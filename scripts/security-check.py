@@ -34,7 +34,7 @@ def scan_source(staged, revisions):
         trees = (git('ls-tree', '-rz', commit) for commit in commits)
         identities = git('log', '--format=%ae%n%ce', *revisions, '--')
         # Public GitHub noreply identities are deliberate, not private addresses.
-        identities = re.sub(rb'[A-Za-z0-9+_.-]+@users\.noreply\.github\.com', b'', identities)
+        identities = re.sub(rb'(?m)^(?:[A-Za-z0-9+_.-]+@users\.noreply\.github\.com|noreply@github\.com)$', b'', identities)
         count += publication.findings('commit-identities', identities)
     for tree in trees:
         for entry in tree.split(b'\0'):

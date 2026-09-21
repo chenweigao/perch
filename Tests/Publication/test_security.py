@@ -102,6 +102,19 @@ class SecurityTests(unittest.TestCase):
         self.git('add', '.')
         self.assertNotEqual(self.check('staged').returncode, 0)
 
+    def test_history_checks_identity_without_rejecting_github_noreply(self):
+        self.git('config', 'user.email', 'noreply@' + 'github.com')
+        (self.root / 'README.md').write_text('safe GitHub identity')
+        self.commit()
+        self.assertEqual(self.check('history', 'HEAD').returncode, 0)
+        private = 'fixture@' + 'company.test'
+        self.git('config', 'user.email', private)
+        (self.root / 'README.md').write_text('identity requires review')
+        self.commit()
+        result = self.check('history', 'HEAD')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn(private.encode(), result.stdout + result.stderr)
+
     def test_missing_or_broken_scanner_blocks(self):
         self.binary.unlink()
         self.assertNotEqual(self.check('staged').returncode, 0)

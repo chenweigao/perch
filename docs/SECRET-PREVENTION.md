@@ -40,6 +40,11 @@ python3 scripts/security-check.py history HEAD
 python3 -m unittest discover -s Tests/Publication -p 'test_*.py'
 ```
 
+PR checks inspect the contributor's actual head and its history, not GitHub's
+synthetic merge commit. Keep GitHub account email privacy enabled too: GitHub can
+otherwise attach a personal address to commits it generates itself. Local hooks
+cannot control GitHub-generated metadata.
+
 CI uses a commit-pinned checkout action, a read-only token, no persisted Git
 credentials, and no external credentials. It scans full history and runs isolated
 regressions with synthetic tokens. It does not probe the validity of candidate
