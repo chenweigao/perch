@@ -7,7 +7,6 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let page: SidebarPage
     let attentionCount: Int
     let environmentSummary: String
-    let onNew: () -> Void
     let onSearch: () -> Void
     let onHome: () -> Void
     let onInbox: () -> Void
@@ -18,16 +17,13 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Perch").font(.system(size: 16, weight: .semibold))
-                .padding(.horizontal, 20).frame(height: 44)
             VStack(spacing: 3) {
-                navigation("新建任务", symbol: "square.and.pencil", shortcut: "⌘N", action: onNew)
                 navigation("搜索任务", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
                     .keyboardShortcut("k")
                 Divider().padding(.vertical, 7)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
-            }.padding(.horizontal, 10).padding(.bottom, 8)
+            }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 8)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 3) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)

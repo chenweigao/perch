@@ -22,8 +22,8 @@ struct SessionRowChrome<Indicator: View>: View {
     var body: some View {
         HStack(spacing: 4) {
             Button(action: onOpen) {
-                HStack(alignment: .top, spacing: 8) {
-                    indicator.frame(width: 16, height: 16).accessibilityHidden(true)
+                HStack(alignment: .top, spacing: 9) {
+                    indicator.frame(width: 17, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
                         if let subtitle {
@@ -53,7 +53,7 @@ struct SessionRowChrome<Indicator: View>: View {
             }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
                 .frame(width: 48, alignment: .trailing)
                 .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
-        }.padding(.leading, 9).padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
+        }.padding(.leading, 10).padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
             .background(selected ? .black.opacity(0.065) : hovered ? .black.opacity(0.03) : .clear,
                         in: RoundedRectangle(cornerRadius: 8))
             .contentShape(Rectangle()).onHover { hovered = $0 }
