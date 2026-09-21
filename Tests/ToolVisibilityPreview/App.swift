@@ -15,6 +15,8 @@ private struct ToolPreview: View {
     @State private var native = false
     @State private var reduceMotion = false
     @State private var showReturn = false
+    @State private var thoughtPreview = false
+    @State private var longThought = false
     @State private var model = ""
     private let models = ModelCatalog.options(["Example A", "Example B"].flatMap { provider in
         (1...24).map { index in
@@ -28,9 +30,19 @@ private struct ToolPreview: View {
             ["id": "u", "role": "user", "created_at": "1", "content": [["type": "text", "text": "检查虚构项目中的 Sample.swift"]]],
             ["id": "intro", "role": "assistant", "created_at": "2", "content": [["type": "text", "text": "已找到目标文件，正在核对内容。这段概要应始终可见。"], ["type": "thinking", "thinking": "这段独立思考可以折叠，不影响概要或工具状态。"]]]
         ]
+        if thoughtPreview {
+            let text = longThought ? String(repeating: "检查每个阶段的输入、工具调用与返回结果。This is a long reasoning preview.\n", count: 18) : "正在检查工具调用记录。"
+            rows = [rows[0], ["id": "thought-preview", "role": "assistant", "created_at": "2", "content": [["type": "thinking", "thinking": text]]]]
+            return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
+        }
         if (phase >= 1 && phase != 2 && phase != 6 && phase != 7) || native {
             rows.append(["id": "a", "role": "assistant", "created_at": "3", "content": [["type": "tool_use", "tool_call_id": "read-1", "tool_name": "Read", "input": ["path": "/fixture/Sample.swift"]]]])
             rows.append(["id": "duplicate", "role": "assistant", "created_at": "4", "content": [["type": "tool_use", "tool_call_id": "read-1", "tool_name": "Read", "input": ["path": "/fixture/Sample.swift"]]]])
+        }
+        if phase == 3 {
+            rows.append(["id": "progress", "role": "assistant", "created_at": "4", "content": [["type": "text", "text": "读取完成，接下来执行检查。工具摘要应分别留在这段说明的前后。"]]])
+            rows.append(["id": "check", "role": "assistant", "created_at": "4", "content": [["type": "tool_use", "tool_call_id": "check-2", "tool_name": "Shell", "input": ["command": "swift test"]]]])
+            rows.append(["id": "check-result", "role": "tool", "created_at": "5", "content": [["type": "tool_result", "tool_call_id": "check-2", "is_error": false, "output": "All checks passed (fixture)"]]])
         }
         if [3, 4, 6].contains(phase) {
             rows.append(["id": "r", "role": "tool", "created_at": "5", "content": [["type": "tool_result", "tool_call_id": phase == 6 ? "orphan" : "read-1", "is_error": phase == 4, "output": phase == 4 ? "Permission denied (fixture only)" : "struct Sample {\n    let value = 42\n}\n完整结果的最后一行"]]])
@@ -55,23 +67,27 @@ private struct ToolPreview: View {
                 Toggle("显示回到底部按钮", isOn: $showReturn)
                 Toggle("减少动态效果", isOn: $reduceMotion)
             }
+            HStack {
+                Toggle("思考预览", isOn: $thoughtPreview)
+                Toggle("长思考", isOn: $longThought).disabled(!thoughtPreview)
+            }
             Divider()
             ConversationScrollView(showsScrollIndicator: true, onScroll: { _ in }, onContentSizeChange: {}) {
-                ConversationTranscript(messages: messages, sessionId: "tool-visibility-fixture",
-                                       running: native && phase < 2 ? ["read-1"] : [], isRunning: phase < 3,
-                                       liveTools: !native && phase < 2 ? live : [], online: phase != 5)
-                if phase == 7 {
+                ConversationTranscript(messages: messages, sessionId: thoughtPreview ? "thought-preview-fixture" : "tool-visibility-fixture",
+                                       running: !thoughtPreview && native && phase < 2 ? ["read-1"] : [], isRunning: thoughtPreview || phase < 3,
+                                       liveTools: !thoughtPreview && !native && phase < 2 ? live : [], online: phase != 5)
+                if phase == 7 && !thoughtPreview {
                     Label("需要你的确认（无真实操作）", systemImage: "hand.raised").foregroundStyle(.orange)
                     KimiToolCard(tool: VisibleTool(id: "approval-fixture", name: "Shell", input: .object(["command": .string("printf fixture")]), status: .awaitingApproval))
                 }
             }.overlay(alignment: .bottom) {
                 ReturnToLatestButton(isVisible: showReturn) { showReturn = false }
             }
-            ConversationActivityBar(activity: ConversationActivity(messages: messages, isRunning: phase < 3,
-                                                                   liveTools: !native && phase < 2 ? live : [],
-                                                                   running: native && phase < 2 ? ["read-1"] : [],
+            ConversationActivityBar(activity: ConversationActivity(messages: messages, isRunning: thoughtPreview || phase < 3,
+                                                                   liveTools: !thoughtPreview && !native && phase < 2 ? live : [],
+                                                                   running: !thoughtPreview && native && phase < 2 ? ["read-1"] : [],
                                                                    online: phase != 5, isThinking: phase == 0),
-                                    isRunning: phase < 3, online: phase != 5)
+                                    isRunning: thoughtPreview || phase < 3, online: phase != 5)
             Text("无远端连接、无真实消息、无审批按钮；独立 bundle ID 与状态目录。").font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(minWidth: 750, minHeight: 500)
             .environment(\.accessibilityReduceMotion, reduceMotion)

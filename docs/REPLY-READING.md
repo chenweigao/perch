@@ -70,8 +70,9 @@ characters, and confirm column alignment and horizontal scrolling in the tables.
 Assistant progress stays visible in chronological order, interleaved with each
 reasoning phase. New reasoning and new overviews append below prior output rather
 than replacing a turn-wide slot. Completed reasoning phases have independent
-disclosures; the currently streaming phase uses a fixed-height, naturally wrapped
-viewport with its own show/hide control and full-text popover. The viewport follows
+disclosures; the currently streaming phase uses a naturally wrapped viewport that
+fits short thoughts and caps its height at 76 pt. The header offers a full-text
+popover only when the preview overflows. The viewport follows
 new text unless the user scrolls upward, with no flashing scrollbar. Kimi volatile deltas and native
 agent snapshots use the same policy. A volatile Kimi message is deduplicated only
 against messages in the current turn.
@@ -81,8 +82,8 @@ as the final reply. Otherwise all assistant process text remains visible under
 “过程记录 · 未返回最终回复”. A thinking-only turn opens its thinking record by
 default; a tool-only turn shows an explicit no-text notice. These labels never
 invent a summary or claim that the requested task succeeded. Runtime notifications
-and injected skill context stay in the activity group instead of becoming user
-message bubbles.
+and injected skill context remain separately collapsible at their source positions
+instead of becoming user message bubbles.
 
 The system unified compact toolbar holds the session title, directory, status and
 stop/menu controls in one line; sync and lifecycle operations live in the session
@@ -157,8 +158,11 @@ top inset. No fixed negative offsets or manual titlebar padding are added.
 
 ## Independent transcript channels
 
-Execution details contain tool calls and runtime context only. Public progress
-notes remain visible in source order alongside their individual thinking phases.
+Tool summaries remain visible in source order alongside public progress and
+individual thinking phases, including after completion. Only tool arguments,
+progress and output fold inside each tool row; there is no outer execution group.
+Tool-call IDs preserve row identity across live/history handoff. Runtime context
+has its own disclosure.
 Only the latest phase can show “思考中”; prior reasoning collapses to “思考记录”.
 Source message and part offset identify each row, independent of its live/completed
 presentation. Repeated thinking/text parts within one message therefore stay unique,
@@ -174,9 +178,25 @@ AppKit's spinning progress indicator supplies visible motion in the activity bar
 running sidebar rows without a SwiftUI animation timer. Reduce Motion shows a static
 hourglass; sidebar attention/review/idle states also have distinct visual indicators.
 
-The TodoList popover anchors to the pointer position within the task-bar button,
+The turn activity popover anchors to the pointer position within the task-bar button,
 held still while open. Keyboard/accessibility activation without a pointer uses
 the button bounds, and AppKit keeps the popover within screen bounds.
+
+The bar uses the active tool's description when available, otherwise a localized
+operation label. Approval, disconnection and stopping states take precedence over
+tool descriptions. Pending input shows its count and a direct review button;
+attention colors apply to the status and action, leaving elapsed time neutral.
+Details show tools needing attention, current operations and then the plan. An
+absent plan has no placeholder; a turn without tools shows its current status.
+
+The activity clock belongs to the connection and is keyed by session and turn;
+switching views does not restart it. A request submitted by this client displays
+elapsed time from submission until the client receives its ending state, including
+transport, tool calls and waits. A turn discovered midway displays observed time
+instead. Completed clocks remain fixed, and a new turn replaces the previous one.
+The expanded view estimates processing and input-wait intervals from received
+status updates; these are client wall times, not model-only execution measurements.
+An app restart loses the local observation history and starts an observed clock.
 
 
 ## Scroll layout contract

@@ -30,24 +30,29 @@ private struct BusySpinner: NSViewRepresentable {
 struct ConversationActivityBar: View {
     let activity: ConversationActivity
     let isRunning: Bool
-    var turnID: String = ""
+    var timing: ConversationTiming? = nil
     var online = true
     var pendingCount = 0
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
     @State private var expanded = false
-    @State private var observedSince: Date?
+    @State private var pointerAnchor: CGRect?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            if activity.isVisible {
+            if activity.isVisible || timing != nil {
                 HStack(spacing: 10) {
-                    Button { expanded.toggle() } label: {
+                    Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
                             if activity.animates { ConversationBusyIndicator() }
-                            else { Image(systemName: activity.symbol).frame(width: 16) }
-                            Text(activity.title).lineLimit(1).truncationMode(.tail)
+                            else {
+                                Image(systemName: activity.symbol).frame(width: 16)
+                                    .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
+                            }
+                            statusTitle
+                                .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
+                                .lineLimit(1).truncationMode(.tail)
                                 .contentTransition(.opacity)
                                 .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.title)
                             Spacer(minLength: 4)
@@ -58,23 +63,35 @@ struct ConversationActivityBar: View {
                             }.foregroundStyle(.secondary).layoutPriority(-1)
                             Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
                         }.contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel("Task activity")
-                        .accessibilityValue(activity.title).help("Show task plan and current activity")
-                        .popover(isPresented: $expanded, arrowEdge: .top) { details }
+                    }.buttonStyle(.plain).accessibilityLabel(Text("本轮活动"))
+                        .accessibilityValue(statusTitle).help("查看本轮活动与计划")
+                        .highPriorityGesture(SpatialTapGesture().onEnded { value in
+                            pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
+                            expanded.toggle()
+                        })
+                        .popover(isPresented: $expanded,
+                                 attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
+                                 arrowEdge: .top) { details }
                     if !online {
-                        Button("Reconnect", action: onReconnect).buttonStyle(.borderless)
+                        Button("重新连接", action: onReconnect).buttonStyle(.borderless)
                     } else if pendingCount > 0 {
-                        Button("Review") { onReview() }.buttonStyle(.borderless)
+                        Button("查看") { onReview() }.buttonStyle(.bordered).controlSize(.small).tint(.orange)
                     }
                 }.font(.system(size: 12))
-                    .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 13).frame(height: 36).workbenchFloatingSurface()
                     .transition(reduceMotion ? .identity : .opacity)
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
-        .onChange(of: isRunning, initial: true) { _, running in observedSince = running ? Date() : nil }
-        .onChange(of: turnID) { _, _ in observedSince = isRunning ? Date() : nil }
+    }
+
+    private var statusTitle: Text {
+        if !online { return Text(LocalizedStringKey(activity.title)) }
+        if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
+        if !isRunning && !activity.needsAttention && timing?.endedAt != nil { return Text("本轮结束") }
+        if let description = activity.operationDescription { return Text(verbatim: description) }
+        return Text(LocalizedStringKey(activity.title))
     }
 
     @ViewBuilder private var counts: some View {
@@ -84,29 +101,42 @@ struct ConversationActivityBar: View {
         }.fixedSize().monospacedDigit()
     }
     @ViewBuilder private var clock: some View {
-        if online, isRunning, let observedSince { ActivityObservedClock(since: observedSince) }
+        if let timing { ActivityTurnClock(timing: timing) }
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("Task plan", systemImage: "checklist").font(.system(size: 13, weight: .semibold))
+                Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: 13, weight: .semibold))
                 Spacer()
-                if !activity.todos.isEmpty {
-                    Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(.secondary)
-                }
                 Button { expanded = false } label: { Image(systemName: "xmark") }
-                    .buttonStyle(.plain).accessibilityLabel("Close activity details")
+                    .buttonStyle(.plain).accessibilityLabel(Text("关闭活动详情"))
             }
             if !online {
-                Text("Updates are disconnected. Tool states below are the last known states.").foregroundStyle(.secondary)
-                Button("Reconnect") { expanded = false; onReconnect() }
+                Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(.secondary)
+                Button("重新连接") { expanded = false; onReconnect() }
             } else if pendingCount > 0 {
-                Text("\(pendingCount) pending \(pendingCount == 1 ? "request" : "requests") in this conversation.").foregroundStyle(.secondary)
-                Button("Review in conversation") { expanded = false; onReview() }
+                Label { Text("等待你确认 · \(pendingCount) 项") } icon: { Image(systemName: "hand.raised") }
+                    .foregroundStyle(.orange)
+                Button("查看") { expanded = false; onReview() }.buttonStyle(.bordered).tint(.orange)
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if !activity.attentionTools.isEmpty {
+                        Text("需要处理").fontWeight(.semibold).foregroundStyle(.orange)
+                        ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
+                    }
+                    if !activity.activeTools.isEmpty {
+                        Text("当前操作").fontWeight(.semibold)
+                        ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
+                    } else if online && pendingCount == 0 && activity.attentionTools.isEmpty {
+                        statusTitle.foregroundStyle(.secondary)
+                    }
                     if !activity.todos.isEmpty {
+                        HStack {
+                            Text("任务计划").fontWeight(.semibold)
+                            Spacer()
+                            Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(.secondary)
+                        }
                         ForEach(activity.todos) { item in
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
@@ -116,33 +146,53 @@ struct ConversationActivityBar: View {
                             }.accessibilityElement(children: .combine)
                                 .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
                         }
-                    } else {
-                        Text("No plan reported yet.").foregroundStyle(.secondary)
-                    }
-                    if !activity.attentionTools.isEmpty {
-                        Divider()
-                        Text("Needs attention").fontWeight(.semibold).foregroundStyle(.orange)
-                        ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
-                    }
-                    if !activity.activeTools.isEmpty {
-                        Divider()
-                        Text("Current activity").fontWeight(.semibold)
-                        ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
+            if let timing {
+                Divider()
+                ActivityTurnClock(timing: timing, showsDetails: true)
+            }
         }.font(.system(size: 12)).padding(16).frame(width: 390)
     }
 }
 
-private struct ActivityObservedClock: View {
-    let since: Date
+private struct ActivityTurnClock: View {
+    let timing: ConversationTiming
+    var showsDetails = false
+    @Environment(\.locale) private var locale
     var body: some View {
-        TimelineView(.periodic(from: since, by: 1)) { context in
-            let seconds = max(0, Int(context.date.timeIntervalSince(since)))
-            Text("Observed \(seconds / 60):\(String(format: "%02d", seconds % 60))")
-                .monospacedDigit().fixedSize()
-        }.help("Time observed in this view, including waits. Earlier runtime is unknown.")
+        Group {
+            if let end = timing.endedAt { content(at: end) }
+            else {
+                TimelineView(.periodic(from: timing.startedAt, by: 1)) { context in content(at: context.date) }
+            }
+        }.monospacedDigit()
+            .help(timing.observedOnly
+                  ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
+                  : Text("从提交本轮请求到收到结束状态的经过时间，包含通信、工具调用和等待。"))
+    }
+    private func duration(_ value: TimeInterval) -> String {
+        ConversationTiming.duration(value, chinese: locale.language.languageCode?.identifier == "zh")
+    }
+    @ViewBuilder private func content(at now: Date) -> some View {
+        let total = timing.elapsed(at: now)
+        if showsDetails {
+            VStack(alignment: .leading, spacing: 6) {
+                label(duration(total))
+                Text("处理与工具调用：\(duration(total - timing.waiting(at: now)))")
+                Text("等待确认：\(duration(timing.waiting(at: now)))")
+                Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        } else { label(duration(total)).fixedSize() }
+    }
+    @ViewBuilder private func label(_ duration: String) -> some View {
+        if timing.observedOnly {
+            if timing.endedAt == nil { Text("已观察 \(duration)") }
+            else { Text("观察时长 \(duration)") }
+        } else if timing.endedAt == nil { Text("已用时 \(duration)") }
+        else { Text("用时 \(duration)") }
     }
 }
 

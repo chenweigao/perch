@@ -1,0 +1,38 @@
+{
+  "checksum" : 299606,
+  "kimi_bytes" : 392096,
+  "kimi_history_decode" : {
+    "iterations_per_sample" : 10,
+    "max_ms" : 4.0538582999999999,
+    "median_ms" : 3.8780166,
+    "min_ms" : 3.7617457999999999
+  },
+  "kimi_stream_event" : {
+    "iterations_per_sample" : 2000,
+    "max_ms" : 0.0096574790000000001,
+    "median_ms" : 0.0092063960000000004,
+    "min_ms" : 0.0087497500000000006
+  },
+  "label" : "candidate-2",
+  "messages" : 400,
+  "native_bytes" : 392210,
+  "native_snapshot_decode" : {
+    "iterations_per_sample" : 10,
+    "max_ms" : 3.7366000000000001,
+    "median_ms" : 3.6999040999999999,
+    "min_ms" : 3.6371332999999999
+  },
+  "search_cold" : {
+    "iterations_per_sample" : 3,
+    "max_ms" : 30.850138999999999,
+    "median_ms" : 30.305166666666665,
+    "min_ms" : 29.357444333333333
+  },
+  "search_repeated" : {
+    "iterations_per_sample" : 8,
+    "max_ms" : 3.8881978749999999,
+    "median_ms" : 3.8591250000000001,
+    "min_ms" : 3.8380000000000001
+  },
+  "turns" : 200
+}

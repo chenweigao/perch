@@ -1,0 +1,64 @@
+{
+  "build" : {
+    "compiler" : "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256" : "c16d119b946f82f5097653c6c3402880f9d171f06bd970a3b6095963fceab418",
+    "package_resolved_sha256" : "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit" : "a050fe31043b75adfd07e8e35bb52ab53208bd8b",
+    "source_sha256" : "96a60224b436dad917c975ef0e2cb0d8ea0b49b254b2e83302a844d5137ff687"
+  },
+  "commit" : "a050fe31043b75adfd07e8e35bb52ab53208bd8b",
+  "duration_s" : 121.0154661249835,
+  "final_resident_mb" : 162.015625,
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "idle_resident_mb" : 127.890625,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "soak",
+  "note" : "unattended soak on the isolated fixture; no remote agent, no production app state",
+  "recreates_timeline" : false,
+  "samples" : [
+    {
+      "elapsed_s" : 0.50762475002557039,
+      "resident_mb" : 164.578125,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 96
+    },
+    {
+      "elapsed_s" : 60.857055583386682,
+      "resident_mb" : 198,
+      "scroll_steps" : 1176,
+      "switches" : 98,
+      "views" : 98
+    },
+    {
+      "elapsed_s" : 120.89868624997325,
+      "resident_mb" : 174.5,
+      "scroll_steps" : 1344,
+      "switches" : 112,
+      "views" : 77
+    }
+  ],
+  "scroll_step_ms" : {
+    "count" : 1344,
+    "max_ms" : 2275.7017916301265,
+    "median_ms" : 46.326416777446866,
+    "over_16_7ms" : 1289,
+    "over_100ms" : 112,
+    "p95_ms" : 285.96662497147918
+  },
+  "scroll_steps" : 1344,
+  "search_keystrokes" : 14,
+  "sessions" : 500,
+  "status" : "passed",
+  "switch_ms" : {
+    "count" : 112,
+    "max_ms" : 860.07475003134459,
+    "median_ms" : 49.800083390437067,
+    "over_16_7ms" : 112,
+    "over_100ms" : 15,
+    "p95_ms" : 164.45829160511494
+  },
+  "switches" : 112,
+  "timestamp" : "2026-09-21T13:19:47Z"
+}

@@ -1,0 +1,15 @@
+{
+  "changed_snapshot": {
+    "max_ms": 4.778989579999999,
+    "median_ms": 4.546077500000001,
+    "min_ms": 4.301871249999998
+  },
+  "idle_revision_hit": {
+    "max_ms": 5.641883340000002,
+    "median_ms": 4.49484375,
+    "min_ms": 4.2377825
+  },
+  "messages": 400,
+  "turns": 200,
+  "variant": "baseline"
+}

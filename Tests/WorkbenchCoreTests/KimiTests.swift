@@ -4,6 +4,16 @@ import WorkbenchCore
 func checkKimiProtocol() throws {
     func require(_ value: Bool, _ message: String = "check failed") { precondition(value, message) }
     let session = #"{"id":"s1","title":"测试","updated_at":"2026-09-20","busy":true,"pending_interaction":"none","metadata":{"cwd":"/tmp"},"agent_config":{"model":"test/model"}}"#
+    let decodedSession = try KimiWire.decode(KimiSession.self, from: Data("{\"code\":0,\"data\":\(session)}".utf8))
+    require(decodedSession.updatedAt == "2026-09-20" && decodedSession.model == "test/model")
+    let rawValue = try KimiWire.decode(JSONValue.self, from: Data(#"{"code":0,"data":{"raw_key":{"tool_name":"test"}}}"#.utf8))
+    require(rawValue["raw_key"]["tool_name"].string == "test", "Untyped payload keys stay unchanged")
+    let delta = try KimiWire.decodeEvent(from: Data(#"{"type":"assistant.delta","session_id":"s1","payload":{"delta":"中文","raw_key":1}}"#.utf8))
+    require(delta.sessionId == "s1" && delta.payload["delta"].string == "中文" && delta.payload["raw_key"].int == 1)
+    do {
+        _ = try KimiWire.decodeEvent(from: Data(#"{"type":"ack","code":1,"msg":"subscription denied"}"#.utf8))
+        preconditionFailure("expected ack error before decoding missing payload")
+    } catch { require(error.localizedDescription == "subscription denied") }
     func snapshot(_ seq: Int = 10, text: String = "你好😀", epoch: String = "e1") throws -> KimiSnapshot {
         let escaped = String(decoding: try JSONEncoder().encode(text), as: UTF8.self)
         return try KimiWire.decoder().decode(KimiSnapshot.self, from: Data("""

@@ -11,6 +11,7 @@ import time
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("mode", choices=["reading", "click", "scroll", "soak"])
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--app", type=Path, help="Use a separately built A/B fixture app")
 parser.add_argument("--seconds", type=int, default=1260)
 parser.add_argument("--switches", type=int, default=40)
 parser.add_argument("--recreate", action="store_true")
@@ -18,7 +19,8 @@ args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 output = args.output.resolve()
 output.mkdir(parents=True, exist_ok=False)
-binary = root / "build/Navigation Preview.app/Contents/MacOS/NavigationPreview"
+app = args.app.resolve() if args.app else root / "build/Navigation Preview.app"
+binary = app / "Contents/MacOS/NavigationPreview"
 environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="200",
                    NAVIGATION_AUTOQUIT="1", NAVIGATION_RESULTS=str(output),
                    NAVIGATION_SWITCHES=str(args.switches),

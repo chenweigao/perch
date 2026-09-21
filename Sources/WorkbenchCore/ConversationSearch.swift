@@ -6,11 +6,30 @@ public struct ConversationSearchHit: Identifiable, Equatable {
     public let excerpt: String
     public var id: String { "\(entryID):\(occurrence)" }
 }
-public enum ConversationSearch {
-    public static func hits(in messages: [KimiMessage], query: String, running: Bool) -> [ConversationSearchHit] {
+/// One find bar's rendered text cache. Reuse requires both row identity and source
+/// equality; replacing history with same-ID messages must invalidate its text.
+public final class ConversationSearch {
+    private struct Entry {
+        let sources: [String]
+        let text: NSString
+    }
+    private var entries: [String: Entry] = [:]
+    public init() {}
+
+    public func hits(in messages: [KimiMessage], query: String, running: Bool) -> [ConversationSearchHit] {
         guard !query.isEmpty else { return [] }
+        var next: [String: Entry] = [:]
+        defer { entries = next }
         return ConversationTimelineEntry.make(messages, isRunning: running).flatMap { entry -> [ConversationSearchHit] in
-            let text = entry.messages.flatMap(\.content).filter { $0.type == "text" && !$0.isRuntimeContext }.compactMap(\.text).map { renderedText(ReplyDocument.parse($0)) }.joined(separator: "\n") as NSString
+            let sources = entry.messages.flatMap(\.content).filter { $0.type == "text" && !$0.isRuntimeContext }.compactMap(\.text)
+            let cached: Entry
+            if let previous = entries[entry.id], previous.sources == sources {
+                cached = previous
+            } else {
+                cached = Entry(sources: sources, text: sources.map { Self.renderedText(ReplyDocument.parse($0)) }.joined(separator: "\n") as NSString)
+            }
+            next[entry.id] = cached
+            let text = cached.text
             var range = NSRange(location: 0, length: text.length), hits: [ConversationSearchHit] = []
             while range.length > 0 {
                 let found = text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: range)

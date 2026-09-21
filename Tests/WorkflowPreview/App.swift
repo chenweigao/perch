@@ -18,6 +18,7 @@ private struct WorkflowPreview: View {
     @State private var follow = true
     @State private var additions = 0
     @State private var query = "needle"
+    @State private var search = ConversationSearch()
     @State private var match = 0
     @State private var openedFile = "No file opened"
     private var key: String { "fixture:" + (disclosureSample ? "disclosure" : session) }
@@ -32,7 +33,7 @@ private struct WorkflowPreview: View {
         }
         return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
     }
-    private var hits: [ConversationSearchHit] { ConversationSearch.hits(in: messages, query: query, running: false) }
+    private var hits: [ConversationSearchHit] { search.hits(in: messages, query: query, running: false) }
     var body: some View {
         VStack(spacing: 10) {
             HStack {

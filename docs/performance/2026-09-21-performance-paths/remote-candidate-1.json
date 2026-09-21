@@ -1,0 +1,15 @@
+{
+  "changed_snapshot": {
+    "max_ms": 4.541477500000002,
+    "median_ms": 4.23013542,
+    "min_ms": 4.1340825
+  },
+  "idle_revision_hit": {
+    "max_ms": 0.0004445799999999722,
+    "median_ms": 0.0004229200000001321,
+    "min_ms": 0.00041708999999987006
+  },
+  "messages": 400,
+  "turns": 200,
+  "variant": "candidate"
+}

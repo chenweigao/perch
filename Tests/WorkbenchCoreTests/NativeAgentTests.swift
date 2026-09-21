@@ -2,6 +2,16 @@ import Foundation
 import WorkbenchCore
 
 func checkNativeAgents() throws {
+    let unchanged = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"unchanged":true}"#.utf8))
+    precondition(unchanged.snapshot == nil)
+    let snapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"a","provider":"omp","title":"A","cwd":"/tmp","busy":false,"revision":2,"completed":0,"model":"m","messages":[{"id":"m","role":"assistant","created_at":"now","content":[{"type":"text","text":"中文"}]}],"interactions":[],"error":"runtime failed"}"#.utf8))
+    precondition(snapshot.snapshot?.messages.first?.createdAt == "now" && snapshot.snapshot?.error == "runtime failed")
+    let receipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"request","status":"failed","error":"rejected"}"#.utf8))
+    precondition(receipt.status == "failed" && receipt.error == "rejected", "Receipt errors are payloads, not request errors")
+    do {
+        _ = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"error":"request failed"}"#.utf8))
+        preconditionFailure("expected request error")
+    } catch { precondition(error.localizedDescription == "request failed") }
     let raw = """
     [
       {"id":"u","role":"user","created_at":"1","content":[{"type":"text","text":"开始任务"}]},
@@ -15,10 +25,10 @@ func checkNativeAgents() throws {
     """
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(raw.utf8))
     let running = ConversationTimelineEntry.make(Array(messages.dropLast()), isRunning: true)
-    precondition(running.count == 4 && running[1].activity && running.last?.presentation == .progress, "Latest commentary must remain visible while running")
+    precondition(running.count == 6 && running[2].activity && running[4].presentation == .progress && running[5].activity, "Latest commentary must remain visible while running")
     let done = ConversationTimelineEntry.make(messages)
-    precondition(done.count == 6 && done[1].activity && done.last?.presentation == .message)
-    precondition(done[1].messages.contains { $0.id == "n" }, "Runtime notifications must not split a user turn")
+    precondition(done.count == 8 && done[2].activity && done.last?.presentation == .message)
+    precondition(done[3].messages.contains { $0.id == "n" }, "Runtime notifications must not split a user turn")
     precondition(done.last?.messages[0].content.count == 1 && done.last?.messages[0].content[0].text == "最终结果")
     precondition(done.first { $0.presentation == .thinkingDetails }?.messages[0].content[0].type == "thinking")
     let host = UUID()
@@ -27,5 +37,5 @@ func checkNativeAgents() throws {
     var workspace = LocalWorkspace(); refs.forEach { workspace.toggleStar($0) }
     let restored = try JSONDecoder().decode(LocalWorkspace.self, from: JSONEncoder().encode(workspace))
     precondition(restored.starred == refs)
-    print("PASS: per-turn activity grouping, visible final answer, native provider identity and persistence")
+    print("PASS: chronological tool summaries, visible final answer, native provider identity and persistence")
 }

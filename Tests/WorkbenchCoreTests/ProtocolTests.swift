@@ -9,6 +9,7 @@ struct ProtocolTests {
         try checkToolVisibility()
         try checkConversationTodos()
         try checkConversationActivity()
+        checkConversationTiming()
         try checkWorkflow()
         checkReplyDocument()
         try checkNativeAgents()

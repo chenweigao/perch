@@ -10,6 +10,10 @@ private final class TransportFixture {
     var failCatalog = false
     var archives = 0
     var abortedTurns: [(String, String?)] = []
+    var holdSnapshots = false
+    var snapshotRequests: [String] = []
+    var pendingSnapshots: [(CheckedContinuation<Data, Error>, Data)] = []
+    var returnedSnapshots = 0
 
     init() {
         for id in ["a", "b"] {
@@ -19,13 +23,25 @@ private final class TransportFixture {
         }
     }
     func request(_ path: String, _ body: JSONValue?) async throws -> Data {
-        let parts = path.split(separator: "/").map(String.init)
+        let parts = path.split(separator: "?")[0].split(separator: "/").map(String.init)
         var result: [String: Any] = [:]
         if path == "/sessions" {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
         } else if parts.count == 4 && parts[2] == "requests" {
             result = ["id": parts[3], "status": receipts[parts[3]] ?? "notFound"]
+        } else if parts.count == 2 {
+            let id = parts[1]
+            snapshotRequests.append(id)
+            result = sessions[id]!
+            result["revision"] = snapshotRequests.count
+            result["messages"] = []; result["interactions"] = []
+            let data = try JSONSerialization.data(withJSONObject: result)
+            defer { returnedSnapshots += 1 }
+            if holdSnapshots {
+                return try await withCheckedThrowingContinuation { pendingSnapshots.append(($0, data)) }
+            }
+            return data
         } else if parts.count == 3 {
             let id = parts[1]
             switch parts[2] {
@@ -64,6 +80,7 @@ struct ConnectionChecks {
     @MainActor
     static func main() async throws {
         try await checkKimiTaskLaunch()
+        try await checkImmediateSelection()
         let fixture = TransportFixture()
         let connection = NativeAgentConnection(host: SSHHost(name: "Fixture", destination: "fixture"), transport: fixture.request)
         try await connection.refresh()
@@ -131,5 +148,33 @@ struct ConnectionChecks {
         precondition(client.queue.allItems.isEmpty && lost.prompts.count == 1)
         precondition(connection.queue.items(for: b).count == 1)
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
+    }
+
+    @MainActor
+    static func checkImmediateSelection() async throws {
+        let fixture = TransportFixture(); fixture.holdSnapshots = true
+        let client = NativeAgentConnection(host: SSHHost(name: "Selection", destination: "fixture"), transport: fixture.request)
+        try await client.refresh()
+        client.select("a")
+        await settle { fixture.snapshotRequests == ["a"] }
+        client.select("b")
+        await settle { fixture.snapshotRequests == ["a", "b"] }
+        client.select("a")
+        await settle { fixture.pendingSnapshots.count == 3 }
+        // Transport deliberately ignores cancellation and completes out of order.
+        fixture.pendingSnapshots[2].0.resume(returning: fixture.pendingSnapshots[2].1)
+        await settle { client.snapshot?.revision == 3 }
+        fixture.pendingSnapshots[0].0.resume(returning: fixture.pendingSnapshots[0].1)
+        fixture.pendingSnapshots[1].0.resume(returning: fixture.pendingSnapshots[1].1)
+        await settle { fixture.returnedSnapshots == 3 }
+        precondition(client.snapshot?.id == "a" && client.snapshot?.revision == 3)
+        precondition(client.actionError == nil)
+        client.select("b")
+        await settle { fixture.pendingSnapshots.count == 4 }
+        client.disconnect()
+        fixture.pendingSnapshots[3].0.resume(returning: fixture.pendingSnapshots[3].1)
+        await settle { fixture.returnedSnapshots == 4 }
+        precondition(client.snapshot == nil && !client.online)
+        print("PASS: immediate selection reads, A-B-A stale response isolation and disconnect cancellation")
     }
 }

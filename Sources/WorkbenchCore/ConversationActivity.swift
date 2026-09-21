@@ -5,6 +5,7 @@ public struct ConversationActivity {
     public let tools: [VisibleTool]
     public let todos: [ConversationTodo]
     public let title: String
+    public let operationDescription: String?
     public let symbol: String
     public let needsAttention: Bool
     public let animates: Bool
@@ -24,6 +25,9 @@ public struct ConversationActivity {
             .compactMap { projection.tools[$0.toolCallId ?? ""] }
         todos = ConversationTodo.floating(in: current, isRunning: isRunning)
         let active = tools.filter { $0.status == .running }
+        let description = active.first?.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
+        operationDescription = online && isRunning && pendingCount == 0 && !isStopping && description?.isEmpty == false
+            ? description : nil
         let uncertain = tools.contains { $0.staysVisible && $0.status != .running }
         needsAttention = !online || pendingCount > 0 || uncertain
         animates = online && isRunning && pendingCount == 0 && !isStopping
@@ -36,7 +40,7 @@ public struct ConversationActivity {
             case "read", "read_file", "readfile": title = "Reading files…"
             case "edit", "write", "edit_file", "write_file", "apply_patch": title = "Editing files…"
             case "bash", "shell", "exec_command": title = "Running command…"
-            default: title = "\(tool.name)…"
+            default: title = "Working…"
             }
             symbol = "terminal"
         } else if isRunning && isThinking { title = "Thinking…"; symbol = "brain" }

@@ -8,6 +8,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var sessions: [NativeAgentSession] = []
     @Published private(set) var snapshot: NativeAgentSnapshot?
     @Published private(set) var selectedID: String?
+    @Published private(set) var timings = ConversationTimings()
     @Published private(set) var online = false
     @Published var error: String?
     @Published var actionError: String?
@@ -30,6 +31,8 @@ final class NativeAgentConnection: ObservableObject {
     private var tunnel: Process?
     private var directory: URL?
     private var task: Task<Void, Never>?
+    private var selectionTask: Task<Void, Never>?
+    private var selectionGeneration = UUID()
     private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
     private var draftFile: DraftFile?
@@ -69,13 +72,7 @@ final class NativeAgentConnection: ObservableObject {
                     online = true; error = nil; onSessionsChanged?()
                     while !Task.isCancelled && generation == token {
                         try await refresh()
-                        if let id = selectedID {
-                            let suffix = snapshot?.id == id ? "?revision=\(snapshot!.revision)" : ""
-                            let value: JSONValue = try await request("/sessions/\(id)\(suffix)")
-                            if id == selectedID && value["unchanged"] != .bool(true) {
-                                snapshot = try KimiWire.decoder().decode(NativeAgentSnapshot.self, from: JSONEncoder().encode(value))
-                            }
-                        }
+                        if selectionTask == nil { try await refreshSelected() }
                         try await Task.sleep(for: .milliseconds(400))
                     }
                 } catch is CancellationError { return }
@@ -87,7 +84,11 @@ final class NativeAgentConnection: ObservableObject {
             }
         }
     }
-    func disconnect() { generation = UUID(); task?.cancel(); task = nil; online = false; closeTunnel() }
+    func disconnect() {
+        generation = UUID(); selectionGeneration = UUID()
+        task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
+        online = false; closeTunnel()
+    }
     private func closeTunnel() {
         api?.invalidate(); api = nil
         if let tunnel, tunnel.isRunning { tunnel.terminate() }; tunnel = nil
@@ -127,14 +128,18 @@ final class NativeAgentConnection: ObservableObject {
             guard let api else { throw WorkbenchError("请先连接原生对话服务") }
             data = try await api.request(path, method: body == nil ? "GET" : "POST", body: body)
         }
-        let value = try JSONDecoder().decode(JSONValue.self, from: data)
-        if let error = value["error"].string, value["id"].string == nil { throw WorkbenchError(error) }
-        return try KimiWire.decoder().decode(T.self, from: data)
+        return try NativeAgentWire.decode(T.self, from: data)
     }
     func refresh() async throws {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
         let value: Catalog = try await request("/sessions")
         let next = value.sessions.sorted { $0.updated > $1.updated }
+        var clocks = timings
+        for session in next {
+            clocks.observe(sessionID: session.id, turnID: session.turnId, requestID: session.turnId,
+                           running: session.busy, waiting: session.pending > 0)
+        }
+        if clocks != timings { timings = clocks }
         if let id = selectedID, !next.contains(where: { $0.id == id }) { selectedID = nil; snapshot = nil }
         if next != sessions {
             sessions = next
@@ -155,6 +160,27 @@ final class NativeAgentConnection: ObservableObject {
     }
     func select(_ id: String) {
         guard selectedID != id else { return }; selectedID = id; snapshot = nil; actionError = nil
+        selectionTask?.cancel()
+        selectionGeneration = UUID(); let token = selectionGeneration
+        guard online else { selectionTask = nil; return }
+        selectionTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if selectionGeneration == token { selectionTask = nil } }
+            do { try await refreshSelected() }
+            catch is CancellationError {}
+            catch { if selectionGeneration == token { actionError = error.localizedDescription } }
+        }
+    }
+    private func refreshSelected() async throws {
+        try Task.checkCancellation()
+        guard let id = selectedID else { return }
+        let token = selectionGeneration, connectionToken = generation
+        let suffix = snapshot?.id == id ? "?revision=\(snapshot!.revision)" : ""
+        let response: NativeSnapshotResponse = try await request("/sessions/\(id)\(suffix)")
+        try Task.checkCancellation()
+        guard token == selectionGeneration, connectionToken == generation, id == selectedID,
+              let value = response.snapshot else { return }
+        snapshot = value
     }
     func create(provider: SessionKind, cwd: String, model: String) async throws -> NativeAgentSession {
         let session: NativeAgentSession = try await request("/sessions", body: .object(["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]))
@@ -222,6 +248,7 @@ final class NativeAgentConnection: ObservableObject {
         guard queue.nextPendingID(for: reference, isStreaming: busy) != nil else { return }
         guard let message = queue.nextDelivery(for: reference, isStreaming: busy) else { return }
         sendingSessions.insert(id)
+        timings.submitted(message.id)
         Task {
             defer { sendingSessions.remove(id); drainQueues() }
             do {
@@ -241,7 +268,9 @@ final class NativeAgentConnection: ObservableObject {
         case "submitting", "submitted": next = .submitting
         case "accepted": next = .accepted
         case "running": next = .running
-        case "completed", "stopped": queue.markDelivered(receipt.id); return
+        case "completed", "stopped":
+            timings.finished(sessionID: message.session.terminalID, requestID: receipt.id)
+            queue.markDelivered(receipt.id); return
         case "failed": next = .failed(receipt.error ?? "运行时拒绝消息")
         case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
         default: next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")

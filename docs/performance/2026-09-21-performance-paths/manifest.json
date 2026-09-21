@@ -1,0 +1,21 @@
+{
+  "baseline_commit": "5cd50ee24d31fbb116089f4f42dc28c09fce14ee",
+  "baseline_built_from": "15fe7ede5b9a89343428ecd9f6f923fd0bef04c2",
+  "candidate_branch_commit": "833b92c",
+  "candidate_composition": "main plus origin/fix/performance-paths; required completed field added to native test fixture",
+  "run_order": [
+    "baseline-1",
+    "candidate-1",
+    "candidate-2",
+    "baseline-2"
+  ],
+  "macos": "26.6.2",
+  "compiler": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+  "swift_fixture_sha256": "23f6212d0e0336494b8f4ae7354c0bcd9b341e67b57c77e23c03570ff87ace25",
+  "python_fixture_sha256": "efa3a6fe9ffac05e053683e8faf1445e8567859dc5ae16027e1215539a3d2e0f",
+  "binary_sha256": {
+    "baseline": "a1db36afb7dbb5b68b9adf626bb585ee4cdbc396ce2365bb25af212eb95c7fc8",
+    "candidate": "992b12286e620e3c0fdaf167149102451baf10020dd0bd339220a00a32576266"
+  },
+  "timing_scope": "Synthetic offline workloads, serial runs, no overlapping compilation or benchmark. No live SSH or model API calls."
+}

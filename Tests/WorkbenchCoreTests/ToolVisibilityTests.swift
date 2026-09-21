@@ -31,7 +31,11 @@ func checkToolVisibility() throws {
     let done = p.update(user + call + duplicate + result, sessionID: "kimi", live: live)
     precondition(ids(done) == ["t"] && done.tools["t"]?.status == .succeeded && done.tools["t"]?.staysVisible == false, "Result wins over stale live-running evidence")
     precondition(done.tools["t"]?.output == .string("完整结果\n第二行"))
-    precondition([gap, overlap, ended, done].allSatisfy { activityID($0) == activityID(start) }, "One activity host survives handoff")
+    precondition([gap, overlap, ended, done].allSatisfy { activityID($0) == activityID(start) }, "One tool row survives handoff")
+    let completedRows = ConversationTimelineEntry.make(done.messages)
+    precondition(completedRows.flatMap(\.messages).flatMap(\.content).map(\.type) == ["text", "text", "tool_use", "thinking"],
+                 "A completed, deduplicated call stays between its surrounding text and thoughts")
+    precondition(completedRows.first(where: \.activity)?.id == activityID(start))
     let body = ConversationTimelineEntry.make(done.messages).filter { !$0.activity }.flatMap(\.messages).flatMap(\.content)
     precondition(body.contains { $0.text == "正文必须一直保留" } && body.contains { $0.thinking == "思考可以折叠" })
     let failure = p.update(user + call + failed, sessionID: "kimi", running: ["t"])

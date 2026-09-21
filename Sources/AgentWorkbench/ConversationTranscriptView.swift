@@ -222,11 +222,14 @@ private final class ConversationDocumentView: NSView {
         drainingRetiredControllers = true
         Task { @MainActor in
             while retiredControllers.count > 0 {
-                try? await Task.sleep(for: .milliseconds(10))
-                autoreleasepool {
-                    for _ in 0..<min(4, retiredControllers.count) {
-                        retiredControllers.removeLastObject()
-                    }
+                // Short slices also need prompt rescheduling so retired graphs do not accumulate.
+                try? await Task.sleep(for: .milliseconds(1))
+                let deadline = ProcessInfo.processInfo.systemUptime + 0.002
+                for _ in 0..<min(4, retiredControllers.count) {
+                    // Drain each graph's autoreleases before checking elapsed time.
+                    // Four complex rows must not consume one long main-thread slice.
+                    autoreleasepool { retiredControllers.removeLastObject() }
+                    if ProcessInfo.processInfo.systemUptime >= deadline { break }
                 }
             }
             drainingRetiredControllers = false
@@ -669,7 +672,7 @@ private struct ConversationEntryView: View, Equatable {
                     ThoughtOutput(messages: entry.messages, finished: entry.presentation == .thinkingRecord)
                         .id(entry.presentation == .thinkingRecord)
                 case .emptyOutput:
-                    Text("本轮未返回文字回复，可展开执行过程查看工具结果。")
+                    Text("本轮未返回文字回复，可展开工具记录查看结果。")
                         .font(.system(size: 13)).foregroundStyle(.secondary)
                 default:
                     if entry.presentation == .record {
@@ -735,18 +738,23 @@ private struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
-    private var current: String { messages.last?.content.compactMap(\.thinking).joined(separator: "\n\n") ?? "" }
     @RememberedExpansion("live-thought", initial: true) private var expanded
     @State private var showFullText = false
+    @State private var previewOverflows = false
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: finished ? "Thoughts · No response" : "Thinking", expanded: $expanded)
+            HStack {
+                ThoughtToggle(title: finished ? "Thoughts · No response" : "Thinking", expanded: $expanded)
+                if expanded && !finished && previewOverflows {
+                    Button { showFullText = true } label: {
+                        Label("View full thoughts", systemImage: "arrow.up.right")
+                    }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary).fixedSize()
+                }
+            }
             if expanded && finished {
                 ThoughtText(text: fullText)
             } else if expanded {
-                ThinkingTextViewport(text: current).frame(height: 76)
-                Button("View all thoughts") { showFullText = true }
-                    .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(.secondary)
+                ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
             }
         }
         .popover(isPresented: $showFullText, arrowEdge: .top) {
@@ -757,9 +765,10 @@ private struct ThoughtOutput: View {
 }
 
 /// TextKit keeps wrapped layout for existing text while a reasoning stream appends.
-/// The fixed viewport never asks SwiftUI to measure the full, growing document.
+/// Reuse TextKit layout to fit short thoughts and cap a growing preview at 76 pt.
 private struct ThinkingTextViewport: NSViewRepresentable {
     let text: String
+    @Binding var overflows: Bool
     final class Coordinator {
         var previous = ""
         let attributes = ThoughtTextStyle.attributes
@@ -782,12 +791,14 @@ private struct ThinkingTextViewport: NSViewRepresentable {
         view.textContainer?.widthTracksTextView = true
         view.isHorizontallyResizable = false
         view.isVerticallyResizable = true
+        view.minSize = .zero
         view.autoresizingMask = [.width]
         view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         scroll.documentView = view
         return scroll
     }
     func updateNSView(_ scroll: FollowingThoughtScrollView, context: Context) {
+        scroll.overflowChanged = { if overflows != $0 { overflows = $0 } }
         guard context.coordinator.previous != text,
               let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
         let prior = context.coordinator.previous
@@ -801,12 +812,23 @@ private struct ThinkingTextViewport: NSViewRepresentable {
         scroll.scheduleFollow()
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: FollowingThoughtScrollView, context: Context) -> CGSize? {
-        CGSize(width: proposal.width ?? 760, height: 76)
+        let width = proposal.width ?? 760
+        return CGSize(width: width, height: min(76, nsView.textHeight(width: width)))
     }
 }
 
 /// Follow only within the thought viewport. Reading older thoughts pauses following.
 private final class FollowingThoughtScrollView: NSScrollView {
+    var overflowChanged: (Bool) -> Void = { _ in }
+
+    func textHeight(width: CGFloat) -> CGFloat {
+        guard let text = documentView as? NSTextView, let container = text.textContainer,
+              let layout = text.layoutManager else { return 0 }
+        text.setFrameSize(NSSize(width: width, height: text.frame.height))
+        layout.ensureLayout(for: container)
+        text.sizeToFit()
+        return text.frame.height
+    }
     private var followsLatest = true
     private var followScheduled = false
     private var scrollObservation: NSObjectProtocol?
@@ -829,15 +851,17 @@ private final class FollowingThoughtScrollView: NSScrollView {
         if changed { scheduleFollow() }
     }
     func scheduleFollow() {
-        guard followsLatest, !followScheduled else { return }
+        guard !followScheduled else { return }
         followScheduled = true
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.followScheduled = false
-            guard self.followsLatest, let text = self.documentView as? NSTextView else { return }
+            guard let text = self.documentView as? NSTextView else { return }
             self.layoutSubtreeIfNeeded()
             if let container = text.textContainer { text.layoutManager?.ensureLayout(for: container) }
             text.sizeToFit()
+            self.overflowChanged(text.bounds.height > self.contentView.bounds.height + 0.5)
+            guard self.followsLatest else { return }
             let bottom = max(0, text.bounds.maxY - self.contentView.bounds.height)
             self.contentView.scroll(to: NSPoint(x: 0, y: bottom))
             self.reflectScrolledClipView(self.contentView)

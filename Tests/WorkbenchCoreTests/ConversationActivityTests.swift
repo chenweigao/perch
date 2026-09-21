@@ -65,5 +65,17 @@ func checkConversationActivity() throws {
                  "A returned result without its call still needs attention")
     let shell = VisibleTool(id: "shell", name: "Bash", input: .object(["command": .string("echo fixture")]), status: .running)
     precondition(ConversationActivity.summary(of: shell) == "Bash", "Raw commands belong in expanded details")
+    let described = try messages(#"[{"id":"cmd","role":"assistant","created_at":"","content":[{"type":"tool_use","tool_call_id":"cmd","tool_name":"Bash","input":{"description":"Run activity checks","command":"swift run WorkbenchChecks"}}]}]"#)
+    let executing = ConversationActivity(messages: user + described, isRunning: true, running: ["cmd"])
+    precondition(executing.operationDescription == "Run activity checks")
+    precondition(active.operationDescription == nil, "Without a description, keep the localized operation title")
+    for activity in [
+        ConversationActivity(messages: user + described, isRunning: true, running: ["cmd"], pendingCount: 2),
+        ConversationActivity(messages: user + described, isRunning: true, running: ["cmd"], online: false),
+        ConversationActivity(messages: user + described, isRunning: true, running: ["cmd"], isStopping: true),
+        ConversationActivity(messages: user + described, isRunning: false, running: ["cmd"])
+    ] {
+        precondition(activity.operationDescription == nil, "Tool descriptions must not mask approval, disconnect, stop or ended states")
+    }
     print("Conversation activity: live/history dedup, result precedence, disconnect, approval, stop and turn isolation passed")
 }
