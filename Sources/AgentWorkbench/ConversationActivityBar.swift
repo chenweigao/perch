@@ -46,9 +46,12 @@ struct ConversationActivityBar: View {
                     Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
                             if activity.animates { ConversationBusyIndicator() }
-                            else { Image(systemName: activity.symbol).frame(width: 16) }
-                            Text(!isRunning && !activity.needsAttention && timing?.endedAt != nil
-                                 ? LocalizedStringKey("本轮结束") : LocalizedStringKey(activity.title))
+                            else {
+                                Image(systemName: activity.symbol).frame(width: 16)
+                                    .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
+                            }
+                            statusTitle
+                                .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
                                 .lineLimit(1).truncationMode(.tail)
                                 .contentTransition(.opacity)
                                 .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.title)
@@ -60,8 +63,8 @@ struct ConversationActivityBar: View {
                             }.foregroundStyle(.secondary).layoutPriority(-1)
                             Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
                         }.contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel("Task activity")
-                        .accessibilityValue(activity.title).help("Show task plan and current activity")
+                    }.buttonStyle(.plain).accessibilityLabel(Text("本轮活动"))
+                        .accessibilityValue(statusTitle).help("查看本轮活动与计划")
                         .highPriorityGesture(SpatialTapGesture().onEnded { value in
                             pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
                             expanded.toggle()
@@ -70,17 +73,25 @@ struct ConversationActivityBar: View {
                                  attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
                                  arrowEdge: .top) { details }
                     if !online {
-                        Button("Reconnect", action: onReconnect).buttonStyle(.borderless)
+                        Button("重新连接", action: onReconnect).buttonStyle(.borderless)
                     } else if pendingCount > 0 {
-                        Button("Review") { onReview() }.buttonStyle(.borderless)
+                        Button("查看") { onReview() }.buttonStyle(.bordered).controlSize(.small).tint(.orange)
                     }
                 }.font(.system(size: 12))
-                    .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 13).frame(height: 36).workbenchFloatingSurface()
                     .transition(reduceMotion ? .identity : .opacity)
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
+    }
+
+    private var statusTitle: Text {
+        if !online { return Text(LocalizedStringKey(activity.title)) }
+        if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
+        if !isRunning && !activity.needsAttention && timing?.endedAt != nil { return Text("本轮结束") }
+        if let description = activity.operationDescription { return Text(verbatim: description) }
+        return Text(LocalizedStringKey(activity.title))
     }
 
     @ViewBuilder private var counts: some View {
@@ -95,28 +106,37 @@ struct ConversationActivityBar: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("Task plan", systemImage: "checklist").font(.system(size: 13, weight: .semibold))
+                Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: 13, weight: .semibold))
                 Spacer()
-                if !activity.todos.isEmpty {
-                    Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(.secondary)
-                }
                 Button { expanded = false } label: { Image(systemName: "xmark") }
-                    .buttonStyle(.plain).accessibilityLabel("Close activity details")
+                    .buttonStyle(.plain).accessibilityLabel(Text("关闭活动详情"))
             }
             if !online {
-                Text("Updates are disconnected. Tool states below are the last known states.").foregroundStyle(.secondary)
-                Button("Reconnect") { expanded = false; onReconnect() }
+                Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(.secondary)
+                Button("重新连接") { expanded = false; onReconnect() }
             } else if pendingCount > 0 {
-                Text("\(pendingCount) pending \(pendingCount == 1 ? "request" : "requests") in this conversation.").foregroundStyle(.secondary)
-                Button("Review in conversation") { expanded = false; onReview() }
-            }
-            if let timing {
-                ActivityTurnClock(timing: timing, showsDetails: true)
-                Divider()
+                Label { Text("等待你确认 · \(pendingCount) 项") } icon: { Image(systemName: "hand.raised") }
+                    .foregroundStyle(.orange)
+                Button("查看") { expanded = false; onReview() }.buttonStyle(.bordered).tint(.orange)
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if !activity.attentionTools.isEmpty {
+                        Text("需要处理").fontWeight(.semibold).foregroundStyle(.orange)
+                        ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
+                    }
+                    if !activity.activeTools.isEmpty {
+                        Text("当前操作").fontWeight(.semibold)
+                        ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
+                    } else if online && pendingCount == 0 && activity.attentionTools.isEmpty {
+                        statusTitle.foregroundStyle(.secondary)
+                    }
                     if !activity.todos.isEmpty {
+                        HStack {
+                            Text("任务计划").fontWeight(.semibold)
+                            Spacer()
+                            Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(.secondary)
+                        }
                         ForEach(activity.todos) { item in
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
@@ -126,21 +146,13 @@ struct ConversationActivityBar: View {
                             }.accessibilityElement(children: .combine)
                                 .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
                         }
-                    } else {
-                        Text("No plan reported yet.").foregroundStyle(.secondary)
-                    }
-                    if !activity.attentionTools.isEmpty {
-                        Divider()
-                        Text("Needs attention").fontWeight(.semibold).foregroundStyle(.orange)
-                        ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
-                    }
-                    if !activity.activeTools.isEmpty {
-                        Divider()
-                        Text("Current activity").fontWeight(.semibold)
-                        ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
+            if let timing {
+                Divider()
+                ActivityTurnClock(timing: timing, showsDetails: true)
+            }
         }.font(.system(size: 12)).padding(16).frame(width: 390)
     }
 }

@@ -178,9 +178,16 @@ AppKit's spinning progress indicator supplies visible motion in the activity bar
 running sidebar rows without a SwiftUI animation timer. Reduce Motion shows a static
 hourglass; sidebar attention/review/idle states also have distinct visual indicators.
 
-The TodoList popover anchors to the pointer position within the task-bar button,
+The turn activity popover anchors to the pointer position within the task-bar button,
 held still while open. Keyboard/accessibility activation without a pointer uses
 the button bounds, and AppKit keeps the popover within screen bounds.
+
+The bar uses the active tool's description when available, otherwise a localized
+operation label. Approval, disconnection and stopping states take precedence over
+tool descriptions. Pending input shows its count and a direct review button;
+attention colors apply to the status and action, leaving elapsed time neutral.
+Details show tools needing attention, current operations and then the plan. An
+absent plan has no placeholder; a turn without tools shows its current status.
 
 The activity clock belongs to the connection and is keyed by session and turn;
 switching views does not restart it. A request submitted by this client displays

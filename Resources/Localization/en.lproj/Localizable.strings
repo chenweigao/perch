@@ -310,3 +310,11 @@
 "Connection lost" = "Connection lost";
 "Review tool results" = "Review tool results";
 "Plan remaining" = "Plan remaining";
+"本轮活动" = "Turn activity";
+"查看本轮活动与计划" = "Show this turn’s activity and plan";
+"查看" = "Review";
+"等待你确认 · %lld 项" = "Waiting for you · %lld items";
+"关闭活动详情" = "Close activity details";
+"连接已断开，以下为最后收到的工具状态。" = "Connection lost. Tool states below are the last received states.";
+"当前操作" = "Current activity";
+"任务计划" = "Task plan";
