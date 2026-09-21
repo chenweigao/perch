@@ -9,33 +9,36 @@ func checkConversationPresentation() throws {
      {"id":"b","role":"assistant","created_at":"3","content":[{"type":"text","text":"修复已写入"},{"type":"tool_use","tool_call_id":"y","tool_name":"write"}]}]
     """)
     let running = ConversationTimelineEntry.make(progress, isRunning: true)
-    precondition(running.last?.presentation == .progress && running.last?.messages.first?.id == "b")
+    precondition(running.map(\.presentation) == [.message, .progress, .activity, .progress, .activity])
+    precondition(running.flatMap(\.messages).flatMap(\.content) == progress.flatMap(\.content),
+                 "Tool summaries must remain between the progress messages that surround them")
     let reorderedTools = ConversationTimelineEntry.make([progress[0], progress[2], progress[1]], isRunning: true)
-    precondition(running.first(where: \.activity)?.id == reorderedTools.first(where: \.activity)?.id,
-                 "Activity identity belongs to the user turn, independent of live/persisted tool order")
+    precondition(running.filter(\.activity).map(\.id) == reorderedTools.filter(\.activity).map(\.id).reversed(),
+                 "Each tool retains its own identity when source order changes")
     let noSummary = ConversationTimelineEntry.make(progress)
-    precondition(noSummary.last?.presentation == .record && noSummary.last?.messages.map(\.id) == ["b"])
-    precondition(noSummary.last?.messages.flatMap(\.content).allSatisfy { $0.type == "text" } == true)
+    precondition(noSummary.last(where: { !$0.activity })?.presentation == .record && noSummary.last(where: { !$0.activity })?.messages.map(\.id) == ["b"])
+    precondition(noSummary.last(where: { !$0.activity })?.messages.flatMap(\.content).allSatisfy { $0.type == "text" } == true)
     let final = try messages("""
     [{"id":"final","role":"assistant","created_at":"4","content":[{"type":"text","text":"已经修复"}]}]
     """)
     let done = ConversationTimelineEntry.make(progress + final)
     precondition(done.last?.presentation == .message && done.last?.messages.first?.id == "final")
-    precondition(done.filter(\.activity).count == 1)
+    precondition(done.filter(\.activity).count == 2)
+    precondition(done.filter(\.activity).map(\.id) == running.filter(\.activity).map(\.id))
     let thoughts = try messages("""
     [{"id":"t","role":"assistant","created_at":"1","content":[{"type":"thinking","thinking":"正在分析中文问题"}]},
      {"id":"x","role":"assistant","created_at":"2","content":[{"type":"tool_use","tool_call_id":"z","tool_name":"read"}]}]
     """)
-    precondition(ConversationTimelineEntry.make(thoughts, isRunning: true).last?.presentation == .thinkingPreview)
-    precondition(ConversationTimelineEntry.make(thoughts).last?.presentation == .thinkingRecord)
+    precondition(ConversationTimelineEntry.make(thoughts, isRunning: true).first?.presentation == .thinkingDetails)
+    precondition(ConversationTimelineEntry.make(thoughts).first?.presentation == .thinkingRecord)
     precondition(ConversationTimelineEntry.make([thoughts[1]]).last?.presentation == .emptyOutput)
     let multipleTurns = ConversationTimelineEntry.make(progress + [progress[0]] + thoughts, isRunning: true)
     precondition(multipleTurns.contains { $0.presentation == .record }, "Earlier no-summary turns retain their commentary")
-    precondition(multipleTurns.last?.presentation == .thinkingPreview)
+    precondition(multipleTurns.last?.presentation == .activity)
 
     // Successive reasoning/progress phases remain chronological and independently readable.
     let mixed = ConversationTimelineEntry.make(progress + thoughts, isRunning: true)
-    precondition(mixed.last?.presentation == .thinkingPreview && mixed.last?.messages[0].id == "t")
+    precondition(mixed.last(where: { !$0.activity })?.presentation == .thinkingDetails && mixed.last(where: { !$0.activity })?.messages[0].id == "t")
     precondition(mixed.filter { $0.presentation == .progress }.flatMap(\.messages).map(\.id) == ["a", "b"])
     precondition(mixed.filter(\.activity).flatMap(\.messages).flatMap(\.content).allSatisfy { $0.type == "tool_use" })
     precondition(Set(mixed.map(\.id)).count == mixed.count, "Channels from one message need distinct SwiftUI identities")
@@ -43,9 +46,10 @@ func checkConversationPresentation() throws {
     [{"id":"both","role":"assistant","created_at":"4","content":[{"type":"thinking","thinking":"继续分析"},{"type":"text","text":"阶段概要"},{"type":"tool_use","tool_call_id":"r","tool_name":"read"}]}]
     """)
     let separated = ConversationTimelineEntry.make(both, isRunning: true)
-    precondition(separated.map(\.presentation) == [.activity, .thinkingDetails, .progress])
+    precondition(separated.map(\.presentation) == [.thinkingDetails, .progress, .activity])
     precondition(separated.flatMap(\.messages).flatMap(\.content).count == 3, "Partition each part exactly once")
-    let firstThought = ConversationTimelineEntry.make(thoughts, isRunning: true).last!
+    let firstThought = ConversationTimelineEntry.make([thoughts[0]], isRunning: true).last!
+    precondition(firstThought.presentation == .thinkingPreview)
     let nextPhase = ConversationTimelineEntry.make(thoughts + both, isRunning: true)
     let preserved = nextPhase.first { $0.id == firstThought.id }!
     precondition(preserved.presentation == .thinkingDetails && preserved.messages == firstThought.messages,
@@ -54,7 +58,7 @@ func checkConversationPresentation() throws {
     let readable = updated.filter { !$0.activity }
     precondition(readable.map { $0.messages[0].id } == ["both", "both", "t", "final"])
     precondition(readable.map(\.presentation) == [.thinkingDetails, .progress, .thinkingDetails, .progress])
-    precondition(updated.contains { $0 == separated.last! }, "A later overview cannot replace the earlier overview")
+    precondition(updated.contains { $0 == separated.first(where: { $0.presentation == .progress })! }, "A later overview cannot replace the earlier overview")
     let interleaved = try messages("""
     [{"id":"stream","role":"assistant","created_at":"5","content":[{"type":"thinking","thinking":"第一阶段思考"},{"type":"text","text":"第一阶段概要"},{"type":"thinking","thinking":"第二阶段思考"},{"type":"text","text":"第二阶段概要"}]}]
     """)
@@ -71,7 +75,7 @@ func checkConversationPresentation() throws {
     precondition(context[0].content[0].isRuntimeContext)
     precondition(ConversationTimelineEntry.make(context).allSatisfy(\.activity), "Runtime context alone is not a completed agent response")
     let withContext = ConversationTimelineEntry.make(progress + context, isRunning: true)
-    precondition(withContext.last?.presentation == .progress && withContext.last?.messages.first?.id == "b")
+    precondition(withContext.last?.activity == true && withContext.last?.messages.first?.id == "context")
     // Cached presentation is exactly the uncached policy across live edits, completion,
     // pagination and a switch to a different conversation (no ID/count-only invalidation).
     let projection = ConversationProjection()

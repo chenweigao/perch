@@ -1,8 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Active/attention rows stay in one ForEach as history arrives. Only completed
-/// rows depend on the execution disclosure; public text lives in separate entries.
+/// Every tool keeps a visible summary in source order; only its payload folds.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
     @RememberedExpansion("expanded") private var expanded
@@ -12,21 +11,16 @@ struct KimiActivityView: View {
     let sessionId: String
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let completed = items.filter { !$0.staysVisible }.count
         let context = entry.messages.filter { $0.content.contains(where: \.isRuntimeContext) }
         VStack(alignment: .leading, spacing: 4) {
-            if completed > 0 || !context.isEmpty {
-                Button { expanded.toggle() } label: {
-                    HStack(spacing: 7) {
-                        Image(systemName: "chevron.right").font(.system(size: 9)).rotationEffect(.degrees(expanded ? 90 : 0))
-                        Text(completed == 0 ? "Runtime context" : "Execution · \(completed) completed")
-                        Spacer(minLength: 0)
-                    }.font(.system(size: 12)).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
-            }
             ForEach(items) { tool in
-                if tool.staysVisible || expanded { KimiToolCard(tool: tool).environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id) }
+                KimiToolCard(tool: tool).environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
+            }
+            if !context.isEmpty {
+                Button { expanded.toggle() } label: {
+                    Label("Runtime context", systemImage: expanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
             }
             if expanded {
                 ForEach(context) { message in
@@ -85,8 +79,8 @@ struct KimiToolCard: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: symbol).font(.system(size: 11))
-                Text(summary).lineLimit(1).truncationMode(.middle)
-                if summary != tool.name { Text(tool.name).font(.system(size: 10)).foregroundStyle(.tertiary) }
+                Text(tool.name).lineLimit(1)
+                if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary) }
                 Spacer(minLength: 0)
                 Text(tool.hasCall ? label : "\(label) · Call record missing").font(.system(size: 10))
             }.font(.system(size: 12)).foregroundStyle(attention ? Color.orange : Color.secondary)

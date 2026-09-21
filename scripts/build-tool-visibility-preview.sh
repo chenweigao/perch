@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 bin_dir="$(swift build -c release --show-bin-path)"
 app_dir="$PWD/build/Tool Visibility Preview.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$')

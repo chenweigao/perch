@@ -7,11 +7,9 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
     public let presentation: Presentation
     public var activity: Bool { presentation == .activity }
     private let partOffset: Int
-    private var activityAnchor: String? = nil
     public var id: String {
         // A tool can start in live state, arrive as an orphan result, then gain its
         // persisted call. Its activity host must survive all three source IDs.
-        if presentation == .activity, let activityAnchor { return "activity:turn:\(activityAnchor)" }
         if presentation == .activity, let toolID = messages.flatMap(\.content).compactMap(\.toolCallId).first {
             return "activity:tool:\(toolID)"
         }
@@ -26,7 +24,6 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
 
     public static func make(_ messages: [KimiMessage], isRunning: Bool = false) -> [Self] {
         var entries: [Self] = [], turn: [KimiMessage] = []
-        var turnAnchor: String?
         func visible(_ part: KimiPart) -> Bool {
             (part.type == "text" && !part.isRuntimeContext && !(part.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 || ["image", "file", "video"].contains(part.type)
@@ -36,17 +33,10 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
             guard !turn.isEmpty else { return }
             let answer = turn.lastIndex { $0.role == "assistant" && $0.content.contains(where: visible) && !$0.content.contains { $0.type == "tool_use" } }
             let final = answer.flatMap { index in turn[(index + 1)...].contains { $0.content.contains { $0.type == "tool_use" } } ? nil : index }
-            let details = turn.compactMap { message -> KimiMessage? in
-                let content = message.content.filter { $0.type == "tool_use" || $0.isRuntimeContext }
-                return content.isEmpty ? nil : KimiMessage(id: message.id, role: message.role, content: content, createdAt: message.createdAt)
-            }
-            if !details.isEmpty { entries.append(Self(messages: details, presentation: .activity, partOffset: 0, activityAnchor: turnAnchor)) }
-
-            // Preserve the source order of reasoning and public progress. A new step
-            // appends a new row instead of replacing a turn-wide preview or overview.
+            // Preserve source order across thoughts, progress, tools and runtime context.
             var phases: [(message: KimiMessage, offset: Int)] = []
             for message in turn {
-                for (offset, part) in message.content.enumerated() where visible(part) || thinking(part) {
+                for (offset, part) in message.content.enumerated() where visible(part) || thinking(part) || part.type == "tool_use" || part.isRuntimeContext {
                     phases.append((KimiMessage(id: message.id, role: message.role, content: [part], createdAt: message.createdAt), offset))
                 }
             }
@@ -54,7 +44,10 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
             let lastText = phases.lastIndex { visible($0.message.content[0]) }
             for (index, phase) in phases.enumerated() {
                 let presentation: Presentation
-                if thinking(phase.message.content[0]) {
+                let part = phase.message.content[0]
+                if part.type == "tool_use" || part.isRuntimeContext {
+                    presentation = .activity
+                } else if thinking(part) {
                     presentation = running && index == phases.count - 1 ? .thinkingPreview
                         : !running && !hasText ? .thinkingRecord : .thinkingDetails
                 } else if !running, let final, phase.message.id == turn[final].id {
@@ -64,7 +57,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 }
                 entries.append(Self(messages: [phase.message], presentation: presentation, partOffset: phase.offset))
             }
-            if phases.isEmpty && !running && turn.contains(where: { $0.role == "assistant" }) {
+            if !hasText && !phases.contains(where: { thinking($0.message.content[0]) }) && !running && turn.contains(where: { $0.role == "assistant" }) {
                 entries.append(Self(messages: [turn[0]], presentation: .emptyOutput, partOffset: 0))
             }
             turn = []
@@ -72,7 +65,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
         for message in messages where !message.content.isEmpty {
             if message.role == "tool" || message.content.allSatisfy({ $0.type == "tool_result" }) { continue }
             let user = message.role == "user" && !message.content.allSatisfy(\.isRuntimeContext)
-            if user { flush(running: false); turnAnchor = message.id; entries.append(Self(messages: [message], presentation: .message, partOffset: 0)) }
+            if user { flush(running: false); entries.append(Self(messages: [message], presentation: .message, partOffset: 0)) }
             else { turn.append(message) }
         }
         flush(running: isRunning)
