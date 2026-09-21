@@ -50,14 +50,17 @@ final class RemoteFileBrowser: ObservableObject {
 
     func submit() { open(input) }
 
-    func open(_ requested: String, line: Int? = nil) {
+    func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false) {
         targetLine = line
         mode = .file
         guard let host else { error = "当前会话没有可用的远端主机。"; return }
         let resolved: String
+        let command: String
         do {
             try SSHCommand.validateDestination(host.destination)
             resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
+            command = fromConversation ? try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd)
+                                       : RemoteFileCommand.remoteCommand(path: resolved)
         } catch {
             self.error = error.localizedDescription
             return
@@ -69,8 +72,13 @@ final class RemoteFileBrowser: ObservableObject {
         input = resolved
         loading = true
         error = nil
-        run(RemoteFileCommand.remoteCommand(path: resolved), destination: host.destination, token: token) { browser, data in
-            browser.content = try RemoteFileCommand.parse(data)
+        run(command, destination: host.destination, token: token) { browser, data in
+            let content = try RemoteFileCommand.parse(data)
+            if case .matches(let paths) = content, paths.count == 1 {
+                browser.open(paths[0], line: line)
+            } else {
+                browser.content = content
+            }
         } failed: { browser in
             browser.content = nil
         }
@@ -391,6 +399,23 @@ struct RemoteFilePanel: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             switch browser.content {
+            case .matches(let paths):
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("找到多个同名文件，请选择：")
+                        .font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, 14)
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 1) {
+                            ForEach(paths, id: \.self) { path in
+                                Button { browser.open(path, line: browser.targetLine) } label: {
+                                    Text(path).font(.system(size: 12, design: .monospaced))
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
+                                }.buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }.padding(.vertical, 8)
             case .directory(let entries):
                 if entries.isEmpty { notice("空目录。", symbol: "folder", tint: .secondary) }
                 else {
