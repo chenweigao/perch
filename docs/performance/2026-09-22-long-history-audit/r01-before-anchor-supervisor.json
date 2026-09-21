@@ -1,0 +1,11 @@
+{
+  "status": "exited",
+  "mode": "anchor",
+  "timeout_s": 120,
+  "binary_sha256": "fa77575cb7e6fce5c3f5f881263bc683c1864ebe911c2b34c9e9ced766680002",
+  "pid": 10016,
+  "exit_code": -9,
+  "elapsed_s": 12.034403292,
+  "passed": false,
+  "failure": "missing final report"
+}

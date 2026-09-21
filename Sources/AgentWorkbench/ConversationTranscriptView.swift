@@ -128,6 +128,10 @@ private final class ConversationDocumentView: NSView {
     #if TRANSCRIPT_CHECKS
     fileprivate var retainedHostCount: Int { controllers.count }
     fileprivate var mountedHostCount: Int { mounted.count }
+    fileprivate var readingAnchor: (entry: String, offset: CGFloat)? {
+        guard let row = geometry.readingRow(at: viewportRect.minY), contents.indices.contains(row) else { return nil }
+        return (contents[row].entry.id, viewportRect.minY - offsets[row])
+    }
     #endif
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -169,7 +173,13 @@ private final class ConversationDocumentView: NSView {
     func configure(_ next: [ConversationEntryView], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
                    contentOriginY: CGFloat) {
-        self.contentOriginY = contentOriginY
+        // An older page changes every subsequent row's y, but not the reader's
+        // message or offset inside it. Capture using the outgoing geometry.
+        if self.sessionId == sessionId, let first = contents.first?.entry.id,
+           next.first?.entry.id != first, next.contains(where: { $0.entry.id == first }) {
+            saveReadingPosition()
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+        }
         if self.viewport !== viewport {
             self.viewport?.remove(self)
             self.viewport = viewport
@@ -190,6 +200,7 @@ private final class ConversationDocumentView: NSView {
             publishedHeight = nil
             self.sessionId = sessionId
         }
+        self.contentOriginY = contentOriginY
         let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
         contents = next
         indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
@@ -205,6 +216,7 @@ private final class ConversationDocumentView: NSView {
         }
         rebuildOffsets()
         observeScroll()
+        restoreReadingPosition()
         refreshVisibleRows()
         publishHeight()
     }
@@ -433,6 +445,13 @@ private final class ConversationDocumentView: NSView {
 
 #if TRANSCRIPT_CHECKS
 extension ConversationTranscript {
+    static func readingAnchor(in root: NSView) -> (entry: String, offset: CGFloat)? {
+        if let document = root as? ConversationDocumentView { return document.readingAnchor }
+        for view in root.subviews {
+            if let anchor = readingAnchor(in: view) { return anchor }
+        }
+        return nil
+    }
     /// Fixture-only inspection includes detached hosts, which a view-tree count misses.
     static func retainedHosts(in root: NSView) -> (retained: Int, mounted: Int)? {
         if let document = root as? ConversationDocumentView {

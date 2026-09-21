@@ -1,0 +1,10 @@
+{
+  "status": "exited",
+  "mode": "anchor",
+  "timeout_s": 120,
+  "binary_sha256": "6b5b00d62deb3424ff9c5c6aa9bf61d8830713986d1ae7a49bfd8ecef3e2b92e",
+  "pid": 32351,
+  "exit_code": 0,
+  "elapsed_s": 6.046856958,
+  "passed": true
+}

@@ -1,0 +1,25 @@
+{
+  "added_messages" : 20,
+  "after_entry" : "activity:tool:only-197",
+  "after_offset" : 16,
+  "before_entry" : "activity:tool:only-197",
+  "before_offset" : 16,
+  "build" : {
+    "compiler" : "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256" : "d07f4c9c490f12311e72194d42ed64354f0e8119be4fb7386b465a7e7c6405f4",
+    "package_resolved_sha256" : "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit" : "b66181a577d9612f30bd8441334c16bea0557e06",
+    "source_sha256" : "4a4e6128034455b7db5b8ec5c2ce1a5e1547c5b2485f7f827a0dbeaedddb85a8"
+  },
+  "commit" : "b66181a577d9612f30bd8441334c16bea0557e06",
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "message_count" : 540,
+  "mode" : "anchor",
+  "preserved" : true,
+  "recreates_timeline" : false,
+  "sessions" : 500,
+  "status" : "passed",
+  "timestamp" : "2026-09-21T18:29:41Z"
+}

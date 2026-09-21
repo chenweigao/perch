@@ -334,6 +334,7 @@ final class NavigationRunner {
         guard let host = model.host else { throw NavigationError("missing host") }
         _ = try await switchTo(target, host: host)
         guard let scroll = findScrollView(host) else { throw NavigationError("no transcript scroll") }
+        let initialRSS = residentMB()
         let expression = try NSRegularExpression(pattern: "第 ([0-9]+) 轮")
         let lastEntryID = model.conversation.map {
             ConversationProjection().update($0.displayMessages, isRunning: false).entries.last?.id
@@ -393,6 +394,8 @@ final class NavigationRunner {
         let result: [String: Any] = ["observed_turns": turns.sorted(), "tail_found": tailFound,
                                    "reading_step_ms": statistics(steps), "document_height_after_reading": documentHeight]
         var report = result
+        report["resident_mb_before_reading"] = initialRSS
+        report["resident_mb_after_downward"] = residentMB()
         #if TRANSCRIPT_CHECKS
         // Reproduce reading upward after a long downward traversal. Inspect the
         // controller cache as well as mounted views; detached hosts used to grow
@@ -422,6 +425,7 @@ final class NavigationRunner {
         report["upward_reading_step_ms"] = statistics(upwardSteps)
         report["upward_reading_samples_ms"] = upwardSteps
         report["upward_host_counts"] = retention
+        report["resident_mb_after_upward"] = residentMB()
         #endif
         report["warm_scroll"] = try await scrollFrames()
         report["switch_after_full_reading"] = try await clickLatency()
@@ -435,6 +439,52 @@ final class NavigationRunner {
         report["cleanup_main_actor_delay_ms"] = statistics(pulseDelay)
         return report
     }
+
+    #if TRANSCRIPT_CHECKS
+    /// Does an arriving older page preserve the exact row and intra-row offset?
+    /// Use the production prepend and native document, with no remote state.
+    func prependAnchor() async throws -> [String: Any] {
+        let target = model.scope.sessions[0].id
+        try model.warm([target])
+        guard let host = model.host else { throw NavigationError("missing host") }
+        _ = try await switchTo(target, host: host)
+        guard let scroll = findScrollView(host) else { throw NavigationError("no transcript scroll") }
+        func settle() async throws {
+            for _ in 0..<20 {
+                try await Task.sleep(for: .milliseconds(16))
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            }
+        }
+        let fromBottom = ProcessInfo.processInfo.environment["NAVIGATION_ANCHOR_FROM_BOTTOM"] == "1"
+        if fromBottom {
+            for _ in 0..<4 {
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: max(0, (scroll.documentView?.bounds.height ?? 0) - scroll.contentView.bounds.height)))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                try await settle()
+            }
+        }
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: fromBottom ? scroll.contentView.bounds.minY - 1200 : 1800))
+        scroll.reflectScrolledClipView(scroll.contentView)
+        try await settle()
+        guard let before = ConversationTranscript.readingAnchor(in: scroll) else { throw NavigationError("missing initial anchor") }
+        let records = (0..<20).map { index in
+            ["id": "older-\(index)", "role": index % 2 == 0 ? "user" : "assistant", "created_at": String(format: "%04d", index),
+             "content": [["type": "text", "text": "更早的消息 \(index)。保留当前正在阅读的内容和位置。"]]] as [String: Any]
+        }
+        let page = try KimiWire.decoder().decode(KimiPage<KimiMessage>.self, from: JSONSerialization.data(withJSONObject: ["items": records, "has_more": false]))
+        ConversationReadingMemory.shared.following[target] = false
+        model.conversation?.prepend(page)
+        try await settle()
+        guard let after = ConversationTranscript.readingAnchor(in: scroll) else { throw NavigationError("missing final anchor") }
+        let passed = before.entry == after.entry && abs(before.offset - after.offset) <= 1
+        let report: [String: Any] = ["before_entry": before.entry, "before_offset": before.offset,
+            "after_entry": after.entry, "after_offset": after.offset, "preserved": passed,
+            "message_count": model.conversation?.messages.count ?? 0, "added_messages": records.count]
+        try writeNavigationArtifact("anchor-detail.json", report)
+        guard passed else { throw NavigationError("prepend moved reading anchor: \(before) -> \(after)") }
+        return report
+    }
+    #endif
 
     /// Workbench → archive → task group → conversation round trips, plus search
     /// keystrokes issued *while* the transcript is being scrolled. The second part
@@ -708,6 +758,7 @@ struct NavigationPreviewApp: App {
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
             if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
+            else if mode == "anchor" { report.merge(try await runner.prependAnchor()) { a, _ in a } }
             else if mode == "scroll" { report.merge(try await runner.scrollFrames()) { a, _ in a } }
             else if mode == "soak" {
                 let seconds = Double(ProcessInfo.processInfo.environment["NAVIGATION_SOAK_SECONDS"] ?? "1260") ?? 1_260
