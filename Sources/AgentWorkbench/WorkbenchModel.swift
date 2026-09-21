@@ -397,11 +397,23 @@ final class WorkbenchModel: ObservableObject {
                               reviewed: item.section != .review, queuedMessages: 0,
                               hasCompletionSignal: pane?.status == "done")
     }
+    /// The inbox narrowing lives in `SessionCatalog.scope`, so the dashboard never
+    /// filters the same sections a second time with different rules.
     var dashboardProjection: DashboardProjection {
-        let scoped = onlyAttention ? scopedSessions.filter { $0.online && $0.section == .attention } : scopedSessions
+        let scoped = scopedSessions
         let subjects = Dictionary(uniqueKeysWithValues: scoped.map { ($0.id, archiveSubject($0)) })
         return DashboardProjection(sessions: scoped, subjects: subjects,
                                    hasEnvironment: !connections.isEmpty, concurrencyLimit: 4)
+    }
+    /// The group being worked on, what could not be restored, and any local-storage
+    /// failure. A save or read failure used to be recorded and never shown.
+    var dashboardContext: DashboardContext {
+        let group = selectedGroup
+        let missing = group?.sessions.filter { reference in
+            !allSessions.contains { $0.reference == reference }
+        } ?? []
+        return DashboardContext(group: group, resume: groupResumeSession, missing: missing,
+                                pendingRestoration: pendingRestoration, storageError: workspaceError)
     }
     /// Runs one batch to completion. Each item is re-validated immediately before
     /// its request, and the catalog is refreshed once at the end rather than per

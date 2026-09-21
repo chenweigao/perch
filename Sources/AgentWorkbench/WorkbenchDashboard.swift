@@ -7,6 +7,7 @@ import WorkbenchCore
 struct WorkbenchDashboard: View {
     var attentionOnly = false
     let projection: DashboardProjection
+    var context = DashboardContext()
     let groups: [WorkItemGroup]
     let selectedGroupID: UUID?
     let isArchiving: Bool
@@ -15,6 +16,9 @@ struct WorkbenchDashboard: View {
     let onNewTask: () -> Void
     let onOpen: (WorkspaceSession) -> Void
     let onMarkReviewed: (WorkspaceSession) -> Void
+    let onEditGroup: () -> Void
+    let onResume: (WorkspaceSession) -> Void
+    let onForgetRestoration: (SavedTerminal) -> Void
     let onArchive: () -> Void
     let onUndoArchive: () -> Void
     let onRetryArchive: () -> Void
@@ -24,7 +28,12 @@ struct WorkbenchDashboard: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
-                if !attentionOnly { header }
+                if let error = context.storageError { storageBanner(error) }
+                if !attentionOnly {
+                    header
+                    if let group = context.group { groupCard(group) }
+                    if !context.pendingRestoration.isEmpty { restoration }
+                }
                 if attentionOnly && projection.sections.isEmpty {
                     Label("暂时没有需要你处理的事项", systemImage: "checkmark.circle")
                         .foregroundStyle(.secondary).padding(.vertical, 24)
@@ -82,25 +91,105 @@ struct WorkbenchDashboard: View {
             .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
     }
 
+    /// The task group loop: the goal being pursued, the next step written at the end of
+    /// the last round, and a way back into the session it was written about. Without it
+    /// the group's own notes are only reachable through the editor sheet.
+    private func groupCard(_ group: WorkItemGroup) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(group.name).font(.system(size: 15, weight: .medium))
+                Spacer()
+                Button("编辑任务组") { onEditGroup() }.font(.caption)
+            }
+            if !group.goal.isEmpty {
+                Text(group.goal).font(.system(size: 12)).foregroundStyle(.secondary)
+                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            }
+            Label("下一步", systemImage: "arrow.turn.down.right").font(.system(size: 12, weight: .semibold))
+            Text(group.nextStep.isEmpty ? "还没有下一步。结束这一轮时，写下回来后要做的第一件事。" : group.nextStep)
+                .font(.system(size: 13)).foregroundStyle(group.nextStep.isEmpty ? Color.secondary : Color.primary)
+                .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Text("关联 \(group.sessions.count) 个会话 · 名称与笔记只保存在本机")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                if let resume = context.resume {
+                    Button("继续上次会话") { onResume(resume) }.font(.caption).disabled(!resume.online)
+                }
+            }
+            ForEach(context.missing) { reference in
+                Label("关联\(reference.kind.label)尚未出现在当前列表：\(reference.terminalID)",
+                      systemImage: "questionmark.folder").font(.caption).foregroundStyle(.secondary)
+            }
+        }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Restore only reattaches the same remote session, so a reference that is missing
+    /// or not yet connected stays a visible waiting list instead of disappearing.
+    private var restoration: some View {
+        DisclosureGroup("等待恢复 · \(context.pendingRestoration.count) 个会话") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("连接后接回原会话；未找到的会话保留在这里，确认后可以移除。")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(context.pendingRestoration, id: \.session.id) { saved in
+                    HStack {
+                        Label(saved.title, systemImage: saved.session.kind.symbol).font(.callout).lineLimit(1)
+                        Spacer()
+                        Button("不再恢复") { onForgetRestoration(saved) }.font(.caption)
+                    }
+                }
+            }.padding(.top, 10)
+        }.padding(18).background(Color.orange.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// A failed read or write of the local workspace was recorded and never shown, so
+    /// pins, groups and reviewed versions could stop persisting while the UI looked fine.
+    private func storageBanner(_ message: String) -> some View {
+        Label(message, systemImage: "exclamationmark.triangle")
+            .font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+    }
+
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
-        HStack(spacing: 0) {
+        let time = SessionTime.label(since: item.updatedAt, waiting: section == .attention)
+        let spoken = time.map { "\(item.title)，\(item.detail)，\($0)" } ?? "\(item.title)，\(item.detail)"
+        return HStack(spacing: 0) {
             Button { onOpen(item) } label: {
                 HStack(spacing: 12) {
                     Image(systemName: item.reference.kind.symbol).foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
                         // Detail text comes from existing metadata; no model request writes it.
-                        Text("\(item.hostName) · \(item.detail) · \(item.directory)")
-                            .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                        Text(metadata(item)).font(.system(size: 11)).foregroundStyle(.secondary)
+                            .lineLimit(1).truncationMode(.middle)
                     }.frame(maxWidth: .infinity, alignment: .leading)
+                    // How long something has waited is the reason to open it next, so the
+                    // time keeps its own space rather than sharing the truncated line.
+                    if let time {
+                        Text(time).font(.system(size: 11)).monospacedDigit()
+                            .foregroundStyle(section == .attention ? Color.orange : Color.secondary)
+                            .fixedSize()
+                    }
                     if section == .attention { Text("处理").font(.caption).foregroundStyle(.orange) }
                 }.padding(14).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!item.online)
-                .accessibilityLabel("\(item.title)，\(item.detail)")
+                .accessibilityLabel(spoken)
             if item.canMarkReviewed && item.online {
                 Button("已查看") { onMarkReviewed(item) }.font(.caption).padding(.trailing, 14)
             }
         }.background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
             .opacity(item.online ? 1 : 0.5)
+            .help(item.directory.isEmpty ? item.title : "\(item.title)\n\(item.directory)")
+    }
+
+    /// The directory tail identifies the work; the full path stays in the row help so a
+    /// long path cannot push the host and status out of the line.
+    private func metadata(_ item: WorkspaceSession) -> String {
+        var parts = [item.hostName, item.detail]
+        if !item.directory.isEmpty { parts.append(URL(fileURLWithPath: item.directory).lastPathComponent) }
+        return parts.joined(separator: " · ")
     }
 }

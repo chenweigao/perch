@@ -99,13 +99,17 @@ private struct WorkbenchDetail: View {
                     else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
                     else {
                         WorkbenchDashboard(
-                            attentionOnly: model.onlyAttention, projection: model.dashboardProjection, groups: model.workspace.groups,
+                            attentionOnly: model.onlyAttention, projection: model.dashboardProjection,
+                            context: model.dashboardContext, groups: model.workspace.groups,
                             selectedGroupID: model.selectedGroupID, isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
                             onSelectScope: { model.showHome(groupID: $0) },
                             onNewTask: { model.showNewKimi = true },
                             onOpen: { model.open($0) },
                             onMarkReviewed: { model.markReviewed($0) },
+                            onEditGroup: { model.editGroup(model.selectedGroup) },
+                            onResume: { model.open($0, pinned: true) },
+                            onForgetRestoration: { model.forgetRestoration($0) },
                             onArchive: { model.runBatchArchive(model.dashboardProjection.archivePlan) },
                             onUndoArchive: { model.undoBatchArchive() },
                             onRetryArchive: { model.retryBatchArchive() },

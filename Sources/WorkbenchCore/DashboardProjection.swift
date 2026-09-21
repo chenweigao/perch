@@ -25,6 +25,25 @@ public enum DashboardEmptyState: Equatable, Sendable {
     }
 }
 
+/// What the workbench shows above the queue: the task group currently in scope,
+/// saved references that could not be reattached, and a local-storage failure. These
+/// are the states that explain the queue, so they travel beside the projection rather
+/// than being read from the live model by the view.
+public struct DashboardContext: Equatable, Sendable {
+    public let group: WorkItemGroup?
+    public let resume: WorkspaceSession?
+    public let missing: [SessionReference]
+    public let pendingRestoration: [SavedTerminal]
+    public let storageError: String?
+
+    public init(group: WorkItemGroup? = nil, resume: WorkspaceSession? = nil,
+                missing: [SessionReference] = [], pendingRestoration: [SavedTerminal] = [],
+                storageError: String? = nil) {
+        self.group = group; self.resume = resume; self.missing = missing
+        self.pendingRestoration = pendingRestoration; self.storageError = storageError
+    }
+}
+
 /// The workbench is an action surface, so this projection carries only the three
 /// priority sections plus the batch plan. Summaries reuse each session's existing
 /// detail text; nothing here asks a model to describe a session.
@@ -60,7 +79,9 @@ public struct DashboardProjection: Equatable, Sendable {
         else { emptyState = nil }
     }
 
-    public var sections: [DashboardSection] { [attention, running, review].filter { !$0.isEmpty } }
+    /// Handle first, then look at results, and only then watch what is still running:
+    /// the two sections that need a person come before the one that needs patience.
+    public var sections: [DashboardSection] { [attention, review, running].filter { !$0.isEmpty } }
     public var archiveCount: Int { archivePlan.count }
     public var archiveActionTitle: String { "归档已完成 \(archiveCount)" }
 

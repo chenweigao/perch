@@ -17,7 +17,9 @@ public enum SessionCatalog {
             item.archived == showArchived &&
             (group.map { $0.sessions.contains(item.reference) } ?? (hostFilter == nil || hostFilter == item.reference.hostID)) &&
             (search.isEmpty || "\(item.title) \(item.directory) \(item.detail) \(item.hostName)".localizedCaseInsensitiveContains(search)) &&
-            (!onlyAttention || [.attention, .review].contains(item.section))
+            // The inbox is only what needs a person right now. Unread results stay in
+            // the workbench review section, which is also what the sidebar count means.
+            (!onlyAttention || item.section == .attention)
         }
         let favorites = starred.compactMap { reference in sessions.first { $0.reference == reference } }
         let recent = sessions.filter { showArchived || !starred.contains($0.reference) }
