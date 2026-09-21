@@ -219,3 +219,10 @@ turns. Build a local read-only replay with
 `READING_SNAPSHOT=/absolute/path/to/snapshot.json scripts/build-reading-preview.sh`.
 The optional **本地快照** scene uses no API or transport; the private snapshot is copied
 only into ignored build output. A normal fixture build removes that optional resource.
+
+### 滚动与自动跟随
+
+向上滚动立即暂停跟随，不等待离开底部一定距离，避免流式输出与用户滚动争抢位置。
+鼠标滚轮没有触控板滚动阶段时也遵循同一规则；文本增长、布局测量不恢复跟随。
+主动向下滚回底部、拖动滚动条到底部，或点击“返回最新回复”才恢复。
+`python3 scripts/check-scroll-following.py` 在构建后验证原生观察器的暂停、持续输出、方向反转和恢复规则；这不是实际设备滚轮输入的端到端性能测试。
