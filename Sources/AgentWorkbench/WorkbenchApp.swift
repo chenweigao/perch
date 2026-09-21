@@ -23,7 +23,7 @@ struct WorkbenchApp: App {
                 }
             }
             CommandGroup(replacing: .newItem) {
-                Button("新建对话…") { model.showNewKimi = true }.keyboardShortcut("n")
+                Button("新建任务…") { model.showNewKimi = true }.keyboardShortcut("n")
                 Button("添加机器…") { model.showAddHost = true }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("新建远端终端…") { model.showNewTerminal = true }.keyboardShortcut("t")
                     .disabled(!model.selectedConnection.online)

@@ -61,6 +61,7 @@ struct ConnectionChecks {
     }
     @MainActor
     static func main() async throws {
+        try await checkKimiTaskLaunch()
         let fixture = TransportFixture()
         let connection = NativeAgentConnection(host: SSHHost(name: "Fixture", destination: "fixture"), transport: fixture.request)
         try await connection.refresh()

@@ -220,10 +220,9 @@ final class WorkbenchModel: ObservableObject {
     }
     func showInbox() { showHome(); onlyAttention = true }
     func showAllSessions() { showHome(); showSessionDirectory = true }
-    func newKimiCreated() {
+    func newKimiCreated(_ session: KimiSession) {
         search = ""; onlyAttention = false; showArchived = false
-        guard let id = kimi.selectedId, let session = kimi.sessions.first(where: { $0.id == id }) else { return }
-        let reference = SessionReference(hostID: kimi.host.id, terminalID: id, kind: .kimi)
+        let reference = SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi)
         associateWithCurrentGroup(reference)
         openReference(reference, title: session.displayTitle, pinned: true)
     }

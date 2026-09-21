@@ -15,7 +15,7 @@ struct WorkbenchSidebar: View {
         let projection = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: "\(model.connections.count) 个 SSH",
-                              onNew: { model.showNewKimi = true }, onSearch: { showSearch = true },
+                              onSearch: { showSearch = true },
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
                               onArchive: { model.showArchive() }) {
             if !projection.favorites.isEmpty {
@@ -27,7 +27,7 @@ struct WorkbenchSidebar: View {
                 Spacer()
                 Button { model.editGroup() } label: { Image(systemName: "plus") }
                     .buttonStyle(.plain).help("新建任务组")
-            }.padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
+            }.padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(model.workspace.groups) { group in
                 Button { model.showHome(groupID: group.id) } label: {
                     HStack(spacing: 9) {
@@ -41,7 +41,7 @@ struct WorkbenchSidebar: View {
             }
             if model.workspace.groups.isEmpty {
                 Button("创建任务组…") { model.editGroup() }.buttonStyle(.plain)
-                    .foregroundStyle(.secondary).padding(.horizontal, 10).padding(.vertical, 6)
+                    .foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 6)
             }
             HStack {
                 Text("最近会话")
@@ -52,15 +52,15 @@ struct WorkbenchSidebar: View {
                     }
                 } label: { Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill") }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(filter.rawValue)")
-            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
+            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(projection.recent) { item in sessionRow(item) }
             if projection.recent.isEmpty {
                 Text(filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(10)
+                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
             }
             Button { model.showAllSessions() } label: {
                 HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
-                    .padding(10).contentShape(Rectangle())
+                    .padding(.leading, 26).padding(10).contentShape(Rectangle())
             }.buttonStyle(.plain).foregroundStyle(.secondary)
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
@@ -71,7 +71,7 @@ struct WorkbenchSidebar: View {
     }
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
-            .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 7)
+            .padding(.leading, 36).padding(.trailing, 10).padding(.top, 10).padding(.bottom, 7)
     }
     private func sessionRow(_ item: WorkspaceSession) -> some View {
         SessionSidebarRow(model: model, item: item, selected: !model.showDashboard && item.id == model.tabs.selectedID,

@@ -17,9 +17,8 @@ private struct SidebarPreview: View {
     @State private var starred: Set<String> = []
     @State private var archived: Set<String> = []
     var body: some View {
-        WorkspaceSplitView(newConversation: { title = "新建任务" }) {
+        WorkspaceSplitView(newConversation: { title = "新建任务"; page = .other }) {
             WorkspaceSidebarShell(page: page, attentionCount: 2, environmentSummary: "1 个 SSH",
-                                  onNew: { title = "新建任务"; page = .other },
                                   onSearch: { showSearch = true },
                                   onHome: { title = "工作台"; page = .home },
                                   onInbox: { title = "待处理"; page = .inbox },
@@ -28,7 +27,11 @@ private struct SidebarPreview: View {
                 task("打磨原生对话阅读体验", status: "OMP · 运行中", symbol: "circle.dotted")
                 section("任务组")
                 Button { title = "Perch 开源"; page = .other } label: {
-                    Label("Perch 开源", systemImage: "folder").padding(10)
+                    HStack(spacing: 9) {
+                        Image(systemName: "folder").frame(width: 17)
+                        Text("Perch 开源")
+                        Spacer()
+                    }.padding(.horizontal, 10).frame(height: 34)
                 }.buttonStyle(.plain)
                 section("最近会话")
                 task("离线会话", status: "连接中断 · 状态未同步", symbol: "wifi.slash")
@@ -36,7 +39,8 @@ private struct SidebarPreview: View {
                     task("原生工作台 · 会话 \(index)", status: index == 1 ? "Kimi · 等你处理" : "Kimi · 已完成",
                          symbol: index == 1 ? "exclamationmark.circle" : "checkmark.circle")
                 }
-                Button("全部会话 →") { title = "全部会话"; page = .other }.buttonStyle(.plain).padding(10)
+                Button("全部会话 →") { title = "全部会话"; page = .other }
+                    .buttonStyle(.plain).padding(.leading, 26).padding(10)
             } environments: {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("环境与 Agent").font(.headline)
@@ -67,7 +71,7 @@ private struct SidebarPreview: View {
     }
     private func section(_ title: String) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
-            .padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
+            .padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
     }
     private func task(_ name: String, status: String, symbol: String) -> some View {
         SessionRowChrome(title: name, subtitle: status.contains("等你处理") || status.contains("连接中断") ? status : nil,

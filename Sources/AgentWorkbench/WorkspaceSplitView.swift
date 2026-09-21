@@ -109,14 +109,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: item.label)
                 item.target = controller
                 item.action = #selector(NSSplitViewController.toggleSidebar(_:))
-                item.isBordered = true
+                item.isBordered = false
             } else if id == composeID {
-                item.label = "新建对话"
-                item.toolTip = "新建对话 · ⌘N"
+                item.label = "新建任务"
+                item.toolTip = "新建任务 · ⌘N"
                 item.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: item.label)
                 item.target = self
                 item.action = #selector(compose)
-                item.isBordered = true
+                item.isBordered = false
             } else if id == titleID {
                 item.label = "当前会话"
                 item.view = headerHost

@@ -5,11 +5,10 @@ public final class KimiAPI: @unchecked Sendable {
     public let baseURL: URL
     private let token: String
     private let session: URLSession
-    public init(baseURL: URL, token: String) {
+    public init(baseURL: URL, token: String, configuration: URLSessionConfiguration = .ephemeral) {
         self.baseURL = baseURL; self.token = token
-        let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 30
-        session = URLSession(configuration: config)
+        configuration.timeoutIntervalForRequest = 30
+        session = URLSession(configuration: configuration)
     }
     public func request(_ path: String, method: String = "GET", body: JSONValue? = nil) async throws -> Data {
         var request = authorizedRequest(path)

@@ -1,0 +1,1 @@
+../../Sources/AgentWorkbench/KimiConnection.swift

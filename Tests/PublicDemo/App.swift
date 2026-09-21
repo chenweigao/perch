@@ -52,7 +52,7 @@ private struct PublicDemo: View {
     var body: some View {
         WorkspaceSplitView(newConversation: { showNotice = true }) {
             WorkspaceSidebarShell(page: .other, attentionCount: 0, environmentSummary: "演示环境",
-                                  onNew: { showNotice = true }, onSearch: { showNotice = true },
+                                  onSearch: { showNotice = true },
                                   onHome: { selected = 0 }, onInbox: { showNotice = true },
                                   onArchive: { showNotice = true }) {
                 section("置顶")
@@ -117,7 +117,7 @@ private struct PublicDemo: View {
     }
     private func section(_ title: String) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
-            .padding(.horizontal, 10).padding(.top, 17).padding(.bottom, 6)
+            .padding(.leading, 36).padding(.trailing, 10).padding(.top, 17).padding(.bottom, 6)
     }
     private func row(_ index: Int, symbol: String) -> some View {
         SessionRowChrome(title: titles[index], subtitle: nil, selected: selected == index,
