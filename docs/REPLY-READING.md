@@ -85,7 +85,7 @@ invent a summary or claim that the requested task succeeded. Runtime notificatio
 and injected skill context remain separately collapsible at their source positions
 instead of becoming user message bubbles.
 
-The system unified compact toolbar holds the session title, directory, status and
+The system unified toolbar holds the session title, directory, status and
 stop/menu controls in one line; sync and lifecycle operations live in the session
 menu. Native and terminal detail views do not add another header.
 
@@ -96,6 +96,25 @@ composer label. A choice applies to the next prompt; opening or searching the
 picker does not change the remote session. New Kimi conversations share this
 picker. OMP/Qoder retain their existing model configuration; no unverified model
 catalog or runtime switching capability is inferred for those adapters.
+
+## Reading hierarchy
+
+The answer keeps its existing plain 14 pt reading surface. Tool summaries use
+compact secondary text; completed and returned tools retain distinct status
+symbols, with the status also available in help and accessibility labels. Running,
+failed, missing, disconnected and approval states keep explicit status text.
+Expanded input/progress/output share a quiet solid background and stay selectable.
+
+The activity summary above the composer is a plain 28 pt row, with 11 pt counts
+and elapsed time. Attention states use a 36 pt row with a soft orange background;
+review and reconnect actions remain visible. The activity popover retains the full
+plan, tool details and timing breakdown. Model selection uses secondary text while
+preserving the provider identity and existing interaction.
+
+`Tool Visibility Preview` includes a final answer, a finished-turn clock and a
+local approval-entry alert. Check completed, running, failed and disconnected
+states, expansion/collapse and the activity popover. Reduce Motion is read from
+the system rather than overriding a read-only SwiftUI environment value.
 
 ## Input and floating activity
 

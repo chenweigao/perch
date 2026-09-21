@@ -65,6 +65,7 @@ struct KimiToolCard: View {
     private var attention: Bool {
         [.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) || !tool.hasCall
     }
+    private var statusLabel: String { tool.hasCall ? label : "\(label) · Call record missing" }
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
@@ -74,16 +75,23 @@ struct KimiToolCard: View {
                     if let output = tool.output { Text("Output").foregroundStyle(.secondary); SelectableReplyText(output.display) }
                     if tool.input == nil && tool.output == nil && tool.progress == nil { Text("暂无Input或返回内容").foregroundStyle(.secondary) }
                 }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 10).padding(.top, 7)
+                    .padding(10)
+                    .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
+                    .padding(.leading, 10).padding(.top, 5)
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: symbol).font(.system(size: 11))
-                Text(tool.name).lineLimit(1)
+                Image(systemName: symbol).font(.system(size: 11)).accessibilityHidden(true)
+                Text(tool.name).font(.system(size: 11)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary) }
                 Spacer(minLength: 0)
-                Text(tool.hasCall ? label : "\(label) · Call record missing").font(.system(size: 10))
+                if attention || tool.status == .running {
+                    Text(statusLabel).font(.system(size: 11)).fixedSize()
+                }
             }.font(.system(size: 12)).foregroundStyle(attention ? Color.orange : Color.secondary)
-        }.padding(.vertical, 5)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
+                .help(Text(verbatim: statusLabel))
+        }.padding(.vertical, 3)
     }
 }

@@ -23,7 +23,8 @@ struct ModelPicker: View {
                     }
                     Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium))
                         .foregroundStyle(.secondary)
-                }.font(.system(size: 12)).padding(.vertical, 6).contentShape(Rectangle())
+                }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    .padding(.vertical, 6).contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .help(Text("选择模型，用于下一条消息"))
                 .accessibilityLabel(Text("选择模型"))

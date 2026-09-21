@@ -60,7 +60,7 @@ struct ConversationActivityBar: View {
                                 HStack(spacing: 10) { counts; clock }
                                 counts
                                 EmptyView()
-                            }.foregroundStyle(.secondary).layoutPriority(-1)
+                            }.font(.system(size: 11)).foregroundStyle(.secondary).layoutPriority(-1)
                             Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
                         }.contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel(Text("本轮活动"))
@@ -79,7 +79,12 @@ struct ConversationActivityBar: View {
                     }
                 }.font(.system(size: 12))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 13).frame(height: 36).workbenchFloatingSurface()
+                    .padding(.horizontal, 8).frame(height: activity.needsAttention ? 36 : 28)
+                    .background {
+                        if activity.needsAttention {
+                            RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.08))
+                        }
+                    }
                     .transition(reduceMotion ? .identity : .opacity)
             }
         }

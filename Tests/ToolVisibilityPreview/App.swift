@@ -13,7 +13,8 @@ import WorkbenchCore
 private struct ToolPreview: View {
     @State private var phase = 0
     @State private var native = false
-    @State private var reduceMotion = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showApproval = false
     @State private var showReturn = false
     @State private var thoughtPreview = false
     @State private var longThought = false
@@ -47,7 +48,18 @@ private struct ToolPreview: View {
         if [3, 4, 6].contains(phase) {
             rows.append(["id": "r", "role": "tool", "created_at": "5", "content": [["type": "tool_result", "tool_call_id": phase == 6 ? "orphan" : "read-1", "is_error": phase == 4, "output": phase == 4 ? "Permission denied (fixture only)" : "struct Sample {\n    let value = 42\n}\n完整结果的最后一行"]]])
         }
+        if phase == 3 {
+            rows.append(["id": "answer", "role": "assistant", "created_at": "6", "content": [["type": "text", "text": "已检查 Sample.swift，结构清晰，示例检查通过。\n\n## 检查结果\n\n- `value` 使用不可变声明，含义明确。\n- 读取与检查记录可在上方展开。\n\n```swift\nstruct Sample {\n    let value = 42\n}\n```\n\n下一步可以补充边界输入的验证。"]]])
+        }
         return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
+    }
+    private var timing: ConversationTiming? {
+        guard phase == 3 else { return nil }
+        var timings = ConversationTimings()
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        timings.submitted("fixture-turn", at: start)
+        timings.finished(sessionID: "fixture", requestID: "fixture-turn", at: start.addingTimeInterval(42))
+        return timings.turns["fixture"]
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -65,7 +77,7 @@ private struct ToolPreview: View {
                 ModelPicker(models: models, selection: $model)
                 Spacer()
                 Toggle("显示回到底部按钮", isOn: $showReturn)
-                Toggle("减少动态效果", isOn: $reduceMotion)
+                if reduceMotion { Text("系统已开启减少动态效果").font(.caption).foregroundStyle(.secondary) }
             }
             HStack {
                 Toggle("思考预览", isOn: $thoughtPreview)
@@ -86,11 +98,14 @@ private struct ToolPreview: View {
             ConversationActivityBar(activity: ConversationActivity(messages: messages, isRunning: thoughtPreview || phase < 3,
                                                                    liveTools: !thoughtPreview && !native && phase < 2 ? live : [],
                                                                    running: !thoughtPreview && native && phase < 2 ? ["read-1"] : [],
-                                                                   online: phase != 5, isThinking: phase == 0),
-                                    isRunning: thoughtPreview || phase < 3, online: phase != 5)
+                                                                   online: phase != 5, isThinking: phase == 0, pendingCount: phase == 7 ? 1 : 0),
+                                    isRunning: thoughtPreview || phase < 3, timing: timing, online: phase != 5,
+                                    pendingCount: phase == 7 ? 1 : 0, onReview: { showApproval = true })
             Text("无远端连接、无真实消息、无审批按钮；独立 bundle ID 与状态目录。").font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(minWidth: 750, minHeight: 500)
-            .environment(\.accessibilityReduceMotion, reduceMotion)
+            .alert("确认请求（预览）", isPresented: $showApproval) {
+                Button("关闭", role: .cancel) {}
+            } message: { Text("仅验证审批入口，不执行任何操作。") }
     }
 }
 
