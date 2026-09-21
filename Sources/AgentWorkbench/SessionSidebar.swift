@@ -2,6 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct WorkbenchSidebar: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @State private var filter = SidebarRecentFilter.all
     @State private var showSearch = false
@@ -14,7 +15,7 @@ struct WorkbenchSidebar: View {
     var body: some View {
         let projection = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
-                              environmentSummary: "\(model.connections.count) 个 SSH",
+                              environmentSummary: L("\(model.connections.count) 个 SSH"),
                               onSearch: { showSearch = true },
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
                               onArchive: { model.showArchive() }) {
@@ -48,17 +49,17 @@ struct WorkbenchSidebar: View {
                 Spacer()
                 Menu {
                     Picker("筛选最近会话", selection: $filter) {
-                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
                     }
                 } label: {
                     Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                         .frame(width: 24, height: 24).contentShape(Rectangle())
                 }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(filter.rawValue)")
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
             }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(projection.recent) { item in sessionRow(item) }
             if projection.recent.isEmpty {
-                Text(filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话")
+                Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
                     .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
             }
             Button { model.showAllSessions() } label: {
@@ -72,7 +73,7 @@ struct WorkbenchSidebar: View {
             SessionDirectoryView(model: model, isSearchSheet: true).frame(width: 640, height: 520)
         }
     }
-    private func heading(_ title: String) -> some View {
+    private func heading(_ title: LocalizedStringKey) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
             .frame(height: 24).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
     }
@@ -83,6 +84,7 @@ struct WorkbenchSidebar: View {
 }
 
 struct SessionDirectoryView: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     var isSearchSheet = false
     @State private var query = ""
@@ -94,7 +96,7 @@ struct SessionDirectoryView: View {
         }
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(isSearchSheet ? "搜索任务" : "全部会话").font(.title2.weight(.semibold))
+                Text(L(key: isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
                 Spacer()
                 if isSearchSheet { Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
             }
@@ -120,13 +122,14 @@ struct SessionDirectoryView: View {
 /// here would register one observer per visible row, so a single search keystroke or
 /// streamed catalog update invalidates every row body instead of just the list.
 private struct SessionSidebarRow: View {
+    @UILocalization private var L
     let model: WorkbenchModel
     let item: WorkspaceSession
     let selected: Bool
     let onOpen: () -> Void
     private var subtitle: String? {
         if item.archived { return nil }
-        if !item.online { return "离线 · 状态未同步" }
+        if !item.online { return L("离线 · 状态未同步") }
         return item.section == .attention ? item.detail : nil
     }
     var body: some View {
@@ -164,6 +167,7 @@ private struct SessionSidebarRow: View {
 }
 
 struct SessionActionsMenu: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
@@ -177,14 +181,14 @@ struct SessionActionsMenu: View {
         Button { model.groupingSession = item } label: { Label("分组…", systemImage: "folder") }
         Divider()
         Button { model.setArchived(item, archived: !item.archived) } label: {
-            Label(item.archived ? "恢复归档" : item.reference.kind == .terminal ? "归档到本机" : "归档会话", systemImage: "archivebox")
+            Label(item.archived ? L("恢复归档") : item.reference.kind == .terminal ? L("归档到本机") : L("归档会话"), systemImage: "archivebox")
         }.disabled(busy || !model.canArchive(item))
         if model.tabs.ids.contains(item.id) {
             Button("关闭本地视图") { model.close(item.id) }
         }
         Divider()
         Button(role: .destructive) { model.pendingDeletion = item } label: {
-            Label(item.reference.kind == .terminal ? "结束远端终端…" : "删除会话…", systemImage: "trash")
+            Label(item.reference.kind == .terminal ? L("结束远端终端…") : L("删除会话…"), systemImage: "trash")
         }.disabled(busy || !item.online || (item.reference.kind != .terminal && !model.canArchive(item)))
     }
 }
@@ -232,6 +236,7 @@ struct ArchivedSessionsView: View {
 }
 
 private struct ConnectionControls: View {
+    @UILocalization private var L
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
@@ -249,12 +254,12 @@ private struct ConnectionControls: View {
                 Label("Kimi · \(kimi.host.name)", systemImage: "bubble.left"); Spacer()
                 Circle().fill(kimi.online ? .green : .orange).frame(width: 5, height: 5)
                 Button { kimi.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接 Kimi")
-            }.help(kimi.error ?? kimi.state)
+            }.help(kimi.error ?? kimi.state(locale: L.locale))
             HStack {
                 Label("OMP / Qoder CN", systemImage: "bubble.left.and.bubble.right"); Spacer()
                 Circle().fill(native.online ? .green : .orange).frame(width: 5, height: 5)
                 Button { native.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接原生对话")
-            }.help(native.error ?? "远端持久托管")
+            }.help(native.error ?? L("远端持久托管"))
         }.font(.system(size: 11)).padding(15).background(.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
     }
 }
@@ -274,6 +279,7 @@ private struct HostConnectionControl: View {
 }
 
 struct KimiSelectionContent: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var connection: KimiConnection
     var body: some View {
@@ -283,8 +289,8 @@ struct KimiSelectionContent: View {
         } else {
             VStack(spacing: 14) {
                 if connection.loading { ProgressView() }
-                Text(connection.loading ? "正在读取对话…" : "等待恢复会话").font(.title3)
-                Text(connection.actionError ?? connection.error ?? "正在连接远端 Kimi 服务").foregroundStyle(.secondary)
+                Text(connection.loading ? L("正在读取对话…") : L("等待恢复会话")).font(.title3)
+                Text(connection.actionError ?? connection.error ?? L("正在连接远端 Kimi 服务")).foregroundStyle(.secondary)
                 Button("返回工作台") { model.showHome(groupID: model.selectedGroupID) }
             }.padding(30)
         }

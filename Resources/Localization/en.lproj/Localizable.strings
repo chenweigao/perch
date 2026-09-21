@@ -1,0 +1,255 @@
+/*
+  Localizable.strings (en)
+  Perch — English translations.
+
+  The development language is Simplified Chinese: source literals are the
+  lookup keys, and a missed lookup falls back to the key itself. Both tables define the same keys to avoid cross-language fallback.
+  Scope: sidebar cluster (sidebar shell, session rows, sheets it opens,
+  settings, app menu/alerts) plus the dynamic strings routed through L().
+*/
+
+/* Sidebar navigation (WorkspaceSidebarShell) */
+"搜索任务" = "Search Tasks";
+"工作台" = "Workspace";
+"待处理" = "Inbox";
+"已归档" = "Archived";
+"环境" = "Environment";
+"设置" = "Settings";
+
+/* Sidebar headings and lists (SessionSidebar) */
+"置顶" = "Pinned";
+"任务组" = "Groups";
+"新建任务组" = "New Group";
+"编辑任务组" = "Edit Group";
+"创建任务组…" = "New Group…";
+"最近会话" = "Recent";
+"全部会话" = "All Sessions";
+"筛选最近会话" = "Filter Recent Sessions";
+"筛选最近会话：%@" = "Filter recent sessions: %@";
+"新任务会出现在这里" = "New tasks show up here";
+"没有符合筛选的会话" = "No sessions match the filter";
+"没有找到会话" = "No sessions found";
+"标题、Agent、环境或目录" = "Title, agent, environment, or directory";
+"完成" = "Done";
+"离线 · 状态未同步" = "Offline · State not synced";
+
+/* Session row actions (SessionRowChrome, SessionActionsMenu) */
+"置顶会话" = "Pin Session";
+"取消置顶" = "Unpin";
+"归档会话" = "Archive Session";
+"归档到本机" = "Archive Locally";
+"恢复会话" = "Restore Session";
+"恢复归档" = "Unarchive";
+"重命名…" = "Rename…";
+"分组…" = "Group…";
+"关闭本地视图" = "Close Local View";
+"结束远端终端…" = "End Remote Terminal…";
+"删除会话…" = "Delete Session…";
+
+/* Session groups sheet */
+"会话分组" = "Session Groups";
+"先在侧栏新建任务组，再关联会话。" = "Create a group in the sidebar first, then assign sessions to it.";
+"可选多个任务组；取消全部选择即移出分组。不会共享对话上下文。" = "Select multiple groups; deselecting all removes the session from every group. Conversation context is never shared.";
+"保存" = "Save";
+"取消" = "Cancel";
+
+/* Archived sessions page */
+"Kimi 归档与服务端同步；终端归档只整理本机列表，不结束远端进程。" = "Kimi archiving syncs with the server; terminal archiving only tidies the local list and leaves remote processes running.";
+"没有归档会话" = "No archived sessions";
+
+/* Sidebar environment popover */
+"环境与 Agent" = "Environments & Agents";
+"添加 SSH 机器" = "Add SSH Machine";
+"本机 Agent…" = "Local Agent…";
+"重新连接 Kimi" = "Reconnect Kimi";
+"重新连接原生对话" = "Reconnect Native Conversations";
+"重新连接 Herdr" = "Reconnect Herdr";
+"断开 Herdr" = "Disconnect Herdr";
+"远端持久托管" = "Hosted remotely";
+
+/* Connection state (HostConnection, KimiConnection) */
+"未连接" = "Not Connected";
+"连接中" = "Connecting";
+"已连接" = "Connected";
+"连接 Kimi Web" = "Connecting to Kimi Web";
+"%lld 秒后重连" = "Reconnecting in %lld s";
+
+/* Sidebar dynamic detail (WorkbenchModel, core status labels) */
+"%lld 个 SSH" = "%lld SSH";
+"等待处理" = "Blocked";
+"运行中" = "Running";
+"结果待查看" = "Result to Review";
+"结果已查看" = "Result Reviewed";
+"空闲" = "Idle";
+"状态未知" = "Status Unknown";
+"Kimi · 结果待查看" = "Kimi · Result to Review";
+"未命名会话" = "Untitled Session";
+"等待确认" = "Waiting for Approval";
+"等待回答" = "Waiting for Answer";
+"出错" = "Error";
+"就绪" = "Ready";
+"等你处理" = "Needs Attention";
+"已停止" = "Stopped";
+"终端" = "Terminal";
+"本机" = "This Mac";
+"归档操作已记录，列表同步失败：%@" = "Archive action recorded; list sync failed: %@";
+
+/* Rename sheet */
+"重命名会话" = "Rename Session";
+"会话名称" = "Session Name";
+"仅修改 Perch 中的显示名称，不更改远端标题。" = "Only changes the display name in Perch; the remote title is untouched.";
+
+/* Add-host / new-terminal sheets (ConnectionSheets) */
+"添加机器" = "Add Machine";
+"复用 ~/.ssh/config 中的别名、密钥与跳板机设置。首次连接请先在系统终端确认主机指纹。" = "Reuses aliases, keys, and jump hosts from ~/.ssh/config. Before connecting for the first time, confirm the host fingerprint in a terminal.";
+"SSH 地址" = "SSH Address";
+"dev-env 或 user@host" = "dev-env or user@host";
+"显示名称" = "Display Name";
+"可选" = "Optional";
+"添加并连接" = "Add & Connect";
+"新建远端终端" = "New Remote Terminal";
+"在 %@ 的 Herdr 中创建持久终端。进入后可运行 Kimi、OMP 或 Qoder CLI。" = "Creates a persistent terminal in Herdr on %@. Inside it you can run the Kimi, OMP, or Qoder CLI.";
+"工作区" = "Workspace";
+"目录" = "Directory";
+"名称" = "Name";
+"创建中…" = "Creating…";
+"创建终端" = "Create Terminal";
+
+/* Local agent setup sheet */
+"本机 Agent" = "Local Agent";
+"本机执行环境与远程 SSH 主机分开：本机工具在你选择的 Mac 目录执行，不通过 ssh localhost。" = "The local environment is separate from remote SSH hosts: local tools run in a Mac directory you choose, not through ssh localhost.";
+"已找到 omp %@" = "Found omp %@";
+"已读取版本；此检测没有验证 RPC、工具审批或运行中引导。" = "Version read; this check did not exercise RPC, tool approvals, or live steering.";
+"找到了可执行文件，但无法使用" = "Found the executable, but it is unusable";
+"正在查找本机 omp…" = "Looking for local omp…";
+"尚未检测。" = "Not checked yet.";
+"当前检测仅验证可执行文件与版本。本机原生对话、工具审批和运行中引导尚未接通。" = "This check only verifies the executable and its version. Local native conversations, tool approvals, and live steering are not connected yet.";
+"重新检测" = "Check Again";
+"关闭" = "Close";
+"未找到本机 omp。请在设置中指定可执行文件路径，或参考 oh-my-pi 安装说明后重试。Perch 不会自动安装或修改你的 shell 配置。" = "Could not find a local omp. Set the executable path in Settings, or see the oh-my-pi install instructions and try again. Perch does not install anything or modify your shell configuration.";
+"未能读取 omp 版本，能力未知" = "Could not read the omp version; capabilities unknown";
+"无法解析版本输出" = "Could not parse the version output";
+
+/* Settings */
+"语言 / Language" = "Language";
+"界面语言" = "Language";
+"Agent 与执行环境" = "Agent & Environments";
+"管理本机 Agent…" = "Manage Local Agent…";
+"添加 SSH 环境…" = "Add SSH Environment…";
+"远程连接沿用本机 SSH 配置。连接与重连可从侧边栏的环境入口管理。" = "Remote connections reuse this Mac's SSH configuration. Connect and reconnect from the environment menu in the sidebar.";
+"界面" = "Appearance";
+"侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
+
+/* App menu (WorkbenchApp) */
+"新建任务…" = "New Task…";
+"添加机器…" = "Add Machine…";
+"新建远端终端…" = "New Remote Terminal…";
+"终端显示信息…" = "Terminal Rendering Info…";
+"切换当前会话置顶" = "Toggle Pin for Current Session";
+"重新连接机器" = "Reconnect Machine";
+"关闭当前本地视图" = "Close Current Local View";
+
+/* Delete confirmation and session fallback (WorkbenchView) */
+"结束远端终端？" = "End Remote Terminal?";
+"删除会话？" = "Delete Session?";
+"结束终端" = "End Terminal";
+"删除会话" = "Delete Session";
+"将从 Kimi 服务删除「%@」及其历史，无法撤销。只想收起时，请使用归档。" = "This deletes \"%@\" and its history from the Kimi service, and cannot be undone. To simply tuck it away, archive it instead.";
+"将删除工作台中的「%@」及对话记录。Agent 自身保存的历史仍保留。" = "This removes \"%@\" and its conversation record from the workspace. History kept by the agent itself is preserved.";
+"将关闭「%@」的远端进程，运行中的任务会中断。只想整理列表时，请使用本机归档。" = "This closes the remote process for \"%@\", interrupting any running task. To tidy the list instead, archive it locally.";
+"操作未完成" = "Action Not Completed";
+"知道了" = "Got It";
+"正在读取对话…" = "Loading conversation…";
+"等待恢复会话" = "Waiting to Resume the Session";
+"连接后读取原会话；已不可用的会话不会自动新建。" = "The original session loads once connected; sessions that no longer exist are not recreated.";
+"连接后接回原终端；已结束的会话不会自动新建。" = "The original terminal reattaches once connected; ended sessions are not recreated.";
+"返回工作台" = "Back to Workspace";
+"正在连接远端 Kimi 服务" = "Connecting to the remote Kimi service";
+"终端显示信息" = "Terminal Rendering Info";
+"终端连接已结束；可重新接入仍在运行的会话。" = "The terminal connection has ended; you can reattach to sessions that are still running.";
+"重新接入" = "Reattach";
+"原生终端" = "Native Terminal";
+"状态更新于 %@" = "Status updated at %@";
+"会话状态每 3 秒同步一次；终端内容实时传输" = "Session state syncs every 3 seconds; terminal content streams live";
+
+/* Selection floating bar */
+"复制文本" = "Copy Text";
+"引用" = "Quote";
+
+/* Workspace home and group editor (WorkspaceView) */
+"今天，先处理重要的事。" = "Today, start with what matters.";
+"对话与终端，都围绕你正在推进的事情组织。" = "Conversations and terminals, organized around the work you are pushing forward.";
+"下一步" = "Next Step";
+"写下回来后要继续做的第一件事。" = "Write down the first thing to continue when you are back.";
+"关联 %lld 个会话 · 本地保存" = "%lld linked sessions · Saved locally";
+"继续上次会话" = "Resume Last Session";
+"关联%@尚未出现在当前列表：%@" = "Linked %@ is not in the current list: %@";
+"等待恢复 · %lld 个标签" = "Waiting to restore · %lld tabs";
+"连接后恢复原会话；未找到的会话保留，供你确认。" = "Original sessions are restored once connected; sessions not found are kept for your confirmation.";
+"不再恢复" = "Don't Restore";
+"待查看结果" = "To Review";
+"其他会话" = "Other Sessions";
+"%lld 个结果" = "%lld results";
+"当前已同步的会话中，没有等待处理或运行中的事项。" = "Among synced sessions, nothing is waiting or running.";
+"已查看、就绪和其他会话 · %lld" = "Reviewed, ready, and other sessions · %lld";
+"状态未同步 · %lld" = "State not synced · %lld";
+"OMP / Qoder CN · 状态未同步" = "OMP / Qoder CN · State not synced";
+"%@ 终端 · %@" = "%@ terminal · %@";
+"离线会话不计入上方数量；历史状态保留供参考。" = "Offline sessions are not counted above; their last known state is kept for reference.";
+"原生对话的审批与提问来自远端 Agent；终端状态由 Herdr 上报。待查看仅表示本轮有结果，不代表任务已经完成。" = "Approvals and questions in native conversations come from the remote agent; terminal state is reported by Herdr. To Review only means a result arrived, not that the task is finished.";
+"已查看" = "Reviewed";
+"关联原生对话与终端，记下共同目标和下一步。归组不共享对话上下文。" = "Link native conversations and terminals, and note the shared goal and next step. Grouping never shares conversation context.";
+"例如：推理仿真前端优化" = "e.g. Inference simulation frontend optimization";
+"目标" = "Goal";
+"做到什么程度算完成？" = "What does done look like?";
+"回来后先做什么？" = "What is the first thing to do when you are back?";
+"搜索要关联的对话或终端" = "Search conversations or terminals to link";
+"未连接或已结束的%@：%@" = "Offline or ended %@: %@";
+"已选 %lld 个会话 · 保存在本机" = "%lld selected · Saved locally";
+"保存任务组" = "Save Group";
+
+"切换侧栏" = "Toggle Sidebar";
+
+"显示或隐藏侧栏" = "Show or Hide Sidebar";
+
+"新建任务" = "New Task";
+
+"新建任务 · ⌘N" = "New Task · ⌘N";
+
+"当前会话" = "Current Session";
+
+"会话操作" = "Session Actions";
+
+"正在恢复会话…" = "Restoring Session…";
+
+"查看远端文件（只读）" = "View Remote Files (Read Only)";
+
+"查看远端文件" = "View Remote Files";
+
+"同步会话" = "Refresh Conversation";
+
+"重新连接" = "Reconnect";
+
+"断开本地连接" = "Disconnect Locally";
+
+"连接终端" = "Connect Terminal";
+"About Perch" = "About Perch";
+"A home for your agents." = "A home for your agents.";
+"Conversation" = "Conversation";
+"Find in conversation" = "Find in conversation";
+"Next match" = "Next match";
+"Previous match" = "Previous match";
+"Back" = "Back";
+"Forward" = "Forward";
+"Next task needing attention" = "Next task needing attention";
+"Drafts could not be saved" = "Drafts could not be saved";
+"Keep Perch open" = "Keep Perch open";
+"Quit anyway" = "Quit anyway";
+"Task notifications" = "Task notifications";
+"Notify when Perch is in the background" = "Notify when Perch is in the background";
+"Completed responses, requests for input, and failures. Click a notification to open the task." = "Completed responses, requests for input, and failures. Click a notification to open the task.";
+"Stop task" = "Stop task";
+"任务组…" = "Group…";
+"原生对话…" = "Native Conversation…";
+"新建" = "New";
+"远端终端…" = "Remote Terminal…";

@@ -63,7 +63,7 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
     /// Present on the snapshot but zeroed on the list endpoint until a turn has run,
     /// which is why ContextBudget treats a zero limit as unknown.
     public let usage: JSONValue?
-    public var displayTitle: String { title.isEmpty ? "未命名会话" : title }
+    public var displayTitle: String { title.isEmpty ? L("未命名会话") : title }
     public var cwd: String { metadata["cwd"].string ?? "" }
     public var model: String { agentConfig["model"].string ?? "" }
     /// Keys stay snake_case here: convertFromSnakeCase rewrites the properties of a
@@ -72,11 +72,11 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
         ContextBudget(used: usage?["context_tokens"].int, limit: usage?["context_limit"].int)
     }
     public var status: String {
-        if pendingInteraction == "approval" { return "等待确认" }
-        if pendingInteraction == "question" { return "等待回答" }
-        if busy { return "运行中" }
-        if lastTurnReason == "failed" { return "出错" }
-        return "就绪"
+        if pendingInteraction == "approval" { return L("等待确认") }
+        if pendingInteraction == "question" { return L("等待回答") }
+        if busy { return L("运行中") }
+        if lastTurnReason == "failed" { return L("出错") }
+        return L("就绪")
     }
 }
 public struct KimiPart: Decodable, Equatable, Sendable {

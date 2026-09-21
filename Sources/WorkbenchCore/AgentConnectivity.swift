@@ -72,8 +72,9 @@ public enum LocalAgentDiscovery {
         return String(text[match])
     }
 
-    public static let missingOMPHint =
-        "未找到本机 omp。请在设置中指定可执行文件路径，或参考 oh-my-pi 安装说明后重试。Perch 不会自动安装或修改你的 shell 配置。"
+    public static var missingOMPHint: String {
+        L("未找到本机 omp。请在设置中指定可执行文件路径，或参考 oh-my-pi 安装说明后重试。Perch 不会自动安装或修改你的 shell 配置。")
+    }
 }
 
 /// Launch arguments for a local OMP session. Returned as argv, never as a shell
@@ -123,7 +124,7 @@ public struct AgentEndpoint: Equatable, Sendable, Identifiable {
     public static func localOMP(version: String?, probe: OMPCommandProbe) -> AgentEndpoint {
         guard let version else {
             return AgentEndpoint(environment: .local, kind: .omp, capabilities: .unknown,
-                                 verificationNote: "未能读取 omp 版本，能力未知")
+                                 verificationNote: L("未能读取 omp 版本，能力未知"))
         }
         let capabilities = AgentCapabilities(
             nativeConversation: probe.prompt,

@@ -86,7 +86,7 @@ final class SelectionActionsController: NSObject {
                 self?.quoteHandler?(text)
                 self?.hide()
             })
-        let hosting = NSHostingView(rootView: bar)
+        let hosting = NSHostingView(rootView: bar.environment(\.locale, AppLanguage.current.resolvedLocale))
         hosting.layout()
         let size = hosting.fittingSize
 
@@ -158,13 +158,13 @@ private struct SelectionActionsBar: View {
             .fixedSize()
     }
 
-    private func action(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func action(_ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) -> some View {
         SelectionActionButton(title: title, systemImage: systemImage, action: action)
     }
 }
 
 private struct SelectionActionButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
     let action: () -> Void
     @State private var hovered = false

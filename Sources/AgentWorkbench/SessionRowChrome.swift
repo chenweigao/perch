@@ -1,7 +1,9 @@
 import SwiftUI
+import WorkbenchCore
 
 /// Shared row geometry; actions have reserved space so hover never moves the title.
 struct SessionRowChrome<Indicator: View>: View {
+    @UILocalization private var L
     let title: String
     let subtitle: String?
     let selected: Bool
@@ -40,16 +42,16 @@ struct SessionRowChrome<Indicator: View>: View {
                     Button(action: onPin) {
                         Image(systemName: starred ? "pin.slash" : "pin")
                             .frame(width: 24, height: 28).contentShape(Rectangle())
-                    }.help(starred ? "取消置顶" : "置顶会话")
-                        .accessibilityLabel(starred ? "取消置顶" : "置顶会话").disabled(busy)
+                    }.help(starred ? L("取消置顶") : L("置顶会话"))
+                        .accessibilityLabel(starred ? L("取消置顶") : L("置顶会话")).disabled(busy)
                         .focused($focus, equals: .pin)
                 }
                 if canQuickArchive {
                     Button(action: onArchive) {
                         Image(systemName: archived ? "arrow.uturn.backward" : "archivebox")
                             .frame(width: 24, height: 28).contentShape(Rectangle())
-                    }.help(archived ? "恢复会话" : "归档会话")
-                        .accessibilityLabel(archived ? "恢复会话" : "归档会话").disabled(busy)
+                    }.help(archived ? L("恢复会话") : L("归档会话"))
+                        .accessibilityLabel(archived ? L("恢复会话") : L("归档会话")).disabled(busy)
                         .focused($focus, equals: .archive)
                 }
             }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)

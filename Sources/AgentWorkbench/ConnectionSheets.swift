@@ -30,6 +30,7 @@ struct AddHostSheet: View {
 }
 
 struct NewTerminalSheet: View {
+    @UILocalization private var L
     @ObservedObject var connection: HostConnection
     @ObservedObject var model: WorkbenchModel
     @Environment(\.dismiss) private var dismiss
@@ -54,7 +55,7 @@ struct NewTerminalSheet: View {
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
-                Button(creating ? "创建中…" : "创建终端") {
+                Button(creating ? L("创建中…") : L("创建终端")) {
                     creating = true
                     Task {
                         do {

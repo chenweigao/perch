@@ -3,7 +3,7 @@ import Foundation
 public enum SessionKind: String, Codable, Sendable {
     case terminal, kimi, omp, qoder
     public var symbol: String { self == .terminal ? "terminal" : "bubble.left.and.text.bubble.right" }
-    public var label: String { [Self.terminal: "终端", .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN"][self]! }
+    public var label: String { [Self.terminal: L("终端"), .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN"][self]! }
 }
 
 public struct SessionReference: Codable, Hashable, Identifiable, Sendable {

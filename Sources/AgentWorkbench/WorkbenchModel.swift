@@ -144,6 +144,8 @@ final class WorkbenchModel: ObservableObject {
     private let sessionDateParser: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return formatter
     }()
+    func refreshLocalizedCatalog() { rebuildCatalog() }
+
     private func rebuildCatalog() {
         let terminalSessions = connections.flatMap { connection in
             (connection.snapshot?.panes ?? []).map { pane in
@@ -152,15 +154,15 @@ final class WorkbenchModel: ObservableObject {
                 let section: WorkQueueSection = pane.status == "blocked" ? .attention : pane.status == "working" ? .running : review ? .review : .other
                 let detail: String
                 switch pane.status {
-                case "blocked": detail = "等待处理"
-                case "working": detail = "运行中"
-                case "done": detail = review ? "结果待查看" : "结果已查看"
-                case "idle": detail = "空闲"
-                default: detail = "状态未知"
+                case "blocked": detail = L("等待处理")
+                case "working": detail = L("运行中")
+                case "done": detail = review ? L("结果待查看") : L("结果已查看")
+                case "idle": detail = L("空闲")
+                default: detail = L("状态未知")
                 }
                 return WorkspaceSession(reference: reference,
                     title: workspace.displayTitle(pane.displayTitle, for: reference), directory: pane.directory, hostName: connection.host.name,
-                    detail: "\(pane.agent ?? "终端") · \(detail)", online: connection.online, section: section,
+                    detail: "\(pane.agent ?? L("终端")) · \(detail)", online: connection.online, section: section,
                     canMarkReviewed: review && pane.revision != nil,
                     archived: workspace.archivedTerminals.contains(SessionReference(hostID: connection.id, terminalID: pane.id)))
             }
@@ -170,7 +172,7 @@ final class WorkbenchModel: ObservableObject {
             let section = workspace.kimiSection(session, on: kimi.host.id)
             return WorkspaceSession(reference: reference,
                 title: workspace.displayTitle(session.displayTitle, for: reference), directory: session.cwd, hostName: kimi.host.name,
-                detail: section == .review ? "Kimi · 结果待查看" : "Kimi · \(session.status)", online: kimi.online,
+                detail: section == .review ? L("Kimi · 结果待查看") : "Kimi · \(session.status)", online: kimi.online,
                 section: section, canMarkReviewed: section == .review, archived: session.archived == true, updatedAt: sessionDateParser.date(from: session.updatedAt)?.timeIntervalSince1970 ?? 0)
         }
         }
@@ -179,7 +181,7 @@ final class WorkbenchModel: ObservableObject {
             let review = session.completed > 0 && workspace.reviewedKimiUpdates[reference.id] != String(session.completed)
             let section: WorkQueueSection = session.pending > 0 ? .attention : session.busy ? .running : session.error != nil ? .attention : review ? .review : .other
             return WorkspaceSession(reference: reference, title: workspace.displayTitle(session.title, for: reference), directory: session.cwd, hostName: native.host.name,
-                detail: "\(session.provider.label) · \(section == .review ? "结果待查看" : session.status)", online: native.online, section: section,
+                detail: "\(session.provider.label) · \(section == .review ? L("结果待查看") : session.status)", online: native.online, section: section,
                 canMarkReviewed: section == .review, archived: session.archived, updatedAt: session.updated)
         }
         }
@@ -463,9 +465,9 @@ final class WorkbenchModel: ObservableObject {
     }
     private func syncArchivedSessions() async {
         do { for native in nativeEnvironments.values where native.online { try await native.refresh() } }
-        catch { managementError = "归档操作已记录，列表同步失败：\(error.localizedDescription)" }
+        catch { managementError = L("归档操作已记录，列表同步失败：\(error.localizedDescription)") }
         do { for kimi in kimiEnvironments.values where kimi.online { try await kimi.refreshSessions() } }
-        catch { managementError = "归档操作已记录，列表同步失败：\(error.localizedDescription)" }
+        catch { managementError = L("归档操作已记录，列表同步失败：\(error.localizedDescription)") }
     }
     /// Whether selected transcript text can become a quote right now. A terminal
     /// session has no draft to receive it, so the action is hidden rather than
@@ -505,7 +507,7 @@ final class WorkbenchModel: ObservableObject {
                 do {
                     let output = try await ProcessRunner.run(candidate, ["--version"])
                     guard let version = LocalAgentDiscovery.parseOMPVersion(String(decoding: output, as: UTF8.self)) else {
-                        localOMP = .unusable(path: candidate, reason: "无法解析版本输出"); return
+                        localOMP = .unusable(path: candidate, reason: L("无法解析版本输出")); return
                     }
                     localOMP = .found(path: candidate, version: version); return
                 } catch { localOMP = .unusable(path: candidate, reason: error.localizedDescription); return }

@@ -49,7 +49,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func navigation(_ title: String, symbol: String, selected: Bool = false,
+    private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,
                             count: Int = 0, shortcut: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 9) {

@@ -6,7 +6,9 @@ final class HostConnection: ObservableObject, Identifiable {
     nonisolated let host: SSHHost
     nonisolated var id: UUID { host.id }
     @Published private(set) var snapshot: Snapshot?
-    @Published private(set) var state = "未连接"
+    @Published private var stateMessage: String.LocalizationValue = "未连接"
+    var state: String { L(stateMessage) }
+    func state(locale: Locale) -> String { L(stateMessage, locale: locale) }
     @Published private(set) var error: String?
     @Published private(set) var online = false
     @Published private(set) var wantsConnection = false
@@ -27,7 +29,7 @@ final class HostConnection: ObservableObject, Identifiable {
         let token = UUID()
         generation = token
         wantsConnection = true
-        state = "连接中"
+        stateMessage = "连接中"
         error = nil
         task = Task { [weak self] in
             guard let self else { return }
@@ -47,7 +49,7 @@ final class HostConnection: ObservableObject, Identifiable {
                     guard self.generation == token else { break }
                     self.online = false
                     self.error = error.localizedDescription
-                    self.state = "\(delay) 秒后重连"
+                    self.stateMessage = "\(delay) 秒后重连"
                     self.stopTunnel()
                     do { try await Task.sleep(for: .seconds(delay)) } catch { break }
                     delay = min(delay * 2, 30)
@@ -63,7 +65,7 @@ final class HostConnection: ObservableObject, Identifiable {
         stopTunnel()
         online = false
         wantsConnection = false
-        state = "未连接"
+        stateMessage = "未连接"
     }
 
     private func stopTunnel() {
@@ -75,7 +77,7 @@ final class HostConnection: ObservableObject, Identifiable {
 
     private func establish(token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
-        state = "连接中"
+        stateMessage = "连接中"
         let data = try await ProcessRunner.run("/usr/bin/ssh", [
             "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
             "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=1",
@@ -135,7 +137,7 @@ final class HostConnection: ObservableObject, Identifiable {
         guard generation == token else { throw CancellationError() }
         snapshot = result
         online = true
-        state = "已连接"
+        stateMessage = "已连接"
         error = nil
         updatedAt = Date()
         onSnapshot?()
