@@ -11,8 +11,8 @@ final class WorkbenchModel: ObservableObject {
     private var kimiEnvironments: [UUID: KimiConnection] = [:]
     private var nativeEnvironments: [UUID: NativeAgentConnection] = [:]
     @Published var connections: [HostConnection]
-    /// Whether the user has ever configured a machine. The built-in entry created on a
-    /// first run is not persisted, so this stays false until a real one is added.
+    /// Whether the user has configured a machine list. Persisting the built-in
+    /// machine's identity alone does not dismiss first-run setup.
     @Published private(set) var configuredEnvironment: Bool
     @Published var pendingHostRemoval: SSHHost?
     @Published var selectedHostID: UUID
@@ -78,10 +78,11 @@ final class WorkbenchModel: ObservableObject {
            let saved = try? JSONDecoder().decode([SSHHost].self, from: data), !saved.isEmpty {
             hosts = saved; configuredEnvironment = true
         } else {
-            // One built-in entry keeps a connection available for the terminal surface. It
-            // is deliberately not persisted, so the workbench still offers the first-run
-            // setup paths until the user adds a machine of their own.
-            hosts = [SSHHost(name: "dev-env", destination: "dev-env")]
+            // Session references and drafts use the host UUID across launches. Keep
+            // that identity stable without marking the machine list as configured.
+            let id = UserDefaults.standard.string(forKey: "defaultHostID").flatMap(UUID.init(uuidString:)) ?? UUID()
+            UserDefaults.standard.set(id.uuidString, forKey: "defaultHostID")
+            hosts = [SSHHost(id: id, name: "dev-env", destination: "dev-env")]
             configuredEnvironment = false
         }
         kimi = KimiConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
@@ -236,8 +237,9 @@ final class WorkbenchModel: ObservableObject {
         for saved in openedSessions where saved.session.hostID == host.id { close(saved.session.id) }
         terminals.removeAll { $0.hostID == host.id }
         let fallback = connections[0].host.id
-        if kimi.host.id == host.id || native.host.id == host.id { activateAgentEnvironment(fallback) }
         if selectedHostID == host.id { selectedHostID = fallback }
+        // A terminal on a surviving machine remains the target of host actions.
+        if kimi.host.id == host.id || native.host.id == host.id { activateAgentEnvironment(selectedHostID) }
         if hostFilter == host.id { hostFilter = nil }
         do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
         catch { managementError = L("机器已移除，但保存机器列表失败：\(error.localizedDescription)") }
