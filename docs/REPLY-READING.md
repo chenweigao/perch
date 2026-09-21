@@ -13,8 +13,9 @@ weight, including strong text nested inside a heading or inline code. Headings
 have 22 pt of leading space (14 pt in compact lists/quotes) and 7 pt before their
 following content; the first block has no leading space. Section spacing carries
 the hierarchy without large, heavy titles. List markers use regular weight.
-Inline code stays 1 pt smaller than its surrounding text, with a faint 2.5% label
-color background; table separators use 6% opacity. Body paragraphs have 12 pt
+Inline code stays 1 pt smaller than its surrounding text and uses monospace with
+no background fill, so tall line fragments do not create gray tiles in prose.
+Fenced code retains its separate container; table separators use 6% opacity. Body paragraphs have 12 pt
 between them; paragraphs within a list item or quote have 8 pt. Compact block
 transitions, such as a paragraph followed by a nested list, have 6 pt of space.
 List rows are measured at the available width: adjacent single-line items have
@@ -106,6 +107,16 @@ method. The editor grows from 40 to 180 pt and then scrolls internally.
 Kimi supports file selection, file drop, file/image paste, attachment thumbnails
 and attachment-only prompts. Upload still uses the existing Kimi multipart API;
 OMP/Qoder attachments are not inferred from that capability.
+
+The plain-text input advertises file URL, PNG and TIFF pasteboard types only when
+an attachment handler is connected. AppKit can therefore enable its standard Paste
+command for an image-only clipboard; the native `readSelection(from:type:)` path
+converts image data into a PNG attachment without replacing the text draft.
+`scripts/check-composer.sh` checks PNG/TIFF type negotiation and file URLs using
+private pasteboards. On macOS, also copy a screenshot and press ⌘V in a loaded
+Kimi conversation (and use Edit → Paste): confirm one thumbnail appears and the
+existing draft remains. Send it to verify upload separately. OMP/Qoder text-only
+inputs do not advertise image paste support.
 
 Streaming thinking uses complete light italic text in a fixed 76 pt vertical scroll area.
 It wraps to the reading width instead of truncating a 240-character suffix; text

@@ -321,6 +321,20 @@ final class WorkbenchModel: ObservableObject {
         }
         rebuildCatalog(); saveWorkspace()
     }
+    func reviewDisplayed(_ session: KimiSession, on hostID: UUID) {
+        let reference = SessionReference(hostID: hostID, terminalID: session.id, kind: .kimi)
+        guard !showDashboard, selectedReference == reference else { return }
+        let previous = workspace.reviewedKimiUpdates[reference.id]
+        workspace.markReviewed(session, on: hostID)
+        if workspace.reviewedKimiUpdates[reference.id] != previous { rebuildCatalog(); saveWorkspace() }
+    }
+    func reviewDisplayed(_ snapshot: NativeAgentSnapshot, on hostID: UUID) {
+        let reference = SessionReference(hostID: hostID, terminalID: snapshot.id, kind: snapshot.provider)
+        guard !showDashboard, selectedReference == reference else { return }
+        let previous = workspace.reviewedKimiUpdates[reference.id]
+        workspace.markReviewed(snapshot, on: hostID)
+        if workspace.reviewedKimiUpdates[reference.id] != previous { rebuildCatalog(); saveWorkspace() }
+    }
     func showArchive() {
         showSessionDirectory = false; search = ""
         showArchived = true; onlyAttention = false

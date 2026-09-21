@@ -11,12 +11,13 @@ struct KimiWorkspaceView: View {
     @ObservedObject var connection: KimiConnection
     let onNew: () -> Void
     let onInput: () -> Void
+    let onResultDisplayed: (KimiSession) -> Void
     @State private var chooseFiles = false
     @State private var activityReview = 0
     var body: some View {
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
-                KimiTimeline(connection: connection, activityReview: activityReview)
+                KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
                 if let problem = connection.actionError ?? conversation.error { errorBanner(problem) }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
                 ConversationActivityBar(activity: ConversationActivity(
@@ -123,10 +124,21 @@ struct KimiWorkspaceView: View {
 private struct KimiTimeline: View {
     @ObservedObject var connection: KimiConnection
     var activityReview: Int
+    let onResultDisplayed: (KimiSession) -> Void
+    @State private var appActive = NSApp.isActive
     @State private var follow = true
     private var readingKey: String { "\(connection.host.id):kimi:\(connection.conversation?.snapshot.session.id ?? "")" }
     private var readingRevision: String { "\(connection.conversation?.lastSeq ?? 0):\(connection.conversation?.live?.assistantText.utf16.count ?? 0)" }
     private var hasNewReply: Bool { ConversationReadingMemory.shared.seenRevision[readingKey] != readingRevision }
+    private var displayedResult: KimiSession? {
+        guard appActive, follow, ConversationReadingMemory.shared.following[readingKey] != false,
+              connection.online, connection.snapshotReady,
+              let conversation = connection.conversation, conversation.error == nil,
+              conversation.snapshot.session.id == connection.selectedId,
+              !conversation.snapshot.session.busy, conversation.snapshot.session.lastTurnReason == "completed",
+              conversation.snapshot.pendingApprovals.isEmpty, conversation.snapshot.pendingQuestions.isEmpty else { return nil }
+        return conversation.snapshot.session
+    }
     var body: some View {
         ScrollViewReader { proxy in
             ConversationScrollView(showsScrollIndicator: !follow, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
@@ -161,6 +173,11 @@ private struct KimiTimeline: View {
             .overlay(alignment: .bottom) {
                 ReturnToLatestButton(isVisible: !follow, hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) }
             }
+            .onChange(of: displayedResult, initial: true) { _, session in
+                if let session { onResultDisplayed(session) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
             .onChange(of: [String(connection.conversation?.snapshot.asOfSeq ?? 0), connection.conversation?.live?.assistantText ?? "", String(connection.conversation?.live?.thinkingText.isEmpty ?? true)]) { _, _ in
                 if #unavailable(macOS 15) {
                     if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }

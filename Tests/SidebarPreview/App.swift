@@ -73,7 +73,7 @@ private struct SidebarPreview: View {
     }
     private func section(_ title: String) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
-            .padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
+            .frame(height: 24).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
     }
     private func task(_ name: String, status: String, symbol: String) -> some View {
         SessionRowChrome(title: name, subtitle: status.contains("等你处理") || status.contains("连接中断") ? status : nil,

@@ -147,7 +147,6 @@ private struct ReplyText: View {
             var attributes: [NSAttributedString.Key: Any] = [
                 .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
             ]
-            if run.code { attributes[.backgroundColor] = NSColor.labelColor.withAlphaComponent(0.025) }
             if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
             if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
             result.append(NSAttributedString(string: run.text, attributes: attributes))

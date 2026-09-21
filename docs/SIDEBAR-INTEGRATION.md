@@ -14,6 +14,14 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
   daily session scope. Recent filters (all/running/local) affect recents only.
 - Attention counts only online sessions needing intervention. Unread results
   remain in the workbench review section.
+- Pins, task groups and recent-session headings align with the row icons' left
+  edge. Group creation and the recent filter use matching 24 pt action areas.
+- Native conversation blue dots mean an unseen completed result. Kimi, OMP and
+  Qoder acknowledge the result loaded into the visible, active conversation when
+  following the latest content. A cached Kimi transcript awaiting refresh, an
+  inactive app, an older scroll position or a pending/error state does not count
+  as a read. The stored cursor comes from the displayed snapshot, not a newer
+  catalog entry. Explicit workbench review controls remain available.
 - Search uses a sheet and its own query. All sessions uses the main area. Both
   search active sessions; archived sessions have their separate page.
 - Environment controls operate on their own connections without changing the
@@ -39,6 +47,12 @@ protocols, task controls, file operations, tool visibility, and sidebar scoping.
 sidebar shell and native split view with fictional rows; it never loads the
 workspace model or connects to agents. This fixture checks presentation and
 shell interactions, not live-provider behavior.
+
+For automatic read-state acceptance on macOS: open an unread completed conversation
+and confirm its dot clears after loading. Switch away, complete another turn and
+confirm its dot returns. Repeat with a failed load, with the app inactive, and
+while scrolled to older content; those must not acknowledge the latest result.
+Confirm approvals/errors remain actionable and read state survives an app restart.
 
 ### Checked on 2026-09-21
 

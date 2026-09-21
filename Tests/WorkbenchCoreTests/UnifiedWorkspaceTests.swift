@@ -57,5 +57,28 @@ func checkUnifiedWorkspace() throws {
     let pending = try session(busy: true, pending: "approval", updated: "v3")
     workspace.markReviewed(pending, on: host)
     precondition(workspace.reviewedKimiUpdates[kimi.id] == "v1", "reading a result cannot dismiss an approval")
+
+    func nativeResult(completed: Int, busy: Bool = false, pending: Bool = false, error: String? = nil) throws -> NativeAgentSnapshot {
+        var value: [String: Any] = ["id":"same", "provider":"omp", "title":"Test", "cwd":"/tmp", "busy":busy,
+            "revision":completed, "completed":completed, "model":"test/model", "messages":[],
+            "interactions":pending ? [["id":"approval"]] : []]
+        if let error { value["error"] = error }
+        return try KimiWire.decoder().decode(NativeAgentSnapshot.self, from: JSONSerialization.data(withJSONObject: value))
+    }
+    let native = SessionReference(hostID: host, terminalID: "same", kind: .omp)
+    workspace.markReviewed(try nativeResult(completed: 1), on: host)
+    precondition(workspace.reviewedKimiUpdates[native.id] == "1")
+    precondition(workspace.reviewedKimiUpdates[kimi.id] == "v1", "Provider review state must stay independent")
+    for result in [try nativeResult(completed: 2, busy: true), try nativeResult(completed: 2, pending: true),
+                   try nativeResult(completed: 2, error: "failed")] {
+        workspace.markReviewed(result, on: host)
+        precondition(workspace.reviewedKimiUpdates[native.id] == "1", "Running, pending or failed views must not acknowledge a result")
+    }
+    precondition(workspace.reviewedKimiUpdates[native.id] != "2", "A newer completion stays unread until its snapshot is displayed")
+    workspace.markReviewed(try nativeResult(completed: 2), on: host)
+    workspace.markReviewed(try nativeResult(completed: 1), on: host)
+    precondition(workspace.reviewedKimiUpdates[native.id] == "2", "An older displayed snapshot cannot roll back the read cursor")
+    let restored = try JSONDecoder().decode(LocalWorkspace.self, from: JSONEncoder().encode(workspace))
+    precondition(restored.reviewedKimiUpdates[native.id] == "2", "Read state must survive restart")
     print("PASS: legacy workspace migration, mixed provider identity, ordered scene restoration, group resume, Kimi queue semantics and review version")
 }

@@ -72,6 +72,11 @@ import SwiftUI
 
     连续出现的 `session/list`、`session/prompt`、`session/shutdown` 应融入句子，仍然保留等宽字体的辨识度。
 
+    - 分支：`feat/example`，提交 `abc1234`（基于 `origin/main`）。
+    - Mac 上运行 `git fetch origin && git checkout feat/example`，然后执行 `./scripts/build.sh`。
+      1. 参数 `--example-option` 位于嵌套列表中，行内代码应保持等宽，周围没有高出文字的灰色矩形。
+      2. 联系地址 `reader@example.com` 与中文、English 混排时，底色保持一致。
+
     ## 列表与段落的阅读节奏
 
     - 单行项目一。

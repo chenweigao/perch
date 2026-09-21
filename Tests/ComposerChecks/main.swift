@@ -70,3 +70,38 @@ check(editor.string == "通过辅助功能输入中文" && draft == editor.strin
 for _ in 0..<100 { editor.syncDraft(draft) }
 check(editor.string == "通过辅助功能输入中文", "Accessibility input must survive streaming refresh")
 print("Unicode private-pasteboard checks passed")
+
+// Exercise AppKit's type negotiation, not a direct call to the attachment handler.
+let imageBoard = NSPasteboard(name: NSPasteboard.Name("dev.agentworkbench.image-checks.\(UUID().uuidString)"))
+defer { imageBoard.releaseGlobally() }
+let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8,
+                             samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+bitmap.setColor(.blue, atX: 0, y: 0)
+var pasted: [URL] = []
+var pasteError: String?
+editor.onFiles = { pasted.append(contentsOf: $0) }
+editor.onError = { pasteError = $0 }
+let originalDraft = editor.string
+defer { for file in pasted { try? FileManager.default.removeItem(at: file) } }
+for (type, format) in [(NSPasteboard.PasteboardType.png, NSBitmapImageRep.FileType.png), (.tiff, .tiff)] {
+    imageBoard.clearContents()
+    imageBoard.setData(bitmap.representation(using: format, properties: [:])!, forType: type)
+    check(imageBoard.availableType(from: editor.readablePasteboardTypes) == type, "Image-only clipboard must enable AppKit Paste")
+    let before = pasted.count
+    check(editor.readSelection(from: imageBoard), "Image-only paste must reach the native read-selection path")
+    check(pasted.count == before + 1 && pasteError == nil, "Exactly one attachment must be emitted")
+    let image = NSBitmapImageRep(data: try Data(contentsOf: pasted.last!))!
+    check(image.pixelsWide == 2 && image.pixelsHigh == 2, "Pasted PNG must retain image dimensions")
+    check(editor.string == originalDraft, "Image paste must preserve existing text")
+}
+imageBoard.clearContents()
+imageBoard.writeObjects(pasted.map { $0 as NSURL })
+let originalFiles = pasted
+check(editor.readSelection(from: imageBoard), "Finder file URLs must remain pasteable")
+check(Array(pasted.suffix(originalFiles.count)) == originalFiles, "Multiple pasted file URLs must be delivered together")
+editor.onFiles = nil
+imageBoard.clearContents()
+imageBoard.setData(bitmap.representation(using: .png, properties: [:])!, forType: .png)
+check(imageBoard.availableType(from: editor.readablePasteboardTypes) == nil, "Text-only connections must not advertise image support")
+print("Attachment paste checks passed: native PNG/TIFF negotiation, file URLs, draft preservation and text-only capability")
