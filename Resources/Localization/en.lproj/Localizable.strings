@@ -10,6 +10,7 @@
 
 /* Sidebar navigation (WorkspaceSidebarShell) */
 "搜索任务" = "Search Tasks";
+"新建会话" = "New Session";
 "工作台" = "Workspace";
 "待处理" = "Inbox";
 "已归档" = "Archived";
@@ -66,6 +67,7 @@
 "重新连接原生对话" = "Reconnect Native Conversations";
 "重新连接 Herdr" = "Reconnect Herdr";
 "断开 Herdr" = "Disconnect Herdr";
+"移除机器…" = "Remove Machine…";
 "远端持久托管" = "Hosted remotely";
 
 /* Connection state (HostConnection, KimiConnection) */
@@ -137,7 +139,7 @@
 "Agent 与执行环境" = "Agent & Environments";
 "管理本机 Agent…" = "Manage Local Agent…";
 "添加 SSH 环境…" = "Add SSH Environment…";
-"远程连接沿用本机 SSH 配置。连接与重连可从侧边栏的环境入口管理。" = "Remote connections reuse this Mac's SSH configuration. Connect and reconnect from the environment menu in the sidebar.";
+"远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。" = "Remote connections reuse this Mac's SSH configuration. Connect, reconnect and remove machines from the environment menu in the sidebar.";
 "界面" = "Appearance";
 "侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
 
@@ -158,6 +160,11 @@
 "将从 Kimi 服务删除「%@」及其历史，无法撤销。只想收起时，请使用归档。" = "This deletes \"%@\" and its history from the Kimi service, and cannot be undone. To simply tuck it away, archive it instead.";
 "将删除工作台中的「%@」及对话记录。Agent 自身保存的历史仍保留。" = "This removes \"%@\" and its conversation record from the workspace. History kept by the agent itself is preserved.";
 "将关闭「%@」的远端进程，运行中的任务会中断。只想整理列表时，请使用本机归档。" = "This closes the remote process for \"%@\", interrupting any running task. To tidy the list instead, archive it locally.";
+"移除机器？" = "Remove Machine?";
+"移除机器" = "Remove Machine";
+"将断开「%@」并从这台 Mac 的列表中移除。远端的 Agent 与终端继续运行，你的 SSH 配置不变；该机器上的会话会从列表消失，重新添加后可再出现。" = "This disconnects \"%@\" and removes it from this Mac's list. Remote agents and terminals keep running and your SSH configuration is unchanged; sessions on that machine leave the list, and return if you add it again.";
+"至少保留一台机器。先添加要用的机器，再移除这一台。" = "Keep at least one machine. Add the machine you want to use before removing this one.";
+"机器已移除，但保存机器列表失败：%@" = "The machine was removed, but saving the machine list failed: %@";
 "操作未完成" = "Action Not Completed";
 "知道了" = "Got It";
 "正在读取对话…" = "Loading conversation…";
@@ -318,3 +325,15 @@
 "连接已断开，以下为最后收到的工具状态。" = "Connection lost. Tool states below are the last received states.";
 "当前操作" = "Current activity";
 "任务计划" = "Task plan";
+"Steer" = "Steer";
+"Queue" = "Queue";
+"Send next turn" = "Send next turn";
+"Queued for next turn" = "Queued for next turn";
+"Steering requested" = "Steering requested";
+"Accepted · waiting for context" = "Accepted · waiting for context";
+"Sending" = "Sending";
+"Queued" = "Queued";
+"Running" = "Running";
+"Send unconfirmed" = "Send unconfirmed";
+"Accepted" = "Accepted";
+"Paused" = "Paused";

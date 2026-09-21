@@ -339,6 +339,60 @@ class HandlerContractTests(unittest.TestCase):
         value['messages'].clear()
         self.assertEqual(len(self.s.state['messages']),1,'changed snapshots must remain detached')
 
+    def test_steer_during_turn_and_echo_are_idempotent(self):
+        self.prompt()
+        self.s.event({'type':'agent_start'})
+        body={'text':'改为只读分析','requestId':'guidance'}
+        self.assertTrue(self.s.summary()['steer'])
+        self.assertEqual(self.request('/sessions/contract/steer',body)[1]['status'],'submitted')
+        self.assertEqual(self.s.state['turnId'],'one')
+        self.assertTrue(self.s.state['busy'])
+        self.assertEqual(self.sent[-1],dict(type='steer',id='guidance',message='改为只读分析'))
+        self.s.event(dict(type='response',command='steer',id='guidance',success=True))
+        self.assertEqual(self.request('/sessions/contract/steer',body)[1]['status'],'accepted')
+        self.assertEqual(len([x for x in self.sent if x['type']=='steer']),1)
+        for kind in ['message_start','message_update','message_end']:
+            self.s.event(dict(type=kind,message=dict(role='user',timestamp=123,content=[dict(type='text',text=body['text'])])))
+        self.assertEqual([m['id'] for m in self.s.snapshot()['messages']],['guidance'])
+        self.assertEqual(self.request('/sessions/contract/requests/guidance')[1]['status'],'consumed')
+        # A late acknowledgement cannot regress consumed to accepted.
+        self.s.event(dict(type='response',command='steer',id='guidance',success=True))
+        self.assertEqual(self.request('/sessions/contract/requests/guidance')[1]['status'],'consumed')
+        self.s.event(dict(type='agent_end'))
+        self.assertEqual(self.request('/sessions/contract/requests/one')[1]['status'],'completed')
+        self.assertEqual(self.request('/sessions/contract/requests/guidance')[1]['status'],'consumed')
+
+    def test_repeated_identical_steers_have_distinct_echoes(self):
+        self.prompt()
+        for n in range(2):
+            self.request('/sessions/contract/steer',dict(text='补充',requestId='s'+str(n)))
+        for n in range(2):
+            self.s.event(dict(type='message_end',message=dict(role='user',timestamp=n,content=[dict(type='text',text='补充')])))
+        self.assertEqual([m['id'] for m in self.s.snapshot()['messages']],['s0','s1'])
+
+    def test_steer_races_completion_and_rejection_preserves_active_turn(self):
+        self.prompt(); self.s.event(dict(type='agent_end'))
+        self.assertEqual(self.request('/sessions/contract/steer',dict(text='补充',requestId='two'))[0],200)
+        self.assertEqual(self.sent[-1]['type'],'prompt')
+        self.assertEqual(self.s.state['turnId'],'two')
+        self.request('/sessions/contract/steer',dict(text='另一个',requestId='three'))
+        self.s.event(dict(type='response',command='steer',id='three',success=False,error='rejected'))
+        self.assertEqual(self.request('/sessions/contract/requests/three')[1]['status'],'failed')
+        self.assertTrue(self.s.state['busy']); self.assertIsNone(self.s.state['error'])
+        self.s.state['provider']='qoder'
+        self.assertFalse(self.s.summary()['steer'])
+        self.assertEqual(self.request('/sessions/contract/steer',dict(text='补充',requestId='four'))[0],400)
+
+    def test_unconsumed_steer_is_not_claimed_complete_or_replayed(self):
+        self.prompt()
+        body=dict(text='补充',requestId='steering')
+        self.request('/sessions/contract/steer',body)
+        self.s.event(dict(type='response',command='steer',id='steering',success=True))
+        self.s.state['cancelled']=True; self.s.event(dict(type='agent_end'))
+        self.assertEqual(self.request('/sessions/contract/requests/steering')[1]['status'],'unknown')
+        self.request('/sessions/contract/steer',body)
+        self.assertEqual(len([x for x in self.sent if x['type']=='steer']),1)
+
     def test_duplicate_prompt_after_completion_and_reload_is_not_replayed(self):
         self.assertEqual(self.prompt()[0],200)
         self.s.event({'type':'agent_end'})

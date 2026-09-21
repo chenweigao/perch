@@ -9,19 +9,62 @@ struct ConversationScrollObserver: NSViewRepresentable {
 
     final class ObserverView: NSView {
         var onScroll: (Bool) -> Void
-        private var observation: NSObjectProtocol?
+        private var observations: [NSObjectProtocol] = []
+        private var wheelMonitor: Any?
+        private var wheelGeneration = 0
         init(onScroll: @escaping (Bool) -> Void) {
             self.onScroll = onScroll
             super.init(frame: .zero)
-            observation = NotificationCenter.default.addObserver(forName: NSScrollView.didLiveScrollNotification, object: nil, queue: .main) { [weak self] notification in
-                guard let self, let scroll = self.enclosingScrollView,
-                      notification.object as? NSScrollView === scroll,
-                      let document = scroll.documentView else { return }
-                self.onScroll(document.bounds.maxY - scroll.documentVisibleRect.maxY < 40)
+            for name in [NSScrollView.willStartLiveScrollNotification, NSScrollView.didEndLiveScrollNotification] {
+                observations.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
+                    guard let self, let scroll = self.enclosingScrollView,
+                          notification.object as? NSScrollView === scroll else { return }
+                    if notification.name == NSScrollView.willStartLiveScrollNotification {
+                        self.onScroll(false)
+                    } else {
+                        self.resumeIfAtBottom()
+                    }
+                })
             }
         }
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-        deinit { if let observation { NotificationCenter.default.removeObserver(observation) } }
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let wheelMonitor { NSEvent.removeMonitor(wheelMonitor); self.wheelMonitor = nil }
+            guard window != nil else { return }
+            wheelMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+                guard let self, event.window === self.window, let scroll = self.enclosingScrollView,
+                      scroll.visibleRect.contains(scroll.convert(event.locationInWindow, from: nil)),
+                      abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) else { return event }
+                self.userScrolled(deltaY: event.scrollingDeltaY)
+                return event // Observe intent without consuming or forwarding the gesture.
+            }
+        }
+        /// Pause before AppKit moves the clip view. Otherwise a streamed height
+        /// update can snap back to the bottom before the old 40-point threshold is crossed.
+        func userScrolled(deltaY: CGFloat) {
+            wheelGeneration += 1
+            let generation = wheelGeneration
+            onScroll(false)
+            // Wheel mice may have no live-scroll phase. Resume only after an explicit
+            // downward event has been applied, never from a content-size change.
+            if deltaY < 0 {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.wheelGeneration == generation else { return }
+                    self.resumeIfAtBottom()
+                }
+            }
+        }
+        private func resumeIfAtBottom() {
+            guard let scroll = enclosingScrollView, let document = scroll.documentView,
+                  document.bounds.maxY - scroll.documentVisibleRect.maxY <= 1 else { return }
+            onScroll(true)
+        }
+        deinit {
+            observations.forEach(NotificationCenter.default.removeObserver)
+            if let wheelMonitor { NSEvent.removeMonitor(wheelMonitor) }
+        }
     }
 }
 
@@ -55,7 +98,6 @@ struct ConversationScrollView<Content: View>: View {
     var onScroll: (Bool) -> Void = { _ in }
     var onContentSizeChange: () -> Void = {}
     @ViewBuilder let content: Content
-    @State private var userScrolling = false
     @State private var contentSize = CGSize.zero
     @State private var conversationViewport = ConversationViewport()
     private var scroll: some View {
@@ -68,7 +110,7 @@ struct ConversationScrollView<Content: View>: View {
                     .padding(.horizontal, 36).frame(maxWidth: .infinity)
                     .coordinateSpace(name: "conversation-content")
                     .background {
-                        if #unavailable(macOS 15) { ConversationScrollObserver(onScroll: onScroll) }
+                        ConversationScrollObserver(onScroll: onScroll)
                     }
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }))
@@ -83,13 +125,6 @@ struct ConversationScrollView<Content: View>: View {
             }.task(id: contentSize) {
                 await Task.yield()
                 if !Task.isCancelled { onContentSizeChange() }
-            }.onScrollPhaseChange { _, phase, context in
-                userScrolling = phase == .tracking || phase == .interacting || phase == .decelerating
-                if userScrolling { onScroll(context.geometry.contentSize.height - context.geometry.visibleRect.maxY < 40) }
-            }.onScrollGeometryChange(for: Bool.self) { geometry in
-                geometry.contentSize.height - geometry.visibleRect.maxY < 40
-            } action: { _, atBottom in
-                if userScrolling { onScroll(atBottom) }
             }
         } else {
             scroll

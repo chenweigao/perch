@@ -777,7 +777,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
     func makeNSView(context: Context) -> FollowingThoughtScrollView {
         let scroll = FollowingThoughtScrollView()
         scroll.drawsBackground = false
-        // Keep wheel/trackpad scrolling without flashing a scroller on every token.
+        // The preview follows the stream; wheel gestures scroll the conversation.
         scroll.hasVerticalScroller = false
         scroll.autohidesScrollers = true
         let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 760, height: 76))
@@ -817,7 +817,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
     }
 }
 
-/// Follow only within the thought viewport. Reading older thoughts pauses following.
+/// A live preview, not a second reading surface. Full thoughts have their own popover.
 private final class FollowingThoughtScrollView: NSScrollView {
     var overflowChanged: (Bool) -> Void = { _ in }
 
@@ -829,21 +829,13 @@ private final class FollowingThoughtScrollView: NSScrollView {
         text.sizeToFit()
         return text.frame.height
     }
-    private var followsLatest = true
     private var followScheduled = false
-    private var scrollObservation: NSObjectProtocol?
 
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        scrollObservation = NotificationCenter.default.addObserver(
-            forName: NSScrollView.didLiveScrollNotification, object: self, queue: .main
-        ) { [weak self] _ in
-            guard let self, let document = self.documentView else { return }
-            self.followsLatest = document.bounds.maxY - self.documentVisibleRect.maxY < 12
-        }
+    override func scrollWheel(with event: NSEvent) {
+        // A nested NSScrollView otherwise consumes the wheel while only a few
+        // thought lines move. Keep transcript navigation consistent under text.
+        enclosingScrollView?.scrollWheel(with: event)
     }
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    deinit { if let scrollObservation { NotificationCenter.default.removeObserver(scrollObservation) } }
 
     override func setFrameSize(_ newSize: NSSize) {
         let changed = frame.size != newSize
@@ -861,7 +853,6 @@ private final class FollowingThoughtScrollView: NSScrollView {
             if let container = text.textContainer { text.layoutManager?.ensureLayout(for: container) }
             text.sizeToFit()
             self.overflowChanged(text.bounds.height > self.contentView.bounds.height + 0.5)
-            guard self.followsLatest else { return }
             let bottom = max(0, text.bounds.maxY - self.contentView.bounds.height)
             self.contentView.scroll(to: NSPoint(x: 0, y: bottom))
             self.reflectScrolledClipView(self.contentView)

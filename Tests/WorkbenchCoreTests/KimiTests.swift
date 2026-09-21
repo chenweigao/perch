@@ -35,6 +35,10 @@ func checkKimiProtocol() throws {
     require(c.apply(try event("assistant.delta", offset: 20)), "a missing delta requires snapshot")
     require(!c.apply(try event("turn.ended", seq: 9)), "old durable events are ignored")
     require(c.apply(try event("turn.ended", epoch: "e2")), "epoch changes require snapshot")
+    for kind in ["prompt.queued", "prompt.steered", "turn.steer"] {
+        var steered = try KimiConversation(snapshot())
+        require(steered.apply(try event(kind, seq: 21)), "Steering must refresh history and pending prompts")
+    }
     c.reconcile(try snapshot(20, text: "恢复😀"))
     require(c.lastSeq == 20 && c.live?.assistantText == "恢复😀")
     require(!c.apply(try event("assistant.delta", seq: 11, offset: 0, delta: "旧步骤不能混入")))

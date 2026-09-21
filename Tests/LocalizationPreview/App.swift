@@ -23,7 +23,7 @@ private struct PreviewHeader: View {
 private struct PreviewSidebar: View {
     @UILocalization private var L
     var body: some View {
-        WorkspaceSidebarShell(page: .home, attentionCount: 2, environmentSummary: L("\(3) 个 SSH"), onSearch: {}, onHome: {}, onInbox: {}, onArchive: {}) {
+        WorkspaceSidebarShell(page: .home, attentionCount: 2, environmentSummary: L("\(3) 个 SSH"), onSearch: {}, onNew: {}, onHome: {}, onInbox: {}, onArchive: {}) {
             Text("最近会话")
             Text(L("未命名会话"))
             Text(L(key: "等待确认"))

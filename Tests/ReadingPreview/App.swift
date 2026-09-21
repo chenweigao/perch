@@ -62,8 +62,8 @@ private struct ReadingPreview: View {
         }
         let content: [[String: String]]
         if scenario == 3 || scenario == 4 {
-            let additions = (0..<thoughtSteps).map { "\n追加思考 \($0 + 1)：这段新增内容应该在固定高度窗口内自动跟随。手动向上阅读时不抢位置，回到底部再恢复跟随。" }.joined()
-            content = [["type": "thinking", "thinking": "正在检查模型返回的内容。即使模型只输出思考过程，界面也应该自然换行，保留完整句子。较长的中文与 English reasoning text 应该在固定宽度内换行，不应横向截断，也不应该推着整页不断增长。用户可以在这个固定高度区域内滚动阅读后续内容。结束后没有正文时，这份思考记录仍然可读。" + additions]]
+            let additions = (0..<thoughtSteps).map { "\n追加思考 \($0 + 1)：这段新增内容应该在固定高度窗口内自动跟随。鼠标放在预览文字上滚动时应移动整页；完整思考在弹窗内阅读。" }.joined()
+            content = [["type": "thinking", "thinking": "正在检查模型返回的内容。即使模型只输出思考过程，界面也应该自然换行，保留完整句子。较长的中文与 English reasoning text 应该在固定宽度内换行，不应横向截断，也不应该推着整页不断增长。预览自动显示最新内容，用户可以展开完整思考阅读。结束后没有正文时，这份思考记录仍然可读。" + additions]]
         }
         else if scenario == 5 { content = [["type": "tool_use", "tool_call_id": "t", "tool_name": "read"]] }
         else { content = [["type": "text", "text": "已找到原因：前一版把工具调用前的说明全部折叠了。这段过程说明现在会保留在页面上。"], ["type": "tool_use", "tool_call_id": "t", "tool_name": "read"]] }
@@ -128,6 +128,9 @@ private struct ReadingPreview: View {
                             .disabled(historyPages >= 2).frame(maxWidth: .infinity)
                         ConversationTranscript(messages: historyMessages, sessionId: "history-fixture")
                     } else {
+                        if scenario == 3 {
+                            ConversationTranscript(messages: historyMessages, sessionId: "thought-scroll-history")
+                        }
                         ConversationTranscript(messages: scenarioMessages, sessionId: "fixture", isRunning: scenario == 1 || scenario == 3 || scenario == 6)
                     }
                     Color.clear.frame(height: 1).id("bottom")
@@ -145,6 +148,15 @@ private struct ReadingPreview: View {
         }.frame(minWidth: 540, minHeight: 500)
             .task(id: streaming) {
                 guard streaming else { return }
+                if scenario == 3 {
+                    thoughtSteps = 0
+                    while thoughtSteps < 300 && scenario == 3 && !Task.isCancelled {
+                        thoughtSteps += 1
+                        do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+                    }
+                    streaming = false
+                    return
+                }
                 prefixLength = 0
                 while prefixLength < source.count && !Task.isCancelled {
                     prefixLength += 35

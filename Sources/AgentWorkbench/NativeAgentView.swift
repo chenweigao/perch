@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import WorkbenchCore
 
 struct NativeAgentView: View {
@@ -28,6 +29,7 @@ struct NativeAgentView: View {
                         ConversationTranscript(messages: s.messages, sessionId: s.id,
                                                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                                isRunning: s.busy, online: connection.online, memoryKey: readingKey)
+                        NativeRunControls(connection: connection, sessionID: s.id)
                         Color.clear.frame(height: 1).id("pending-interactions")
                         ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }
                         Color.clear.frame(height: 1).id("bottom")
@@ -36,6 +38,11 @@ struct NativeAgentView: View {
                             ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
                         }
                         .onChange(of: s.revision) { _, _ in
+                            if #unavailable(macOS 15) {
+                                if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                            }
+                        }
+                        .onChange(of: connection.queue.allItems.filter { $0.session.terminalID == s.id }) { _, _ in
                             if #unavailable(macOS 15) {
                                 if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                             }
@@ -77,7 +84,6 @@ struct NativeAgentView: View {
                     }.padding(6)
                 }
                 VStack(spacing: 8) {
-                    NativeRunControls(connection: connection, sessionID: s.id)
                     if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
                         CommandPalette(completion: completion, selection: palette.selection) { command in
                             apply(command, completion, to: s.id)
@@ -99,7 +105,8 @@ struct NativeAgentView: View {
                                                  canSend: canSend(s), canStop: connection.canStop,
                                                  queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
                                                  onSend: { connection.send(mode: defaultMode(s)) },
-                                                 onStop: { connection.stop() })
+                                                 onStop: { connection.stop() },
+                                                 onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
                         }
                     }.padding(14).workbenchControlSurface()
                     ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
@@ -207,7 +214,8 @@ struct NativeRunControls: View {
     var body: some View {
         if let reference {
             let phase = connection.stops.phase(for: reference)
-            let pending = connection.queue.items(for: reference)
+            let visible = Set(connection.snapshot?.messages.map(\.id) ?? [])
+            let pending = connection.queue.items(for: reference).filter { !visible.contains($0.id) }
             VStack(alignment: .leading, spacing: 8) {
                 if phase != .idle {
                     HStack(spacing: 10) {
@@ -222,24 +230,24 @@ struct NativeRunControls: View {
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
-                    HStack(spacing: 10) {
-                        Text(message.mode == .steer ? "Steer" : "Queue").font(.caption2)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.black.opacity(0.06), in: Capsule())
-                        Text(message.text).font(.caption).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Text(message.state.label).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
-                        if message.state.isEditable {
-                            Button("Edit") { editingMessage = message }.font(.caption2)
-                            Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
+                    VStack(alignment: .leading, spacing: 8) {
+                        PendingMessageContent(text: message.text,
+                                              status: message.mode == .steer && message.state == .accepted
+                                                ? "Accepted · waiting for context" : message.state.label,
+                                              mode: message.mode == .steer ? "Steer" : "Queue")
+                        HStack(spacing: 10) {
+                            if message.state.isEditable {
+                                Button("Edit") { editingMessage = message }.font(.caption2)
+                                Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
+                            }
+                            switch message.state {
+                            case .unknown: Button("Sync and retry") { connection.retry(message.id) }.font(.caption2)
+                            case .failed:
+                                Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
+                            default: EmptyView()
+                            }
                         }
-                        switch message.state {
-                        case .unknown: Button("Sync and retry") { connection.retry(message.id) }.font(.caption2)
-                        case .failed:
-                            Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
-                        default: EmptyView()
-                        }
-                    }
+                    }.padding(.vertical, 8)
                 }
                 if let warning = connection.queue.unsentWarning(for: reference) {
                     Text(warning).font(.caption2).foregroundStyle(.secondary)
@@ -336,16 +344,39 @@ struct NewConversationSheet: View {
     @State private var agentModel = ""
     @State private var creating = false
     @State private var error: String?
+    @State private var attachments: [URL] = []
+    @State private var chooseFiles = false
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
-    private var canStart: Bool { !creating && !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online) }
+    /// Attachments ride the Kimi session channel; native adapters have none, so an
+    /// attachment-only draft can start a Kimi task but never a native one.
+    private var canStart: Bool {
+        let hasContent = !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
+        return !creating && hasContent && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Start a task").font(.title2.weight(.semibold))
             if let group = model.selectedGroup { Text(group.name).foregroundStyle(.secondary) }
-            MessageComposer(text: $prompt, placeholder: "What would you like to work on?", canSend: canStart, onSend: start)
-                .frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
+            VStack(alignment: .leading, spacing: 10) {
+                if !attachments.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(attachments, id: \.self) { file in
+                                ComposerAttachment(file: file) { attachments.removeAll { $0 == file } }
+                            }
+                        }
+                    }
+                }
+                MessageComposer(text: $prompt, placeholder: "What would you like to work on?", canSend: canStart, onSend: start,
+                                onFiles: provider == .kimi ? addAttachments : nil,
+                                onError: { error = $0 })
+            }.frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
+            if provider != .kimi && !attachments.isEmpty {
+                Text("Attachments are sent only with Kimi sessions.").font(.caption).foregroundStyle(.secondary)
+            }
             HStack(spacing: 12) {
+                ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                 Menu {
                     ForEach(model.connections) { connection in
                         Button(connection.host.name) { model.activateAgentEnvironment(connection.id) }
@@ -374,6 +405,9 @@ struct NewConversationSheet: View {
                     .buttonStyle(.borderedProminent).disabled(!canStart)
             }
         }.padding(24).frame(width: 650)
+            .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+                do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
+            }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
             .onAppear {
                 if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data) {
@@ -389,14 +423,18 @@ struct NewConversationSheet: View {
                 }
             }
     }
+    private func addAttachments(_ files: [URL]) {
+        for file in files where !attachments.contains(file) { attachments.append(file) }
+    }
     private func start() {
         guard canStart else { return }; creating = true
-        let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd
+        let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd, files = attachments
         let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
         Task {
             do {
                 if selectedProvider == .kimi {
                     let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text, model: selectedModel)
+                    if !files.isEmpty { kimi.attachments[session.id] = files }
                     model.newKimiCreated(session)
                     await kimi.sendPrompt(for: session.id)
                 } else {
@@ -408,7 +446,7 @@ struct NewConversationSheet: View {
                 UserDefaults.standard.set(try JSONEncoder().encode(defaults), forKey: defaultsKey)
                 UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
                 UserDefaults.standard.set(directory, forKey: "new.cwd")
-                prompt = ""; dismiss()
+                prompt = ""; attachments = []; dismiss()
             } catch { self.error = error.localizedDescription; creating = false }
         }
     }

@@ -79,6 +79,20 @@ func checkRunControl() throws {
     raced.resolve(session, evidence: .completedBeforeStop)
     precondition(raced.phase(for: session) == .completedBeforeStop)
 
+    // Running/accepted prompts must not block steering; unconfirmed sends still do.
+    var liveQueue = OutboundQueue()
+    liveQueue.enqueue("original", for: session, mode: .now, id: "original")
+    liveQueue.markRunning("original")
+    liveQueue.enqueue("later", for: session, mode: .nextTurn, id: "later")
+    liveQueue.enqueue("guide", for: session, mode: .steer, id: "guide")
+    precondition(liveQueue.nextDelivery(for: session, isStreaming: true)?.id == "guide")
+    liveQueue.markAccepted("guide")
+    liveQueue.enqueue("guide again", for: session, mode: .steer, id: "guide2")
+    precondition(liveQueue.nextPendingID(for: session, isStreaming: true) == "guide2")
+    precondition(liveQueue.nextPendingID(for: session, isStreaming: false) == nil)
+    liveQueue.markUnknown("guide", "lost acknowledgement")
+    precondition(liveQueue.nextPendingID(for: session, isStreaming: true) == nil)
+
     // Queue ownership is host + session, so switching cannot cross sessions.
     var queue = OutboundQueue()
     precondition(queue.enqueue("   ", for: session, mode: .nextTurn) == nil)

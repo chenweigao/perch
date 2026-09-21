@@ -1,4 +1,5 @@
 import SwiftUI
+import WorkbenchCore
 
 /// The primary action follows runtime state, never the contents of the draft.
 /// A separate queue action preserves composing while the current turn runs.
@@ -10,15 +11,22 @@ struct ComposerActionButton: View {
     var queuedSendTitle = "Queue"
     let onSend: () -> Void
     let onStop: () -> Void
+    var onQueue: (() -> Void)? = nil
 
     private var enabled: Bool { !isStopping && (isRunning ? canStop : canSend) }
     private var title: String { isStopping ? "Stopping…" : isRunning ? "Stop task" : "Send" }
     var body: some View {
         HStack(spacing: 8) {
             if isRunning && canSend && !isStopping {
-                Button(queuedSendTitle, action: onSend).buttonStyle(.plain)
+                Button(L(key: queuedSendTitle), action: onSend).buttonStyle(.plain)
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                     .accessibilityLabel(queuedSendTitle == "Queue" ? "Queue message" : queuedSendTitle)
+                if let onQueue {
+                    Menu {
+                        Button("Send next turn", action: onQueue)
+                    } label: { Image(systemName: "chevron.down") }
+                        .menuStyle(.borderlessButton).fixedSize().help("Send next turn")
+                }
             }
             Button {
                 if isRunning { onStop() } else { onSend() }

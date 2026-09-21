@@ -110,7 +110,8 @@ class Session:
         return {k:self.state[k] for k in ('id','provider','title','cwd','busy','archived','updated','revision','completed','model','error')} | {
             'pending':len(self.state['interactions']), 'cancelled':self.state.get('cancelled',False),
             'thinking':self.state.get('thinking'), 'context':self.state.get('context'),
-            'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState')}
+            'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState'),
+            'steer':self.state['provider']=='omp'}
     def finish(self, status):
         self.state['turnState']=status
         receipt=self.state.get('requests',{}).get(self.state.get('turnId'))
@@ -129,7 +130,7 @@ class Session:
         if s['busy'] or s['archived']: raise ValueError('会话正在运行或已归档')
         if not text.strip(): raise ValueError('消息不能为空')
         if not self.process or self.process.poll() is not None: self.launch()
-        receipt={'id':request_id,'digest':digest,'status':'submitting'}
+        receipt={'id':request_id,'digest':digest,'text':text,'status':'submitting'}
         receipts[request_id]=receipt
         s.update(busy=True,error=None,cancelled=False,stopRequested=False,stopAcknowledged=False,
                  updated=time.time(),turnId=request_id,turnState='submitting')
@@ -330,6 +331,28 @@ class Session:
         for i, existing in enumerate(self.state['messages']):
             if existing['id'] == identity: self.state['messages'][i] = value; return
         self.state['messages'].append(value)
+    def steer(self, body):
+        s=self.state; request_id=body.get('requestId'); text=body.get('text','')
+        if s['provider']!='omp': raise ValueError('当前 Agent 不支持运行中引导')
+        if not isinstance(request_id,str) or not request_id or not text.strip():
+            raise ValueError('缺少 requestId 或消息内容')
+        receipts=s.setdefault('requests',{}); digest=hashlib.sha256(text.encode()).hexdigest()
+        if request_id in receipts:
+            receipt=receipts[request_id]
+            if receipt['digest']!=digest: raise ValueError('requestId 已用于另一条消息')
+            return copy.deepcopy(receipt)
+        # The turn can finish between the client's snapshot and this request.
+        if not s['busy']: return self.prompt(body)
+        if s.get('stopRequested'): raise ValueError('正在停止，请等待停止完成')
+        receipt={'id':request_id,'digest':digest,'text':text,'status':'submitted',
+                 'mode':'steer','turnId':s.get('turnId')}
+        receipts[request_id]=receipt
+        self.touch(True)
+        try: self.send({'type':'steer','id':request_id,'message':text})
+        except Exception as e: receipt.update(status='unknown',error=str(e))
+        self.touch(True)
+        return copy.deepcopy(receipt)
+
     def event(self,e):
         s = self.state; t = e.get('type'); provider = s['provider']; durable = False
         if t == 'ready':
@@ -339,6 +362,14 @@ class Session:
                 self.send({'id':'state','type':'get_state'})
             return
         if t == 'response':
+            receipt=s.get('requests',{}).get(e.get('id'))
+            if e.get('command')=='steer' and receipt and receipt.get('mode')=='steer':
+                # A late ack must not overwrite evidence that the model consumed it.
+                if receipt['status']=='submitted':
+                    receipt.update(status='accepted' if e.get('success') else 'failed',
+                                   error=None if e.get('success') else str(e.get('error','引导被拒绝')))
+                    self.touch(True)
+                return
             # A command reporting "nothing to compact" describes that command, not a
             # broken session, so it must not mark the session as errored.
             if self.command_id and e.get('id') == self.command_id:
@@ -374,6 +405,9 @@ class Session:
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
             if not s.get('cancelled') and not s['error']: s['completed']+=1
             self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
+            for receipt in s.get('requests',{}).values():
+                if receipt.get('mode')=='steer' and receipt.get('turnId')==s.get('turnId') and receipt['status'] in ('submitted','accepted'):
+                    receipt.update(status='unknown',error='本轮已结束，尚未观察到引导消息进入上下文')
             if e.get('resume'): s['resume']=e['resume']
             # Context usage only moves when a turn consumes tokens, so re-read it here
             # rather than polling get_state on a timer.
@@ -383,7 +417,20 @@ class Session:
         elif t in ('worker_error','extension_error'):
             s['error']=None if s.get('cancelled') or s.get('stopAcknowledged') else e.get('message',e.get('error','Agent 错误')); durable=True
         elif provider == 'omp' and t in ('message_start','message_update','message_end'):
-            m=e['message']; identity=str(m.get('timestamp'))+':'+m['role']; self.upsert(m,identity); durable=t=='message_end'
+            m=e['message']; identity=str(m.get('timestamp'))+':'+m['role']
+            if m['role']=='user':
+                # Bind the runtime's echo to the submitted id, including repeated text.
+                receipts=s.get('requests',{})
+                receipt=next((r for r in receipts.values() if r.get('runtimeId')==identity),None)
+                if receipt is None:
+                    content=m.get('content',[])
+                    text=content if isinstance(content,str) else ''.join(p.get('text','') for p in content if p.get('type')=='text')
+                    receipt=next((r for r in receipts.values() if r.get('text')==text
+                                  and not r.get('runtimeId') and r['status'] in ('submitting','submitted','accepted','running','unknown')),None)
+                if receipt:
+                    receipt['runtimeId']=identity; identity=receipt['id']
+                    if receipt.get('mode')=='steer': receipt.update(status='consumed',error=None)
+            self.upsert(m,identity); durable=t=='message_end'
             if m.get('stopReason')=='aborted': s['cancelled']=True
             if m.get('stopReason')=='error': s['error']=m.get('errorMessage','模型请求失败')
         elif provider == 'omp' and t == 'extension_ui_request':
@@ -552,6 +599,8 @@ class Handler(BaseHTTPRequestHandler):
                         action=path[3]
                         if action=='prompt':
                             result=s.prompt(body)
+                        elif action=='steer':
+                            result=s.steer(body)
                         elif action=='model':
                             if s.state['provider'] not in ('omp','dsh'): raise ValueError('当前 Agent 不支持切换模型')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
@@ -665,7 +714,7 @@ class Handler(BaseHTTPRequestHandler):
                             # Deletion removes Workbench transcript only; upstream history remains available in the CLI.
                             s.path.unlink(); del SESSIONS[s.state['id']]
                         else: raise ValueError('未知操作')
-                        if action!='prompt': result={'ok':True}
+                        if action not in ('prompt','steer'): result={'ok':True}
                 else: raise ValueError('未知路径')
             self.respond(200,result)
         except Exception as e: self.respond(400,{'error':str(e)})

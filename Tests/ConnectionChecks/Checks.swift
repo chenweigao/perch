@@ -6,6 +6,7 @@ private final class TransportFixture {
     var sessions: [String: [String: Any]] = [:]
     var receipts: [String: String] = [:]
     var prompts: [String] = []
+    var steers: [String] = []
     var losePromptResponse = false
     var failCatalog = false
     var archives = 0
@@ -19,7 +20,7 @@ private final class TransportFixture {
         for id in ["a", "b"] {
             sessions[id] = ["id": id, "provider": "omp", "title": id, "cwd": "/fixture",
                             "busy": false, "archived": false, "updated": 1.0, "completed": 0,
-                            "pending": 0, "model": "fixture", "cancelled": false]
+                            "pending": 0, "model": "fixture", "cancelled": false, "steer": true]
         }
     }
     func request(_ path: String, _ body: JSONValue?) async throws -> Data {
@@ -54,6 +55,10 @@ private final class TransportFixture {
                 }
                 if losePromptResponse { losePromptResponse = false; throw WorkbenchError("response lost") }
                 result = ["id": key, "status": receipts[key]!]
+            case "steer":
+                let key = body!["requestId"].string!
+                steers.append(key); receipts[key] = "accepted"
+                result = ["id": key, "status": "accepted"]
             case "abort":
                 abortedTurns.append((id, body?["turnId"].string))
                 // An old optimistic cancellation flag is still not terminal evidence.
@@ -80,8 +85,32 @@ struct ConnectionChecks {
     @MainActor
     static func main() async throws {
         try await checkKimiTaskLaunch()
+        try await checkKimiSteering()
         try await checkImmediateSelection()
         let fixture = TransportFixture()
+        let steeringFixture = TransportFixture()
+        let steeringClient = NativeAgentConnection(host: SSHHost(name: "Steer", destination: "fixture"), transport: steeringFixture.request)
+        try await steeringClient.refresh(); steeringClient.select("a")
+        steeringClient.drafts["a"] = "original"; steeringClient.send()
+        await settle { !steeringClient.sending }
+        try await steeringClient.refresh()
+        let originalTurn = steeringFixture.sessions["a"]?["turnId"] as? String
+        precondition(steeringClient.modes(for: "a") == [.steer, .nextTurn])
+        steeringClient.drafts["a"] = "guide now"; steeringClient.send(mode: .steer)
+        await settle { steeringFixture.steers.count == 1 && !steeringClient.sending }
+        precondition(steeringFixture.prompts.count == 1)
+        precondition(steeringFixture.sessions["a"]?["turnId"] as? String == originalTurn)
+        steeringClient.drafts["a"] = "guide again"; steeringClient.send(mode: .steer)
+        await settle { steeringFixture.steers.count == 2 && !steeringClient.sending }
+        steeringClient.drafts["a"] = "next turn"; steeringClient.send(mode: .nextTurn)
+        precondition(steeringFixture.prompts.count == 1)
+        let consumedID = steeringFixture.steers[0]
+        steeringFixture.receipts[consumedID] = "consumed"
+        steeringClient.select("b")
+        try await steeringClient.refresh()
+        precondition(steeringClient.queue.message(consumedID) == nil, "Consumed guidance in a background session must not block queued work")
+        steeringClient.disconnect()
+        print("PASS: native steering during accepted turn, repeated guidance, next-turn queue")
         let connection = NativeAgentConnection(host: SSHHost(name: "Fixture", destination: "fixture"), transport: fixture.request)
         try await connection.refresh()
         connection.select("a")

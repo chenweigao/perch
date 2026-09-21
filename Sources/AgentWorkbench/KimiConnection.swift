@@ -26,6 +26,7 @@ final class KimiConnection: ObservableObject {
     var catalog: [AgentModel] { ModelSelectionCatalog.parseKimi(models) }
     @Published var manualPermissions: [String: Bool] = [:]
     @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
+    @Published private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     @Published var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
     @Published private(set) var aborting: Set<String> = []
     @Published private var sendingSessions: Set<String> = []
@@ -223,7 +224,13 @@ final class KimiConnection: ObservableObject {
     private func refreshConversation(selectionToken: UUID) async throws {
         guard let api, let id = selectedId else { return }
         let value = try await api.get(KimiSnapshot.self, "/api/v1/sessions/\(id)/snapshot")
+        try Task.checkCancellation()
         guard selectionToken == selectionGeneration, id == selectedId else { throw CancellationError() }
+        let prompts = try await api.get(KimiPromptQueue.self, "/api/v1/sessions/\(id)/prompts")
+        guard selectionToken == selectionGeneration, id == selectedId else { throw CancellationError() }
+        pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [],
+                                                remote: prompts.queued + (prompts.active.map { [$0] } ?? []),
+                                                messages: value.messages.items)
         if let current = conversation, value.epoch == current.snapshot.epoch, value.asOfSeq < current.lastSeq { return }
         if conversation != nil { conversation?.reconcile(value) } else { conversation = KimiConversation(value) }
         timings.observe(sessionID: id, turnID: value.inFlightTurn.map { String($0.turnId) },
@@ -351,13 +358,13 @@ final class KimiConnection: ObservableObject {
         select(session.id)
         return session
     }
-    func sendPrompt() {
+    func sendPrompt(mode: DeliveryMode = .steer) {
         guard online, snapshotReady, !loading, !sending, let id = selectedId else { return }
-        Task { await sendPrompt(for: id) }
+        Task { await sendPrompt(for: id, mode: mode) }
     }
     /// A newly created session can accept a prompt before its display snapshot loads.
     /// Keep the destination fixed even when catalog updates restore another tab.
-    func sendPrompt(for id: String) async {
+    func sendPrompt(for id: String, mode: DeliveryMode = .steer) async {
         guard online, let api else {
             actionError = "发送未确认，草稿已保留。请先连接 Kimi。"
             return
@@ -366,6 +373,10 @@ final class KimiConnection: ObservableObject {
         let text = drafts[id] ?? ""
         let files = attachments[id] ?? []
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        let promptID = "awb_\(UUID().uuidString)"
+        let preview: [JSONValue] = [.object(["type": .string("text"), "text": .string(text)])]
+            + files.map { .object(["type": .string("file"), "name": .string($0.lastPathComponent)]) }
+        pendingPrompts[id, default: []].append(KimiPrompt(id: promptID, content: preview))
         let chosenModel = modelChoices[id]
         let manual = manualPermissions[id] == true
         // The server accepts an unrecognised thinking value without failing, so the
@@ -386,7 +397,6 @@ final class KimiConnection: ObservableObject {
                     content.append(.object(["type": .string("file"), "file_id": .string(fileId), "name": .string(file.lastPathComponent), "media_type": .string(mime), "size": uploaded["size"]]))
                 }
             }
-            let promptID = "awb_\(UUID().uuidString)"
             var body: [String: JSONValue] = [
                 "prompt_id": .string(promptID),
                 "content": .array(content)
@@ -395,10 +405,43 @@ final class KimiConnection: ObservableObject {
             if let effort { body["thinking"] = .string(effort.rawValue) }
             if manual { body["permission_mode"] = .string("manual") }
             timings.submitted(promptID)
-            _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
+            let accepted = try await api.post(KimiPrompt.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
+            if let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) {
+                pendingPrompts[id]?[index] = accepted
+            }
             if drafts[id] == text { drafts[id] = "" }
             attachments[id]?.removeAll { files.contains($0) }
-        } catch { actionError = "发送未确认，草稿已保留。请检查会话后再发送。\n\(error.localizedDescription)" }
+            if mode == .steer && ["queued", "blocked"].contains(accepted.status) {
+                await steerPrompt(promptID, for: id)
+            }
+        } catch {
+            let message = "发送未确认，草稿已保留。请检查会话后再发送。\n" + error.localizedDescription
+            updatePrompt(promptID, for: id, status: "unknown", error: message)
+            actionError = message
+        }
+    }
+    private func updatePrompt(_ promptID: String, for id: String, status: String, error: String? = nil) {
+        guard let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) else { return }
+        pendingPrompts[id]?[index].status = status
+        pendingPrompts[id]?[index].error = error
+    }
+    /// Only steers an already accepted id. Failure must never re-submit its text.
+    func steerPrompt(_ promptID: String, for id: String) async {
+        guard online, let api else { return }
+        updatePrompt(promptID, for: id, status: "steering")
+        do {
+            _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/prompts/\(promptID):steer", body: .object([:]))
+            updatePrompt(promptID, for: id, status: "steered")
+        } catch {
+            // The queued prompt may have started while the request was in flight.
+            // Keep its accepted identity and re-read the queue/history, never replay.
+            updatePrompt(promptID, for: id, status: "queued",
+                         error: "引导未确认；消息已接收。" + error.localizedDescription)
+        }
+        if selectedId == id {
+            do { try await refreshConversation(selectionToken: selectionGeneration) }
+            catch { actionError = error.localizedDescription }
+        }
     }
     /// The model the next prompt will actually use: the explicit choice if any,
     /// otherwise whatever the session is already configured with.
