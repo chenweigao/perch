@@ -1,0 +1,72 @@
+import AppKit
+import SwiftUI
+
+func check(_ condition: @autoclosure () -> Bool, _ message: String) {
+    if !condition() { fatalError(message) }
+}
+let app = NSApplication.shared
+let editor = DraftTextView(frame: NSRect(x: 0, y: 0, width: 480, height: 100))
+editor.isRichText = false
+var draft = "已写好的草稿 "
+var height: CGFloat = 40
+let representable = ComposerEditor(text: Binding(get: { draft }, set: { draft = $0 }),
+                                  height: Binding(get: { height }, set: { height = $0 }),
+                                  placeholder: "", accessibilityLabel: "测试输入", canSend: true,
+                                  onSend: {}, onFiles: nil, onError: nil)
+let coordinator = ComposerEditor.Coordinator(representable)
+coordinator.editor = editor
+editor.delegate = coordinator
+editor.string = draft
+editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+editor.setMarkedText("zhongwen", selectedRange: NSRange(location: 8, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+check(editor.hasMarkedText(), "Fixture must enter actual AppKit marked-text state")
+let composing = editor.string
+for _ in 0..<100 { editor.syncDraft("已写好的草稿 ") }
+check(editor.string == composing && editor.hasMarkedText(), "Stream refresh must preserve marked text and prior draft")
+check(draft == "已写好的草稿 ", "Marked input must not leak into published draft")
+var sends = 0
+editor.canSend = true
+editor.onSend = { sends += 1 }
+check(!editor.handleReturn(keyCode: 36, modifiers: []), "Composition Return must remain owned by input method")
+check(sends == 0, "Candidate confirmation must not submit")
+editor.insertText("中文", replacementRange: NSRange(location: NSNotFound, length: 0))
+check(!editor.hasMarkedText() && editor.string == "已写好的草稿 中文", "Committed Chinese must replace only marked text")
+check(draft == editor.string, "Delegate must publish committed Chinese before next refresh")
+editor.syncDraft(draft)
+check(editor.string == "已写好的草稿 中文", "Immediate SwiftUI refresh must preserve newly committed text")
+check(!editor.handleReturn(keyCode: 36, modifiers: .shift), "Shift Return must allow a newline")
+editor.insertNewline(nil)
+check(editor.string.hasSuffix("中文\n"), "Newline must stay in the draft")
+check(editor.handleReturn(keyCode: 36, modifiers: []) && sends == 1, "Plain Return must submit committed draft once")
+editor.canSend = false
+check(editor.handleReturn(keyCode: 36, modifiers: []) && sends == 1, "Disabled submit must not call send")
+editor.syncDraft("")
+check(editor.string.isEmpty, "Confirmed successful send can clear the committed draft")
+editor.syncDraft("另一段会话草稿")
+check(editor.string == "另一段会话草稿", "New committed draft can replace the editing buffer")
+editor.string = "开头 replace 结尾"
+draft = editor.string
+editor.setSelectedRange((editor.string as NSString).range(of: "replace"))
+editor.setMarkedText("zhongjian", selectedRange: NSRange(location: 9, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+for _ in 0..<100 { editor.syncDraft(draft) }
+editor.insertText("中间", replacementRange: NSRange(location: NSNotFound, length: 0))
+editor.syncDraft(draft)
+check(editor.string == "开头 中间 结尾" && draft == editor.string, "Middle composition must preserve both sides and publish replacement")
+print("Composer checks passed: marked-text refresh, Chinese commit, Return safety, newline and draft reset")
+
+// Use a private pasteboard so the checks never replace the user's clipboard.
+let plainBoard = NSPasteboard(name: NSPasteboard.Name("dev.agentworkbench.composer-checks.\(UUID().uuidString)"))
+defer { plainBoard.releaseGlobally() }
+plainBoard.setString("中文输入保留测试", forType: .string)
+editor.syncDraft("")
+draft = ""
+editor.setSelectedRange(NSRange(location: 0, length: 0))
+check(editor.readSelection(from: plainBoard), "Plain Unicode pasteboard must be readable")
+check(editor.string == "中文输入保留测试" && draft == editor.string, "Unicode paste must synchronously update the draft")
+for _ in 0..<100 { editor.syncDraft(draft) }
+check(editor.string == "中文输入保留测试", "Unicode paste must survive streaming refresh")
+editor.setAccessibilityValue("通过辅助功能输入中文")
+check(editor.string == "通过辅助功能输入中文" && draft == editor.string, "Accessibility input must also publish Chinese before refresh")
+for _ in 0..<100 { editor.syncDraft(draft) }
+check(editor.string == "通过辅助功能输入中文", "Accessibility input must survive streaming refresh")
+print("Unicode private-pasteboard checks passed")

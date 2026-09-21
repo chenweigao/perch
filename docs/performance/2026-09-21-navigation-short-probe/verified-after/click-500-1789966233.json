@@ -1,0 +1,28 @@
+{
+  "commit" : "8b5f9d88e5d697d2fed8158da76b7a38ca6b85e7",
+  "distinct_conversations" : 8,
+  "first_content_actionable" : {
+    "count" : 4,
+    "max_ms" : 4503.7438333965838,
+    "median_ms" : 4230.9741666540504,
+    "over_16_7ms" : 4,
+    "over_100ms" : 4,
+    "p95_ms" : 4230.9741666540504
+  },
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "click",
+  "note" : "cache-hit switches only, cycling round-robin through the 8-conversation cache window (production's KimiConversationCache capacity); each session has its own message IDs; excludes mouse event delivery, network and JSON decode",
+  "selection_feedback" : {
+    "count" : 4,
+    "max_ms" : 4473.814916680567,
+    "median_ms" : 4204.5202082954347,
+    "over_16_7ms" : 4,
+    "over_100ms" : 4,
+    "p95_ms" : 4204.5202082954347
+  },
+  "sessions" : 500,
+  "switches" : 4,
+  "timestamp" : "2026-09-21T04:50:14Z"
+}

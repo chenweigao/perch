@@ -1,0 +1,24 @@
+{
+  "commit" : "e7146952af1bb5e6d54659829780b990adff99ee",
+  "idle" : {
+    "cpu_percent_of_one_core" : 0.17705847539559752,
+    "cpu_seconds" : 0.2125100000000002,
+    "resident_mb_end" : 86.234375,
+    "resident_mb_start" : 161.859375,
+    "seconds" : 120.02249512495473
+  },
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "resource",
+  "note" : "idle keeps the same laid-out transcript on screen with no input; streaming applies real JSON events through the production transcript and forces layout\/display each event. CPU is process user+system time from getrusage, including the fixture's own driver loop, so it is an upper bound rather than the app's steady-state cost.",
+  "sessions" : 500,
+  "streaming" : {
+    "cpu_percent_of_one_core" : 100.22553128796537,
+    "cpu_seconds" : 120.29322599999999,
+    "events_applied" : 6322,
+    "events_per_second" : 52.673440547892284,
+    "resident_mb_end" : 122.234375,
+    "resident_mb_start" : 88.359375,
+    "seconds" : 120.02253762504552
+  },
+  "timestamp" : "2026-09-21T01:00:55Z"
+}

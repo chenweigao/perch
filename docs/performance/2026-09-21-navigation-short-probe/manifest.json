@@ -1,0 +1,10 @@
+{
+  "base_commit": "8b5f9d88e5d697d2fed8158da76b7a38ca6b85e7",
+  "fixture_note": "Inherited session-specific message IDs and bounded conversation cache are preserved; only NAVIGATION_SWITCHES was added for four-switch probes.",
+  "history_sha256": "b6edaf7d19a7fc6d2742981278aa960fce7dfe52e81a302b27261b0645aa371b",
+  "fixture_sha256": "e11b08660fa7a7741027d4c739c78f1731443b36247eb7fdb83a770723db2651",
+  "before_transcript_sha256": "72ee83b54c759334a06de797ad279255a8933be193ad0afc4afe60b8bb743787",
+  "candidate_transcript_sha256": "704281eaa74cf75b33c1a38fe737154b6988d044f25882676b5231770da91a24",
+  "copied_app_runs": "invalid: exit -9 without report; excluded; normal build/Navigation Preview.app used for verified measurements",
+  "long_soak_started": false
+}

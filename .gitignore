@@ -1,0 +1,14 @@
+.build/
+.swiftpm/
+build/
+.DS_Store
+.local/
+__pycache__/
+# Local credentials, runtime state and publication staging
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.session-export/
+.public-export/

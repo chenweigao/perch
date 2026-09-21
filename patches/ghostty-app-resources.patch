@@ -1,0 +1,31 @@
+--- a/Sources/GhosttyTerminal/Configuration/GhosttyRuntimeResources.swift
++++ b/Sources/GhosttyTerminal/Configuration/GhosttyRuntimeResources.swift
+@@ -7,17 +7,26 @@
+ /// bundle location before the C runtime initializes. User-level Ghostty
+ /// resources and configuration are never consulted.
+ public enum GhosttyRuntimeResources {
++    private static var resourceBundle: Bundle {
++        // Packaged macOS apps put SwiftPM resources under Contents/Resources.
++        if let url = Bundle.main.url(forResource: "GhosttyKit_GhosttyTerminal", withExtension: "bundle"),
++           let bundle = Bundle(url: url) {
++            return bundle
++        }
++        return Bundle.module
++    }
++
+     /// The package-bundled Ghostty resource directory.
+     ///
+     /// Ghostty expects shell integration below this directory and its compiled
+     /// terminfo database in a sibling `terminfo` directory.
+     public static var directoryURL: URL? {
+-        Bundle.module.url(forResource: "Ghostty", withExtension: nil)
++        resourceBundle.url(forResource: "Ghostty", withExtension: nil)
+     }
+ 
+     /// The compiled terminfo database exported to child shells by Ghostty.
+     public static var terminfoDirectoryURL: URL? {
+-        Bundle.module.url(forResource: "terminfo", withExtension: nil)
++        resourceBundle.url(forResource: "terminfo", withExtension: nil)
+     }
+ 
+     static func configureEnvironment() {

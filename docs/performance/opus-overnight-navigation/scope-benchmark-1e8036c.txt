@@ -1,0 +1,12 @@
+scope evaluation per sidebar/dashboard update — pure model work, no AppKit layout
+100 sessions · no search                      median   0.059 ms  p95   0.092 ms  total    12.56 ms  n=200  checksum=18000
+100 sessions · search keystroke               median   0.436 ms  p95   0.458 ms  total    89.59 ms  n=200  checksum=0
+100 sessions · latin search keystroke         median   0.259 ms  p95   0.285 ms  total    52.44 ms  n=200  checksum=6000
+100 sessions · task group scope               median   0.038 ms  p95   0.045 ms  total     7.84 ms  n=200  checksum=4400
+100 sessions · archive scope                  median   0.010 ms  p95   0.012 ms  total     2.02 ms  n=200  checksum=2000
+
+500 sessions · no search                      median   0.160 ms  p95   0.179 ms  total    32.42 ms  n=200  checksum=90800
+500 sessions · search keystroke               median   2.060 ms  p95   2.174 ms  total   413.74 ms  n=200  checksum=0
+500 sessions · latin search keystroke         median   1.235 ms  p95   1.291 ms  total   248.37 ms  n=200  checksum=27800
+500 sessions · task group scope               median   0.551 ms  p95   0.589 ms  total   111.24 ms  n=200  checksum=22600
+500 sessions · archive scope                  median   0.038 ms  p95   0.043 ms  total     7.75 ms  n=200  checksum=9200

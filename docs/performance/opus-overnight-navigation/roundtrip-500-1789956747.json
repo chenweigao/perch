@@ -1,0 +1,50 @@
+{
+  "back_to_workbench_ms" : {
+    "count" : 20,
+    "max_ms" : 16.571416635997593,
+    "median_ms" : 12.94791663531214,
+    "over_16_7ms" : 0,
+    "over_100ms" : 0,
+    "p95_ms" : 15.890999929979444
+  },
+  "commit" : "5b7ee8ec00f4849bbb4758076faccd5c5cdf4d0e",
+  "cycles" : 20,
+  "dropped_keystrokes" : 0,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "roundtrip",
+  "note" : "scope changes are timed until the list itself re-renders; search keystrokes are issued between scroll steps, so a dropped keystroke means input did not reach the list while scrolling",
+  "search_during_scroll_ms" : {
+    "count" : 60,
+    "max_ms" : 69.98970836866647,
+    "median_ms" : 31.392291653901339,
+    "over_16_7ms" : 60,
+    "over_100ms" : 0,
+    "p95_ms" : 65.804500016383827
+  },
+  "sessions" : 500,
+  "timestamp" : "2026-09-21T02:12:21Z",
+  "to_archive_ms" : {
+    "count" : 20,
+    "max_ms" : 79.949500039219856,
+    "median_ms" : 50.892125000245869,
+    "over_16_7ms" : 20,
+    "over_100ms" : 0,
+    "p95_ms" : 59.110541711561382
+  },
+  "to_conversation_ms" : {
+    "count" : 20,
+    "max_ms" : 479.73262495361269,
+    "median_ms" : 11.839500046335161,
+    "over_16_7ms" : 1,
+    "over_100ms" : 1,
+    "p95_ms" : 15.630458365194499
+  },
+  "to_task_group_ms" : {
+    "count" : 20,
+    "max_ms" : 81.906208302825689,
+    "median_ms" : 53.380874916911125,
+    "over_16_7ms" : 20,
+    "over_100ms" : 0,
+    "p95_ms" : 61.982250073924661
+  }
+}

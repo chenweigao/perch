@@ -1,0 +1,21 @@
+{
+  "commit" : "8b5f9d88e5d697d2fed8158da76b7a38ca6b85e7",
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "scroll",
+  "note" : "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+  "scroll_step_ms" : {
+    "count" : 240,
+    "document_height" : 100345,
+    "max_ms" : 62.018499942496419,
+    "median_ms" : 20.706666633486748,
+    "over_16_7ms" : 123,
+    "over_100ms" : 0,
+    "p95_ms" : 56.887208367697895,
+    "viewport_height" : 600
+  },
+  "sessions" : 500,
+  "steps" : 240,
+  "timestamp" : "2026-09-21T04:49:04Z"
+}

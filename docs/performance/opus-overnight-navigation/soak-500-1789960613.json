@@ -1,0 +1,77 @@
+{
+  "commit" : "ac43b898b1c2ae3419ab00cfa9083a1ff0547eea",
+  "duration_s" : 360.25238325004466,
+  "final_resident_mb" : 228.265625,
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "idle_resident_mb" : 122.953125,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "soak",
+  "note" : "unattended soak on the isolated fixture; no remote agent, no production app state",
+  "samples" : [
+    {
+      "elapsed_s" : 4.8070683750556782,
+      "resident_mb" : 276.375,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 1133
+    },
+    {
+      "elapsed_s" : 64.883169375010766,
+      "resident_mb" : 256.734375,
+      "scroll_steps" : 1620,
+      "switches" : 135,
+      "views" : 1112
+    },
+    {
+      "elapsed_s" : 124.97038037504535,
+      "resident_mb" : 246.53125,
+      "scroll_steps" : 3216,
+      "switches" : 268,
+      "views" : 1133
+    },
+    {
+      "elapsed_s" : 185.45835445832927,
+      "resident_mb" : 223.15625,
+      "scroll_steps" : 4596,
+      "switches" : 383,
+      "views" : 1112
+    },
+    {
+      "elapsed_s" : 245.63272958341986,
+      "resident_mb" : 223.96875,
+      "scroll_steps" : 5928,
+      "switches" : 494,
+      "views" : 1112
+    },
+    {
+      "elapsed_s" : 305.70050708332565,
+      "resident_mb" : 227.421875,
+      "scroll_steps" : 7716,
+      "switches" : 643,
+      "views" : 1112
+    }
+  ],
+  "scroll_step_ms" : {
+    "count" : 9240,
+    "max_ms" : 508.10387497767806,
+    "median_ms" : 21.18883328512311,
+    "over_16_7ms" : 8969,
+    "over_100ms" : 50,
+    "p95_ms" : 28.831041767261922
+  },
+  "scroll_steps" : 9240,
+  "search_keystrokes" : 65,
+  "sessions" : 500,
+  "switch_ms" : {
+    "count" : 770,
+    "max_ms" : 3614.6451249951497,
+    "median_ms" : 158.90162508003414,
+    "over_16_7ms" : 770,
+    "over_100ms" : 770,
+    "p95_ms" : 208.2338749896735
+  },
+  "switches" : 770,
+  "timestamp" : "2026-09-21T03:10:53Z",
+  "unresponsive_events" : 0
+}

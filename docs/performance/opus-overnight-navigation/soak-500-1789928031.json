@@ -1,0 +1,180 @@
+{
+  "commit" : "3b80fee3e651e08ba919e0c229882560660ada5b",
+  "duration_s" : 1260.1631651666248,
+  "final_resident_mb" : 133.71875,
+  "idle_resident_mb" : 103.109375,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "soak",
+  "note" : "unattended soak on the isolated fixture; no remote agent, no production app state",
+  "samples" : [
+    {
+      "elapsed_s" : 0.92012491659261286,
+      "resident_mb" : 174.609375,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 61.032902791630477,
+      "resident_mb" : 166.96875,
+      "scroll_steps" : 5340,
+      "switches" : 445,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 121.07010933326092,
+      "resident_mb" : 161.71875,
+      "scroll_steps" : 10680,
+      "switches" : 890,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 181.15488995832857,
+      "resident_mb" : 161.015625,
+      "scroll_steps" : 16008,
+      "switches" : 1334,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 241.20613779162522,
+      "resident_mb" : 163.6875,
+      "scroll_steps" : 21336,
+      "switches" : 1778,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 301.28759041661397,
+      "resident_mb" : 163.25,
+      "scroll_steps" : 26688,
+      "switches" : 2224,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 361.36772604158614,
+      "resident_mb" : 160.921875,
+      "scroll_steps" : 32040,
+      "switches" : 2670,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 421.46329887502361,
+      "resident_mb" : 161.46875,
+      "scroll_steps" : 37392,
+      "switches" : 3116,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 481.57066183327697,
+      "resident_mb" : 157.28125,
+      "scroll_steps" : 42744,
+      "switches" : 3562,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 541.63176262495108,
+      "resident_mb" : 160.390625,
+      "scroll_steps" : 48072,
+      "switches" : 4006,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 601.69613191660028,
+      "resident_mb" : 162.53125,
+      "scroll_steps" : 53424,
+      "switches" : 4452,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 661.79925974993967,
+      "resident_mb" : 161.203125,
+      "scroll_steps" : 58776,
+      "switches" : 4898,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 721.9397654166678,
+      "resident_mb" : 157.5,
+      "scroll_steps" : 64080,
+      "switches" : 5340,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 782.035266208346,
+      "resident_mb" : 155.546875,
+      "scroll_steps" : 69312,
+      "switches" : 5776,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 842.13407562498469,
+      "resident_mb" : 157.734375,
+      "scroll_steps" : 74400,
+      "switches" : 6200,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 902.29106604168192,
+      "resident_mb" : 155.1875,
+      "scroll_steps" : 79500,
+      "switches" : 6625,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 962.32368716667406,
+      "resident_mb" : 155.5,
+      "scroll_steps" : 84744,
+      "switches" : 7062,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 1022.3331869166577,
+      "resident_mb" : 156.046875,
+      "scroll_steps" : 90012,
+      "switches" : 7501,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 1082.3711589166196,
+      "resident_mb" : 155.765625,
+      "scroll_steps" : 95292,
+      "switches" : 7941,
+      "views" : 286
+    },
+    {
+      "elapsed_s" : 1142.444928083336,
+      "resident_mb" : 140.25,
+      "scroll_steps" : 100620,
+      "switches" : 8385,
+      "views" : 307
+    },
+    {
+      "elapsed_s" : 1202.5291774582583,
+      "resident_mb" : 137.046875,
+      "scroll_steps" : 105912,
+      "switches" : 8826,
+      "views" : 286
+    }
+  ],
+  "scroll_step_ms" : {
+    "count" : 110988,
+    "max_ms" : 48.449333407916129,
+    "median_ms" : 8.4117916412651539,
+    "over_16_7ms" : 33,
+    "over_100ms" : 0,
+    "p95_ms" : 12.362583307549357
+  },
+  "scroll_steps" : 110988,
+  "search_keystrokes" : 771,
+  "sessions" : 500,
+  "switch_ms" : {
+    "count" : 9249,
+    "max_ms" : 532.52733335830271,
+    "median_ms" : 24.823166662827134,
+    "over_16_7ms" : 9249,
+    "over_100ms" : 1,
+    "p95_ms" : 26.97474998421967
+  },
+  "switches" : 9249,
+  "timestamp" : "2026-09-20T17:52:51Z",
+  "unresponsive_events" : 0
+}

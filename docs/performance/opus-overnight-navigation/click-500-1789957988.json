@@ -1,0 +1,27 @@
+{
+  "commit" : "ac43b898b1c2ae3419ab00cfa9083a1ff0547eea",
+  "first_content_actionable" : {
+    "count" : 39,
+    "max_ms" : 34.619625075720251,
+    "median_ms" : 31.634541694074869,
+    "over_16_7ms" : 39,
+    "over_100ms" : 0,
+    "p95_ms" : 32.967749983072281
+  },
+  "history_source" : "streaming-workload",
+  "history_turns" : 24,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "click",
+  "note" : "cache-hit switches only; excludes mouse event delivery, network and JSON decode",
+  "selection_feedback" : {
+    "count" : 39,
+    "max_ms" : 34.467166638933122,
+    "median_ms" : 31.466708402149379,
+    "over_16_7ms" : 39,
+    "over_100ms" : 0,
+    "p95_ms" : 32.805124996230006
+  },
+  "sessions" : 500,
+  "switches" : 39,
+  "timestamp" : "2026-09-21T02:33:06Z"
+}

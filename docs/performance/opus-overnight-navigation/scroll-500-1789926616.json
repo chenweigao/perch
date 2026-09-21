@@ -1,0 +1,19 @@
+{
+  "commit" : "3b80fee3e651e08ba919e0c229882560660ada5b",
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "scroll",
+  "note" : "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+  "scroll_step_ms" : {
+    "count" : 240,
+    "document_height" : 19935,
+    "max_ms" : 27.086499962024391,
+    "median_ms" : 4.2737916810438037,
+    "over_16_7ms" : 23,
+    "over_100ms" : 0,
+    "p95_ms" : 23.788374965079129,
+    "viewport_height" : 600
+  },
+  "sessions" : 500,
+  "steps" : 240,
+  "timestamp" : "2026-09-20T17:50:14Z"
+}

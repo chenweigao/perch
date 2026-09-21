@@ -1,0 +1,49 @@
+{
+  "commit" : "ac43b898b1c2ae3419ab00cfa9083a1ff0547eea",
+  "duration_s" : 90.395868166699074,
+  "final_resident_mb" : 265.265625,
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "idle_resident_mb" : 122.515625,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "soak",
+  "note" : "unattended soak on the isolated fixture; no remote agent, no production app state",
+  "samples" : [
+    {
+      "elapsed_s" : 4.601840625051409,
+      "resident_mb" : 319,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 1133
+    },
+    {
+      "elapsed_s" : 64.778657916700467,
+      "resident_mb" : 286.4375,
+      "scroll_steps" : 1608,
+      "switches" : 134,
+      "views" : 1112
+    }
+  ],
+  "scroll_step_ms" : {
+    "count" : 2292,
+    "max_ms" : 256.64325000252575,
+    "median_ms" : 22.310708300210536,
+    "over_16_7ms" : 2275,
+    "over_100ms" : 8,
+    "p95_ms" : 28.235833276994526
+  },
+  "scroll_steps" : 2292,
+  "search_keystrokes" : 16,
+  "sessions" : 500,
+  "switch_ms" : {
+    "count" : 191,
+    "max_ms" : 3635.2732917293906,
+    "median_ms" : 161.37145832180977,
+    "over_16_7ms" : 191,
+    "over_100ms" : 191,
+    "p95_ms" : 176.13024997990578
+  },
+  "switches" : 191,
+  "timestamp" : "2026-09-21T03:08:21Z",
+  "unresponsive_events" : 0
+}

@@ -1,0 +1,10 @@
+patches/*.patch -whitespace
+
+# Private development handoffs and local acceptance notes stay in the private repo.
+docs/tasks export-ignore
+docs/VALIDATION.md export-ignore
+docs/OPEN-SOURCE-PREP.md export-ignore
+docs/*-HANDOFF.md export-ignore
+docs/OVERNIGHT-REPORT.md export-ignore
+docs/PRODUCT-PLAN.md export-ignore
+docs/GOAL-B-CORRECTNESS.md export-ignore

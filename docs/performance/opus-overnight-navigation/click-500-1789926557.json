@@ -1,0 +1,25 @@
+{
+  "commit" : "3b80fee3e651e08ba919e0c229882560660ada5b",
+  "first_content_actionable" : {
+    "count" : 39,
+    "max_ms" : 34.832124947570264,
+    "median_ms" : 29.301833361387253,
+    "over_16_7ms" : 39,
+    "over_100ms" : 0,
+    "p95_ms" : 31.533166649751365
+  },
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "click",
+  "note" : "cache-hit switches only; excludes mouse event delivery, network and JSON decode",
+  "selection_feedback" : {
+    "count" : 39,
+    "max_ms" : 34.656999981962144,
+    "median_ms" : 29.104666667990386,
+    "over_16_7ms" : 39,
+    "over_100ms" : 0,
+    "p95_ms" : 31.365333357825875
+  },
+  "sessions" : 500,
+  "switches" : 39,
+  "timestamp" : "2026-09-20T17:49:16Z"
+}

@@ -1,0 +1,10 @@
+{
+  "source_commit": "474d71d8d3c7831b78c9dc5420488f9e3197d18e",
+  "source_sha256": "32ca8477a21342eecfa23e9c2e50c672061e15d9a048eebdaaee7a0e00b152c6",
+  "fixture_sha256": "5c9f37c74736550bf774cdd671ebe1312a824fc2e91832df9e57c6809e967672",
+  "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+  "compiler": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+  "production_lifecycle_change": "KimiWorkspaceView keeps KimiTimeline identity and resets follow on a new conversation id; fixture compares shared versus recreated NavigationConversation.",
+  "notes": "Result status passed means the fixture completed and mounted-content checks passed, not that all latency targets passed. No new long soak was run.",
+  "kimi_workspace_sha256": "cbde0e5c94036ca8a0d2cf51b03322b1f69fd79bf150609fe62f478f59cc4b27"
+}
