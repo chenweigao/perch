@@ -60,12 +60,15 @@ def dsh_catalog():
     return DSH_MODELS or []
 
 def combined_catalog():
-    dsh = dsh_catalog()
+    # One list serves every native runtime, so each entry names the runtime that can
+    # actually route it. Without that tag the Mac picker cannot tell an OMP model
+    # from a dsh one, and a dsh route handed to `omp --model` just fails.
+    dsh = [dict(e, agent='dsh') for e in dsh_catalog()]
     try: omp = model_catalog()
     except Exception:
         if dsh: return dsh
         raise
-    return (omp if isinstance(omp, list) else []) + dsh
+    return [dict(e, agent='omp') for e in (omp if isinstance(omp, list) else [])] + dsh
 
 def save(path, value):
     tmp = path.with_suffix('.tmp')

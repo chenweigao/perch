@@ -132,5 +132,40 @@ func checkModelSelection() throws {
      "thinking":null,"context":null}
     """.utf8))
     precondition(unreported.budget == nil && ThinkingLevel.parse(unreported.thinking) == nil)
-    print("PASS: OMP and Kimi model catalogs, provider/id separation, effort validation and fallback, context budget with unknown and over-limit states")
+
+    // The bridge serves one combined list, so each entry names the runtime that can
+    // route it; `provider` is the model's vendor and cannot answer that.
+    let tagged = try json("""
+    [{"agent":"omp","provider":"openai-codex","id":"gpt-5.4-mini","name":"GPT-5.4 mini","thinking":["low","high"]},
+     {"agent":"dsh","provider":"deepseek-official","id":"deepseek-v4-flash","name":"DeepSeek-V4-Flash","thinking":["high"]},
+     {"agent":"dsh","provider":"deepseek-official","id":"deepseek-v4-pro","name":"DeepSeek-V4-Pro"}]
+    """)
+    let taggedModels = ModelSelectionCatalog.parseOMP(tagged)
+    precondition(taggedModels.map(\.agent) == [.omp, .dsh, .dsh])
+    precondition(ModelSelectionCatalog.forAgent(.omp, in: taggedModels).map(\.id) == ["gpt-5.4-mini"])
+    precondition(ModelSelectionCatalog.forAgent(.dsh, in: taggedModels).map(\.id) == ["deepseek-v4-flash", "deepseek-v4-pro"])
+    // Qoder's SDK reports no catalog, so it is offered nothing rather than a list
+    // belonging to another runtime.
+    precondition(ModelSelectionCatalog.forAgent(.qoder, in: taggedModels).isEmpty)
+    // An agent this client cannot launch parses as no agent at all, so among tagged
+    // entries it is dropped instead of being offered to every runtime.
+    let foreign = ModelSelectionCatalog.parseOMP(try json(#"""
+    [{"agent":"cursor","provider":"p","id":"x"},{"agent":"omp","provider":"p","id":"y"}]
+    """#))
+    precondition(foreign.first?.agent == nil)
+    precondition(ModelSelectionCatalog.forAgent(.omp, in: foreign).map(\.id) == ["y"])
+    // A bridge that predates tagging reports no agent at all. Hiding every model
+    // then would leave a working session with an empty menu, so the old ambiguous
+    // list is passed through untouched.
+    precondition(ompModels.allSatisfy { $0.agent == nil })
+    precondition(ModelSelectionCatalog.forAgent(.omp, in: ompModels) == ompModels)
+    precondition(ModelSelectionCatalog.forAgent(.dsh, in: ompModels) == ompModels)
+    // Starting a session sends only the id, so two vendors sharing one id are a
+    // single choice — and a single identity for the picker's list.
+    let options = ModelCatalog.options(taggedModels)
+    precondition(options.map(\.id) == ["gpt-5.4-mini", "deepseek-v4-flash", "deepseek-v4-pro"])
+    precondition(options.allSatisfy { $0.capabilities.isEmpty })
+    let collide = ModelCatalog.options([AgentModel(id: "x", provider: "a", name: "X"), AgentModel(id: "x", provider: "b", name: "X")])
+    precondition(collide.count == 1 && Set(options.map(\.id)).count == options.count)
+    print("PASS: OMP and Kimi model catalogs, provider/id separation, per-runtime catalog split with untagged-bridge fallback, effort validation and fallback, context budget with unknown and over-limit states")
 }

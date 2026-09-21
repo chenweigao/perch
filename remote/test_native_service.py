@@ -307,6 +307,16 @@ class DshHandlerContractTests(unittest.TestCase):
             code,payload=self.request('/models')
         self.assertEqual(code,200)
         self.assertEqual(payload['models'][0]['provider'],'deepseek-official')
+        # Survivors still say which runtime owns them, so the picker can go on filtering.
+        self.assertEqual({e['agent'] for e in payload['models']},{'dsh'})
+    def test_combined_catalog_tags_each_runtime(self):
+        broker.MODELS=[{'provider':'openai-codex','id':'gpt-5.4-mini','name':'GPT-5.4 mini','selector':'openai-codex/gpt-5.4-mini'}]
+        code,payload=self.request('/models')
+        self.assertEqual(code,200)
+        self.assertEqual([(e['agent'],e['id']) for e in payload['models']],
+                         [('omp','gpt-5.4-mini'),('dsh','deepseek-v4-flash'),('dsh','deepseek-v4-pro')])
+        # Tagging builds new dicts; the cached CLI output stays as omp emitted it.
+        self.assertNotIn('agent',broker.MODELS[0])
 
 class HandlerContractTests(unittest.TestCase):
     def setUp(self):

@@ -172,11 +172,12 @@ struct NativeModelControls: View {
 
     var body: some View {
         if snapshot.provider == .omp || snapshot.provider == .dsh {
+            let available = connection.models(for: snapshot.provider)
             let current = connection.model(for: snapshot)
             HStack(spacing: 10) {
                 ModelControlWidth {
                 Menu {
-                    ForEach(Dictionary(grouping: connection.models, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
+                    ForEach(Dictionary(grouping: available, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
                         Menu(group.key) {
                             ForEach(group.value) { model in
                                 Button {
@@ -188,7 +189,9 @@ struct NativeModelControls: View {
                             }
                         }
                     }
-                    if connection.models.isEmpty { Text("Loading models…") }
+                    if available.isEmpty {
+                        Text(connection.modelsError ?? (connection.models.isEmpty ? "Loading models…" : "No \(snapshot.provider.label) models in this catalog"))
+                    }
                 } label: {
                     Text(current?.name ?? (snapshot.model.isEmpty ? "Choose model" : snapshot.model))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -356,6 +359,14 @@ struct NewConversationSheet: View {
     @State private var chooseFiles = false
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
+    /// OMP and dsh report a real catalog through the bridge, so they get the picker
+    /// Kimi already uses. Qoder's SDK reports none, and an empty picker is a dead
+    /// affordance, so a typed id stays the only control there.
+    private var nativeModelOptions: [ModelOption] { ModelCatalog.options(native.models(for: provider)) }
+    private var showsNativePicker: Bool { (provider == .omp || provider == .dsh) && !nativeModelOptions.isEmpty }
+    /// A catalog belongs to one host and one runtime, and the sheet can switch
+    /// either while it is open, so both identify the read.
+    private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString }
     /// Attachments ride the Kimi session channel; native adapters have none, so an
     /// attachment-only draft can start a Kimi task but never a native one.
     private var canStart: Bool {
@@ -393,6 +404,7 @@ struct NewConversationSheet: View {
                 Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach([SessionKind.kimi, .omp, .qoder, .dsh], id: \.self) { Text($0.label).tag($0) } }.frame(width: 200)
                 Spacer()
                 if provider == .kimi { ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel) }
+                else if showsNativePicker { ModelPicker(models: nativeModelOptions, selection: $agentModel) }
             }.disabled(creating)
             HStack {
                 Image(systemName: "folder")
@@ -400,7 +412,15 @@ struct NewConversationSheet: View {
                 Menu("Recent") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }
             }.disabled(creating)
             if provider != .kimi {
+                // The field stays beside the picker: it shows the id that will
+                // actually be sent, and still accepts one the catalog does not list.
                 TextField(provider == .qoder ? "Model (default: Qwen3.8-Flash)" : provider == .dsh ? "Model (default: the dsh catalog's current route)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
+                if provider == .omp || provider == .dsh, !showsNativePicker {
+                    Text(native.modelsError ?? (provider == .dsh
+                        ? "The \(provider.label) model list is cached after its first session — type the model id for now."
+                        : "No model list from \(provider.label) yet — type the model id."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             if !(provider == .kimi ? kimi.online : native.online) {
                 Text("Connecting to \(kimi.host.name)…").font(.caption).foregroundStyle(.secondary)
@@ -417,6 +437,11 @@ struct NewConversationSheet: View {
                 do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
             }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
+            .task(id: catalogID) {
+                // A native catalog is now needed before any session exists. Qoder
+                // reports none and Kimi reads its own connection.
+                if provider == .omp || provider == .dsh { await native.loadModels() }
+            }
             .onAppear {
                 if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data) {
                     provider = saved.provider; cwd = saved.directory; agentModel = saved.model

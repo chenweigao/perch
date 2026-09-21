@@ -36,12 +36,18 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
     public let contextWindow: Int?
     public let thinking: [ThinkingLevel]
     public let defaultThinking: ThinkingLevel?
+    /// The runtime that can route this model. `provider` is the model's own vendor
+    /// and says nothing about that, so a combined catalog needs this to avoid
+    /// offering a dsh route to OMP. Nil means the catalog did not say.
+    public let agent: SessionKind?
 
     public init(id: String, provider: String, name: String, contextWindow: Int? = nil,
-                thinking: [ThinkingLevel] = [], defaultThinking: ThinkingLevel? = nil) {
+                thinking: [ThinkingLevel] = [], defaultThinking: ThinkingLevel? = nil,
+                agent: SessionKind? = nil) {
         self.id = id; self.provider = provider; self.name = name
         self.contextWindow = contextWindow; self.thinking = thinking
         self.defaultThinking = thinking.contains(where: { $0 == defaultThinking }) ? defaultThinking : nil
+        self.agent = agent
     }
 
     public var supportsThinking: Bool { !thinking.isEmpty }
@@ -56,9 +62,10 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
 }
 
 public enum ModelSelectionCatalog {
-    /// Parses `omp models --json`. Verified against 17.1.4 locally and 18.1.16 on the
-    /// remote host: both emit provider, id, selector, name, contextWindow and a
-    /// thinking array.
+    /// Parses the bridge's normalized catalog, which `omp models --json` and dsh's
+    /// ACP config options are both converted to. Verified against OMP 17.1.4
+    /// locally and 18.1.16 on the remote host: both emit provider, id, selector,
+    /// name, contextWindow and a thinking array.
     public static func parseOMP(_ value: JSONValue) -> [AgentModel] {
         let items: [JSONValue]
         if case .array(let list) = value { items = list }
@@ -74,8 +81,19 @@ public enum ModelSelectionCatalog {
                               thinking: levels,
                               // OMP states no default, so the highest offered level is
                               // not assumed to be active.
-                              defaultThinking: nil)
+                              defaultThinking: nil,
+                              // An agent this client cannot launch is no agent at all.
+                              agent: SessionKind(rawValue: item["agent"].string ?? ""))
         }
+    }
+
+    /// The models one runtime can actually route. A bridge that predates tagging
+    /// reports no agent at all; hiding every model then would leave a working
+    /// session with an empty menu, so an untagged catalog is passed through as the
+    /// ambiguous list it always was.
+    public static func forAgent(_ kind: SessionKind, in models: [AgentModel]) -> [AgentModel] {
+        guard models.contains(where: { $0.agent != nil }) else { return models }
+        return models.filter { $0.agent == kind }
     }
 
     /// Parses Kimi `/api/v1/models`. Effort levels come from `support_efforts`, which

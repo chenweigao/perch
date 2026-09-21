@@ -11,6 +11,9 @@ private final class TransportFixture {
     var holdPromptResponse = false
     var pendingPrompt: CheckedContinuation<Void, Error>?
     var failCatalog = false
+    var modelsCatalog: [[String: Any]] = []
+    var failModels = false
+    var modelRequests = 0
     var archives = 0
     var abortedTurns: [(String, String?)] = []
     var holdSnapshots = false
@@ -29,7 +32,11 @@ private final class TransportFixture {
     func request(_ path: String, _ body: JSONValue?) async throws -> Data {
         let parts = path.split(separator: "?")[0].split(separator: "/").map(String.init)
         var result: [String: Any] = [:]
-        if path == "/sessions" {
+        if path == "/models" {
+            modelRequests += 1
+            if failModels { throw WorkbenchError("catalog unavailable") }
+            result = ["models": modelsCatalog]
+        } else if path == "/sessions" {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
         } else if parts.count == 4 && parts[2] == "requests" {
@@ -95,6 +102,7 @@ struct ConnectionChecks {
         try await checkSendFailureIsolation()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
+        try await checkNativeModelCatalog()
         let unsupportedFixture = TransportFixture()
         let unsupportedClient = NativeAgentConnection(host: SSHHost(name: "Commands", destination: "fixture"), transport: unsupportedFixture.request)
         try await unsupportedClient.refresh(); unsupportedClient.select("a")
@@ -194,6 +202,37 @@ struct ConnectionChecks {
         precondition(client.queue.allItems.isEmpty && lost.prompts.count == 1)
         precondition(connection.queue.items(for: b).count == 1)
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
+    }
+
+    /// The new-task sheet reads the catalog before any session exists, so the split
+    /// per runtime and the failure path are checked away from a live conversation.
+    @MainActor
+    static func checkNativeModelCatalog() async throws {
+        let fixture = TransportFixture()
+        fixture.modelsCatalog = [
+            ["agent": "omp", "provider": "openai-codex", "id": "gpt-5.4-mini", "name": "GPT-5.4 mini"],
+            ["agent": "dsh", "provider": "deepseek-official", "id": "deepseek-v4-flash", "name": "DeepSeek-V4-Flash"]]
+        let client = NativeAgentConnection(host: SSHHost(name: "Catalog", destination: "fixture"), transport: fixture.request)
+        await client.loadModels()
+        precondition(fixture.modelRequests == 1)
+        precondition(client.models(for: .omp).map(\.id) == ["gpt-5.4-mini"])
+        precondition(client.models(for: .dsh).map(\.id) == ["deepseek-v4-flash"])
+        precondition(client.models(for: .qoder).isEmpty, "Qoder reports no catalog and must not borrow another runtime's")
+        precondition(client.modelsError == nil && client.actionError == nil)
+        // A failed read keeps the last good list and reports to the model control,
+        // not as a conversation banner nobody asked for.
+        fixture.failModels = true
+        await client.loadModels()
+        precondition(client.modelsError != nil && client.actionError == nil)
+        precondition(client.models(for: .omp).map(\.id) == ["gpt-5.4-mini"], "A failed catalog read must not empty the picker")
+        // A bridge that predates tagging still lists everything it knows.
+        fixture.failModels = false
+        fixture.modelsCatalog = [["provider": "bailian", "id": "kimi-k3", "name": "Kimi K3"]]
+        await client.loadModels()
+        precondition(client.modelsError == nil)
+        precondition(client.models(for: .omp).map(\.id) == ["kimi-k3"] && client.models(for: .dsh).map(\.id) == ["kimi-k3"])
+        client.disconnect()
+        print("PASS: native model catalog split per runtime, last good list kept on failure, untagged bridge tolerated")
     }
 
     @MainActor
