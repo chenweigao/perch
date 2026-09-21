@@ -61,7 +61,7 @@ struct TaskGroupPage: View {
                                     .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
                                 ForEach(items.archived) { archivedRow($0) }
                             }
-                        }.font(.system(size: 12)).foregroundStyle(.secondary)
+                        }.disclosureGroupStyle(TaskGroupArchiveDisclosureStyle())
                     }
                     if items.missingCount > 0 {
                         VStack(alignment: .leading, spacing: 8) {
@@ -174,5 +174,26 @@ struct TaskGroupPage: View {
                 .buttonStyle(.borderless).font(.system(size: 11)).disabled(model.managing.contains(session.id) || !model.canArchive(session))
         }.padding(.horizontal, 8).padding(.vertical, 13)
             .contextMenu { SessionActionsMenu(model: model, item: session) }
+    }
+}
+
+/// The full header is a button, so both the label and its surrounding space
+/// expand the archive instead of requiring a click on the disclosure triangle.
+private struct TaskGroupArchiveDisclosureStyle: DisclosureGroupStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button { configuration.isExpanded.toggle() } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 10, weight: .medium)).frame(width: 12).accessibilityHidden(true)
+                    configuration.label
+                    Spacer(minLength: 0)
+                }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    .contentShape(Rectangle())
+            }.buttonStyle(SidebarNavigationStyle())
+                .accessibilityValue(configuration.isExpanded ? Text("已展开") : Text("已收起"))
+            if configuration.isExpanded { configuration.content }
+        }
     }
 }

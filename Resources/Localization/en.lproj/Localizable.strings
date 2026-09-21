@@ -374,3 +374,5 @@
 "管理关联" = "Manage linked sessions";
 "继续上次会话：%@" = "Resume last session: %@";
 "记下回来后先做什么" = "Write down what to do next";
+"已展开" = "Expanded";
+"已收起" = "Collapsed";
