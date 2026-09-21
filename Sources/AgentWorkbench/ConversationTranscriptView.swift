@@ -138,7 +138,8 @@ private final class ConversationDocumentView: NSView {
         enclosingScrollView?.reflectScrolledClipView(clip)
         refreshVisibleRows()
         DispatchQueue.main.async { [weak self] in
-            guard let view = self?.controllers[target.hit.entryID]?.view else { return }
+            guard let self, self.sessionId == target.session,
+                  let view = self.controllers[target.hit.entryID]?.view else { return }
             var remaining = target.hit.occurrence
             func select(in view: NSView) -> Bool {
                 if let text = view as? ReplyTextView, text.isConversationBodyText {

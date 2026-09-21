@@ -42,6 +42,7 @@ final class KimiConnection: ObservableObject {
     private var folder: URL?
     private var task: Task<Void, Never>?
     private var selectionTask: Task<Void, Never>?
+    private var historyTask: Task<Void, Never>?
     private var listRefresh: Task<Void, Never>?
     private var archivingBatch = false
     func beginArchiveBatch() { archivingBatch = true; listRefresh?.cancel() }
@@ -145,6 +146,7 @@ final class KimiConnection: ObservableObject {
     func disconnect() {
         generation = UUID(); selectionGeneration = UUID()
         task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel()
+        historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
         snapshotReady = false
         closeTransport(); online = false; connecting = false; stateMessage = "未连接"
     }
@@ -204,11 +206,20 @@ final class KimiConnection: ObservableObject {
         if sessions != all { sessions = all; onSessionsChanged?() }
     }
     func select(_ id: String) {
-        guard id != selectedId || (conversation == nil && !loading) else { return }
+        guard id != selectedId || (!snapshotReady && !loading) else { return }
         if let conversation { cachedConversations.store(conversation) }
         selectedId = id; UserDefaults.standard.set(id, forKey: savedSelectionKey)
+        conversation = cachedConversations.take(id)
+        loadSelected(id)
+    }
+    func reloadSelected() {
+        guard online, !loading, let id = selectedId else { return }
+        loadSelected(id)
+    }
+    private func loadSelected(_ id: String) {
         selectionGeneration = UUID(); let token = selectionGeneration
-        conversation = cachedConversations.take(id); snapshotReady = false; loading = true; actionError = nil
+        historyTask?.cancel(); historyTask = nil; loadingOlder = false
+        snapshotReady = false; loading = true; actionError = nil
         selectionTask?.cancel()
         selectionTask = Task { [weak self] in
             guard let self else { return }
@@ -216,10 +227,6 @@ final class KimiConnection: ObservableObject {
             catch is CancellationError {} catch { if token == selectionGeneration { actionError = error.localizedDescription } }
             if token == selectionGeneration { loading = false }
         }
-    }
-    func reloadSelected() {
-        let token = selectionGeneration
-        Task { do { try await refreshConversation(selectionToken: token) } catch { actionError = error.localizedDescription } }
     }
     private func refreshConversation(selectionToken: UUID) async throws {
         guard let api, let id = selectedId else { return }
@@ -231,15 +238,22 @@ final class KimiConnection: ObservableObject {
         pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [],
                                                 remote: prompts.queued + (prompts.active.map { [$0] } ?? []),
                                                 messages: value.messages.items)
-        if let current = conversation, value.epoch == current.snapshot.epoch, value.asOfSeq < current.lastSeq { return }
+        if let current = conversation, value.epoch == current.snapshot.epoch, value.asOfSeq < current.lastSeq {
+            // Keep newer events from this same server epoch, but settle the read.
+            // Otherwise a refresh can leave the cached conversation unsendable.
+            snapshotReady = true; loading = false
+            return
+        }
         if conversation != nil { conversation?.reconcile(value) } else { conversation = KimiConversation(value) }
         timings.observe(sessionID: id, turnID: value.inFlightTurn.map { String($0.turnId) },
                         requestID: value.inFlightTurn?.currentPromptId, running: value.session.busy,
                         waiting: !value.pendingApprovals.isEmpty || !value.pendingQuestions.isEmpty)
+        // Catalog observers may select another session synchronously. Publish this
+        // snapshot's state before notifying them, never after their new selection.
+        snapshotReady = true; loading = false
         if let i = sessions.firstIndex(where: { $0.id == id }), sessions[i] != value.session {
             sessions[i] = value.session; onSessionsChanged?()
         }
-        snapshotReady = true; loading = false
     }
     private func subscribe(_ id: String) async throws {
         guard let socket, selectedId == id, let conversation else { return }
@@ -290,30 +304,24 @@ final class KimiConnection: ObservableObject {
         try await ws.send(.string(String(decoding: JSONEncoder().encode(frame), as: UTF8.self)))
     }
 
-    func loadOlder() {
-        guard !loadingOlder, let api, let id = selectedId, let first = conversation?.messages.first, conversation?.hasOlder == true else { return }
+    func loadOlder() { loadHistory(all: false) }
+    func loadAllHistoryForSearch() { loadHistory(all: true) }
+    private func loadHistory(all: Bool) {
+        guard online, snapshotReady, !loadingOlder, let api, let id = selectedId, conversation?.hasOlder == true else { return }
         let token = selectionGeneration; loadingOlder = true
-        Task {
-            defer { loadingOlder = false }
-            do {
-                let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
-                if token == selectionGeneration { conversation?.prepend(page) }
-            } catch { actionError = error.localizedDescription }
-        }
-    }
-    func loadAllHistoryForSearch() {
-        guard !loadingOlder, let api, let id = selectedId else { return }
-        let token = selectionGeneration; loadingOlder = true
-        Task {
-            defer { loadingOlder = false }
+        historyTask = Task {
+            defer { if token == selectionGeneration { loadingOlder = false; historyTask = nil } }
             do {
                 while token == selectionGeneration, conversation?.hasOlder == true, let first = conversation?.messages.first {
                     let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
+                    try Task.checkCancellation()
                     guard token == selectionGeneration else { return }
                     conversation?.prepend(page)
-                    if page.items.isEmpty { break }
+                    if !all || page.items.isEmpty { break }
                 }
-            } catch { actionError = error.localizedDescription }
+            } catch is CancellationError {} catch {
+                if token == selectionGeneration { actionError = error.localizedDescription }
+            }
         }
     }
     func setArchived(_ id: String, archived: Bool, refresh: Bool = true) async throws {
@@ -342,7 +350,10 @@ final class KimiConnection: ObservableObject {
         guard result["deleted"] == .bool(true) else { throw WorkbenchError("服务端未确认删除") }
         cachedConversations.remove(id)
         drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
-        if selectedId == id { selectionGeneration = UUID(); selectionTask?.cancel(); selectedId = nil; conversation = nil; loading = false }
+        if selectedId == id {
+            selectionGeneration = UUID(); selectionTask?.cancel(); historyTask?.cancel(); historyTask = nil
+            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false
+        }
         sessions.removeAll { $0.id == id }; onSessionsChanged?()
     }
 

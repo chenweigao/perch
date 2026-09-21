@@ -71,7 +71,7 @@ struct WorkbenchHeaderActions: View {
             }
             if !model.showDashboard {
                 Menu {
-                    if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online) }
+                    if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
                     else if model.showNative { Button("重新连接") { native.connect() } }
                     else {
                         Button(model.selectedConnection.wantsConnection ? L("断开本地连接") : L("连接终端")) {

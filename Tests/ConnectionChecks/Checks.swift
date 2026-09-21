@@ -88,6 +88,7 @@ struct ConnectionChecks {
     static func main() async throws {
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
+        try await checkKimiSelectionIsolation()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
         let fixture = TransportFixture()

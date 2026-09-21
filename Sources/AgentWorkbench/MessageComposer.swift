@@ -66,7 +66,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
         editor.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         editor.delegate = context.coordinator
-        editor.string = text
+        editor.syncDraft(text)
         editor.placeholder = placeholder
         editor.setAccessibilityLabel(accessibilityLabel)
         scroll.documentView = editor

@@ -304,6 +304,9 @@ struct KimiSelectionContent: View {
                 if connection.loading { ProgressView() }
                 Text(connection.loading ? L("正在读取对话…") : L("等待恢复会话")).font(.title3)
                 Text(connection.actionError ?? connection.error ?? L("正在连接远端 Kimi 服务")).foregroundStyle(.secondary)
+                if connection.online, !connection.loading, let reference = model.selectedReference {
+                    Button("Retry") { connection.select(reference.terminalID) }
+                }
                 Button("返回工作台") { model.showHome(groupID: model.selectedGroupID) }
             }.padding(30)
         }

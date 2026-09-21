@@ -19,7 +19,7 @@ struct KimiWorkspaceView: View {
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
-                if let problem = connection.actionError ?? conversation.error { errorBanner(problem) }
+                if let problem = connection.actionError ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: conversation.displayMessages, isRunning: conversation.snapshot.session.busy,
@@ -123,11 +123,14 @@ struct KimiWorkspaceView: View {
         (!(connection.drafts[connection.selectedId ?? ""] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
          !(connection.attachments[connection.selectedId ?? ""] ?? []).isEmpty)
     }
-    private func errorBanner(_ text: String) -> some View {
+    private func errorBanner(_ text: String, canRetry: Bool = false) -> some View {
         HStack(alignment: .top) {
             Image(systemName: "exclamationmark.circle")
             Text(text).textSelection(.enabled)
             Spacer()
+            if canRetry {
+                Button("Retry") { connection.reloadSelected() }.disabled(!connection.online || connection.loading)
+            }
         }.font(.system(size: 12)).foregroundStyle(.orange).padding(12).background(.orange.opacity(0.06)).padding(.horizontal, 28)
     }
 }
@@ -158,7 +161,7 @@ private struct KimiTimeline: View {
                 if let c = connection.conversation {
                     if c.hasOlder {
                         Button(connection.loadingOlder ? "加载中…" : "加载更早消息") { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
-                            .disabled(connection.loadingOlder || !connection.online).frame(maxWidth: .infinity)
+                            .disabled(connection.loadingOlder || !connection.online || !connection.snapshotReady).frame(maxWidth: .infinity)
                     }
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,

@@ -25,7 +25,7 @@ struct ConversationFindBar: View {
                 Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").accessibilityLabel("Previous match").disabled(hits.isEmpty)
                 Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").accessibilityLabel("Next match").disabled(hits.isEmpty)
                 if model.showKimi && kimi.conversation?.hasOlder == true {
-                    Button(kimi.loadingOlder ? "Loading…" : "Search full history") { kimi.loadAllHistoryForSearch() }.disabled(kimi.loadingOlder || !kimi.online)
+                    Button(kimi.loadingOlder ? "Loading…" : "Search full history") { kimi.loadAllHistoryForSearch() }.disabled(kimi.loadingOlder || !kimi.online || !kimi.snapshotReady)
                 }
                 Button(action: close) { Image(systemName: "xmark") }.help("Close find").accessibilityLabel("Close find")
             }
