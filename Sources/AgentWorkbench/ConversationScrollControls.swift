@@ -26,8 +26,10 @@ struct ConversationScrollObserver: NSViewRepresentable {
 }
 
 struct ReturnToLatestButton: View {
+    let isVisible: Bool
     var hasNewReply = false
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
@@ -39,6 +41,10 @@ struct ReturnToLatestButton: View {
                 .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
         }.buttonStyle(.plain).help("Return to latest reply").accessibilityLabel("Return to latest reply")
             .padding(.bottom, 8)
+            .opacity(isVisible ? 1 : 0)
+            .allowsHitTesting(isVisible).accessibilityHidden(!isVisible)
+            .disabled(!isVisible)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isVisible)
     }
 }
 

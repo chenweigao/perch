@@ -159,7 +159,7 @@ private struct KimiTimeline: View {
                 Color.clear.frame(height: 1).id("bottom")
             }
             .overlay(alignment: .bottom) {
-                if !follow { ReturnToLatestButton(hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) } }
+                ReturnToLatestButton(isVisible: !follow, hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .onChange(of: [String(connection.conversation?.snapshot.asOfSeq ?? 0), connection.conversation?.live?.assistantText ?? "", String(connection.conversation?.live?.thinkingText.isEmpty ?? true)]) { _, _ in
                 if #unavailable(macOS 15) {

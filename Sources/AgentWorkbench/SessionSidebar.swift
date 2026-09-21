@@ -36,9 +36,8 @@ struct WorkbenchSidebar: View {
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
                         Text("\(group.sessions.count)").font(.system(size: 11)).foregroundStyle(.secondary)
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
-                        .background(model.showDashboard && model.selectedGroupID == group.id ? .black.opacity(0.065) : .clear,
-                                    in: RoundedRectangle(cornerRadius: 8))
-                }.buttonStyle(.plain).contextMenu { Button("编辑任务组") { model.editGroup(group) } }
+                }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
+                    .contextMenu { Button("编辑任务组") { model.editGroup(group) } }
             }
             if model.workspace.groups.isEmpty {
                 Button("创建任务组…") { model.editGroup() }.buttonStyle(.plain)
@@ -62,7 +61,7 @@ struct WorkbenchSidebar: View {
             Button { model.showAllSessions() } label: {
                 HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
                     .padding(.leading, 26).padding(10).contentShape(Rectangle())
-            }.buttonStyle(.plain).foregroundStyle(.secondary)
+            }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }

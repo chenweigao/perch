@@ -16,6 +16,7 @@ private struct SidebarPreview: View {
     @State private var query = ""
     @State private var starred: Set<String> = []
     @State private var archived: Set<String> = []
+    @State private var reduceMotion = false
     var body: some View {
         WorkspaceSplitView(newConversation: { title = "新建任务"; page = .other }) {
             WorkspaceSidebarShell(page: page, attentionCount: 2, environmentSummary: "1 个 SSH",
@@ -32,7 +33,7 @@ private struct SidebarPreview: View {
                         Text("Perch 开源")
                         Spacer()
                     }.padding(.horizontal, 10).frame(height: 34)
-                }.buttonStyle(.plain)
+                }.buttonStyle(SidebarNavigationStyle(selected: title == "Perch 开源"))
                 section("最近会话")
                 task("离线会话", status: "连接中断 · 状态未同步", symbol: "wifi.slash")
                 ForEach(1...20, id: \.self) { index in
@@ -40,7 +41,7 @@ private struct SidebarPreview: View {
                          symbol: index == 1 ? "exclamationmark.circle" : "checkmark.circle")
                 }
                 Button("全部会话 →") { title = "全部会话"; page = .other }
-                    .buttonStyle(.plain).padding(.leading, 26).padding(10)
+                    .buttonStyle(SidebarNavigationStyle()).padding(.leading, 26).padding(10)
             } environments: {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("环境与 Agent").font(.headline)
@@ -48,7 +49,7 @@ private struct SidebarPreview: View {
                     Label("示例 SSH · 已连接", systemImage: "server.rack")
                     Text("纯虚构数据，不建立连接").font(.caption).foregroundStyle(.secondary)
                 }.padding(20)
-            }
+            }.environment(\.accessibilityReduceMotion, reduceMotion)
         } header: {
             Label(title, systemImage: "square.grid.2x2").font(.system(size: 13, weight: .semibold))
         } actions: {
@@ -59,6 +60,7 @@ private struct SidebarPreview: View {
                 Text("验证固定入口、独立滚动、宽度拖动和环境弹层。")
                     .foregroundStyle(.secondary)
                 Text("此窗口只使用虚构数据，不加载工作区或连接远端。")
+                Toggle("减少动态效果（预览）", isOn: $reduceMotion)
                 Spacer()
             }.padding(36).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.sheet(isPresented: $showSearch) {

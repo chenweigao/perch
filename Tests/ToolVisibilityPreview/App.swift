@@ -13,6 +13,15 @@ import WorkbenchCore
 private struct ToolPreview: View {
     @State private var phase = 0
     @State private var native = false
+    @State private var reduceMotion = false
+    @State private var showReturn = false
+    @State private var model = ""
+    private let models = ModelCatalog.options(["Example A", "Example B"].flatMap { provider in
+        (1...24).map { index in
+            JSONValue.object(["provider": .string(provider), "model": .string("\(provider)/model-\(index)"),
+                              "display_name": .string("Model \(index)")])
+        }
+    })
     private let live = try! KimiWire.decoder().decode([KimiLiveTool].self, from: Data(#"[{"tool_call_id":"read-1","name":"Read","args":{"path":"/fixture/Sample.swift"},"last_progress":"已读取 20 行，正在继续"}]"#.utf8))
     private var messages: [KimiMessage] {
         var rows: [[String: Any]] = [
@@ -40,6 +49,12 @@ private struct ToolPreview: View {
                 Text("完成").tag(3); Text("失败").tag(4); Text("断线").tag(5)
                 Text("孤立结果").tag(6); Text("待审批").tag(7)
             }.pickerStyle(.segmented)
+            HStack {
+                ModelPicker(models: models, selection: $model)
+                Spacer()
+                Toggle("显示回到底部按钮", isOn: $showReturn)
+                Toggle("减少动态效果", isOn: $reduceMotion)
+            }
             Divider()
             ConversationScrollView(showsScrollIndicator: true, onScroll: { _ in }, onContentSizeChange: {}) {
                 ConversationTranscript(messages: messages, sessionId: "tool-visibility-fixture",
@@ -49,9 +64,17 @@ private struct ToolPreview: View {
                     Label("需要你的确认（无真实操作）", systemImage: "hand.raised").foregroundStyle(.orange)
                     KimiToolCard(tool: VisibleTool(id: "approval-fixture", name: "Shell", input: .object(["command": .string("printf fixture")]), status: .awaitingApproval))
                 }
+            }.overlay(alignment: .bottom) {
+                ReturnToLatestButton(isVisible: showReturn) { showReturn = false }
             }
+            ConversationActivityBar(activity: ConversationActivity(messages: messages, isRunning: phase < 3,
+                                                                   liveTools: !native && phase < 2 ? live : [],
+                                                                   running: native && phase < 2 ? ["read-1"] : [],
+                                                                   online: phase != 5, isThinking: phase == 0),
+                                    isRunning: phase < 3, online: phase != 5)
             Text("无远端连接、无真实消息、无审批按钮；独立 bundle ID 与状态目录。").font(.caption).foregroundStyle(.secondary)
-        }.padding(20).frame(minWidth: 650, minHeight: 500)
+        }.padding(20).frame(minWidth: 750, minHeight: 500)
+            .environment(\.accessibilityReduceMotion, reduceMotion)
     }
 }
 

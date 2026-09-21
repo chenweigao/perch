@@ -63,7 +63,7 @@ private struct WorkflowPreview: View {
                     ConversationTranscript(messages: messages, sessionId: session, memoryKey: key)
                     Color.clear.frame(height: 1).id("bottom")
                 }.overlay(alignment: .bottom) {
-                    if !follow { ReturnToLatestButton(hasNewReply: additions > 0) { follow = true; ConversationReadingMemory.shared.following[key] = true; proxy.scrollTo("bottom", anchor: .bottom) } }
+                    ReturnToLatestButton(isVisible: !follow, hasNewReply: additions > 0) { follow = true; ConversationReadingMemory.shared.following[key] = true; proxy.scrollTo("bottom", anchor: .bottom) }
                 }.task(id: session) {
                     follow = ConversationReadingMemory.shared.following[key] ?? true
                     await Task.yield()

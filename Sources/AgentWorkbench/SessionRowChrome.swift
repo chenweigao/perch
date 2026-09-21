@@ -15,6 +15,7 @@ struct SessionRowChrome<Indicator: View>: View {
     let onArchive: () -> Void
     @ViewBuilder let indicator: Indicator
     @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private enum Focus { case open, pin, archive }
     @FocusState private var focus: Focus?
 
@@ -54,9 +55,13 @@ struct SessionRowChrome<Indicator: View>: View {
             }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
                 .frame(width: 48, alignment: .trailing)
                 .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: showActions)
         }.padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
-            .background(selected ? .black.opacity(0.065) : hovered ? .black.opacity(0.03) : .clear,
-                        in: RoundedRectangle(cornerRadius: 8))
+            .background {
+                RoundedRectangle(cornerRadius: 8).fill(.black.opacity(selected ? 0.065 : hovered ? 0.03 : 0))
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: selected)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: hovered)
+            }
             .contentShape(Rectangle()).onHover { hovered = $0 }
     }
 }

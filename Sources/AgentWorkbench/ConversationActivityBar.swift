@@ -37,9 +37,10 @@ struct ConversationActivityBar: View {
     var onReconnect: () -> Void = {}
     @State private var expanded = false
     @State private var observedSince: Date?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Group {
+        ZStack {
             if activity.isVisible {
                 HStack(spacing: 10) {
                     Button { expanded.toggle() } label: {
@@ -47,6 +48,8 @@ struct ConversationActivityBar: View {
                             if activity.animates { ConversationBusyIndicator() }
                             else { Image(systemName: activity.symbol).frame(width: 16) }
                             Text(activity.title).lineLimit(1).truncationMode(.tail)
+                                .contentTransition(.opacity)
+                                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.title)
                             Spacer(minLength: 4)
                             ViewThatFits(in: .horizontal) {
                                 HStack(spacing: 10) { counts; clock }
@@ -66,8 +69,10 @@ struct ConversationActivityBar: View {
                 }.font(.system(size: 12))
                     .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
                     .padding(.horizontal, 13).frame(height: 36).workbenchFloatingSurface()
+                    .transition(reduceMotion ? .identity : .opacity)
             }
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
         .onChange(of: isRunning, initial: true) { _, running in observedSince = running ? Date() : nil }
         .onChange(of: turnID) { _, _ in observedSince = isRunning ? Date() : nil }
     }

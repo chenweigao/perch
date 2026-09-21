@@ -134,7 +134,7 @@ private struct ReadingPreview: View {
             }.frame(maxWidth: narrow ? 492 : .infinity)
                 .task(id: scenario) { await Task.yield(); proxy.scrollTo("bottom", anchor: .bottom) }
                 .overlay(alignment: .bottom) {
-                    if !follow { ReturnToLatestButton { follow = true; proxy.scrollTo("bottom", anchor: .bottom) } }
+                    ReturnToLatestButton(isVisible: !follow) { follow = true; proxy.scrollTo("bottom", anchor: .bottom) }
                 }
             }
             ConversationActivityBar(activity: ConversationActivity(

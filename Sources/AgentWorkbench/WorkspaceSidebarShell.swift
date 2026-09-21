@@ -39,12 +39,12 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         Text(environmentSummary).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                         Image(systemName: "chevron.up.chevron.down").font(.system(size: 9)).foregroundStyle(.secondary)
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
-                }.buttonStyle(.plain).popover(isPresented: $showEnvironments, arrowEdge: .trailing) { environments }
+                }.buttonStyle(SidebarNavigationStyle()).popover(isPresented: $showEnvironments, arrowEdge: .trailing) { environments }
                 SettingsLink {
                     HStack(spacing: 9) {
                         Image(systemName: "gearshape").frame(width: 17); Text("设置"); Spacer(); Text("⌘,").foregroundStyle(.tertiary)
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(SidebarNavigationStyle())
             }.padding(.horizontal, 10).padding(.bottom, 10)
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -58,7 +58,30 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 if count > 0 { Text("\(count)").font(.system(size: 11, weight: .medium)).monospacedDigit().foregroundStyle(.secondary) }
                 if let shortcut { Text(shortcut).foregroundStyle(.tertiary) }
             }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
-                .background(selected ? .black.opacity(0.065) : .clear, in: RoundedRectangle(cornerRadius: 8))
-        }.buttonStyle(.plain).accessibilityAddTraits(selected ? .isSelected : [])
+        }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// Animate the navigation background alone; labels and page changes stay immediate.
+struct SidebarNavigationStyle: ButtonStyle {
+    var selected = false
+    func makeBody(configuration: Configuration) -> some View {
+        SidebarNavigationBody(configuration: configuration, selected: selected)
+    }
+}
+
+private struct SidebarNavigationBody: View {
+    let configuration: ButtonStyleConfiguration
+    let selected: Bool
+    @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var opacity: Double { configuration.isPressed ? 0.09 : selected ? 0.065 : hovered ? 0.03 : 0 }
+    var body: some View {
+        configuration.label.contentShape(Rectangle())
+            .background {
+                RoundedRectangle(cornerRadius: 8).fill(.black.opacity(opacity))
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: opacity)
+            }
+            .onHover { hovered = $0 }
     }
 }

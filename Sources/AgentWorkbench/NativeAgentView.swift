@@ -22,7 +22,7 @@ struct NativeAgentView: View {
                         Color.clear.frame(height: 1).id("bottom")
                     }
                         .overlay(alignment: .bottom) {
-                            if !follow { ReturnToLatestButton(hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) } }
+                            ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
                         }
                         .onChange(of: s.revision) { _, _ in
                             if #unavailable(macOS 15) {
