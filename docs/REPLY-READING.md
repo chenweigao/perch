@@ -13,8 +13,9 @@ weight, including strong text nested inside a heading or inline code. Headings
 have 22 pt of leading space (14 pt in compact lists/quotes) and 7 pt before their
 following content; the first block has no leading space. Section spacing carries
 the hierarchy without large, heavy titles. List markers use regular weight.
-Inline code stays 1 pt smaller than its surrounding text, with a faint 2.5% label
-color background; table separators use 6% opacity. Body paragraphs have 12 pt
+Inline code stays 1 pt smaller than its surrounding text and uses monospace with
+no background fill, so tall line fragments do not create gray tiles in prose.
+Fenced code retains its separate container; table separators use 6% opacity. Body paragraphs have 12 pt
 between them; paragraphs within a list item or quote have 8 pt. Compact block
 transitions, such as a paragraph followed by a nested list, have 6 pt of space.
 List rows are measured at the available width: adjacent single-line items have
