@@ -78,6 +78,18 @@ private struct WorkbenchDetail: View {
 
     private var conversation: some View {
         VStack(spacing: 0) {
+            if let notice = model.taskNotice {
+                HStack {
+                    Button { model.openNotifiedTask(notice.sessionID) } label: {
+                        Label("\(notice.message) · \(notice.title)", systemImage: notice.kind == .completed ? "checkmark.circle" : "exclamationmark.circle").lineLimit(1)
+                    }.buttonStyle(.plain)
+                    Spacer()
+                    Button { model.taskNotice = nil } label: { Image(systemName: "xmark") }
+                }.font(.system(size: 12)).padding(10).background(.orange.opacity(0.06))
+            }
+            if model.showConversationFind && (model.showKimi || model.showNative) {
+                ConversationFindBar(model: model, kimi: model.kimi, native: model.native)
+            }
             ZStack {
                 if model.showDashboard {
                     if model.showArchived { ArchivedSessionsView(model: model) }

@@ -6,8 +6,10 @@ import WorkbenchCore
 
 @MainActor
 final class WorkbenchModel: ObservableObject {
-    let kimi: KimiConnection
-    let native: NativeAgentConnection
+    @Published var kimi: KimiConnection
+    @Published var native: NativeAgentConnection
+    private var kimiEnvironments: [UUID: KimiConnection] = [:]
+    private var nativeEnvironments: [UUID: NativeAgentConnection] = [:]
     @Published var connections: [HostConnection]
     @Published var selectedHostID: UUID
     @Published private(set) var tabs = TerminalTabs()
@@ -40,6 +42,20 @@ final class WorkbenchModel: ObservableObject {
     @Published var renderReport = ""
     @Published var showGroupEditor = false
     @Published var editingGroup: WorkItemGroup?
+    @Published var taskNotice: TaskNotice?
+    @Published var notificationError: String?
+    @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "task.notifications") {
+        didSet {
+            UserDefaults.standard.set(notificationsEnabled, forKey: "task.notifications")
+            if notificationsEnabled { notifications.requestPermission { [weak self] error in self?.notificationError = error } }
+        }
+    }
+    private let notifications = TaskNotifications()
+    private var taskEvents = TaskEventTracker()
+    private var pendingNotificationID: String?
+    @Published var showConversationFind = false
+    @Published private(set) var navigation = SessionNavigation()
+    private var navigatingHistory = false
     @Published var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
     private let workspaceURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -57,7 +73,7 @@ final class WorkbenchModel: ObservableObject {
            let saved = try? JSONDecoder().decode([SSHHost].self, from: data), !saved.isEmpty { hosts = saved }
         else { hosts = [SSHHost(name: "dev-env", destination: "dev-env")] }
         kimi = KimiConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
-        native = NativeAgentConnection(host: kimi.host)
+        native = NativeAgentConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
         connections = hosts.map(HostConnection.init)
         selectedHostID = hosts[0].id
         if let data = try? JSONEncoder().encode(hosts) { UserDefaults.standard.set(data, forKey: "hosts") }
@@ -73,12 +89,22 @@ final class WorkbenchModel: ObservableObject {
             canSaveWorkspace = false
             workspaceError = "本地工作台读取失败，原文件已保留：\(error.localizedDescription)"
         }
+        if let reference = selectedReference { navigation.visit(reference.id) }
+        notifications.start()
+        notifications.onOpen = { [weak self] id in self?.openNotifiedTask(id) }
         for connection in connections { observe(connection) }
-        native.onSessionsChanged = { [weak self] in self?.catalogChanged() }
-        kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
-        kimi.$online.removeDuplicates().sink { [weak self] _ in
-            Task { @MainActor in self?.catalogChanged() }
-        }.store(in: &subscriptions)
+        registerEnvironment(kimi: kimi, native: native)
+        for host in hosts where host.id != kimi.host.id {
+            registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
+        }
+        observers.append(NotificationCenter.default.addObserver(forName: .init("PerchOpenConversationFile"), object: nil, queue: .main) { [weak self] notice in
+            guard let url = notice.object as? URL, let reference = ConversationFileReference(url: url) else { return }
+            MainActor.assumeIsolated {
+                guard let self, !self.showDashboard, self.selectedHost != nil else { return }
+                self.showFileViewer = true; self.syncFileViewer()
+                self.fileBrowser.open(reference.path, line: reference.line)
+            }
+        })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -89,6 +115,19 @@ final class WorkbenchModel: ObservableObject {
         })
     }
 
+    private func registerEnvironment(kimi: KimiConnection, native: NativeAgentConnection) {
+        kimiEnvironments[kimi.host.id] = kimi; nativeEnvironments[native.host.id] = native
+        native.onSessionsChanged = { [weak self] in self?.catalogChanged() }
+        kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
+        native.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
+        kimi.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
+    }
+    func activateAgentEnvironment(_ hostID: UUID) {
+        guard kimi.host.id != hostID, let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }
+        kimi = nextKimi; native = nextNative
+        if started { if !kimi.online { kimi.connect() }; if !native.online { native.connect() } }
+        selectedHostID = hostID
+    }
     var selectedReference: SessionReference? { openedSessions.first { $0.session.id == tabs.selectedID }?.session }
     var showNative: Bool { !showDashboard && [.omp, .qoder].contains(selectedReference?.kind) }
     var showKimi: Bool { !showDashboard && selectedReference?.kind == .kimi }
@@ -126,7 +165,7 @@ final class WorkbenchModel: ObservableObject {
                     archived: workspace.archivedTerminals.contains(SessionReference(hostID: connection.id, terminalID: pane.id)))
             }
         }
-        let conversations = kimi.sessions.map { session in
+        let conversations = kimiEnvironments.values.flatMap { kimi in kimi.sessions.map { session in
             let reference = SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi)
             let section = workspace.kimiSection(session, on: kimi.host.id)
             return WorkspaceSession(reference: reference,
@@ -134,13 +173,15 @@ final class WorkbenchModel: ObservableObject {
                 detail: section == .review ? "Kimi · 结果待查看" : "Kimi · \(session.status)", online: kimi.online,
                 section: section, canMarkReviewed: section == .review, archived: session.archived == true, updatedAt: sessionDateParser.date(from: session.updatedAt)?.timeIntervalSince1970 ?? 0)
         }
-        let agents = native.sessions.map { session in
+        }
+        let agents = nativeEnvironments.values.flatMap { native in native.sessions.map { session in
             let reference = SessionReference(hostID: native.host.id, terminalID: session.id, kind: session.provider)
             let review = session.completed > 0 && workspace.reviewedKimiUpdates[reference.id] != String(session.completed)
             let section: WorkQueueSection = session.pending > 0 ? .attention : session.busy ? .running : session.error != nil ? .attention : review ? .review : .other
             return WorkspaceSession(reference: reference, title: workspace.displayTitle(session.title, for: reference), directory: session.cwd, hostName: native.host.name,
                 detail: "\(session.provider.label) · \(section == .review ? "结果待查看" : session.status)", online: native.online, section: section,
                 canMarkReviewed: section == .review, archived: session.archived, updatedAt: session.updated)
+        }
         }
         let next = ((conversations + agents) + terminalSessions).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
         if next != allSessions { allSessions = next }
@@ -160,6 +201,7 @@ final class WorkbenchModel: ObservableObject {
         try SSHCommand.validateDestination(destination)
         let connection = HostConnection(host: SSHHost(name: name.isEmpty ? destination : name, destination: destination))
         observe(connection); connections.append(connection)
+        registerEnvironment(kimi: KimiConnection(host: connection.host), native: NativeAgentConnection(host: connection.host))
         UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts")
         connection.connect()
     }
@@ -185,8 +227,10 @@ final class WorkbenchModel: ObservableObject {
         tabs.pin(identity); saveWorkspace()
     }
     func select(_ identity: String) {
+        if !navigatingHistory { navigation.visit(identity) }
         tabs.select(identity); showDashboard = false
         if let reference = selectedReference {
+            if reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
             selectedHostID = reference.hostID
             if let group = selectedGroup, !group.sessions.contains(reference) { selectedGroupID = nil }
             if let group = selectedGroup { workspace.lastSessionByGroup[group.id.uuidString] = reference.id }
@@ -194,6 +238,20 @@ final class WorkbenchModel: ObservableObject {
             if reference.kind == .kimi, kimi.online { kimi.select(reference.terminalID) }
         }
         updateVisibility(focus: true); saveWorkspace(); syncFileViewer()
+    }
+    func navigate(_ delta: Int) {
+        navigatingHistory = true
+        defer { navigatingHistory = false }
+        while let id = navigation.step(delta) {
+            if openedSessions.contains(where: { $0.session.id == id }) { select(id); return }
+            if let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) { open(item); return }
+        }
+    }
+    func nextAttentionTask() {
+        let items = allSessions.filter { $0.online && !$0.archived && ($0.section == .attention || $0.section == .review) }
+        guard !items.isEmpty else { return }
+        let index = items.firstIndex(where: { $0.id == selectedReference?.id }) ?? -1
+        open(items[(index + 1) % items.count])
     }
     private func updateVisibility(focus: Bool = false) {
         for terminal in terminals { terminal.context.isSurfaceVisible = !showDashboard && terminal.id == selectedTerminalID }
@@ -209,7 +267,9 @@ final class WorkbenchModel: ObservableObject {
         restoreAvailableSessions()
     }
     func start() {
-        guard !started else { return }; started = true
+        guard !started else { return }
+        if let reference = selectedReference, reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
+        started = true
         connections.forEach { $0.connect() }; kimi.connect(); native.connect()
     }
     func showHome(groupID: UUID? = nil) {
@@ -247,6 +307,7 @@ final class WorkbenchModel: ObservableObject {
         showHome(groupID: group.id)
     }
     func markReviewed(_ item: WorkspaceSession) {
+        guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard item.online else { return }
         if [.omp, .qoder].contains(item.reference.kind), let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) {
             workspace.reviewedKimiUpdates[item.id] = String(session.completed)
@@ -278,6 +339,7 @@ final class WorkbenchModel: ObservableObject {
     /// metadata the sections already use. `fingerprint` carries the per-source
     /// revision so output arriving mid-batch is detected before committing.
     func archiveSubject(_ item: WorkspaceSession) -> ArchiveSubject {
+        guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false) }
         let starred = workspace.starred.contains(item.reference)
         let queued = native.queue.items(for: item.reference).filter { $0.state != .delivered }.count
         if [.omp, .qoder].contains(item.reference.kind) {
@@ -378,6 +440,7 @@ final class WorkbenchModel: ObservableObject {
         result.retryFailures(); executeBatchArchive(result)
     }
     private func archiveRequest(_ reference: SessionReference, archived: Bool = true) async throws {
+        guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError("The task environment is unavailable") }
         if reference.kind == .kimi { try await kimi.setArchived(reference.terminalID, archived: archived, refresh: false) }
         else if [.omp, .qoder].contains(reference.kind) {
             try await native.setArchived(reference.terminalID, archived: archived)
@@ -385,9 +448,9 @@ final class WorkbenchModel: ObservableObject {
         else { workspace.archivedTerminals.remove(reference) }
     }
     private func syncArchivedSessions() async {
-        do { if native.online { try await native.refresh() } }
+        do { for native in nativeEnvironments.values where native.online { try await native.refresh() } }
         catch { managementError = "归档操作已记录，列表同步失败：\(error.localizedDescription)" }
-        do { if kimi.online { try await kimi.refreshSessions() } }
+        do { for kimi in kimiEnvironments.values where kimi.online { try await kimi.refreshSessions() } }
         catch { managementError = "归档操作已记录，列表同步失败：\(error.localizedDescription)" }
     }
     /// Whether selected transcript text can become a quote right now. A terminal
@@ -446,11 +509,13 @@ final class WorkbenchModel: ObservableObject {
         rebuildCatalog(); saveWorkspace()
     }
     func canArchive(_ item: WorkspaceSession) -> Bool {
+        guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return false }
         if item.reference.kind == .terminal { return true }
         if [.omp, .qoder].contains(item.reference.kind) { return native.online && native.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false }
         return kimi.online && kimi.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false
     }
     func setArchived(_ item: WorkspaceSession, archived: Bool) {
+        guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard canArchive(item), !managing.contains(item.id) else { return }
         managing.insert(item.id); managementError = nil
         Task {
@@ -469,6 +534,7 @@ final class WorkbenchModel: ObservableObject {
         }
     }
     func deleteConfirmed(_ item: WorkspaceSession) {
+        guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard item.online, !managing.contains(item.id) else { return }
         managing.insert(item.id); managementError = nil
         Task {
@@ -488,8 +554,6 @@ final class WorkbenchModel: ObservableObject {
     /// own connection. The file viewer must read from that same host, not a default.
     var selectedHost: SSHHost? {
         guard let reference = selectedReference else { return nil }
-        if reference.kind == .kimi { return kimi.host }
-        if [.omp, .qoder].contains(reference.kind) { return native.host }
         return connections.first { $0.id == reference.hostID }?.host
     }
     func toggleFileViewer() {
@@ -515,8 +579,48 @@ final class WorkbenchModel: ObservableObject {
     }
     private func catalogChanged() {
         rebuildCatalog()
+        updateTaskEvents()
+        if let id = pendingNotificationID, let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) {
+            pendingNotificationID = nil; open(item)
+        }
         for item in allSessions where item.archived && tabs.ids.contains(item.id) { close(item.id) }
         restoreAvailableSessions()
+    }
+    private func updateTaskEvents() {
+        for item in allSessions where !item.archived {
+            guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { continue }
+            let subject = archiveSubject(item)
+            let completion: String?
+            if item.reference.kind == .kimi {
+                let session = kimi.sessions.first { $0.id == item.reference.terminalID }
+                completion = session?.lastTurnReason == "completed" ? session?.updatedAt : nil
+            } else if item.reference.kind == .terminal {
+                let pane = connections.first { $0.id == item.reference.hostID }?.snapshot?.panes.first { $0.id == item.reference.terminalID }
+                completion = pane?.status == "done" ? pane?.revision.map(String.init) : nil
+            } else {
+                let count = native.sessions.first { $0.id == item.reference.terminalID }?.completed ?? 0
+                completion = count > 0 ? String(count) : nil
+            }
+            let state = TaskEventState(running: subject.busy, pending: subject.pendingInteraction, failed: subject.failed, completion: completion)
+            guard let event = taskEvents.observe(state, id: item.id, online: item.online) else { continue }
+            if NSApp.isActive && !showDashboard && selectedReference?.id == item.id { continue }
+            let notice = TaskNotice(sessionID: item.id, title: item.title, kind: event)
+            taskNotice = notice
+            if notificationsEnabled && !NSApp.isActive { notifications.post(id: item.id, title: item.title, event: event) }
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(8))
+                if self?.taskNotice?.id == notice.id { self?.taskNotice = nil }
+            }
+        }
+    }
+    func openNotifiedTask(_ id: String) {
+        taskNotice = nil
+        if let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) { open(item) }
+        else if openedSessions.contains(where: { $0.session.id == id }) { select(id) }
+        else {
+            pendingNotificationID = id
+            if let host = id.split(separator: ":").first.flatMap({ UUID(uuidString: String($0)) }) { activateAgentEnvironment(host) }
+        }
     }
     private func snapshotUpdated() {
         var changed = false
@@ -540,14 +644,16 @@ final class WorkbenchModel: ObservableObject {
             terminals.append(terminal)
             if terminal.id == selectedTerminalID { attachedSelection = true }
         }
-        if showNative, let reference = selectedReference, native.sessions.contains(where: { $0.id == reference.terminalID }) { native.select(reference.terminalID) }
-        if showKimi, let reference = selectedReference, kimi.online, kimi.sessions.contains(where: { $0.id == reference.terminalID }) { kimi.select(reference.terminalID) }
+        if showNative, let reference = selectedReference, let connection = nativeEnvironments[reference.hostID], connection.sessions.contains(where: { $0.id == reference.terminalID }) { connection.select(reference.terminalID) }
+        if showKimi, let reference = selectedReference, let connection = kimiEnvironments[reference.hostID], connection.online, connection.sessions.contains(where: { $0.id == reference.terminalID }) { connection.select(reference.terminalID) }
         updateVisibility(focus: attachedSelection)
     }
+    func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        try? flushDrafts()
         saveWorkspace()
         if canSaveWorkspace { do { try workspaceWriter.flush(workspace) } catch { workspaceError = error.localizedDescription } }
-        kimi.disconnect(); native.disconnect(); terminals.removeAll(); connections.forEach { $0.disconnect() }
+        kimiEnvironments.values.forEach { $0.disconnect() }; nativeEnvironments.values.forEach { $0.disconnect() }; terminals.removeAll(); connections.forEach { $0.disconnect() }
     }
     func inspectRendering() {
         guard let terminal = selectedTerminal, let view = terminal.context.attachedPlatformView,

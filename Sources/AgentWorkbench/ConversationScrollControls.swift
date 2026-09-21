@@ -26,15 +26,18 @@ struct ConversationScrollObserver: NSViewRepresentable {
 }
 
 struct ReturnToLatestButton: View {
+    var hasNewReply = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Image(systemName: "arrow.down").font(.system(size: 13, weight: .medium))
-                .frame(width: 32, height: 32)
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down")
+                if hasNewReply { Text("New reply") }
+            }.font(.system(size: 12, weight: .medium)).padding(.horizontal, 10).frame(height: 32)
                 .workbenchFloatingSurface()
                 .overlay(Circle().strokeBorder(.primary.opacity(0.08)))
                 .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
-        }.buttonStyle(.plain).help("回到最新回复").accessibilityLabel("回到最新回复")
+        }.buttonStyle(.plain).help("Return to latest reply").accessibilityLabel("Return to latest reply")
             .padding(.bottom, 8)
     }
 }
@@ -62,7 +65,7 @@ struct ConversationScrollView<Content: View>: View {
                         if #unavailable(macOS 15) { ConversationScrollObserver(onScroll: onScroll) }
                     }
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
-                .background(ConversationViewportView(viewport: conversationViewport))
+                .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }))
         }
     }
     var body: some View {

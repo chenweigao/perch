@@ -26,65 +26,139 @@ private struct BusySpinner: NSViewRepresentable {
     static func dismantleNSView(_ view: NSProgressIndicator, coordinator: ()) { view.stopAnimation(nil) }
 }
 
-/// Kept outside the scrolling transcript, immediately above the composer.
+/// Kept outside the transcript; only the clock subview refreshes every second.
 struct ConversationActivityBar: View {
-    let messages: [KimiMessage]
+    let activity: ConversationActivity
     let isRunning: Bool
-    var isThinking = false
-    var runningToolCount = 0
+    var turnID: String = ""
+    var online = true
+    var pendingCount = 0
+    var onReview: () -> Void = {}
+    var onReconnect: () -> Void = {}
     @State private var expanded = false
-    @State private var pointerAnchor: CGRect?
-    private var todos: [ConversationTodo] { ConversationTodo.floating(in: messages, isRunning: isRunning) }
-    private var status: String {
-        if isThinking { return "正在思考" }
-        return runningToolCount > 0 ? "正在处理 · \(runningToolCount) 项操作" : "正在处理"
-    }
+    @State private var observedSince: Date?
+
     var body: some View {
-        let items = todos
-        if !items.isEmpty || isRunning {
-            HStack(spacing: 9) {
-                if isRunning { ConversationBusyIndicator() }
-                else { Image(systemName: "checklist").font(.system(size: 12)).foregroundStyle(.secondary) }
-                if items.isEmpty {
-                    Text(status).font(.system(size: 12)).foregroundStyle(.secondary)
-                    Spacer(minLength: 0)
-                } else {
-                    Button { pointerAnchor = nil; expanded.toggle() } label: {
+        Group {
+            if activity.isVisible {
+                HStack(spacing: 10) {
+                    Button { expanded.toggle() } label: {
                         HStack(spacing: 9) {
-                            Text("\(items.filter { $0.status == .done }.count)/\(items.count)")
-                                .monospacedDigit().foregroundStyle(.secondary)
-                            if !isRunning { Text("未完成").foregroundStyle(.secondary) }
-                            Text(items.first { $0.status == .inProgress }?.title ?? items.first { $0.status == .pending }?.title ?? "计划已完成")
-                                .lineLimit(1).truncationMode(.tail)
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.up.chevron.down").font(.system(size: 9)).foregroundStyle(.secondary)
-                        }.font(.system(size: 12)).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help("查看任务清单")
-                        .highPriorityGesture(SpatialTapGesture().onEnded { value in
-                            pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
-                            expanded.toggle()
-                        })
-                        .popover(isPresented: $expanded, attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds), arrowEdge: .top) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("任务清单").font(.system(size: 13, weight: .semibold))
-                                ScrollView {
-                                    VStack(alignment: .leading, spacing: 13) {
-                                        ForEach(items) { item in
-                                            HStack(alignment: .top, spacing: 9) {
-                                                Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
-                                                    .foregroundStyle(item.status == .inProgress ? Color.accentColor : Color.secondary)
-                                                Text(item.title).foregroundStyle(item.status == .done ? .secondary : .primary)
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                            }.font(.system(size: 12)).accessibilityElement(children: .combine)
-                                                .accessibilityLabel("\(item.status == .done ? "已完成" : item.status == .inProgress ? "进行中" : "待办")：\(item.title)")
-                                        }
-                                    }.padding(.vertical, 2)
-                                }.frame(maxHeight: 260)
-                            }.padding(16).frame(width: 330)
+                            if activity.animates { ConversationBusyIndicator() }
+                            else { Image(systemName: activity.symbol).frame(width: 16) }
+                            Text(activity.title).lineLimit(1).truncationMode(.tail)
+                            Spacer(minLength: 4)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 10) { counts; clock }
+                                counts
+                                EmptyView()
+                            }.foregroundStyle(.secondary).layoutPriority(-1)
+                            Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
+                        }.contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityLabel("Task activity")
+                        .accessibilityValue(activity.title).help("Show current activity and plan")
+                        .popover(isPresented: $expanded, arrowEdge: .top) { details }
+                    if !online {
+                        Button("Reconnect", action: onReconnect).buttonStyle(.borderless)
+                    } else if pendingCount > 0 {
+                        Button("Review") { onReview() }.buttonStyle(.borderless)
+                    }
+                }.font(.system(size: 12))
+                    .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
+                    .padding(.horizontal, 13).frame(height: 36).workbenchFloatingSurface()
+            }
+        }
+        .onChange(of: isRunning, initial: true) { _, running in observedSince = running ? Date() : nil }
+        .onChange(of: turnID) { _, _ in observedSince = isRunning ? Date() : nil }
+    }
+
+    @ViewBuilder private var counts: some View {
+        HStack(spacing: 10) {
+            if !activity.activeTools.isEmpty { Text("\(activity.activeTools.count) \(activity.activeTools.count == 1 ? "tool" : "tools")") }
+            if !activity.todos.isEmpty { Text("\(activity.completedSteps)/\(activity.todos.count) steps") }
+        }.fixedSize().monospacedDigit()
+    }
+    @ViewBuilder private var clock: some View {
+        if online, isRunning, let observedSince { ActivityObservedClock(since: observedSince) }
+    }
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label(activity.title, systemImage: activity.symbol).font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button { expanded = false } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.plain).accessibilityLabel("Close activity details")
+            }
+            if !online {
+                Text("Updates are disconnected. Tool states below are the last known states.").foregroundStyle(.secondary)
+                Button("Reconnect") { expanded = false; onReconnect() }
+            } else if pendingCount > 0 {
+                Text("\(pendingCount) pending \(pendingCount == 1 ? "request" : "requests") in this conversation.").foregroundStyle(.secondary)
+                Button("Review in conversation") { expanded = false; onReview() }
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if !activity.todos.isEmpty {
+                        Text("Plan · \(activity.completedSteps)/\(activity.todos.count)").fontWeight(.semibold)
+                        ForEach(activity.todos) { item in
+                            HStack(alignment: .top, spacing: 9) {
+                                Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
+                                    .foregroundStyle(item.status == .inProgress ? Color.accentColor : Color.secondary)
+                                Text(item.title).foregroundStyle(item.status == .done ? .secondary : .primary)
+                            }.accessibilityElement(children: .combine)
+                                .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
                         }
+                    }
+                    if !activity.tools.isEmpty {
+                        Text("Tools · \(activity.tools.count)").fontWeight(.semibold)
+                        ForEach(activity.tools) { tool in ActivityToolDetails(tool: tool) }
+                    } else if activity.todos.isEmpty {
+                        Text("Live tool activity and reported plan steps will appear here.").foregroundStyle(.secondary)
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
+            }.frame(maxHeight: 300)
+            if isRunning {
+                Divider()
+                Text("Observed time starts when this view sees the turn. Earlier runtime is unknown; waiting for input is included.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        }.font(.system(size: 12)).padding(16).frame(width: 390)
+    }
+}
+
+private struct ActivityObservedClock: View {
+    let since: Date
+    var body: some View {
+        TimelineView(.periodic(from: since, by: 1)) { context in
+            let seconds = max(0, Int(context.date.timeIntervalSince(since)))
+            Text("Observed \(seconds / 60):\(String(format: "%02d", seconds % 60))")
+                .monospacedDigit().fixedSize()
+        }.help("Time observed in this view, including waits. Earlier runtime is unknown.")
+    }
+}
+
+private struct ActivityToolDetails: View {
+    let tool: VisibleTool
+    @State private var expanded = false
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            if expanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let input = tool.input { Text("Input").fontWeight(.medium); Text(input.display).textSelection(.enabled) }
+                    if let progress = tool.progress { Text("Latest update").fontWeight(.medium); Text(progress.display).textSelection(.enabled) }
+                    if let output = tool.output { Text("Result").fontWeight(.medium); Text(output.display).textSelection(.enabled) }
+                }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(tool.name).fontWeight(.medium)
+                    Spacer()
+                    Text(ConversationActivity.status(of: tool)).foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : Color.secondary)
                 }
-            }.padding(.horizontal, 13).frame(height: 36)
-                .workbenchFloatingSurface()
+                Text(ConversationActivity.summary(of: tool)).lineLimit(2).foregroundStyle(.secondary)
+                if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(.secondary) }
+            }
         }
     }
 }

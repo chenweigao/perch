@@ -28,6 +28,15 @@ struct WorkbenchApp: App {
                 Button("新建远端终端…") { model.showNewTerminal = true }.keyboardShortcut("t")
                     .disabled(!model.selectedConnection.online)
             }
+            CommandMenu("Conversation") {
+                Button("Find in conversation") { model.showConversationFind = true }.keyboardShortcut("f").disabled(!model.showKimi && !model.showNative)
+                Button("Next match") { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }.keyboardShortcut("g").disabled(!model.showConversationFind)
+                Button("Previous match") { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showConversationFind)
+                Divider()
+                Button("Back") { model.navigate(-1) }.keyboardShortcut("[", modifiers: .command).disabled(!model.navigation.canGoBack)
+                Button("Forward") { model.navigate(1) }.keyboardShortcut("]", modifiers: .command).disabled(!model.navigation.canGoForward)
+                Button("Next task needing attention") { model.nextAttentionTask() }.keyboardShortcut("j", modifiers: [.command, .shift])
+            }
             CommandGroup(after: .help) {
                 Button("终端显示信息…") { model.inspectRendering() }.disabled(model.selectedTerminal == nil)
             }
@@ -53,16 +62,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationWillTerminate(_ notification: Notification) { model?.shutdown() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let count = model?.native.queue.exitWarningCount ?? 0
-        guard count > 0 else { return .terminateNow }
-        let alert = NSAlert()
-        alert.messageText = "还有 \(count) 条消息待发送或结果未确认"
-        alert.informativeText = "退出会丢失这些消息的本地队列记录。已交给远端的任务会继续运行；未确认的消息请先核对会话。"
-        alert.addButton(withTitle: "留在 Perch")
-        alert.addButton(withTitle: "退出并丢弃本地记录")
-        if alert.runModal() == .alertFirstButtonReturn {
-            sender.windows.first(where: { $0.canBecomeMain })?.makeKeyAndOrderFront(nil)
-            return .terminateCancel
+        do { try model?.flushDrafts() }
+        catch {
+            let alert = NSAlert()
+            alert.messageText = "Drafts could not be saved"
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: "Keep Perch open")
+            alert.addButton(withTitle: "Quit anyway")
+            if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
         }
         return .terminateNow
     }

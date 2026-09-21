@@ -21,6 +21,7 @@ final class RemoteFileBrowser: ObservableObject {
     @Published private(set) var loading = false
     @Published var error: String?
     @Published var showLineNumbers = false
+    @Published var targetLine: Int?
     @Published var mode: RemotePanelMode = .file
     @Published private(set) var gitStatus: RemoteGitStatus?
     @Published private(set) var gitPath: String?
@@ -49,7 +50,9 @@ final class RemoteFileBrowser: ObservableObject {
 
     func submit() { open(input) }
 
-    func open(_ requested: String) {
+    func open(_ requested: String, line: Int? = nil) {
+        targetLine = line
+        mode = .file
         guard let host else { error = "当前会话没有可用的远端主机。"; return }
         let resolved: String
         do {
@@ -410,6 +413,10 @@ struct RemoteFilePanel: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 8) {
                         Text(byteLabel(size)).font(.system(size: 11)).foregroundStyle(.secondary)
+                        if let line = browser.targetLine {
+                            Text(line <= text.split(separator: "\n", omittingEmptySubsequences: false).count ? "Line \(line)" : "Line \(line) is outside the loaded content")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
                         if truncated {
                             Label("已截断，仅显示前 1 MiB", systemImage: "scissors")
                                 .font(.system(size: 11)).foregroundStyle(.orange)
@@ -418,11 +425,8 @@ struct RemoteFilePanel: View {
                         Toggle("行号", isOn: $browser.showLineNumbers).toggleStyle(.checkbox).font(.system(size: 11))
                     }.padding(.horizontal, 14).padding(.vertical, 7)
                     Divider()
-                    ScrollView([.horizontal, .vertical]) {
-                        SelectableReplyText(browser.showLineNumbers ? numbered(text) : text,
-                                            font: .monospacedSystemFont(ofSize: 12, weight: .regular), lineSpacing: 3)
-                            .fixedSize(horizontal: true, vertical: true).padding(14)
-                    }
+                    RemoteSourceText(text: browser.showLineNumbers ? numbered(text) : text, line: browser.targetLine)
+
                 }
             case .binary(let size):
                 notice("这是二进制文件（\(byteLabel(size))），不做预览。", symbol: "doc.zipper", tint: .secondary)
@@ -454,5 +458,41 @@ struct RemoteFilePanel: View {
             Text(text).font(.system(size: 12)).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center).textSelection(.enabled)
         }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct RemoteSourceText: NSViewRepresentable {
+    let text: String
+    let line: Int?
+    final class Coordinator { var text = ""; var line: Int? }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
+        let view = NSTextView(); view.isEditable = false; view.isSelectable = true
+        view.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        view.textContainerInset = NSSize(width: 14, height: 14)
+        view.isHorizontallyResizable = true; view.isVerticallyResizable = true
+        view.textContainer?.widthTracksTextView = false
+        view.textContainer?.containerSize = NSSize(width: 1_000_000, height: 1_000_000)
+        scroll.documentView = view
+        return scroll
+    }
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let view = scroll.documentView as? NSTextView else { return }
+        guard context.coordinator.text != text || context.coordinator.line != line else { return }
+        context.coordinator.text = text; context.coordinator.line = line
+        view.string = text; view.sizeToFit()
+        guard let line, line > 0 else { return }
+        let source = text as NSString
+        var range = NSRange(location: 0, length: 0)
+        for _ in 1..<line {
+            range = source.lineRange(for: NSRange(location: range.location, length: 0))
+            let next = NSMaxRange(range)
+            if next >= source.length { break }
+            range = NSRange(location: next, length: 0)
+        }
+        range = source.lineRange(for: NSRange(location: min(range.location, source.length), length: 0))
+        view.setSelectedRange(range)
+        DispatchQueue.main.async { view.scrollRangeToVisible(range) }
     }
 }

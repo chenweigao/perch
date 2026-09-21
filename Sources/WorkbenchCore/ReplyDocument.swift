@@ -76,7 +76,8 @@ public enum ReplyDocument {
             case let value as Link:
                 let url = value.destination.flatMap(URL.init(string:))
                 let allowed = ["https", "http", "mailto"].contains(url?.scheme?.lowercased() ?? "")
-                return inlines(value).map { var run = $0; run.link = allowed ? url : nil; return run }
+                let file = value.destination.flatMap { ConversationFileReference(text: $0.removingPercentEncoding ?? $0) }
+                return inlines(value).map { var run = $0; run.link = allowed ? url : file?.url; return run }
             case let value as Markdown.Image: return inlines(value) // Render alt text without fetching remote media.
             case let value as InlineHTML: return [ReplyInline(text: value.rawHTML)]
             default: return inlines(node)

@@ -114,8 +114,13 @@ private struct ReplyText: View {
             ]
             if run.code { attributes[.backgroundColor] = NSColor.labelColor.withAlphaComponent(0.045) }
             if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
-            if let link = run.link { attributes[.link] = link }
+            if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
             result.append(NSAttributedString(string: run.text, attributes: attributes))
+        }
+        for (range, reference) in ConversationFileReference.matches(in: result.string) {
+            if result.attribute(.link, at: range.location, effectiveRange: nil) == nil {
+                result.addAttribute(.link, value: reference.url, range: range)
+            }
         }
         return result
     }
@@ -133,7 +138,16 @@ private struct ReplyText: View {
 
 /// TextKit owns selection and line measurement. SwiftUI receives only the measured
 /// size, with no SelectionOverlay/font-baseline feedback through its layout graph.
+private struct ConversationBodyTextKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    var isConversationBodyText: Bool {
+        get { self[ConversationBodyTextKey.self] }
+        set { self[ConversationBodyTextKey.self] = newValue }
+    }
+}
+
 struct SelectableReplyText: NSViewRepresentable {
+    @Environment(\.isConversationBodyText) private var isConversationBodyText
     let attributed: NSAttributedString
     init(attributed: NSAttributedString) { self.attributed = attributed }
     init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4) {
@@ -142,11 +156,20 @@ struct SelectableReplyText: NSViewRepresentable {
             .font: font, .foregroundColor: NSColor.labelColor.withAlphaComponent(0.88), .paragraphStyle: paragraph
         ])
     }
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            guard let url = (link as? URL) ?? (link as? String).flatMap(URL.init(string:)), url.scheme == "perch-file" else { return false }
+            NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: url)
+            return true
+        }
+    }
+    func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> ReplyTextView {
         // The enclosing conversation owns viewport layout; each short paragraph
         // needs selection and drawing, not another TextKit 2 viewport controller.
         let view = ReplyTextView(usingTextLayoutManager: false)
         view.isEditable = false
+        view.delegate = context.coordinator
         view.enabledTextCheckingTypes = 0
         view.isSelectable = true
         view.drawsBackground = false
@@ -159,13 +182,14 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }
-    func updateNSView(_ view: ReplyTextView, context: Context) { view.update(attributed) }
+    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.update(attributed) }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ReplyTextView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
     }
 }
 
 final class ReplyTextView: NSTextView {
+    var isConversationBodyText = false
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
     private var measurements: [(width: CGFloat, size: CGSize)] = []

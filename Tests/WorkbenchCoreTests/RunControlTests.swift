@@ -120,7 +120,7 @@ func checkRunControl() throws {
     precondition(risky.id == "m-a")
     queue.markAccepted("m-a")
     queue.markUnknown("m-a", "断线，未确认是否已执行")
-    precondition(queue.message("m-a")?.state.label.contains("结果未知") == true)
+    precondition(queue.message("m-a")?.state.label.contains("Send unconfirmed") == true)
     // Retry reuses the id so the runtime can reject a duplicate.
     guard let retried = queue.retry("m-a") else { fatalError("retry") }
     precondition(retried.id == "m-a" && retried.state == .draftQueued)
@@ -145,8 +145,8 @@ func checkRunControl() throws {
     precondition(!queue.isPaused(session))
     precondition(queue.nextDelivery(for: session, isStreaming: false)?.id == "m-a")
 
-    // The queue is process-local, so quitting must warn rather than silently drop.
-    precondition(queue.unsentWarning(for: session)?.contains("退出后不会保留") == true)
+    // Persisted pending messages remain visible until their receipt is reconciled.
+    precondition(queue.unsentWarning(for: session)?.contains("saved locally") == true)
     precondition(queue.unsentWarning(for: neighbour) == nil)
     print("PASS: verified-capability delivery modes, stop state machine with turn binding and unknown results, queue ownership, idempotent retry and stop-paused drafts")
 }

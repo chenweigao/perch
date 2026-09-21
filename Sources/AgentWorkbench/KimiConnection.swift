@@ -22,8 +22,9 @@ final class KimiConnection: ObservableObject {
     /// none genuinely has no effort control rather than a hidden default.
     var catalog: [AgentModel] { ModelSelectionCatalog.parseKimi(models) }
     @Published var manualPermissions: [String: Bool] = [:]
-    @Published var drafts: [String: String] = [:]
-    @Published var attachments: [String: [URL]] = [:]
+    @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
+    @Published var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
+    @Published private(set) var aborting: Set<String> = []
     @Published private var sendingSessions: Set<String> = []
     var sending: Bool { selectedId.map { sendingSessions.contains($0) } ?? false }
     @Published var loading = false
@@ -46,7 +47,30 @@ final class KimiConnection: ObservableObject {
     private var subscribedId: String?
     private var savedSelectionKey: String { "kimi.session.\(host.id)" }
 
-    init(host: SSHHost) { self.host = host; selectedId = UserDefaults.standard.string(forKey: savedSelectionKey) }
+    private var draftFile: DraftFile?
+    private var draftLoadError: String?
+    @Published private(set) var draftSaveError: String?
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments) }
+    private func loadDrafts() {
+        let file = DraftFile.applicationFile(namespace: "kimi-\(host.id)")
+        do {
+            let saved = try file.load()
+            drafts = saved.text
+            attachments = saved.attachments
+            draftFile = file
+        } catch { draftLoadError = error.localizedDescription; draftSaveError = "Draft recovery failed; the original file was preserved: \(error.localizedDescription)" }
+    }
+    private func persistDrafts() {
+        draftFile?.save(savedDrafts) { [weak self] error in
+            Task { @MainActor in self?.draftSaveError = error.map { "Drafts could not be saved: " + $0 } }
+        }
+    }
+    func flushDrafts() throws {
+        if let draftLoadError { throw WorkbenchError(draftLoadError) }
+        try draftFile?.flush(savedDrafts)
+    }
+
+    init(host: SSHHost) { self.host = host; selectedId = UserDefaults.standard.string(forKey: savedSelectionKey); loadDrafts() }
 
     /// Isolated connection checks use a local HTTP fixture without SSH.
     init(host: SSHHost, api: KimiAPI) { self.host = host; self.api = api; online = true }
@@ -261,6 +285,21 @@ final class KimiConnection: ObservableObject {
             } catch { actionError = error.localizedDescription }
         }
     }
+    func loadAllHistoryForSearch() {
+        guard !loadingOlder, let api, let id = selectedId else { return }
+        let token = selectionGeneration; loadingOlder = true
+        Task {
+            defer { loadingOlder = false }
+            do {
+                while token == selectionGeneration, conversation?.hasOlder == true, let first = conversation?.messages.first {
+                    let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
+                    guard token == selectionGeneration else { return }
+                    conversation?.prepend(page)
+                    if page.items.isEmpty { break }
+                }
+            } catch { actionError = error.localizedDescription }
+        }
+    }
     func setArchived(_ id: String, archived: Bool, refresh: Bool = true) async throws {
         guard online, let api else { throw WorkbenchError("请先连接 Kimi") }
         if archived {
@@ -357,11 +396,22 @@ final class KimiConnection: ObservableObject {
         let current = chosen.isEmpty ? (sessions.first { $0.id == id }?.model ?? "") : chosen
         return ModelSelectionCatalog.model(current, in: catalog)
     }
+    var isStopping: Bool { selectedId.map { aborting.contains($0) } ?? false }
+    var canStop: Bool {
+        online && snapshotReady && !loading && !isStopping
+            && conversation?.snapshot.session.busy == true
+    }
     func abort() {
-        guard let api, let id = selectedId else { return }
+        guard canStop, let api, let id = selectedId else { return }
+        aborting.insert(id); actionError = nil
         Task {
+            defer { aborting.remove(id) }
             do { _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id):abort") }
-            catch { actionError = error.localizedDescription }
+            catch {
+                if selectedId == id { actionError = "Stop request not confirmed: \(error.localizedDescription)" }
+            }
+            // The snapshot, not this HTTP acknowledgement, decides when the send
+            // arrow returns. A still-busy session continues to offer Stop.
         }
     }
     func resolve(_ approval: KimiApproval, decision: String) {

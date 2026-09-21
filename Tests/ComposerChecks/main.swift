@@ -12,7 +12,7 @@ var height: CGFloat = 40
 let representable = ComposerEditor(text: Binding(get: { draft }, set: { draft = $0 }),
                                   height: Binding(get: { height }, set: { height = $0 }),
                                   placeholder: "", accessibilityLabel: "测试输入", canSend: true,
-                                  onSend: {}, onFiles: nil, onError: nil)
+                                  onSend: {}, onFiles: nil, onError: nil, onKey: nil)
 let coordinator = ComposerEditor.Coordinator(representable)
 coordinator.editor = editor
 editor.delegate = coordinator

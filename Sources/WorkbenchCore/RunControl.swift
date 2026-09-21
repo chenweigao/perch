@@ -45,7 +45,7 @@ public struct AgentCapabilities: Equatable, Sendable {
     }
 }
 
-public enum DeliveryMode: String, Sendable, Equatable {
+public enum DeliveryMode: String, Codable, Sendable, Equatable {
     case now, steer, nextTurn
 }
 
@@ -150,7 +150,7 @@ public struct StopController: Equatable, Sendable {
     }
 }
 
-public enum OutboundState: Equatable, Sendable {
+public enum OutboundState: Codable, Equatable, Sendable {
     case draftQueued, submitting, accepted, running, delivered, stoppedBeforeDelivery
     case failed(String)
     case unknown(String)
@@ -164,19 +164,19 @@ public enum OutboundState: Equatable, Sendable {
     }
     public var label: String {
         switch self {
-        case .draftQueued: return "待发送"
-        case .submitting: return "提交中"
-        case .accepted: return "已受理"
-        case .running: return "运行中"
-        case .delivered: return "已完成"
-        case .stoppedBeforeDelivery: return "已随停止暂停"
-        case .failed(let message): return "发送失败：\(message)"
-        case .unknown(let message): return "结果未知：\(message)"
+        case .draftQueued: return "Queued"
+        case .submitting: return "Sending"
+        case .accepted: return "Accepted"
+        case .running: return "Running"
+        case .delivered: return "Completed"
+        case .stoppedBeforeDelivery: return "Paused"
+        case .failed(let message): return "Send failed: \(message)"
+        case .unknown(let message): return "Send unconfirmed: \(message)"
         }
     }
 }
 
-public struct OutboundMessage: Identifiable, Equatable, Sendable {
+public struct OutboundMessage: Codable, Identifiable, Equatable, Sendable {
     /// Doubles as the runtime idempotency key: a retry reuses it so a reconnect
     /// cannot run the same instruction twice.
     public let id: String
@@ -188,7 +188,7 @@ public struct OutboundMessage: Identifiable, Equatable, Sendable {
 
 /// Pending messages scoped to host + session. Every accessor takes a
 /// SessionReference, so switching sessions cannot surface another session's queue.
-public struct OutboundQueue: Equatable, Sendable {
+public struct OutboundQueue: Codable, Equatable, Sendable {
     private var messages: [OutboundMessage] = []
     private var paused: Set<String> = []
     public init() {}
@@ -281,12 +281,22 @@ public struct OutboundQueue: Equatable, Sendable {
         }
     }
 
-    /// This queue lives only in the current process. Callers must show this warning
-    /// before quitting rather than dropping messages that were shown as queued.
+    /// Never automatically replay instructions whose receipt may have been lost.
+    public mutating func recoverAfterRestart() {
+        for index in messages.indices {
+            let session = messages[index].session
+            paused.insert(session.id)
+            switch messages[index].state {
+            case .draftQueued: messages[index].state = .stoppedBeforeDelivery
+            case .submitting, .accepted, .running:
+                messages[index].state = .unknown("Restored after restart. Sync the receipt before retrying.")
+            default: break
+            }
+        }
+    }
     public func unsentWarning(for session: SessionReference) -> String? {
-        let pending = items(for: session).filter { $0.state.needsExitWarning }
-        guard !pending.isEmpty else { return nil }
-        return "还有 \(pending.count) 条消息待发送或结果未确认，退出后不会保留本地记录"
+        let count = items(for: session).filter { $0.state.needsExitWarning }.count
+        return count == 0 ? nil : "\(count) pending messages are saved locally."
     }
     public var allPendingCount: Int { messages.count }
     public var exitWarningCount: Int { messages.filter { $0.state.needsExitWarning }.count }

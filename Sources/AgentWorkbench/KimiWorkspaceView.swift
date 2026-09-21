@@ -12,16 +12,23 @@ struct KimiWorkspaceView: View {
     let onNew: () -> Void
     let onInput: () -> Void
     @State private var chooseFiles = false
-    @State private var showOptions = false
+    @State private var activityReview = 0
     var body: some View {
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
-                KimiTimeline(connection: connection)
+                KimiTimeline(connection: connection, activityReview: activityReview)
                 if let problem = connection.actionError ?? conversation.error { errorBanner(problem) }
-                ConversationActivityBar(messages: conversation.displayMessages,
-                                        isRunning: conversation.snapshot.session.busy && conversation.snapshot.pendingApprovals.isEmpty && conversation.snapshot.pendingQuestions.isEmpty,
-                                        isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false && conversation.live?.runningTools.isEmpty != false,
-                                        runningToolCount: conversation.live?.runningTools.count ?? 0)
+                let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
+                ConversationActivityBar(activity: ConversationActivity(
+                    messages: conversation.displayMessages, isRunning: conversation.snapshot.session.busy,
+                    liveTools: conversation.live?.runningTools ?? [], online: connection.online,
+                    isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
+                    isResponding: conversation.live?.assistantText.isEmpty == false,
+                    pendingCount: pending, isStopping: connection.isStopping),
+                    isRunning: conversation.snapshot.session.busy,
+                    turnID: conversation.live.map { String($0.turnId) } ?? "",
+                    online: connection.online, pendingCount: pending,
+                    onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(conversation.snapshot.session.id)
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
                 composer(sessionID: conversation.snapshot.session.id).id(conversation.snapshot.session.id)
@@ -62,13 +69,12 @@ struct KimiWorkspaceView: View {
                 }
                 MessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
                                               set: { onInput(); connection.drafts[sessionID] = $0 }),
-                                accessibilityLabel: "发送给 Kimi 的消息", canSend: canSend,
+                                accessibilityLabel: "Message Kimi", canSend: canSend,
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 })
-                HStack(spacing: 13) {
-                    Button { chooseFiles = true } label: { Image(systemName: "plus").font(.system(size: 17, weight: .regular)).frame(width: 23, height: 25) }
-                        .buttonStyle(.plain).foregroundStyle(.secondary).help("添加图片或文件").disabled(connection.sending)
+                HStack(spacing: 10) {
+                    ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
                     ModelPicker(models: ModelCatalog.options(connection.models),
                                 selection: Binding(get: { connection.modelChoices[sessionID] ?? "" },
                                                    set: { connection.modelChoices[sessionID] = $0 }),
@@ -78,25 +84,18 @@ struct KimiWorkspaceView: View {
                                    disabled: connection.sending) { level in
                         connection.thinkingChoices[sessionID] = level
                     }
-                    ContextMeter(budget: connection.conversation?.snapshot.session.budget)
-                    Button { showOptions.toggle() } label: {
-                        Image(systemName: connection.manualPermissions[sessionID] == true ? "shield.lefthalf.filled" : "slider.horizontal.3").font(.system(size: 13))
-                    }.buttonStyle(.plain).foregroundStyle(.secondary).help("对话选项")
-                        .popover(isPresented: $showOptions) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("工具执行").font(.system(size: 13, weight: .semibold))
-                                Toggle("逐次确认工具", isOn: Binding(get: { connection.manualPermissions[sessionID] == true }, set: { connection.manualPermissions[sessionID] = $0 })).toggleStyle(.checkbox)
-                                Text("开启后，下次发送将使用手动确认。关闭此选项会沿用服务端当前设置。").font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            }.padding(18).frame(width: 260)
-                        }
                     Spacer(minLength: 8)
-                    Button { connection.sendPrompt() } label: {
-                        Image(systemName: connection.sending ? "ellipsis" : "arrow.up").font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white).frame(width: 32, height: 32).background(canSend ? kimiAccent : Color.gray.opacity(0.3), in: Circle())
-                    }.buttonStyle(.plain).accessibilityLabel(connection.sending ? "发送中" : "发送")
-                        .help("Return 发送 · Shift Return 换行").disabled(!canSend)
+                    ContextMeter(budget: connection.conversation?.snapshot.session.budget)
+                    ComposerOptionsButton(manualApproval: Binding(
+                        get: { connection.manualPermissions[sessionID] == true },
+                        set: { connection.manualPermissions[sessionID] = $0 }))
+                    ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,
+                                         isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
+                                         onSend: { connection.sendPrompt() }, onStop: { connection.abort() })
                 }
             }.padding(14).workbenchControlSurface()
+            ComposerDeliveryHint(running: connection.conversation?.snapshot.session.busy == true,
+                                 sending: connection.sending, saveError: connection.draftSaveError)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
@@ -108,7 +107,7 @@ struct KimiWorkspaceView: View {
         }
     }
     private var canSend: Bool {
-        connection.online && connection.snapshotReady && !connection.sending &&
+        connection.online && connection.snapshotReady && !connection.sending && !connection.isStopping &&
         (!(connection.modelChoices[connection.selectedId ?? ""] ?? "").isEmpty || connection.conversation?.snapshot.session.model.isEmpty == false) &&
         (!(connection.drafts[connection.selectedId ?? ""] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
          !(connection.attachments[connection.selectedId ?? ""] ?? []).isEmpty)
@@ -124,22 +123,27 @@ struct KimiWorkspaceView: View {
 
 private struct KimiTimeline: View {
     @ObservedObject var connection: KimiConnection
+    var activityReview: Int
     @State private var follow = true
+    private var readingKey: String { "\(connection.host.id):kimi:\(connection.conversation?.snapshot.session.id ?? "")" }
+    private var readingRevision: String { "\(connection.conversation?.lastSeq ?? 0):\(connection.conversation?.live?.assistantText.utf16.count ?? 0)" }
+    private var hasNewReply: Bool { ConversationReadingMemory.shared.seenRevision[readingKey] != readingRevision }
     var body: some View {
         ScrollViewReader { proxy in
-            ConversationScrollView(showsScrollIndicator: !follow, onScroll: { follow = $0 }, onContentSizeChange: {
-                if follow { proxy.scrollTo("bottom", anchor: .bottom) }
+            ConversationScrollView(showsScrollIndicator: !follow, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
+                if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
             }) {
                 if let c = connection.conversation {
                     if c.hasOlder {
-                        Button(connection.loadingOlder ? "加载中…" : "加载更早消息") { follow = false; connection.loadOlder() }
+                        Button(connection.loadingOlder ? "加载中…" : "加载更早消息") { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
                             .disabled(connection.loadingOlder || !connection.online).frame(maxWidth: .infinity)
                     }
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.busy,
-                                           liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady)
+                                           liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey)
                     if let notice = c.notice { Text(notice).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
+                    Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(c.snapshot.pendingApprovals) { approval in
                         VStack(alignment: .leading, spacing: 12) {
                             Label("需要你的确认", systemImage: "hand.raised").font(.headline).foregroundStyle(.orange)
@@ -156,17 +160,23 @@ private struct KimiTimeline: View {
                 Color.clear.frame(height: 1).id("bottom")
             }
             .overlay(alignment: .bottom) {
-                if !follow { ReturnToLatestButton { follow = true; proxy.scrollTo("bottom", anchor: .bottom) } }
+                if !follow { ReturnToLatestButton(hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) } }
             }
             .onChange(of: [String(connection.conversation?.snapshot.asOfSeq ?? 0), connection.conversation?.live?.assistantText ?? "", String(connection.conversation?.live?.thinkingText.isEmpty ?? true)]) { _, _ in
                 if #unavailable(macOS 15) {
-                    if follow { proxy.scrollTo("bottom", anchor: .bottom) }
+                    if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
+                if (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
+            }
+            .onChange(of: activityReview) { _, _ in
+                follow = false; ConversationReadingMemory.shared.following[readingKey] = false; proxy.scrollTo("pending-interactions", anchor: .top)
             }
             .task(id: connection.conversation?.snapshot.session.id) {
                 // Keep the scroll host across session changes; reset the user
                 // follow preference when the newly selected conversation arrives.
-                follow = true
+                follow = ConversationReadingMemory.shared.following[readingKey] ?? true
                 await Task.yield()
                 if !Task.isCancelled && follow { proxy.scrollTo("bottom", anchor: .bottom) }
             }

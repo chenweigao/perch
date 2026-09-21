@@ -1,12 +1,17 @@
 import AppKit
 import SwiftUI
 
+/// Keys the composer hands to an attached palette before acting on them itself.
+/// Kept minimal so the composer stays a text editor rather than a menu host.
+enum ComposerKey { case up, down, enter, tab, escape }
+
+
 /// AppKit owns the editing buffer while the input method is composing. Streaming
 /// updates may refresh SwiftUI, but must never replace marked text with a draft.
 struct MessageComposer: View {
     @Binding var text: String
-    var placeholder = "继续这个任务，或提出新的想法…"
-    var accessibilityLabel = "消息"
+    var placeholder = "Continue this task, or share a new idea…"
+    var accessibilityLabel = "Message"
     var canSend: Bool
     var onSend: () -> Void
     var onFiles: (([URL]) -> Void)? = nil
@@ -176,7 +181,7 @@ final class DraftTextView: NSTextView {
             do {
                 let folder = FileManager.default.temporaryDirectory.appendingPathComponent("AgentWorkbenchAttachments", isDirectory: true)
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                let file = folder.appendingPathComponent("粘贴图片-\(UUID().uuidString.prefix(8)).png")
+                let file = folder.appendingPathComponent("pasted-image-\(UUID().uuidString.prefix(8)).png")
                 try png.write(to: file, options: .atomic)
                 onFiles([file])
             } catch { onError?(error.localizedDescription) }
@@ -197,7 +202,7 @@ struct ComposerAttachment: View {
             } else { Image(systemName: "doc").frame(width: 30, height: 34).foregroundStyle(.secondary) }
             Text(file.lastPathComponent).font(.system(size: 11)).lineLimit(1).frame(maxWidth: 130)
             Button(action: onRemove) { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)) }
-                .buttonStyle(.plain).foregroundStyle(.secondary).help("移除附件")
+                .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove attachment")
         }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
     }
 }

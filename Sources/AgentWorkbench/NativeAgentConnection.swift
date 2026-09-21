@@ -11,10 +11,10 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var online = false
     @Published var error: String?
     @Published var actionError: String?
-    @Published var drafts: [String: String] = [:]
+    @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
     @Published private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
-    @Published var queue = OutboundQueue()
+    @Published var queue = OutboundQueue() { didSet { persistDrafts() } }
     @Published var stops = StopController()
     /// The runtime's own catalog, read once per connection. Only OMP answers
     /// `omp models`, so a Qoder session keeps an empty list rather than being
@@ -32,7 +32,30 @@ final class NativeAgentConnection: ObservableObject {
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
-    init(host: SSHHost) { self.host = host; requestTransport = nil }
+    private var draftFile: DraftFile?
+    private var draftLoadError: String?
+    @Published private(set) var draftSaveError: String?
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue) }
+    private func loadDrafts() {
+        let file = DraftFile.applicationFile(namespace: "native-\(host.id)")
+        do {
+            let saved = try file.load()
+            drafts = saved.text
+            queue = saved.outbox
+            draftFile = file
+        } catch { draftLoadError = error.localizedDescription; draftSaveError = "Draft recovery failed; the original file was preserved: \(error.localizedDescription)" }
+    }
+    private func persistDrafts() {
+        draftFile?.save(savedDrafts) { [weak self] error in
+            Task { @MainActor in self?.draftSaveError = error.map { "Drafts could not be saved: " + $0 } }
+        }
+    }
+    func flushDrafts() throws {
+        if let draftLoadError { throw WorkbenchError(draftLoadError) }
+        try draftFile?.flush(savedDrafts)
+    }
+
+    init(host: SSHHost) { self.host = host; requestTransport = nil; loadDrafts() }
     /// Used by the isolated connection contract checks; no SSH or App is started.
     init(host: SSHHost, transport: @escaping (String, JSONValue?) async throws -> Data) {
         self.host = host; requestTransport = transport; online = true
@@ -135,7 +158,7 @@ final class NativeAgentConnection: ObservableObject {
     }
     func create(provider: SessionKind, cwd: String, model: String) async throws -> NativeAgentSession {
         let session: NativeAgentSession = try await request("/sessions", body: .object(["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]))
-        try await refresh(); select(session.id); return session
+        sessions.insert(session, at: 0); onSessionsChanged?(); select(session.id); return session
     }
     func loadModels() async {
         guard models.isEmpty else { return }
@@ -261,23 +284,36 @@ final class NativeAgentConnection: ObservableObject {
             actionError = "当前版本不支持 /compact 参数；草稿已保留，请调整后发送"
             return
         }
-        drafts[id] = ""
+        guard !sendingSessions.contains(id) else { return }
+        sendingSessions.insert(id)
         Task {
-            do { try await action(id, "command", ["name": .string(command.name)]) }
+            defer { sendingSessions.remove(id) }
+            do {
+                try await action(id, "command", ["name": .string(command.name)])
+                if drafts[id] == draft { drafts[id] = "" }
+            }
             catch {
-                // The draft is restored so the text is not lost when the command is
-                // refused, which is the common case for a session with no history.
-                if (drafts[id] ?? "").isEmpty { drafts[id] = draft }
                 actionError = error.localizedDescription
             }
         }
     }
+    var isStopping: Bool {
+        guard let id = selectedID, let reference = reference(id) else { return false }
+        return stops.isStopping(reference)
+    }
+    var canStop: Bool {
+        guard online, capabilities.stop, let id = selectedID,
+              let session = sessions.first(where: { $0.id == id }), session.busy, session.turnId != nil,
+              let reference = reference(id) else { return false }
+        let phase = stops.phase(for: reference)
+        return phase == .idle || phase.canRetry
+    }
     /// Requests a stop for the session that was on screen. The phase stays short of
     /// "stopped" until the bridge reports the runtime's own terminal state.
     func stop() {
-        guard online, let id = selectedID, let reference = reference(id),
-              let session = sessions.first(where: { $0.id == id }), session.busy,
-              let turn = session.turnId, let attempt = stops.request(reference, turn: turn) else { return }
+        guard canStop, let id = selectedID, let reference = reference(id),
+              let turn = sessions.first(where: { $0.id == id })?.turnId,
+              let attempt = stops.request(reference, turn: turn) else { return }
         queue.pauseForStop(reference)
         Task {
             do { try await action(id, "abort", ["turnId": .string(turn)]); stops.acknowledge(attempt.requestID) }

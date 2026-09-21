@@ -4,35 +4,53 @@ import WorkbenchCore
 struct NativeAgentView: View {
     @ObservedObject var connection: NativeAgentConnection
     @State private var follow = true
+    @State private var activityReview = 0
     @State private var palette = CommandPaletteState()
     var body: some View {
         VStack(spacing: 0) {
             if let s = connection.snapshot {
+                let readingKey = "\(connection.host.id):native:\(s.id)"
                 ScrollViewReader { proxy in
-                    ConversationScrollView(showsScrollIndicator: !follow, onScroll: { follow = $0 }, onContentSizeChange: {
-                        if follow { proxy.scrollTo("bottom", anchor: .bottom) }
+                    ConversationScrollView(showsScrollIndicator: !follow, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
+                        if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                     }) {
                         ConversationTranscript(messages: s.messages, sessionId: s.id,
                                                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
-                                               isRunning: s.busy, online: connection.online)
+                                               isRunning: s.busy, online: connection.online, memoryKey: readingKey)
+                        Color.clear.frame(height: 1).id("pending-interactions")
                         ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }
                         Color.clear.frame(height: 1).id("bottom")
                     }
                         .overlay(alignment: .bottom) {
-                            if !follow { ReturnToLatestButton { follow = true; proxy.scrollTo("bottom", anchor: .bottom) } }
+                            if !follow { ReturnToLatestButton(hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) } }
                         }
                         .onChange(of: s.revision) { _, _ in
                             if #unavailable(macOS 15) {
-                                if follow { proxy.scrollTo("bottom", anchor: .bottom) }
+                                if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                             }
                         }
+                        .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
+                            if (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
+                        }
+                        .onChange(of: activityReview) { _, _ in
+                            follow = false; ConversationReadingMemory.shared.following[readingKey] = false; proxy.scrollTo("pending-interactions", anchor: .top)
+                        }
                         .task(id: s.id) {
+                            follow = ConversationReadingMemory.shared.following[readingKey] ?? true
                             await Task.yield()
                             if !Task.isCancelled && follow { proxy.scrollTo("bottom", anchor: .bottom) }
                         }
                 }
-                ConversationActivityBar(messages: s.messages, isRunning: s.busy && s.interactions.isEmpty,
-                                        isThinking: s.messages.last?.content.last?.type == "thinking")
+                ConversationActivityBar(activity: ConversationActivity(
+                    messages: s.messages, isRunning: s.busy,
+                    running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
+                    online: connection.online,
+                    isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
+                    isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
+                    pendingCount: s.interactions.count, isStopping: connection.isStopping),
+                    isRunning: s.busy, turnID: connection.sessions.first { $0.id == s.id }?.turnId ?? "",
+                    online: connection.online, pendingCount: s.interactions.count,
+                    onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                     .frame(maxWidth: .infinity).padding(.vertical, 6)
                 if let error = connection.actionError ?? s.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled).padding(10) }
@@ -53,38 +71,35 @@ struct NativeAgentView: View {
                     VStack(spacing: 12) {
                         MessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                                       set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
-                                        accessibilityLabel: "发送给 \(s.provider.label) 的消息",
+                                        accessibilityLabel: "Message \(s.provider.label)",
                                         canSend: canSend(s),
                                         onSend: { connection.send(mode: defaultMode(s)) },
                                         onKey: { key in handle(key, for: s) }).id(s.id)
                         HStack(spacing: 10) {
+                            ComposerAddButton(supportsFiles: false)
                             NativeModelControls(connection: connection, snapshot: s)
-                            Spacer(minLength: 6)
-                            // While a turn runs the label must state what will actually
-                            // happen, so a queued message is never shown as steering.
-                            if s.busy, let mode = connection.modes(for: s.id).first {
-                                Text(mode == .steer ? connection.capabilities.steer.label : "下一轮发送")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                            Button { connection.send(mode: defaultMode(s)) } label: {
-                                Image(systemName: "arrow.up").fontWeight(.semibold).frame(width: 30, height: 30)
-                            }
-                                .buttonStyle(.borderedProminent).clipShape(Circle()).accessibilityLabel("发送")
-                                .disabled(!canSend(s))
+                            Spacer(minLength: 8)
+                            ContextMeter(budget: connection.sessions.first { $0.id == s.id }?.budget)
+                            ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
+                                                 canSend: canSend(s), canStop: connection.canStop,
+                                                 queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
+                                                 onSend: { connection.send(mode: defaultMode(s)) },
+                                                 onStop: { connection.stop() })
                         }
-                    }.padding(16).workbenchControlSurface()
+                    }.padding(14).workbenchControlSurface()
+                    ComposerDeliveryHint(running: s.busy, sending: connection.sending, saveError: connection.draftSaveError)
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
                 Text("此会话已移除，请从侧栏选择其他会话。").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else { ProgressView("正在读取对话…").frame(maxWidth: .infinity, maxHeight: .infinity) }
             if !connection.online { HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10) }
         }
-        .onChange(of: connection.selectedID) { _, _ in follow = true }
+
     }
     /// A running session may still accept text when the adapter can queue it, so the
     /// composer is not disabled just because a turn is in progress.
     private func canSend(_ s: NativeAgentSnapshot) -> Bool {
-        guard connection.online, !connection.sending else { return false }
+        guard connection.online, !connection.sending, !connection.isStopping else { return false }
         guard !(connection.drafts[s.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         return !connection.modes(for: s.id).isEmpty
     }
@@ -126,6 +141,7 @@ struct NativeModelControls: View {
         if snapshot.provider == .omp {
             let current = connection.model(for: snapshot)
             HStack(spacing: 10) {
+                ModelControlWidth {
                 Menu {
                     ForEach(Dictionary(grouping: connection.models, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
                         Menu(group.key) {
@@ -139,24 +155,24 @@ struct NativeModelControls: View {
                             }
                         }
                     }
-                    if connection.models.isEmpty { Text("正在读取模型列表…") }
+                    if connection.models.isEmpty { Text("Loading models…") }
                 } label: {
-                    Text(current?.name ?? (snapshot.model.isEmpty ? "选择模型" : snapshot.model))
+                    Text(current?.name ?? (snapshot.model.isEmpty ? "Choose model" : snapshot.model))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                }.menuStyle(.borderlessButton)
                     // Switching mid-turn would attribute the running transcript to the
                     // wrong model, so the runtime rejects it and so does the UI.
                     .disabled(!connection.online || snapshot.busy)
-                    .help(snapshot.busy ? "运行中不能切换模型" : "切换模型，下一轮生效")
+                    .help(snapshot.busy ? "Models cannot be changed while running" : "Change the model for the next turn")
+                }
                 ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking),
                                disabled: !connection.online) { level in
                     connection.setThinking(level, for: snapshot.id)
                 }
-                ContextMeter(budget: session?.budget)
             }.task(id: snapshot.id) { await connection.loadModels() }
         } else {
-            Text(snapshot.model.isEmpty ? "沿用 Agent 模型" : snapshot.model)
-                .font(.caption).foregroundStyle(.secondary)
+            Text(snapshot.model.isEmpty ? "Agent model" : snapshot.model)
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).frame(maxWidth: 240, alignment: .leading)
         }
     }
 }
@@ -180,29 +196,29 @@ struct NativeRunControls: View {
                         if !phase.isSettled { ProgressView().controlSize(.small) }
                         Text(phase.label).font(.caption)
                             .foregroundStyle(phase.canRetry ? .orange : .secondary).textSelection(.enabled)
-                        if phase.canRetry { Button("重试停止") { connection.stop() }.font(.caption) }
+                        if phase.canRetry { Button("Retry stop") { connection.stop() }.font(.caption) }
                     }
                 }
                 if connection.queue.isPaused(reference) {
-                    Button("恢复待发消息") { connection.resumeQueue(reference) }.font(.caption)
+                    Button("Resume queued messages") { connection.resumeQueue(reference) }.font(.caption)
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
                     HStack(spacing: 10) {
-                        Text(message.mode == .steer ? "引导" : "下一轮").font(.caption2)
+                        Text(message.mode == .steer ? "Steer" : "Queue").font(.caption2)
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Color.black.opacity(0.06), in: Capsule())
                         Text(message.text).font(.caption).lineLimit(1).truncationMode(.middle)
                         Spacer()
                         Text(message.state.label).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
                         if message.state.isEditable {
-                            Button("编辑") { editingMessage = message }.font(.caption2)
-                            Button("移除") { _ = connection.queue.remove(message.id) }.font(.caption2)
+                            Button("Edit") { editingMessage = message }.font(.caption2)
+                            Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
                         }
                         switch message.state {
-                        case .unknown: Button("核对并重试") { connection.retry(message.id) }.font(.caption2)
+                        case .unknown: Button("Sync and retry") { connection.retry(message.id) }.font(.caption2)
                         case .failed:
-                            Button("移回草稿") { connection.restoreFailed(message) }.font(.caption2)
+                            Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
                         default: EmptyView()
                         }
                     }
@@ -302,42 +318,63 @@ struct NewConversationSheet: View {
     @State private var agentModel = ""
     @State private var creating = false
     @State private var error: String?
+    private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
     private var canStart: Bool { !creating && !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online) }
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("开始新任务").font(.title2.weight(.semibold))
-            MessageComposer(text: $prompt, placeholder: "你想完成什么任务？", canSend: canStart, onSend: start)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Start a task").font(.title2.weight(.semibold))
+            if let group = model.selectedGroup { Text(group.name).foregroundStyle(.secondary) }
+            MessageComposer(text: $prompt, placeholder: "What would you like to work on?", canSend: canStart, onSend: start)
                 .frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
-            Picker("Agent", selection: $provider) { ForEach([SessionKind.kimi, .omp, .qoder], id: \.self) { Text($0.label).tag($0) } }.pickerStyle(.segmented).disabled(creating)
-            Text("\(kimi.host.name) · \(model.selectedGroup?.name ?? "工作台")").font(.callout).foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Menu {
+                    ForEach(model.connections) { connection in
+                        Button(connection.host.name) { model.activateAgentEnvironment(connection.id) }
+                    }
+                } label: { Label(kimi.host.name, systemImage: "server.rack") }
+                Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach([SessionKind.kimi, .omp, .qoder], id: \.self) { Text($0.label).tag($0) } }.frame(width: 160)
+                Spacer()
+                if provider == .kimi { ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel) }
+            }.disabled(creating)
             HStack {
-                TextField("远端项目绝对路径", text: $cwd).textFieldStyle(.roundedBorder).disabled(creating)
-                Menu("最近目录") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }.fixedSize().disabled(creating)
+                Image(systemName: "folder")
+                TextField("Project directory (absolute path)", text: $cwd).textFieldStyle(.roundedBorder)
+                Menu("Recent") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }
+            }.disabled(creating)
+            if provider != .kimi {
+                TextField(provider == .qoder ? "Model (default: Qwen3.8-Flash)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
-            if provider == .kimi {
-                ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel).disabled(creating)
-            } else {
-                TextField(provider == .qoder ? "模型名称（默认 Qwen3.8-Flash）" : "模型（留空沿用远端配置）", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
-                Text("创建独立对话，工具在远端执行；待确认操作会留在这里等你处理。").font(.caption).foregroundStyle(.secondary)
+            if !(provider == .kimi ? kimi.online : native.online) {
+                Text("Connecting to \(kimi.host.name)…").font(.caption).foregroundStyle(.secondary)
             }
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             HStack {
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
                 Spacer()
-                Button(creating ? "创建中…" : "开始任务", action: start)
-                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(!canStart)
+                Button(creating ? "Starting…" : "Start task", action: start).keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent).disabled(!canStart)
             }
-        }.padding(28).frame(width: 650).onChange(of: provider) { _, value in agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? "" }.onAppear {
-            provider = model.selectedReference?.kind == .terminal ? .kimi : model.selectedReference?.kind ?? SessionKind(rawValue: UserDefaults.standard.string(forKey: "new.provider") ?? "kimi") ?? .kimi
-            agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
-            cwd = model.selectedItem?.directory ?? UserDefaults.standard.string(forKey: "new.cwd") ?? recent.first ?? ""
-        }
+        }.padding(24).frame(width: 650)
+            .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
+            .onAppear {
+                if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data) {
+                    provider = saved.provider; cwd = saved.directory; agentModel = saved.model
+                    model.activateAgentEnvironment(saved.hostID)
+                } else {
+                    let groupItem = model.groupResumeSession ?? model.allSessions.first { model.selectedGroup?.sessions.contains($0.reference) == true }
+                    provider = groupItem?.reference.kind ?? model.selectedReference?.kind ?? .kimi
+                    if provider == .terminal { provider = .kimi }
+                    if let host = groupItem?.reference.hostID { model.activateAgentEnvironment(host) }
+                    cwd = groupItem?.directory ?? model.selectedItem?.directory ?? UserDefaults.standard.string(forKey: "new.cwd") ?? recent.first ?? ""
+                    agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
+                }
+            }
     }
     private func start() {
-        guard canStart else { return }
-        creating = true
+        guard canStart else { return }; creating = true
         let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd
+        let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
         Task {
             do {
                 if selectedProvider == .kimi {
@@ -350,8 +387,8 @@ struct NewConversationSheet: View {
                     model.newNativeCreated(session)
                     native.send()
                 }
+                UserDefaults.standard.set(try JSONEncoder().encode(defaults), forKey: defaultsKey)
                 UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
-                UserDefaults.standard.set(selectedProvider.rawValue, forKey: "new.provider")
                 UserDefaults.standard.set(directory, forKey: "new.cwd")
                 prompt = ""; dismiss()
             } catch { self.error = error.localizedDescription; creating = false }

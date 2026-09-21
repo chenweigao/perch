@@ -20,8 +20,8 @@ struct KimiMessageView: View {
                 case "text":
                     if part.isRuntimeContext {
                         DisclosureGroup("运行上下文") { KimiMarkdown(text: part.text ?? "") }.font(.system(size: 11)).foregroundStyle(.secondary)
-                    } else { KimiMarkdown(text: part.text ?? "") }
-                case "thinking": DisclosureGroup("思考过程") { KimiMarkdown(text: part.thinking ?? "") }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    } else { KimiMarkdown(text: part.text ?? "").environment(\.isConversationBodyText, true) }
+                case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
                 case "tool_use":
                     if let tool = tools[part.toolCallId ?? ""] { KimiToolCard(tool: tool) }
                 case "image", "file", "video":
@@ -46,6 +46,7 @@ struct ConversationTranscript: View {
     var isRunning = false
     var liveTools: [KimiLiveTool] = []
     var online = true
+    var memoryKey: String?
     @State private var toolProjection = ToolVisibilityProjection()
     @State private var projection = ConversationProjection()
     @Environment(\.self) private var environment
@@ -59,9 +60,9 @@ struct ConversationTranscript: View {
             let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
                 if let value = visible.tools[id] { result[id] = value }
             }
-            return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId)
+            return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId, memoryKey: (memoryKey ?? sessionId) + ":" + entry.id)
         }
-        ConversationDocumentHost(contents: contents, sessionId: sessionId,
+        ConversationDocumentHost(contents: contents, sessionId: memoryKey ?? sessionId,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
                                  contentOriginY: contentOriginY) { height in
@@ -107,9 +108,13 @@ private final class ConversationDocumentView: NSView {
     private static let retiredControllers = NSMutableArray()
     private static var drainingRetiredControllers = false
     private var sessionId = ""
+    private var restoreTarget: ConversationReadingMemory.Position?
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
     private var columnWidth: CGFloat = ReplyStyle.readingWidth
+    private var disclosureRow: String?
+    private var heightAnimation: (id: String, from: CGFloat, to: CGFloat, start: TimeInterval)?
+    private var heightTimer: Timer?
     private var refreshing = false
     private var contentOriginY: CGFloat = 0
     private var publishedHeight: CGFloat?
@@ -117,6 +122,40 @@ private final class ConversationDocumentView: NSView {
     private weak var observedClip: NSClipView?
     private var boundsObserver: NSObjectProtocol?
     private(set) var totalHeight: CGFloat = 0
+    private var findObserver: NSObjectProtocol?
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        findObserver = NotificationCenter.default.addObserver(forName: .init("PerchRevealConversationHit"), object: nil, queue: .main) { [weak self] notice in
+            guard let self, let target = notice.object as? ConversationFindTarget, target.session == self.sessionId else { return }
+            self.reveal(target)
+        }
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    private func reveal(_ target: ConversationFindTarget) {
+        guard let index = indices[target.hit.entryID], let clip = observedClip else { return }
+        clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
+        enclosingScrollView?.reflectScrolledClipView(clip)
+        refreshVisibleRows()
+        DispatchQueue.main.async { [weak self] in
+            guard let view = self?.controllers[target.hit.entryID]?.view else { return }
+            var remaining = target.hit.occurrence
+            func select(in view: NSView) -> Bool {
+                if let text = view as? ReplyTextView, text.isConversationBodyText {
+                    let source = text.string as NSString
+                    var search = NSRange(location: 0, length: source.length)
+                    while search.length > 0 {
+                        let found = source.range(of: target.query, options: [.caseInsensitive, .diacriticInsensitive], range: search)
+                        if found.location == NSNotFound { break }
+                        if remaining == 0 { text.setSelectedRange(found); text.showFindIndicator(for: found); text.scrollRangeToVisible(found); return true }
+                        remaining -= 1
+                        search = NSRange(location: NSMaxRange(found), length: source.length - NSMaxRange(found))
+                    }
+                }
+                return view.subviews.contains { select(in: $0) }
+            }
+            _ = select(in: view)
+        }
+    }
     var heightChanged: (CGFloat) -> Void = { _ in }
     override var isFlipped: Bool { true }
 
@@ -130,6 +169,10 @@ private final class ConversationDocumentView: NSView {
             viewport?.add(self)
         }
         if self.sessionId != sessionId {
+            cancelHeightAnimation()
+            saveReadingPosition()
+            saveReadingHeights()
+            restoreTarget = ConversationReadingMemory.shared.following[sessionId] == false ? ConversationReadingMemory.shared.positions[sessionId] : nil
             for id in mounted { controllers[id]?.view.removeFromSuperview() }
             Self.retire(Array(controllers.values))
             controllers.removeAll()
@@ -143,7 +186,7 @@ private final class ConversationDocumentView: NSView {
         let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
         contents = next
         indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
-        heights = next.map { previous[$0.entry.id] ?? 160 }
+        heights = next.map { previous[$0.entry.id] ?? ConversationReadingMemory.shared.measuredHeights[sessionId]?[$0.entry.id] ?? 160 }
         self.rowAppearance = appearance
         for id in Array(controllers.keys) {
             guard let index = indices[id] else {
@@ -161,6 +204,9 @@ private final class ConversationDocumentView: NSView {
     /// Releasing hundreds of hosting graphs in the selection transaction stalls
     /// the main thread. Drain a small batch between frames, on AppKit's thread.
     func prepareForRemoval() {
+        cancelHeightAnimation()
+        saveReadingPosition()
+        saveReadingHeights()
         for id in mounted { controllers[id]?.view.removeFromSuperview() }
         Self.retire(Array(controllers.values))
         controllers.removeAll()
@@ -225,17 +271,14 @@ private final class ConversationDocumentView: NSView {
             if let existing = controllers[id] {
                 controller = existing
             } else {
-                controller = ConversationEntryController(content: content, appearance: appearance) { [weak self] height in
+                controller = ConversationEntryController(content: content, appearance: appearance, disclosureChanged: { [weak self] animated in self?.beginDisclosureChange(id, animated: animated) }) { [weak self] height in
                     self?.rowHeightChanged(id, height: height)
                 }
                 controllers[id] = controller
             }
             let height = controller.measure(width: columnWidth).height
-            if heights[index] != height {
-                heights[index] = height
-                rebuildOffsets()
-            }
-            controller.view.frame = CGRect(x: 0, y: offsets[index], width: columnWidth, height: height)
+            updateHeight(id, height: height)
+            controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: height)
             if controller.view.superview !== self { addSubview(controller.view) }
             nextMounted.insert(id)
             index += 1
@@ -244,10 +287,44 @@ private final class ConversationDocumentView: NSView {
         mounted = nextMounted
         publishHeight()
     }
-    private func rowHeightChanged(_ id: String, height: CGFloat) {
-        guard let index = indices[id], heights[index] != height else { return }
-        heights[index] = height
+    private func beginDisclosureChange(_ id: String, animated: Bool) {
+        viewport?.pauseFollowing?()
+        if let previous = heightAnimation, previous.id != id, let index = indices[previous.id] {
+            heights[index] = previous.to
+            rebuildOffsets()
+        }
+        cancelHeightAnimation()
+        disclosureRow = animated ? id : nil
+    }
+    private func cancelHeightAnimation() {
+        heightTimer?.invalidate(); heightTimer = nil
+        heightAnimation = nil; disclosureRow = nil
+    }
+    private func updateHeight(_ id: String, height: CGFloat) {
+        guard let index = indices[id], heightAnimation?.id != id, heights[index] != height else { return }
+        if disclosureRow == id {
+            disclosureRow = nil
+            heightAnimation = (id, heights[index], height, ProcessInfo.processInfo.systemUptime)
+            let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.advanceHeightAnimation() }
+            heightTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
+        } else {
+            heights[index] = height
+            rebuildOffsets()
+        }
+    }
+    private func advanceHeightAnimation() {
+        guard let animation = heightAnimation, let index = indices[animation.id] else { cancelHeightAnimation(); return }
+        let progress = min(1, (ProcessInfo.processInfo.systemUptime - animation.start) / ConversationReadingMemory.disclosureDuration)
+        let eased = progress * progress * (3 - 2 * progress)
+        heights[index] = animation.from + (animation.to - animation.from) * eased
+        if progress == 1 { cancelHeightAnimation() }
         rebuildOffsets()
+        refreshVisibleRows()
+        publishHeight()
+    }
+    private func rowHeightChanged(_ id: String, height: CGFloat) {
+        updateHeight(id, height: height)
         publishHeight()
         viewport?.refresh()
     }
@@ -267,6 +344,7 @@ private final class ConversationDocumentView: NSView {
         super.setFrameSize(size)
         if size.width > 0 { columnWidth = size.width }
         refreshVisibleRows()
+        restoreReadingPosition()
     }
     override func setFrameOrigin(_ point: NSPoint) {
         super.setFrameOrigin(point)
@@ -274,6 +352,27 @@ private final class ConversationDocumentView: NSView {
     }
     override func layout() {
         super.layout()
+        refreshVisibleRows()
+        restoreReadingPosition()
+    }
+    private func saveReadingPosition() {
+        guard restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
+              let index = offsets.indices.last(where: { offsets[$0] <= max(0, clip.bounds.minY - contentOriginY) }),
+              contents.indices.contains(index) else { return }
+        ConversationReadingMemory.shared.positions[sessionId] = .init(entry: contents[index].entry.id,
+            index: index, offset: clip.bounds.minY - contentOriginY - offsets[index])
+    }
+    private func saveReadingHeights() {
+        guard !sessionId.isEmpty else { return }
+        ConversationReadingMemory.shared.measuredHeights[sessionId] = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
+    }
+    private func restoreReadingPosition() {
+        guard let target = restoreTarget, let clip = observedClip, bounds.height >= totalHeight - 1, !contents.isEmpty else { return }
+        let index = indices[target.entry] ?? min(target.index, contents.count - 1)
+        let y = max(0, offsets[index] + target.offset + contentOriginY)
+        clip.scroll(to: NSPoint(x: 0, y: y))
+        enclosingScrollView?.reflectScrolledClipView(clip)
+        restoreTarget = nil
         refreshVisibleRows()
     }
     private func observeScroll() {
@@ -286,7 +385,7 @@ private final class ConversationDocumentView: NSView {
         clip.postsBoundsChangedNotifications = true
         boundsObserver = NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification, object: clip, queue: nil
-        ) { [weak self] _ in self?.refreshVisibleRows() }
+        ) { [weak self] _ in self?.refreshVisibleRows(); self?.saveReadingPosition() }
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -298,6 +397,8 @@ private final class ConversationDocumentView: NSView {
         observeScroll()
     }
     deinit {
+        heightTimer?.invalidate()
+        if let findObserver { NotificationCenter.default.removeObserver(findObserver) }
         if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
     }
 }
@@ -317,7 +418,7 @@ private struct ConversationEntryAppearance: Equatable {
         layoutDirection = environment.layoutDirection
         displayScale = environment.displayScale
         dynamicTypeSize = environment.dynamicTypeSize
-        reduceMotion = environment.accessibilityReduceMotion
+        reduceMotion = environment.accessibilityReduceMotion || environment.conversationReduceMotion
         isEnabled = environment.isEnabled
     }
 }
@@ -325,15 +426,18 @@ private struct ConversationEntryAppearance: Equatable {
 private struct HostedConversationEntry: View {
     let content: ConversationEntryView
     let appearance: ConversationEntryAppearance
+    var disclosureChanged: (Bool) -> Void = { _ in }
     var sizeChanged: (CGSize) -> Void = { _ in }
     var body: some View {
-        content.equatable().fixedSize(horizontal: false, vertical: true)
+        content.equatable().environment(\.conversationMemoryKey, content.memoryKey).fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGSize.self) { $0.size } action: { sizeChanged($0) }
+            .environment(\.conversationDisclosureWillChange, disclosureChanged)
             .environment(\.colorScheme, appearance.colorScheme)
             .environment(\.layoutDirection, appearance.layoutDirection)
             .environment(\.displayScale, appearance.displayScale)
             .environment(\.dynamicTypeSize, appearance.dynamicTypeSize)
+            .environment(\.conversationReduceMotion, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
             // Match Perch's current ink and monochrome disclosure/control tint.
             .foregroundStyle(Color(red: 0.16, green: 0.18, blue: 0.23))
@@ -350,15 +454,16 @@ private final class ConversationEntryController: NSViewController {
     private var pendingSize: (size: CGSize, generation: Int)?
     private var notificationScheduled = false
     private var publishedHeight: CGFloat?
-    private var mounted = false
     private var widthMeasurementScheduled = false
     var heightChanged: (CGFloat) -> Void
+    private let disclosureChanged: (Bool) -> Void
 
     init(content: ConversationEntryView, appearance: ConversationEntryAppearance,
-         heightChanged: @escaping (CGFloat) -> Void) {
+         disclosureChanged: @escaping (Bool) -> Void, heightChanged: @escaping (CGFloat) -> Void) {
         self.content = content
         self.appearance = appearance
         self.heightChanged = heightChanged
+        self.disclosureChanged = disclosureChanged
         host = NSHostingController(rootView: HostedConversationEntry(
             content: content, appearance: appearance))
         super.init(nibName: nil, bundle: nil)
@@ -371,25 +476,17 @@ private final class ConversationEntryController: NSViewController {
         let container = ConversationEntryContainer()
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
         addChild(host)
-        host.view.autoresizingMask = [.width, .height]
-        container.visibilityChanged = { [weak self] visible in self?.setVisible(visible) }
+        container.wantsLayer = true
+        container.layer?.masksToBounds = true
+        container.addSubview(host.view)
         container.widthChanged = { [weak self] in self?.committedWidthChanged() }
         // The row already owns its measured frame; its sole child fills it.
         // Avoid rebuilding an Auto Layout constraint graph on viewport changes.
         view = container
     }
-    func setViewport(_ viewport: ConversationViewport?) {
-        (view as? ConversationEntryContainer)?.setViewport(viewport)
-    }
-    private func setVisible(_ visible: Bool) {
-        guard visible != mounted else { return }
-        mounted = visible
-        if visible {
-            host.view.frame = view.bounds
-            view.addSubview(host.view)
-        } else {
-            host.view.removeFromSuperview()
-        }
+    func layout(frame: CGRect, contentHeight: CGFloat) {
+        view.frame = frame
+        host.view.frame = CGRect(x: 0, y: 0, width: frame.width, height: contentHeight)
     }
     private func committedWidthChanged() {
         // A detached host cannot report geometry after a window/sidebar resize.
@@ -417,7 +514,7 @@ private final class ConversationEntryController: NSViewController {
     }
     private func setRoot() {
         let version = generation
-        host.rootView = HostedConversationEntry(content: content, appearance: appearance) { [weak self] size in
+        host.rootView = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: disclosureChanged) { [weak self] size in
             self?.report(size, generation: version)
         }
     }
@@ -468,6 +565,7 @@ private final class ConversationEntryController: NSViewController {
 /// scroll clipping is not always represented by an enclosing NSClipView.
 final class ConversationViewport {
     fileprivate weak var view: NSView?
+    var pauseFollowing: (() -> Void)?
     private let rows = NSHashTable<NSView>.weakObjects()
     private var scheduled = false
     fileprivate func add(_ row: NSView) { rows.add(row); refresh() }
@@ -478,13 +576,9 @@ final class ConversationViewport {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.scheduled = false
-            // Convert the viewport once per pass. Every visible scroll tick walks
-            // this for each registered row otherwise.
-            let window = self.view?.window
-            let viewportRect = self.view.map { $0.convert($0.bounds, to: nil) }
+            // Coalesce scroll and layout updates into one document pass.
             for row in self.rows.allObjects {
                 if let document = row as? ConversationDocumentView { document.refreshVisibleRows() }
-                else { (row as? ConversationEntryContainer)?.updateVisibility(viewport: viewportRect, viewportWindow: window) }
             }
         }
     }
@@ -502,8 +596,9 @@ extension EnvironmentValues {
 
 struct ConversationViewportView: NSViewRepresentable {
     let viewport: ConversationViewport
-    func makeNSView(context: Context) -> MarkerView { MarkerView(viewport: viewport) }
-    func updateNSView(_ view: MarkerView, context: Context) { viewport.refresh() }
+    var onPauseFollowing: () -> Void = {}
+    func makeNSView(context: Context) -> MarkerView { viewport.pauseFollowing = onPauseFollowing; return MarkerView(viewport: viewport) }
+    func updateNSView(_ view: MarkerView, context: Context) { viewport.pauseFollowing = onPauseFollowing; viewport.refresh() }
     final class MarkerView: NSView {
         private let viewport: ConversationViewport
         init(viewport: ConversationViewport) {
@@ -519,59 +614,15 @@ struct ConversationViewportView: NSViewRepresentable {
     }
 }
 
-/// Preserve every row's frame and state, but keep offscreen NSTextView subtrees
-/// out of AppKit's scroll geometry, tracking-area and accessibility traversal.
+/// The document alone mounts visible rows. Keep a row's hosting subtree attached
+/// while its frame changes so disclosure layout cannot blank it for one pass.
 private final class ConversationEntryContainer: NSView {
-    var visibilityChanged: ((Bool) -> Void)?
+    override var isFlipped: Bool { true }
     var widthChanged: (() -> Void)?
-    private weak var viewport: ConversationViewport?
-    private var lastVisibility: Bool?
-    func setViewport(_ next: ConversationViewport?) {
-        guard viewport !== next else { return }
-        viewport?.remove(self)
-        viewport = next
-        next?.add(self)
-        updateVisibility()
-    }
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        updateVisibility()
-    }
-    override func viewDidMoveToSuperview() {
-        super.viewDidMoveToSuperview()
-        updateVisibility()
-    }
     override func setFrameSize(_ newSize: NSSize) {
         let previousWidth = bounds.width
         super.setFrameSize(newSize)
         if bounds.width != previousWidth { widthChanged?() }
-        updateVisibility()
-    }
-    override func setFrameOrigin(_ newOrigin: NSPoint) {
-        super.setFrameOrigin(newOrigin)
-        updateVisibility()
-    }
-    override func layout() {
-        super.layout()
-        updateVisibility()
-    }
-    /// `viewport` is the marker rect already converted to window coordinates by a
-    /// batched refresh; nil means this row has to convert it itself.
-    func updateVisibility(viewport viewportRect: CGRect? = nil, viewportWindow: NSWindow? = nil) {
-        let visible: Bool
-        if let window, let viewportRect, viewportWindow === window {
-            visible = convert(bounds, to: nil).intersects(viewportRect)
-        } else if let window, let marker = viewport?.view, marker.window === window {
-            visible = convert(bounds, to: nil).intersects(marker.convert(marker.bounds, to: nil))
-        } else if let window, let content = window.contentView {
-            // Standalone reading previews do not install a scroll viewport.
-            visible = convert(bounds, to: nil).intersects(content.convert(content.bounds, to: nil))
-        } else {
-            visible = false
-        }
-        guard lastVisibility != visible else { return }
-        lastVisibility = visible
-        visibilityChanged?(visible)
     }
 }
 
@@ -581,6 +632,7 @@ private struct ConversationEntryView: View, Equatable {
     let tools: [String: VisibleTool]
     let api: KimiAPI?
     let sessionId: String
+    let memoryKey: String
     // Only rows whose height is wholly determined by message values may cache
     // across measurements. Disclosure state and loaded attachments are local.
     var hasStableHeight: Bool {
@@ -593,11 +645,10 @@ private struct ConversationEntryView: View, Equatable {
         default: return false
         }
     }
-    @State private var commentaryExpanded = false
-    @State private var thinkingExpanded = false
+    @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
-            && lhs.sessionId == rhs.sessionId
+            && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -613,10 +664,7 @@ private struct ConversationEntryView: View, Equatable {
                         }.padding(.top, 10) }
                     }.font(.system(size: 12)).foregroundStyle(.secondary)
                 case .thinkingDetails:
-                    DisclosureGroup("思考记录", isExpanded: $thinkingExpanded) {
-                        if thinkingExpanded { KimiMarkdown(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"))
-                            .padding(.top, 10) }
-                    }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    ThoughtDisclosure(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"))
                 case .thinkingPreview, .thinkingRecord:
                     ThoughtOutput(messages: entry.messages, finished: entry.presentation == .thinkingRecord)
                         .id(entry.presentation == .thinkingRecord)
@@ -639,34 +687,71 @@ private struct ConversationEntryView: View, Equatable {
     }
 }
 
+/// Keep live, historical and popover thoughts in the same TextKit style.
+private enum ThoughtTextStyle {
+    static let attributes: [NSAttributedString.Key: Any] = {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = 4
+        let font = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 13, weight: .light), toHaveTrait: .italicFontMask)
+        return [.font: font, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph]
+    }()
+}
+
+private struct ThoughtText: View {
+    let text: String
+    var body: some View {
+        SelectableReplyText(attributed: NSAttributedString(string: text, attributes: ThoughtTextStyle.attributes))
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct ThoughtToggle: View {
+    let title: String
+    @Binding var expanded: Bool
+    var body: some View {
+        Button { expanded.toggle() } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right").font(.system(size: 9)).rotationEffect(.degrees(expanded ? 90 : 0))
+                Text(title)
+                Spacer(minLength: 0)
+            }.font(.system(size: 12)).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
+    }
+}
+
+private struct ThoughtDisclosure: View {
+    let text: String
+    @RememberedExpansion("thought") private var expanded
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ThoughtToggle(title: "Thoughts", expanded: $expanded)
+            if expanded { ThoughtText(text: text) }
+        }
+    }
+}
+
 private struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
     private var current: String { messages.last?.content.compactMap(\.thinking).joined(separator: "\n\n") ?? "" }
-    @State private var expanded = true
+    @RememberedExpansion("live-thought", initial: true) private var expanded
     @State private var showFullText = false
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Button { expanded.toggle() } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right").font(.system(size: 9))
-                    Text(finished ? "思考记录 · 未返回正文" : "思考中")
-                    Spacer(minLength: 0)
-                    Text(expanded ? "收起" : "展开").font(.system(size: 10))
-                }.font(.system(size: 12)).foregroundStyle(.secondary)
-            }.buttonStyle(.plain)
+            ThoughtToggle(title: finished ? "Thoughts · No response" : "Thinking", expanded: $expanded)
             if expanded && finished {
-                KimiMarkdown(text: fullText)
+                ThoughtText(text: fullText)
             } else if expanded {
                 ThinkingTextViewport(text: current).frame(height: 76)
-                Button("查看全部思考") { showFullText = true }
+                Button("View all thoughts") { showFullText = true }
                     .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(.secondary)
             }
         }
         .popover(isPresented: $showFullText, arrowEdge: .top) {
-            if showFullText { ScrollView { SelectableReplyText(fullText, font: NSFontManager.shared.convert(.systemFont(ofSize: 13, weight: .light), toHaveTrait: .italicFontMask), lineSpacing: 5).frame(maxWidth: .infinity, alignment: .leading).padding(16) }
-                .frame(width: 480, height: 300) }
+            ScrollView { ThoughtText(text: fullText).padding(16) }
+                .frame(width: 480, height: 300)
         }
     }
 }
@@ -677,12 +762,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
     let text: String
     final class Coordinator {
         var previous = ""
-        let attributes: [NSAttributedString.Key: Any] = {
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.lineSpacing = 4
-            let font = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 13, weight: .light), toHaveTrait: .italicFontMask)
-            return [.font: font, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph]
-        }()
+        let attributes = ThoughtTextStyle.attributes
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> FollowingThoughtScrollView {

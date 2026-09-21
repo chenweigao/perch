@@ -82,8 +82,8 @@ func checkModelSelection() throws {
     precondition(local.remaining == 354188)
     precondition(local.remainingPercent == 95)
     precondition(local.pressure == .comfortable)
-    precondition(local.summary == "上下文余量 95% · 354K / 372K")
-    precondition(local.detail.contains("不含尚未提交的草稿"))
+    precondition(local.summary == "Context remaining: 95% · 354K / 372K")
+    precondition(local.detail.contains("excludes unsent drafts"))
     // Values taken from the live Kimi session snapshot usage.
     guard let kimi = ContextBudget(used: 110527, limit: 983616) else { fatalError("budget") }
     precondition(kimi.remainingPercent == 88 && kimi.pressure == .comfortable)

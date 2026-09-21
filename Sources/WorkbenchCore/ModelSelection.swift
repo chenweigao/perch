@@ -8,14 +8,14 @@ public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
 
     public var label: String {
         switch self {
-        case .off: return "关闭"
-        case .minimal: return "最低"
-        case .low: return "低"
-        case .medium: return "中"
-        case .high: return "高"
-        case .xhigh: return "很高"
-        case .max: return "最高"
-        case .auto: return "自动"
+        case .off: return "Off"
+        case .minimal: return "Minimal"
+        case .low: return "Low"
+        case .medium: return "Medium"
+        case .high: return "High"
+        case .xhigh: return "Extra high"
+        case .max: return "Max"
+        case .auto: return "Auto"
         }
     }
     public static func parse(_ value: String?) -> ThinkingLevel? {
@@ -123,8 +123,8 @@ public struct ContextBudget: Equatable, Sendable {
 
     /// Remaining is what the user acts on, so it leads. Compaction is the runtime's
     /// own behaviour and is not promised here.
-    public var summary: String { "上下文余量 \(remainingPercent)% · \(Self.short(remaining)) / \(Self.short(limit))" }
-    public var detail: String { "已用 \(used) tokens，上限 \(limit) tokens。数值由运行时上报，不含尚未提交的草稿。" }
+    public var summary: String { "Context remaining: \(remainingPercent)% · \(Self.short(remaining)) / \(Self.short(limit))" }
+    public var detail: String { "\(used) of \(limit) tokens used. Reported by the agent; excludes unsent drafts." }
 
     public static func short(_ tokens: Int) -> String {
         if tokens >= 1_000_000 { return String(format: "%.1fM", Double(tokens) / 1_000_000) }

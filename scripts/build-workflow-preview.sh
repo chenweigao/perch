@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bin_dir="$(swift build -c release --show-bin-path)"
-app_dir="$PWD/build/Reply Reading Preview.app"
+app_dir="$PWD/build/Workflow Preview.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
@@ -15,22 +15,15 @@ swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
-    Sources/AgentWorkbench/ConversationActivityBar.swift Tests/ReadingPreview/App.swift \
-    "${objects[@]}" -o "$app_dir/Contents/MacOS/ReplyReadingPreview"
-cp Tests/Fixtures/reply-reading.md "$app_dir/Contents/Resources/"
-# Private snapshots stay in ignored build output and are never required by the fixture.
-if [[ -n "${READING_SNAPSHOT:-}" ]]; then
-    cp "$READING_SNAPSHOT" "$app_dir/Contents/Resources/scroll-snapshot.json"
-else
-    rm -f "$app_dir/Contents/Resources/scroll-snapshot.json"
-fi
+    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/RemoteFileView.swift Tests/WorkflowPreview/App.swift \
+    "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkflowPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleIdentifier</key><string>dev.agentworkbench.readingpreview</string>
-<key>CFBundleName</key><string>Reply Reading Preview</string>
-<key>CFBundleExecutable</key><string>ReplyReadingPreview</string>
+<key>CFBundleIdentifier</key><string>dev.agentworkbench.workflowpreview</string>
+<key>CFBundleName</key><string>Workflow Preview</string>
+<key>CFBundleExecutable</key><string>WorkflowPreview</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>

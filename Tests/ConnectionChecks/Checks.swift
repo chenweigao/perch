@@ -9,6 +9,7 @@ private final class TransportFixture {
     var losePromptResponse = false
     var failCatalog = false
     var archives = 0
+    var abortedTurns: [(String, String?)] = []
 
     init() {
         for id in ["a", "b"] {
@@ -38,6 +39,7 @@ private final class TransportFixture {
                 if losePromptResponse { losePromptResponse = false; throw WorkbenchError("response lost") }
                 result = ["id": key, "status": receipts[key]!]
             case "abort":
+                abortedTurns.append((id, body?["turnId"].string))
                 // An old optimistic cancellation flag is still not terminal evidence.
                 sessions[id]?["cancelled"] = true
                 result = ["ok": true]
@@ -67,6 +69,9 @@ struct ConnectionChecks {
         try await connection.refresh()
         connection.select("a")
         let a = connection.reference("a")!, b = connection.reference("b")!
+        precondition(!connection.canStop && !connection.isStopping)
+        connection.stop()
+        precondition(fixture.abortedTurns.isEmpty, "Idle composer must not send an abort")
 
         // Resume must dispatch even if the catalog has not changed at all.
         connection.queue.enqueue("暂停中的中文", for: a, mode: .nextTurn, id: "resume-a")
@@ -87,18 +92,27 @@ struct ConnectionChecks {
         precondition(fixture.archives == 1 && connection.actionError?.contains("同步失败") == true)
         fixture.failCatalog = false
 
-        connection.select("a"); try await connection.refresh(); connection.stop()
+        connection.select("a"); try await connection.refresh()
+        precondition(connection.canStop)
+        connection.stop(); connection.stop()
+        precondition(connection.isStopping && !connection.canStop, "Disable repeated stop clicks immediately")
         await settle { connection.stops.phase(for: a) == .stopping }
+        precondition(fixture.abortedTurns.count == 1 && fixture.abortedTurns[0].0 == "a" && fixture.abortedTurns[0].1 == "resume-a")
+        precondition(connection.isStopping && !connection.canStop, "Acknowledgement is not a stopped turn")
+        connection.select("b")
+        precondition(!connection.isStopping && connection.canStop, "Stop UI state belongs to the selected session")
+        connection.select("a")
         precondition(connection.queue.isPaused(a))
         fixture.sessions["a"]?["busy"] = false
         fixture.sessions["a"]?["turnState"] = "stopped"
         fixture.receipts["resume-a"] = "stopped"
         try await connection.refresh()
         precondition(connection.stops.phase(for: a) == .stopped)
+        precondition(!connection.isStopping && !connection.canStop)
         fixture.sessions["a"]?["busy"] = true
         fixture.sessions["a"]?["turnId"] = "new-turn"
         try await connection.refresh()
-        precondition(connection.stops.phase(for: a) == .idle)
+        precondition(connection.stops.phase(for: a) == .idle && connection.canStop)
 
         // A lost response is reconciled by receipt, never automatically replayed.
         let lost = TransportFixture(); lost.losePromptResponse = true

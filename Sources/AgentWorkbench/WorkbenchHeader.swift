@@ -39,8 +39,7 @@ struct WorkbenchHeaderActions: View {
         return nil
     }
     private var canStop: Bool {
-        (model.showKimi && kimi.online && kimi.snapshotReady && kimi.conversation?.snapshot.session.busy == true)
-        || (model.showNative && native.online && native.snapshot?.busy == true)
+        (model.showKimi && kimi.canStop) || (model.showNative && native.canStop)
     }
     var body: some View {
         HStack(spacing: 12) {
@@ -65,7 +64,7 @@ struct WorkbenchHeaderActions: View {
                 Button { if model.showKimi { kimi.abort() } else { native.stop() } } label: {
                     Image(systemName: "stop.fill").font(.system(size: 9)).frame(width: 28, height: 28)
                         .workbenchControlSurface()
-                }.buttonStyle(.plain).help("停止当前任务").accessibilityLabel("停止当前任务")
+                }.buttonStyle(.plain).help("Stop task").accessibilityLabel("Stop task")
             }
             if !model.showDashboard {
                 Menu {

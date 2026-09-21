@@ -1,10 +1,6 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Keys the composer hands to an attached palette before acting on them itself.
-/// Kept minimal so the composer stays a text editor rather than a menu host.
-enum ComposerKey { case up, down, enter, tab, escape }
-
 /// Suggestions for a slash draft, rendered above the composer. Entirely driven by
 /// the command list the runtime reported, so a session with no commands shows
 /// nothing rather than a hard-coded menu.

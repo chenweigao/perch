@@ -17,22 +17,21 @@ struct ThinkingPicker: View {
                     Button {
                         onSelect(level)
                     } label: {
-                        if level == current { Label(level.label, systemImage: "checkmark") } else { Text(level.label) }
+                        if level == (current ?? model.defaultThinking) { Label(level.label, systemImage: "checkmark") } else { Text(level.label) }
                     }
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Image(systemName: "brain").font(.system(size: 10))
-                    Text(current.map(\.label) ?? model.defaultThinking.map { "\($0.label)（默认）" } ?? "思考强度")
+                    Text("Thinking: \(current?.label ?? model.defaultThinking?.label ?? "Default")")
                         .font(.system(size: 12))
                 }.foregroundStyle(.secondary)
-            }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            }.menuStyle(.borderlessButton).menuIndicator(.visible).fixedSize()
                 .disabled(disabled)
-                .help("思考强度只影响下一轮；可选项来自该模型声明的范围")
-                .accessibilityLabel("选择思考强度")
+                .help("Thinking effort for the next turn. Available levels depend on the model.")
+                .accessibilityLabel("Choose thinking effort")
         } else if model != nil {
-            Text("该模型无思考强度").font(.system(size: 11)).foregroundStyle(.tertiary)
-                .help("此模型未声明可选的思考强度，设置该值不会生效")
+            Text("Thinking unavailable").font(.system(size: 11)).foregroundStyle(.tertiary)
+                .help("This model does not offer adjustable thinking effort.")
         }
     }
 }
@@ -44,16 +43,13 @@ struct ContextMeter: View {
 
     var body: some View {
         if let budget {
-            HStack(spacing: 5) {
-                Gauge(value: budget.usedFraction) { EmptyView() }
-                    .gaugeStyle(.accessoryLinearCapacity).frame(width: 46).tint(tint(budget.pressure))
-                Text("余 \(budget.remainingPercent)%").font(.system(size: 11)).monospacedDigit()
-                    .foregroundStyle(budget.pressure == .comfortable ? .secondary : tint(budget.pressure))
-            }.help(budget.summary + "\n" + budget.detail)
-                .accessibilityLabel(budget.summary)
+            Text("\(budget.remainingPercent)% left").font(.system(size: 11)).monospacedDigit()
+                .foregroundStyle(budget.pressure == .comfortable ? .secondary : tint(budget.pressure))
+                .help(budget.summary + "\n" + budget.detail)
+                .accessibilityLabel(budget.summary).fixedSize()
         } else {
-            Text("上下文余量未知").font(.system(size: 11)).foregroundStyle(.tertiary)
-                .help("运行时尚未上报上下文用量，通常在第一轮结束后出现")
+            Text("Context unknown").font(.system(size: 11)).foregroundStyle(.tertiary)
+                .fixedSize().help("Context usage is not available yet. It usually appears after the first turn.")
         }
     }
 
@@ -63,5 +59,26 @@ struct ContextMeter: View {
         case .tight: return .orange
         case .critical: return .red
         }
+    }
+}
+
+/// Low-frequency options stay next to the context status, outside model controls.
+struct ComposerOptionsButton: View {
+    @Binding var manualApproval: Bool
+    @State private var presented = false
+    var body: some View {
+        Button { presented.toggle() } label: {
+            Image(systemName: manualApproval ? "gearshape.fill" : "gearshape")
+                .font(.system(size: 13)).frame(width: 28, height: 32)
+        }.buttonStyle(.plain).foregroundStyle(.secondary)
+            .help("Conversation options").accessibilityLabel("Conversation options")
+            .popover(isPresented: $presented) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Tool execution").font(.system(size: 13, weight: .semibold))
+                    Toggle("Ask before running tools", isOn: $manualApproval).toggleStyle(.checkbox)
+                    Text("When enabled, your next message requests manual approval. When disabled, the current server setting is preserved.")
+                        .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }.padding(18).frame(width: 280)
+            }
     }
 }

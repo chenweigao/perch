@@ -46,7 +46,7 @@ private struct ReadingPreview: View {
             let json = """
             [{"id":"earlier","role":"assistant","created_at":"1","content":[{"type":"thinking","thinking":"先检查工作目录"},{"type":"text","text":"开始检查目录。"}]},
              {"id":"overview","role":"assistant","created_at":"2","content":[{"type":"text","text":"两个仓库已核实，接着检查 MR 状态。"},{"type":"tool_use","tool_call_id":"check","tool_name":"Bash"}]},
-             {"id":"thought","role":"assistant","created_at":"3","content":[{"type":"thinking","thinking":"这里是独立的思考内容。收起这段思考后，上方的进度概要仍然可见。"}]}]
+             {"id":"thought","role":"assistant","created_at":"3","content":[{"type":"thinking","thinking":"这里是独立的思考内容。English reasoning keeps the same light italic style. 收起这段思考后，上方的进度概要仍然可见。"}]}]
             """
             var messages = try! KimiWire.decoder().decode([KimiMessage].self, from: Data(json.utf8))
             for step in 0..<phaseSteps {
@@ -137,8 +137,10 @@ private struct ReadingPreview: View {
                     if !follow { ReturnToLatestButton { follow = true; proxy.scrollTo("bottom", anchor: .bottom) } }
                 }
             }
-            ConversationActivityBar(messages: scenario == 1 || scenario == 6 ? todoMessages : [], isRunning: (scenario == 1 && !turnEnded) || scenario == 3,
-                                    isThinking: scenario == 3)
+            ConversationActivityBar(activity: ConversationActivity(
+                messages: scenario == 1 || scenario == 6 ? todoMessages : [],
+                isRunning: (scenario == 1 && !turnEnded) || scenario == 3, isThinking: scenario == 3),
+                isRunning: (scenario == 1 && !turnEnded) || scenario == 3, turnID: String(scenario))
                 .padding(.horizontal, 32).padding(.bottom, 12)
         }.frame(minWidth: 540, minHeight: 500)
             .task(id: streaming) {

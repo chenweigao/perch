@@ -4,9 +4,12 @@ import WorkbenchCore
 @main
 struct ProtocolTests {
     static func main() async throws {
+        setbuf(stdout, nil)
         try checkConversationPresentation()
         try checkToolVisibility()
         try checkConversationTodos()
+        try checkConversationActivity()
+        try checkWorkflow()
         checkReplyDocument()
         try checkNativeAgents()
         try checkKimiProtocol()
