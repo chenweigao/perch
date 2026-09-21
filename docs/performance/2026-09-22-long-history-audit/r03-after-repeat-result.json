@@ -1,0 +1,6 @@
+{
+  "error" : "search failed to select native text: 第 6 轮结果, got []",
+  "history_turns" : 200,
+  "mode" : "interactions",
+  "status" : "failed"
+}

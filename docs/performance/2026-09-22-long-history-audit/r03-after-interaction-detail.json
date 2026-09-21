@@ -1,0 +1,20 @@
+{
+  "fixture-195" : {
+    "entry" : "text:F66588FA-0FE4-47E8-9F0D-28FE3CFD71B4:omp:session-1:0195b:0",
+    "selected" : [
+      "fixture-195"
+    ]
+  },
+  "中文换行" : {
+    "entry" : "text:F66588FA-0FE4-47E8-9F0D-28FE3CFD71B4:omp:session-1:0000b:0",
+    "selected" : [
+
+    ]
+  },
+  "第 6 轮结果" : {
+    "entry" : "text:F66588FA-0FE4-47E8-9F0D-28FE3CFD71B4:omp:session-1:0005b:0",
+    "selected" : [
+      "第 6 轮结果"
+    ]
+  }
+}

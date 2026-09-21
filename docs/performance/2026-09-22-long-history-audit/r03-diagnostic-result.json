@@ -1,0 +1,6 @@
+{
+  "error" : "interaction failures: [\"search: 第 6 轮结果\", \"search: 中文换行\"]",
+  "history_turns" : 200,
+  "mode" : "interactions",
+  "status" : "failed"
+}

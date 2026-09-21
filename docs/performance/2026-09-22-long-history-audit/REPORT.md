@@ -49,3 +49,13 @@ Navigation Preview 使用生产 ConversationTranscript/ConversationScrollView，
 确认：当前 mounted/retained 分离，保留范围为可见行前后各 12 行；淘汰对象经过单一主线程退役队列，回调取消，weak 观察者随 document 销毁移除。上行 RSS 增长约 3 MiB，单次短跑不证明长期稳定。采样看到 sizeThatFits、SwiftUI 布局和 Markdown 解析，采样窗口也包含切换；不能将包含关系相加为热点占比或可得加速。
 
 决策：未找到有证据支持的最小性能修复；不添加解析缓存、预加载或新抽象。保留完整 sample 于 .local/long-history-audit/r02-profile。此轮计一次无新可行动问题，后续正确性审查继续。
+
+## 第 3 轮：缩窄列后的轻微锚点位移（候选撤回）
+
+触发：在同一 200 轮混合历史先执行搜索以测量远近行，再到 y=1800，700 pt 阅读列缩至约 420 pt。同一消息行内偏移 165→168 pt。会话切出再返回保持缩窄后的偏移。
+
+确认：当前实现不会为同会话宽度更新保持精确像素锚点。更深原因尚未完全确定；不能只根据 3 pt 的差异断言文字行本身漂移同样距离。
+
+尝试：在 sizeThatFits/随后 setFrameSize 两种入口捕获已有阅读锚点，等待 committed width 后恢复。出现过 165→165 pt 的成功，但两次最终复验一过一败（r03-width-order-1/2）。**撤回全部宽度候选**，未把偶尔成功当成修复。失败结果、候选 patch 均保留。
+
+验收同时揭示了新挂载消息的搜索选区偶发丢失，目标行始终还在 mounted rows。转入下一轮单独处理，保持本轮未解决状态。

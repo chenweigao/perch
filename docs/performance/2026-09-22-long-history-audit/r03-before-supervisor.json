@@ -1,0 +1,10 @@
+{
+  "status": "exited",
+  "mode": "interactions",
+  "timeout_s": 120,
+  "binary_sha256": "c16ba3e40438b68cdcb090732481ce0d8affba6ccedb58760747614e83c4443c",
+  "pid": 40889,
+  "exit_code": 1,
+  "elapsed_s": 6.191292874999999,
+  "passed": false
+}

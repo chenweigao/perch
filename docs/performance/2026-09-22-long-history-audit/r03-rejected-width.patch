@@ -1,0 +1,41 @@
+--- retained-source
++++ rejected-width-candidate
+@@ -263,7 +263,13 @@
+ 
+     func measure(width: CGFloat?) -> CGSize {
+         let nextWidth = max(1, width?.isFinite == true ? width! : ReplyStyle.readingWidth)
+-        if columnWidth != nextWidth { laidOutRange = nil }
++        if columnWidth != nextWidth {
++            if restoreTarget == nil, ConversationReadingMemory.shared.following[sessionId] == false {
++                saveReadingPosition()
++                restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
++            }
++            laidOutRange = nil
++        }
+         columnWidth = nextWidth
+         refreshVisibleRows()
+         return CGSize(width: columnWidth, height: totalHeight)
+@@ -380,6 +386,12 @@
+         }
+     }
+     override func setFrameSize(_ size: NSSize) {
++        // AppKit can commit the width before SwiftUI asks sizeThatFits for it.
++        if bounds.width != size.width, restoreTarget == nil,
++           ConversationReadingMemory.shared.following[sessionId] == false {
++            saveReadingPosition()
++            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
++        }
+         let changed = frame.size != size
+         super.setFrameSize(size)
+         if size.width > 0 {
+@@ -410,7 +422,9 @@
+         ConversationReadingMemory.shared.measuredHeights[sessionId] = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
+     }
+     private func restoreReadingPosition() {
+-        guard let target = restoreTarget, let clip = observedClip, bounds.height >= totalHeight - 1, !contents.isEmpty else { return }
++        guard let target = restoreTarget, let clip = observedClip,
++              abs(bounds.width - columnWidth) < 0.5,
++              bounds.height >= totalHeight - 1, !contents.isEmpty else { return }
+         let index = indices[target.entry] ?? min(target.index, contents.count - 1)
+         let y = max(0, offsets[index] + target.offset + contentOriginY)
+         clip.scroll(to: NSPoint(x: 0, y: y))

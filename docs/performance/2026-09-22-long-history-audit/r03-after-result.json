@@ -1,0 +1,6 @@
+{
+  "error" : "search failed to select native text: 中文换行, got []",
+  "history_turns" : 200,
+  "mode" : "interactions",
+  "status" : "failed"
+}
