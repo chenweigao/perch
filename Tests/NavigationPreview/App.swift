@@ -290,13 +290,22 @@ final class NavigationRunner {
         let visible = scroll.contentView.bounds.height
         guard document > visible + 10 else { throw NavigationError("content shorter than viewport") }
         var frames: [Double] = []
-        let steps = 240
+        let stepPoints = ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_STEP_POINTS"].flatMap(Double.init)
+        let steps = stepPoints == nil ? 240 : 1200
         for index in 0..<steps {
             // Triangle sweep top→bottom→top, emulating continuous reading.
             let phase = Double(index % 120) / 119
             let progress = index % 240 < 120 ? phase : 1 - phase
             let currentHeight = scroll.documentView?.bounds.height ?? document
-            let offset = max(0, currentHeight - visible) * progress
+            let offset: CGFloat
+            if let stepPoints {
+                // Small continuous deltas exercise repeated layout of the same
+                // rows; the original triangle makes almost viewport-sized jumps.
+                let sweep = Double(index < steps / 2 ? index : steps - 1 - index)
+                offset = min(max(0, currentHeight - visible), sweep * stepPoints)
+            } else {
+                offset = max(0, currentHeight - visible) * progress
+            }
             let start = CACurrentMediaTime()
             scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
             scroll.reflectScrolledClipView(scroll.contentView)
@@ -311,6 +320,7 @@ final class NavigationRunner {
         result["document_height"] = document
         result["viewport_height"] = visible
         result["final_document_height"] = scroll.documentView?.bounds.height ?? 0
+        if let stepPoints { result["step_points"] = stepPoints }
         return ["scroll_step_ms": result, "steps": steps,
                 "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate"]
     }

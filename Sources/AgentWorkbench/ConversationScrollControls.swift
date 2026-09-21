@@ -118,9 +118,7 @@ struct ConversationScrollView<Content: View>: View {
     }
     var body: some View {
         if #available(macOS 15, *) {
-            scroll.onScrollGeometryChange(for: CGRect.self) { $0.visibleRect } action: { _, _ in
-                conversationViewport.refresh()
-            }.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
+            scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
                 contentSize = size
             }.task(id: contentSize) {
                 await Task.yield()
