@@ -42,6 +42,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         sidebarItem.maximumThickness = 420
         sidebarItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 260)
         sidebarItem.canCollapse = true
+        sidebarItem.titlebarSeparatorStyle = .none
         let contentItem = NSSplitViewItem(viewController: WorkbenchDetailController(content: coordinator.contentHost))
         contentItem.minimumThickness = 600
         controller.addSplitViewItem(sidebarItem)
@@ -114,10 +115,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, composeID, backID, forwardID, separatorID, titleID, .flexibleSpace, actionsID]
+            [toggleID, backID, forwardID, separatorID, titleID, .flexibleSpace, actionsID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            toolbarDefaultItemIdentifiers(toolbar)
+            toolbarDefaultItemIdentifiers(toolbar) + [composeID]
         }
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
@@ -264,7 +265,8 @@ final class WorkbenchSplitController: NSSplitViewController {
         super.viewDidAppear()
         guard let window = view.window else { return }
         window.titleVisibility = .hidden
-        window.toolbarStyle = .unifiedCompact
+        window.styleMask.insert(.fullSizeContentView)
+        window.toolbarStyle = .unified
         window.toolbar = workspaceToolbar
     }
 }
