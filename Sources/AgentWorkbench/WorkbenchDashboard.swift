@@ -19,8 +19,6 @@ struct WorkbenchDashboard<RowActions: View>: View {
     /// The per-row menu is supplied by the caller, so the queue offers the same actions
     /// as the sidebar without this view reaching into the workspace model.
     let rowActions: (WorkspaceSession) -> RowActions
-    let onEditGroup: () -> Void
-    let onResume: (WorkspaceSession) -> Void
     let onForgetRestoration: (SavedTerminal) -> Void
     let onArchive: () -> Void
     let onUndoArchive: () -> Void
@@ -34,7 +32,6 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 if let error = context.storageError { storageBanner(error) }
                 if !attentionOnly {
                     header
-                    if let group = context.group { groupCard(group) }
                     if !context.pendingRestoration.isEmpty { restoration }
                 }
                 if attentionOnly && projection.sections.isEmpty {
@@ -91,40 +88,6 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     .font(.caption).foregroundStyle(.secondary)
             } else if state == .noSessions {
                 Button("选择 Agent 和工作目录") { onNewTask() }.buttonStyle(.borderedProminent)
-            }
-        }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    /// The task group loop: the goal being pursued, the next step written at the end of
-    /// the last round, and a way back into the session it was written about. Without it
-    /// the group's own notes are only reachable through the editor sheet.
-    private func groupCard(_ group: WorkItemGroup) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(group.name).font(.system(size: 15, weight: .medium))
-                Spacer()
-                Button("编辑任务组") { onEditGroup() }.font(.caption)
-            }
-            if !group.goal.isEmpty {
-                Text(group.goal).font(.system(size: 12)).foregroundStyle(.secondary)
-                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            }
-            Label("下一步", systemImage: "arrow.turn.down.right").font(.system(size: 12, weight: .semibold))
-            Text(group.nextStep.isEmpty ? "还没有下一步。结束这一轮时，写下回来后要做的第一件事。" : group.nextStep)
-                .font(.system(size: 13)).foregroundStyle(group.nextStep.isEmpty ? Color.secondary : Color.primary)
-                .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Text("关联 \(group.sessions.count) 个会话 · 名称与笔记只保存在本机")
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                if let resume = context.resume {
-                    Button("继续上次会话") { onResume(resume) }.font(.caption).disabled(!resume.online)
-                }
-            }
-            ForEach(context.missing) { reference in
-                Label("关联\(reference.kind.label)尚未出现在当前列表：\(reference.terminalID)",
-                      systemImage: "questionmark.folder").font(.caption).foregroundStyle(.secondary)
             }
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))

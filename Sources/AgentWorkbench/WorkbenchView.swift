@@ -114,8 +114,6 @@ private struct WorkbenchDetail: View {
                             onOpen: { model.open($0) },
                             onMarkReviewed: { model.markReviewed($0) },
                             rowActions: { SessionActionsMenu(model: model, item: $0) },
-                            onEditGroup: { model.editGroup(model.selectedGroup) },
-                            onResume: { model.open($0, pinned: true) },
                             onForgetRestoration: { model.forgetRestoration($0) },
                             onArchive: { model.runBatchArchive(model.dashboardProjection.archivePlan) },
                             onUndoArchive: { model.undoBatchArchive() },

@@ -440,15 +440,10 @@ final class WorkbenchModel: ObservableObject {
         return DashboardProjection(sessions: scoped, subjects: subjects,
                                    hasConfiguredEnvironment: configuredEnvironment, concurrencyLimit: 4)
     }
-    /// The group being worked on, what could not be restored, and any local-storage
-    /// failure. A save or read failure used to be recorded and never shown.
+    /// What could not be restored, and any local-storage failure. A save or read
+    /// failure used to be recorded and never shown.
     var dashboardContext: DashboardContext {
-        let group = selectedGroup
-        let missing = group?.sessions.filter { reference in
-            !allSessions.contains { $0.reference == reference }
-        } ?? []
-        return DashboardContext(group: group, resume: groupResumeSession, missing: missing,
-                                pendingRestoration: pendingRestoration, storageError: workspaceError)
+        DashboardContext(pendingRestoration: pendingRestoration, storageError: workspaceError)
     }
     /// Runs one batch to completion. Each item is re-validated immediately before
     /// its request, and the catalog is refreshed once at the end rather than per

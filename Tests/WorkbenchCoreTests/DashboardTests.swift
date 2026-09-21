@@ -93,18 +93,14 @@ func checkDashboard() throws {
     let inboxProjection = DashboardProjection(sessions: inbox.sessions, subjects: subjects, hasConfiguredEnvironment: true)
     precondition(inboxProjection.sections.map(\.section) == [.attention])
 
-    // The group loop and the restore list are part of the workbench, not only of the
-    // editor sheet, and a local-storage failure is visible instead of just recorded.
-    let group = WorkItemGroup(name: "productB 验收", goal: "端到端跑通", nextStep: "看审批",
-                              sessions: [reference("approval"), reference("gone")])
-    let context = DashboardContext(group: group, resume: sessions[0], missing: [reference("gone")],
-                                   pendingRestoration: [SavedTerminal(session: reference("gone"), title: "已结束的会话")],
+    // The restore list and a local-storage failure are part of the workbench itself:
+    // visible instead of only recorded. The group's own page presents the group.
+    let context = DashboardContext(pendingRestoration: [SavedTerminal(session: reference("gone"), title: "已结束的会话")],
                                    storageError: "工作台保存失败")
-    precondition(context.group?.nextStep == "看审批")
-    precondition(context.missing == [reference("gone")] && context.resume?.id == sessions[0].id)
     precondition(context.pendingRestoration.map(\.title) == ["已结束的会话"])
+    precondition(context.storageError == "工作台保存失败")
     precondition(DashboardContext() == DashboardContext())
-    precondition(DashboardContext(group: group) != context)
+    precondition(DashboardContext(storageError: "工作台保存失败") != DashboardContext())
 
     // Queue rows carry how long something has waited. A source with no timestamp
     // reports nothing rather than a fabricated "just now", and a remote clock that
@@ -117,5 +113,5 @@ func checkDashboard() throws {
     precondition(SessionTime.label(since: now.timeIntervalSince1970 - 720, waiting: false, now: now) == "12 分钟前")
     precondition(SessionTime.label(since: now.timeIntervalSince1970 - 7_200, waiting: false, now: now) == "2 小时前")
     precondition(SessionTime.label(since: now.timeIntervalSince1970 - 180_000, waiting: false, now: now) == "2 天前")
-    print("PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run empty states, single inbox narrowing, group and restore context and queue row times")
+    print("PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run empty states, single inbox narrowing, restore context and queue row times")
 }

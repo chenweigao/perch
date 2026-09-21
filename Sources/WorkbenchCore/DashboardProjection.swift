@@ -25,21 +25,15 @@ public enum DashboardEmptyState: Equatable, Sendable {
     }
 }
 
-/// What the workbench shows above the queue: the task group currently in scope,
-/// saved references that could not be reattached, and a local-storage failure. These
-/// are the states that explain the queue, so they travel beside the projection rather
-/// than being read from the live model by the view.
+/// What the workbench shows above the queue: saved references that could not be
+/// reattached, and a local-storage failure. These states explain the queue, so they
+/// travel beside the projection rather than being read from the live model by the view.
+/// The task group's own page presents the group, its next step and what to resume.
 public struct DashboardContext: Equatable, Sendable {
-    public let group: WorkItemGroup?
-    public let resume: WorkspaceSession?
-    public let missing: [SessionReference]
     public let pendingRestoration: [SavedTerminal]
     public let storageError: String?
 
-    public init(group: WorkItemGroup? = nil, resume: WorkspaceSession? = nil,
-                missing: [SessionReference] = [], pendingRestoration: [SavedTerminal] = [],
-                storageError: String? = nil) {
-        self.group = group; self.resume = resume; self.missing = missing
+    public init(pendingRestoration: [SavedTerminal] = [], storageError: String? = nil) {
         self.pendingRestoration = pendingRestoration; self.storageError = storageError
     }
 }
