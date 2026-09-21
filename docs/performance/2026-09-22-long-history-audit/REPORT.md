@@ -41,3 +41,11 @@ Navigation Preview 使用生产 ConversationTranscript/ConversationScrollView，
 补测：从底部进入上方历史再前插，activity:tool:only-197 保持且行内偏移 16→16 pt。一次通过 AX 点击屏外分页按钮后视口变为旧页首；该操作可能自动滚动按钮到可见处，不能作精准锚点失败证据。保留此观察，并用不经点击的底部前插回归和可见按钮检查区分。
 
 原始大体积 reading-trace 和编译日志留在本工作树 `.local/long-history-audit/`；本目录保存摘要结果、样本及监督器记录。
+
+## 第 2 轮：回读剩余成本与生命周期审查（无产品改动）
+
+触发：第 1 轮固定全量回放上行 p95 约 34 ms，宿主数已有限制。检查 controller/viewport/observer/retire 的实际路径并采样 5 秒。
+
+确认：当前 mounted/retained 分离，保留范围为可见行前后各 12 行；淘汰对象经过单一主线程退役队列，回调取消，weak 观察者随 document 销毁移除。上行 RSS 增长约 3 MiB，单次短跑不证明长期稳定。采样看到 sizeThatFits、SwiftUI 布局和 Markdown 解析，采样窗口也包含切换；不能将包含关系相加为热点占比或可得加速。
+
+决策：未找到有证据支持的最小性能修复；不添加解析缓存、预加载或新抽象。保留完整 sample 于 .local/long-history-audit/r02-profile。此轮计一次无新可行动问题，后续正确性审查继续。

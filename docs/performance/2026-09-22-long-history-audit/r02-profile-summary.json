@@ -1,0 +1,69 @@
+{
+  "note": "5s diagnostic sample spans late reading and switching; inclusive stack samples overlap and are not attributable speedup. Not an A/B timing run. Full sample remains in .local.",
+  "stacks": {
+    "ConversationEntryController.measure": [
+      "254 ConversationEntryController.measure(width:)  (in NavigationPreview) + 184  [0x102df8790]",
+      "5 ConversationEntryController.measure(width:)  (in NavigationPreview) + 376  [0x102df8850]",
+      "164 ConversationEntryController.measure(width:)  (in NavigationPreview) + 184  [0x102df8790]",
+      "7 ConversationEntryController.measure(width:)  (in NavigationPreview) + 376  [0x102df8850]"
+    ],
+    "ReplyDocument.parse": [
+      "+ !           :   | + !   : | + !         : | +   ! : |             +           !           :                                                     |                             + ! : |   + !                                               :               |     +       !   :                                           +                                           12 static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | + !         : | +   ! : |             +           !           :                                                     |                             + ! : |   + !                                               :               |     +       !   :                                           +                                           1 static ReplyDocument.parse(_:)  (in NavigationPreview) + 156  [0x102ecc6f0]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | + !         : |       +             !                       :                                                                         |         +                                                                                                                                                                                     1 static ReplyDocument.parse(_:)  (in NavigationPreview) + 156  [0x102ecc6f0]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | + !     : | + !   : | +     !   :             |         +                     !       :   |                                           !                                           24 static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | + !     : | + !   : | +     !   :             |         +                     !       :   |                                           !                                           3 static ReplyDocument.parse(_:)  (in NavigationPreview) + 156  [0x102ecc6f0]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | + !     : | + !   : | +     !   :             |         +                     !       :   |                                           !                                           1 static ReplyDocument.parse(_:)  (in NavigationPreview) + 96  [0x102ecc6b4]  <stdin>:0",
+      "+ !           :   | + !   : | +     ! :   |   + ! : |           +     !     :           |           +                                         !     :             |       + ! : | +   ! :                                               |               +     !       :   |                                           !                                           15 static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | +     ! :   |   + ! : |           +     !     :           |           +                                         !     :             |       + ! : | +   ! :                                               |               +     !       :   |                                           !                                           3 static ReplyDocument.parse(_:)  (in NavigationPreview) + 156  [0x102ecc6f0]  ReplyDocument.swift:33",
+      "+ !           :   | + !   : | + !   : |   +           !     : | + ! :   | + !       : |                                                       +                                     ! :     |   +                       !                     :       |   +                                           :                               | +     !   11 static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33",
+      "+   :             | +         !   : | +               !                                   :     |   +               !   : | + !   :                                                                       |       +   !                                                                                       4 static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33",
+      "+   :             |         +     !                                                     :                             | +       !                                                 :                     |           +                                                                                       3 static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33",
+      "6       static ReplyDocument.parse(_:)  (in NavigationPreview) + 196  [0x102ecc718]  ReplyDocument.swift:33"
+    ],
+    "ReplyText.attributed": [
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 908  [0x102e1b484]",
+      "6 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1116  [0x102e1b554]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1116  [0x102e1b554]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 420  [0x102e1b29c]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "10 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 908  [0x102e1b484]",
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 1104  [0x102e1b548]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 940  [0x102e1b4a4]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1116  [0x102e1b554]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 2060  [0x102e1b904]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "9 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 908  [0x102e1b484]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1104  [0x102e1b548]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1608  [0x102e1b740]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3124  [0x102e1bd2c]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1024  [0x102e1b4f8]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 928  [0x102e1b498]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 1116  [0x102e1b554]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "3 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 1104  [0x102e1b548]",
+      "2 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 908  [0x102e1b484]",
+      "1 ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]",
+      "14       ReplyText.attributed.getter  (in NavigationPreview) + 3160  [0x102e1bd50]"
+    ],
+    "ConversationDocumentView.retire": [
+      "+ !           :   | + !   : | + !   : |   +           !     : | + ! :   | + !       : |                                                       +                                       1 static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 472  [0x102df7040]",
+      "+         51 closure #2 in static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 156  [0x102df7ee8]",
+      "+         17 closure #2 in static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 232  [0x102df7f34]",
+      "+         8 closure #2 in static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 528  [0x102df805c]",
+      "+         6 closure #2 in static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 148  [0x102df7ee0]",
+      "+         4 closure #2 in static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 608  [0x102df80ac]",
+      "+         1 closure #2 in static ConversationDocumentView.retire(_:)  (in NavigationPreview) + 224  [0x102df7f2c]"
+    ]
+  }
+}
