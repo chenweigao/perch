@@ -11,6 +11,7 @@ LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
 MODEL_LOCK = threading.Lock()
+DSH_MODELS = None
 
 def model_catalog():
     global MODELS
@@ -21,6 +22,50 @@ def model_catalog():
             if out.returncode!=0: raise ValueError('读取 omp 模型列表失败：'+(out.stderr or '').strip()[:200])
             MODELS=json.loads(out.stdout)
         return MODELS
+
+def dsh_binary():
+    if os.environ.get('DSH_BIN'): return os.environ['DSH_BIN']
+    marker = ROOT / 'dsh-runtime'
+    if marker.exists():
+        path = marker.read_text().strip()
+        if path and os.path.exists(path): return path
+    found = shutil.which('dsh')
+    if found: return found
+    raise ValueError('未找到 dsh 运行时：重跑 install-native-service.sh --with-dsh，或把 dsh 加入 PATH（也可设 DSH_BIN）')
+
+def dsh_catalog_update(config_options):
+    # The Mac picker consumes one normalized shape; dsh reports its live catalog as
+    # ACP config options, so conversion happens here once rather than on the client.
+    global DSH_MODELS
+    model_option = next((o for o in config_options if o.get('id') == 'model'), None)
+    if not model_option: return
+    effort = next((o for o in config_options if o.get('id') == 'reasoning_effort'), {})
+    efforts = [e['value'] for e in effort.get('options', []) if e.get('value')]
+    current = model_option.get('currentValue')
+    entries = []
+    for group in model_option.get('options', []):
+        for item in group.get('options', []):
+            try: provider, model = json.loads(item['value'])
+            except Exception: continue
+            entries.append({'id': model, 'provider': provider, 'name': item.get('name') or model,
+                            'thinking': efforts if item.get('value') == current else []})
+    DSH_MODELS = entries
+    save(ROOT / 'dsh-catalog.json', entries)
+
+def dsh_catalog():
+    global DSH_MODELS
+    if DSH_MODELS is None:
+        path = ROOT / 'dsh-catalog.json'
+        if path.exists(): DSH_MODELS = json.loads(path.read_text())
+    return DSH_MODELS or []
+
+def combined_catalog():
+    dsh = dsh_catalog()
+    try: omp = model_catalog()
+    except Exception:
+        if dsh: return dsh
+        raise
+    return (omp if isinstance(omp, list) else []) + dsh
 
 def save(path, value):
     tmp = path.with_suffix('.tmp')
@@ -47,6 +92,10 @@ class Session:
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
+        # dsh (ACP) runtime-only state: wire request routing, the prompt waiting for
+        # the handshake, per-message block assembly and pending permission options.
+        self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
+        self.acp_blocks = {}; self.permission_options = {}
         # Version 1 stored command results as plain strings in existing histories.
         previous=state.get('commandResult')
         if isinstance(previous,str):
@@ -85,7 +134,18 @@ class Session:
         s.update(busy=True,error=None,cancelled=False,stopRequested=False,stopAcknowledged=False,
                  updated=time.time(),turnId=request_id,turnState='submitting')
         if not s['messages']: s['title']=text[:60]
-        if s['provider']=='qoder': self.upsert({'role':'user','content':text},request_id)
+        if s['provider']=='qoder' or s['provider']=='dsh': self.upsert({'role':'user','content':text},request_id)
+        if s['provider']=='dsh':
+            # ACP needs initialize + session/new|resume before the first prompt; the
+            # read thread flushes this once the handshake lands.
+            self.pending_prompt=(request_id,text)
+            try:
+                if self.ready.is_set(): self.acp_flush_prompt()
+            except Exception as e:
+                # The write may or may not have landed; never claim submission.
+                s['busy']=False; s['error']=str(e); self.finish('unknown')
+            self.touch(True)
+            return copy.deepcopy(receipt)
         # Persist before writing: a service crash between disk and stdin leaves an
         # unknown outcome, never permission to execute the instruction a second time.
         self.touch(True)
@@ -98,26 +158,154 @@ class Session:
         return copy.deepcopy(receipt)
     def launch(self):
         s = self.state
+        env = None
         if s['provider'] == 'omp':
             args = ['omp','--mode','rpc-ui','--cwd',s['cwd'],'--approval-mode','always-ask','--no-title','--session-dir',str(ROOT/'omp-sessions')]
             if s.get('resume'): args += ['--resume',s['resume']]
             if s['model']: args += ['--model',s['model']]
             if s.get('thinking'): args += ['--thinking',s['thinking']]
+        elif s['provider'] == 'dsh':
+            args = [dsh_binary(),'--profile','acp']
+            # A dedicated home keeps workbench sessions out of the user's own ~/.dsh,
+            # and telemetry stays off unless the user turns it on themselves.
+            env = dict(os.environ, DSH_HOME=str(ROOT/'dsh-home'), DSH_TELEMETRY_MODE='DISABLED')
         else:
             cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which('qoderclicn')}
             if not cfg['binary']: raise ValueError('未找到 qoderclicn')
             args = ['node',str(ROOT/'qoder-worker.mjs'),json.dumps(cfg)]
         self.ready.clear()
-        self.process = subprocess.Popen(args,cwd=s['cwd'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=open(ROOT/(s['id']+'.stderr'),'a'),text=True,start_new_session=True)
+        self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
+        self.acp_blocks = {}; self.permission_options = {}
+        self.process = subprocess.Popen(args,cwd=s['cwd'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=open(ROOT/(s['id']+'.stderr'),'a'),text=True,start_new_session=True,env=env)
         threading.Thread(target=self.read,daemon=True).start()
+        if s['provider'] == 'dsh':
+            # The handshake is asynchronous; the prompt stays parked in
+            # pending_prompt until session/new|resume answers.
+            self.acp_request('initialize', {'protocolVersion':1,'clientCapabilities':{'fs':{'readTextFile':False,'writeTextFile':False}}}, 'initialize')
     def send(self, value):
         if not self.process or self.process.poll() is not None: raise ValueError('远端进程已退出，请重新发送以恢复会话')
         with self.write_lock:
             self.process.stdin.write(json.dumps(value,ensure_ascii=False)+'\n'); self.process.stdin.flush()
+    def acp_request(self, method, params, kind):
+        self.acp_next_id += 1
+        request_id = self.acp_next_id
+        self.acp_pending[request_id] = kind
+        self.send({'jsonrpc':'2.0','id':request_id,'method':method,'params':params})
+        return request_id
+    def acp_notify(self, method, params):
+        self.send({'jsonrpc':'2.0','method':method,'params':params})
+    def acp_flush_prompt(self):
+        # session/prompt settles only when the whole turn does, so its response — not
+        # a separate event — is the turn's terminal signal.
+        if not self.pending_prompt: return
+        request_id, text = self.pending_prompt
+        self.pending_prompt = None
+        self.acp_request('session/prompt', {'sessionId':self.state['resume'],'prompt':[{'type':'text','text':text}]}, 'prompt:'+request_id)
+        receipt = self.state.get('requests',{}).get(request_id)
+        if receipt and receipt['status'] == 'submitting':
+            receipt['status'] = 'submitted'
+            if self.state.get('turnState') == 'submitting': self.state['turnState'] = 'submitted'
+    def acp_apply_options(self, options):
+        s = self.state
+        s['acpOptions'] = options
+        dsh_catalog_update(options)
+        model_option = next((o for o in options if o.get('id') == 'model'), None)
+        if model_option and model_option.get('currentValue'):
+            try:
+                provider, model = json.loads(model_option['currentValue'])
+                s['model'] = model; s['provider_id'] = provider
+            except Exception: pass
+        effort = next((o for o in options if o.get('id') == 'reasoning_effort'), None)
+        if effort is not None:
+            # The empty value is "provider default", which is a real choice, not an
+            # unknown level; keep it distinct from a named effort.
+            s['thinking'] = effort.get('currentValue') or None
+    def acp_event(self, frame):
+        # Fold the ACP wire shape into the per-provider event vocabulary event()
+        # already switches on. Unknown frames are dropped rather than failing the
+        # stream, because dsh is a preview runtime that may add message kinds.
+        if 'method' in frame and 'id' in frame:
+            return {'type':'acp_request','wireId':frame['id'],'method':frame['method'],'params':frame.get('params') or {}}
+        if 'method' in frame:
+            return {'type':'acp_notification','method':frame['method'],'params':frame.get('params') or {}}
+        if 'id' in frame:
+            kind = self.acp_pending.pop(frame['id'], 'unknown')
+            return {'type':'acp_response','kind':kind,'result':frame.get('result'),'error':frame.get('error')}
+        return None
+    def acp_fail_prompt(self, message):
+        self.pending_prompt = None
+        self.state['busy'] = False; self.state['error'] = message
+        self.finish('failed'); self.touch(True)
+    def acp_sync_config(self):
+        # Apply the workbench-side model/thinking wishes after (re)opening, then let
+        # the parked prompt go. Each step waits for the runtime's answer so a prompt
+        # never gets pinned to a route the user already replaced.
+        s = self.state
+        options = s.get('acpOptions') or []
+        model_option = next((o for o in options if o.get('id') == 'model'), None)
+        if s.get('model') and model_option and model_option.get('currentValue'):
+            try: current = json.loads(model_option['currentValue'])[1]
+            except Exception: current = None
+            if current and s['model'] != current:
+                target = None
+                for group in model_option.get('options', []):
+                    for item in group.get('options', []):
+                        try:
+                            if json.loads(item['value'])[1] == s['model']: target = target or item['value']
+                        except Exception: pass
+                if target:
+                    self.acp_request('session/set_config_option', {'sessionId':s['resume'],'configId':'model','value':target}, 'set_config')
+                    return
+                s['error'] = 'dsh 不认识模型 %s，沿用当前模型' % s['model']
+        effort = next((o for o in options if o.get('id') == 'reasoning_effort'), None)
+        if s.get('thinking') and effort is not None:
+            values = [o.get('value') for o in effort.get('options', [])]
+            if s['thinking'] != effort.get('currentValue') and s['thinking'] in values:
+                self.acp_request('session/set_config_option', {'sessionId':s['resume'],'configId':'reasoning_effort','value':s['thinking']}, 'set_config')
+                return
+        self.acp_flush_prompt()
+    def acp_update(self, update):
+        s = self.state
+        kind = update.get('sessionUpdate')
+        if s['busy'] and s.get('turnState') in ('submitting','submitted','accepted'):
+            self.finish('running')
+        if kind in ('agent_message_chunk', 'agent_thought_chunk'):
+            message_id = update.get('messageId') or 'live'
+            blocks = self.acp_blocks.setdefault(message_id, [])
+            content = update.get('content') or {}
+            if kind == 'agent_thought_chunk':
+                blocks.append({'type':'thinking','thinking':content.get('text','')})
+            elif content.get('type') == 'text':
+                blocks.append({'type':'text','text':content.get('text','')})
+            elif content.get('type') == 'resource_link':
+                blocks.append({'type':'text','text':'[%s](%s)' % (content.get('name') or content.get('uri') or '资源', content.get('uri') or '')})
+            else:
+                blocks.append({'type':'text','text':'[dsh 发出了暂不支持的内容类型 %s]' % content.get('type')})
+            self.upsert({'role':'assistant','content':list(blocks),'timestamp':time.time()}, 'dsh:'+message_id)
+            return True
+        if kind == 'tool_call':
+            self.upsert({'role':'assistant','content':[{'type':'toolCall','id':update.get('toolCallId'),'name':update.get('title') or 'tool','arguments':update.get('rawInput') if update.get('rawInput') is not None else {}}],'timestamp':time.time()}, 'dsh-tool:'+str(update.get('toolCallId')))
+            return True
+        if kind == 'tool_call_update':
+            texts = []
+            for part in update.get('content') or []:
+                body = part.get('content') or {}
+                if body.get('type') == 'text' and body.get('text'): texts.append(body['text'])
+            self.upsert({'role':'toolResult','toolCallId':update.get('toolCallId'),'content':'\n'.join(texts),'isError':update.get('status') == 'failed','timestamp':time.time()}, 'dsh-result:'+str(update.get('toolCallId')))
+            return True
+        if kind == 'usage_update':
+            s['context'] = {'tokens':update.get('used'),'limit':update.get('size')}
+            return True
+        if kind == 'config_option_update' and update.get('configOptions'):
+            self.acp_apply_options(update['configOptions'])
+            return True
+        return False
     def read(self):
         try:
             for line in self.process.stdout:
                 event = json.loads(line)
+                if self.state['provider'] == 'dsh': event = self.acp_event(event)
+                if event is None: continue
                 if event.get('type') == 'rpc_chunk':
                     if event['index'] == 0: self.chunks = {'id':event['chunkId'],'count':event['count'],'size':event['byteLength'],'parts':[]}
                     c = self.chunks
@@ -232,6 +420,78 @@ class Session:
             s['resume']=e.get('session_id',s.get('resume')); durable=True
             if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result','Qoder 执行失败')
         elif provider == 'qoder' and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
+        elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
+            if e.get('error'):
+                s['error']='dsh 握手失败：'+str(e['error'].get('message','initialize 被拒绝'))
+                if self.pending_prompt: self.acp_fail_prompt(str(e['error'].get('message','握手失败')))
+                durable=True
+            else:
+                if s.get('resume'):
+                    self.acp_request('session/resume', {'sessionId':s['resume'],'cwd':s['cwd']}, 'session_open')
+                else:
+                    self.acp_request('session/new', {'cwd':s['cwd'],'mcpServers':[]}, 'session_open')
+            return
+        elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'session_open':
+            if e.get('error'):
+                s['error']='dsh 会话打开失败：'+str(e['error'].get('message','未知错误'))
+                if self.pending_prompt: self.acp_fail_prompt(s['error'])
+            else:
+                result = e.get('result') or {}
+                if result.get('sessionId'): s['resume'] = result['sessionId']
+                self.acp_apply_options(result.get('configOptions') or [])
+                self.ready.set()
+                self.acp_sync_config()
+            durable=True
+        elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'set_config':
+            if e.get('error'):
+                s['error']='dsh 设置被拒绝：'+str(e['error'].get('message','未知错误'))
+            else:
+                self.acp_apply_options((e.get('result') or {}).get('configOptions') or [])
+                self.acp_sync_config()
+            durable=True
+        elif provider == 'dsh' and t == 'acp_response' and e['kind'].startswith('prompt:'):
+            s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
+            if e.get('error'):
+                message=str(e['error'].get('message','dsh 执行失败'))
+                if message.startswith('Internal error: '): message=message[len('Internal error: '):]
+                # The cancel ack for dsh IS the prompt response; an error racing a
+                # requested stop reads as a stopped turn, not as a failure.
+                if s.get('stopRequested'): s['cancelled']=True
+                elif not s.get('cancelled'): s['error']=message
+            elif (e.get('result') or {}).get('stopReason') == 'cancelled':
+                s['cancelled']=True
+            if s.get('cancelled'): s['stopAcknowledged']=True
+            if not s.get('cancelled') and not s['error']: s['completed']+=1
+            self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
+        elif provider == 'dsh' and t == 'acp_notification' and e['method'] == 'session/update':
+            if (e['params'].get('sessionId')) != s.get('resume'): return
+            durable = self.acp_update(e['params'].get('update') or {})
+            if not durable: return
+        elif provider == 'dsh' and t == 'acp_request' and e['method'] == 'session/request_permission':
+            if (e['params'].get('sessionId')) != s.get('resume'):
+                try: self.send({'jsonrpc':'2.0','id':e['wireId'],'result':{'outcome':{'outcome':'cancelled'}}})
+                except Exception: pass
+                return
+            labels = []; mapping = {}
+            for i, option in enumerate(e['params'].get('options') or []):
+                label = option.get('name') or option.get('kind') or str(option.get('optionId'))
+                if label in mapping: label = '%s (%d)' % (label, i+1)
+                mapping[label] = option.get('optionId'); labels.append(label)
+            interaction_id = 'acp-permission-' + str(e['wireId'])
+            self.permission_options[interaction_id] = {'wireId':e['wireId'],'map':mapping}
+            tool = e['params'].get('toolCall') or {}
+            preview = None
+            if tool.get('rawInput') is not None:
+                preview = json.dumps(tool['rawInput'], ensure_ascii=False)
+                if len(preview) > 400: preview = preview[:400] + '…'
+            s['interactions'].append({'id':interaction_id,'method':'select','title':tool.get('title') or '工具审批','message':preview,'options':labels})
+            durable=True
+        elif provider == 'dsh' and t == 'acp_request':
+            # A server->client request this bridge does not understand must still be
+            # answered, or the agent wedges waiting on a decision slot.
+            try: self.send({'jsonrpc':'2.0','id':e['wireId'],'error':{'code':-32601,'message':'unsupported by the workbench bridge'}})
+            except Exception: pass
+            return
         else: return
         self.touch(durable)
     def snapshot(self, revision=None):
@@ -267,14 +527,20 @@ class Handler(BaseHTTPRequestHandler):
             body=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))) or b'{}') if post else {}
             path=urlparse(self.path).path.split('/')
             if self.path=='/models' and not post:
-                return self.respond(200,{'models':model_catalog()})
+                return self.respond(200,{'models':combined_catalog()})
             with LOCK:
                 if self.path=='/health': result={'version':2}
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
-                    if body['provider'] not in ('omp','qoder') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
+                    if body['provider'] not in ('omp','qoder','dsh') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
                     sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':body['provider'],'title':body.get('title') or '新对话','cwd':body['cwd'],'model':body.get('model',''),'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
-                    s.persist(); SESSIONS[sid]=s; result=s.summary()
+                    s.persist(); SESSIONS[sid]=s
+                    if body['provider']=='dsh':
+                        # Launch at create so the ACP handshake lands before the first
+                        # prompt and the model picker has a live catalog to show.
+                        try: s.launch()
+                        except Exception as e: s.state['error']=str(e); s.touch(True)
+                    result=s.summary()
                 elif len(path)>=3 and path[1]=='sessions':
                     s=SESSIONS[path[2]]
                     if not post and len(path)==5 and path[3]=='requests':
@@ -287,26 +553,52 @@ class Handler(BaseHTTPRequestHandler):
                         if action=='prompt':
                             result=s.prompt(body)
                         elif action=='model':
-                            if s.state['provider']!='omp': raise ValueError('当前 Agent 不支持切换模型')
+                            if s.state['provider'] not in ('omp','dsh'): raise ValueError('当前 Agent 不支持切换模型')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                             provider,model=body.get('provider',''),body.get('model','')
                             if not provider or not model: raise ValueError('请同时指定 provider 和模型')
-                            # set_model takes provider and modelId separately; a combined
-                            # "provider/id" string is rejected by the runtime.
-                            if s.process and s.process.poll() is None:
-                                s.send({'id':str(uuid.uuid4()),'type':'set_model','provider':provider,'modelId':model})
-                                s.send({'id':'state','type':'get_state'})
-                            s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
+                            if s.state['provider']=='dsh':
+                                # Send the runtime's own opaque option value back rather
+                                # than re-serializing [provider, model] ourselves.
+                                options = s.state.get('acpOptions') or []
+                                model_option = next((o for o in options if o.get('id')=='model'), {})
+                                target = next((item['value'] for group in model_option.get('options',[]) for item in group.get('options',[]) if item.get('value')==json.dumps([provider,model],separators=(',',':')) or item.get('value')==json.dumps([provider,model])), None)
+                                if target is None: raise ValueError('dsh 不认识该模型，请同步后重试')
+                                if s.process and s.process.poll() is None and s.ready.is_set():
+                                    s.acp_request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'model','value':target}, 'set_config')
+                                else:
+                                    # Applied by acp_sync_config on the next handshake.
+                                    s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
+                                result={'ok':True}
+                            else:
+                                # set_model takes provider and modelId separately; a combined
+                                # "provider/id" string is rejected by the runtime.
+                                if s.process and s.process.poll() is None:
+                                    s.send({'id':str(uuid.uuid4()),'type':'set_model','provider':provider,'modelId':model})
+                                    s.send({'id':'state','type':'get_state'})
+                                s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
                         elif action=='thinking':
-                            if s.state['provider']!='omp': raise ValueError('当前 Agent 不支持设置思考强度')
+                            if s.state['provider'] not in ('omp','dsh'): raise ValueError('当前 Agent 不支持设置思考强度')
                             level=body.get('level','')
                             if not level: raise ValueError('请指定思考强度')
-                            # The runtime answers success for an unknown level and then
-                            # reports null, so the caller must have validated it already.
-                            if s.process and s.process.poll() is None:
-                                s.send({'id':str(uuid.uuid4()),'type':'set_thinking_level','level':level})
-                                s.send({'id':'state','type':'get_state'})
-                            s.state['thinking']=level; s.touch(True)
+                            if s.state['provider']=='dsh':
+                                if s.state['busy']: raise ValueError('请先停止或完成当前任务')
+                                options = s.state.get('acpOptions') or []
+                                effort = next((o for o in options if o.get('id')=='reasoning_effort'), {})
+                                values = [o.get('value') for o in effort.get('options',[])]
+                                if values and level not in values: raise ValueError('当前模型不支持该思考强度')
+                                if s.process and s.process.poll() is None and s.ready.is_set():
+                                    s.acp_request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'reasoning_effort','value':level}, 'set_config')
+                                else:
+                                    s.state['thinking']=level; s.touch(True)
+                                result={'ok':True}
+                            else:
+                                # The runtime answers success for an unknown level and then
+                                # reports null, so the caller must have validated it already.
+                                if s.process and s.process.poll() is None:
+                                    s.send({'id':str(uuid.uuid4()),'type':'set_thinking_level','level':level})
+                                    s.send({'id':'state','type':'get_state'})
+                                s.state['thinking']=level; s.touch(True)
                         elif action=='command':
                             if s.state['provider']!='omp': raise ValueError('当前 Agent 不支持命令')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
@@ -327,7 +619,17 @@ class Handler(BaseHTTPRequestHandler):
                         elif action=='abort':
                             if not body.get('turnId') or body['turnId']!=s.state.get('turnId'): raise ValueError('轮次已变化，请重新同步')
                             if s.state['busy'] and not s.state.get('stopRequested'):
-                                s.send({'type':'abort','turnId':body['turnId']})
+                                if s.state['provider']=='dsh':
+                                    if s.pending_prompt is not None:
+                                        # The prompt never reached the runtime, so the
+                                        # stop settles locally instead of on the wire.
+                                        s.pending_prompt=None; s.state['cancelled']=True; s.state['busy']=False
+                                        s.finish('stopped')
+                                    elif s.state.get('resume'):
+                                        s.acp_notify('session/cancel', {'sessionId':s.state['resume']})
+                                    else: raise ValueError('会话尚未完成握手，请稍候')
+                                else:
+                                    s.send({'type':'abort','turnId':body['turnId']})
                                 s.state['stopRequested']=True; s.touch(True)
                         elif action=='answer':
                             item=next(x for x in s.snapshot()['interactions'] if x['id']==body['id'])
@@ -336,8 +638,23 @@ class Handler(BaseHTTPRequestHandler):
                                 if body.get('cancelled'): answer['cancelled']=True
                                 elif item['method']=='confirm': answer['confirmed']=body.get('allow',False)
                                 else: answer['value']=body['value']
-                            else: answer={'type':'answer',**body}
-                            s.send(answer); s.state['interactions']=[x for x in s.state['interactions'] if x['id']!=body['id']]; s.touch(True)
+                                s.send(answer)
+                            elif s.state['provider']=='dsh':
+                                pending = s.permission_options.get(body['id'])
+                                if not pending: raise ValueError('该审批已失效，请同步会话后重试')
+                                if body.get('cancelled'):
+                                    outcome = {'outcome':'cancelled'}
+                                else:
+                                    option_id = pending['map'].get(body.get('value'))
+                                    if option_id is None: raise ValueError('未知的审批选项')
+                                    outcome = {'outcome':'selected','optionId':option_id}
+                                # Pop only after the answer is accepted on the wire; a
+                                # rejected choice must not destroy the mapping.
+                                s.send({'jsonrpc':'2.0','id':pending['wireId'],'result':{'outcome':outcome}})
+                                s.permission_options.pop(body['id'], None)
+                            else:
+                                s.send({'type':'answer',**body})
+                            s.state['interactions']=[x for x in s.state['interactions'] if x['id']!=body['id']]; s.touch(True)
                         elif action=='archive':
                             if s.state['busy']: raise ValueError('请先停止或完成任务')
                             s.state['archived']=body['archived']; s.touch(True)

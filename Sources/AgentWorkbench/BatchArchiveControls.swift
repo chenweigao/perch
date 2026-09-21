@@ -4,6 +4,7 @@ import WorkbenchCore
 /// One batch entry point: the count, what it will leave behind, and the outcome of
 /// the last run with undo. Deliberately not a per-item confirmation dialog.
 struct BatchArchiveControls: View {
+    var showsArchiveAction = true
     let count: Int
     let blockedSummary: String?
     let isRunning: Bool
@@ -14,19 +15,21 @@ struct BatchArchiveControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Button(action: onArchive) {
-                    Label(isRunning ? "正在归档…" : "归档已完成 \(count)", systemImage: "archivebox")
+            if showsArchiveAction {
+                HStack(spacing: 10) {
+                    Button(action: onArchive) {
+                        Label(isRunning ? "正在归档…" : "归档已完成 \(count)", systemImage: "archivebox")
+                    }
+                    .disabled(count == 0 || isRunning)
+                    .help(count == 0 ? "当前范围内没有可归档的已完成会话" : "批量归档当前范围内本轮已正常结束且结果已查看的会话")
+                    .accessibilityLabel("归档已完成的 \(count) 个会话")
+                    if isRunning { ProgressView().controlSize(.small) }
                 }
-                .disabled(count == 0 || isRunning)
-                .help(count == 0 ? "当前范围内没有可归档的已完成会话" : "批量归档当前范围内本轮已正常结束且结果已查看的会话")
-                .accessibilityLabel("归档已完成的 \(count) 个会话")
-                if isRunning { ProgressView().controlSize(.small) }
-            }
-            // The count alone reads as "everything else is unfinished"; name the reasons.
-            if let blockedSummary {
-                Text(blockedSummary).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // Explain why other sessions are left out of the batch.
+                if let blockedSummary {
+                    Text(blockedSummary).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             if let result, result.isFinished {
                 HStack(spacing: 10) {

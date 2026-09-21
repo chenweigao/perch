@@ -19,6 +19,7 @@ struct ProtocolTests {
         try checkRunControl()
         try checkConnectivity()
         try checkDashboard()
+        checkTaskGroup()
         checkSidebar()
         try checkModelSelection()
         try checkSlashCommands()

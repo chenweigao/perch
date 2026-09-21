@@ -79,7 +79,7 @@ struct WorkspaceHome: View {
                 }
                 if !model.kimi.online || !model.native.online || model.connections.contains(where: { !$0.online }) {
                     VStack(alignment: .leading, spacing: 6) {
-                        if !model.native.online { Label("OMP / Qoder CN · 状态未同步", systemImage: "wifi.slash") }
+                        if !model.native.online { Label("原生对话 · 状态未同步", systemImage: "wifi.slash") }
                         if !model.kimi.online { Label("Kimi · \(model.kimi.state)", systemImage: "wifi.slash") }
                         ForEach(model.connections.filter { !$0.online }) { connection in
                             Label("\(connection.host.name) 终端 · \(connection.state)", systemImage: "wifi.slash")
@@ -128,6 +128,7 @@ struct WorkspaceHome: View {
 struct WorkItemGroupEditor: View {
     @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
+    var sessionsOnly = false
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var goal = ""
@@ -136,13 +137,16 @@ struct WorkItemGroupEditor: View {
     @State private var sessions = Set<SessionReference>()
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
-            Text(model.editingGroup == nil ? L("新建任务组") : L("编辑任务组")).font(.title2.weight(.semibold))
+            Text(sessionsOnly ? L("关联已有会话") : model.editingGroup == nil ? L("新建任务组") : L("编辑任务组"))
+                .font(.title2.weight(.medium))
             Text("关联原生对话与终端，记下共同目标和下一步。归组不共享对话上下文。")
                 .font(.callout).foregroundStyle(.secondary)
-            Form {
-                TextField("名称", text: $name, prompt: Text("例如：推理仿真前端优化"))
-                TextField("目标", text: $goal, prompt: Text("做到什么程度算完成？"), axis: .vertical).lineLimit(2...3)
-                TextField("下一步", text: $nextStep, prompt: Text("回来后先做什么？"), axis: .vertical).lineLimit(2...3)
+            if !sessionsOnly {
+                Form {
+                    TextField("名称", text: $name, prompt: Text("例如：推理仿真前端优化"))
+                    TextField("目标", text: $goal, prompt: Text("做到什么程度算完成？"), axis: .vertical).lineLimit(2...3)
+                    TextField("下一步", text: $nextStep, prompt: Text("回来后先做什么？"), axis: .vertical).lineLimit(2...3)
+                }
             }
             TextField("搜索要关联的对话或终端", text: $search).textFieldStyle(.roundedBorder)
             ScrollView {

@@ -1,3 +1,5 @@
+> Follow-up: [bounded transcript teardown and same-source A/B](PERFORMANCE-RELEASE-BUDGET.md). The initial measurements and uncertainty below are retained as historical evidence.
+
 # Performance paths branch: isolated Mac comparison
 
 2026-09-21. Tested `origin/fix/performance-paths` at `833b92c` on top of current main `5cd50ee`. The branch merged without source conflicts. **The decoding, repeated-search and idle-snapshot optimizations are effective; this is not acceptance of improved overall navigation or scrolling. Do not merge on an overall smoothness claim.**

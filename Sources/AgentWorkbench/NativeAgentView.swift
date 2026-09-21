@@ -146,15 +146,16 @@ struct NativeAgentView: View {
     }
 }
 
-/// Model, reasoning effort and remaining context for an OMP session. Only OMP
-/// answers set_model/set_thinking_level, so a Qoder session keeps the plain label.
+/// Model, reasoning effort and remaining context for runtimes that accept route
+/// changes — OMP via set_model/set_thinking_level, dsh via ACP config options. A
+/// Qoder session keeps the plain label.
 struct NativeModelControls: View {
     @ObservedObject var connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
 
     var body: some View {
-        if snapshot.provider == .omp {
+        if snapshot.provider == .omp || snapshot.provider == .dsh {
             let current = connection.model(for: snapshot)
             HStack(spacing: 10) {
                 ModelControlWidth {
@@ -349,7 +350,7 @@ struct NewConversationSheet: View {
                         Button(connection.host.name) { model.activateAgentEnvironment(connection.id) }
                     }
                 } label: { Label(kimi.host.name, systemImage: "server.rack") }
-                Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach([SessionKind.kimi, .omp, .qoder], id: \.self) { Text($0.label).tag($0) } }.frame(width: 160)
+                Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach([SessionKind.kimi, .omp, .qoder, .dsh], id: \.self) { Text($0.label).tag($0) } }.frame(width: 200)
                 Spacer()
                 if provider == .kimi { ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel) }
             }.disabled(creating)
@@ -359,7 +360,7 @@ struct NewConversationSheet: View {
                 Menu("Recent") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }
             }.disabled(creating)
             if provider != .kimi {
-                TextField(provider == .qoder ? "Model (default: Qwen3.8-Flash)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
+                TextField(provider == .qoder ? "Model (default: Qwen3.8-Flash)" : provider == .dsh ? "Model (default: the dsh catalog's current route)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
             if !(provider == .kimi ? kimi.online : native.online) {
                 Text("Connecting to \(kimi.host.name)…").font(.caption).foregroundStyle(.secondary)

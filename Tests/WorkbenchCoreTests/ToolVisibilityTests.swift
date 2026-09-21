@@ -63,8 +63,8 @@ func checkToolVisibility() throws {
     precondition(unidentified.tools.count == 1 && unidentified.tools.values.first?.status == .failed)
     let approved = VisibleTool(id: "approval", name: "Shell", input: nil, status: .awaitingApproval)
     precondition(approved.staysVisible)
-    // Same presentation contract for both native adapters, without invoking either.
-    for provider in ["omp", "qoder"] {
+    // Same presentation contract for every native adapter, without invoking any.
+    for provider in ["omp", "qoder", "dsh"] {
         let value = p.update(user + call, sessionID: provider,
                              running: ToolVisibilityProjection.runningIDs(in: user + call, busy: true))
         precondition(ids(value) == ["t"] && value.tools["t"]?.status == .running)

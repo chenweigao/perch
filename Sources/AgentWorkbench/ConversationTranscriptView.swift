@@ -222,11 +222,14 @@ private final class ConversationDocumentView: NSView {
         drainingRetiredControllers = true
         Task { @MainActor in
             while retiredControllers.count > 0 {
-                try? await Task.sleep(for: .milliseconds(10))
-                autoreleasepool {
-                    for _ in 0..<min(4, retiredControllers.count) {
-                        retiredControllers.removeLastObject()
-                    }
+                // Short slices also need prompt rescheduling so retired graphs do not accumulate.
+                try? await Task.sleep(for: .milliseconds(1))
+                let deadline = ProcessInfo.processInfo.systemUptime + 0.002
+                for _ in 0..<min(4, retiredControllers.count) {
+                    // Drain each graph's autoreleases before checking elapsed time.
+                    // Four complex rows must not consume one long main-thread slice.
+                    autoreleasepool { retiredControllers.removeLastObject() }
+                    if ProcessInfo.processInfo.systemUptime >= deadline { break }
                 }
             }
             drainingRetiredControllers = false
