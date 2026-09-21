@@ -1,0 +1,56 @@
+{
+  "build" : {
+    "compiler" : "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256" : "825d0ac9108edf81843b5337c6ccd7747b0d67c8eb3ea90d9a1f595d3dfc1034",
+    "package_resolved_sha256" : "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit" : "4c051fa8189b625e0d86b089bc769e9e8d850fd9",
+    "source_sha256" : "c3ae932177d8333c4e6e6f5381a4e42f6f365de4992861aaad98c1337e232376"
+  },
+  "commit" : "4c051fa8189b625e0d86b089bc769e9e8d850fd9",
+  "failures" : {
+    "checks" : [
+
+    ]
+  },
+  "fixture-195" : {
+    "entry" : "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0195b:0",
+    "mounted_rows" : [
+      "thinking:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0196b:0",
+      "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0196a:0",
+      "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0195b:0"
+    ],
+    "selected" : [
+      "fixture-195"
+    ]
+  },
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "search",
+  "recreates_timeline" : false,
+  "sessions" : 500,
+  "status" : "passed",
+  "timestamp" : "2026-09-21T18:43:41Z",
+  "中文换行" : {
+    "entry" : "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0000b:0",
+    "mounted_rows" : [
+      "thinking:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0001b:0",
+      "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0001a:0",
+      "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0000b:0"
+    ],
+    "selected" : [
+      "中文换行"
+    ]
+  },
+  "第 6 轮结果" : {
+    "entry" : "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0005b:0",
+    "mounted_rows" : [
+      "thinking:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0006b:0",
+      "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0006a:0",
+      "text:BAA32230-FAD9-4B91-8D59-63F11C0B45CB:omp:session-1:0005b:0"
+    ],
+    "selected" : [
+      "第 6 轮结果"
+    ]
+  }
+}

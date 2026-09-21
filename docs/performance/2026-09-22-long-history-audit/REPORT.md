@@ -59,3 +59,29 @@ Navigation Preview 使用生产 ConversationTranscript/ConversationScrollView，
 尝试：在 sizeThatFits/随后 setFrameSize 两种入口捕获已有阅读锚点，等待 committed width 后恢复。出现过 165→165 pt 的成功，但两次最终复验一过一败（r03-width-order-1/2）。**撤回全部宽度候选**，未把偶尔成功当成修复。失败结果、候选 patch 均保留。
 
 验收同时揭示了新挂载消息的搜索选区偶发丢失，目标行始终还在 mounted rows。转入下一轮单独处理，保持本轮未解决状态。
+
+## 第 4 轮：新挂载搜索结果未建立原生选区
+
+触发：在未完整读过的 200 轮历史依次查找第 196 轮代码 fixture-195、第 6 轮标题、首轮表格“中文换行”。修复前出现标题/表格目标行已挂载而 selected text 为空，见 r03 的独立失败记录。
+
+执行路径：PerchRevealConversationHit → ConversationDocumentView.reveal → mount/measure → 下一主线程队列遍历 ReplyTextView。仅把动作延后一队列不能保证新 NSHostingController 的原生文本树完成布局。
+
+最小修复：在既有异步回调里对目标行执行一次 layoutSubtreeIfNeeded，再使用原来的查找、选区和 scrollRangeToVisible。不加重试、缓存、预加载或新的搜索语义。
+
+验证：去掉诊断日志后的最终候选连续 3 个独立进程、9 个代码/标题/表格查询全部建立正确原生选区；完整 200 轮阅读、末尾、保留宿主和底部进入后的前插回归通过。缩放候选已全部撤回，interactions 模式仍保留严格 1 pt 断言，用来复现未解决位移；search 模式只独立验收搜索，不隐瞒 interactions 的失败。
+
+同 fixture 的 b66181a 对照与最终构建结果补充于收尾段。
+
+### 最终同 fixture 短对照
+
+使用最终 Navigation fixture 分别重建 b66181a 生产源码与候选，基线仅补同样的 TRANSCRIPT_CHECKS 观察接口。fixture/Package.resolved SHA256 一致；生产 source SHA 与二进制 SHA 分别记录。过程脚本保存在 compare-matched.py.txt，临时源码由 finally 恢复。构建和计时分离。
+
+| 指标 | b66181a | 候选 |
+| --- | ---: | ---: |
+| 首次向下 p95 ms | 30.79 | 32.21 |
+| 向上重读 p95 ms | 35.07 | 33.58 |
+| RSS 开始 / 向下 / 向上 MiB | 120.9 / 145.4 / 147.3 | 120.9 / 143.0 / 146.4 |
+
+两者均全覆盖 200 轮及末尾，文档高度一致、宿主数有界。这是短对照，不提供统计显著加速或主观流畅度结论。b66181a 的同 fixture 搜索在这一次也通过；原选区问题是间歇性问题，不是每次跳转都会失败。候选独立三次回归全通过。
+
+最终完整 Release App build/sign 通过，Reading Preview 重新构建通过。生产改动仅为前插锚点与单目标行搜索布局；没有修改 Core、协议、消息解析语义或 Composer。

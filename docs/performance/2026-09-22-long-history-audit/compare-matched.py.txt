@@ -1,0 +1,26 @@
+from pathlib import Path
+import os,subprocess
+root=Path.cwd(); local=root/'.local/long-history-audit'; source=root/'Sources/AgentWorkbench/ConversationTranscriptView.swift'
+candidate=source.read_text();(local/'candidate-before-matched.swift').write_text(candidate)
+baseline=subprocess.check_output(['git','show','b66181a:Sources/AgentWorkbench/ConversationTranscriptView.swift'],text=True)
+# Identical fixture-only observation methods; production body remains b66181a.
+start=candidate.index('    fileprivate var readingAnchor:')
+end=candidate.index('    #endif',start)
+baseline=baseline.replace('    fileprivate var mountedHostCount: Int { mounted.count }\n','    fileprivate var mountedHostCount: Int { mounted.count }\n'+candidate[start:end],1)
+start=candidate.index('    static func readingAnchor(in root:')
+end=candidate.index('    /// Fixture-only inspection',start)
+baseline=baseline.replace('extension ConversationTranscript {\n','extension ConversationTranscript {\n'+candidate[start:end],1)
+env=dict(os.environ,SWIFTPM_CUSTOM_LIBS_DIR=str(root/'.local/swiftpm-libs'),NAVIGATION_SCROLL_STEP_POINTS='12')
+def build(name):
+ with (local/name).open('w') as log:subprocess.run(['scripts/build-navigation-preview.sh'],env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
+def run(mode,name):
+ return subprocess.run(['python3','scripts/run-navigation-check.py',mode,'--output',str(local/name),'--switches','8'],env=env).returncode
+try:
+ source.write_text(baseline)
+ build('build-matched-baseline.log')
+ run('reading','matched-baseline-reading')
+ run('search','matched-baseline-search')
+finally:
+ source.write_text(candidate)
+ build('build-matched-candidate.log')
+run('reading','matched-candidate-reading')

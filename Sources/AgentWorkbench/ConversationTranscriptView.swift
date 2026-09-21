@@ -149,6 +149,9 @@ private final class ConversationDocumentView: NSView {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.sessionId == target.session,
                   let view = self.controllers[target.hit.entryID]?.view else { return }
+            // A newly mounted host may not have created its native text views yet.
+            // Complete that host's layout before looking for the selected range.
+            view.layoutSubtreeIfNeeded()
             var remaining = target.hit.occurrence
             func select(in view: NSView) -> Bool {
                 if let text = view as? ReplyTextView, text.isConversationBodyText {

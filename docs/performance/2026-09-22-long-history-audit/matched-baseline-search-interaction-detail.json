@@ -1,0 +1,40 @@
+{
+  "failures" : {
+    "checks" : [
+
+    ]
+  },
+  "fixture-195" : {
+    "entry" : "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0195b:0",
+    "mounted_rows" : [
+      "thinking:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0196b:0",
+      "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0196a:0",
+      "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0195b:0"
+    ],
+    "selected" : [
+      "fixture-195"
+    ]
+  },
+  "中文换行" : {
+    "entry" : "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0000b:0",
+    "mounted_rows" : [
+      "thinking:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0001b:0",
+      "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0001a:0",
+      "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0000b:0"
+    ],
+    "selected" : [
+      "中文换行"
+    ]
+  },
+  "第 6 轮结果" : {
+    "entry" : "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0005b:0",
+    "mounted_rows" : [
+      "thinking:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0006b:0",
+      "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0006a:0",
+      "text:51841AC4-EB6F-4E79-B436-37C4AD3630A5:omp:session-1:0005b:0"
+    ],
+    "selected" : [
+      "第 6 轮结果"
+    ]
+  }
+}

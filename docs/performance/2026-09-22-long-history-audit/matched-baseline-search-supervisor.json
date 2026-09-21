@@ -1,0 +1,10 @@
+{
+  "status": "exited",
+  "mode": "search",
+  "timeout_s": 120,
+  "binary_sha256": "4060269440545a2eb6a869f3b77ed41c357da81301bbe201fc5c7c32a79a6963",
+  "pid": 63064,
+  "exit_code": 0,
+  "elapsed_s": 5.124416833,
+  "passed": true
+}

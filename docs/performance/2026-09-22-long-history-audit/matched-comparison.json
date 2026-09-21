@@ -1,0 +1,80 @@
+{
+  "baseline_production_commit": "b66181a",
+  "fixture_sha256": "825d0ac9108edf81843b5337c6ccd7747b0d67c8eb3ea90d9a1f595d3dfc1034",
+  "baseline_source_sha256": "2d63f1788118a2e69c11eba4046351f0cf6e4bbc2f5eea1f24bda85a32b480b7",
+  "candidate_source_sha256": "c3ae932177d8333c4e6e6f5381a4e42f6f365de4992861aaad98c1337e232376",
+  "baseline": {
+    "reading_step_ms": {
+      "count": 358,
+      "max_ms": 60.496833408251405,
+      "median_ms": 19.487875048071146,
+      "over_16_7ms": 216,
+      "over_100ms": 0,
+      "p95_ms": 30.79445834737271
+    },
+    "upward_reading_step_ms": {
+      "count": 356,
+      "max_ms": 44.284833245910704,
+      "median_ms": 12.93600001372397,
+      "over_16_7ms": 132,
+      "over_100ms": 0,
+      "p95_ms": 35.06854164879769
+    },
+    "warm_scroll": {
+      "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+      "scroll_step_ms": {
+        "count": 1200,
+        "document_height": 106745,
+        "final_document_height": 106745,
+        "max_ms": 24.25970835611224,
+        "median_ms": 0.6485417252406478,
+        "over_16_7ms": 8,
+        "over_100ms": 0,
+        "p95_ms": 3.3569165971130133,
+        "step_points": 12,
+        "viewport_height": 600
+      },
+      "steps": 1200
+    },
+    "resident_mb_before_reading": 120.90625,
+    "resident_mb_after_downward": 145.4375,
+    "resident_mb_after_upward": 147.328125
+  },
+  "candidate": {
+    "reading_step_ms": {
+      "count": 358,
+      "max_ms": 49.57233334425837,
+      "median_ms": 19.23829165752977,
+      "over_16_7ms": 219,
+      "over_100ms": 0,
+      "p95_ms": 32.21191675402224
+    },
+    "upward_reading_step_ms": {
+      "count": 356,
+      "max_ms": 38.223416660912335,
+      "median_ms": 12.203958351165056,
+      "over_16_7ms": 129,
+      "over_100ms": 0,
+      "p95_ms": 33.576708287000656
+    },
+    "warm_scroll": {
+      "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+      "scroll_step_ms": {
+        "count": 1200,
+        "document_height": 106745,
+        "final_document_height": 106745,
+        "max_ms": 27.011166675947607,
+        "median_ms": 0.7013333961367607,
+        "over_16_7ms": 8,
+        "over_100ms": 0,
+        "p95_ms": 4.0049166418612,
+        "step_points": 12,
+        "viewport_height": 600
+      },
+      "steps": 1200
+    },
+    "resident_mb_before_reading": 120.875,
+    "resident_mb_after_downward": 143.015625,
+    "resident_mb_after_upward": 146.390625
+  }
+}

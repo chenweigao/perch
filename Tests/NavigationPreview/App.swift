@@ -46,6 +46,7 @@ final class NavigationMarker {
 final class NavigationModel: ObservableObject {
     @Published var selected: String = ""
     @Published var search = ""
+    @Published var narrow = false
     @Published var showArchived = false
     @Published var inGroup = false
     @Published var conversation: KimiConversation?
@@ -127,6 +128,7 @@ struct NavigationRoot: View {
             }.frame(width: 316)
             Divider()
             NavigationConversation(model: model)
+                .frame(width: model.narrow ? 492 : nil)
                 .id(ProcessInfo.processInfo.environment["NAVIGATION_RECREATE"] == "1" ? model.selected : "shared")
                 .frame(maxWidth: .infinity)
         }.frame(maxHeight: .infinity).preferredColorScheme(.light)
@@ -486,6 +488,73 @@ final class NavigationRunner {
     }
     #endif
 
+    #if TRANSCRIPT_CHECKS
+    /// Check actual native text selection and reading memory across layout and session changes.
+    func readingInteractions(searchOnly: Bool = false) async throws -> [String: Any] {
+        let targets = try warmedTargets()
+        guard let host = model.host else { throw NavigationError("missing host") }
+        _ = try await switchTo(targets[0], host: host)
+        guard let scroll = findScrollView(host) else { throw NavigationError("missing scroll") }
+        func settle() async throws {
+            for _ in 0..<20 {
+                try await Task.sleep(for: .milliseconds(16))
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            }
+        }
+        var report: [String: Any] = [:]
+        var failures: [String] = []
+        func record(_ name: String, _ value: [String: Any]) throws {
+            report[name] = value
+            try writeNavigationArtifact("interaction-detail.json", report)
+        }
+        for query in ["fixture-195", "第 6 轮结果", "中文换行"] {
+            guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: query, running: false).first else {
+                throw NavigationError("fixture query has no hit: \(query)")
+            }
+            NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: hit, query: query))
+            try await settle()
+            var stack = [scroll as NSView], selected: [String] = [], rows: [String] = []
+            while let view = stack.popLast() {
+                if let id = view.identifier?.rawValue { rows.append(id) }
+                if let text = view as? ReplyTextView, text.selectedRange().length > 0 {
+                    selected.append((text.string as NSString).substring(with: text.selectedRange()))
+                }
+                stack.append(contentsOf: view.subviews)
+            }
+            try record(query, ["selected": selected, "entry": hit.entryID, "mounted_rows": rows])
+            if !selected.contains(query) { failures.append("search: " + query) }
+        }
+        if searchOnly {
+            try record("failures", ["checks": failures])
+            guard failures.isEmpty else { throw NavigationError("search failures: \(failures)") }
+            return report
+        }
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: 1800))
+        scroll.reflectScrolledClipView(scroll.contentView)
+        try await settle()
+        guard let before = ConversationTranscript.readingAnchor(in: scroll) else { throw NavigationError("missing anchor") }
+        ConversationReadingMemory.shared.following[targets[0]] = false
+        model.narrow = true
+        try await settle()
+        guard let narrow = ConversationTranscript.readingAnchor(in: scroll) else { throw NavigationError("missing resized anchor") }
+        try record("resize", ["before_entry": before.entry, "after_entry": narrow.entry,
+                              "before_offset": before.offset, "after_offset": narrow.offset])
+        if before.entry != narrow.entry || abs(before.offset - narrow.offset) > 1 { failures.append("resize anchor") }
+        ConversationReadingMemory.shared.following[targets[0]] = false
+        _ = try await switchTo(targets[1], host: host)
+        try await settle()
+        _ = try await switchTo(targets[0], host: host)
+        try await settle()
+        guard let restored = ConversationTranscript.readingAnchor(in: scroll) else { throw NavigationError("missing restored anchor") }
+        try record("session_return", ["before_entry": narrow.entry, "after_entry": restored.entry,
+                                      "before_offset": narrow.offset, "after_offset": restored.offset])
+        if narrow.entry != restored.entry || abs(narrow.offset - restored.offset) > 1 { failures.append("session return anchor") }
+        try record("failures", ["checks": failures])
+        guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
+        return report
+    }
+    #endif
+
     /// Workbench → archive → task group → conversation round trips, plus search
     /// keystrokes issued *while* the transcript is being scrolled. The second part
     /// answers whether input still lands during scrolling, which a scroll-only or
@@ -758,6 +827,8 @@ struct NavigationPreviewApp: App {
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
             if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
+            else if mode == "search" { report.merge(try await runner.readingInteractions(searchOnly: true)) { a, _ in a } }
+            else if mode == "interactions" { report.merge(try await runner.readingInteractions()) { a, _ in a } }
             else if mode == "anchor" { report.merge(try await runner.prependAnchor()) { a, _ in a } }
             else if mode == "scroll" { report.merge(try await runner.scrollFrames()) { a, _ in a } }
             else if mode == "soak" {
