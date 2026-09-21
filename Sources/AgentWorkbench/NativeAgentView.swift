@@ -92,6 +92,7 @@ struct NativeAgentView: View {
                     VStack(spacing: 12) {
                         MessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                                       set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
+                                        placeholder: L("Continue this task, or type / for commands…"),
                                         accessibilityLabel: "Message \(s.provider.label)",
                                         canSend: canSend(s),
                                         onSend: { connection.send(mode: defaultMode(s)) },
@@ -146,6 +147,7 @@ struct NativeAgentView: View {
         case .down: palette.move(1, count: completion.matches.count); return true
         case .enter, .tab:
             guard let command = palette.choice(in: completion) else { return false }
+            if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
             apply(command, completion, to: s.id)
             return true
         case .escape: palette.dismiss(draft); return true

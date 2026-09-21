@@ -236,6 +236,10 @@ final class NativeAgentConnection: ObservableObject {
             run(invocation.command, arguments: invocation.arguments, for: id, draft: text)
             return
         }
+        if SlashCommands.invocation(in: text, from: [AgentCommand(name: "goal")]) != nil {
+            actionError = L("This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation.")
+            return
+        }
         guard queue.enqueue(text, for: reference, mode: mode) != nil else { return }
         drafts[id] = ""
         actionError = nil

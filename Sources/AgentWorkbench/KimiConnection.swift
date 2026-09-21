@@ -18,6 +18,8 @@ final class KimiConnection: ObservableObject {
     func state(locale: Locale) -> String { L(stateMessage, locale: locale) }
     @Published var error: String?
     @Published var actionError: String?
+    @Published private(set) var commandFeedback: [String: String] = [:]
+    @Published private(set) var commandErrors: [String: String] = [:]
     @Published var models: [JSONValue] = []
     @Published var modelChoices: [String: String] = [:]
     @Published var thinkingChoices: [String: ThinkingLevel] = [:]
@@ -381,9 +383,44 @@ final class KimiConnection: ObservableObject {
             return
         }
         guard !sendingSessions.contains(id) else { return }
-        let text = drafts[id] ?? ""
+        var text = drafts[id] ?? ""
+        var startingGoal = false
         let files = attachments[id] ?? []
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        commandErrors[id] = nil
+        do {
+            if let command = try KimiCommand.parse(text) {
+                guard files.isEmpty else { throw WorkbenchError(L("Remove attachments before running a command.")) }
+                let busy = conversation?.snapshot.session.id == id ? conversation?.snapshot.session.busy : sessions.first { $0.id == id }?.busy
+                guard !command.requiresIdle || busy != true else { throw WorkbenchError(L("Wait for the current task to finish before running this command.")) }
+                if case .goalStart = command {
+                    let chosen = modelChoices[id] ?? ""
+                    let current = conversation?.snapshot.session.id == id
+                        ? conversation?.snapshot.session.model ?? "" : sessions.first { $0.id == id }?.model ?? ""
+                    guard !chosen.isEmpty || !current.isEmpty else { throw WorkbenchError(L("Choose a model before starting a goal.")) }
+                }
+                sendingSessions.insert(id)
+                if selectedId == id { actionError = nil }
+                commandFeedback[id] = nil
+                defer { sendingSessions.remove(id) }
+                let submittedDraft = text
+                if let objective = try await runCommand(command, for: id, api: api) {
+                    // Goal creation and the starter prompt are separate Kimi APIs.
+                    // Once created, retain only the objective on a failed send so
+                    // retrying cannot accidentally create the same goal again.
+                    if drafts[id] == submittedDraft { drafts[id] = objective }
+                    text = objective
+                    startingGoal = true
+                } else {
+                    if drafts[id] == submittedDraft { drafts[id] = "" }
+                    return
+                }
+            }
+        } catch {
+            commandErrors[id] = error.localizedDescription
+            if selectedId == id { actionError = error.localizedDescription }
+            return
+        }
         let promptID = "awb_\(UUID().uuidString)"
         let preview: [JSONValue] = [.object(["type": .string("text"), "text": .string(text)])]
             + files.map { .object(["type": .string("file"), "name": .string($0.lastPathComponent)]) }
@@ -418,6 +455,7 @@ final class KimiConnection: ObservableObject {
             if manual { body["permission_mode"] = .string("manual") }
             timings.submitted(promptID)
             let accepted = try await api.post(KimiPrompt.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
+            if startingGoal { commandFeedback[id] = L("Goal created. First message accepted.") }
             if let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) {
                 pendingPrompts[id]?[index] = accepted
             }
@@ -428,9 +466,42 @@ final class KimiConnection: ObservableObject {
             }
         } catch {
             let message = "发送未确认，草稿已保留。请检查会话后再发送。\n" + error.localizedDescription
+            if startingGoal { commandFeedback[id] = L("Goal created; the first message is unconfirmed. Check the conversation before sending again.") }
             updatePrompt(promptID, for: id, status: "unknown", error: message)
             if selectedId == id { actionError = message }
         }
+    }
+    private func runCommand(_ command: KimiCommand, for id: String, api: KimiAPI) async throws -> String? {
+        let path = "/api/v1/sessions/\(id)"
+        switch command {
+        case .help:
+            commandFeedback[id] = KimiCommand.helpText
+        case .goalStatus:
+            let goal = try await api.get(KimiGoal?.self, path + "/goal")
+            if let goal {
+                commandFeedback[id] = "\(goal.objective)\n\(goal.status) · \(goal.turnsUsed) turns · \(goal.tokensUsed) tokens"
+            } else { commandFeedback[id] = L("No active goal.") }
+        case .compact(let instructions):
+            _ = try await api.post(JSONValue.self, path + ":compact", body: .object(["instruction": .string(instructions)]))
+            commandFeedback[id] = L("Compaction requested. Watch the conversation for progress.")
+        case .goalStart(let objective):
+            _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["goal_objective": .string(objective)])]))
+            commandFeedback[id] = L("Goal created. Sending the objective to start work.")
+            return objective
+        case .goalControl(let control):
+            _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["goal_control": .string(control)])]))
+            // The profile resume endpoint starts continuation itself. Do not send
+            // a second prompt or change the user's existing permission mode.
+            switch control {
+            case "pause": commandFeedback[id] = L("Goal paused. An active turn can still finish; use Stop to interrupt it.")
+            case "cancel": commandFeedback[id] = L("Goal removed. An active turn can still finish; use Stop to interrupt it.")
+            default: commandFeedback[id] = L("Goal resume requested.")
+            }
+        case .plan(let enabled):
+            _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["plan_mode": .bool(enabled)])]))
+            commandFeedback[id] = enabled ? L("Plan mode enabled.") : L("Plan mode disabled.")
+        }
+        return nil
     }
     private func updatePrompt(_ promptID: String, for id: String, status: String, error: String? = nil) {
         guard let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) else { return }

@@ -95,6 +95,15 @@ struct ConnectionChecks {
         try await checkSendFailureIsolation()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
+        let unsupportedFixture = TransportFixture()
+        let unsupportedClient = NativeAgentConnection(host: SSHHost(name: "Commands", destination: "fixture"), transport: unsupportedFixture.request)
+        try await unsupportedClient.refresh(); unsupportedClient.select("a")
+        await settle { unsupportedClient.snapshot?.id == "a" }
+        unsupportedClient.drafts["a"] = "/goal fix scrolling"
+        unsupportedClient.send()
+        precondition(unsupportedClient.drafts["a"] == "/goal fix scrolling" && unsupportedClient.actionError != nil)
+        precondition(unsupportedFixture.prompts.isEmpty, "An unavailable goal command must not become a literal model prompt")
+        unsupportedClient.disconnect()
         let fixture = TransportFixture()
         let steeringFixture = TransportFixture()
         let steeringClient = NativeAgentConnection(host: SSHHost(name: "Steer", destination: "fixture"), transport: steeringFixture.request)
