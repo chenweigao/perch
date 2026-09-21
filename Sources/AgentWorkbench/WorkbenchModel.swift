@@ -103,7 +103,7 @@ final class WorkbenchModel: ObservableObject {
             MainActor.assumeIsolated {
                 guard let self, !self.showDashboard, self.selectedHost != nil else { return }
                 self.showFileViewer = true; self.syncFileViewer()
-                self.fileBrowser.open(reference.path, line: reference.line)
+                self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
             }
         })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(

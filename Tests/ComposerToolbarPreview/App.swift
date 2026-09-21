@@ -19,16 +19,25 @@ private struct ToolbarPreview: View {
     @State private var running = false
     @State private var stopping = false
     @State private var offline = false
+    @State private var emptyModels = false
     @State private var stopCount = 0
     @State private var sendCount = 0
     private var canSend: Bool { !offline && !stopping && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private func send() { sendCount += 1; text = ""; running = true }
     private let models = ModelCatalog.options([
         .object(["provider": .string("lan"), "model": .string("lan/qwen3.8-flash-next")]),
+        .object(["provider": .string("fixture"), "model": .string("fixture/qwen3.8-flash-next")]),
+        .object(["provider": .string("fixture"), "model": .string("fixture/deepseek-v4-pro")]),
+        .object(["provider": .string("fixture"), "model": .string("fixture/glm-5.2")]),
         .object(["provider": .string("fixture"), "model": .string("fixture/a-very-long-model-name-for-narrow-window-layout-validation")])])
     var body: some View {
         VStack(spacing: 24) {
             HStack { Text("Offline layout preview"); Spacer(); Toggle("Narrow", isOn: $narrow); Toggle("Low context", isOn: $low) }
+            HStack {
+                Toggle("Empty model list", isOn: $emptyModels)
+                Text("Next message: \(model.isEmpty ? "session model (lan/qwen3.8-flash-next)" : model)")
+                    .font(.caption).textSelection(.enabled)
+            }
             HStack {
                 Toggle("Running", isOn: $running)
                 Toggle("Offline", isOn: $offline)
@@ -40,7 +49,8 @@ private struct ToolbarPreview: View {
                 HStack(spacing: 10) {
                     Button {} label: { Image(systemName: "plus").font(.system(size: 17)).frame(width: 23, height: 25) }
                         .buttonStyle(.plain).foregroundStyle(.secondary).help("Add images or files").accessibilityLabel("Add images or files")
-                    ModelPicker(models: models, selection: $model)
+                    ModelPicker(models: emptyModels ? [] : models, selection: $model,
+                                current: "lan/qwen3.8-flash-next")
                     ThinkingPicker(model: AgentModel(id: model, provider: "lan", name: model,
                                                      thinking: [.low, .medium, .high, .xhigh], defaultThinking: .xhigh),
                                    current: effort, disabled: false) { effort = $0 }

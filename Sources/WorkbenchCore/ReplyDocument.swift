@@ -20,7 +20,7 @@ public struct ReplyListItem: Equatable {
 public enum ReplyAlignment: Equatable { case leading, center, trailing }
 
 public struct ReplyInline: Equatable {
-    public let text: String
+    public var text: String
     public var strong = false
     public var emphasis = false
     public var code = false
@@ -36,8 +36,8 @@ public enum ReplyDocument {
     private static func blocks(_ parent: Markup) -> [ReplyBlock] {
         parent.children.flatMap { node -> [ReplyBlock] in
             switch node {
-            case let value as Paragraph: return [.paragraph(inlines(value))]
-            case let value as Heading: return [.heading(value.level, inlines(value))]
+            case let value as Paragraph: return [.paragraph(linkBareURLs(inlines(value)))]
+            case let value as Heading: return [.heading(value.level, linkBareURLs(inlines(value)))]
             case let value as CodeBlock:
                 // Remove the parser's terminal newline, preserving code indentation and blank lines.
                 let code = value.code.hasSuffix("\n") ? String(value.code.dropLast()) : value.code
@@ -55,11 +55,43 @@ public enum ReplyDocument {
                 let alignments: [ReplyAlignment] = value.columnAlignments.map {
                     switch $0 { case .center: return .center; case .right: return .trailing; default: return .leading }
                 }
-                return [.table(headers: value.head.cells.map(inlines), rows: value.body.rows.map { $0.cells.map(inlines) }, alignments: alignments)]
+                return [.table(headers: value.head.cells.map { linkBareURLs(inlines($0)) }, rows: value.body.rows.map { $0.cells.map { linkBareURLs(inlines($0)) } }, alignments: alignments)]
             case is ThematicBreak: return [.rule]
             case let value as HTMLBlock: return [.paragraph([ReplyInline(text: value.rawHTML)])]
             default: return blocks(node)
             }
+        }
+    }
+
+    private static let linkDetector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+
+    private static func linkBareURLs(_ runs: [ReplyInline]) -> [ReplyInline] {
+        runs.flatMap { run -> [ReplyInline] in
+            guard run.link == nil, !run.code else { return [run] }
+            let text = run.text as NSString
+            let matches = linkDetector.matches(in: run.text, range: NSRange(location: 0, length: text.length))
+                .filter { ["http", "https"].contains($0.url?.scheme?.lowercased() ?? "") }
+            guard !matches.isEmpty else { return [run] }
+            var result: [ReplyInline] = []
+            var offset = 0
+            for match in matches {
+                if match.range.location > offset {
+                    var prefix = run
+                    prefix.text = text.substring(with: NSRange(location: offset, length: match.range.location - offset))
+                    result.append(prefix)
+                }
+                var link = run
+                link.text = text.substring(with: match.range)
+                link.link = match.url
+                result.append(link)
+                offset = NSMaxRange(match.range)
+            }
+            if offset < text.length {
+                var suffix = run
+                suffix.text = text.substring(from: offset)
+                result.append(suffix)
+            }
+            return result
         }
     }
 

@@ -8,6 +8,7 @@ public struct RemoteDirectoryEntry: Equatable, Identifiable, Sendable {
 
 public enum RemoteFileContent: Equatable, Sendable {
     case directory([RemoteDirectoryEntry])
+    case matches([String])
     case text(String, truncated: Bool, size: Int)
     case binary(size: Int)
     case denied
@@ -82,6 +83,26 @@ public enum RemoteFileCommand {
             .map(SSHCommand.quote).joined(separator: " ")
     }
 
+    /// Conversation replies can cite only a filename. Keep exact paths authoritative;
+    /// search below the session directory only when that filename is missing there.
+    public static func referenceCommand(path: String, cwd: String) throws -> String {
+        let resolved = try RemoteFilePath.resolve(path, cwd: cwd)
+        guard !path.contains("/"), path != "~" else { return remoteCommand(path: resolved) }
+        // find's -name operand is a glob, even when passed as a quoted argument.
+        let name = path.trimmingCharacters(in: .whitespacesAndNewlines)
+            .reduce("") { $0 + ("\\*?[".contains($1) ? "\\" : "") + String($1) }
+        let lookup = """
+        if [ ! -e "$1" ]; then
+          printf 'kind=matches\\n--\\n'
+          find "$2" -type d \\( -name .git -o -name .build -o -name node_modules \\) -prune -o -type f -name "$3" -print0
+          exit $?
+        fi
+        \(script(limit: readLimit))
+        """
+        return ["/bin/sh", "-c", lookup, "perch-file-reference", resolved, cwd, name]
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+
     public static func sshArguments(destination: String, controlPath: String?,
                                     path: String, limit: Int = readLimit) -> [String] {
         var arguments = ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
@@ -106,6 +127,9 @@ public enum RemoteFileCommand {
             if parts.count == 2 { fields[String(parts[0])] = String(parts[1]) }
         }
         switch fields["kind"] {
+        case "matches":
+            let paths = String(decoding: body, as: UTF8.self).split(separator: "\0").map(String.init).sorted()
+            return paths.isEmpty ? .missing : .matches(paths)
         case "dir":
             let entries = String(decoding: body, as: UTF8.self).split(separator: "\n").map { line -> RemoteDirectoryEntry in
                 let isDirectory = line.hasSuffix("/")
