@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import WorkbenchCore
 
 struct NativeAgentView: View {
@@ -336,16 +337,39 @@ struct NewConversationSheet: View {
     @State private var agentModel = ""
     @State private var creating = false
     @State private var error: String?
+    @State private var attachments: [URL] = []
+    @State private var chooseFiles = false
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
-    private var canStart: Bool { !creating && !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online) }
+    /// Attachments ride the Kimi session channel; native adapters have none, so an
+    /// attachment-only draft can start a Kimi task but never a native one.
+    private var canStart: Bool {
+        let hasContent = !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
+        return !creating && hasContent && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Start a task").font(.title2.weight(.semibold))
             if let group = model.selectedGroup { Text(group.name).foregroundStyle(.secondary) }
-            MessageComposer(text: $prompt, placeholder: "What would you like to work on?", canSend: canStart, onSend: start)
-                .frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
+            VStack(alignment: .leading, spacing: 10) {
+                if !attachments.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(attachments, id: \.self) { file in
+                                ComposerAttachment(file: file) { attachments.removeAll { $0 == file } }
+                            }
+                        }
+                    }
+                }
+                MessageComposer(text: $prompt, placeholder: "What would you like to work on?", canSend: canStart, onSend: start,
+                                onFiles: provider == .kimi ? addAttachments : nil,
+                                onError: { error = $0 })
+            }.frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
+            if provider != .kimi && !attachments.isEmpty {
+                Text("Attachments are sent only with Kimi sessions.").font(.caption).foregroundStyle(.secondary)
+            }
             HStack(spacing: 12) {
+                ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                 Menu {
                     ForEach(model.connections) { connection in
                         Button(connection.host.name) { model.activateAgentEnvironment(connection.id) }
@@ -374,6 +398,9 @@ struct NewConversationSheet: View {
                     .buttonStyle(.borderedProminent).disabled(!canStart)
             }
         }.padding(24).frame(width: 650)
+            .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+                do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
+            }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
             .onAppear {
                 if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data) {
@@ -389,14 +416,18 @@ struct NewConversationSheet: View {
                 }
             }
     }
+    private func addAttachments(_ files: [URL]) {
+        for file in files where !attachments.contains(file) { attachments.append(file) }
+    }
     private func start() {
         guard canStart else { return }; creating = true
-        let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd
+        let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd, files = attachments
         let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
         Task {
             do {
                 if selectedProvider == .kimi {
                     let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text, model: selectedModel)
+                    if !files.isEmpty { kimi.attachments[session.id] = files }
                     model.newKimiCreated(session)
                     await kimi.sendPrompt(for: session.id)
                 } else {
@@ -408,7 +439,7 @@ struct NewConversationSheet: View {
                 UserDefaults.standard.set(try JSONEncoder().encode(defaults), forKey: defaultsKey)
                 UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
                 UserDefaults.standard.set(directory, forKey: "new.cwd")
-                prompt = ""; dismiss()
+                prompt = ""; attachments = []; dismiss()
             } catch { self.error = error.localizedDescription; creating = false }
         }
     }

@@ -10,6 +10,7 @@
 
 /* Sidebar navigation (WorkspaceSidebarShell) */
 "搜索任务" = "Search Tasks";
+"新建会话" = "New Session";
 "工作台" = "Workspace";
 "待处理" = "Inbox";
 "已归档" = "Archived";

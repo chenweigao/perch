@@ -8,6 +8,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let attentionCount: Int
     let environmentSummary: String
     let onSearch: () -> Void
+    let onNew: () -> Void
     let onHome: () -> Void
     let onInbox: () -> Void
     let onArchive: () -> Void
@@ -21,6 +22,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 navigation("搜索任务", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
                     .keyboardShortcut("k")
                 Divider().padding(.vertical, 7)
+                navigation("新建会话", symbol: "square.and.pencil", shortcut: "⌘N", action: onNew)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
             }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 8)
