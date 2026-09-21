@@ -6,8 +6,14 @@ HTML execution or a WebView. Remote image references inside Markdown show their
 alt text; dedicated conversation attachments keep their existing renderer.
 
 The reading column and composer share a 760 pt maximum width. Body text uses the
-macOS system font at 15 pt with 6 pt line spacing; emphasis uses semibold rather
-than bold. Paragraphs, headings and lists have distinct spacing. Nested list
+macOS system font at 14 pt with a 1.625 minimum line-height ratio. H1 uses 16 pt;
+H2–H6 stay at the body size. Headings, strong text and table headers use medium
+weight, including strong text nested inside a heading or inline code. Headings
+have 22 pt of leading space (14 pt in compact lists/quotes) and 7 pt before their
+following content; the first block has no leading space. Section spacing carries
+the hierarchy without large, heavy titles. List markers use regular weight.
+Inline code stays 1 pt smaller than its surrounding text, with a faint 2.5% label
+color background; table separators use 6% opacity. Nested list
 continuations align with the text, ordered lists preserve their starting number,
 and task markers are read-only. Quotes use a fine left rule. Code uses the system
 monospace font, a quiet header and horizontal scrolling. Tables render as native
@@ -33,6 +39,15 @@ adds a wide numeric table, a narrow-column toggle and streaming simulation.
 `WorkbenchChecks` covers document structure, escaped table pipes, inline styles,
 link schemes, unclosed fences and each prefix of a streamed Markdown document.
 Visual checks remain separate from protocol checks and remote compatibility.
+
+For a focused typography check, build with `scripts/build.sh`, then run
+`scripts/build-reply-typography-preview.sh` and open
+`build/Reply Typography Preview.app`. The fixture includes a long H1, H2–H6,
+an entirely strong paragraph, mixed Chinese/English, code inside headings,
+links, lists and a table. Inspect it at both normal and narrow window widths:
+emphasis should remain distinguishable, headings should wrap without crowding,
+and inline code should blend into prose. Check selection and copying separately;
+the renderer preserves the original Markdown and parsed document structure.
 
 ## Turn visibility and compact chrome
 

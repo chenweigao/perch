@@ -42,7 +42,7 @@ private struct ReplyBlocks: View {
         if case .heading = previous { return 7 }
         if case .paragraph = previous, case .paragraph = block { return 14 }
         switch block {
-        case .heading: return 14
+        case .heading: return compact ? 14 : 22
         case .rule: return 28
         case .code: return compact ? 10 : 18
         default: return compact ? 0 : 14
@@ -58,13 +58,14 @@ private struct ReplyBlockContent: View, Equatable {
         switch block {
         case .paragraph(let runs): ReplyText(runs: runs)
         case .heading(let level, let runs):
-            ReplyText(runs: runs, size: level == 1 ? 21 : level == 2 ? 17.5 : level == 3 ? 16 : 14, weight: .semibold, lineHeight: level == 1 ? 28 : 24.5)
+            ReplyText(runs: runs, size: level == 1 ? ReplyStyle.bodySize + 2 : ReplyStyle.bodySize,
+                      weight: .medium, lineHeight: 24)
         case .code(let language, let source): ReplyCode(language: language, source: source)
         case .list(let items):
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 9) {
-                        Text(item.marker).font(.system(size: ReplyStyle.bodySize, weight: .semibold)).foregroundStyle(ReplyStyle.ink)
+                        Text(item.marker).font(.system(size: ReplyStyle.bodySize)).foregroundStyle(ReplyStyle.ink)
                             .frame(minWidth: 18, alignment: .trailing)
                         // Type erasure breaks the recursive SwiftUI view type, not the document hierarchy.
                         AnyView(ReplyBlocks(blocks: item.blocks, compact: true))
@@ -96,7 +97,7 @@ private struct ReplyText: View {
     @Environment(\.replyInk) private var ink
     let runs: [ReplyInline]
     var size: CGFloat = ReplyStyle.bodySize
-    var weight: Font.Weight = .regular
+    var weight: NSFont.Weight = .regular
     var alignment: TextAlignment = .leading
     var lineHeight: CGFloat? = nil
     private var attributed: NSAttributedString {
@@ -105,14 +106,14 @@ private struct ReplyText: View {
         paragraph.minimumLineHeight = lineHeight ?? size * ReplyStyle.lineHeightRatio
         paragraph.alignment = alignment == .trailing ? .right : alignment == .center ? .center : .left
         for run in runs {
-            let strong = run.strong || weight == .semibold
-            var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: strong ? .semibold : .regular)
-                                : NSFont.systemFont(ofSize: size, weight: strong ? .semibold : .regular)
+            let runWeight: NSFont.Weight = run.strong ? .medium : weight
+            var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
+                                : NSFont.systemFont(ofSize: size, weight: runWeight)
             if run.emphasis { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
             var attributes: [NSAttributedString.Key: Any] = [
                 .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
             ]
-            if run.code { attributes[.backgroundColor] = NSColor.labelColor.withAlphaComponent(0.045) }
+            if run.code { attributes[.backgroundColor] = NSColor.labelColor.withAlphaComponent(0.025) }
             if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
             if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
             result.append(NSAttributedString(string: run.text, attributes: attributes))
@@ -271,7 +272,7 @@ private struct ReplyTable: View {
         Grid(horizontalSpacing: 0, verticalSpacing: 0) {
             row(headers, header: true, minimum: minimum)
             ForEach(Array(rows.enumerated()), id: \.offset) { _, cells in
-                Rectangle().fill(.primary.opacity(0.08)).frame(height: 1).gridCellUnsizedAxes(.horizontal)
+                Rectangle().fill(.primary.opacity(0.06)).frame(height: 1).gridCellUnsizedAxes(.horizontal)
                 row(cells, header: false, minimum: minimum)
             }
         }
@@ -280,7 +281,7 @@ private struct ReplyTable: View {
         GridRow(alignment: .top) {
             ForEach(Array(headers.indices), id: \.self) { column in
                 let alignment: Alignment = alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading
-                ReplyText(runs: column < cells.count ? cells[column] : [], size: 13, weight: header ? .semibold : .regular,
+                ReplyText(runs: column < cells.count ? cells[column] : [], size: 13, weight: header ? .medium : .regular,
                           alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading)
                     .frame(minWidth: minimum, maxWidth: .infinity, alignment: alignment)
                     .padding(.horizontal, 12).padding(.vertical, 10)
