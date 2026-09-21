@@ -105,6 +105,7 @@ private final class ConversationDocumentView: NSView {
     private var offsets: [CGFloat] = []
     private var controllers: [String: ConversationEntryController] = [:]
     private var mounted: Set<String> = []
+    private var laidOutRange: Range<Int>?
     private static let retiredControllers = NSMutableArray()
     private static var drainingRetiredControllers = false
     private var sessionId = ""
@@ -237,11 +238,14 @@ private final class ConversationDocumentView: NSView {
     }
 
     func measure(width: CGFloat?) -> CGSize {
-        columnWidth = max(1, width?.isFinite == true ? width! : ReplyStyle.readingWidth)
+        let nextWidth = max(1, width?.isFinite == true ? width! : ReplyStyle.readingWidth)
+        if columnWidth != nextWidth { laidOutRange = nil }
+        columnWidth = nextWidth
         refreshVisibleRows()
         return CGSize(width: columnWidth, height: totalHeight)
     }
     private func rebuildOffsets() {
+        laidOutRange = nil
         var y: CGFloat = 0
         offsets = heights.map { height in
             defer { y += height + 18 }
@@ -266,6 +270,11 @@ private final class ConversationDocumentView: NSView {
         let visible = viewportRect
         var index = offsets.indices.first { offsets[$0] + heights[$0] > max(0, visible.minY) }
             ?? max(0, contents.count - 1)
+        let first = index
+        let end = offsets.indices.dropFirst(first).first { offsets[$0] >= visible.maxY } ?? contents.count
+        // Most wheel deltas stay within the same rows. The clip view moves their
+        // pixels; no hosting measurement, frame writes or reattachment is needed.
+        if laidOutRange == first..<end { return }
         var nextMounted: Set<String> = []
         while index < contents.count && offsets[index] < visible.maxY {
             let content = contents[index]
@@ -288,9 +297,11 @@ private final class ConversationDocumentView: NSView {
         }
         for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
         mounted = nextMounted
+        laidOutRange = first..<index
         publishHeight()
     }
     private func beginDisclosureChange(_ id: String, animated: Bool) {
+        laidOutRange = nil
         viewport?.pauseFollowing?()
         if let previous = heightAnimation, previous.id != id, let index = indices[previous.id] {
             heights[index] = previous.to
@@ -344,18 +355,22 @@ private final class ConversationDocumentView: NSView {
         }
     }
     override func setFrameSize(_ size: NSSize) {
+        let changed = frame.size != size
         super.setFrameSize(size)
-        if size.width > 0 { columnWidth = size.width }
-        refreshVisibleRows()
+        if size.width > 0 {
+            if columnWidth != size.width { laidOutRange = nil }
+            columnWidth = size.width
+        }
+        if changed { viewport?.refresh() }
         restoreReadingPosition()
     }
     override func setFrameOrigin(_ point: NSPoint) {
+        let changed = frame.origin != point
         super.setFrameOrigin(point)
-        refreshVisibleRows()
+        if changed { viewport?.refresh() }
     }
     override func layout() {
         super.layout()
-        refreshVisibleRows()
         restoreReadingPosition()
     }
     private func saveReadingPosition() {
@@ -388,7 +403,7 @@ private final class ConversationDocumentView: NSView {
         clip.postsBoundsChangedNotifications = true
         boundsObserver = NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification, object: clip, queue: nil
-        ) { [weak self] _ in self?.refreshVisibleRows(); self?.saveReadingPosition() }
+        ) { [weak self] _ in self?.viewport?.refresh(); self?.saveReadingPosition() }
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -517,21 +532,22 @@ private final class ConversationEntryController: NSViewController {
     }
     private func setRoot() {
         let version = generation
-        host.rootView = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: disclosureChanged) { [weak self] size in
-            self?.report(size, generation: version)
+        host.rootView = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] animated in
+            self?.sizes.removeAll(keepingCapacity: true)
+            self?.disclosureChanged(animated)
+        }) { [weak self] size in
+            self?.contentSizeChanged(size, generation: version)
         }
     }
     func measure(width proposed: CGFloat?) -> CGSize {
         let width = max(1, proposed?.isFinite == true ? proposed! : ReplyStyle.readingWidth)
         let height: CGFloat
-        if content.hasStableHeight, let cached = sizes.first(where: { $0.width == width }) {
+        if let cached = sizes.first(where: { $0.width == width }) {
             height = cached.height
         } else {
             height = ceil(host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
-            if content.hasStableHeight {
-                if sizes.count == 8 { sizes.removeFirst() }
-                sizes.append((width, height))
-            }
+            if sizes.count == 8 { sizes.removeFirst() }
+            sizes.append((width, height))
         }
         let size = CGSize(width: width, height: height)
         // Disclosure and attachment state can change without changing the entry.
@@ -541,6 +557,18 @@ private final class ConversationEntryController: NSViewController {
             report(size, generation: generation)
         }
         return size
+    }
+    private func contentSizeChanged(_ size: CGSize, generation version: Int) {
+        guard version == generation, size.width > 0, size.height.isFinite,
+              abs(size.width - view.bounds.width) < 0.5 else { return }
+        let height = ceil(size.height)
+        // Local state (disclosures, loaded images) can resize a row without a
+        // new message. Replace the cache before another scroll pass reads it.
+        if sizes.first(where: { $0.width == size.width })?.height != height {
+            sizes.removeAll(keepingCapacity: true)
+            sizes.append((size.width, height))
+        }
+        report(size, generation: version)
     }
     private func report(_ size: CGSize, generation version: Int) {
         guard version == generation, size.width > 0, size.height.isFinite else { return }
@@ -636,18 +664,6 @@ private struct ConversationEntryView: View, Equatable {
     let api: KimiAPI?
     let sessionId: String
     let memoryKey: String
-    // Only rows whose height is wholly determined by message values may cache
-    // across measurements. Disclosure state and loaded attachments are local.
-    var hasStableHeight: Bool {
-        switch entry.presentation {
-        case .message, .progress, .record:
-            return entry.messages.allSatisfy { message in
-                message.content.allSatisfy { $0.type == "text" && !$0.isRuntimeContext }
-            }
-        case .emptyOutput: return true
-        default: return false
-        }
-    }
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api

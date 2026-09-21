@@ -19,6 +19,15 @@ private struct ReadingPreview: View {
     @State private var prefixLength = 0
     @State private var historyPages = 0
     @State private var thoughtSteps = 0
+    @State private var showImage = false
+    private static let sampleImage: String = {
+        let image = NSImage(size: NSSize(width: 240, height: 120))
+        image.lockFocus()
+        NSColor.systemBlue.setFill()
+        NSRect(x: 0, y: 0, width: 240, height: 120).fill()
+        image.unlockFocus()
+        return image.tiffRepresentation!.base64EncodedString()
+    }()
     @State private var phaseSteps = 0
     @State private var todoCompleted = false
     @State private var turnEnded = false
@@ -67,7 +76,13 @@ private struct ReadingPreview: View {
         }
         else if scenario == 5 { content = [["type": "tool_use", "tool_call_id": "t", "tool_name": "read"]] }
         else { content = [["type": "text", "text": "已找到原因：前一版把工具调用前的说明全部折叠了。这段过程说明现在会保留在页面上。"], ["type": "tool_use", "tool_call_id": "t", "tool_name": "read"]] }
-        let data = try! JSONSerialization.data(withJSONObject: [["id": "fixture", "role": "assistant", "created_at": "1", "content": content]])
+        var records: [[String: Any]] = [["id": "fixture", "role": "assistant", "created_at": "1", "content": content]]
+        if scenario == 3 && showImage {
+            records.insert(["id": "local-image", "role": "assistant", "created_at": "0",
+                            "content": [["type": "image", "name": "local-fixture.tiff",
+                                         "source": ["kind": "base64", "data": Self.sampleImage]]]], at: 0)
+        }
+        let data = try! JSONSerialization.data(withJSONObject: records)
         return try! KimiWire.decoder().decode([KimiMessage].self, from: data)
     }
     private var todoMessages: [KimiMessage] {
@@ -99,7 +114,12 @@ private struct ReadingPreview: View {
                 if replay != nil { Text("本地快照").tag(9) }
             }.pickerStyle(.segmented).padding(.horizontal, 20).padding(.bottom, 12)
             if scenario == 6 { Button("追加下一阶段") { phaseSteps += 1 }.padding(.bottom, 8) }
-            if scenario == 3 { Button("追加思考") { thoughtSteps += 1 }.padding(.bottom, 8) }
+            if scenario == 3 {
+                HStack {
+                    Button("追加思考") { thoughtSteps += 1 }
+                    Toggle("本地图片加载", isOn: $showImage)
+                }.padding(.bottom, 8)
+            }
             if scenario == 1 {
                 HStack {
                     Toggle("清单全部完成", isOn: $todoCompleted)
