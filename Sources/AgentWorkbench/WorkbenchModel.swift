@@ -144,6 +144,8 @@ final class WorkbenchModel: ObservableObject {
     private let sessionDateParser: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return formatter
     }()
+    func refreshLocalizedCatalog() { rebuildCatalog() }
+
     private func rebuildCatalog() {
         let terminalSessions = connections.flatMap { connection in
             (connection.snapshot?.panes ?? []).map { pane in

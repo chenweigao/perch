@@ -13,7 +13,7 @@ done
 swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ConversationTranscriptView.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ConversationTranscriptView.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \

@@ -7,11 +7,12 @@ enum WorkbenchChrome {
 
 /// Title changes follow workspace selection, independently of streaming state.
 struct WorkbenchHeader: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var title: String {
-        if model.showDashboard { return model.showArchived ? "已归档" : model.onlyAttention ? "待处理" : model.showSessionDirectory ? "全部会话" : model.selectedGroup?.name ?? "工作台" }
-        return item?.title ?? "正在恢复会话…"
+        if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? L("工作台") }
+        return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
         HStack(spacing: 9) {
@@ -25,6 +26,7 @@ struct WorkbenchHeader: View {
 
 /// Only toolbar status observes the active stream; title and sidebar do not.
 struct WorkbenchHeaderActions: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
     @ObservedObject var native: NativeAgentConnection
@@ -33,8 +35,8 @@ struct WorkbenchHeaderActions: View {
         if model.showDashboard { return nil }
         if model.showKimi, let session = kimi.conversation?.snapshot.session, session.busy { return session.status }
         if model.showNative, let session = native.snapshot {
-            if !session.interactions.isEmpty { return "等你处理" }
-            if session.busy { return "运行中" }
+            if !session.interactions.isEmpty { return L("等你处理") }
+            if session.busy { return L("运行中") }
         }
         return nil
     }
@@ -50,7 +52,7 @@ struct WorkbenchHeaderActions: View {
             }
             if let status {
                 HStack(spacing: 5) {
-                    Circle().fill(status.contains("处理") || status.contains("确认") ? Color.orange : Color.secondary).frame(width: 5, height: 5)
+                    Circle().fill((model.showKimi ? kimi.conversation?.snapshot.pendingApprovals.isEmpty == false || kimi.conversation?.snapshot.pendingQuestions.isEmpty == false : native.snapshot?.interactions.isEmpty == false) ? Color.orange : Color.secondary).frame(width: 5, height: 5)
                     Text(status).font(.system(size: 11))
                 }.foregroundStyle(.secondary).fixedSize()
             }
@@ -71,7 +73,7 @@ struct WorkbenchHeaderActions: View {
                     if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online) }
                     else if model.showNative { Button("重新连接") { native.connect() } }
                     else {
-                        Button(model.selectedConnection.wantsConnection ? "断开本地连接" : "连接终端") {
+                        Button(model.selectedConnection.wantsConnection ? L("断开本地连接") : L("连接终端")) {
                             if model.selectedConnection.wantsConnection { model.selectedConnection.disconnect() }
                             else { model.selectedConnection.connect() }
                         }

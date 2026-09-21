@@ -1,35 +1,15 @@
 import Foundation
 
-/// UI language preference. The development language of the app is Simplified
-/// Chinese: every user-facing literal in `Sources/` is its own localization
-/// key, and `Resources/Localization/en.lproj/Localizable.strings` carries the
-/// English translations. Chinese needs no table — a missed lookup falls back
-/// to the key itself.
+/// UI language, independent of connection state and the user's region format.
 public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     case system
     case zhHans = "zh-Hans"
     case en
-
     public static let defaultsKey = "perch.appLanguage"
-
     public var id: String { rawValue }
-
     public static var current: AppLanguage {
         AppLanguage(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "") ?? .system
     }
-
-    /// Locale applied to the SwiftUI environment and to `L()`. `nil` means
-    /// follow the system; callers then use `.autoupdatingCurrent`.
-    public var locale: Locale? {
-        switch self {
-        case .system: return nil
-        case .zhHans: return Locale(identifier: "zh-Hans")
-        case .en: return Locale(identifier: "en")
-        }
-    }
-
-    /// Self-describing name, shown in the language picker regardless of the
-    /// active UI language.
     public var displayName: String {
         switch self {
         case .system: return "跟随系统 / System"
@@ -37,29 +17,32 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         case .en: return "English"
         }
     }
-
-    public var resolvedLocale: Locale { locale ?? .autoupdatingCurrent }
-
-    /// Keeps system-level UI (AppKit menus, alerts, next launch) consistent with
-    /// the in-app choice. SwiftUI views switch immediately through the
-    /// environment locale, so this only matters outside the view hierarchy.
+    public var localization: String {
+        guard self == .system else { return rawValue }
+        // Read system language preferences, not an AppleLanguages override left
+        // by a previous in-app choice. Region settings are not UI languages.
+        let preferences = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleLanguages"] as? [String] ?? Locale.preferredLanguages
+        return Self.resolveSystemLanguage(preferences)
+    }
+    public static func resolveSystemLanguage(_ preferences: [String]) -> String {
+        Bundle.preferredLocalizations(from: ["zh-Hans", "en"], forPreferences: preferences).first ?? "zh-Hans"
+    }
+    public var resolvedLocale: Locale { Locale(identifier: localization) }
     public static func applyToSystem(_ language: AppLanguage) {
-        switch language {
-        case .system: UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-        default: UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
-        }
+        UserDefaults.standard.set(language.rawValue, forKey: defaultsKey)
+        if language == .system { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
+        else { UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages") }
     }
 }
 
-/// Localizes a dynamic string through the app bundle's `Localizable.strings`
-/// using the language selected in Settings. SwiftUI literals (`Text("…")`,
-/// `Button("…")`, …) already resolve through the environment locale; use `L()`
-/// for `String` values that flow into views as data (status labels, error
-/// messages, interpolated summaries) so both paths agree on one language.
-public func L(_ keyAndValue: String.LocalizationValue) -> String {
-    String(localized: keyAndValue, locale: AppLanguage.current.resolvedLocale)
+/// Choose the resource bundle explicitly: String(localized:locale:) uses its
+/// locale for formatting, but does not select the language of the resource table.
+public func L(_ value: String.LocalizationValue, locale: Locale = AppLanguage.current.resolvedLocale) -> String {
+    let language = AppLanguage.resolveSystemLanguage([locale.identifier])
+    let bundle = Bundle.main.url(forResource: language, withExtension: "lproj")
+        .flatMap(Bundle.init(url:)) ?? .main
+    return String(localized: value, bundle: bundle, locale: locale)
 }
 
-public func L(_ key: String) -> String {
-    L(String.LocalizationValue(key))
-}
+/// Label dynamic keys explicitly so interpolated literals retain placeholders.
+public func L(key: String) -> String { L(String.LocalizationValue(key)) }

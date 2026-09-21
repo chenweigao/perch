@@ -8,6 +8,7 @@ private let quiet = Color(red: 0.48, green: 0.51, blue: 0.58)
 private let paper = Color(red: 0.965, green: 0.965, blue: 0.96)
 
 struct WorkbenchView: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     var body: some View {
         WorkbenchWorkspace(model: model).equatable()
@@ -64,6 +65,7 @@ private struct WorkbenchWorkspace: View, Equatable {
 }
 
 private struct WorkbenchDetail: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
 
     var body: some View {
@@ -157,11 +159,12 @@ private struct TerminalPane: View {
 }
 
 private struct StatusBar: View {
+    @UILocalization private var L
     @ObservedObject var connection: HostConnection
     var body: some View {
         HStack(spacing: 7) {
             Circle().fill(connection.online ? Color.green : quiet).frame(width: 5, height: 5)
-            Text(connection.state)
+            Text(connection.state(locale: L.locale))
             if let version = connection.snapshot?.version { Text("·"); Text("Herdr \(version)") }
             Spacer()
             if let date = connection.updatedAt { Text("状态更新于 \(date.formatted(date: .omitted, time: .standard))") }

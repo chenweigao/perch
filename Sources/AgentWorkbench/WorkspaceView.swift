@@ -2,6 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct WorkspaceHome: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     var body: some View {
         let scoped = model.scopedSessions
@@ -59,7 +60,7 @@ struct WorkspaceHome: View {
                 ForEach([WorkQueueSection.attention, .review, .running], id: \.self) { section in
                     let items = live.filter { $0.section == section }
                     if !items.isEmpty {
-                        Text(L(section.rawValue)).font(.system(size: 13, weight: .semibold)).padding(.top, 12)
+                        Text(L(key: section.rawValue)).font(.system(size: 13, weight: .semibold)).padding(.top, 12)
                         // Long result inventories stay collapsed so they don't bury active work.
                         if section == .review {
                             DisclosureGroup("\(items.count) 个结果") { rows(items).padding(.top, 10) }
@@ -93,7 +94,7 @@ struct WorkspaceHome: View {
     }
     private func count(_ section: WorkQueueSection, value: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(L(section.rawValue)).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(L(key: section.rawValue)).font(.system(size: 12)).foregroundStyle(.secondary)
             Text("\(value)").font(.system(size: 25, weight: .semibold)).foregroundStyle(color)
         }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
             .background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
@@ -125,6 +126,7 @@ struct WorkspaceHome: View {
 }
 
 struct WorkItemGroupEditor: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""

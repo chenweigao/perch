@@ -86,7 +86,7 @@ final class SelectionActionsController: NSObject {
                 self?.quoteHandler?(text)
                 self?.hide()
             })
-        let hosting = NSHostingView(rootView: bar)
+        let hosting = NSHostingView(rootView: bar.environment(\.locale, AppLanguage.current.resolvedLocale))
         hosting.layout()
         let size = hosting.fittingSize
 

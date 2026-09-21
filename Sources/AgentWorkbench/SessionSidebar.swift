@@ -2,6 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct WorkbenchSidebar: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @State private var filter = SidebarRecentFilter.all
     @State private var showSearch = false
@@ -48,14 +49,14 @@ struct WorkbenchSidebar: View {
                 Spacer()
                 Menu {
                     Picker("筛选最近会话", selection: $filter) {
-                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L($0.rawValue)).tag($0) }
+                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
                     }
                 } label: { Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill") }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(filter.rawValue))")
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
             }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(projection.recent) { item in sessionRow(item) }
             if projection.recent.isEmpty {
-                Text(L(filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
+                Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
                     .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
             }
             Button { model.showAllSessions() } label: {
@@ -80,6 +81,7 @@ struct WorkbenchSidebar: View {
 }
 
 struct SessionDirectoryView: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     var isSearchSheet = false
     @State private var query = ""
@@ -91,7 +93,7 @@ struct SessionDirectoryView: View {
         }
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(L(isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
+                Text(L(key: isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
                 Spacer()
                 if isSearchSheet { Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
             }
@@ -117,6 +119,7 @@ struct SessionDirectoryView: View {
 /// here would register one observer per visible row, so a single search keystroke or
 /// streamed catalog update invalidates every row body instead of just the list.
 private struct SessionSidebarRow: View {
+    @UILocalization private var L
     let model: WorkbenchModel
     let item: WorkspaceSession
     let selected: Bool
@@ -161,6 +164,7 @@ private struct SessionSidebarRow: View {
 }
 
 struct SessionActionsMenu: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
@@ -229,6 +233,7 @@ struct ArchivedSessionsView: View {
 }
 
 private struct ConnectionControls: View {
+    @UILocalization private var L
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
@@ -246,7 +251,7 @@ private struct ConnectionControls: View {
                 Label("Kimi · \(kimi.host.name)", systemImage: "bubble.left"); Spacer()
                 Circle().fill(kimi.online ? .green : .orange).frame(width: 5, height: 5)
                 Button { kimi.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接 Kimi")
-            }.help(kimi.error ?? kimi.state)
+            }.help(kimi.error ?? kimi.state(locale: L.locale))
             HStack {
                 Label("OMP / Qoder CN", systemImage: "bubble.left.and.bubble.right"); Spacer()
                 Circle().fill(native.online ? .green : .orange).frame(width: 5, height: 5)
@@ -271,6 +276,7 @@ private struct HostConnectionControl: View {
 }
 
 struct KimiSelectionContent: View {
+    @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var connection: KimiConnection
     var body: some View {

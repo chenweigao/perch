@@ -28,7 +28,7 @@ app_dir="$PWD/build/Performance $title.app"
 bin_dir="$(swift build -c release --show-bin-path)"
 mkdir -p "$module_dir" "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
-    Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/ReplyMarkdownView.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift

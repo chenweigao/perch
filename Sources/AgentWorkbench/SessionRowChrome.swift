@@ -3,6 +3,7 @@ import WorkbenchCore
 
 /// Shared row geometry; actions have reserved space so hover never moves the title.
 struct SessionRowChrome<Indicator: View>: View {
+    @UILocalization private var L
     let title: String
     let subtitle: String?
     let selected: Bool

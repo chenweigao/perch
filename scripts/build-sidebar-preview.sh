@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 app_dir="$PWD/build/Sidebar Preview.app"
 mkdir -p "$app_dir/Contents/MacOS"
 swiftc -O -swift-version 5 -parse-as-library \
-    Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
     Sources/AgentWorkbench/SessionRowChrome.swift Tests/SidebarPreview/App.swift -o "$app_dir/Contents/MacOS/SidebarPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

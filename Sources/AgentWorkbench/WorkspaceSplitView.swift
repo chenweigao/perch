@@ -1,8 +1,10 @@
 import AppKit
 import SwiftUI
+import WorkbenchCore
 
 /// AppKit owns the native glass sidebar, divider restoration, and unified toolbar.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
+    @Environment(\.locale) private var locale
     let newConversation: () -> Void
     let sidebar: Sidebar
     let header: Header
@@ -51,10 +53,12 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     func updateNSViewController(_ controller: WorkbenchSplitController, context: Context) {
         let coordinator = context.coordinator
         coordinator.newConversation = newConversation
-        coordinator.sidebarHost.rootView = sidebar
-        coordinator.contentHost.rootView = content
-        coordinator.headerHost.rootView = header
-        coordinator.actionsHost.rootView = actions
+        coordinator.locale = locale
+        coordinator.sidebarHost.rootView = WorkspaceLocalizedRoot(content: sidebar, locale: locale)
+        coordinator.contentHost.rootView = WorkspaceLocalizedRoot(content: content, locale: locale)
+        coordinator.headerHost.rootView = WorkspaceLocalizedRoot(content: header, locale: locale)
+        coordinator.actionsHost.rootView = WorkspaceLocalizedRoot(content: actions, locale: locale)
+        coordinator.updateToolbarLanguage()
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsViewController: WorkbenchSplitController,
@@ -64,11 +68,12 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     }
 
     final class Coordinator: NSObject, NSToolbarDelegate {
-        let sidebarHost: NSHostingController<Sidebar>
-        let contentHost: NSHostingController<Content>
-        let headerHost: NSHostingView<Header>
-        let actionsHost: NSHostingView<Actions>
+        let sidebarHost: NSHostingController<WorkspaceLocalizedRoot<Sidebar>>
+        let contentHost: NSHostingController<WorkspaceLocalizedRoot<Content>>
+        let headerHost: NSHostingView<WorkspaceLocalizedRoot<Header>>
+        let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
         weak var controller: WorkbenchSplitController?
+        var locale: Locale
         var newConversation: () -> Void
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
         private let composeID = NSToolbarItem.Identifier("WorkbenchCompose")
@@ -77,10 +82,11 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private let actionsID = NSToolbarItem.Identifier("WorkbenchActions")
 
         init(_ view: WorkspaceSplitView) {
-            sidebarHost = NSHostingController(rootView: view.sidebar)
-            contentHost = NSHostingController(rootView: view.content)
-            headerHost = NSHostingView(rootView: view.header)
-            actionsHost = NSHostingView(rootView: view.actions)
+            sidebarHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.sidebar, locale: view.locale))
+            contentHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.content, locale: view.locale))
+            headerHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
+            actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
+            locale = view.locale
             newConversation = view.newConversation
             super.init()
             // NSSplitView owns these dimensions; intrinsic SwiftUI measurements would
@@ -102,33 +108,46 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             if id == separatorID, let controller {
                 return NSTrackingSeparatorToolbarItem(identifier: id, splitView: controller.splitView, dividerIndex: 0)
             }
+            let L = LocalizedUIStrings(locale: locale)
             let item = NSToolbarItem(itemIdentifier: id)
             if id == toggleID {
-                item.label = "切换侧栏"
-                item.toolTip = "显示或隐藏侧栏"
+                item.label = L("切换侧栏")
+                item.toolTip = L("显示或隐藏侧栏")
                 item.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: item.label)
                 item.target = controller
                 item.action = #selector(NSSplitViewController.toggleSidebar(_:))
                 item.isBordered = false
             } else if id == composeID {
-                item.label = "新建任务"
-                item.toolTip = "新建任务 · ⌘N"
+                item.label = L("新建任务")
+                item.toolTip = L("新建任务 · ⌘N")
                 item.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: item.label)
                 item.target = self
                 item.action = #selector(compose)
                 item.isBordered = false
             } else if id == titleID {
-                item.label = "当前会话"
+                item.label = L("当前会话")
                 item.view = headerHost
                 item.isBordered = false
                 item.visibilityPriority = .high
             } else if id == actionsID {
-                item.label = "会话操作"
+                item.label = L("会话操作")
                 item.view = actionsHost
                 item.isBordered = false
                 item.visibilityPriority = .user
             }
             return item
+        }
+        func updateToolbarLanguage() {
+            let L = LocalizedUIStrings(locale: locale)
+            for item in controller?.workspaceToolbar?.items ?? [] {
+                switch item.itemIdentifier {
+                case toggleID: item.label = L("切换侧栏"); item.toolTip = L("显示或隐藏侧栏")
+                case composeID: item.label = L("新建任务"); item.toolTip = L("新建任务 · ⌘N")
+                case titleID: item.label = L("当前会话")
+                case actionsID: item.label = L("会话操作")
+                default: break
+                }
+            }
         }
         @objc private func compose() { newConversation() }
     }
@@ -172,4 +191,11 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.toolbarStyle = .unifiedCompact
         window.toolbar = workspaceToolbar
     }
+}
+
+/// Each AppKit hosting root starts a new SwiftUI environment tree.
+struct WorkspaceLocalizedRoot<Content: View>: View {
+    let content: Content
+    let locale: Locale
+    var body: some View { content.environment(\.locale, locale) }
 }

@@ -3,8 +3,7 @@
   Perch — English translations.
 
   The development language is Simplified Chinese: source literals are the
-  lookup keys, and a missed lookup falls back to the key itself. Only keys
-  that differ from their English rendering need an entry here.
+  lookup keys, and a missed lookup falls back to the key itself. Both tables define the same keys to avoid cross-language fallback.
   Scope: sidebar cluster (sidebar shell, session rows, sheets it opens,
   settings, app menu/alerts) plus the dynamic strings routed through L().
 */
@@ -208,3 +207,49 @@
 "未连接或已结束的%@：%@" = "Offline or ended %@: %@";
 "已选 %lld 个会话 · 保存在本机" = "%lld selected · Saved locally";
 "保存任务组" = "Save Group";
+
+"切换侧栏" = "Toggle Sidebar";
+
+"显示或隐藏侧栏" = "Show or Hide Sidebar";
+
+"新建任务" = "New Task";
+
+"新建任务 · ⌘N" = "New Task · ⌘N";
+
+"当前会话" = "Current Session";
+
+"会话操作" = "Session Actions";
+
+"正在恢复会话…" = "Restoring Session…";
+
+"查看远端文件（只读）" = "View Remote Files (Read Only)";
+
+"查看远端文件" = "View Remote Files";
+
+"同步会话" = "Refresh Conversation";
+
+"重新连接" = "Reconnect";
+
+"断开本地连接" = "Disconnect Locally";
+
+"连接终端" = "Connect Terminal";
+"About Perch" = "About Perch";
+"A home for your agents." = "A home for your agents.";
+"Conversation" = "Conversation";
+"Find in conversation" = "Find in conversation";
+"Next match" = "Next match";
+"Previous match" = "Previous match";
+"Back" = "Back";
+"Forward" = "Forward";
+"Next task needing attention" = "Next task needing attention";
+"Drafts could not be saved" = "Drafts could not be saved";
+"Keep Perch open" = "Keep Perch open";
+"Quit anyway" = "Quit anyway";
+"Task notifications" = "Task notifications";
+"Notify when Perch is in the background" = "Notify when Perch is in the background";
+"Completed responses, requests for input, and failures. Click a notification to open the task." = "Completed responses, requests for input, and failures. Click a notification to open the task.";
+"Stop task" = "Stop task";
+"任务组…" = "Group…";
+"原生对话…" = "Native Conversation…";
+"新建" = "New";
+"远端终端…" = "Remote Terminal…";

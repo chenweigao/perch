@@ -10,8 +10,8 @@ entry in Resources/Localization/en.lproj/Localizable.strings:
 2. Every literal passed to L(...) anywhere under Sources/, regardless of file.
 
 Interpolation holes `\\(...)` in sources and `%@`/`%lld`/`%f` in the strings
-table are all normalized to `<P>` before comparison, so the check validates
-coverage, not format-specifier typing (audit specifier types when adding keys).
+table are all normalized to `<P>` before comparison, for source coverage. Both tables must also have matching keys and preserve
+placeholder types and positions; duplicate keys fail the check.
 
 Exits non-zero when a key is missing. Runs anywhere (no macOS required).
 """
@@ -37,6 +37,8 @@ SCOPED_FILES = [
     "Sources/AgentWorkbench/WorkbenchSettings.swift",
     "Sources/AgentWorkbench/WorkbenchView.swift",
     "Sources/AgentWorkbench/WorkbenchApp.swift",
+    "Sources/AgentWorkbench/WorkbenchHeader.swift",
+    "Sources/AgentWorkbench/WorkspaceSplitView.swift",
     "Sources/AgentWorkbench/SelectionActions.swift",
     # Core files whose raw values are rendered in the scoped UI via L().
     "Sources/WorkbenchCore/Workspace.swift",
@@ -51,8 +53,8 @@ LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
 HOLE = re.compile(r"\\\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)")
 # Entry in a .strings file.
 ENTRY = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*;')
-FORMAT_SPEC = re.compile(r"%(?:@|lld|lld|f)")
-L_CALL = re.compile(r'L\(\s*"((?:[^"\\]|\\.)*)"')
+FORMAT_SPEC = re.compile(r"%(?:(\d+)\$)?(@|lld|ld|d|f)")
+L_CALL = re.compile(r'L\(\s*(?:key:\s*)?"((?:[^"\\]|\\.)*)"')
 
 
 def normalize(key: str) -> str:
@@ -61,13 +63,23 @@ def normalize(key: str) -> str:
     return key
 
 
-def table_keys(path: Path) -> set[str]:
-    keys = set()
+def format_signature(value: str) -> list[tuple[int, str]]:
+    return sorted((int(m.group(1)) if m.group(1) else i, m.group(2))
+                  for i, m in enumerate(FORMAT_SPEC.finditer(value.replace("%%", "")), 1))
+
+
+def table_entries(path: Path) -> dict[str, str]:
+    entries = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         m = ENTRY.match(line)
         if m:
-            keys.add(normalize(m.group(1)))
-    return keys
+            key, value = m.groups()
+            if key in entries:
+                raise ValueError(f"{path.name}: duplicate key: {key}")
+            if format_signature(key) != format_signature(value):
+                raise ValueError(f"{path.name}: placeholder type/order mismatch: {key}")
+            entries[key] = value
+    return entries
 
 
 def scoped_literals() -> dict[str, str]:
@@ -85,15 +97,24 @@ def l_literals() -> dict[str, str]:
     found: dict[str, str] = {}
     for path in sorted((ROOT / "Sources").rglob("*.swift")):
         text = path.read_text(encoding="utf-8")
-        for m in L_CALL.finditer(text):
+        calls = list(L_CALL.finditer(text))
+        calls += list(re.finditer(r'stateMessage(?:\s*:\s*String.LocalizationValue)?\s*=\s*"((?:[^"\\]|\\.)*)"', text))
+        for m in calls:
             raw = m.group(1)
-            if CJK.search(raw):
-                found.setdefault(normalize(raw), str(path.relative_to(ROOT)))
+            found.setdefault(normalize(raw), str(path.relative_to(ROOT)))
     return found
 
 
 def main() -> int:
-    keys = table_keys(EN_TABLE)
+    try:
+        en = table_entries(EN_TABLE)
+        zh = table_entries(ZH_TABLE)
+        if set(en) != set(zh):
+            raise ValueError("English and Chinese tables must contain the same keys")
+    except (ValueError, OSError) as error:
+        print(error)
+        return 1
+    keys = {normalize(key) for key in en}
     wanted = scoped_literals() | l_literals()
     missing = sorted(set(wanted) - keys)
     for key in missing:
@@ -101,9 +122,6 @@ def main() -> int:
     unused = sorted(keys - set(wanted))
     for key in unused:
         print(f"unused?  {key}")
-    if not ENTRY.search("") and not ZH_TABLE.exists():
-        print(f"missing table: {ZH_TABLE}")
-        return 1
     if missing:
         print(f"\n{len(missing)} key(s) missing from {EN_TABLE.relative_to(ROOT)}")
         return 1

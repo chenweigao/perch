@@ -30,6 +30,7 @@ struct AddHostSheet: View {
 }
 
 struct NewTerminalSheet: View {
+    @UILocalization private var L
     @ObservedObject var connection: HostConnection
     @ObservedObject var model: WorkbenchModel
     @Environment(\.dismiss) private var dismiss
