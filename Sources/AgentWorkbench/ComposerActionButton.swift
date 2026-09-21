@@ -52,12 +52,10 @@ struct ComposerAddButton: View {
     }
 }
 struct ComposerDeliveryHint: View {
-    let running: Bool
     let sending: Bool
     let saveError: String?
     var body: some View {
         if let saveError { Text(saveError).font(.system(size: 11)).foregroundStyle(.orange).textSelection(.enabled) }
         else if sending { Text("Sending…").font(.system(size: 11)).foregroundStyle(.secondary) }
-        else if running { Text("Working · New messages will be queued").font(.system(size: 11)).foregroundStyle(.tertiary) }
     }
 }

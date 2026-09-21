@@ -94,8 +94,7 @@ struct KimiWorkspaceView: View {
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() })
                 }
             }.padding(14).workbenchControlSurface()
-            ComposerDeliveryHint(running: connection.conversation?.snapshot.session.busy == true,
-                                 sending: connection.sending, saveError: connection.draftSaveError)
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)

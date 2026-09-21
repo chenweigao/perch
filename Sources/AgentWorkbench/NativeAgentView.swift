@@ -87,7 +87,7 @@ struct NativeAgentView: View {
                                                  onStop: { connection.stop() })
                         }
                     }.padding(14).workbenchControlSurface()
-                    ComposerDeliveryHint(running: s.busy, sending: connection.sending, saveError: connection.draftSaveError)
+                    ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
                 Text("此会话已移除，请从侧栏选择其他会话。").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
