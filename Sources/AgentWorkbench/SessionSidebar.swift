@@ -17,6 +17,7 @@ struct WorkbenchSidebar: View {
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个 SSH"),
                               onSearch: { showSearch = true },
+                              onNew: { model.showNewKimi = true },
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
                               onArchive: { model.showArchive() }) {
             if !projection.favorites.isEmpty {

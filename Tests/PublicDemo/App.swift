@@ -53,6 +53,7 @@ private struct PublicDemo: View {
         WorkspaceSplitView(newConversation: { showNotice = true }) {
             WorkspaceSidebarShell(page: .other, attentionCount: 0, environmentSummary: "演示环境",
                                   onSearch: { showNotice = true },
+                                  onNew: { showNotice = true },
                                   onHome: { selected = 0 }, onInbox: { showNotice = true },
                                   onArchive: { showNotice = true }) {
                 section("置顶")

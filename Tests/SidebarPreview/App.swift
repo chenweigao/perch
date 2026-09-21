@@ -21,6 +21,7 @@ private struct SidebarPreview: View {
         WorkspaceSplitView(newConversation: { title = "新建任务"; page = .other }) {
             WorkspaceSidebarShell(page: page, attentionCount: 2, environmentSummary: "1 个 SSH",
                                   onSearch: { showSearch = true },
+                                  onNew: { title = "新建会话"; page = .other },
                                   onHome: { title = "工作台"; page = .home },
                                   onInbox: { title = "待处理"; page = .inbox },
                                   onArchive: { title = "已归档"; page = .archive }) {

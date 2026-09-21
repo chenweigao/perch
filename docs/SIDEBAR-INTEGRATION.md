@@ -7,7 +7,7 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
 
 - Keep the existing AppKit sidebar split item: system floating glass, width
   restoration, and a draggable 220–420 pt divider.
-- Fixed top: Perch, new task (⌘N), task search (⌘K), workbench, attention inbox.
+- Fixed top: Perch, new session (⌘N), task search (⌘K), workbench, attention inbox.
 - The titlebar keeps two native navigation buttons: sidebar toggle and new task.
   Both use 32 × 28 pt controls and 16 pt regular/medium-scale symbols, centered
   without stretching. AppKit owns toolbar spacing and the separation from window
