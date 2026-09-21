@@ -12,6 +12,7 @@ import WorkbenchCore
 private struct ActivityPreview: View {
     @State private var phase = "Tools"
     @State private var narrow = false
+    @State private var includeHistory = true
     @State private var reviewCount = 0
     @State private var reconnectCount = 0
     @State private var turn = 1
@@ -20,6 +21,16 @@ private struct ActivityPreview: View {
         var rows: [[String: Any]] = [
             ["id": "u\(turn)", "role": "user", "created_at": "", "content": [["type": "text", "text": "Inspect a fixture project"]]]
         ]
+        if includeHistory {
+            for index in 1...20 {
+                rows.append(["id": "history-call-\(index)", "role": "assistant", "created_at": "", "content": [
+                    ["type": "tool_use", "tool_call_id": "history-\(index)", "tool_name": "Bash", "input": ["command": "echo fixture-\(index)"]]
+                ]])
+                rows.append(["id": "history-result-\(index)", "role": "tool", "created_at": "", "content": [
+                    ["type": "tool_result", "tool_call_id": "history-\(index)", "output": "Fixture result"]
+                ]])
+            }
+        }
         if phase != "Thinking" {
             let todos: [[String: String]] = [
                 ["title": "Inspect the existing layout", "status": "done"],
@@ -40,6 +51,7 @@ private struct ActivityPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             HStack { Text("Local fixture · No agent connections").font(.headline); Spacer(); Toggle("Narrow", isOn: $narrow) }
+            Toggle("Include 20 historical tool calls (hidden from the popover)", isOn: $includeHistory)
             Picker("Scenario", selection: $phase) {
                 ForEach(["Thinking", "Tools", "Approval", "Offline", "Stopping", "Responding", "Done", "Failed"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)

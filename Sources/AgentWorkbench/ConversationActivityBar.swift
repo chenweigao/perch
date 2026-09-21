@@ -59,7 +59,7 @@ struct ConversationActivityBar: View {
                             Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
                         }.contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Task activity")
-                        .accessibilityValue(activity.title).help("Show current activity and plan")
+                        .accessibilityValue(activity.title).help("Show task plan and current activity")
                         .popover(isPresented: $expanded, arrowEdge: .top) { details }
                     if !online {
                         Button("Reconnect", action: onReconnect).buttonStyle(.borderless)
@@ -79,8 +79,8 @@ struct ConversationActivityBar: View {
 
     @ViewBuilder private var counts: some View {
         HStack(spacing: 10) {
-            if !activity.activeTools.isEmpty { Text("\(activity.activeTools.count) \(activity.activeTools.count == 1 ? "tool" : "tools")") }
             if !activity.todos.isEmpty { Text("\(activity.completedSteps)/\(activity.todos.count) steps") }
+            if !activity.activeTools.isEmpty { Text("\(activity.activeTools.count) \(activity.activeTools.count == 1 ? "tool" : "tools")") }
         }.fixedSize().monospacedDigit()
     }
     @ViewBuilder private var clock: some View {
@@ -89,8 +89,11 @@ struct ConversationActivityBar: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label(activity.title, systemImage: activity.symbol).font(.system(size: 13, weight: .semibold))
+                Label("Task plan", systemImage: "checklist").font(.system(size: 13, weight: .semibold))
                 Spacer()
+                if !activity.todos.isEmpty {
+                    Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(.secondary)
+                }
                 Button { expanded = false } label: { Image(systemName: "xmark") }
                     .buttonStyle(.plain).accessibilityLabel("Close activity details")
             }
@@ -104,29 +107,30 @@ struct ConversationActivityBar: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if !activity.todos.isEmpty {
-                        Text("Plan · \(activity.completedSteps)/\(activity.todos.count)").fontWeight(.semibold)
                         ForEach(activity.todos) { item in
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
                                     .foregroundStyle(item.status == .inProgress ? Color.accentColor : Color.secondary)
-                                Text(item.title).foregroundStyle(item.status == .done ? .secondary : .primary)
+                                Text(item.title).fontWeight(item.status == .inProgress ? .medium : .regular)
+                                    .foregroundStyle(item.status == .done ? .secondary : .primary)
                             }.accessibilityElement(children: .combine)
                                 .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
                         }
+                    } else {
+                        Text("No plan reported yet.").foregroundStyle(.secondary)
                     }
-                    if !activity.tools.isEmpty {
-                        Text("Tools · \(activity.tools.count)").fontWeight(.semibold)
-                        ForEach(activity.tools) { tool in ActivityToolDetails(tool: tool) }
-                    } else if activity.todos.isEmpty {
-                        Text("Live tool activity and reported plan steps will appear here.").foregroundStyle(.secondary)
+                    if !activity.attentionTools.isEmpty {
+                        Divider()
+                        Text("Needs attention").fontWeight(.semibold).foregroundStyle(.orange)
+                        ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
+                    }
+                    if !activity.activeTools.isEmpty {
+                        Divider()
+                        Text("Current activity").fontWeight(.semibold)
+                        ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
-            if isRunning {
-                Divider()
-                Text("Observed time starts when this view sees the turn. Earlier runtime is unknown; waiting for input is included.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
-            }
         }.font(.system(size: 12)).padding(16).frame(width: 390)
     }
 }
@@ -159,9 +163,11 @@ private struct ActivityToolDetails: View {
                 HStack {
                     Text(tool.name).fontWeight(.medium)
                     Spacer()
-                    Text(ConversationActivity.status(of: tool)).foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : Color.secondary)
+                    Text(tool.hasCall ? ConversationActivity.status(of: tool) : "Call record missing")
+                        .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : Color.secondary)
                 }
-                Text(ConversationActivity.summary(of: tool)).lineLimit(2).foregroundStyle(.secondary)
+                let summary = ConversationActivity.summary(of: tool)
+                if summary != tool.name { Text(summary).lineLimit(2).foregroundStyle(.secondary) }
                 if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(.secondary) }
             }
         }

@@ -29,5 +29,41 @@ func checkConversationActivity() throws {
     precondition(!idle.isVisible)
     let failedResult = try messages(#"[{"id":"r","role":"tool","created_at":"","content":[{"type":"tool_result","tool_call_id":"t","is_error":true,"output":"Failed"}]}]"#)
     precondition(ConversationActivity(messages: user + call + failedResult, isRunning: false).needsAttention)
+    let mixedTools = try messages(#"""
+    [
+      {"id":"calls","role":"assistant","created_at":"","content":[
+        {"type":"tool_use","tool_call_id":"returned","tool_name":"Bash","input":{"command":"echo fixture"}},
+        {"type":"tool_use","tool_call_id":"failed","tool_name":"Read","input":{"path":"Missing.swift"}},
+        {"type":"tool_use","tool_call_id":"missing","tool_name":"Read","input":{"path":"Pending.swift"}},
+        {"type":"tool_use","tool_call_id":"active","tool_name":"Read","input":{"path":"Current.swift"}}
+      ]},
+      {"id":"results","role":"tool","created_at":"","content":[
+        {"type":"tool_result","tool_call_id":"returned","output":"Returned without success signal"},
+        {"type":"tool_result","tool_call_id":"failed","is_error":true,"output":"Not found"}
+      ]},
+      {"id":"plan","role":"assistant","created_at":"","content":[
+        {"type":"tool_use","tool_call_id":"plan","tool_name":"TodoList","input":{"todos":[
+          {"title":"Inspect files","status":"done"},{"title":"Review changes","status":"in_progress"}
+        ]}}
+      ]},
+      {"id":"plan-result","role":"tool","created_at":"","content":[
+        {"type":"tool_result","tool_call_id":"plan","is_error":false,"output":"Plan saved"}
+      ]}
+    ]
+    """#)
+    let mixedMessages = user + call + result + mixedTools
+    let mixed = ConversationActivity(messages: mixedMessages, isRunning: true, running: ["active"])
+    precondition(mixed.activeTools.map(\.id) == ["active"])
+    precondition(mixed.attentionTools.map(\.id) == ["failed", "missing"])
+    precondition(mixed.todos.count == 2 && mixed.completedSteps == 1, "Keep the plan after hiding completed TodoList calls")
+    precondition(mixed.tools.count == 6, "Filtering the popover must not discard tool history")
+    let transcript = ToolVisibilityProjection().update(mixedMessages, sessionID: "fixture", running: ["active"])
+    precondition(transcript.tools["t"]?.status == .succeeded && transcript.tools["returned"]?.status == .returned)
+    precondition(offline.attentionTools.map(\.id) == ["t"])
+    let orphan = ConversationActivity(messages: user + result, isRunning: false)
+    precondition(orphan.attentionTools.count == 1 && !orphan.attentionTools[0].hasCall,
+                 "A returned result without its call still needs attention")
+    let shell = VisibleTool(id: "shell", name: "Bash", input: .object(["command": .string("echo fixture")]), status: .running)
+    precondition(ConversationActivity.summary(of: shell) == "Bash", "Raw commands belong in expanded details")
     print("Conversation activity: live/history dedup, result precedence, disconnect, approval, stop and turn isolation passed")
 }

@@ -10,6 +10,7 @@ public struct ConversationActivity {
     public let animates: Bool
     public let isVisible: Bool
     public var activeTools: [VisibleTool] { tools.filter { $0.status == .running } }
+    public var attentionTools: [VisibleTool] { tools.filter { $0.staysVisible && $0.status != .running } }
     public var completedSteps: Int { todos.filter { $0.status == .done }.count }
 
     public init(messages: [KimiMessage], isRunning: Bool, liveTools: [KimiLiveTool] = [],
@@ -46,7 +47,7 @@ public struct ConversationActivity {
     }
 
     public static func summary(of tool: VisibleTool) -> String {
-        tool.input?["description"].string ?? tool.input?["command"].string
+        tool.input?["description"].string
             ?? tool.input?["file_path"].string ?? tool.input?["path"].string ?? tool.name
     }
     public static func status(of tool: VisibleTool) -> String {
