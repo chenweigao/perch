@@ -22,8 +22,8 @@ func checkNativeAgents() throws {
     precondition(done.last?.messages[0].content.count == 1 && done.last?.messages[0].content[0].text == "最终结果")
     precondition(done.first { $0.presentation == .thinkingDetails }?.messages[0].content[0].type == "thinking")
     let host = UUID()
-    let refs = [SessionKind.kimi, .omp, .qoder, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
-    precondition(Set(refs.map(\.id)).count == 4)
+    let refs = [SessionKind.kimi, .omp, .qoder, .dsh, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
+    precondition(Set(refs.map(\.id)).count == 5)
     var workspace = LocalWorkspace(); refs.forEach { workspace.toggleStar($0) }
     let restored = try JSONDecoder().decode(LocalWorkspace.self, from: JSONEncoder().encode(workspace))
     precondition(restored.starred == refs)

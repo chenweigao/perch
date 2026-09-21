@@ -36,13 +36,14 @@
 | Kimi Code | Kimi Web API + SSH | 原生对话 |
 | Oh My Pi（OMP） | 远端桥接 RPC | 原生对话 |
 | Qoder CN | 远端桥接官方 Agent SDK | 原生对话 |
+| DeepSeek Harness（dsh） | 远端桥接 ACP | 原生对话 |
 | 其他 CLI Agent | Herdr + SSH | 终端 |
 
 原生接入共用对话组件。欢迎扩展 RPC、SDK 或 ACP 适配器；目前不宣称任意协议即插即用。
-已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN](docs/NATIVE-AGENTS.md)。
+已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / dsh](docs/NATIVE-AGENTS.md)。
 凭据和模型由对应 CLI 配置，Perch 不直连模型服务商。
 
-目前支持发现本机 OMP，本机原生对话尚未接通。OMP / Qoder CN 支持停止与下一轮消息排队，
+目前支持发现本机 OMP，本机原生对话尚未接通。OMP / Qoder CN / dsh 支持停止与下一轮消息排队，
 暂不支持运行中即时引导；Herdr 中的现有会话继续使用终端。
 
 ## 构建运行

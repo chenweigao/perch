@@ -79,7 +79,7 @@ struct WorkspaceHome: View {
                 }
                 if !model.kimi.online || !model.native.online || model.connections.contains(where: { !$0.online }) {
                     VStack(alignment: .leading, spacing: 6) {
-                        if !model.native.online { Label("OMP / Qoder CN · 状态未同步", systemImage: "wifi.slash") }
+                        if !model.native.online { Label("原生对话 · 状态未同步", systemImage: "wifi.slash") }
                         if !model.kimi.online { Label("Kimi · \(model.kimi.state)", systemImage: "wifi.slash") }
                         ForEach(model.connections.filter { !$0.online }) { connection in
                             Label("\(connection.host.name) 终端 · \(connection.state)", systemImage: "wifi.slash")

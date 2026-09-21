@@ -110,6 +110,204 @@ class ProtocolTests(unittest.TestCase):
         tool=broker.normalize({'role':'user','content':[{'type':'tool_result','tool_use_id':'x','content':'ok'}]},'tool')
         self.assertEqual(tool['content'][0]['tool_call_id'],'x')
 
+class DshProtocolTests(unittest.TestCase):
+    OPTIONS = [
+        {'id':'model','name':'Model','category':'model','type':'select','currentValue':'["deepseek-official","deepseek-v4-flash"]',
+         'options':[{'group':'deepseek-official','name':'DeepSeek','options':[
+             {'value':'["deepseek-official","deepseek-v4-flash"]','name':'DeepSeek-V4-Flash'},
+             {'value':'["deepseek-official","deepseek-v4-pro"]','name':'DeepSeek-V4-Pro'}]}]},
+        {'id':'reasoning_effort','name':'Reasoning effort','category':'thought_level','type':'select','currentValue':'high',
+         'options':[{'value':'off','name':'Off'},{'value':'low','name':'Low'},{'value':'high','name':'High'},{'value':'max','name':'Max'}]}]
+    def session(self):
+        s = broker.Session({'id':'qd','provider':'dsh','cwd':'/tmp','title':'QD','model':'','busy':False,'archived':False,'updated':0,'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
+        self.sent = []
+        s.send = lambda value: self.sent.append(value)
+        s.process = type('Process',(),{'poll':lambda self:None})()
+        return s
+    def open_session(self, s):
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'dsh-1','configOptions':self.OPTIONS},'error':None})
+    def test_handshake_opens_session_and_applies_options(self):
+        s = self.session()
+        self.assertFalse(s.ready.is_set())
+        self.open_session(s)
+        self.assertTrue(s.ready.is_set())
+        self.assertEqual(s.state['resume'],'dsh-1')
+        self.assertEqual(s.state['model'],'deepseek-v4-flash')
+        self.assertEqual(s.state['provider_id'],'deepseek-official')
+        self.assertEqual(s.state['thinking'],'high')
+        self.assertEqual(broker.dsh_catalog()[0]['id'],'deepseek-v4-flash')
+    def test_pending_prompt_flushes_after_handshake(self):
+        s = self.session()
+        s.state['busy'] = True; s.state['turnId'] = 'r1'; s.state['turnState'] = 'submitting'
+        s.state['requests'] = {'r1':{'id':'r1','digest':'x','status':'submitting'}}
+        s.pending_prompt = ('r1','你好')
+        self.assertEqual([f for f in self.sent if f.get('method')=='session/prompt'],[])
+        self.open_session(s)
+        frames = [f for f in self.sent if f.get('method')=='session/prompt']
+        self.assertEqual(len(frames),1)
+        self.assertEqual(frames[0]['params']['sessionId'],'dsh-1')
+        self.assertEqual(frames[0]['params']['prompt'][0]['text'],'你好')
+        self.assertEqual(s.state['requests']['r1']['status'],'submitted')
+    def test_prompt_parks_until_ready(self):
+        s = self.session()
+        s.ready.clear()
+        s.prompt({'text':'ping','requestId':'r1'})
+        self.assertEqual(s.state['requests']['r1']['status'],'submitting')
+        self.assertEqual([f for f in self.sent if f.get('method')=='session/prompt'],[])
+    def test_open_failure_fails_parked_prompt(self):
+        s = self.session()
+        s.state['busy'] = True; s.state['turnId'] = 'r1'
+        s.state['requests'] = {'r1':{'id':'r1','digest':'x','status':'submitting'}}
+        s.pending_prompt = ('r1','ping')
+        s.event({'type':'acp_response','kind':'session_open','result':None,'error':{'message':'session not found'}})
+        self.assertFalse(s.state['busy'])
+        self.assertEqual(s.summary()['turnState'],'failed')
+        self.assertIn('session not found',s.state['error'])
+        self.assertIsNone(s.pending_prompt)
+    def test_updates_build_messages_tools_and_context(self):
+        s = self.session(); self.open_session(s)
+        s.state['busy'] = True; s.state['turnId'] = 'r1'; s.state['turnState'] = 'submitted'
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'dsh-1','update':{'sessionUpdate':'agent_thought_chunk','messageId':'m1','content':{'type':'text','text':'想一下'}}}})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'dsh-1','update':{'sessionUpdate':'agent_message_chunk','messageId':'m1','content':{'type':'text','text':'答：'}}}})
+        self.assertEqual(s.summary()['turnState'],'running')
+        messages = s.snapshot()['messages']
+        self.assertEqual(len(messages),1)
+        parts = messages[0]['content']
+        self.assertEqual([p['type'] for p in parts],['thinking','text'])
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'dsh-1','update':{'sessionUpdate':'tool_call','toolCallId':'c1','title':'bash','status':'in_progress','rawInput':{'command':'ls'}}}})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'dsh-1','update':{'sessionUpdate':'tool_call_update','toolCallId':'c1','status':'completed','content':[{'type':'content','content':{'type':'text','text':'ok'}}]}}})
+        messages = s.snapshot()['messages']
+        tool_msg = next(m for m in messages if m['content'][0]['type']=='tool_use')
+        self.assertEqual(tool_msg['content'][0]['tool_name'],'bash')
+        result_msg = next(m for m in messages if m['role']=='tool')
+        self.assertEqual(result_msg['content'][0]['tool_call_id'],'c1')
+        self.assertEqual(result_msg['content'][0]['output'][0]['text'],'ok')
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'dsh-1','update':{'sessionUpdate':'usage_update','used':120,'size':1000}}})
+        self.assertEqual(s.summary()['context'],{'tokens':120,'limit':1000})
+    def test_updates_from_other_sessions_are_ignored(self):
+        s = self.session(); self.open_session(s)
+        before = s.state['revision']
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'other','update':{'sessionUpdate':'agent_message_chunk','messageId':'m1','content':{'type':'text','text':'x'}}}})
+        self.assertEqual(s.state['revision'],before)
+        self.assertEqual(s.state['messages'],[])
+    def test_permission_request_maps_to_select_and_back(self):
+        s = self.session(); self.open_session(s)
+        s.state['busy'] = True; s.state['turnId'] = 'r1'
+        s.event({'type':'acp_request','wireId':9,'method':'session/request_permission','params':{'sessionId':'dsh-1','toolCall':{'toolCallId':'c1','title':'bash','rawInput':{'command':'rm -rf build/' }},'options':[
+            {'optionId':'allow-once','name':'Allow once','kind':'allow_once'},
+            {'optionId':'reject-once','name':'Reject','kind':'reject_once'}]}})
+        interactions = s.snapshot()['interactions']
+        self.assertEqual(interactions[0]['method'],'select')
+        self.assertEqual(interactions[0]['options'],['Allow once','Reject'])
+        # The Mac answers with the label; the bridge owes dsh the opaque optionId.
+        pending = s.permission_options['acp-permission-9']
+        self.assertEqual(pending['map']['Allow once'],'allow-once')
+        s.send({'jsonrpc':'2.0','id':pending['wireId'],'result':{'outcome':{'outcome':'selected','optionId':pending['map']['Allow once']}}})
+        response = self.sent[-1]
+        self.assertEqual(response['id'],9)
+        self.assertEqual(response['result']['outcome']['optionId'],'allow-once')
+    def test_prompt_end_states(self):
+        s = self.session(); self.open_session(s)
+        s.state['busy'] = True; s.state['turnId'] = 'r1'
+        s.event({'type':'acp_response','kind':'prompt:r1','result':{'stopReason':'end_turn'},'error':None})
+        self.assertEqual(s.state['completed'],1)
+        self.assertEqual(s.summary()['turnState'],'completed')
+        s2 = self.session(); self.open_session(s2)
+        s2.state['busy'] = True; s2.state['turnId'] = 'r2'; s2.state['stopRequested'] = True
+        s2.event({'type':'acp_response','kind':'prompt:r2','result':{'stopReason':'cancelled'},'error':None})
+        self.assertEqual(s2.summary()['turnState'],'stopped')
+        self.assertEqual(s2.state['completed'],0)
+        s3 = self.session(); self.open_session(s3)
+        s3.state['busy'] = True; s3.state['turnId'] = 'r3'
+        s3.event({'type':'acp_response','kind':'prompt:r3','result':None,'error':{'message':'Internal error: turn failed: no API key'}})
+        self.assertEqual(s3.state['error'],'turn failed: no API key')
+        self.assertEqual(s3.summary()['turnState'],'failed')
+    def test_error_after_stop_request_reads_as_stopped(self):
+        s = self.session(); self.open_session(s)
+        s.state['busy'] = True; s.state['turnId'] = 'r1'; s.state['stopRequested'] = True
+        s.event({'type':'acp_response','kind':'prompt:r1','result':None,'error':{'message':'Internal error: turn cancelled'}})
+        self.assertIsNone(s.state['error'])
+        self.assertEqual(s.summary()['turnState'],'stopped')
+    def test_unknown_server_request_is_answered_not_wedged(self):
+        s = self.session(); self.open_session(s)
+        s.event({'type':'acp_request','wireId':33,'method':'session/other','params':{}})
+        response = self.sent[-1]
+        self.assertEqual(response['id'],33)
+        self.assertEqual(response['error']['code'],-32601)
+
+class DshHandlerContractTests(unittest.TestCase):
+    def setUp(self):
+        process_guard=patch.object(broker.subprocess,'Popen',side_effect=AssertionError('contract tests must not launch a real process'))
+        process_guard.start(); self.addCleanup(process_guard.stop)
+        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None; broker.DSH_MODELS=None
+        self.s=broker.Session(dict(id='dsh-contract',provider='dsh',cwd=folder.name,title='Test',model='',
+            busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
+        self.s.process=type('Process',(),{'poll':lambda self:None})()
+        self.sent=[]; self.s.send=lambda value:self.sent.append(value)
+        broker.SESSIONS['dsh-contract']=self.s
+        self.s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'dsh-1','configOptions':DshProtocolTests.OPTIONS},'error':None})
+    def request(self,path,body=None):
+        handler=object.__new__(broker.Handler); raw=json.dumps(body or {}).encode()
+        handler.path=path; handler.headers={'Authorization':'Bearer test-token','Content-Length':str(len(raw))}
+        handler.rfile=io.BytesIO(raw); result=[]
+        handler.respond=lambda code,payload:result.append((code,payload))
+        handler.handle_request(body is not None)
+        return result[0]
+    def test_answer_selected_maps_label_to_option_id(self):
+        self.s.state['busy']=True; self.s.state['turnId']='r1'
+        self.s.event({'type':'acp_request','wireId':9,'method':'session/request_permission','params':{'sessionId':'dsh-1','toolCall':{'toolCallId':'c1','title':'bash'},'options':[
+            {'optionId':'allow-once','name':'Allow once','kind':'allow_once'},
+            {'optionId':'reject-once','name':'Reject','kind':'reject_once'}]}})
+        code,payload=self.request('/sessions/dsh-contract/answer',{'id':'acp-permission-9','value':'Allow once'})
+        self.assertEqual(code,200)
+        response=self.sent[-1]
+        self.assertEqual(response['result']['outcome'],{'outcome':'selected','optionId':'allow-once'})
+        self.assertEqual(self.s.snapshot()['interactions'],[])
+    def test_answer_cancelled_and_unknown_option(self):
+        self.s.state['busy']=True; self.s.state['turnId']='r1'
+        self.s.event({'type':'acp_request','wireId':10,'method':'session/request_permission','params':{'sessionId':'dsh-1','toolCall':{'toolCallId':'c2','title':'bash'},'options':[{'optionId':'allow-once','name':'Allow once','kind':'allow_once'}]}})
+        code,_=self.request('/sessions/dsh-contract/answer',{'id':'acp-permission-10','value':'not-an-option'})
+        self.assertEqual(code,400)
+        code,_=self.request('/sessions/dsh-contract/answer',{'id':'acp-permission-10','cancelled':True})
+        self.assertEqual(code,200)
+        self.assertEqual(self.sent[-1]['result']['outcome'],{'outcome':'cancelled'})
+    def test_abort_parked_prompt_settles_locally(self):
+        self.s.ready.clear(); self.s.pending_prompt=('r1','ping')
+        self.s.state.update(busy=True,turnId='r1',turnState='submitting',requests={'r1':{'id':'r1','digest':'x','status':'submitting'}})
+        code,_=self.request('/sessions/dsh-contract/abort',{'turnId':'r1'})
+        self.assertEqual(code,200)
+        self.assertIsNone(self.s.pending_prompt)
+        self.assertEqual(self.s.summary()['turnState'],'stopped')
+        self.assertEqual([f for f in self.sent if f.get('method')=='session/cancel'],[])
+    def test_abort_live_turn_notifies_cancel(self):
+        self.s.state.update(busy=True,turnId='r1',turnState='running',requests={'r1':{'id':'r1','digest':'x','status':'running'}})
+        code,_=self.request('/sessions/dsh-contract/abort',{'turnId':'r1'})
+        self.assertEqual(code,200)
+        frame=self.sent[-1]
+        self.assertEqual(frame['method'],'session/cancel')
+        self.assertEqual(frame['params'],{'sessionId':'dsh-1'})
+        self.assertNotIn('id',frame)
+    def test_model_and_thinking_actions_validate_then_send(self):
+        code,_=self.request('/sessions/dsh-contract/model',{'provider':'deepseek-official','model':'deepseek-v4-pro'})
+        self.assertEqual(code,200)
+        frame=self.sent[-1]
+        self.assertEqual(frame['method'],'session/set_config_option')
+        self.assertEqual(frame['params']['configId'],'model')
+        self.assertEqual(frame['params']['value'],'["deepseek-official","deepseek-v4-pro"]')
+        code,_=self.request('/sessions/dsh-contract/model',{'provider':'deepseek-official','model':'not-a-model'})
+        self.assertEqual(code,400)
+        code,_=self.request('/sessions/dsh-contract/thinking',{'level':'max'})
+        self.assertEqual(code,200)
+        self.assertEqual(self.sent[-1]['params']['value'],'max')
+        code,_=self.request('/sessions/dsh-contract/thinking',{'level':'xhigh'})
+        self.assertEqual(code,400)
+    def test_combined_catalog_survives_omp_failure(self):
+        def fail(*args,**kwargs): raise OSError('omp not installed')
+        with patch.object(broker.subprocess,'run',side_effect=fail):
+            code,payload=self.request('/models')
+        self.assertEqual(code,200)
+        self.assertEqual(payload['models'][0]['provider'],'deepseek-official')
+
 class HandlerContractTests(unittest.TestCase):
     def setUp(self):
         process_guard=patch.object(broker.subprocess,'Popen',side_effect=AssertionError('contract tests must not launch a real process'))

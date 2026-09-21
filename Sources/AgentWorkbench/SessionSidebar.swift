@@ -256,7 +256,7 @@ private struct ConnectionControls: View {
                 Button { kimi.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接 Kimi")
             }.help(kimi.error ?? kimi.state(locale: L.locale))
             HStack {
-                Label("OMP / Qoder CN", systemImage: "bubble.left.and.bubble.right"); Spacer()
+                Label("原生对话", systemImage: "bubble.left.and.bubble.right"); Spacer()
                 Circle().fill(native.online ? .green : .orange).frame(width: 5, height: 5)
                 Button { native.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接原生对话")
             }.help(native.error ?? L("远端持久托管"))

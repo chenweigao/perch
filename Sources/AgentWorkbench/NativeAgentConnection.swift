@@ -16,9 +16,9 @@ final class NativeAgentConnection: ObservableObject {
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     @Published var queue = OutboundQueue() { didSet { persistDrafts() } }
     @Published var stops = StopController()
-    /// The runtime's own catalog, read once per connection. Only OMP answers
-    /// `omp models`, so a Qoder session keeps an empty list rather than being
-    /// offered models it cannot switch to.
+    /// The bridge's combined catalog: OMP answers `omp models`, dsh contributes its
+    /// ACP config options after each handshake, and a Qoder session keeps an empty
+    /// list rather than being offered models it cannot switch to.
     @Published private(set) var models: [AgentModel] = []
     /// The hosted bridge rejects `prompt` while a turn runs, so this adapter may only
     /// offer next-turn queueing. Steering stays unsupported until the bridge itself
@@ -160,12 +160,16 @@ final class NativeAgentConnection: ObservableObject {
         let session: NativeAgentSession = try await request("/sessions", body: .object(["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]))
         sessions.insert(session, at: 0); onSessionsChanged?(); select(session.id); return session
     }
+    /// The catalog is re-read on every session switch because it is no longer
+    /// static: a dsh session contributes its runtime's options only after the ACP
+    /// handshake lands. Failures keep the last good list; an empty list is the only
+    /// state worth an error message.
     func loadModels() async {
-        guard models.isEmpty else { return }
         do {
             let value: JSONValue = try await request("/models")
-            models = ModelSelectionCatalog.parseOMP(value["models"])
-        } catch { actionError = error.localizedDescription }
+            let parsed = ModelSelectionCatalog.parseOMP(value["models"])
+            if parsed != models { models = parsed }
+        } catch { if models.isEmpty { actionError = error.localizedDescription } }
     }
     func model(for snapshot: NativeAgentSnapshot) -> AgentModel? {
         ModelSelectionCatalog.model(snapshot.model, in: models)

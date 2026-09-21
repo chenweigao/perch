@@ -37,17 +37,18 @@ Liquid Glass controls on macOS 26. Designed for a focused, fluid reading experie
 | Kimi Code | Kimi Web API over SSH | Native conversation |
 | Oh My Pi (OMP) | RPC through the remote bridge | Native conversation |
 | Qoder CN | Official Agent SDK through the remote bridge | Native conversation |
+| DeepSeek Harness (dsh) | ACP through the remote bridge | Native conversation |
 | Other CLI agents | Herdr + SSH | Terminal |
 
 Native integrations share the same conversation UI. Additional RPC, SDK or ACP
 adapters are welcome; arbitrary protocol compatibility is not automatic.
-See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN setup](docs/NATIVE-AGENTS.md)
+See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / dsh setup](docs/NATIVE-AGENTS.md)
 for tested versions and recovery limits. Agent credentials and model configuration
 stay with the CLI; Perch does not connect directly to model providers.
 
 Local OMP discovery is available, but local native conversations are not connected
-yet. OMP / Qoder CN support stopping and queued follow-up messages; live steering
-is not supported. Existing Herdr sessions remain terminal sessions.
+yet. OMP / Qoder CN / dsh support stopping and queued follow-up messages; live
+steering is not supported. Existing Herdr sessions remain terminal sessions.
 
 ## Build and run
 

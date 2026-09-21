@@ -42,7 +42,7 @@ struct NewTerminalSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("新建远端终端").font(.title2.weight(.semibold))
-            Text("在 \(connection.host.name) 的 Herdr 中创建持久终端。进入后可运行 Kimi、OMP 或 Qoder CLI。")
+            Text("在 \(connection.host.name) 的 Herdr 中创建持久终端。进入后可运行 Kimi、OMP、Qoder 或 dsh CLI。")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
                 Picker("工作区", selection: $workspaceID) {
