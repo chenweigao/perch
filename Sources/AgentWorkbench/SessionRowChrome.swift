@@ -20,7 +20,7 @@ struct SessionRowChrome<Indicator: View>: View {
 
     private var showActions: Bool { hovered || selected || archived || focus != nil }
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             Button(action: onOpen) {
                 HStack(alignment: .top, spacing: 9) {
                     indicator.frame(width: 17, height: 16).accessibilityHidden(true)
@@ -30,7 +30,8 @@ struct SessionRowChrome<Indicator: View>: View {
                             Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading)
-                }.contentShape(Rectangle())
+                }.padding(.leading, 10).padding(.trailing, 4)
+                    .frame(height: subtitle == nil ? 34 : 48).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
                 .accessibilityLabel(title)
             HStack(spacing: 0) {
@@ -53,7 +54,7 @@ struct SessionRowChrome<Indicator: View>: View {
             }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
                 .frame(width: 48, alignment: .trailing)
                 .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
-        }.padding(.leading, 10).padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
+        }.padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
             .background(selected ? .black.opacity(0.065) : hovered ? .black.opacity(0.03) : .clear,
                         in: RoundedRectangle(cornerRadius: 8))
             .contentShape(Rectangle()).onHover { hovered = $0 }
