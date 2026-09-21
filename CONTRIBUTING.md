@@ -7,7 +7,9 @@ validation. For larger changes, discuss the scope in an issue first.
 ## Development
 
 Follow [the setup guide](docs/GETTING-STARTED.md) and `AGENTS.md`. Use a dedicated
-branch and worktree. Run `scripts/build.sh`, `.build/release/WorkbenchChecks` and
+branch and worktree. Install local secret checks once with
+`python3 scripts/setup-security.py`; see [secret prevention](docs/SECRET-PREVENTION.md).
+Run `scripts/build.sh`, `.build/release/WorkbenchChecks` and
 `git diff --check`; add tests for the behavior you change. Remote bridge tests run
 with `python3 -m unittest discover -s remote -p 'test_*.py'`.
 
