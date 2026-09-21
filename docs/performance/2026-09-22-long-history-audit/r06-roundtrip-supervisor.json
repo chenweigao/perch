@@ -1,0 +1,10 @@
+{
+  "status": "exited",
+  "mode": "roundtrip",
+  "timeout_s": 120,
+  "binary_sha256": "f5367f62ca086284abb2414d21399596e5a7730257e6275f0bb8ab2d7683d7fa",
+  "pid": 72178,
+  "exit_code": 0,
+  "elapsed_s": 8.810411959,
+  "passed": true
+}

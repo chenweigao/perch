@@ -96,3 +96,15 @@ Navigation Preview 使用生产 ConversationTranscript/ConversationScrollView，
 - 窄列后消息仍可读；精确 3 pt 偏移沿用第 3 轮未解决记录，不把“看起来没跳”当成像素断言通过。
 
 这些是实际窗口控件、内容与交互检查，没有测量显示链路帧率；不宣称达到 Codex 的主观流畅度。本轮没有产品代码修改，也不再增加重复 fixture。连续无新可行动问题计数 1。
+
+## 第 6 轮：输入、草稿与会话往返（未发现新可行动问题）
+
+实际 Composer Preview 使用生产 MessageComposer，每 100 ms 刷新：通过 Unicode 粘贴核对“历史阅读时输入 draft-A\n第二行仍保留”，切至会话二输入 draft-B，回到会话一内容未变；Return 本地提交后显示完整两行且只清空当前草稿；会话二仍有 draft-B，Shift Return 后继续键入 line-2 成功。
+
+CUA typeText 直接注入中文未完整送达，改用 Unicode 粘贴后读回完整；一次粘贴等待超时、一次 AX 切换报错，随后的 AX 读回确认动作实际完成。这些是工具交互限制，未当作生产 Composer 缺陷或 IME 验收。真实中文输入法 marked-text/候选组合未验证。
+
+既有 Navigation roundtrip：20 次归档/分组/会话往返、60 次滚动间搜索更新，dropped_keystrokes=0；搜索模型更新到列表显示 p95 58.98 ms，会话内容 p95 34.68 ms。这不是同一窗口中真实 Composer 硬件键入与长历史滚动同时发生的测量；此边界保留。
+
+ComposerChecks 可编译，但独立 .local/ComposerChecks 两次启动均 SIGKILL（第二次 shell 137），没有 PASS 输出，原因未确认，**不列为通过**；没有继续重复启动或修改安全设置。实际隔离输入窗口正常运行。
+
+无产品修改，连续无新可行动问题计数 2。
