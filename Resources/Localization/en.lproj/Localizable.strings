@@ -254,3 +254,19 @@
 "原生对话…" = "Native Conversation…";
 "新建" = "New";
 "远端终端…" = "Remote Terminal…";
+
+/* Task group page */
+"关联已有会话" = "Link Existing Sessions";
+"需要处理 · %lld" = "Needs Attention · %lld";
+"本组会话 · %lld" = "Group Sessions · %lld";
+"搜索本组会话" = "Search Group Sessions";
+"还没有可显示的会话" = "No sessions to show yet";
+"没有匹配的会话" = "No matching sessions";
+"清除搜索" = "Clear Search";
+"另有 %lld 个关联会话尚未同步，可在关联管理中查看。" = "%lld other linked sessions have not synced yet. Find them in Link Existing Sessions.";
+"归档已完成 %lld" = "Archive Completed %lld";
+"任务组操作" = "Group Actions";
+"正在归档…" = "Archiving…";
+"状态未同步" = "State not synced";
+"需要处理" = "Needs Attention";
+"有新结果" = "New Result";

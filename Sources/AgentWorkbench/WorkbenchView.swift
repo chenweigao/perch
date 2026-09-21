@@ -20,7 +20,7 @@ struct WorkbenchView: View {
                     Button("关闭") { model.showRenderReport = false }.keyboardShortcut(.cancelAction)
                 }.padding(26).frame(minWidth: 550)
             }
-            .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model) }
+            .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .sheet(isPresented: $model.showAddHost) { AddHostSheet(model: model) }
             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
             .onAppear {
@@ -96,6 +96,7 @@ private struct WorkbenchDetail: View {
                 if model.showDashboard {
                     if model.showArchived { ArchivedSessionsView(model: model) }
                     else if model.showSessionDirectory { SessionDirectoryView(model: model) }
+                    else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
                     else {
                         WorkbenchDashboard(
                             attentionOnly: model.onlyAttention, projection: model.dashboardProjection, groups: model.workspace.groups,

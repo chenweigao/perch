@@ -42,6 +42,7 @@ final class WorkbenchModel: ObservableObject {
     @Published var renderReport = ""
     @Published var showGroupEditor = false
     @Published var editingGroup: WorkItemGroup?
+    @Published var editingGroupSessionsOnly = false
     @Published var taskNotice: TaskNotice?
     @Published var notificationError: String?
     @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "task.notifications") {
@@ -302,7 +303,9 @@ final class WorkbenchModel: ObservableObject {
         guard let group = selectedGroup, let id = workspace.lastSessionByGroup[group.id.uuidString] else { return nil }
         return allSessions.first { $0.id == id && !$0.archived && group.sessions.contains($0.reference) }
     }
-    func editGroup(_ group: WorkItemGroup? = nil) { editingGroup = group; showGroupEditor = true }
+    func editGroup(_ group: WorkItemGroup? = nil, sessionsOnly: Bool = false) {
+        editingGroup = group; editingGroupSessionsOnly = sessionsOnly; showGroupEditor = true
+    }
     func saveGroup(_ group: WorkItemGroup) {
         if let index = workspace.groups.firstIndex(where: { $0.id == group.id }) { workspace.groups[index] = group }
         else { workspace.groups.append(group) }
