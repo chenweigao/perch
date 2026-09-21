@@ -39,6 +39,12 @@ struct WorkbenchView: View {
             } message: { item in
                 Text(item.reference.kind == .kimi ? L("将从 Kimi 服务删除「\(item.title)」及其历史，无法撤销。只想收起时，请使用归档。") : item.reference.kind != .terminal ? L("将删除工作台中的「\(item.title)」及对话记录。Agent 自身保存的历史仍保留。") : L("将关闭「\(item.title)」的远端进程，运行中的任务会中断。只想整理列表时，请使用本机归档。"))
             }
+            .alert("移除机器？", isPresented: Binding(get: { model.pendingHostRemoval != nil }, set: { if !$0 { model.pendingHostRemoval = nil } }), presenting: model.pendingHostRemoval) { host in
+                Button("取消", role: .cancel) { model.pendingHostRemoval = nil }
+                Button("移除机器", role: .destructive) { model.pendingHostRemoval = nil; model.removeHost(host) }
+            } message: { host in
+                Text("将断开「\(host.name)」并从这台 Mac 的列表中移除。远端的 Agent 与终端继续运行，你的 SSH 配置不变；该机器上的会话会从列表消失，重新添加后可再出现。")
+            }
             .alert("操作未完成", isPresented: Binding(get: { model.managementError != nil }, set: { if !$0 { model.managementError = nil } })) {
                 Button("知道了") { model.managementError = nil }
             } message: { Text(model.managementError ?? "") }
@@ -99,13 +105,16 @@ private struct WorkbenchDetail: View {
                     else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
                     else {
                         WorkbenchDashboard(
-                            attentionOnly: model.onlyAttention, projection: model.dashboardProjection, groups: model.workspace.groups,
+                            attentionOnly: model.onlyAttention, projection: model.dashboardProjection,
+                            context: model.dashboardContext, groups: model.workspace.groups,
                             selectedGroupID: model.selectedGroupID, isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
                             onSelectScope: { model.showHome(groupID: $0) },
                             onNewTask: { model.showNewKimi = true },
                             onOpen: { model.open($0) },
                             onMarkReviewed: { model.markReviewed($0) },
+                            rowActions: { SessionActionsMenu(model: model, item: $0) },
+                            onForgetRestoration: { model.forgetRestoration($0) },
                             onArchive: { model.runBatchArchive(model.dashboardProjection.archivePlan) },
                             onUndoArchive: { model.undoBatchArchive() },
                             onRetryArchive: { model.retryBatchArchive() },

@@ -25,11 +25,11 @@ func checkSidebar() {
     expectEqual(all.totalRecentCount, 34)
     expectEqual(all.recent.first?.id, approval.id)
     expectFalse(all.recent.contains { $0.archived || $0.id == pinned.id })
+    // A filter narrows the recents only: pins and the actionable count are the same list
+    // whichever filter is active.
     let running = SidebarProjection(sessions: sessions, starred: pins, filter: .running)
-    let local = SidebarProjection(sessions: sessions, starred: pins, filter: .local)
     expectEqual(running.recent.map(\.id), [localRun.id])
-    expectEqual(local.recent.map(\.id), [localRun.id])
     expectEqual(running.attentionCount, all.attentionCount)
-    expectEqual(local.favorites.map(\.id), all.favorites.map(\.id))
+    expectEqual(running.favorites.map(\.id), all.favorites.map(\.id))
     print("PASS: stable sidebar pins, bounded recents, independent filters and actionable attention count")
 }

@@ -34,10 +34,10 @@ func checkDashboard() throws {
         subject("shell", kind: .terminal, hasCompletionSignal: false),
         subject("filed"),
     ])
-    let projection = DashboardProjection(sessions: sessions, subjects: subjects, hasEnvironment: true)
+    let projection = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: true)
 
-    // Three priority sections, in the order the workbench presents them.
-    precondition(projection.sections.map(\.section) == [.attention, .running, .review])
+    // Three priority sections: what needs a person comes before what needs patience.
+    precondition(projection.sections.map(\.section) == [.attention, .review, .running])
     precondition(projection.attention.items.map(\.id) == [reference("approval").id])
     precondition(projection.running.items.map(\.id) == [reference("streaming").id])
     precondition(projection.review.items.map(\.id) == [reference("unread").id])
@@ -63,21 +63,55 @@ func checkDashboard() throws {
     precondition(projection.running.items.allSatisfy { !$0.detail.contains("%") })
 
     // Empty states offer a path forward rather than a blank list.
-    let firstRun = DashboardProjection(sessions: [], subjects: [:], hasEnvironment: false)
+    let firstRun = DashboardProjection(sessions: [], subjects: [:], hasConfiguredEnvironment: false)
     precondition(firstRun.emptyState == .noEnvironment)
     precondition(firstRun.archiveCount == 0 && firstRun.blockedSummary == nil)
-    let connected = DashboardProjection(sessions: [], subjects: [:], hasEnvironment: true)
+    let connected = DashboardProjection(sessions: [], subjects: [:], hasConfiguredEnvironment: true)
     precondition(connected.emptyState == .noSessions)
     let quiet = DashboardProjection(sessions: [session("done", section: .other)],
                                     subjects: Dictionary(uniqueKeysWithValues: [subject("done")]),
-                                    hasEnvironment: true)
+                                    hasConfiguredEnvironment: true)
     precondition(quiet.emptyState == .nothingPending)
     precondition(quiet.sections.isEmpty && quiet.archiveCount == 1)
     // A dashboard with work to do has no empty state.
     precondition(projection.emptyState == nil)
+    // Sessions that are already listed prove an environment works, so an unconfigured
+    // machine list does not put setup advice above real work.
+    let unconfigured = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: false)
+    precondition(unconfigured.emptyState == nil)
 
     // The batch keeps the caller's concurrency bound.
-    let bounded = DashboardProjection(sessions: sessions, subjects: subjects, hasEnvironment: true, concurrencyLimit: 2)
+    let bounded = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: true, concurrencyLimit: 2)
     precondition(bounded.archivePlan.concurrencyLimit == 2)
-    print("PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress and first-run empty states")
+
+    // The inbox narrows to what needs a person. Unread results stay in the workbench
+    // review section, which is what the sidebar count already promises, and the
+    // narrowing happens once so the dashboard cannot apply a second rule.
+    let inbox = SessionCatalog.scope(sessions, starred: [], group: nil, hostFilter: nil, search: "",
+                                    onlyAttention: true, showArchived: false)
+    precondition(inbox.sessions.map(\.id) == [reference("approval").id])
+    let inboxProjection = DashboardProjection(sessions: inbox.sessions, subjects: subjects, hasConfiguredEnvironment: true)
+    precondition(inboxProjection.sections.map(\.section) == [.attention])
+
+    // The restore list and a local-storage failure are part of the workbench itself:
+    // visible instead of only recorded. The group's own page presents the group.
+    let context = DashboardContext(pendingRestoration: [SavedTerminal(session: reference("gone"), title: "已结束的会话")],
+                                   storageError: "工作台保存失败")
+    precondition(context.pendingRestoration.map(\.title) == ["已结束的会话"])
+    precondition(context.storageError == "工作台保存失败")
+    precondition(DashboardContext() == DashboardContext())
+    precondition(DashboardContext(storageError: "工作台保存失败") != DashboardContext())
+
+    // Queue rows carry how long something has waited. A source with no timestamp
+    // reports nothing rather than a fabricated "just now", and a remote clock that
+    // runs ahead of this Mac is not rendered as a negative wait.
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    precondition(SessionTime.label(since: 0, waiting: true, now: now) == nil)
+    precondition(SessionTime.label(since: now.timeIntervalSince1970 + 300, waiting: true, now: now) == "刚开始等待")
+    precondition(SessionTime.label(since: now.timeIntervalSince1970 - 30, waiting: false, now: now) == "刚刚更新")
+    precondition(SessionTime.label(since: now.timeIntervalSince1970 - 720, waiting: true, now: now) == "已等待 12 分钟")
+    precondition(SessionTime.label(since: now.timeIntervalSince1970 - 720, waiting: false, now: now) == "12 分钟前")
+    precondition(SessionTime.label(since: now.timeIntervalSince1970 - 7_200, waiting: false, now: now) == "2 小时前")
+    precondition(SessionTime.label(since: now.timeIntervalSince1970 - 180_000, waiting: false, now: now) == "2 天前")
+    print("PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run empty states, single inbox narrowing, restore context and queue row times")
 }

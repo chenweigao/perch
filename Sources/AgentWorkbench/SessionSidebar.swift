@@ -140,29 +140,10 @@ private struct SessionSidebarRow: View {
                          busy: model.managing.contains(item.id), onOpen: onOpen,
                          onPin: { model.toggleStar(item.reference) },
                          onArchive: { model.setArchived(item, archived: !item.archived) }) {
-            statusIndicator
+            SessionStatusIndicator(item: item)
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
             .help("\(item.title)\n\(item.reference.kind.label) · \(item.hostName) · \(item.directory)\n\(item.detail)")
-    }
-
-    @ViewBuilder private var statusIndicator: some View {
-        if item.archived {
-            Image(systemName: "archivebox").font(.system(size: 10))
-        } else if !item.online {
-            Image(systemName: "wifi.slash").font(.system(size: 10))
-        } else {
-            switch item.section {
-            case .running:
-                ConversationBusyIndicator()
-            case .attention:
-                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
-            case .review:
-                Circle().fill(.blue).frame(width: 6, height: 6)
-            case .other:
-                Image(systemName: item.reference.kind.symbol).font(.system(size: 11)).foregroundStyle(.secondary)
-            }
-        }
     }
 }
 
@@ -249,7 +230,10 @@ private struct ConnectionControls: View {
             }
             Button { dismiss(); model.showLocalSetup = true } label: { Label("本机 Agent…", systemImage: "laptopcomputer") }
                 .buttonStyle(.plain).padding(.vertical, 4)
-            ForEach(model.connections) { connection in HostConnectionControl(connection: connection) }
+            ForEach(model.connections) { connection in
+                HostConnectionControl(connection: connection, canRemove: model.connections.count > 1,
+                                      onRemove: { dismiss(); model.pendingHostRemoval = connection.host })
+            }
             HStack {
                 Label("Kimi · \(kimi.host.name)", systemImage: "bubble.left"); Spacer()
                 Circle().fill(kimi.online ? .green : .orange).frame(width: 5, height: 5)
@@ -265,6 +249,8 @@ private struct ConnectionControls: View {
 }
 private struct HostConnectionControl: View {
     @ObservedObject var connection: HostConnection
+    let canRemove: Bool
+    let onRemove: () -> Void
     var body: some View {
         HStack {
             Label(connection.host.name, systemImage: "server.rack"); Spacer()
@@ -274,6 +260,12 @@ private struct HostConnectionControl: View {
         }.contextMenu {
             Button("重新连接 Herdr") { connection.connect() }
             Button("断开 Herdr") { connection.disconnect() }
+            // The last machine stays: the terminal surface resolves its connection from
+            // the selected host without an empty case.
+            if canRemove {
+                Divider()
+                Button("移除机器…", role: .destructive) { onRemove() }
+            }
         }
     }
 }

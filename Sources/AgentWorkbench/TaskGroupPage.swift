@@ -16,7 +16,7 @@ struct TaskGroupPage: View {
         let items = projection
         let archive = DashboardProjection(sessions: items.sessions,
             subjects: Dictionary(uniqueKeysWithValues: items.sessions.map { ($0.id, model.archiveSubject($0)) }),
-            hasEnvironment: !model.connections.isEmpty)
+            hasConfiguredEnvironment: model.configuredEnvironment)
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 24) {
                 header(archive)
