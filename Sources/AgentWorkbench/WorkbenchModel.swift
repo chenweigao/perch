@@ -11,6 +11,10 @@ final class WorkbenchModel: ObservableObject {
     private var kimiEnvironments: [UUID: KimiConnection] = [:]
     private var nativeEnvironments: [UUID: NativeAgentConnection] = [:]
     @Published var connections: [HostConnection]
+    /// Whether the user has ever configured a machine. The built-in entry created on a
+    /// first run is not persisted, so this stays false until a real one is added.
+    @Published private(set) var configuredEnvironment: Bool
+    @Published var pendingHostRemoval: SSHHost?
     @Published var selectedHostID: UUID
     @Published private(set) var tabs = TerminalTabs()
     @Published private(set) var openedSessions: [SavedTerminal] = []
@@ -71,13 +75,19 @@ final class WorkbenchModel: ObservableObject {
     init() {
         let hosts: [SSHHost]
         if let data = UserDefaults.standard.data(forKey: "hosts"),
-           let saved = try? JSONDecoder().decode([SSHHost].self, from: data), !saved.isEmpty { hosts = saved }
-        else { hosts = [SSHHost(name: "dev-env", destination: "dev-env")] }
+           let saved = try? JSONDecoder().decode([SSHHost].self, from: data), !saved.isEmpty {
+            hosts = saved; configuredEnvironment = true
+        } else {
+            // One built-in entry keeps a connection available for the terminal surface. It
+            // is deliberately not persisted, so the workbench still offers the first-run
+            // setup paths until the user adds a machine of their own.
+            hosts = [SSHHost(name: "dev-env", destination: "dev-env")]
+            configuredEnvironment = false
+        }
         kimi = KimiConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
         native = NativeAgentConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
         connections = hosts.map(HostConnection.init)
         selectedHostID = hosts[0].id
-        if let data = try? JSONEncoder().encode(hosts) { UserDefaults.standard.set(data, forKey: "hosts") }
         do {
             workspace = try WorkspaceFile.load(from: workspaceURL)
             openedSessions = workspace.pinned
@@ -206,7 +216,32 @@ final class WorkbenchModel: ObservableObject {
         observe(connection); connections.append(connection)
         registerEnvironment(kimi: KimiConnection(host: connection.host), native: NativeAgentConnection(host: connection.host))
         UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts")
+        configuredEnvironment = true
         connection.connect()
+    }
+    /// Removing a machine is local bookkeeping: it disconnects this Mac and drops the
+    /// entry, while remote agents and terminals keep running. Saved references are kept,
+    /// so a task group still reports what is no longer in the list. One machine always
+    /// remains, because the terminal surface resolves its connection from the selected
+    /// host without an empty case.
+    func removeHost(_ host: SSHHost) {
+        guard connections.count > 1, let index = connections.firstIndex(where: { $0.id == host.id }) else {
+            managementError = "至少保留一台机器。先添加要用的机器，再移除这一台。"
+            return
+        }
+        connections[index].disconnect()
+        kimiEnvironments[host.id]?.disconnect(); nativeEnvironments[host.id]?.disconnect()
+        kimiEnvironments.removeValue(forKey: host.id); nativeEnvironments.removeValue(forKey: host.id)
+        connections.remove(at: index)
+        for saved in openedSessions where saved.session.hostID == host.id { close(saved.session.id) }
+        terminals.removeAll { $0.hostID == host.id }
+        let fallback = connections[0].host.id
+        if kimi.host.id == host.id || native.host.id == host.id { activateAgentEnvironment(fallback) }
+        if selectedHostID == host.id { selectedHostID = fallback }
+        if hostFilter == host.id { hostFilter = nil }
+        do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
+        catch { managementError = "机器已移除，但保存机器列表失败：\(error.localizedDescription)" }
+        rebuildCatalog(); syncFileViewer(); saveWorkspace()
     }
     func open(_ pane: Pane, on connection: HostConnection, pinned: Bool = false) {
         openReference(SessionReference(hostID: connection.id, terminalID: pane.id), title: pane.displayTitle, pinned: pinned)
@@ -403,7 +438,7 @@ final class WorkbenchModel: ObservableObject {
         let scoped = scopedSessions
         let subjects = Dictionary(uniqueKeysWithValues: scoped.map { ($0.id, archiveSubject($0)) })
         return DashboardProjection(sessions: scoped, subjects: subjects,
-                                   hasEnvironment: !connections.isEmpty, concurrencyLimit: 4)
+                                   hasConfiguredEnvironment: configuredEnvironment, concurrencyLimit: 4)
     }
     /// The group being worked on, what could not be restored, and any local-storage
     /// failure. A save or read failure used to be recorded and never shown.

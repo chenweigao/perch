@@ -16,7 +16,8 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
 - Scrollable middle: pins, task groups, up to 20 recent sessions, all sessions.
 - Fixed bottom: archive, environment popover, native Settings entry (⌘,).
 - Workbench/group/archive selection changes the main page, not the sidebar's
-  daily session scope. Recent filters (all/running/local) affect recents only.
+  daily session scope. Recent filters (all/running) affect recents only. There is no
+  local filter while local execution is not wired, because no session would match it.
 - Attention counts only online sessions needing intervention. Unread results
   remain in the workbench review section.
 - Pins, task groups and recent-session headings align with the row icons' left

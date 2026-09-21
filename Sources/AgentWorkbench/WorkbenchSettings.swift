@@ -17,7 +17,7 @@ struct WorkbenchSettings: View {
             Section("Agent 与执行环境") {
                 Button("管理本机 Agent…") { showLocal = true }
                 Button("添加 SSH 环境…") { showSSH = true }
-                Text("远程连接沿用本机 SSH 配置。连接与重连可从侧边栏的环境入口管理。")
+                Text("远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Task notifications") {

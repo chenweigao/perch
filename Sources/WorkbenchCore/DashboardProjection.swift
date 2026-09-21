@@ -11,14 +11,14 @@ public struct DashboardSection: Identifiable, Equatable, Sendable {
     public var isEmpty: Bool { items.isEmpty }
 }
 
-/// What the workbench offers when there is nothing to act on. A first run needs
-/// two starting paths, not an empty list that looks broken.
+/// What the workbench offers when there is nothing to act on. A first run needs a
+/// way to set up an environment, not an empty list that looks broken.
 public enum DashboardEmptyState: Equatable, Sendable {
     case noEnvironment, noSessions, nothingPending
 
     public var title: String {
         switch self {
-        case .noEnvironment: return "先选择一个执行环境"
+        case .noEnvironment: return "先连接一台运行 Agent 的机器"
         case .noSessions: return "选择 Agent 和工作目录后开始"
         case .nothingPending: return "当前范围内没有待处理或运行中的事项"
         }
@@ -57,8 +57,12 @@ public struct DashboardProjection: Equatable, Sendable {
     public let blocked: [ArchiveBlock: Int]
     public let emptyState: DashboardEmptyState?
 
+    /// `hasConfiguredEnvironment` asks whether the user has ever set up a machine, not
+    /// whether one is reachable right now. The app keeps a built-in connection so the
+    /// terminal surface always has one, so counting connections would hide the first run,
+    /// and counting online connections would show it during every reconnect.
     public init(sessions: [WorkspaceSession], subjects: [String: ArchiveSubject],
-                hasEnvironment: Bool, concurrencyLimit: Int = 4) {
+                hasConfiguredEnvironment: Bool, concurrencyLimit: Int = 4) {
         let visible = sessions.filter { !$0.archived }
         let live = visible.filter(\.online)
         attention = DashboardSection(section: .attention, items: live.filter { $0.section == .attention })
@@ -73,8 +77,10 @@ public struct DashboardProjection: Equatable, Sendable {
         archivePlan = BatchArchivePlan(subjects: scoped, concurrencyLimit: concurrencyLimit)
         blocked = archivePlan.blocked.reduce(into: [:]) { counts, item in counts[item.block, default: 0] += 1 }
 
-        if !hasEnvironment { emptyState = .noEnvironment }
-        else if visible.isEmpty { emptyState = .noSessions }
+        // An empty list means one of two different things, and setup advice belongs only
+        // to the first of them: nothing has been set up yet, or nothing has been started.
+        // Sessions already listed are proof enough that an environment works.
+        if visible.isEmpty { emptyState = hasConfiguredEnvironment ? .noSessions : .noEnvironment }
         else if attention.isEmpty && running.isEmpty && review.isEmpty { emptyState = .nothingPending }
         else { emptyState = nil }
     }

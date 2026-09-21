@@ -34,7 +34,7 @@ func checkDashboard() throws {
         subject("shell", kind: .terminal, hasCompletionSignal: false),
         subject("filed"),
     ])
-    let projection = DashboardProjection(sessions: sessions, subjects: subjects, hasEnvironment: true)
+    let projection = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: true)
 
     // Three priority sections: what needs a person comes before what needs patience.
     precondition(projection.sections.map(\.section) == [.attention, .review, .running])
@@ -63,21 +63,25 @@ func checkDashboard() throws {
     precondition(projection.running.items.allSatisfy { !$0.detail.contains("%") })
 
     // Empty states offer a path forward rather than a blank list.
-    let firstRun = DashboardProjection(sessions: [], subjects: [:], hasEnvironment: false)
+    let firstRun = DashboardProjection(sessions: [], subjects: [:], hasConfiguredEnvironment: false)
     precondition(firstRun.emptyState == .noEnvironment)
     precondition(firstRun.archiveCount == 0 && firstRun.blockedSummary == nil)
-    let connected = DashboardProjection(sessions: [], subjects: [:], hasEnvironment: true)
+    let connected = DashboardProjection(sessions: [], subjects: [:], hasConfiguredEnvironment: true)
     precondition(connected.emptyState == .noSessions)
     let quiet = DashboardProjection(sessions: [session("done", section: .other)],
                                     subjects: Dictionary(uniqueKeysWithValues: [subject("done")]),
-                                    hasEnvironment: true)
+                                    hasConfiguredEnvironment: true)
     precondition(quiet.emptyState == .nothingPending)
     precondition(quiet.sections.isEmpty && quiet.archiveCount == 1)
     // A dashboard with work to do has no empty state.
     precondition(projection.emptyState == nil)
+    // Sessions that are already listed prove an environment works, so an unconfigured
+    // machine list does not put setup advice above real work.
+    let unconfigured = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: false)
+    precondition(unconfigured.emptyState == nil)
 
     // The batch keeps the caller's concurrency bound.
-    let bounded = DashboardProjection(sessions: sessions, subjects: subjects, hasEnvironment: true, concurrencyLimit: 2)
+    let bounded = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: true, concurrencyLimit: 2)
     precondition(bounded.archivePlan.concurrencyLimit == 2)
 
     // The inbox narrows to what needs a person. Unread results stay in the workbench
@@ -86,7 +90,7 @@ func checkDashboard() throws {
     let inbox = SessionCatalog.scope(sessions, starred: [], group: nil, hostFilter: nil, search: "",
                                     onlyAttention: true, showArchived: false)
     precondition(inbox.sessions.map(\.id) == [reference("approval").id])
-    let inboxProjection = DashboardProjection(sessions: inbox.sessions, subjects: subjects, hasEnvironment: true)
+    let inboxProjection = DashboardProjection(sessions: inbox.sessions, subjects: subjects, hasConfiguredEnvironment: true)
     precondition(inboxProjection.sections.map(\.section) == [.attention])
 
     // The group loop and the restore list are part of the workbench, not only of the

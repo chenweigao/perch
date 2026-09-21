@@ -4,7 +4,7 @@ import WorkbenchCore
 /// The workbench as a place to pick work up: scope, new task, batch archive, then
 /// only the sections that need an action. Rendering is driven entirely by
 /// DashboardProjection so the same data can be checked without a running app.
-struct WorkbenchDashboard: View {
+struct WorkbenchDashboard<RowActions: View>: View {
     var attentionOnly = false
     let projection: DashboardProjection
     var context = DashboardContext()
@@ -16,6 +16,9 @@ struct WorkbenchDashboard: View {
     let onNewTask: () -> Void
     let onOpen: (WorkspaceSession) -> Void
     let onMarkReviewed: (WorkspaceSession) -> Void
+    /// The per-row menu is supplied by the caller, so the queue offers the same actions
+    /// as the sidebar without this view reaching into the workspace model.
+    let rowActions: (WorkspaceSession) -> RowActions
     let onEditGroup: () -> Void
     let onResume: (WorkspaceSession) -> Void
     let onForgetRestoration: (SavedTerminal) -> Void
@@ -79,10 +82,12 @@ struct WorkbenchDashboard: View {
             Text(state.title).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
                 HStack(spacing: 10) {
-                    Button("本机开始") { onStartLocal() }.buttonStyle(.borderedProminent)
-                    Button("连接远程") { onConnectRemote() }
+                    Button("连接远程机器…") { onConnectRemote() }.buttonStyle(.borderedProminent)
+                    Button("检测本机 Agent…") { onStartLocal() }
                 }
-                Text("本机使用这台 Mac 上已安装的 Agent，工具在你选择的目录执行；远程仍在 SSH 主机上运行。")
+                // The local path is discovery only today, so it is offered as a check
+                // rather than as a second way to start work.
+                Text("远程 Agent 在 SSH 机器上运行，沿用你现有的 SSH 配置。本机执行环境目前只能检测是否安装了 Agent，还不能在这台 Mac 上开始对话。")
                     .font(.caption).foregroundStyle(.secondary)
             } else if state == .noSessions {
                 Button("选择 Agent 和工作目录") { onNewTask() }.buttonStyle(.borderedProminent)
@@ -154,16 +159,47 @@ struct WorkbenchDashboard: View {
     }
 
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
-        let time = SessionTime.label(since: item.updatedAt, waiting: section == .attention)
-        let spoken = time.map { "\(item.title)，\(item.detail)，\($0)" } ?? "\(item.title)，\(item.detail)"
-        return HStack(spacing: 0) {
-            Button { onOpen(item) } label: {
+        QueueRow(item: item, section: section,
+                 time: SessionTime.label(since: item.updatedAt, waiting: section == .attention),
+                 metadata: metadata(item), onOpen: { onOpen(item) },
+                 onMarkReviewed: { onMarkReviewed(item) }, actions: rowActions(item))
+    }
+
+    /// The directory tail identifies the work; the full path stays in the row help so a
+    /// long path cannot push the host and status out of the line.
+    private func metadata(_ item: WorkspaceSession) -> String {
+        var parts = [item.hostName, item.detail]
+        if !item.directory.isEmpty { parts.append(URL(fileURLWithPath: item.directory).lastPathComponent) }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// The same session the sidebar lists, at reading density: the shared status indicator,
+/// what it is, how long it has waited, and the sidebar's own actions in the context menu.
+/// Hover state lives here so pointing at one row does not invalidate the whole queue.
+private struct QueueRow<Actions: View>: View {
+    let item: WorkspaceSession
+    let section: WorkQueueSection
+    let time: String?
+    let metadata: String
+    let onOpen: () -> Void
+    let onMarkReviewed: () -> Void
+    let actions: Actions
+    @State private var hovered = false
+
+    private var spoken: String {
+        time.map { "\(item.title)，\(item.detail)，\($0)" } ?? "\(item.title)，\(item.detail)"
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: onOpen) {
                 HStack(spacing: 12) {
-                    Image(systemName: item.reference.kind.symbol).foregroundStyle(.secondary)
+                    SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
                         // Detail text comes from existing metadata; no model request writes it.
-                        Text(metadata(item)).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(metadata).font(.system(size: 11)).foregroundStyle(.secondary)
                             .lineLimit(1).truncationMode(.middle)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                     // How long something has waited is the reason to open it next, so the
@@ -173,23 +209,21 @@ struct WorkbenchDashboard: View {
                             .foregroundStyle(section == .attention ? Color.orange : Color.secondary)
                             .fixedSize()
                     }
-                    if section == .attention { Text("处理").font(.caption).foregroundStyle(.orange) }
+                    // The row is the button that opens the session; this is the affordance
+                    // for that, not a second control next to it.
+                    if item.online {
+                        Image(systemName: "arrow.up.right").font(.caption)
+                            .foregroundStyle(.secondary).opacity(hovered ? 1 : 0.4)
+                    }
                 }.padding(14).contentShape(Rectangle())
-            }.buttonStyle(.plain).disabled(!item.online)
-                .accessibilityLabel(spoken)
+            }.buttonStyle(.plain).disabled(!item.online).accessibilityLabel(spoken)
             if item.canMarkReviewed && item.online {
-                Button("已查看") { onMarkReviewed(item) }.font(.caption).padding(.trailing, 14)
+                Button("已查看", action: onMarkReviewed).font(.caption).padding(.trailing, 14)
             }
-        }.background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
-            .opacity(item.online ? 1 : 0.5)
+        }.background(Color.black.opacity(hovered && item.online ? 0.05 : 0.025),
+                     in: RoundedRectangle(cornerRadius: 10))
+            .opacity(item.online ? 1 : 0.5).onHover { hovered = $0 }
+            .contextMenu { actions }
             .help(item.directory.isEmpty ? item.title : "\(item.title)\n\(item.directory)")
-    }
-
-    /// The directory tail identifies the work; the full path stays in the row help so a
-    /// long path cannot push the host and status out of the line.
-    private func metadata(_ item: WorkspaceSession) -> String {
-        var parts = [item.hostName, item.detail]
-        if !item.directory.isEmpty { parts.append(URL(fileURLWithPath: item.directory).lastPathComponent) }
-        return parts.joined(separator: " · ")
     }
 }
