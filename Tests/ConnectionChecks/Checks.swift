@@ -8,6 +8,8 @@ private final class TransportFixture {
     var prompts: [String] = []
     var steers: [String] = []
     var losePromptResponse = false
+    var holdPromptResponse = false
+    var pendingPrompt: CheckedContinuation<Void, Error>?
     var failCatalog = false
     var archives = 0
     var abortedTurns: [(String, String?)] = []
@@ -55,6 +57,7 @@ private final class TransportFixture {
                     sessions[id]?["busy"] = true; sessions[id]?["turnId"] = key
                     sessions[id]?["turnState"] = "accepted"
                 }
+                if holdPromptResponse { try await withCheckedThrowingContinuation { pendingPrompt = $0 } }
                 if losePromptResponse { losePromptResponse = false; throw WorkbenchError("response lost") }
                 result = ["id": key, "status": receipts[key]!]
             case "steer":
@@ -89,6 +92,7 @@ struct ConnectionChecks {
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
         try await checkKimiSelectionIsolation()
+        try await checkSendFailureIsolation()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
         let fixture = TransportFixture()
@@ -181,6 +185,22 @@ struct ConnectionChecks {
         precondition(client.queue.allItems.isEmpty && lost.prompts.count == 1)
         precondition(connection.queue.items(for: b).count == 1)
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
+    }
+
+    @MainActor
+    static func checkSendFailureIsolation() async throws {
+        let fixture = TransportFixture(); fixture.holdPromptResponse = true
+        let client = NativeAgentConnection(host: SSHHost(name: "Send fixture", destination: "fixture"), transport: fixture.request)
+        try await client.refresh(); client.select("a")
+        client.drafts["a"] = "Keep this instruction"; client.send()
+        await settle { fixture.pendingPrompt != nil }
+        let message = client.queue.allItems[0]
+        client.select("b"); client.actionError = "B's own message"
+        fixture.pendingPrompt?.resume(throwing: WorkbenchError("A's send failed"))
+        await settle { if case .unknown = client.queue.message(message.id)?.state { return true }; return false }
+        precondition(client.actionError == "B's own message", "A send failure must not replace B's feedback")
+        precondition(client.queue.message(message.id)?.text == "Keep this instruction")
+        print("PASS: native send failure stays with its queued message across selection changes")
     }
 
     @MainActor

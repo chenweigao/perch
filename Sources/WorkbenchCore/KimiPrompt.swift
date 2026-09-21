@@ -31,10 +31,12 @@ public struct KimiPrompt: Decodable, Identifiable, Equatable, Sendable {
         var merged = local
         for prompt in remote {
             if let index = merged.firstIndex(where: { $0.id == prompt.id }) {
-                // Keep a steer failure visible while the accepted message waits.
-                let error = merged[index].error
+                // A receipt settles send uncertainty. Only an unresolved steer
+                // warning remains relevant while this accepted message is queued.
+                let waiting = ["queued", "blocked"]
+                let error = waiting.contains(merged[index].status) && waiting.contains(prompt.status) ? merged[index].error : nil
                 merged[index] = prompt
-                merged[index].error = error
+                if let error { merged[index].error = error }
             } else { merged.append(prompt) }
         }
         return merged.filter { !visible.contains($0.userMessageId ?? $0.id) }

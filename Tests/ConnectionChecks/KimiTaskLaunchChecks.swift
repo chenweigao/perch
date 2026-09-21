@@ -95,7 +95,8 @@ func checkKimiTaskLaunch() async throws {
         precondition(LaunchProtocol.creations == 1)
         if mode == "prompt-failure" {
             precondition(connection.drafts["new"] == "新任务只发送一次")
-            precondition(connection.actionError?.contains("草稿已保留") == true)
+            precondition(connection.pendingPrompts["new"]?.first?.error?.contains("草稿已保留") == true,
+                         "Launch failure belongs to the created session, even if another tab is selected")
         } else { precondition(connection.drafts["new"] == "") }
         print("PASS: Kimi task launch \(mode), fixed destination, chosen model, draft retention")
         await ConnectionChecks.settle { !connection.loading }

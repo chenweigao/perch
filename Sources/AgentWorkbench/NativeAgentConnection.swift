@@ -256,7 +256,7 @@ final class NativeAgentConnection: ObservableObject {
                 apply(receipt)
             } catch {
                 queue.markUnknown(message.id, error.localizedDescription)
-                actionError = error.localizedDescription
+                if selectedID == id { actionError = error.localizedDescription }
             }
         }
     }

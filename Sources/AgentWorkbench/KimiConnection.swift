@@ -393,7 +393,8 @@ final class KimiConnection: ObservableObject {
         // The server accepts an unrecognised thinking value without failing, so the
         // level is resolved against the target model before it is sent.
         let effort = activeModel(for: id)?.resolve(thinkingChoices[id])
-        sendingSessions.insert(id); actionError = nil
+        sendingSessions.insert(id)
+        if selectedId == id { actionError = nil }
         defer { sendingSessions.remove(id) }
         do {
             var content: [JSONValue] = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -428,7 +429,7 @@ final class KimiConnection: ObservableObject {
         } catch {
             let message = "发送未确认，草稿已保留。请检查会话后再发送。\n" + error.localizedDescription
             updatePrompt(promptID, for: id, status: "unknown", error: message)
-            actionError = message
+            if selectedId == id { actionError = message }
         }
     }
     private func updatePrompt(_ promptID: String, for id: String, status: String, error: String? = nil) {

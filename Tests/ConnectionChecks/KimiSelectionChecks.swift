@@ -84,7 +84,7 @@ private func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "disconnect"] {
+    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -166,6 +166,22 @@ func checkKimiSelectionIsolation() async throws {
                 SelectionProtocol.release("/api/v1/sessions/b/messages")
                 await ConnectionChecks.settle { !client.loadingOlder }
                 precondition(client.conversation?.messages.first?.id == "b-older" && client.actionError == nil)
+            case "send failure":
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+                client.drafts["a"] = "Keep this instruction"
+                SelectionProtocol.hold("/api/v1/sessions/a/prompts")
+                SelectionProtocol.fail("/api/v1/sessions/a/prompts", true)
+                let send = Task { await client.sendPrompt(for: "a") }
+                await ConnectionChecks.settle { SelectionProtocol.count("/api/v1/sessions/a/prompts") == 2 }
+                client.select("b")
+                await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+                client.actionError = "B's own message"
+                SelectionProtocol.release("/api/v1/sessions/a/prompts")
+                await send.value
+                precondition(client.drafts["a"] == "Keep this instruction")
+                precondition(client.pendingPrompts["a"]?.first?.error != nil)
+                guard client.actionError == "B's own message" else { throw WorkbenchError("A send failure overwrote B's feedback") }
             default:
                 SelectionProtocol.hold("/api/v1/sessions/a/snapshot")
                 client.select("a")
