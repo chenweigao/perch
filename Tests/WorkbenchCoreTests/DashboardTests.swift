@@ -48,6 +48,17 @@ func checkDashboard() throws {
     precondition(!projection.other.contains { $0.archived })
     precondition(!projection.archivePlan.candidates.contains { $0.reference == reference("filed") })
 
+    // Recents are bounded, ordered, and disjoint from priority/offline/archive rows.
+    let older = (0..<9).map { index in
+        WorkspaceSession(reference: reference("recent-\(index)"), title: "Recent", directory: "", hostName: "Fixture",
+                         detail: "", online: true, section: .other, canMarkReviewed: false,
+                         updatedAt: Double(index))
+    }
+    let recentProjection = DashboardProjection(sessions: sessions + older, subjects: subjects, hasConfiguredEnvironment: true)
+    precondition(recentProjection.recent.map(\.id) == (3...8).reversed().map { reference("recent-\($0)").id })
+    precondition(Set(recentProjection.recent.map(\.id)).isDisjoint(with: Set(recentProjection.sections.flatMap(\.items).map(\.id))))
+    precondition(recentProjection.recent.allSatisfy { $0.online && !$0.archived })
+
     // Only the genuinely finished, reviewed session is a candidate.
     precondition(projection.archiveCount == 1)
     precondition(projection.archivePlan.candidates.map(\.reference) == [reference("done")])
@@ -92,6 +103,15 @@ func checkDashboard() throws {
     precondition(inbox.sessions.map(\.id) == [reference("approval").id])
     let inboxProjection = DashboardProjection(sessions: inbox.sessions, subjects: subjects, hasConfiguredEnvironment: true)
     precondition(inboxProjection.sections.map(\.section) == [.attention])
+
+    let stale = session("stale-approval", section: .attention, online: false)
+    let withStale = sessions + [stale]
+    let inboxScope = SessionCatalog.scope(withStale, starred: [], group: nil, hostFilter: nil, search: "", onlyAttention: true, showArchived: false)
+    let inboxWithStale = DashboardProjection(sessions: inboxScope.sessions, subjects: subjects, hasConfiguredEnvironment: true)
+    let sidebar = SidebarProjection(sessions: withStale, starred: [], filter: .all)
+    precondition(inboxWithStale.attention.items.count == sidebar.attentionCount)
+    precondition(inboxWithStale.offline.map(\.id) == [stale.id])
+    precondition(inboxWithStale.recent.isEmpty && inboxWithStale.review.isEmpty)
 
     // The restore list and a local-storage failure are part of the workbench itself:
     // visible instead of only recorded. The group's own page presents the group.

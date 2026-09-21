@@ -1,100 +1,153 @@
 import SwiftUI
 import WorkbenchCore
 
-/// The workbench as a place to pick work up: scope, new task, batch archive, then
-/// only the sections that need an action. Rendering is driven entirely by
-/// DashboardProjection so the same data can be checked without a running app.
+/// Home offers a bounded overview; the inbox shows every actionable session.
+/// Both use the same projection and rows, without maintaining a second inbox state.
 struct WorkbenchDashboard<RowActions: View>: View {
     var attentionOnly = false
     let projection: DashboardProjection
     var context = DashboardContext()
-    let groups: [WorkItemGroup]
-    let selectedGroupID: UUID?
     let isArchiving: Bool
     let archiveResult: BatchArchiveRun?
-    let onSelectScope: (UUID?) -> Void
     let onNewTask: () -> Void
     let onOpen: (WorkspaceSession) -> Void
     let onMarkReviewed: (WorkspaceSession) -> Void
-    /// The per-row menu is supplied by the caller, so the queue offers the same actions
-    /// as the sidebar without this view reaching into the workspace model.
     let rowActions: (WorkspaceSession) -> RowActions
     let onForgetRestoration: (SavedTerminal) -> Void
-    let onArchive: () -> Void
     let onUndoArchive: () -> Void
     let onRetryArchive: () -> Void
     let onStartLocal: () -> Void
     let onConnectRemote: () -> Void
+    let onShowInbox: () -> Void
+    let onShowAll: () -> Void
+    let onShowHome: () -> Void
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
+            LazyVStack(alignment: .leading, spacing: 28) {
                 if let error = context.storageError { storageBanner(error) }
-                if !attentionOnly {
-                    header
-                    if !context.pendingRestoration.isEmpty { restoration }
-                }
-                if attentionOnly && projection.sections.isEmpty {
-                    Label("暂时没有需要你处理的事项", systemImage: "checkmark.circle")
-                        .foregroundStyle(.secondary).padding(.vertical, 24)
-                } else if let empty = projection.emptyState { emptyState(empty) }
-                ForEach(projection.sections) { section in
-                    Text(section.section.rawValue).font(.system(size: 13, weight: .semibold)).padding(.top, 10)
-                        .accessibilityAddTraits(.isHeader)
-                    ForEach(section.items) { item in row(item, in: section.section) }
-                }
-                if !projection.other.isEmpty {
-                    DisclosureGroup("已查看、就绪和其他会话 · \(projection.other.count)") {
-                        VStack(spacing: 10) { ForEach(projection.other) { row($0, in: .other) } }.padding(.top, 10)
+                introduction
+                if attentionOnly {
+                    if projection.attention.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("暂时没有需要你处理的事项", systemImage: "checkmark.circle")
+                                .foregroundStyle(.secondary)
+                            Button("返回工作台", action: onShowHome).buttonStyle(.link)
+                        }.padding(.vertical, 12)
+                    } else { section(projection.attention, limit: projection.attention.items.count) }
+                } else {
+                    if let empty = projection.emptyState, empty != .nothingPending { emptyState(empty) }
+                    ForEach(projection.sections) { value in
+                        section(value, limit: value.section == .attention ? 3 : 5)
+                    }
+                    if !projection.recent.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack {
+                                Text("最近会话").accessibilityAddTraits(.isHeader)
+                                Spacer()
+                                Button("查看全部", action: onShowAll).buttonStyle(.link)
+                            }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
+                            ForEach(projection.recent) { row($0, in: .other) }
+                        }
+                    }
+                    if isArchiving {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("正在归档…")
+                        }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
+                    if archiveResult != nil {
+                        BatchArchiveControls(showsArchiveAction: false, count: projection.archiveCount,
+                                             blockedSummary: nil, isRunning: isArchiving, result: archiveResult,
+                                             onArchive: {}, onUndo: onUndoArchive, onRetry: onRetryArchive)
                     }
                 }
+                // Connectivity is not an actionable request. Keep stale records separate,
+                // including on the inbox, without counting them as live work.
                 if !projection.offline.isEmpty {
                     DisclosureGroup("状态未同步 · \(projection.offline.count)") {
-                        VStack(spacing: 10) { ForEach(projection.offline) { row($0, in: .other) } }.padding(.top, 10)
-                    }
-                    Text("离线会话不计入上方数量，也不会被批量归档。").font(.caption).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("连接后才能确认这些会话的当前状态。")
+                                .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
+                            ForEach(projection.offline) { row($0, in: .other) }
+                        }
+                    }.font(.system(size: 12)).foregroundStyle(.secondary)
                 }
-            }.padding(32).frame(maxWidth: 1000).frame(maxWidth: .infinity)
+                if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
+            }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
+                .frame(maxWidth: 944).frame(maxWidth: .infinity)
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Picker("范围", selection: Binding(get: { selectedGroupID }, set: onSelectScope)) {
-                    Text("全部").tag(UUID?.none)
-                    ForEach(groups) { group in Text(group.name).tag(UUID?.some(group.id)) }
-                }.labelsHidden().fixedSize()
-                Button(action: onNewTask) { Label("新建任务", systemImage: "plus") }
-                Spacer()
+    private var title: LocalizedStringKey {
+        if attentionOnly { return "等你处理" }
+        if projection.emptyState == .noEnvironment || projection.emptyState == .noSessions { return "开始第一段会话" }
+        return "接着做"
+    }
+
+    private var introduction: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title).font(.system(size: 25, weight: .semibold))
+            if attentionOnly {
+                Text("确认、回答或处理错误；查看结果请到工作台。")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            } else if projection.emptyState != .noEnvironment && projection.emptyState != .noSessions {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 14) { summary }
+                    VStack(alignment: .leading, spacing: 5) { summary }
+                }.font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            BatchArchiveControls(count: projection.archiveCount, blockedSummary: projection.blockedSummary,
-                                 isRunning: isArchiving, result: archiveResult,
-                                 onArchive: onArchive, onUndo: onUndoArchive, onRetry: onRetryArchive)
+        }
+    }
+
+    @ViewBuilder private var summary: some View {
+        if projection.sections.isEmpty && projection.other.isEmpty && !projection.offline.isEmpty {
+            Text("连接后查看最新进展")
+        } else if projection.attention.isEmpty {
+            Text("当前没有待处理事项")
+        } else {
+            Button(action: onShowInbox) { Text("\(projection.attention.items.count) 项等你处理") }
+                .buttonStyle(.plain).foregroundStyle(.orange)
+        }
+        if !projection.review.isEmpty { Text("\(projection.review.items.count) 项结果待查看") }
+        if !projection.running.isEmpty { Text("\(projection.running.items.count) 项运行中") }
+    }
+
+    private func section(_ value: DashboardSection, limit: Int) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 7) {
+                Text(LocalizedStringKey(value.section.rawValue)).accessibilityAddTraits(.isHeader)
+                Text("\(value.items.count)").foregroundStyle(.tertiary)
+                Spacer()
+                if value.section == .attention && !attentionOnly {
+                    Button("进入待处理", action: onShowInbox).buttonStyle(.link)
+                }
+            }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
+            ForEach(value.items.prefix(limit)) { row($0, in: value.section) }
+            if value.items.count > limit && value.section != .attention {
+                DisclosureGroup("展开其余 \(value.items.count - limit) 个会话") {
+                    VStack(spacing: 0) { ForEach(value.items.dropFirst(limit)) { row($0, in: value.section) } }
+                }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 12)
+            }
         }
     }
 
     private func emptyState(_ state: DashboardEmptyState) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(state.title).font(.system(size: 15, weight: .medium))
+            Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
                 HStack(spacing: 10) {
-                    Button("连接远程机器…") { onConnectRemote() }.buttonStyle(.borderedProminent)
-                    Button("检测本机 Agent…") { onStartLocal() }
+                    Button("连接远程机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
+                    Button("检测本机 Agent…", action: onStartLocal)
                 }
-                // The local path is discovery only today, so it is offered as a check
-                // rather than as a second way to start work.
-                Text("远程 Agent 在 SSH 机器上运行，沿用你现有的 SSH 配置。本机执行环境目前只能检测是否安装了 Agent，还不能在这台 Mac 上开始对话。")
+                Text("远程 Agent 沿用你的 SSH 配置。本机环境目前仅支持安装检测。")
                     .font(.caption).foregroundStyle(.secondary)
-            } else if state == .noSessions {
-                Button("选择 Agent 和工作目录") { onNewTask() }.buttonStyle(.borderedProminent)
+            } else {
+                Button("新建会话", action: onNewTask).buttonStyle(.borderedProminent)
             }
-        }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
+        }.padding(.vertical, 12)
     }
 
-    /// Restore only reattaches the same remote session, so a reference that is missing
-    /// or not yet connected stays a visible waiting list instead of disappearing.
     private var restoration: some View {
         DisclosureGroup("等待恢复 · \(context.pendingRestoration.count) 个会话") {
             VStack(alignment: .leading, spacing: 10) {
@@ -102,17 +155,15 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(context.pendingRestoration, id: \.session.id) { saved in
                     HStack {
-                        Label(saved.title, systemImage: saved.session.kind.symbol).font(.callout).lineLimit(1)
+                        Label(saved.title, systemImage: saved.session.kind.symbol).lineLimit(1)
                         Spacer()
-                        Button("不再恢复") { onForgetRestoration(saved) }.font(.caption)
+                        Button("不再恢复") { onForgetRestoration(saved) }
                     }
                 }
             }.padding(.top, 10)
-        }.padding(18).background(Color.orange.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+        }.font(.system(size: 12)).foregroundStyle(.secondary)
     }
 
-    /// A failed read or write of the local workspace was recorded and never shown, so
-    /// pins, groups and reviewed versions could stop persisting while the UI looked fine.
     private func storageBanner(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.triangle")
             .font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
@@ -122,27 +173,17 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
 
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
-        QueueRow(item: item, section: section,
-                 time: SessionTime.label(since: item.updatedAt, waiting: section == .attention),
-                 metadata: metadata(item), onOpen: { onOpen(item) },
-                 onMarkReviewed: { onMarkReviewed(item) }, actions: rowActions(item))
-    }
-
-    /// The directory tail identifies the work; the full path stays in the row help so a
-    /// long path cannot push the host and status out of the line.
-    private func metadata(_ item: WorkspaceSession) -> String {
-        var parts = [item.hostName, item.detail]
+        var parts = [item.detail, item.hostName]
         if !item.directory.isEmpty { parts.append(URL(fileURLWithPath: item.directory).lastPathComponent) }
-        return parts.joined(separator: " · ")
+        return QueueRow(item: item,
+                        time: SessionTime.label(since: item.updatedAt, waiting: section == .attention && item.online),
+                        metadata: parts.joined(separator: " · "), onOpen: { onOpen(item) },
+                        onMarkReviewed: { onMarkReviewed(item) }, actions: rowActions(item))
     }
 }
 
-/// The same session the sidebar lists, at reading density: the shared status indicator,
-/// what it is, how long it has waited, and the sidebar's own actions in the context menu.
-/// Hover state lives here so pointing at one row does not invalidate the whole queue.
 private struct QueueRow<Actions: View>: View {
     let item: WorkspaceSession
-    let section: WorkQueueSection
     let time: String?
     let metadata: String
     let onOpen: () -> Void
@@ -150,42 +191,29 @@ private struct QueueRow<Actions: View>: View {
     let actions: Actions
     @State private var hovered = false
 
-    private var spoken: String {
-        time.map { "\(item.title)，\(item.detail)，\($0)" } ?? "\(item.title)，\(item.detail)"
-    }
-
     var body: some View {
         HStack(spacing: 0) {
             Button(action: onOpen) {
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
                     SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 5) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                        // Detail text comes from existing metadata; no model request writes it.
                         Text(metadata).font(.system(size: 11)).foregroundStyle(.secondary)
                             .lineLimit(1).truncationMode(.middle)
                     }.frame(maxWidth: .infinity, alignment: .leading)
-                    // How long something has waited is the reason to open it next, so the
-                    // time keeps its own space rather than sharing the truncated line.
                     if let time {
-                        Text(time).font(.system(size: 11)).monospacedDigit()
-                            .foregroundStyle(section == .attention ? Color.orange : Color.secondary)
-                            .fixedSize()
+                        Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
                     }
-                    // The row is the button that opens the session; this is the affordance
-                    // for that, not a second control next to it.
-                    if item.online {
-                        Image(systemName: "arrow.up.right").font(.caption)
-                            .foregroundStyle(.secondary).opacity(hovered ? 1 : 0.4)
-                    }
-                }.padding(14).contentShape(Rectangle())
-            }.buttonStyle(.plain).disabled(!item.online).accessibilityLabel(spoken)
+                }.padding(.horizontal, 8).padding(.vertical, 13).frame(minHeight: 64).contentShape(Rectangle())
+            }.buttonStyle(.plain).disabled(!item.online)
+                .accessibilityLabel([item.title, metadata, time].compactMap { $0 }.joined(separator: "，"))
             if item.canMarkReviewed && item.online {
-                Button("已查看", action: onMarkReviewed).font(.caption).padding(.trailing, 14)
+                Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
+                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
             }
-        }.background(Color.black.opacity(hovered && item.online ? 0.05 : 0.025),
-                     in: RoundedRectangle(cornerRadius: 10))
-            .opacity(item.online ? 1 : 0.5).onHover { hovered = $0 }
+        }.background(hovered && item.online ? Color.black.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
+            .opacity(item.online ? 1 : 0.55).onHover { hovered = $0 }
             .contextMenu { actions }
             .help(item.directory.isEmpty ? item.title : "\(item.title)\n\(item.directory)")
     }

@@ -82,6 +82,11 @@ public struct DashboardProjection: Equatable, Sendable {
     /// Handle first, then look at results, and only then watch what is still running:
     /// the two sections that need a person come before the one that needs patience.
     public var sections: [DashboardSection] { [attention, review, running].filter { !$0.isEmpty } }
+    /// Recent rows never repeat an active priority section. Unknown timestamps stay
+    /// behind dated sessions; stable identity breaks ties without invented activity.
+    public var recent: [WorkspaceSession] {
+        Array(other.sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }.prefix(6))
+    }
     public var archiveCount: Int { archivePlan.count }
     public var archiveActionTitle: String { "归档已完成 \(archiveCount)" }
 

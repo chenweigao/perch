@@ -40,6 +40,7 @@ struct WorkbenchHeaderActions: View {
         }
         return nil
     }
+    private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil }
     private var canStop: Bool {
         (model.showKimi && kimi.canStop) || (model.showNative && native.canStop)
     }
@@ -83,6 +84,15 @@ struct WorkbenchHeaderActions: View {
                 } label: { Image(systemName: "ellipsis").frame(width: 28, height: 28).workbenchControlSurface() }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("会话操作")
             } else {
+                if isHome && !model.workspace.groups.isEmpty {
+                    Menu {
+                        Button("全部任务组") { model.showHome() }
+                        ForEach(model.workspace.groups) { group in
+                            Button(group.name) { model.showHome(groupID: group.id) }
+                        }
+                    } label: { Text("全部任务组").font(.system(size: 12)).foregroundStyle(.secondary) }
+                        .menuStyle(.borderlessButton).fixedSize().help("打开任务组")
+                }
                 if model.selectedGroup != nil {
                     Button { model.editGroup(model.selectedGroup) } label: { Image(systemName: "pencil") }
                         .buttonStyle(.plain).help("编辑任务组")
@@ -92,6 +102,16 @@ struct WorkbenchHeaderActions: View {
                     Button("远端终端…") { model.showNewTerminal = true }.disabled(!model.selectedConnection.online)
                     Button("任务组…") { model.editGroup() }
                 } label: { Label("新建", systemImage: "plus") }.menuStyle(.borderlessButton).fixedSize()
+                if isHome {
+                    let projection = model.dashboardProjection
+                    Menu {
+                        Button(L("归档已查看结果 · \(projection.archiveCount)")) { model.runBatchArchive(projection.archivePlan) }
+                            .disabled(projection.archiveCount == 0 || model.isArchiving)
+                        Text("仅归档本轮正常结束且已查看的会话。")
+                        if let reason = projection.blockedSummary { Text(reason) }
+                    } label: { Image(systemName: "ellipsis").frame(width: 28, height: 28) }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("工作台操作")
+                }
             }
         }.fixedSize(horizontal: true, vertical: false)
     }

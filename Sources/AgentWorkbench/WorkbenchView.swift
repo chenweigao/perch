@@ -108,20 +108,20 @@ private struct WorkbenchDetail: View {
                     else {
                         WorkbenchDashboard(
                             attentionOnly: model.onlyAttention, projection: model.dashboardProjection,
-                            context: model.dashboardContext, groups: model.workspace.groups,
-                            selectedGroupID: model.selectedGroupID, isArchiving: model.isArchiving,
+                            context: model.dashboardContext, isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
-                            onSelectScope: { model.showHome(groupID: $0) },
                             onNewTask: { model.showNewKimi = true },
                             onOpen: { model.open($0) },
                             onMarkReviewed: { model.markReviewed($0) },
                             rowActions: { SessionActionsMenu(model: model, item: $0) },
                             onForgetRestoration: { model.forgetRestoration($0) },
-                            onArchive: { model.runBatchArchive(model.dashboardProjection.archivePlan) },
                             onUndoArchive: { model.undoBatchArchive() },
                             onRetryArchive: { model.retryBatchArchive() },
                             onStartLocal: { model.showLocalSetup = true },
-                            onConnectRemote: { model.showAddHost = true })
+                            onConnectRemote: { model.showAddHost = true },
+                            onShowInbox: { model.showInbox() },
+                            onShowAll: { model.showAllSessions() },
+                            onShowHome: { model.showHome() })
                     }
                 }
                 else if model.showKimi {

@@ -41,6 +41,7 @@ SCOPED_FILES = [
     "Sources/AgentWorkbench/WorkbenchView.swift",
     "Sources/AgentWorkbench/WorkbenchApp.swift",
     "Sources/AgentWorkbench/WorkbenchHeader.swift",
+    "Sources/AgentWorkbench/WorkbenchDashboard.swift",
     "Sources/AgentWorkbench/WorkspaceSplitView.swift",
     "Sources/AgentWorkbench/SelectionActions.swift",
     # Core files whose raw values are rendered in the scoped UI via L().
