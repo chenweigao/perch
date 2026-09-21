@@ -108,6 +108,16 @@ Kimi supports file selection, file drop, file/image paste, attachment thumbnails
 and attachment-only prompts. Upload still uses the existing Kimi multipart API;
 OMP/Qoder attachments are not inferred from that capability.
 
+The plain-text input advertises file URL, PNG and TIFF pasteboard types only when
+an attachment handler is connected. AppKit can therefore enable its standard Paste
+command for an image-only clipboard; the native `readSelection(from:type:)` path
+converts image data into a PNG attachment without replacing the text draft.
+`scripts/check-composer.sh` checks PNG/TIFF type negotiation and file URLs using
+private pasteboards. On macOS, also copy a screenshot and press ⌘V in a loaded
+Kimi conversation (and use Edit → Paste): confirm one thumbnail appears and the
+existing draft remains. Send it to verify upload separately. OMP/Qoder text-only
+inputs do not advertise image paste support.
+
 Streaming thinking uses complete light italic text in a fixed 76 pt vertical scroll area.
 It wraps to the reading width instead of truncating a 240-character suffix; text
 updates do not move the outer transcript. Its inner viewport follows new text by

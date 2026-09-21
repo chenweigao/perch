@@ -34,6 +34,7 @@ public struct NativeAgentSnapshot: Decodable {
     public let cwd: String
     public let busy: Bool
     public let revision: Int
+    public let completed: Int
     public let model: String
     public let messages: [KimiMessage]
     public let interactions: [JSONValue]

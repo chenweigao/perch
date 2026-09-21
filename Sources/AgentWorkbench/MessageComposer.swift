@@ -169,14 +169,21 @@ final class DraftTextView: NSTextView {
         if handleReturn(keyCode: event.keyCode, modifiers: event.modifierFlags) { return }
         super.keyDown(with: event)
     }
-    override func paste(_ sender: Any?) {
-        guard let onFiles else { super.paste(sender); return }
-        let board = NSPasteboard.general
-        if let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
+    // AppKit validates Paste before dispatching it. Plain-text editors must
+    // advertise attachment types as well as implement how to read them.
+    override var readablePasteboardTypes: [NSPasteboard.PasteboardType] {
+        guard onFiles != nil else { return super.readablePasteboardTypes }
+        return [.fileURL, .png, .tiff] + super.readablePasteboardTypes
+    }
+    override func readSelection(from board: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
+        guard let onFiles else { return super.readSelection(from: board, type: type) }
+        if type == .fileURL,
+           let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
             onFiles(urls)
-            return
+            return true
         }
-        if let data = board.data(forType: .png) ?? board.data(forType: .tiff),
+        if type == .png || type == .tiff,
+           let data = board.data(forType: type),
            let bitmap = NSBitmapImageRep(data: data), let png = bitmap.representation(using: .png, properties: [:]) {
             do {
                 let folder = FileManager.default.temporaryDirectory.appendingPathComponent("AgentWorkbenchAttachments", isDirectory: true)
@@ -185,9 +192,9 @@ final class DraftTextView: NSTextView {
                 try png.write(to: file, options: .atomic)
                 onFiles([file])
             } catch { onError?(error.localizedDescription) }
-            return
+            return true
         }
-        super.paste(sender)
+        return super.readSelection(from: board, type: type)
     }
 }
 

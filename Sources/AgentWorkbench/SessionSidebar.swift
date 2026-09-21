@@ -28,7 +28,7 @@ struct WorkbenchSidebar: View {
                 Button { model.editGroup() } label: {
                     Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(.plain).help("新建任务组")
-            }.padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
+            }.padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(model.workspace.groups) { group in
                 Button { model.showHome(groupID: group.id) } label: {
                     HStack(spacing: 9) {
@@ -50,9 +50,12 @@ struct WorkbenchSidebar: View {
                     Picker("筛选最近会话", selection: $filter) {
                         ForEach(SidebarRecentFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
-                } label: { Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill") }
+                } label: {
+                    Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(filter.rawValue)")
-            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
+            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(projection.recent) { item in sessionRow(item) }
             if projection.recent.isEmpty {
                 Text(filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话")
@@ -71,7 +74,7 @@ struct WorkbenchSidebar: View {
     }
     private func heading(_ title: String) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
-            .padding(.leading, 36).padding(.trailing, 10).padding(.top, 10).padding(.bottom, 7)
+            .frame(height: 24).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
     }
     private func sessionRow(_ item: WorkspaceSession) -> some View {
         SessionSidebarRow(model: model, item: item, selected: !model.showDashboard && item.id == model.tabs.selectedID,
@@ -275,7 +278,8 @@ struct KimiSelectionContent: View {
     @ObservedObject var connection: KimiConnection
     var body: some View {
         if connection.conversation?.snapshot.session.id == model.selectedReference?.terminalID {
-            KimiWorkspaceView(connection: connection, onNew: { model.showNewKimi = true }, onInput: {}).id(model.selectedReference?.id)
+            KimiWorkspaceView(connection: connection, onNew: { model.showNewKimi = true }, onInput: {},
+                              onResultDisplayed: { model.reviewDisplayed($0, on: connection.host.id) }).id(model.selectedReference?.id)
         } else {
             VStack(spacing: 14) {
                 if connection.loading { ProgressView() }

@@ -112,7 +112,9 @@ private struct WorkbenchDetail: View {
                 }
                 else if model.showKimi {
                     KimiSelectionContent(model: model, connection: model.kimi)
-                } else if model.showNative { NativeAgentView(connection: model.native) }
+                } else if model.showNative {
+                    NativeAgentView(connection: model.native, onResultDisplayed: { model.reviewDisplayed($0, on: model.native.host.id) })
+                }
                 else if model.selectedTerminal == nil { unavailableSession }
                 ForEach(model.terminals) { terminal in
                     VStack(spacing: 0) {

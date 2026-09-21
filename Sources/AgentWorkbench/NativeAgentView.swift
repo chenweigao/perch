@@ -1,11 +1,22 @@
+import AppKit
 import SwiftUI
 import WorkbenchCore
 
 struct NativeAgentView: View {
     @ObservedObject var connection: NativeAgentConnection
+    let onResultDisplayed: (NativeAgentSnapshot) -> Void
+    @State private var appActive = NSApp.isActive
     @State private var follow = true
     @State private var activityReview = 0
     @State private var palette = CommandPaletteState()
+    private var displayedResultKey: String? {
+        guard appActive, follow, connection.online,
+              let snapshot = connection.snapshot, snapshot.id == connection.selectedID,
+              !snapshot.busy, snapshot.interactions.isEmpty, snapshot.error == nil, snapshot.completed > 0 else { return nil }
+        let key = "\(connection.host.id):native:\(snapshot.id)"
+        guard ConversationReadingMemory.shared.following[key] != false else { return nil }
+        return "\(key):\(snapshot.completed)"
+    }
     var body: some View {
         VStack(spacing: 0) {
             if let s = connection.snapshot {
@@ -40,6 +51,9 @@ struct NativeAgentView: View {
                             await Task.yield()
                             if !Task.isCancelled && follow { proxy.scrollTo("bottom", anchor: .bottom) }
                         }
+                }
+                .onChange(of: displayedResultKey, initial: true) { _, key in
+                    if key != nil { onResultDisplayed(s) }
                 }
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: s.messages, isRunning: s.busy,
@@ -94,6 +108,8 @@ struct NativeAgentView: View {
             } else { ProgressView("正在读取对话…").frame(maxWidth: .infinity, maxHeight: .infinity) }
             if !connection.online { HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10) }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
 
     }
     /// A running session may still accept text when the adapter can queue it, so the

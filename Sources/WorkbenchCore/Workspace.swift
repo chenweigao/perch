@@ -131,6 +131,14 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
         reviewedKimiUpdates[SessionReference(hostID: hostID, terminalID: session.id, kind: .kimi).id] = session.updatedAt
     }
 
+    public mutating func markReviewed(_ snapshot: NativeAgentSnapshot, on hostID: UUID) {
+        guard !snapshot.busy, snapshot.interactions.isEmpty, snapshot.error == nil, snapshot.completed > 0 else { return }
+        let id = SessionReference(hostID: hostID, terminalID: snapshot.id, kind: snapshot.provider).id
+        // A catalog can already know about a newer completion than the displayed transcript.
+        if let previous = reviewedKimiUpdates[id].flatMap(Int.init), snapshot.completed <= previous { return }
+        reviewedKimiUpdates[id] = String(snapshot.completed)
+    }
+
     public func needsReview(_ pane: Pane, on hostID: UUID) -> Bool {
         guard pane.status == "done" else { return false }
         guard let revision = pane.revision else { return true }
