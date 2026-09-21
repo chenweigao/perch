@@ -8,6 +8,11 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
 - Keep the existing AppKit sidebar split item: system floating glass, width
   restoration, and a draggable 220–420 pt divider.
 - Fixed top: Perch, new task (⌘N), task search (⌘K), workbench, attention inbox.
+- The titlebar keeps two native navigation buttons: sidebar toggle and new task.
+  Both use 32 × 28 pt controls and 16 pt regular/medium-scale symbols, centered
+  without stretching. AppKit owns toolbar spacing and the separation from window
+  controls. Borders appear on hover, with native momentary press feedback;
+  tooltips, accessibility labels and the existing ⌘N menu shortcut remain.
 - Scrollable middle: pins, task groups, up to 20 recent sessions, all sessions.
 - Fixed bottom: archive, environment popover, native Settings entry (⌘,).
 - Workbench/group/archive selection changes the main page, not the sidebar's
@@ -47,6 +52,13 @@ protocols, task controls, file operations, tool visibility, and sidebar scoping.
 sidebar shell and native split view with fictional rows; it never loads the
 workspace model or connects to agents. This fixture checks presentation and
 shell interactions, not live-provider behavior.
+
+In the sidebar preview, compare both titlebar buttons at normal and narrow window
+widths, with the sidebar expanded and collapsed. Check their vertical centers,
+spacing, hover/press feedback, tooltips and keyboard focus. Click the blank area
+inside each button as well as its glyph: sidebar toggle and new-task actions must
+still work. The main app's title stays aligned to the content side of the tracking
+separator; conversation actions stay at the right.
 
 For automatic read-state acceptance on macOS: open an unread completed conversation
 and confirm its dot clears after loading. Switch away, complete another turn and

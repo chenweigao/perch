@@ -128,7 +128,33 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.isBordered = false
                 item.visibilityPriority = .user
             }
+            if id == toggleID || id == composeID {
+                item.view = navigationButton(for: item)
+            }
             return item
+        }
+
+        private func navigationButton(for item: NSToolbarItem) -> NSButton {
+            let button = NSButton(title: "", target: item.target, action: item.action)
+            button.image = item.image?.withSymbolConfiguration(
+                NSImage.SymbolConfiguration(pointSize: 16, weight: .regular, scale: .medium))
+            button.imagePosition = .imageOnly
+            button.imageScaling = .scaleNone
+            button.controlSize = .regular
+            button.setButtonType(.momentaryPushIn)
+            button.bezelStyle = .texturedRounded
+            button.isBordered = true
+            button.showsBorderOnlyWhileMouseInside = true
+            button.toolTip = item.toolTip
+            button.setAccessibilityLabel(item.label)
+            // Equal native controls share one vertical center and toolbar spacing;
+            // the symbols retain their aspect ratios instead of stretching to fit.
+            button.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: 32),
+                button.heightAnchor.constraint(equalToConstant: 28),
+            ])
+            return button
         }
         @objc private func compose() { newConversation() }
     }
