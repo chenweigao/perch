@@ -36,13 +36,14 @@ struct ConversationActivityBar: View {
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
     @State private var expanded = false
+    @State private var pointerAnchor: CGRect?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             if activity.isVisible || timing != nil {
                 HStack(spacing: 10) {
-                    Button { expanded.toggle() } label: {
+                    Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
                             if activity.animates { ConversationBusyIndicator() }
                             else { Image(systemName: activity.symbol).frame(width: 16) }
@@ -61,7 +62,13 @@ struct ConversationActivityBar: View {
                         }.contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Task activity")
                         .accessibilityValue(activity.title).help("Show task plan and current activity")
-                        .popover(isPresented: $expanded, arrowEdge: .top) { details }
+                        .highPriorityGesture(SpatialTapGesture().onEnded { value in
+                            pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
+                            expanded.toggle()
+                        })
+                        .popover(isPresented: $expanded,
+                                 attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
+                                 arrowEdge: .top) { details }
                     if !online {
                         Button("Reconnect", action: onReconnect).buttonStyle(.borderless)
                     } else if pendingCount > 0 {
