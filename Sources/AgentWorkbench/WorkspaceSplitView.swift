@@ -160,13 +160,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private func navigationButton(for item: NSToolbarItem) -> NSButton {
             let button = NSButton(title: "", target: item.target, action: item.action)
             button.image = item.image?.withSymbolConfiguration(
-                NSImage.SymbolConfiguration(pointSize: 16, weight: .regular, scale: .medium))
+                NSImage.SymbolConfiguration(pointSize: 13, weight: .regular, scale: .medium))
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleNone
-            button.controlSize = .regular
+            button.controlSize = .small
+            button.contentTintColor = .secondaryLabelColor
             button.setButtonType(.momentaryPushIn)
             button.bezelStyle = .texturedRounded
-            button.isBordered = true
+            button.isBordered = false
             button.showsBorderOnlyWhileMouseInside = true
             button.toolTip = item.toolTip
             button.setAccessibilityLabel(item.label)
@@ -174,7 +175,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             // the symbols retain their aspect ratios instead of stretching to fit.
             button.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                button.widthAnchor.constraint(equalToConstant: 32),
+                button.widthAnchor.constraint(equalToConstant: 28),
                 button.heightAnchor.constraint(equalToConstant: 28),
             ])
             return button
