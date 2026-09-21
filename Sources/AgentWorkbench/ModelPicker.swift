@@ -12,14 +12,16 @@ struct ModelPicker: View {
             Menu {
                 Picker("Model", selection: $selection) {
                     Text(current.isEmpty ? "Use default model" : "Keep session model").tag("")
-                    ForEach(ModelCatalog.groups(models)) { group in
-                        Menu(group.id) {
+                }.pickerStyle(.inline)
+                ForEach(ModelCatalog.groups(models)) { group in
+                    Menu(group.id) {
+                        Picker(group.id, selection: $selection) {
                             ForEach(group.models) { model in
                                 Text(model.name).tag(model.id)
                             }
-                        }
+                        }.pickerStyle(.inline)
                     }
-                }.pickerStyle(.inline)
+                }
                 if models.isEmpty { Text("No models available") }
             } label: {
                 Text(option?.name ?? (effective.isEmpty ? "Default model" : String(effective.split(separator: "/").last ?? "")))
