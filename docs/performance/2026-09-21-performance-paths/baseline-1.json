@@ -1,0 +1,38 @@
+{
+  "checksum" : 299606,
+  "kimi_bytes" : 392096,
+  "kimi_history_decode" : {
+    "iterations_per_sample" : 10,
+    "max_ms" : 16.7957958,
+    "median_ms" : 16.520612499999999,
+    "min_ms" : 15.770820800000001
+  },
+  "kimi_stream_event" : {
+    "iterations_per_sample" : 2000,
+    "max_ms" : 0.017695854,
+    "median_ms" : 0.017451146000000001,
+    "min_ms" : 0.017271895499999999
+  },
+  "label" : "baseline-1",
+  "messages" : 400,
+  "native_bytes" : 392210,
+  "native_snapshot_decode" : {
+    "iterations_per_sample" : 10,
+    "max_ms" : 23.851570899999999,
+    "median_ms" : 23.382566700000002,
+    "min_ms" : 22.972120799999999
+  },
+  "search_cold" : {
+    "iterations_per_sample" : 3,
+    "max_ms" : 31.022333333333332,
+    "median_ms" : 30.160638666666667,
+    "min_ms" : 29.988027666666667
+  },
+  "search_repeated" : {
+    "iterations_per_sample" : 8,
+    "max_ms" : 33.139937500000002,
+    "median_ms" : 31.619505125,
+    "min_ms" : 30.7503125
+  },
+  "turns" : 200
+}

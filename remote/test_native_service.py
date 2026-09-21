@@ -129,6 +129,18 @@ class HandlerContractTests(unittest.TestCase):
         return result[0]
     def prompt(self,key='one'):
         return self.request('/sessions/contract/prompt',{'text':'中文指令','requestId':key})
+    def test_unchanged_snapshot_skips_history_copy_but_expires_approvals(self):
+        self.s.state['messages']=[{'id':'history','role':'assistant','content':[{'type':'text','text':'历史'}]}]
+        with patch.object(broker.copy,'deepcopy',side_effect=AssertionError('unchanged history must not be copied')):
+            self.assertEqual(self.request('/sessions/contract?revision=0'),(200,{'unchanged':True}))
+        self.s.state['interactions']=[{'id':'expired','expires':1}]
+        code,value=self.request('/sessions/contract?revision=0')
+        self.assertEqual(code,200); self.assertEqual(value['revision'],1)
+        self.assertEqual(value['interactions'],[])
+        self.assertEqual(value['messages'],self.s.state['messages'])
+        value['messages'].clear()
+        self.assertEqual(len(self.s.state['messages']),1,'changed snapshots must remain detached')
+
     def test_duplicate_prompt_after_completion_and_reload_is_not_replayed(self):
         self.assertEqual(self.prompt()[0],200)
         self.s.event({'type':'agent_end'})

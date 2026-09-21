@@ -38,10 +38,34 @@ public enum KimiWire {
         let d = JSONDecoder(); d.keyDecodingStrategy = .convertFromSnakeCase; return d
     }
     public static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        // Check the outcome before decoding the success payload: errors may have a different data shape.
-        let envelope = try JSONDecoder().decode(JSONValue.self, from: data)
-        guard envelope["code"].int == 0 else { throw WorkbenchError(envelope["msg"].string ?? "Kimi 返回了无法识别的响应") }
-        return try decoder().decode(T.self, from: JSONEncoder().encode(envelope["data"]))
+        try decoder().decode(Response<T>.self, from: data).value
+    }
+    public static func decodeEvent(from data: Data) throws -> KimiEvent {
+        try decoder().decode(EventResponse.self, from: data).value
+    }
+    private struct EventResponse: Decodable {
+        let value: KimiEvent
+        private enum CodingKeys: String, CodingKey { case type, code, msg }
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            if try container.decode(String.self, forKey: .type) == "ack",
+               let code = try container.decodeIfPresent(Int.self, forKey: .code), code != 0 {
+                throw WorkbenchError(try container.decodeIfPresent(String.self, forKey: .msg) ?? "Kimi 控制请求失败")
+            }
+            value = try KimiEvent(from: decoder)
+        }
+    }
+    private struct Response<T: Decodable>: Decodable {
+        let value: T
+        private enum CodingKeys: String, CodingKey { case code, msg, data }
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            // Errors need not have the success payload's shape.
+            guard try container.decodeIfPresent(Int.self, forKey: .code) == 0 else {
+                throw WorkbenchError(try container.decodeIfPresent(String.self, forKey: .msg) ?? "Kimi 返回了无法识别的响应")
+            }
+            value = try container.decode(T.self, forKey: .data)
+        }
     }
 }
 
