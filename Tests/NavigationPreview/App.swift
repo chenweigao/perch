@@ -500,7 +500,8 @@ final class NavigationRunner {
                     }
                 }
                 if CACurrentMediaTime() >= nextSample {
-                    nextSample = CACurrentMediaTime() + 60
+                    // Keep bounded two-minute checks observable as well as overnight runs.
+                    nextSample = CACurrentMediaTime() + 10
                     samples.append([
                         "elapsed_s": CACurrentMediaTime() - start,
                         "resident_mb": Double(residentBytes()) / 1_048_576,

@@ -1,0 +1,29 @@
+{
+  "history_turns" : 200,
+  "samples" : [
+    {
+      "elapsed_s" : 0.50762475002557039,
+      "resident_mb" : 164.578125,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 96
+    },
+    {
+      "elapsed_s" : 60.857055583386682,
+      "resident_mb" : 198,
+      "scroll_steps" : 1176,
+      "switches" : 98,
+      "views" : 98
+    },
+    {
+      "elapsed_s" : 120.89868624997325,
+      "resident_mb" : 174.5,
+      "scroll_steps" : 1344,
+      "switches" : 112,
+      "views" : 77
+    }
+  ],
+  "scroll_steps" : 1344,
+  "status" : "running",
+  "switches" : 112
+}

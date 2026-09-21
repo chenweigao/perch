@@ -8,6 +8,7 @@ struct ConversationFindBar: View {
     @State private var query = ""
     @State private var index = 0
     @State private var hits: [ConversationSearchHit] = []
+    @State private var search = ConversationSearch()
     @FocusState private var focused: Bool
     private var messages: [KimiMessage] { model.showKimi ? kimi.conversation?.displayMessages ?? [] : native.snapshot?.messages ?? [] }
     private var running: Bool { model.showKimi ? kimi.conversation?.snapshot.session.busy == true : native.snapshot?.busy == true }
@@ -39,7 +40,7 @@ struct ConversationFindBar: View {
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindNext"))) { notice in move(notice.object as? Int ?? 1) }
             .onExitCommand { model.showConversationFind = false }
     }
-    private func updateSearch() { hits = ConversationSearch.hits(in: messages, query: query, running: running) }
+    private func updateSearch() { hits = search.hits(in: messages, query: query, running: running) }
     private func move(_ delta: Int) { updateSearch(); guard !hits.isEmpty else { return }; index = (index + delta + hits.count) % hits.count; reveal() }
     private func reveal() {
         guard hits.indices.contains(index) else { return }

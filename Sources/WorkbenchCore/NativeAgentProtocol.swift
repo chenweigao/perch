@@ -1,5 +1,33 @@
 import Foundation
 
+public enum NativeAgentWire {
+    public static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        try KimiWire.decoder().decode(Response<T>.self, from: data).value
+    }
+    private struct Response<T: Decodable>: Decodable {
+        let value: T
+        private enum CodingKeys: String, CodingKey { case id, error }
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            if try container.decodeIfPresent(String.self, forKey: .id) == nil,
+               let error = try container.decodeIfPresent(String.self, forKey: .error) {
+                throw WorkbenchError(error)
+            }
+            value = try T(from: decoder)
+        }
+    }
+}
+
+public struct NativeSnapshotResponse: Decodable {
+    public let snapshot: NativeAgentSnapshot?
+    private enum CodingKeys: String, CodingKey { case unchanged }
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        snapshot = try container.decodeIfPresent(Bool.self, forKey: .unchanged) == true
+            ? nil : NativeAgentSnapshot(from: decoder)
+    }
+}
+
 public struct NativeAgentSession: Decodable, Identifiable, Equatable {
     public let id: String
     public let provider: SessionKind

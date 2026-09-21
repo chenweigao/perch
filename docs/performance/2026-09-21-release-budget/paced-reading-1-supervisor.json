@@ -1,0 +1,10 @@
+{
+  "status": "exited",
+  "mode": "reading",
+  "timeout_s": 120,
+  "binary_sha256": "57e5cb09c5250241697b89f2ddd63af1ed9545b4e7a657f713f30df6cb0b08c1",
+  "pid": 13931,
+  "exit_code": 0,
+  "elapsed_s": 17.255800917000002,
+  "passed": true
+}
