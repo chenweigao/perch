@@ -25,8 +25,9 @@ struct WorkbenchSidebar: View {
             HStack {
                 Text("任务组").font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer()
-                Button { model.editGroup() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.plain).help("新建任务组")
+                Button { model.editGroup() } label: {
+                    Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
+                }.buttonStyle(.plain).help("新建任务组")
             }.padding(.leading, 36).padding(.trailing, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(model.workspace.groups) { group in
                 Button { model.showHome(groupID: group.id) } label: {
@@ -34,7 +35,7 @@ struct WorkbenchSidebar: View {
                         Image(systemName: "folder").frame(width: 17)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
                         Text("\(group.sessions.count)").font(.system(size: 11)).foregroundStyle(.secondary)
-                    }.padding(.horizontal, 10).frame(height: 34)
+                    }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
                         .background(model.showDashboard && model.selectedGroupID == group.id ? .black.opacity(0.065) : .clear,
                                     in: RoundedRectangle(cornerRadius: 8))
                 }.buttonStyle(.plain).contextMenu { Button("编辑任务组") { model.editGroup(group) } }

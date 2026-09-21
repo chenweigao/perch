@@ -16,6 +16,7 @@ struct ModelPicker: View {
                     .lineLimit(1).truncationMode(.middle)
                 Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(.secondary)
             }.font(.system(size: 12)).padding(.horizontal, 7).padding(.vertical, 6)
+                .contentShape(Rectangle())
                 .background(presented ? Color.primary.opacity(0.05) : .clear, in: RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(.plain).help("选择模型 · \(effective)").accessibilityLabel("选择模型")
             .popover(isPresented: $presented, arrowEdge: .top) {

@@ -100,24 +100,26 @@ struct WorkspaceHome: View {
     }
     private func rows(_ items: [WorkspaceSession]) -> some View {
         ForEach(items) { item in
-            HStack(spacing: 12) {
-                Image(systemName: item.reference.kind.symbol).foregroundStyle(.secondary)
+            HStack(spacing: 0) {
                 Button { model.open(item) } label: {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                        Text("\(item.hostName) · \(item.detail) · \(item.directory)").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
-                        if model.selectedGroup == nil {
-                            let groups = model.workspace.groups.filter { $0.sessions.contains(item.reference) }.map(\.name)
-                            if !groups.isEmpty { Text(groups.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }
-                        }
-                    }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                    HStack(spacing: 12) {
+                        Image(systemName: item.reference.kind.symbol).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                            Text("\(item.hostName) · \(item.detail) · \(item.directory)").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                            if model.selectedGroup == nil {
+                                let groups = model.workspace.groups.filter { $0.sessions.contains(item.reference) }.map(\.name)
+                                if !groups.isEmpty { Text(groups.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.secondary)
+                    }.padding(14).contentShape(Rectangle())
                 }.buttonStyle(.plain).disabled(!item.online)
                     .contextMenu { SessionActionsMenu(model: model, item: item) }
                 if item.canMarkReviewed && item.online {
-                    Button("已查看") { model.markReviewed(item) }.font(.caption)
+                    Button("已查看") { model.markReviewed(item) }.font(.caption).padding(.trailing, 14)
                 }
-                Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.secondary)
-            }.padding(14).background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).opacity(item.online ? 1 : 0.5)
+            }.background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).opacity(item.online ? 1 : 0.5)
         }
     }
 }

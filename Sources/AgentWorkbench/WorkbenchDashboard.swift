@@ -83,22 +83,24 @@ struct WorkbenchDashboard: View {
     }
 
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: item.reference.kind.symbol).foregroundStyle(.secondary)
+        HStack(spacing: 0) {
             Button { onOpen(item) } label: {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                    // Detail text comes from existing metadata; no model request writes it.
-                    Text("\(item.hostName) · \(item.detail) · \(item.directory)")
-                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
-                }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                HStack(spacing: 12) {
+                    Image(systemName: item.reference.kind.symbol).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                        // Detail text comes from existing metadata; no model request writes it.
+                        Text("\(item.hostName) · \(item.detail) · \(item.directory)")
+                            .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                    if section == .attention { Text("处理").font(.caption).foregroundStyle(.orange) }
+                }.padding(14).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!item.online)
                 .accessibilityLabel("\(item.title)，\(item.detail)")
-            if section == .attention { Text("处理").font(.caption).foregroundStyle(.orange) }
             if item.canMarkReviewed && item.online {
-                Button("已查看") { onMarkReviewed(item) }.font(.caption)
+                Button("已查看") { onMarkReviewed(item) }.font(.caption).padding(.trailing, 14)
             }
-        }.padding(14).background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
+        }.background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
             .opacity(item.online ? 1 : 0.5)
     }
 }
