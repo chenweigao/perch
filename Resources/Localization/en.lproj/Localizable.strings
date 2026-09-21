@@ -324,3 +324,15 @@
 "连接已断开，以下为最后收到的工具状态。" = "Connection lost. Tool states below are the last received states.";
 "当前操作" = "Current activity";
 "任务计划" = "Task plan";
+"Steer" = "Steer";
+"Queue" = "Queue";
+"Send next turn" = "Send next turn";
+"Queued for next turn" = "Queued for next turn";
+"Steering requested" = "Steering requested";
+"Accepted · waiting for context" = "Accepted · waiting for context";
+"Sending" = "Sending";
+"Queued" = "Queued";
+"Running" = "Running";
+"Send unconfirmed" = "Send unconfirmed";
+"Accepted" = "Accepted";
+"Paused" = "Paused";

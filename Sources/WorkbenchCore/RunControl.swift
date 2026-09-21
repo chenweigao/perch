@@ -229,7 +229,8 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
         // Do not bypass an unconfirmed instruction with a later queued message.
         guard !items(for: session).contains(where: {
             switch $0.state {
-            case .submitting, .accepted, .running, .failed, .unknown: return true
+            case .accepted, .running: return !isStreaming
+            case .submitting, .failed, .unknown: return true
             default: return false
             }
         }) else { return nil }

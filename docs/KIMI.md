@@ -49,3 +49,9 @@ Kimi 与 Herdr 共用任务组、侧栏、打开标签和待处理队列；两�
 
 参考：[官方服务 API](https://moonshotai.github.io/kimi-code/en/reference/server-api.html)、
 [官方源码](https://github.com/MoonshotAI/kimi-code)。具体字段以运行服务的 OpenAPI、AsyncAPI 及已安装 2.0.2 实现验证。
+
+## 运行中引导
+
+运行中发送默认先 `POST /sessions/{id}/prompts`，再对返回的排队消息 ID 调用 `POST /sessions/{id}/prompts/{prompt_id}:steer`。选择“下一轮发送”只提交排队；若提交时任务已经空闲、返回状态为 running，则直接开始新一轮。
+
+客户端读取 `GET /sessions/{id}/prompts` 恢复待发消息，按 `user_message_id` 与历史合并。引导接口失败时保留已接收的消息及错误，不把同一内容重新提交。HTTP 接收与上下文回显分开显示。

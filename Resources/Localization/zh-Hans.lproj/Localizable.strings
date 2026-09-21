@@ -282,3 +282,15 @@
 "连接已断开，以下为最后收到的工具状态。" = "连接已断开，以下为最后收到的工具状态。";
 "当前操作" = "当前操作";
 "任务计划" = "任务计划";
+"Steer" = "引导";
+"Queue" = "排队";
+"Send next turn" = "下一轮发送";
+"Queued for next turn" = "等待下一轮发送";
+"Steering requested" = "正在提交引导";
+"Accepted · waiting for context" = "已接收，等待进入上下文";
+"Sending" = "发送中";
+"Queued" = "待发送";
+"Running" = "运行中";
+"Send unconfirmed" = "发送未确认";
+"Accepted" = "已接收";
+"Paused" = "已暂停";

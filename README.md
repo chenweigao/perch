@@ -47,8 +47,10 @@ for tested versions and recovery limits. Agent credentials and model configurati
 stay with the CLI; Perch does not connect directly to model providers.
 
 Local OMP discovery is available, but local native conversations are not connected
-yet. OMP / Qoder CN / dsh support stopping and queued follow-up messages; live
-steering is not supported. Existing Herdr sessions remain terminal sessions.
+yet. Kimi and remote OMP support steering during a running task, with an explicit
+next-turn option. OMP requires the updated native bridge. Qoder CN / dsh support
+stopping and next-turn queueing. Pending messages appear in the conversation
+until runtime history confirms them. Existing Herdr sessions remain terminal sessions.
 
 ## Build and run
 

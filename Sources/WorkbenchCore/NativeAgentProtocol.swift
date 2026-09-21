@@ -45,6 +45,7 @@ public struct NativeAgentSession: Decodable, Identifiable, Equatable {
     public let context: ContextUsage?
     public let turnId: String?
     public let turnState: String?
+    public let steer: Bool?
     public var status: String { pending > 0 ? L("等你处理") : busy ? L("运行中") : error != nil ? L("出错") : cancelled == true ? L("已停止") : L("就绪") }
     public var budget: ContextBudget? { ContextBudget(used: context?.tokens, limit: context?.limit) }
 }

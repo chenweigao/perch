@@ -28,6 +28,7 @@ struct NativeAgentView: View {
                         ConversationTranscript(messages: s.messages, sessionId: s.id,
                                                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                                isRunning: s.busy, online: connection.online, memoryKey: readingKey)
+                        NativeRunControls(connection: connection, sessionID: s.id)
                         Color.clear.frame(height: 1).id("pending-interactions")
                         ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }
                         Color.clear.frame(height: 1).id("bottom")
@@ -36,6 +37,11 @@ struct NativeAgentView: View {
                             ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
                         }
                         .onChange(of: s.revision) { _, _ in
+                            if #unavailable(macOS 15) {
+                                if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                            }
+                        }
+                        .onChange(of: connection.queue.allItems.filter { $0.session.terminalID == s.id }) { _, _ in
                             if #unavailable(macOS 15) {
                                 if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                             }
@@ -77,7 +83,6 @@ struct NativeAgentView: View {
                     }.padding(6)
                 }
                 VStack(spacing: 8) {
-                    NativeRunControls(connection: connection, sessionID: s.id)
                     if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
                         CommandPalette(completion: completion, selection: palette.selection) { command in
                             apply(command, completion, to: s.id)
@@ -99,7 +104,8 @@ struct NativeAgentView: View {
                                                  canSend: canSend(s), canStop: connection.canStop,
                                                  queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
                                                  onSend: { connection.send(mode: defaultMode(s)) },
-                                                 onStop: { connection.stop() })
+                                                 onStop: { connection.stop() },
+                                                 onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
                         }
                     }.padding(14).workbenchControlSurface()
                     ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
@@ -207,7 +213,8 @@ struct NativeRunControls: View {
     var body: some View {
         if let reference {
             let phase = connection.stops.phase(for: reference)
-            let pending = connection.queue.items(for: reference)
+            let visible = Set(connection.snapshot?.messages.map(\.id) ?? [])
+            let pending = connection.queue.items(for: reference).filter { !visible.contains($0.id) }
             VStack(alignment: .leading, spacing: 8) {
                 if phase != .idle {
                     HStack(spacing: 10) {
@@ -222,24 +229,24 @@ struct NativeRunControls: View {
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
-                    HStack(spacing: 10) {
-                        Text(message.mode == .steer ? "Steer" : "Queue").font(.caption2)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.black.opacity(0.06), in: Capsule())
-                        Text(message.text).font(.caption).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Text(message.state.label).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
-                        if message.state.isEditable {
-                            Button("Edit") { editingMessage = message }.font(.caption2)
-                            Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
+                    VStack(alignment: .leading, spacing: 8) {
+                        PendingMessageContent(text: message.text,
+                                              status: message.mode == .steer && message.state == .accepted
+                                                ? "Accepted · waiting for context" : message.state.label,
+                                              mode: message.mode == .steer ? "Steer" : "Queue")
+                        HStack(spacing: 10) {
+                            if message.state.isEditable {
+                                Button("Edit") { editingMessage = message }.font(.caption2)
+                                Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
+                            }
+                            switch message.state {
+                            case .unknown: Button("Sync and retry") { connection.retry(message.id) }.font(.caption2)
+                            case .failed:
+                                Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
+                            default: EmptyView()
+                            }
                         }
-                        switch message.state {
-                        case .unknown: Button("Sync and retry") { connection.retry(message.id) }.font(.caption2)
-                        case .failed:
-                            Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
-                        default: EmptyView()
-                        }
-                    }
+                    }.padding(.vertical, 8)
                 }
                 if let warning = connection.queue.unsentWarning(for: reference) {
                     Text(warning).font(.caption2).foregroundStyle(.secondary)

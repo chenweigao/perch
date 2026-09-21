@@ -14,6 +14,7 @@ struct ProtocolTests {
         checkReplyDocument()
         try checkNativeAgents()
         try checkKimiProtocol()
+        try checkKimiPrompts()
         try checkUnifiedWorkspace()
         try checkSessionManagement()
         try checkBatchArchive()

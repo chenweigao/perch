@@ -21,11 +21,6 @@ final class NativeAgentConnection: ObservableObject {
     /// ACP config options after each handshake, and a Qoder session keeps an empty
     /// list rather than being offered models it cannot switch to.
     @Published private(set) var models: [AgentModel] = []
-    /// The hosted bridge rejects `prompt` while a turn runs, so this adapter may only
-    /// offer next-turn queueing. Steering stays unsupported until the bridge itself
-    /// forwards a verified mid-turn command.
-    let capabilities = AgentCapabilities(nativeConversation: true, stop: true, steer: .unsupported,
-                                         queueWhileBusy: true, resume: true)
     var onSessionsChanged: (() -> Void)?
     private var api: KimiAPI?
     private var tunnel: Process?
@@ -222,9 +217,12 @@ final class NativeAgentConnection: ObservableObject {
         return SessionReference(hostID: host.id, terminalID: id, kind: session.provider)
     }
     func modes(for id: String) -> [DeliveryMode] {
-        capabilities.modes(isStreaming: sessions.first { $0.id == id }?.busy ?? false)
+        guard let session = sessions.first(where: { $0.id == id }) else { return [] }
+        return AgentCapabilities(nativeConversation: true, stop: true,
+                                 steer: session.steer == true ? .commandPresentEffectUnverified : .unsupported,
+                                 queueWhileBusy: true, resume: true).modes(isStreaming: session.busy)
     }
-    /// Queues the draft and hands it to the runtime when the session is free. The
+    /// Queues the draft and delivers steering during a turn or other input when free. The
     /// draft is cleared only once the message is queued, so nothing is lost if the
     /// request fails.
     func send(mode: DeliveryMode = .now) {
@@ -252,7 +250,7 @@ final class NativeAgentConnection: ObservableObject {
         Task {
             defer { sendingSessions.remove(id); drainQueues() }
             do {
-                let receipt: NativeRequestReceipt = try await request("/sessions/\(id)/prompt", body: .object([
+                let receipt: NativeRequestReceipt = try await request("/sessions/\(id)/\(message.mode == .steer ? "steer" : "prompt")", body: .object([
                     "text": .string(message.text), "requestId": .string(message.id)]))
                 apply(receipt)
             } catch {
@@ -268,6 +266,12 @@ final class NativeAgentConnection: ObservableObject {
         case "submitting", "submitted": next = .submitting
         case "accepted": next = .accepted
         case "running": next = .running
+        case "consumed":
+            // Keep the local bubble until the corresponding history is on screen.
+            if snapshot?.id != message.session.terminalID || snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
+                queue.markDelivered(receipt.id)
+            } else { queue.markAccepted(receipt.id) }
+            return
         case "completed", "stopped":
             timings.finished(sessionID: message.session.terminalID, requestID: receipt.id)
             queue.markDelivered(receipt.id); return
@@ -287,7 +291,7 @@ final class NativeAgentConnection: ObservableObject {
     }
     private func drainQueues() {
         let pending = Set(queue.allItems.filter { $0.state == .draftQueued }.map { $0.session.terminalID })
-        for session in sessions where !session.busy && pending.contains(session.id) { deliver(session.id) }
+        for session in sessions where pending.contains(session.id) { deliver(session.id) }
     }
     func resumeQueue(_ reference: SessionReference) {
         guard online, sessions.first(where: { $0.id == reference.terminalID })?.busy == false,
@@ -335,7 +339,7 @@ final class NativeAgentConnection: ObservableObject {
         return stops.isStopping(reference)
     }
     var canStop: Bool {
-        guard online, capabilities.stop, let id = selectedID,
+        guard online, let id = selectedID,
               let session = sessions.first(where: { $0.id == id }), session.busy, session.turnId != nil,
               let reference = reference(id) else { return false }
         let phase = stops.phase(for: reference)

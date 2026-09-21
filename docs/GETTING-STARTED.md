@@ -53,7 +53,10 @@ Use task groups for related work and the sidebar for navigation. Hover a session
 for pin and archive actions; right-click for a local display name, grouping and
 deletion. Active work cannot be quick-archived. `⌘T` opens a remote terminal.
 
-Native OMP / Qoder CN offer Stop and queued next-turn messages, not live steering.
+Kimi and remote OMP send running-task messages as steering by default. Choose
+“Send next turn” from the adjacent menu to queue instead. Pending text and its
+delivery state remain visible in the conversation. Qoder CN / dsh queue for the
+next turn. Update the remote native bridge to enable OMP steering.
 Local Agent setup currently discovers OMP and checks its version; local native
 execution is not available yet. Remote file viewing and read-only Git diff are
 experimental. Configure models and credentials in each agent's CLI.

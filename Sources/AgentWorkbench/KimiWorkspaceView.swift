@@ -92,7 +92,9 @@ struct KimiWorkspaceView: View {
                         set: { connection.manualPermissions[sessionID] = $0 }))
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
-                                         onSend: { connection.sendPrompt() }, onStop: { connection.abort() })
+                                         queuedSendTitle: "Steer",
+                                         onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
+                                         onQueue: { connection.sendPrompt(mode: .nextTurn) })
                 }
             }.padding(14).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
@@ -153,6 +155,16 @@ private struct KimiTimeline: View {
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.busy,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey)
+                    ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
+                        VStack(alignment: .leading, spacing: 8) {
+                            PendingMessageContent(text: prompt.text, status: prompt.label)
+                            if ["queued", "blocked"].contains(prompt.status) && c.snapshot.session.busy {
+                                Button("Steer") {
+                                    Task { await connection.steerPrompt(prompt.id, for: c.snapshot.session.id) }
+                                }.font(.caption).disabled(!connection.online || connection.isStopping)
+                            }
+                        }.padding(.vertical, 8)
+                    }
                     if let notice = c.notice { Text(notice).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(c.snapshot.pendingApprovals) { approval in
@@ -179,6 +191,11 @@ private struct KimiTimeline: View {
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
             .onChange(of: [String(connection.conversation?.snapshot.asOfSeq ?? 0), connection.conversation?.live?.assistantText ?? "", String(connection.conversation?.live?.thinkingText.isEmpty ?? true)]) { _, _ in
+                if #unavailable(macOS 15) {
+                    if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                }
+            }
+            .onChange(of: connection.pendingPrompts[connection.selectedId ?? ""] ?? []) { _, _ in
                 if #unavailable(macOS 15) {
                     if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                 }

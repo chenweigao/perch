@@ -7,10 +7,15 @@ private final class LaunchProtocol: URLProtocol {
     static var failPrompt = false
     static var submissions: [(String, JSONValue)] = []
     static var creations = 0
-    static func reset(snapshotFailure: Bool = false, promptFailure: Bool = false) {
+    static var promptStatus = "running"
+    static var failSteer = false
+    static var steered: [String] = []
+    static var accepted: [[String: Any]] = []
+    static func reset(snapshotFailure: Bool = false, promptFailure: Bool = false, status: String = "running", steerFailure: Bool = false) {
         lock.lock(); defer { lock.unlock() }
         failSnapshot = snapshotFailure; failPrompt = promptFailure
-        submissions = []; creations = 0
+        submissions = []; creations = 0; accepted = []; steered = []
+        promptStatus = status; failSteer = steerFailure
     }
     static var sent: [(String, JSONValue)] {
         lock.lock(); defer { lock.unlock() }; return submissions
@@ -24,7 +29,7 @@ private final class LaunchProtocol: URLProtocol {
         var status = 200
         var result: [String: Any] = [:]
         func session(_ id: String, updated: String) -> [String: Any] {
-            ["id": id, "title": "", "updated_at": updated, "busy": false,
+            ["id": id, "title": "", "updated_at": updated, "busy": Self.promptStatus == "queued",
              "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/model"]]
         }
         if path == "/api/v1/sessions" {
@@ -35,6 +40,12 @@ private final class LaunchProtocol: URLProtocol {
             let id = path.split(separator: "/")[3]
             result = ["as_of_seq": 0, "epoch": "fixture", "session": session(String(id), updated: "loaded"),
                       "messages": ["items": [], "has_more": false], "pending_approvals": [], "pending_questions": []]
+        } else if path.hasSuffix(":steer") {
+            Self.steered.append(path)
+            if Self.failSteer { status = 503 }
+            result = ["steered": true]
+        } else if path.hasSuffix("/prompts") && request.httpMethod == "GET" {
+            result = ["active": NSNull(), "queued": Self.steered.isEmpty || Self.failSteer ? Self.accepted : []]
         } else if path.hasSuffix("/prompts") {
             var data = request.httpBody ?? Data()
             if let stream = request.httpBodyStream {
@@ -45,8 +56,11 @@ private final class LaunchProtocol: URLProtocol {
                     if count <= 0 { break }; data.append(contentsOf: buffer.prefix(count))
                 }
             }
-            Self.submissions.append((path, try! JSONDecoder().decode(JSONValue.self, from: data)))
-            if Self.failPrompt { status = 503 }
+            let body = try! JSONDecoder().decode(JSONValue.self, from: data)
+            Self.submissions.append((path, body))
+            result = ["prompt_id": body["prompt_id"].string!, "user_message_id": body["prompt_id"].string!,
+                      "status": Self.promptStatus, "content": (try! JSONSerialization.jsonObject(with: data) as! [String: Any])["content"]!]
+            if Self.failPrompt { status = 503 } else { Self.accepted.append(result) }
         } else { preconditionFailure("Unexpected route: \(path)") }
         Self.lock.unlock()
         let envelope: [String: Any] = status == 200 ? ["code": 0, "data": result] : ["msg": "fixture unavailable"]
@@ -84,7 +98,36 @@ func checkKimiTaskLaunch() async throws {
             precondition(connection.actionError?.contains("草稿已保留") == true)
         } else { precondition(connection.drafts["new"] == "") }
         print("PASS: Kimi task launch \(mode), fixed destination, chosen model, draft retention")
+        await ConnectionChecks.settle { !connection.loading }
         connection.disconnect()
         UserDefaults.standard.removeObject(forKey: "kimi.session.\(host.id)")
+    }
+}
+
+@MainActor
+func checkKimiSteering() async throws {
+    for mode in ["steer", "next-turn", "steer-failure", "already-running"] {
+        LaunchProtocol.reset(status: mode == "already-running" ? "running" : "queued", steerFailure: mode == "steer-failure")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LaunchProtocol.self]
+        let api = KimiAPI(baseURL: URL(string: "http://fixture.invalid")!, token: "fixture", configuration: configuration)
+        let client = KimiConnection(host: SSHHost(name: "Steer fixture", destination: "fixture"), api: api)
+        client.drafts["active"] = "运行中补充"
+        await client.sendPrompt(for: "active", mode: mode == "next-turn" ? .nextTurn : .steer)
+        let sent = LaunchProtocol.sent
+        precondition(sent.count == 1)
+        let id = sent[0].1["prompt_id"].string!
+        precondition(client.drafts["active"] == "")
+        precondition(client.pendingPrompts["active"]?.first?.text == "运行中补充")
+        if mode == "next-turn" || mode == "already-running" {
+            precondition(LaunchProtocol.steered.isEmpty)
+        } else {
+            precondition(LaunchProtocol.steered == ["/api/v1/sessions/active/prompts/\(id):steer"])
+            if mode == "steer-failure" {
+                precondition(client.pendingPrompts["active"]?.first?.error?.contains("消息已接收") == true)
+            } else { precondition(client.pendingPrompts["active"]?.first?.status == "steered") }
+        }
+        client.disconnect()
+        print("PASS: Kimi \(mode), accepted id, visible message, no duplicate submission")
     }
 }
