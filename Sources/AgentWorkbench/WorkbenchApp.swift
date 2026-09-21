@@ -1,15 +1,18 @@
 import AppKit
 import SwiftUI
+import WorkbenchCore
 
 @main
 struct WorkbenchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = WorkbenchModel()
+    @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     var body: some Scene {
         WindowGroup("Perch") {
             WorkbenchView(model: model).preferredColorScheme(.light)
                 .frame(minWidth: 940, minHeight: 620)
-                .onAppear { delegate.model = model; model.start() }
+                .environment(\.locale, appLanguage.resolvedLocale)
+                .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }
         }
         .defaultSize(width: 1280, height: 820)
         .windowStyle(.hiddenTitleBar)
@@ -18,7 +21,7 @@ struct WorkbenchApp: App {
                 Button("About Perch") {
                     NSApp.orderFrontStandardAboutPanel(options: [
                         .applicationName: "Perch",
-                        .credits: NSAttributedString(string: "A home for your agents.")
+                        .credits: NSAttributedString(string: L("A home for your agents."))
                     ])
                 }
             }
@@ -50,7 +53,7 @@ struct WorkbenchApp: App {
                 }.keyboardShortcut("w", modifiers: [.command, .shift])
             }
         }
-        Settings { WorkbenchSettings(model: model) }
+        Settings { WorkbenchSettings(model: model).environment(\.locale, appLanguage.resolvedLocale) }
     }
 }
 
@@ -65,10 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do { try model?.flushDrafts() }
         catch {
             let alert = NSAlert()
-            alert.messageText = "Drafts could not be saved"
+            alert.messageText = L("Drafts could not be saved")
             alert.informativeText = error.localizedDescription
-            alert.addButton(withTitle: "Keep Perch open")
-            alert.addButton(withTitle: "Quit anyway")
+            alert.addButton(withTitle: L("Keep Perch open"))
+            alert.addButton(withTitle: L("Quit anyway"))
             if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
         }
         return .terminateNow

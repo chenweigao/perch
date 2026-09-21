@@ -18,6 +18,7 @@ cp "$bin_dir/AgentWorkbench" "$app_dir/Contents/MacOS/AgentWorkbench"
 for bundle in "$bin_dir"/*.bundle; do
     cp -R "$bundle" "$app_dir/Contents/Resources/"
 done
+cp -R "$PWD/Resources/Localization/"*.lproj "$app_dir/Contents/Resources/"
 cp Resources/Brand/Perch.icns "$app_dir/Contents/Resources/Perch.icns"
 cp Resources/Info.plist "$app_dir/Contents/Info.plist"
 mkdir -p "$app_dir/Contents/Resources/Licenses"

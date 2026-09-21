@@ -1,0 +1,26 @@
+/*
+  Localizable.strings (zh-Hans)
+  Perch — 简体中文。
+
+  开发语言即中文：源码里的中文字面量就是 key，查不到条目时直接显示中文，
+  所以本表只需覆盖源码中以英文书写的用户可见文案。
+*/
+
+/* 菜单与关于面板（WorkbenchApp） */
+"About Perch" = "关于 Perch";
+"A home for your agents." = "给你的 Agent 一个家。";
+"Conversation" = "对话";
+"Find in conversation" = "在对话中查找";
+"Next match" = "下一个匹配";
+"Previous match" = "上一个匹配";
+"Back" = "返回";
+"Forward" = "前进";
+"Next task needing attention" = "下一个待处理任务";
+"Drafts could not be saved" = "草稿未能保存";
+"Keep Perch open" = "留在 Perch";
+"Quit anyway" = "仍然退出";
+
+/* 设置（WorkbenchSettings） */
+"Task notifications" = "任务通知";
+"Notify when Perch is in the background" = "Perch 处于后台时发送通知";
+"Completed responses, requests for input, and failures. Click a notification to open the task." = "已完成的回复、待处理的输入请求和失败。点击通知可打开对应任务。";

@@ -10,15 +10,15 @@ struct WorkspaceHome: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(model.selectedGroup?.name ?? "今天，先处理重要的事。")
+                    Text(model.selectedGroup?.name ?? L("今天，先处理重要的事。"))
                         .font(.system(size: 26, weight: .semibold))
-                    Text(model.selectedGroup?.goal.isEmpty == false ? model.selectedGroup!.goal : "对话与终端，都围绕你正在推进的事情组织。")
+                    Text(model.selectedGroup?.goal.isEmpty == false ? model.selectedGroup!.goal : L("对话与终端，都围绕你正在推进的事情组织。"))
                         .font(.system(size: 13)).foregroundStyle(.secondary)
                 }
                 if let group = model.selectedGroup {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("下一步", systemImage: "arrow.turn.down.right").font(.system(size: 12, weight: .semibold))
-                        Text(group.nextStep.isEmpty ? "写下回来后要继续做的第一件事。" : group.nextStep).font(.system(size: 14)).textSelection(.enabled)
+                        Text(group.nextStep.isEmpty ? L("写下回来后要继续做的第一件事。") : group.nextStep).font(.system(size: 14)).textSelection(.enabled)
                         HStack {
                             Text("关联 \(group.sessions.count) 个会话 · 本地保存").font(.caption).foregroundStyle(.secondary)
                             Spacer()
@@ -59,7 +59,7 @@ struct WorkspaceHome: View {
                 ForEach([WorkQueueSection.attention, .review, .running], id: \.self) { section in
                     let items = live.filter { $0.section == section }
                     if !items.isEmpty {
-                        Text(section.rawValue).font(.system(size: 13, weight: .semibold)).padding(.top, 12)
+                        Text(L(section.rawValue)).font(.system(size: 13, weight: .semibold)).padding(.top, 12)
                         // Long result inventories stay collapsed so they don't bury active work.
                         if section == .review {
                             DisclosureGroup("\(items.count) 个结果") { rows(items).padding(.top, 10) }
@@ -93,7 +93,7 @@ struct WorkspaceHome: View {
     }
     private func count(_ section: WorkQueueSection, value: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(section.rawValue).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(L(section.rawValue)).font(.system(size: 12)).foregroundStyle(.secondary)
             Text("\(value)").font(.system(size: 25, weight: .semibold)).foregroundStyle(color)
         }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
             .background(Color.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
@@ -134,7 +134,7 @@ struct WorkItemGroupEditor: View {
     @State private var sessions = Set<SessionReference>()
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
-            Text(model.editingGroup == nil ? "新建任务组" : "编辑任务组").font(.title2.weight(.semibold))
+            Text(model.editingGroup == nil ? L("新建任务组") : L("编辑任务组")).font(.title2.weight(.semibold))
             Text("关联原生对话与终端，记下共同目标和下一步。归组不共享对话上下文。")
                 .font(.callout).foregroundStyle(.secondary)
             Form {

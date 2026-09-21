@@ -12,7 +12,7 @@ final class KimiConnection: ObservableObject {
     @Published private(set) var conversation: KimiConversation?
     @Published private(set) var online = false
     @Published private(set) var connecting = false
-    @Published private(set) var state = "未连接"
+    @Published private(set) var state = L("未连接")
     @Published var error: String?
     @Published var actionError: String?
     @Published var models: [JSONValue] = []
@@ -83,7 +83,7 @@ final class KimiConnection: ObservableObject {
             var delay = 1
             while !Task.isCancelled && generation == token {
                 do {
-                    state = "连接 Kimi Web"
+                    state = L("连接 Kimi Web")
                     try await establish(token: token)
                     guard let api else { throw CancellationError() }
                     let catalog = try await api.get(JSONValue.self, "/api/v1/models")
@@ -95,7 +95,7 @@ final class KimiConnection: ObservableObject {
                         throw WorkbenchError("此 Kimi Web 的事件协议尚未支持")
                     }
                     try await sendFrame(ws, type: "client_hello", payload: ["client_id": .string("agent-workbench")])
-                    online = true; state = "已连接"; error = nil; delay = 1
+                    online = true; state = L("已连接"); error = nil; delay = 1
                     if let id = selectedId, sessions.contains(where: { $0.id == id }) {
                         do {
                             try await refreshConversation(selectionToken: selectionGeneration)
@@ -129,7 +129,7 @@ final class KimiConnection: ObservableObject {
                 catch {
                     guard generation == token else { break }
                     snapshotReady = false
-                    online = false; self.error = error.localizedDescription; state = "\(delay) 秒后重连"
+                    online = false; self.error = error.localizedDescription; state = L("\(delay) 秒后重连")
                     closeTransport()
                     do { try await Task.sleep(for: .seconds(delay)) } catch { break }
                     delay = min(delay * 2, 30)
@@ -142,7 +142,7 @@ final class KimiConnection: ObservableObject {
         generation = UUID(); selectionGeneration = UUID()
         task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel()
         snapshotReady = false
-        closeTransport(); online = false; connecting = false; state = "未连接"
+        closeTransport(); online = false; connecting = false; state = L("未连接")
     }
     private func closeTransport() {
         socket?.cancel(with: .goingAway, reason: nil); socket = nil; subscribedId = nil

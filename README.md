@@ -66,6 +66,10 @@ Configure SSH access first, then add your host in Perch. Kimi currently uses por
 
 `⌘N` new conversation · `⌘K` search · `Return` send · `Shift Return` new line
 
+The interface follows the system language, with 简体中文 and English available
+under Settings → Language; the sidebar and its flows are bilingual first, other
+areas may still mix languages while translations catch up.
+
 ## Status
 
 Early source preview. Long-session responsiveness and recovery still need work;

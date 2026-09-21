@@ -158,13 +158,13 @@ private struct SelectionActionsBar: View {
             .fixedSize()
     }
 
-    private func action(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func action(_ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) -> some View {
         SelectionActionButton(title: title, systemImage: systemImage, action: action)
     }
 }
 
 private struct SelectionActionButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
     let action: () -> Void
     @State private var hovered = false
