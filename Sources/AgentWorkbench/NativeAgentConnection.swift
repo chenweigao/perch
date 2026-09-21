@@ -30,6 +30,8 @@ final class NativeAgentConnection: ObservableObject {
     private var tunnel: Process?
     private var directory: URL?
     private var task: Task<Void, Never>?
+    private var selectionTask: Task<Void, Never>?
+    private var selectionGeneration = UUID()
     private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
     private var draftFile: DraftFile?
@@ -69,13 +71,7 @@ final class NativeAgentConnection: ObservableObject {
                     online = true; error = nil; onSessionsChanged?()
                     while !Task.isCancelled && generation == token {
                         try await refresh()
-                        if let id = selectedID {
-                            let suffix = snapshot?.id == id ? "?revision=\(snapshot!.revision)" : ""
-                            let value: JSONValue = try await request("/sessions/\(id)\(suffix)")
-                            if id == selectedID && value["unchanged"] != .bool(true) {
-                                snapshot = try KimiWire.decoder().decode(NativeAgentSnapshot.self, from: JSONEncoder().encode(value))
-                            }
-                        }
+                        if selectionTask == nil { try await refreshSelected() }
                         try await Task.sleep(for: .milliseconds(400))
                     }
                 } catch is CancellationError { return }
@@ -87,7 +83,11 @@ final class NativeAgentConnection: ObservableObject {
             }
         }
     }
-    func disconnect() { generation = UUID(); task?.cancel(); task = nil; online = false; closeTunnel() }
+    func disconnect() {
+        generation = UUID(); selectionGeneration = UUID()
+        task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
+        online = false; closeTunnel()
+    }
     private func closeTunnel() {
         api?.invalidate(); api = nil
         if let tunnel, tunnel.isRunning { tunnel.terminate() }; tunnel = nil
@@ -127,9 +127,7 @@ final class NativeAgentConnection: ObservableObject {
             guard let api else { throw WorkbenchError("请先连接原生对话服务") }
             data = try await api.request(path, method: body == nil ? "GET" : "POST", body: body)
         }
-        let value = try JSONDecoder().decode(JSONValue.self, from: data)
-        if let error = value["error"].string, value["id"].string == nil { throw WorkbenchError(error) }
-        return try KimiWire.decoder().decode(T.self, from: data)
+        return try NativeAgentWire.decode(T.self, from: data)
     }
     func refresh() async throws {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
@@ -155,6 +153,27 @@ final class NativeAgentConnection: ObservableObject {
     }
     func select(_ id: String) {
         guard selectedID != id else { return }; selectedID = id; snapshot = nil; actionError = nil
+        selectionTask?.cancel()
+        selectionGeneration = UUID(); let token = selectionGeneration
+        guard online else { selectionTask = nil; return }
+        selectionTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if selectionGeneration == token { selectionTask = nil } }
+            do { try await refreshSelected() }
+            catch is CancellationError {}
+            catch { if selectionGeneration == token { actionError = error.localizedDescription } }
+        }
+    }
+    private func refreshSelected() async throws {
+        try Task.checkCancellation()
+        guard let id = selectedID else { return }
+        let token = selectionGeneration, connectionToken = generation
+        let suffix = snapshot?.id == id ? "?revision=\(snapshot!.revision)" : ""
+        let response: NativeSnapshotResponse = try await request("/sessions/\(id)\(suffix)")
+        try Task.checkCancellation()
+        guard token == selectionGeneration, connectionToken == generation, id == selectedID,
+              let value = response.snapshot else { return }
+        snapshot = value
     }
     func create(provider: SessionKind, cwd: String, model: String) async throws -> NativeAgentSession {
         let session: NativeAgentSession = try await request("/sessions", body: .object(["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]))

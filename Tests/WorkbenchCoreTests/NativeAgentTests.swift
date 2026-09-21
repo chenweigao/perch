@@ -2,6 +2,16 @@ import Foundation
 import WorkbenchCore
 
 func checkNativeAgents() throws {
+    let unchanged = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"unchanged":true}"#.utf8))
+    precondition(unchanged.snapshot == nil)
+    let snapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"a","provider":"omp","title":"A","cwd":"/tmp","busy":false,"revision":2,"model":"m","messages":[{"id":"m","role":"assistant","created_at":"now","content":[{"type":"text","text":"中文"}]}],"interactions":[],"error":"runtime failed"}"#.utf8))
+    precondition(snapshot.snapshot?.messages.first?.createdAt == "now" && snapshot.snapshot?.error == "runtime failed")
+    let receipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"request","status":"failed","error":"rejected"}"#.utf8))
+    precondition(receipt.status == "failed" && receipt.error == "rejected", "Receipt errors are payloads, not request errors")
+    do {
+        _ = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"error":"request failed"}"#.utf8))
+        preconditionFailure("expected request error")
+    } catch { precondition(error.localizedDescription == "request failed") }
     let raw = """
     [
       {"id":"u","role":"user","created_at":"1","content":[{"type":"text","text":"开始任务"}]},

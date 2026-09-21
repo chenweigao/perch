@@ -264,10 +264,7 @@ final class KimiConnection: ObservableObject {
         let message = try await ws.receive()
         let data: Data
         switch message { case .data(let d): data = d; case .string(let s): data = Data(s.utf8); @unknown default: throw WorkbenchError("未知 WebSocket 消息") }
-        // Control frames keep code/msg outside payload. Preserve them when decoding acknowledgements.
-        let raw = try JSONDecoder().decode(JSONValue.self, from: data)
-        if raw["type"].string == "ack", let code = raw["code"].int, code != 0 { throw WorkbenchError(raw["msg"].string ?? "Kimi 控制请求失败") }
-        return try KimiWire.decoder().decode(KimiEvent.self, from: data)
+        return try KimiWire.decodeEvent(from: data)
     }
     private func sendFrame(_ ws: URLSessionWebSocketTask, type: String, payload: [String: JSONValue]) async throws {
         let frame = JSONValue.object(["type": .string(type), "id": .string(UUID().uuidString), "payload": .object(payload)])

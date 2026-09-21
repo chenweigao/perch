@@ -234,9 +234,10 @@ class Session:
         elif provider == 'qoder' and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
         else: return
         self.touch(durable)
-    def snapshot(self):
+    def snapshot(self, revision=None):
         live=[x for x in self.state['interactions'] if not x.get('expires') or x['expires']>time.time()]
         if live != self.state['interactions']: self.state['interactions']=live; self.touch(True)
+        if revision == str(self.state['revision']): return {'unchanged':True}
         # Idempotency receipts are queried individually; do not resend/copy the
         # entire receipt ledger with each streaming transcript snapshot.
         s=copy.deepcopy({k:v for k,v in self.state.items() if k!='requests'})
@@ -279,9 +280,8 @@ class Handler(BaseHTTPRequestHandler):
                     if not post and len(path)==5 and path[3]=='requests':
                         result=copy.deepcopy(s.state.get('requests',{}).get(path[4],{'id':path[4],'status':'notFound'}))
                     elif not post:
-                        snapshot=s.snapshot()
                         since=parse_qs(urlparse(self.path).query).get('revision',[None])[0]
-                        result={'unchanged':True} if since==str(snapshot['revision']) else snapshot
+                        result=s.snapshot(since)
                     else:
                         action=path[3]
                         if action=='prompt':
