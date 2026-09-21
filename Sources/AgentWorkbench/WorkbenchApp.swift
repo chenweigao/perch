@@ -22,6 +22,7 @@ struct WorkbenchApp: App {
         .defaultSize(width: 1280, height: 820)
         .windowStyle(.hiddenTitleBar)
         .commands {
+            SidebarCommands()
             CommandGroup(replacing: .appInfo) {
                 Button(L("About Perch")) {
                     NSApp.orderFrontStandardAboutPanel(options: [

@@ -6,15 +6,22 @@ import WorkbenchCore
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
     let newConversation: () -> Void
+    let canNavigate: (Int) -> Bool
+    let navigate: (Int) -> Void
     let sidebar: Sidebar
     let header: Header
     let actions: Actions
     let content: Content
 
-    init(newConversation: @escaping () -> Void, @ViewBuilder sidebar: () -> Sidebar,
+    init(newConversation: @escaping () -> Void,
+         canNavigate: @escaping (Int) -> Bool = { _ in false },
+         navigate: @escaping (Int) -> Void = { _ in },
+         @ViewBuilder sidebar: () -> Sidebar,
          @ViewBuilder header: () -> Header, @ViewBuilder actions: () -> Actions,
          @ViewBuilder content: () -> Content) {
         self.newConversation = newConversation
+        self.canNavigate = canNavigate
+        self.navigate = navigate
         self.sidebar = sidebar()
         self.header = header()
         self.actions = actions()
@@ -45,7 +52,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let toolbar = NSToolbar(identifier: "WorkbenchToolbar")
         toolbar.delegate = coordinator
         toolbar.displayMode = .iconOnly
-        toolbar.allowsUserCustomization = false
+        toolbar.allowsUserCustomization = true
+        toolbar.autosavesConfiguration = true
         controller.workspaceToolbar = toolbar
         return controller
     }
@@ -53,6 +61,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     func updateNSViewController(_ controller: WorkbenchSplitController, context: Context) {
         let coordinator = context.coordinator
         coordinator.newConversation = newConversation
+        coordinator.canNavigate = canNavigate
+        coordinator.navigate = navigate
         coordinator.locale = locale
         coordinator.sidebarHost.rootView = WorkspaceLocalizedRoot(content: sidebar, locale: locale)
         coordinator.contentHost.rootView = WorkspaceLocalizedRoot(content: content, locale: locale)
@@ -75,6 +85,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         weak var controller: WorkbenchSplitController?
         var locale: Locale
         var newConversation: () -> Void
+        var canNavigate: (Int) -> Bool
+        var navigate: (Int) -> Void
+        private let backID = NSToolbarItem.Identifier("WorkbenchBack")
+        private let forwardID = NSToolbarItem.Identifier("WorkbenchForward")
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
         private let composeID = NSToolbarItem.Identifier("WorkbenchCompose")
         private let separatorID = NSToolbarItem.Identifier("WorkbenchSidebarSeparator")
@@ -88,6 +102,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
             locale = view.locale
             newConversation = view.newConversation
+            canNavigate = view.canNavigate
+            navigate = view.navigate
             super.init()
             // NSSplitView owns these dimensions; intrinsic SwiftUI measurements would
             // recursively measure the full conversation during every split layout.
@@ -98,10 +114,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, composeID, separatorID, titleID, .flexibleSpace, actionsID]
+            [backID, forwardID, separatorID, titleID, .flexibleSpace, actionsID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            toolbarDefaultItemIdentifiers(toolbar)
+            toolbarDefaultItemIdentifiers(toolbar) + [toggleID, composeID]
         }
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
@@ -109,6 +125,21 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 return NSTrackingSeparatorToolbarItem(identifier: id, splitView: controller.splitView, dividerIndex: 0)
             }
             let L = LocalizedUIStrings(locale: locale)
+            if id == backID || id == forwardID {
+                let direction = id == backID ? -1 : 1
+                let item = WorkbenchNavigationToolbarItem(itemIdentifier: id)
+                item.label = L(direction == -1 ? "Back" : "Forward")
+                item.toolTip = item.label + (direction == -1 ? " · ⌘[" : " · ⌘]")
+                item.image = NSImage(systemSymbolName: direction == -1 ? "arrow.left" : "arrow.right",
+                                     accessibilityDescription: item.label)
+                item.target = self
+                item.action = direction == -1 ? #selector(goBack) : #selector(goForward)
+                item.isBordered = false
+                item.canNavigate = { [weak self] in self?.canNavigate(direction) ?? false }
+                item.view = navigationButton(for: item)
+                item.validate()
+                return item
+            }
             let item = NSToolbarItem(itemIdentifier: id)
             if id == toggleID {
                 item.label = L("切换侧栏")
@@ -144,6 +175,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             let L = LocalizedUIStrings(locale: locale)
             for item in controller?.workspaceToolbar?.items ?? [] {
                 switch item.itemIdentifier {
+                case backID: item.label = L("Back"); item.toolTip = item.label + " · ⌘["
+                case forwardID: item.label = L("Forward"); item.toolTip = item.label + " · ⌘]"
                 case toggleID: item.label = L("切换侧栏"); item.toolTip = L("显示或隐藏侧栏")
                 case composeID: item.label = L("新建任务"); item.toolTip = L("新建任务 · ⌘N")
                 case titleID: item.label = L("当前会话")
@@ -181,6 +214,18 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             return button
         }
         @objc private func compose() { newConversation() }
+        @objc private func goBack() { navigate(-1); controller?.workspaceToolbar?.validateVisibleItems() }
+        @objc private func goForward() { navigate(1); controller?.workspaceToolbar?.validateVisibleItems() }
+    }
+}
+
+/// AppKit does not automatically validate toolbar items backed by custom views.
+private final class WorkbenchNavigationToolbarItem: NSToolbarItem {
+    var canNavigate: () -> Bool = { false }
+
+    override func validate() {
+        isEnabled = canNavigate()
+        (view as? NSButton)?.isEnabled = isEnabled
     }
 }
 
