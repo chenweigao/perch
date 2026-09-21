@@ -68,10 +68,30 @@ func checkWorkflow() throws {
     precondition(search.hits(in: edited, query: "cafe", running: true).count == 1, "Keep rendered Unicode search semantics")
     precondition(search.hits(in: [], query: "cafe", running: false).isEmpty, "Removed messages must not remain searchable")
     precondition(search.hits(in: messages, query: "match", running: false) == hits, "Switching back restores current content and order")
+    let boundaryText = "👋" + String(repeating: "a", count: 49) + "needle" + String(repeating: "b", count: 79) + "👋"
+    let boundaryData = try JSONSerialization.data(withJSONObject: [["id": "boundary", "role": "assistant", "created_at": "", "content": [["type": "text", "text": boundaryText]]]])
+    let boundaryMessages = try KimiWire.decoder().decode([KimiMessage].self, from: boundaryData)
+    let excerpt = search.hits(in: boundaryMessages, query: "needle", running: false)[0].excerpt
+    precondition(excerpt.hasPrefix("👋") && excerpt.hasSuffix("👋"), "Search excerpts must keep complete characters at both boundaries")
     var navigation = SessionNavigation()
     navigation.visit("a"); navigation.visit("b"); navigation.visit("b")
     precondition(navigation.entries == ["a", "b"] && navigation.step(-1) == "a")
     navigation.visit("c"); precondition(!navigation.canGoForward && navigation.entries == ["a", "c"])
+    navigation.visit("d")
+    let available: Set<String> = ["a", "d"]
+    precondition(navigation.canStep(-1, isAvailable: available.contains))
+    precondition(navigation.step(-1, isAvailable: available.contains) == "a", "Back skips unavailable sessions")
+    precondition(navigation.canStep(1, isAvailable: available.contains))
+    precondition(navigation.step(1, isAvailable: available.contains) == "d", "Forward skips the same unavailable sessions")
+    let position = navigation.index
+    precondition(!navigation.canStep(-1, isAvailable: { $0 == "d" }))
+    precondition(navigation.step(-1, isAvailable: { $0 == "d" }) == nil)
+    precondition(navigation.index == position, "Failed navigation must not move the history cursor")
+    precondition(!navigation.canStep(1, isAvailable: available.contains), "Failed back must not create a forward destination")
+    precondition(navigation.step(0, isAvailable: available.contains) == nil)
+    precondition(navigation.step(-1, isAvailable: available.contains) == "a", "Restored sessions remain reachable after a failed back")
+    navigation.visit("e")
+    precondition(navigation.entries == ["a", "e"], "A new visit branches from the visible history position")
 
     var events = TaskEventTracker()
     let working = TaskEventState(running: true, pending: false, failed: false, completion: nil)

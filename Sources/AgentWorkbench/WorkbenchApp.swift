@@ -46,8 +46,8 @@ struct WorkbenchApp: App {
                 Button(L("Next match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }.keyboardShortcut("g").disabled(!model.showConversationFind)
                 Button(L("Previous match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showConversationFind)
                 Divider()
-                Button(L("Back")) { model.navigate(-1) }.keyboardShortcut("[", modifiers: .command).disabled(!model.navigation.canGoBack)
-                Button(L("Forward")) { model.navigate(1) }.keyboardShortcut("]", modifiers: .command).disabled(!model.navigation.canGoForward)
+                Button(L("Back")) { model.navigate(-1) }.keyboardShortcut("[", modifiers: .command).disabled(!model.canNavigate(-1))
+                Button(L("Forward")) { model.navigate(1) }.keyboardShortcut("]", modifiers: .command).disabled(!model.canNavigate(1))
                 Button(L("Next task needing attention")) { model.nextAttentionTask() }.keyboardShortcut("j", modifiers: [.command, .shift])
             }
             CommandGroup(after: .help) {

@@ -67,7 +67,7 @@ private struct WorkbenchWorkspace: View, Equatable {
     var body: some View {
         WorkspaceSplitView(
             newConversation: { model.showNewKimi = true },
-            canNavigate: { $0 == -1 ? model.navigation.canGoBack : model.navigation.canGoForward },
+            canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
             sidebar: { WorkbenchSidebar(model: model) },
             header: { WorkbenchHeader(model: model) },

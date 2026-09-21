@@ -35,7 +35,8 @@ public final class ConversationSearch {
                 let found = text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: range)
                 guard found.location != NSNotFound else { break }
                 let start = max(0, found.location - 50), end = min(text.length, NSMaxRange(found) + 80)
-                hits.append(.init(entryID: entry.id, occurrence: hits.count, excerpt: text.substring(with: NSRange(location: start, length: end - start))))
+                let excerptRange = text.rangeOfComposedCharacterSequences(for: NSRange(location: start, length: end - start))
+                hits.append(.init(entryID: entry.id, occurrence: hits.count, excerpt: text.substring(with: excerptRange)))
                 range = NSRange(location: NSMaxRange(found), length: text.length - NSMaxRange(found))
             }
             return hits
@@ -65,9 +66,20 @@ public struct SessionNavigation {
         guard index < 0 || entries[index] != id else { return }
         entries = Array(entries.prefix(index + 1)); entries.append(id); index = entries.count - 1
     }
-    public mutating func step(_ delta: Int) -> String? {
-        let next = index + delta
-        guard entries.indices.contains(next) else { return nil }
+    public func canStep(_ delta: Int, isAvailable: (String) -> Bool) -> Bool {
+        destinationIndex(delta, isAvailable: isAvailable) != nil
+    }
+    public mutating func step(_ delta: Int, isAvailable: (String) -> Bool = { _ in true }) -> String? {
+        guard let next = destinationIndex(delta, isAvailable: isAvailable) else { return nil }
         index = next; return entries[next]
+    }
+    private func destinationIndex(_ delta: Int, isAvailable: (String) -> Bool) -> Int? {
+        guard delta != 0 else { return nil }
+        var next = index + delta
+        while entries.indices.contains(next) {
+            if isAvailable(entries[next]) { return next }
+            next += delta
+        }
+        return nil
     }
 }

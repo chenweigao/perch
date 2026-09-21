@@ -285,13 +285,20 @@ final class WorkbenchModel: ObservableObject {
         }
         updateVisibility(focus: true); saveWorkspace(); syncFileViewer()
     }
+    private var navigableSessionIDs: Set<String> {
+        Set(openedSessions.map { $0.session.id }).union(allSessions.filter { $0.online && !$0.archived }.map(\.id))
+    }
+    func canNavigate(_ delta: Int) -> Bool {
+        let available = navigableSessionIDs
+        return navigation.canStep(delta, isAvailable: available.contains)
+    }
     func navigate(_ delta: Int) {
+        let available = navigableSessionIDs
+        guard let id = navigation.step(delta, isAvailable: available.contains) else { return }
         navigatingHistory = true
         defer { navigatingHistory = false }
-        while let id = navigation.step(delta) {
-            if openedSessions.contains(where: { $0.session.id == id }) { select(id); return }
-            if let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) { open(item); return }
-        }
+        if openedSessions.contains(where: { $0.session.id == id }) { select(id); return }
+        if let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) { open(item) }
     }
     func nextAttentionTask() {
         let items = allSessions.filter { $0.online && !$0.archived && ($0.section == .attention || $0.section == .review) }
