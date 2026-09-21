@@ -337,6 +337,17 @@ class HandlerContractTests(unittest.TestCase):
         return result[0]
     def prompt(self,key='one'):
         return self.request('/sessions/contract/prompt',{'text':'中文指令','requestId':key})
+    def test_models_unwraps_omp_json_and_tags_the_runtime(self):
+        # 18.1.16 answers ModelsJson, not a bare list, and one malformed entry must
+        # not take the whole catalog down with it.
+        broker.DSH_MODELS=[]
+        broker.MODELS={'models':[{'provider':'aone','id':'deepseek-v4-pro','selector':'aone/deepseek-v4-pro',
+                                 'name':'DeepSeek V4 Pro · Aone','contextWindow':1000000,'thinking':['low','high','max']},'not-a-model']}
+        code,payload=self.request('/models')
+        self.assertEqual(code,200)
+        self.assertEqual([(e['agent'],e['id']) for e in payload['models']],[('omp','deepseek-v4-pro')])
+        self.assertEqual(payload['models'][0]['thinking'],['low','high','max'])
+        self.assertEqual(payload['models'][0]['selector'],'aone/deepseek-v4-pro')
     def test_unchanged_snapshot_skips_history_copy_but_expires_approvals(self):
         self.s.state['messages']=[{'id':'history','role':'assistant','content':[{'type':'text','text':'历史'}]}]
         with patch.object(broker.copy,'deepcopy',side_effect=AssertionError('unchanged history must not be copied')):

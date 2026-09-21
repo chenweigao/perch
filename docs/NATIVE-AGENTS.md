@@ -28,7 +28,7 @@ Mac 当前每 400 ms 查询轻量目录和选中对话的 revision；未变化�
 
 ## 模型选择
 
-桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`，dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤，因此 OMP 不会被提供 dsh 的路由，反之亦然。
+桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤，因此 OMP 不会被提供 dsh 的路由，反之亦然。
 
 新建任务面板里 Kimi、OMP、dsh 共用同一个可搜索下拉；模型输入框保留，既显示将要发送的 id，也接受目录里没有的 id（`omp models --no-extensions` 不含扩展提供的模型）。Qoder CN 的官方 SDK 不提供模型清单，因此只有输入框，留空即 `Qwen3.8-Flash`。会话内的模型菜单与思考强度同样按 Agent 过滤，运行中不可切换；Qoder 只显示标签。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。
 

@@ -59,16 +59,26 @@ def dsh_catalog():
         if path.exists(): DSH_MODELS = json.loads(path.read_text())
     return DSH_MODELS or []
 
+def catalog_entries(value, agent):
+    # `omp models --json` answers {"models":[...]} (ModelsJson in 18.1.16), older
+    # builds answer a bare list, and a stale dsh cache answers whatever it holds.
+    # The Mac side already tolerates every shape, so the bridge must too: reading
+    # only the list form served an empty OMP catalog and an empty picker.
+    if isinstance(value, dict):
+        value = next((value[name] for name in ('models', 'items') if isinstance(value.get(name), list)), [])
+    if not isinstance(value, list): return []
+    return [dict(e, agent=agent) for e in value if isinstance(e, dict)]
+
 def combined_catalog():
     # One list serves every native runtime, so each entry names the runtime that can
     # actually route it. Without that tag the Mac picker cannot tell an OMP model
     # from a dsh one, and a dsh route handed to `omp --model` just fails.
-    dsh = [dict(e, agent='dsh') for e in dsh_catalog()]
-    try: omp = model_catalog()
+    dsh = catalog_entries(dsh_catalog(), 'dsh')
+    try: omp = catalog_entries(model_catalog(), 'omp')
     except Exception:
         if dsh: return dsh
         raise
-    return [dict(e, agent='omp') for e in (omp if isinstance(omp, list) else [])] + dsh
+    return omp + dsh
 
 def save(path, value):
     tmp = path.with_suffix('.tmp')
