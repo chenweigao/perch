@@ -46,6 +46,7 @@ final class RemoteFileBrowser: ObservableObject {
         gitStatus = nil
         gitPath = nil
         gitDiff = nil
+        targetLine = nil
     }
 
     func submit() { open(input) }
@@ -507,17 +508,15 @@ struct RemoteSourceText: NSViewRepresentable {
         guard context.coordinator.text != text || context.coordinator.line != line else { return }
         context.coordinator.text = text; context.coordinator.line = line
         view.string = text; view.sizeToFit()
-        guard let line, line > 0 else { return }
-        let source = text as NSString
-        var range = NSRange(location: 0, length: 0)
-        for _ in 1..<line {
-            range = source.lineRange(for: NSRange(location: range.location, length: 0))
-            let next = NSMaxRange(range)
-            if next >= source.length { break }
-            range = NSRange(location: next, length: 0)
+        guard let line, let range = RemoteFileContent.lineRange(in: text, line: line) else {
+            view.setSelectedRange(NSRange(location: 0, length: 0))
+            view.scrollRangeToVisible(NSRange(location: 0, length: 0))
+            return
         }
-        range = source.lineRange(for: NSRange(location: min(range.location, source.length), length: 0))
         view.setSelectedRange(range)
-        DispatchQueue.main.async { view.scrollRangeToVisible(range) }
+        DispatchQueue.main.async {
+            guard view.string == text, context.coordinator.line == line else { return }
+            view.scrollRangeToVisible(range)
+        }
     }
 }

@@ -13,6 +13,20 @@ public enum RemoteFileContent: Equatable, Sendable {
     case binary(size: Int)
     case denied
     case missing
+
+    /// NSTextView selections use UTF-16 offsets. An unavailable line must not
+    /// highlight the last loaded line as if the reference had been found.
+    public static func lineRange(in text: String, line: Int) -> NSRange? {
+        guard line > 0 else { return nil }
+        let source = text as NSString
+        var start = 0
+        for _ in 1..<line {
+            guard start < source.length else { return nil }
+            start = NSMaxRange(source.lineRange(for: NSRange(location: start, length: 0)))
+            if start == source.length && !text.hasSuffix("\n") && !text.hasSuffix("\r") { return nil }
+        }
+        return source.lineRange(for: NSRange(location: start, length: 0))
+    }
 }
 
 public enum RemoteFilePath {

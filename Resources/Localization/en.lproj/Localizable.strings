@@ -378,3 +378,6 @@
 "已收起" = "Collapsed";
 
 "%lld 个未归档 · %lld 个已归档 · %lld 个尚未同步" = "%lld unarchived · %lld archived · %lld not synced";
+"Retry" = "Retry";
+"Unable to load this conversation." = "Unable to load this conversation.";
+"Choose Kimi or remove the attachments to start this task." = "Choose Kimi or remove the attachments to start this task.";

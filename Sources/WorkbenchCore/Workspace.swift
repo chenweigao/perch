@@ -42,6 +42,12 @@ public struct WorkspaceSession: Identifiable, Equatable, Sendable {
     public let archived: Bool
     public let updatedAt: Double
     public var id: String { reference.id }
+    public func matchesSearch(_ query: String) -> Bool {
+        let searchable = "\(title) \(directory) \(hostName) \(detail) \(reference.kind.label)"
+        return query.split(whereSeparator: \.isWhitespace).allSatisfy {
+            searchable.localizedStandardContains(String($0))
+        }
+    }
     public init(reference: SessionReference, title: String, directory: String, hostName: String,
                 detail: String, online: Bool, section: WorkQueueSection, canMarkReviewed: Bool, archived: Bool = false, updatedAt: Double = 0) {
         self.reference = reference; self.title = title; self.directory = directory; self.hostName = hostName

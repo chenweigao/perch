@@ -154,7 +154,8 @@ final class NativeAgentConnection: ObservableObject {
         drainQueues()
     }
     func select(_ id: String) {
-        guard selectedID != id else { return }; selectedID = id; snapshot = nil; actionError = nil
+        guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
+        selectedID = id; snapshot = nil; actionError = nil
         selectionTask?.cancel()
         selectionGeneration = UUID(); let token = selectionGeneration
         guard online else { selectionTask = nil; return }

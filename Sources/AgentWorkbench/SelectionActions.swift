@@ -45,7 +45,7 @@ final class SelectionActionsController: NSObject {
     /// Only non-editable text views offer these actions, which keeps the composer
     /// and any field editor out of scope.
     private func selectionChanged(_ textView: NSTextView?) {
-        guard let textView, !textView.isEditable, textView.isSelectable else { return }
+        guard let textView, !textView.isEditable, textView.isSelectable else { hide(); return }
         guard textView.selectedRange().length > 0, !selectedText(in: textView).isEmpty else {
             if textView === source { hide() }
             return
@@ -65,9 +65,10 @@ final class SelectionActionsController: NSObject {
     /// out of the window so the bar does not float over unrelated content.
     private func anchor(for textView: NSTextView) -> NSRect? {
         let range = textView.selectedRange()
-        guard range.length > 0, let window = textView.window else { return nil }
+        guard range.length > 0, !textView.isHiddenOrHasHiddenAncestor, let window = textView.window else { return nil }
         let rect = textView.firstRect(forCharacterRange: range, actualRange: nil)
-        guard rect.width > 0 || rect.height > 0, window.frame.intersects(rect) else { return nil }
+        let visible = window.convertToScreen(textView.convert(textView.visibleRect, to: nil))
+        guard rect.width > 0 || rect.height > 0, visible.intersects(rect) else { return nil }
         return rect
     }
 
@@ -131,7 +132,7 @@ final class SelectionActionsController: NSObject {
         panel.setFrameOrigin(origin(above: rect, size: panel.frame.size))
     }
 
-    private func hide() {
+    func hide() {
         guard let panel, panel.isVisible else { return }
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)

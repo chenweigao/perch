@@ -113,11 +113,17 @@ struct NativeAgentView: View {
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
                 Text("此会话已移除，请从侧栏选择其他会话。").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = connection.actionError, let id = connection.selectedID {
+                VStack(spacing: 14) {
+                    Text(error).foregroundStyle(.secondary).textSelection(.enabled)
+                    Button("Retry") { connection.select(id) }.disabled(!connection.online)
+                }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else { ProgressView("正在读取对话…").frame(maxWidth: .infinity, maxHeight: .infinity) }
             if !connection.online { HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10) }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
+        .onChange(of: connection.selectedID) { _, _ in palette = CommandPaletteState() }
 
     }
     /// A running session may still accept text when the adapter can queue it, so the
@@ -294,8 +300,8 @@ struct NativeInteractionView: View {
     @State private var submitting = false
     private var id: String { request["id"].string ?? "" }
     private func submit(_ fields: [String: JSONValue]) {
+        guard !submitting, let session = connection.selectedID else { return }
         submitting = true
-        guard let session = connection.selectedID else { return }
         Task {
             do { try await connection.action(session, "answer", fields.merging(["id": .string(id)]) { _, new in new }) }
             catch { connection.actionError = error.localizedDescription; submitting = false }
@@ -352,7 +358,7 @@ struct NewConversationSheet: View {
     /// attachment-only draft can start a Kimi task but never a native one.
     private var canStart: Bool {
         let hasContent = !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
-        return !creating && hasContent && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online)
+        return !creating && hasContent && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -373,7 +379,7 @@ struct NewConversationSheet: View {
                                 onError: { error = $0 })
             }.frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
             if provider != .kimi && !attachments.isEmpty {
-                Text("Attachments are sent only with Kimi sessions.").font(.caption).foregroundStyle(.secondary)
+                Text("Choose Kimi or remove the attachments to start this task.").font(.caption).foregroundStyle(.secondary)
             }
             HStack(spacing: 12) {
                 ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }

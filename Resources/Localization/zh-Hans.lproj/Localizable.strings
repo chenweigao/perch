@@ -336,3 +336,6 @@
 "已收起" = "已收起";
 
 "%lld 个未归档 · %lld 个已归档 · %lld 个尚未同步" = "%lld 个未归档 · %lld 个已归档 · %lld 个尚未同步";
+"Retry" = "重试";
+"Unable to load this conversation." = "无法读取此会话。";
+"Choose Kimi or remove the attachments to start this task." = "请选择 Kimi 或移除附件，再开始任务。";

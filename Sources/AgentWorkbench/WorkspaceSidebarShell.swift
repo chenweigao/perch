@@ -20,7 +20,6 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 3) {
                 navigation("搜索任务", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
-                    .keyboardShortcut("k")
                 Divider().padding(.vertical, 7)
                 navigation("新建会话", symbol: "square.and.pencil", shortcut: "⌘N", action: onNew)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)

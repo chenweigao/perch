@@ -7,6 +7,7 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) {
 let app = NSApplication.shared
 let editor = DraftTextView(frame: NSRect(x: 0, y: 0, width: 480, height: 100))
 editor.isRichText = false
+editor.allowsUndo = true
 var draft = "已写好的草稿 "
 var height: CGFloat = 40
 let representable = ComposerEditor(text: Binding(get: { draft }, set: { draft = $0 }),
@@ -44,6 +45,10 @@ editor.syncDraft("")
 check(editor.string.isEmpty, "Confirmed successful send can clear the committed draft")
 editor.syncDraft("另一段会话草稿")
 check(editor.string == "另一段会话草稿", "New committed draft can replace the editing buffer")
+check(editor.selectedRange() == NSRange(location: (editor.string as NSString).length, length: 0), "Completion and quotes leave the caret after the new draft")
+editor.setSelectedRange(NSRange(location: 2, length: 0))
+editor.syncDraft(editor.string)
+check(editor.selectedRange().location == 2, "An unchanged streaming refresh must not move the caret")
 editor.string = "开头 replace 结尾"
 draft = editor.string
 editor.setSelectedRange((editor.string as NSString).range(of: "replace"))
@@ -105,3 +110,32 @@ imageBoard.clearContents()
 imageBoard.setData(bitmap.representation(using: .png, properties: [:])!, forType: .png)
 check(imageBoard.availableType(from: editor.readablePasteboardTypes) == nil, "Text-only connections must not advertise image support")
 print("Attachment paste checks passed: native PNG/TIFF negotiation, file URLs, draft preservation and text-only capability")
+
+var navigations = 0
+editor.onKey = { _ in navigations += 1; return true }
+func navigationEvent(_ flags: NSEvent.ModifierFlags) -> NSEvent {
+    NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0,
+                    windowNumber: 0, context: nil, characters: "\u{F701}", charactersIgnoringModifiers: "\u{F701}",
+                    isARepeat: false, keyCode: 125)!
+}
+check(editor.handleNavigation(navigationEvent([.numericPad, .function, .capsLock])), "Hardware arrow flags must not disable command completion")
+check(!editor.handleNavigation(navigationEvent([.command, .numericPad])), "Editing shortcuts must remain owned by the text editor")
+editor.isEditable = false
+check(!editor.handleNavigation(navigationEvent(.numericPad)) && navigations == 1, "Disabled composer must not apply completions")
+check(!editor.handleReturn(keyCode: 36, modifiers: []), "Disabled composer must not submit")
+editor.onFiles = { pasted.append(contentsOf: $0) }
+check(!editor.readSelection(from: imageBoard, type: .png), "Disabled composer must not accept pasted attachments")
+print("Composer interaction checks passed: caret, native arrow flags and disabled input")
+
+editor.isEditable = true
+editor.syncDraft("")
+editor.insertText("undo this draft", replacementRange: NSRange(location: NSNotFound, length: 0))
+editor.breakUndoCoalescing()
+check(editor.undoManager?.canUndo == true, "Typing must support Undo")
+editor.undoManager?.undo()
+check(editor.string.isEmpty, "Undo removes the last edit")
+editor.undoManager?.redo()
+check(editor.string == "undo this draft", "Redo restores the last edit")
+editor.syncDraft("")
+check(editor.undoManager?.canUndo == false, "A sent draft must not remain in this composer's undo history")
+print("Composer undo checks passed: isolated typing, redo and send boundary")

@@ -38,7 +38,11 @@ struct WorkbenchApp: App {
                     .disabled(!model.selectedConnection.online)
             }
             CommandMenu(L("Conversation")) {
-                Button(L("Find in conversation")) { model.showConversationFind = true }.keyboardShortcut("f").disabled(!model.showKimi && !model.showNative)
+                Button(L("搜索任务")) { model.showSessionSearch = true }.keyboardShortcut("k")
+                Button(L("Find in conversation")) {
+                    model.showConversationFind = true
+                    NotificationCenter.default.post(name: .init("PerchFocusFind"), object: nil)
+                }.keyboardShortcut("f").disabled(!model.showKimi && !model.showNative)
                 Button(L("Next match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }.keyboardShortcut("g").disabled(!model.showConversationFind)
                 Button(L("Previous match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showConversationFind)
                 Divider()
@@ -53,7 +57,7 @@ struct WorkbenchApp: App {
                 Button(L("切换当前会话置顶")) {
                     if let reference = model.selectedReference { model.toggleStar(reference) }
                 }.keyboardShortcut("p", modifiers: [.command, .shift]).disabled(model.selectedReference == nil)
-                Button(L("重新连接机器")) { model.selectedConnection.connect() }.keyboardShortcut("r", modifiers: [.command, .shift])
+                Button(L("重新连接机器")) { model.reconnectSelectedEnvironment() }.keyboardShortcut("r", modifiers: [.command, .shift])
                 Button(L("关闭当前本地视图")) {
                     if let id = model.tabs.selectedID { model.close(id) }
                 }.keyboardShortcut("w", modifiers: [.command, .shift])

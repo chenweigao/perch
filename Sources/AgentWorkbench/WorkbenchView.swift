@@ -22,6 +22,9 @@ struct WorkbenchView: View {
             }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .sheet(isPresented: $model.showAddHost) { AddHostSheet(model: model) }
+            .sheet(isPresented: $model.showSessionSearch) {
+                SessionDirectoryView(model: model, isSearchSheet: true).frame(width: 640, height: 520)
+            }
             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
             .onAppear {
                 let actions = SelectionActionsController.shared
@@ -29,6 +32,8 @@ struct WorkbenchView: View {
                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
                 actions.start()
             }
+            .onChange(of: model.selectedReference) { _, _ in SelectionActionsController.shared.hide() }
+            .onChange(of: model.showDashboard) { _, _ in SelectionActionsController.shared.hide() }
             .sheet(isPresented: $model.showNewTerminal) { NewTerminalSheet(connection: model.selectedConnection, model: model) }
             .sheet(isPresented: $model.showNewKimi) { NewConversationSheet(model: model, native: model.native, kimi: model.kimi) }
             .sheet(item: $model.renamingSession) { item in RenameSessionSheet(model: model, item: item) }

@@ -20,27 +20,38 @@ struct ConversationFindBar: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                 TextField("Find in conversation", text: $query).textFieldStyle(.roundedBorder).focused($focused)
-                    .onSubmit { move(1) }.onChange(of: query) { _, _ in index = 0; updateSearch(); reveal() }
+                    .onSubmit { move(1) }.onChange(of: query) { _, _ in index = 0; updateSearch(preservingSelection: false); reveal() }
                 Text(hits.isEmpty ? "0 matches" : "\(min(index + 1, hits.count))/\(hits.count)").monospacedDigit()
-                Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").disabled(hits.isEmpty)
-                Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").disabled(hits.isEmpty)
+                Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").accessibilityLabel("Previous match").disabled(hits.isEmpty)
+                Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").accessibilityLabel("Next match").disabled(hits.isEmpty)
                 if model.showKimi && kimi.conversation?.hasOlder == true {
                     Button(kimi.loadingOlder ? "Loading…" : "Search full history") { kimi.loadAllHistoryForSearch() }.disabled(kimi.loadingOlder || !kimi.online)
                 }
-                Button { model.showConversationFind = false } label: { Image(systemName: "xmark") }.help("Close find")
+                Button(action: close) { Image(systemName: "xmark") }.help("Close find").accessibilityLabel("Close find")
             }
             if hits.indices.contains(index) { Text(hits[index].excerpt).lineLimit(2).textSelection(.enabled).foregroundStyle(.secondary) }
             if model.showKimi && kimi.conversation?.hasOlder == true { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
         }.font(.system(size: 12)).padding(10).background(.regularMaterial)
             .onAppear { focused = true; updateSearch() }
-            .onChange(of: model.selectedReference) { _, _ in index = 0; updateSearch() }
-            .onChange(of: messages.count) { _, _ in updateSearch() }
+            .onChange(of: model.selectedReference) { _, _ in index = 0; updateSearch(preservingSelection: false) }
+            .onChange(of: messages) { _, _ in updateSearch() }
             .onChange(of: running) { _, _ in updateSearch() }
             .onChange(of: hits.count) { _, count in index = min(index, max(0, count - 1)) }
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindNext"))) { notice in move(notice.object as? Int ?? 1) }
-            .onExitCommand { model.showConversationFind = false }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchFocusFind"))) { _ in focused = true }
+            .onExitCommand(perform: close)
     }
-    private func updateSearch() { hits = search.hits(in: messages, query: query, running: running) }
+    private func updateSearch(preservingSelection: Bool = true) {
+        let current = preservingSelection && hits.indices.contains(index) ? hits[index].id : nil
+        hits = search.hits(in: messages, query: query, running: running)
+        // Loading older messages inserts matches before the current one.
+        // Keep the user's match selected instead of changing it by array index.
+        index = current.flatMap { id in hits.firstIndex { $0.id == id } } ?? min(index, max(0, hits.count - 1))
+    }
+    private func close() {
+        model.showConversationFind = false
+        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+    }
     private func move(_ delta: Int) { updateSearch(); guard !hits.isEmpty else { return }; index = (index + delta + hits.count) % hits.count; reveal() }
     private func reveal() {
         guard hits.indices.contains(index) else { return }

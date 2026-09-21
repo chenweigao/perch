@@ -8,6 +8,19 @@ func checkWorkflow() throws {
     let host = UUID(), otherHost = UUID()
     let session = SessionReference(hostID: host, terminalID: "same-id", kind: .omp)
     let other = SessionReference(hostID: otherHost, terminalID: "same-id", kind: .omp)
+    let searchable = WorkspaceSession(reference: session, title: "Café 中文体验", directory: "/work/perch", hostName: "Dev Mac",
+                                      detail: "Ready", online: true, section: .other, canMarkReviewed: false)
+    precondition(searchable.matchesSearch("  CAFE  \n OMP perch 中文  "), "Search combines words across title, agent and path")
+    precondition(searchable.matchesSearch(" \t "), "Whitespace must show all sessions")
+    precondition(!searchable.matchesSearch("perch missing"), "Every search term must match")
+    let source = "中文 👋\r\nsecond\n"
+    let second = RemoteFileContent.lineRange(in: source, line: 2)!
+    precondition((source as NSString).substring(with: second) == "second\n", "File line links use UTF-16 and CRLF correctly")
+    precondition(RemoteFileContent.lineRange(in: source, line: 3) == NSRange(location: (source as NSString).length, length: 0))
+    precondition(RemoteFileContent.lineRange(in: source, line: 4) == nil)
+    precondition(RemoteFileContent.lineRange(in: "one\ntwo", line: 3) == nil, "Missing lines must not highlight a different line")
+    precondition(RemoteFileContent.lineRange(in: "", line: 1) == NSRange(location: 0, length: 0))
+    precondition(RemoteFileContent.lineRange(in: source, line: 0) == nil)
     var queue = OutboundQueue()
     let sent = queue.enqueue("Keep this unconfirmed instruction", for: session, mode: .now)!
     _ = queue.nextDelivery(for: session, isStreaming: false)

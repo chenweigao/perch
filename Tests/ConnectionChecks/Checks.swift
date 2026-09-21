@@ -12,6 +12,7 @@ private final class TransportFixture {
     var archives = 0
     var abortedTurns: [(String, String?)] = []
     var holdSnapshots = false
+    var failSnapshot = false
     var snapshotRequests: [String] = []
     var pendingSnapshots: [(CheckedContinuation<Data, Error>, Data)] = []
     var returnedSnapshots = 0
@@ -34,6 +35,7 @@ private final class TransportFixture {
         } else if parts.count == 2 {
             let id = parts[1]
             snapshotRequests.append(id)
+            if failSnapshot { throw WorkbenchError("snapshot unavailable") }
             result = sessions[id]!
             result["revision"] = snapshotRequests.count
             result["messages"] = []; result["interactions"] = []
@@ -87,6 +89,7 @@ struct ConnectionChecks {
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
         try await checkImmediateSelection()
+        try await checkSelectionRetry()
         let fixture = TransportFixture()
         let steeringFixture = TransportFixture()
         let steeringClient = NativeAgentConnection(host: SSHHost(name: "Steer", destination: "fixture"), transport: steeringFixture.request)
@@ -177,6 +180,24 @@ struct ConnectionChecks {
         precondition(client.queue.allItems.isEmpty && lost.prompts.count == 1)
         precondition(connection.queue.items(for: b).count == 1)
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
+    }
+
+    @MainActor
+    static func checkSelectionRetry() async throws {
+        let fixture = TransportFixture(); fixture.failSnapshot = true
+        let client = NativeAgentConnection(host: SSHHost(name: "Retry", destination: "fixture"), transport: fixture.request)
+        try await client.refresh()
+        client.select("a")
+        await settle { client.actionError != nil }
+        precondition(client.snapshot == nil && client.selectedID == "a")
+        fixture.failSnapshot = false
+        client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        precondition(client.actionError == nil && fixture.snapshotRequests == ["a", "a"])
+        client.select("a")
+        await Task.yield()
+        precondition(fixture.snapshotRequests.count == 2, "Selecting a loaded session must not refetch it")
+        print("PASS: failed conversation load can retry the same session without creating a new task")
     }
 
     @MainActor

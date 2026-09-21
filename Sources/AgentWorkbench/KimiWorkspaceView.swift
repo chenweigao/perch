@@ -8,6 +8,7 @@ private let kimiPaper = Color(red: 0.965, green: 0.965, blue: 0.96)
 private let kimiReadingWidth: CGFloat = ReplyStyle.readingWidth
 
 struct KimiWorkspaceView: View {
+    @UILocalization private var L
     @ObservedObject var connection: KimiConnection
     let onNew: () -> Void
     let onInput: () -> Void
@@ -33,6 +34,14 @@ struct KimiWorkspaceView: View {
                     .id(conversation.snapshot.session.id)
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
                 composer(sessionID: conversation.snapshot.session.id).id(conversation.snapshot.session.id)
+            } else if let id = connection.selectedId {
+                VStack(spacing: 14) {
+                    if connection.loading { ProgressView("正在读取会话…") }
+                    else {
+                        Text(connection.actionError ?? L("Unable to load this conversation.")).foregroundStyle(.secondary).textSelection(.enabled)
+                        Button("Retry") { connection.select(id) }.disabled(!connection.online)
+                    }
+                }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Spacer()
                 Image(systemName: "bubble.left.and.text.bubble.right").font(.system(size: 42, weight: .light)).foregroundStyle(kimiAccent)

@@ -30,6 +30,7 @@ struct MessageComposer: View {
 }
 
 struct ComposerEditor: NSViewRepresentable {
+    @Environment(\.isEnabled) private var isEnabled
     @Binding var text: String
     @Binding var height: CGFloat
     let placeholder: String
@@ -49,6 +50,7 @@ struct ComposerEditor: NSViewRepresentable {
         scroll.borderType = .noBorder
         let editor = DraftTextView(frame: .zero)
         editor.isRichText = false
+        editor.allowsUndo = true
         editor.isAutomaticQuoteSubstitutionEnabled = false
         editor.isAutomaticDashSubstitutionEnabled = false
         editor.isAutomaticTextReplacementEnabled = false
@@ -69,11 +71,12 @@ struct ComposerEditor: NSViewRepresentable {
         editor.setAccessibilityLabel(accessibilityLabel)
         scroll.documentView = editor
         context.coordinator.editor = editor
+        context.coordinator.observeFocus()
         editor.onLayout = { [weak coordinator = context.coordinator] in coordinator?.measure() }
         updateNSView(scroll, context: context)
         DispatchQueue.main.async { [weak editor] in
             guard let editor else { return }
-            editor.window?.makeFirstResponder(editor)
+            if editor.isEditable { editor.window?.makeFirstResponder(editor) }
             context.coordinator.measure()
         }
         return scroll
@@ -82,7 +85,10 @@ struct ComposerEditor: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.parent = self
         guard let editor = coordinator.editor else { return }
-        editor.canSend = canSend
+        editor.isEditable = isEnabled
+        editor.canSend = canSend && isEnabled
+        editor.placeholder = placeholder
+        editor.setAccessibilityLabel(accessibilityLabel)
         editor.onSend = onSend
         editor.onFiles = onFiles
         editor.onError = onError
@@ -93,7 +99,16 @@ struct ComposerEditor: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: ComposerEditor
         weak var editor: DraftTextView?
+        private var focusObserver: NSObjectProtocol?
         init(_ parent: ComposerEditor) { self.parent = parent }
+        deinit { if let focusObserver { NotificationCenter.default.removeObserver(focusObserver) } }
+        func observeFocus() {
+            focusObserver = NotificationCenter.default.addObserver(forName: .init("PerchFocusComposer"), object: nil, queue: .main) { [weak self] _ in
+                guard let editor = self?.editor, editor.isEditable, !editor.isHiddenOrHasHiddenAncestor,
+                      let window = editor.window, window.isKeyWindow else { return }
+                window.makeFirstResponder(editor)
+            }
+        }
         func textDidChange(_ notification: Notification) {
             guard let editor else { return }
             // Only committed input enters SwiftUI's draft. The marked range stays
@@ -116,6 +131,8 @@ struct ComposerEditor: NSViewRepresentable {
 }
 
 final class DraftTextView: NSTextView {
+    private let draftUndoManager = UndoManager()
+    override var undoManager: UndoManager? { draftUndoManager }
     var placeholder = ""
     var canSend = false
     var onSend: (() -> Void)?
@@ -127,6 +144,10 @@ final class DraftTextView: NSTextView {
     func syncDraft(_ value: String) {
         guard !hasMarkedText(), string != value else { return }
         string = value
+        // Programmatic replacements are a completed send, quote, or completion.
+        // Resume typing after the replacement; undo must not revive a sent draft.
+        setSelectedRange(NSRange(location: (value as NSString).length, length: 0))
+        undoManager?.removeAllActions()
         needsDisplay = true
     }
     override func setFrameSize(_ newSize: NSSize) {
@@ -144,7 +165,7 @@ final class DraftTextView: NSTextView {
     /// Returns false during composition so Return stays with the input method.
     func handleReturn(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> Bool {
         guard keyCode == 36 || keyCode == 76 else { return false }
-        guard !hasMarkedText() else { return false }
+        guard isEditable, !hasMarkedText() else { return false }
         if modifiers.contains(.shift) || modifiers.contains(.option) { return false }
         if canSend { onSend?() }
         return true
@@ -152,8 +173,9 @@ final class DraftTextView: NSTextView {
     /// An attached suggestion list sees navigation keys first, but never while the
     /// input method is composing, so Return still commits Chinese text.
     func handleNavigation(_ event: NSEvent) -> Bool {
-        guard let onKey, !hasMarkedText() else { return false }
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard isEditable, let onKey, !hasMarkedText() else { return false }
+        // Arrow events include numericPad/function; Caps Lock is not a shortcut.
+        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
         guard modifiers.isEmpty else { return false }
         switch event.keyCode {
         case 126: return onKey(.up)
@@ -172,10 +194,11 @@ final class DraftTextView: NSTextView {
     // AppKit validates Paste before dispatching it. Plain-text editors must
     // advertise attachment types as well as implement how to read them.
     override var readablePasteboardTypes: [NSPasteboard.PasteboardType] {
-        guard onFiles != nil else { return super.readablePasteboardTypes }
+        guard isEditable, onFiles != nil else { return super.readablePasteboardTypes }
         return [.fileURL, .png, .tiff] + super.readablePasteboardTypes
     }
     override func readSelection(from board: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
+        guard isEditable else { return false }
         guard let onFiles else { return super.readSelection(from: board, type: type) }
         if type == .fileURL,
            let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {

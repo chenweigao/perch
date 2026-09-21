@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import WorkbenchCore
 
@@ -5,7 +6,6 @@ struct WorkbenchSidebar: View {
     @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
     @State private var filter = SidebarRecentFilter.all
-    @State private var showSearch = false
     private var page: SidebarPage {
         guard model.showDashboard else { return .other }
         if model.showArchived { return .archive }
@@ -16,7 +16,7 @@ struct WorkbenchSidebar: View {
         let projection = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个 SSH"),
-                              onSearch: { showSearch = true },
+                              onSearch: { model.showSessionSearch = true },
                               onNew: { model.showNewKimi = true },
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
                               onArchive: { model.showArchive() }) {
@@ -72,9 +72,6 @@ struct WorkbenchSidebar: View {
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }
-        .sheet(isPresented: $showSearch) {
-            SessionDirectoryView(model: model, isSearchSheet: true).frame(width: 640, height: 520)
-        }
     }
     private func heading(_ title: LocalizedStringKey) -> some View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
@@ -91,12 +88,11 @@ struct SessionDirectoryView: View {
     @ObservedObject var model: WorkbenchModel
     var isSearchSheet = false
     @State private var query = ""
+    @State private var selection: String?
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
+    private var sessions: [WorkspaceSession] { model.allSessions.filter { !$0.archived && $0.matchesSearch(query) } }
     var body: some View {
-        let sessions = model.allSessions.filter {
-            !$0.archived && (query.isEmpty || "\($0.title) \($0.directory) \($0.hostName) \($0.detail)".localizedCaseInsensitiveContains(query))
-        }
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L(key: isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
@@ -104,20 +100,42 @@ struct SessionDirectoryView: View {
                 if isSearchSheet { Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
             }
             TextField("标题、Agent、环境或目录", text: $query).textFieldStyle(.roundedBorder).focused($focused)
-            ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(sessions) { item in
-                        SessionSidebarRow(model: model, item: item, selected: false, onOpen: {
-                            model.open(item)
-                            if isSearchSheet { dismiss() }
-                        })
+                .onSubmit { if let item = sessions.first(where: { $0.id == selection }) { open(item) } }
+                .onKeyPress(.downArrow, phases: [.down, .repeat]) { move(1, key: $0) }
+                .onKeyPress(.upArrow, phases: [.down, .repeat]) { move(-1, key: $0) }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 4) {
+                        ForEach(sessions) { item in
+                            SessionSidebarRow(model: model, item: item, selected: item.id == selection,
+                                              onOpen: { open(item) }).id(item.id)
+                        }
+                        if sessions.isEmpty { Text("没有找到会话").foregroundStyle(.secondary).padding(24) }
                     }
-                    if sessions.isEmpty { Text("没有找到会话").foregroundStyle(.secondary).padding(24) }
                 }
+                .onChange(of: selection) { _, value in if let value { proxy.scrollTo(value) } }
             }
         }.padding(24).frame(maxWidth: 950, maxHeight: .infinity, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .onAppear { if isSearchSheet { focused = true } }
+            .onAppear { if isSearchSheet { focused = true }; selection = sessions.first(where: \.online)?.id }
+            .onChange(of: query) { _, _ in selection = sessions.first(where: \.online)?.id }
+            .onChange(of: sessions.filter(\.online).map(\.id)) { _, ids in
+                if selection.map({ !ids.contains($0) }) ?? true { selection = ids.first }
+            }
+    }
+    private func open(_ item: WorkspaceSession) {
+        guard item.online else { return }
+        model.open(item)
+        if isSearchSheet { dismiss() }
+    }
+    private func move(_ delta: Int, key: KeyPress) -> KeyPress.Result {
+        guard key.modifiers.intersection([.command, .control, .option, .shift]).isEmpty,
+              (NSApp.keyWindow?.firstResponder as? NSTextView)?.hasMarkedText() != true else { return .ignored }
+        let available = sessions.filter(\.online)
+        guard !available.isEmpty else { return .ignored }
+        let index = available.firstIndex { $0.id == selection } ?? 0
+        selection = available[min(max(index + delta, 0), available.count - 1)].id
+        return .handled
     }
 }
 

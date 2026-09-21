@@ -59,6 +59,7 @@ final class WorkbenchModel: ObservableObject {
     private var taskEvents = TaskEventTracker()
     private var pendingNotificationID: String?
     @Published var showConversationFind = false
+    @Published var showSessionSearch = false
     @Published private(set) var navigation = SessionNavigation()
     private var navigatingHistory = false
     @Published var showFileViewer = false
@@ -139,6 +140,11 @@ final class WorkbenchModel: ObservableObject {
         kimi = nextKimi; native = nextNative
         if started { if !kimi.online { kimi.connect() }; if !native.online { native.connect() } }
         selectedHostID = hostID
+    }
+    func reconnectSelectedEnvironment() {
+        if showKimi { kimi.connect() }
+        else if showNative { native.connect() }
+        else { selectedConnection.connect() }
     }
     var selectedReference: SessionReference? { openedSessions.first { $0.session.id == tabs.selectedID }?.session }
     var showNative: Bool { !showDashboard && [.omp, .qoder, .dsh].contains(selectedReference?.kind) }
@@ -520,13 +526,13 @@ final class WorkbenchModel: ObservableObject {
     /// session has no draft to receive it, so the action is hidden rather than
     /// offered as a no-op.
     var canQuoteSelection: Bool {
-        guard let reference = selectedReference else { return false }
+        guard !showDashboard, let reference = selectedReference else { return false }
         return reference.kind == .kimi ? kimi.online : [.omp, .qoder, .dsh].contains(reference.kind) && native.online
     }
     /// Appends the selection to the current session's draft as a Markdown quote.
     /// Existing draft text is kept: quoting is an addition, not a replacement.
     func quoteSelection(_ text: String) {
-        guard let reference = selectedReference else { return }
+        guard canQuoteSelection, let reference = selectedReference else { return }
         let quoted = text.split(separator: "\n", omittingEmptySubsequences: false)
             .map { "> " + $0 }.joined(separator: "\n")
         let id = reference.terminalID
@@ -537,6 +543,7 @@ final class WorkbenchModel: ObservableObject {
             let existing = native.drafts[id] ?? ""
             native.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
         }
+        DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
     }
     /// Looks for a local OMP by running each candidate path directly. A GUI process
     /// does not inherit the shell PATH, and no shell is involved in the lookup, so a
