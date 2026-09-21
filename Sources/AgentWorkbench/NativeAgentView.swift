@@ -62,7 +62,8 @@ struct NativeAgentView: View {
                     isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
                     isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
                     pendingCount: s.interactions.count, isStopping: connection.isStopping),
-                    isRunning: s.busy, turnID: connection.sessions.first { $0.id == s.id }?.turnId ?? "",
+                    isRunning: s.busy,
+                    timing: connection.timings.turns[s.id],
                     online: connection.online, pendingCount: s.interactions.count,
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)

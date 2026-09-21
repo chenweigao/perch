@@ -288,3 +288,25 @@
 "找到多个同名文件，请选择：" = "Multiple files match. Choose a path:";
 
 "View full thoughts" = "View full thoughts";
+/* Turn timing and activity */
+"本轮结束" = "Turn ended";
+"已用时 %@" = "Elapsed %@";
+"用时 %@" = "Took %@";
+"已观察 %@" = "Observed %@";
+"观察时长 %@" = "Observed duration %@";
+"处理与工具调用：%@" = "Processing and tools: %@";
+"等待确认：%@" = "Waiting for input: %@";
+"阶段时长按客户端收到的状态估算，包含通信与调度。" = "Phase times are estimated from received updates, including transport and scheduling.";
+"从客户端首次观察到本轮开始计时，包含等待；此前用时未知。" = "Time since this client first observed the turn, including waits. Earlier time is unknown.";
+"从提交本轮请求到收到结束状态的经过时间，包含通信、工具调用和等待。" = "Time from submitting this request until receiving its end state, including transport, tools and waits.";
+"Thinking…" = "Thinking…";
+"Working…" = "Working…";
+"Writing response…" = "Writing response…";
+"Reading files…" = "Reading files…";
+"Editing files…" = "Editing files…";
+"Running command…" = "Running command…";
+"Needs your input" = "Needs your input";
+"Stopping…" = "Stopping…";
+"Connection lost" = "Connection lost";
+"Review tool results" = "Review tool results";
+"Plan remaining" = "Plan remaining";

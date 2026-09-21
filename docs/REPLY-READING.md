@@ -182,6 +182,15 @@ The TodoList popover anchors to the pointer position within the task-bar button,
 held still while open. Keyboard/accessibility activation without a pointer uses
 the button bounds, and AppKit keeps the popover within screen bounds.
 
+The activity clock belongs to the connection and is keyed by session and turn;
+switching views does not restart it. A request submitted by this client displays
+elapsed time from submission until the client receives its ending state, including
+transport, tool calls and waits. A turn discovered midway displays observed time
+instead. Completed clocks remain fixed, and a new turn replaces the previous one.
+The expanded view estimates processing and input-wait intervals from received
+status updates; these are client wall times, not model-only execution measurements.
+An app restart loses the local observation history and starts an observed clock.
+
 
 ## Scroll layout contract
 

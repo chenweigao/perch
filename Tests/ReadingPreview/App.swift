@@ -140,7 +140,7 @@ private struct ReadingPreview: View {
             ConversationActivityBar(activity: ConversationActivity(
                 messages: scenario == 1 || scenario == 6 ? todoMessages : [],
                 isRunning: (scenario == 1 && !turnEnded) || scenario == 3, isThinking: scenario == 3),
-                isRunning: (scenario == 1 && !turnEnded) || scenario == 3, turnID: String(scenario))
+                isRunning: (scenario == 1 && !turnEnded) || scenario == 3)
                 .padding(.horizontal, 32).padding(.bottom, 12)
         }.frame(minWidth: 540, minHeight: 500)
             .task(id: streaming) {

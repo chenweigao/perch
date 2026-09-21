@@ -30,24 +30,25 @@ private struct BusySpinner: NSViewRepresentable {
 struct ConversationActivityBar: View {
     let activity: ConversationActivity
     let isRunning: Bool
-    var turnID: String = ""
+    var timing: ConversationTiming? = nil
     var online = true
     var pendingCount = 0
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
     @State private var expanded = false
-    @State private var observedSince: Date?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            if activity.isVisible {
+            if activity.isVisible || timing != nil {
                 HStack(spacing: 10) {
                     Button { expanded.toggle() } label: {
                         HStack(spacing: 9) {
                             if activity.animates { ConversationBusyIndicator() }
                             else { Image(systemName: activity.symbol).frame(width: 16) }
-                            Text(activity.title).lineLimit(1).truncationMode(.tail)
+                            Text(!isRunning && !activity.needsAttention && timing?.endedAt != nil
+                                 ? LocalizedStringKey("本轮结束") : LocalizedStringKey(activity.title))
+                                .lineLimit(1).truncationMode(.tail)
                                 .contentTransition(.opacity)
                                 .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.title)
                             Spacer(minLength: 4)
@@ -73,8 +74,6 @@ struct ConversationActivityBar: View {
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
-        .onChange(of: isRunning, initial: true) { _, running in observedSince = running ? Date() : nil }
-        .onChange(of: turnID) { _, _ in observedSince = isRunning ? Date() : nil }
     }
 
     @ViewBuilder private var counts: some View {
@@ -84,7 +83,7 @@ struct ConversationActivityBar: View {
         }.fixedSize().monospacedDigit()
     }
     @ViewBuilder private var clock: some View {
-        if online, isRunning, let observedSince { ActivityObservedClock(since: observedSince) }
+        if let timing { ActivityTurnClock(timing: timing) }
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -103,6 +102,10 @@ struct ConversationActivityBar: View {
             } else if pendingCount > 0 {
                 Text("\(pendingCount) pending \(pendingCount == 1 ? "request" : "requests") in this conversation.").foregroundStyle(.secondary)
                 Button("Review in conversation") { expanded = false; onReview() }
+            }
+            if let timing {
+                ActivityTurnClock(timing: timing, showsDetails: true)
+                Divider()
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -135,14 +138,42 @@ struct ConversationActivityBar: View {
     }
 }
 
-private struct ActivityObservedClock: View {
-    let since: Date
+private struct ActivityTurnClock: View {
+    let timing: ConversationTiming
+    var showsDetails = false
+    @Environment(\.locale) private var locale
     var body: some View {
-        TimelineView(.periodic(from: since, by: 1)) { context in
-            let seconds = max(0, Int(context.date.timeIntervalSince(since)))
-            Text("Observed \(seconds / 60):\(String(format: "%02d", seconds % 60))")
-                .monospacedDigit().fixedSize()
-        }.help("Time observed in this view, including waits. Earlier runtime is unknown.")
+        Group {
+            if let end = timing.endedAt { content(at: end) }
+            else {
+                TimelineView(.periodic(from: timing.startedAt, by: 1)) { context in content(at: context.date) }
+            }
+        }.monospacedDigit()
+            .help(timing.observedOnly
+                  ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
+                  : Text("从提交本轮请求到收到结束状态的经过时间，包含通信、工具调用和等待。"))
+    }
+    private func duration(_ value: TimeInterval) -> String {
+        ConversationTiming.duration(value, chinese: locale.language.languageCode?.identifier == "zh")
+    }
+    @ViewBuilder private func content(at now: Date) -> some View {
+        let total = timing.elapsed(at: now)
+        if showsDetails {
+            VStack(alignment: .leading, spacing: 6) {
+                label(duration(total))
+                Text("处理与工具调用：\(duration(total - timing.waiting(at: now)))")
+                Text("等待确认：\(duration(timing.waiting(at: now)))")
+                Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        } else { label(duration(total)).fixedSize() }
+    }
+    @ViewBuilder private func label(_ duration: String) -> some View {
+        if timing.observedOnly {
+            if timing.endedAt == nil { Text("已观察 \(duration)") }
+            else { Text("观察时长 \(duration)") }
+        } else if timing.endedAt == nil { Text("已用时 \(duration)") }
+        else { Text("用时 \(duration)") }
     }
 }
 

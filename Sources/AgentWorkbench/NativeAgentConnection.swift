@@ -8,6 +8,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var sessions: [NativeAgentSession] = []
     @Published private(set) var snapshot: NativeAgentSnapshot?
     @Published private(set) var selectedID: String?
+    @Published private(set) var timings = ConversationTimings()
     @Published private(set) var online = false
     @Published var error: String?
     @Published var actionError: String?
@@ -133,6 +134,12 @@ final class NativeAgentConnection: ObservableObject {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
         let value: Catalog = try await request("/sessions")
         let next = value.sessions.sorted { $0.updated > $1.updated }
+        var clocks = timings
+        for session in next {
+            clocks.observe(sessionID: session.id, turnID: session.turnId, requestID: session.turnId,
+                           running: session.busy, waiting: session.pending > 0)
+        }
+        if clocks != timings { timings = clocks }
         if let id = selectedID, !next.contains(where: { $0.id == id }) { selectedID = nil; snapshot = nil }
         if next != sessions {
             sessions = next
@@ -241,6 +248,7 @@ final class NativeAgentConnection: ObservableObject {
         guard queue.nextPendingID(for: reference, isStreaming: busy) != nil else { return }
         guard let message = queue.nextDelivery(for: reference, isStreaming: busy) else { return }
         sendingSessions.insert(id)
+        timings.submitted(message.id)
         Task {
             defer { sendingSessions.remove(id); drainQueues() }
             do {
@@ -260,7 +268,9 @@ final class NativeAgentConnection: ObservableObject {
         case "submitting", "submitted": next = .submitting
         case "accepted": next = .accepted
         case "running": next = .running
-        case "completed", "stopped": queue.markDelivered(receipt.id); return
+        case "completed", "stopped":
+            timings.finished(sessionID: message.session.terminalID, requestID: receipt.id)
+            queue.markDelivered(receipt.id); return
         case "failed": next = .failed(receipt.error ?? "运行时拒绝消息")
         case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
         default: next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")

@@ -16,6 +16,8 @@ private struct ActivityPreview: View {
     @State private var reviewCount = 0
     @State private var reconnectCount = 0
     @State private var turn = 1
+    @State private var clocks = ConversationTimings()
+    @State private var observedOnly = false
     private var busy: Bool { phase != "Done" && phase != "Failed" }
     private var messages: [KimiMessage] {
         var rows: [[String: Any]] = [
@@ -52,6 +54,7 @@ private struct ActivityPreview: View {
         VStack(alignment: .leading, spacing: 24) {
             HStack { Text("Local fixture · No agent connections").font(.headline); Spacer(); Toggle("Narrow", isOn: $narrow) }
             Toggle("Include 20 historical tool calls (hidden from the popover)", isOn: $includeHistory)
+            Toggle("Joined an existing turn (unknown start)", isOn: $observedOnly)
             Picker("Scenario", selection: $phase) {
                 ForEach(["Thinking", "Tools", "Approval", "Offline", "Stopping", "Responding", "Done", "Failed"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
@@ -63,12 +66,20 @@ private struct ActivityPreview: View {
                 liveTools: ["Tools", "Approval", "Offline", "Stopping"].contains(phase) ? live : [],
                 online: phase != "Offline", isThinking: phase == "Thinking", isResponding: phase == "Responding",
                 pendingCount: phase == "Approval" ? 1 : 0, isStopping: phase == "Stopping"),
-                isRunning: busy, turnID: String(turn), online: phase != "Offline", pendingCount: phase == "Approval" ? 1 : 0,
+                isRunning: busy, timing: clocks.turns["preview"], online: phase != "Offline", pendingCount: phase == "Approval" ? 1 : 0,
                 onReview: { reviewCount += 1 }, onReconnect: { reconnectCount += 1 })
                 .frame(width: narrow ? 340 : 840)
             Text("Continue this task, or share a new idea…").foregroundStyle(.secondary)
                 .frame(width: narrow ? 308 : 808, height: 64, alignment: .topLeading).padding(16).workbenchControlSurface()
         }.padding(24)
+            .onChange(of: turn, initial: true) { _, _ in updateTiming(newTurn: true) }
+            .onChange(of: phase) { _, _ in updateTiming() }
+            .onChange(of: observedOnly) { _, _ in turn += 1; phase = "Thinking" }
+    }
+    private func updateTiming(newTurn: Bool = false) {
+        let id = String(turn)
+        if newTurn && !observedOnly { clocks.submitted(id, at: Date().addingTimeInterval(-79)) }
+        clocks.observe(sessionID: "preview", turnID: id, requestID: id, running: busy, waiting: phase == "Approval")
     }
 }
 private final class ActivityDelegate: NSObject, NSApplicationDelegate {

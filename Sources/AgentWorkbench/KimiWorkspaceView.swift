@@ -27,7 +27,7 @@ struct KimiWorkspaceView: View {
                     isResponding: conversation.live?.assistantText.isEmpty == false,
                     pendingCount: pending, isStopping: connection.isStopping),
                     isRunning: conversation.snapshot.session.busy,
-                    turnID: conversation.live.map { String($0.turnId) } ?? "",
+                    timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, pendingCount: pending,
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(conversation.snapshot.session.id)

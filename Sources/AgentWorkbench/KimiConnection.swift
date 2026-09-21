@@ -10,6 +10,7 @@ final class KimiConnection: ObservableObject {
     @Published private(set) var sessions: [KimiSession] = []
     @Published private(set) var selectedId: String?
     @Published private(set) var conversation: KimiConversation?
+    @Published private(set) var timings = ConversationTimings()
     @Published private(set) var online = false
     @Published private(set) var connecting = false
     @Published private var stateMessage: String.LocalizationValue = "未连接"
@@ -193,6 +194,12 @@ final class KimiConnection: ObservableObject {
             before = page.hasMore ? page.items.last?.id : nil
         } while before != nil
         guard token == generation else { throw CancellationError() }
+        var clocks = timings
+        for session in all {
+            clocks.observe(sessionID: session.id, running: session.busy,
+                           waiting: ["approval", "question"].contains(session.pendingInteraction ?? ""))
+        }
+        if clocks != timings { timings = clocks }
         if sessions != all { sessions = all; onSessionsChanged?() }
     }
     func select(_ id: String) {
@@ -219,6 +226,9 @@ final class KimiConnection: ObservableObject {
         guard selectionToken == selectionGeneration, id == selectedId else { throw CancellationError() }
         if let current = conversation, value.epoch == current.snapshot.epoch, value.asOfSeq < current.lastSeq { return }
         if conversation != nil { conversation?.reconcile(value) } else { conversation = KimiConversation(value) }
+        timings.observe(sessionID: id, turnID: value.inFlightTurn.map { String($0.turnId) },
+                        requestID: value.inFlightTurn?.currentPromptId, running: value.session.busy,
+                        waiting: !value.pendingApprovals.isEmpty || !value.pendingQuestions.isEmpty)
         if let i = sessions.firstIndex(where: { $0.id == id }), sessions[i] != value.session {
             sessions[i] = value.session; onSessionsChanged?()
         }
@@ -376,13 +386,15 @@ final class KimiConnection: ObservableObject {
                     content.append(.object(["type": .string("file"), "file_id": .string(fileId), "name": .string(file.lastPathComponent), "media_type": .string(mime), "size": uploaded["size"]]))
                 }
             }
+            let promptID = "awb_\(UUID().uuidString)"
             var body: [String: JSONValue] = [
-                "prompt_id": .string("awb_\(UUID().uuidString)"),
+                "prompt_id": .string(promptID),
                 "content": .array(content)
             ]
             if let model = chosenModel, !model.isEmpty { body["model"] = .string(model) }
             if let effort { body["thinking"] = .string(effort.rawValue) }
             if manual { body["permission_mode"] = .string("manual") }
+            timings.submitted(promptID)
             _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
             if drafts[id] == text { drafts[id] = "" }
             attachments[id]?.removeAll { files.contains($0) }
