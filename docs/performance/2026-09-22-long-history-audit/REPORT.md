@@ -1,6 +1,8 @@
 # Perch 长会话阅读审查 — 2026-09-22
 
-基线 `b66181a577d9612f30bd8441334c16bea0557e06`；分支 `codex/perch-long-history-audit`。仅本地独立工作树，未推送、合并、发布，也未操作真实会话。报告逐轮补充。
+**交付：2 项最小修复；缩放候选撤回。消息覆盖和多条原生交互通过，但仍未达到长历史流畅度验收，不能宣称卡顿已解决。**
+
+基线 `b66181a577d9612f30bd8441334c16bea0557e06`；分支 `codex/perch-long-history-audit`。仅本地独立工作树，未推送、合并、发布，也未操作真实会话。已于第 7 轮结束：第 5–7 轮连续没有找到新的可行动问题。
 
 ## 开始前检查
 
@@ -108,3 +110,63 @@ CUA typeText 直接注入中文未完整送达，改用 Unicode 粘贴后读回�
 ComposerChecks 可编译，但独立 .local/ComposerChecks 两次启动均 SIGKILL（第二次 shell 137），没有 PASS 输出，原因未确认，**不列为通过**；没有继续重复启动或修改安全设置。实际隔离输入窗口正常运行。
 
 无产品修改，连续无新可行动问题计数 2。
+
+## 第 7 轮：待释放宿主队列和持续资源使用（未发现新可行动问题）
+
+仅新增 TRANSCRIPT_CHECKS 诊断：把退役队列与当前保留/挂载宿主分开记录。既有 soak 在 8 个预解码、每份 200 轮混合历史的会话间运行 180.14 秒，共 370 次切换、4440 次大跨度滚动、47 次模型搜索更新。
+
+- 每约 10 秒采样：保留宿主 2–6，挂载宿主 2–6，退役宿主 0–5；这不是全过程峰值，不能把采样上界当成硬上界。完整连续阅读的逐步记录保留宿主最大 20。
+- 同期进程 RSS 152.2–160.8 MiB，无持续上升趋势；开始前 112.0 MiB、结束 154.1 MiB、等待 500 ms 后 147.4 MiB。最后退役队列为 0。
+- 切换 p95 59.25 ms；大跨度滚动 p95 49.22 ms，最大 72.86 ms。没有 >100 ms 步进，但 4439/4440 步超过 16.7 ms，不能作为流畅度通过。
+- 正常退出、完整结果文件、监督器 passed。没有启动远端，也未操作任何正式 Perch 会话。
+
+原实现的单一退役队列在该受控窗口没有显示持续积压；未增加释放调度或新的内存缓存。3 分钟/8 个缓存会话不证明整夜无限会话稳定。连续无新可行动问题计数 3，满足用户停止条件。
+
+## 本地交付与验证边界
+
+工作树目录：`perch-long-history-audit/perch`（位于工作区统一 `_worktrees` 目录），分支 `codex/perch-long-history-audit`。原仓库 main、其他任务工作树和门户已有修改保持原状；没有推送、PR、合并、安装或发布。
+
+| 本地提交 | 内容 |
+| --- | --- |
+| aee26c0 | 前插旧消息保留阅读锚点；回归和初始对照 |
+| 4c051fa | 有界宿主与剩余成本审查记录 |
+| a4fd4d4 | 保留失败的缩放候选与证据，产品改动撤回 |
+| fac99c4 | 新宿主先布局再设置搜索选区；同 fixture 对照 |
+| fc38ca6 | 实际 Mac 富文本、图片、折叠与流式阅读验证 |
+| 457389a | 输入草稿、会话往返和工具失败边界 |
+| 本报告提交 | 退役队列测量、三分钟回放和最终收尾 |
+
+完整 Release App build/sign、WorkbenchChecks、Navigation 各通过项目和实际 UI 观察分别见上文。WorkbenchChecks 真实 SSH 项明确跳过。ComposerChecks 两次 SIGKILL 无 PASS，不算通过。第 3 轮 interactions 严格缩放断言仍会失败，失败记录完整保留；不把搜索模式通过误写为整套交互通过。
+
+### 未解决与下一步
+
+1. 首次阅读、淘汰后重建仍有约 32–34 ms p95 的半屏布局成本；没有证明相比最新 main 有显著性能提升，也没有硬件输入到呈现帧率或与 Codex 同场景主观对照。
+2. 缩窄列后的同一消息偏移仍可能 165→168 pt；撤回的候选没有解决晚到布局/几何变化的具体来源。
+3. 同一窗口内完整生产 Composer + 200 轮历史 + 流式回复 + 真实滚轮/中文 IME 的联合验收未完成。现有输入窗口与导航窗口分别验证，不能合成为端到端结论。
+4. 远端图片的慢加载/取消、整夜连续运行及超过 8 个缓存会话的资源行为未实测。未接触真实会话。
+
+下一步最值得做的验证：把现有 200 轮固定历史与生产 Composer、固定速率流式尾部放在一个隔离窗口，用真实滚轮持续向上读并输入，采集显示帧间隔与主线程 Time Profiler；先确认尖峰是否与新宿主首次测量同步，再决定下一项最小修复。缩放问题同时记录 anchor ID/offset、contentOriginY 和高度回调时间，避免再凭单次成功调整恢复时序。
+
+### 复现入口
+
+先在该工作树执行 `scripts/prepare-local-swiftpm.sh`（仅本机混装 CLT 需要），然后：
+
+```sh
+export SWIFTPM_CUSTOM_LIBS_DIR="$PWD/.local/swiftpm-libs"
+scripts/build.sh
+scripts/build-navigation-preview.sh
+# 每个输出目录必须是新目录；以下均使用合成消息。
+NAVIGATION_SCROLL_STEP_POINTS=12 python3 scripts/run-navigation-check.py reading --output .local/replay-reading --switches 8
+NAVIGATION_ANCHOR_FROM_BOTTOM=1 python3 scripts/run-navigation-check.py anchor --output .local/replay-prepend
+python3 scripts/run-navigation-check.py search --output .local/replay-search
+# 保留的未解决缩放回归：失败是已知缺口，不是全通过入口。
+python3 scripts/run-navigation-check.py interactions --output .local/replay-resize
+python3 scripts/run-navigation-check.py roundtrip --output .local/replay-roundtrip
+python3 scripts/run-navigation-check.py soak --seconds 180 --output .local/replay-soak
+scripts/build-reading-preview.sh
+scripts/build-composer-preview.sh
+```
+
+最后两个入口只构建独立 UI fixture；通过其 `build/Reply Reading Preview.app` 和 `build/Composer Preview.app` 进行实际交互。禁止把这些 fixture 的通过状态替代正式会话或远端协议验收。
+
+收尾重新 fetch：origin/main 仍为 b66181a；与任务分支的 merge-tree 检查无冲突。所有本轮隔离预览进程均已退出。首次收尾提交被发布检查发现报告中的个人绝对路径；已改为可移植的工作树标识，未绕过检查。

@@ -661,12 +661,20 @@ final class NavigationRunner {
                 if CACurrentMediaTime() >= nextSample {
                     // Keep bounded two-minute checks observable as well as overnight runs.
                     nextSample = CACurrentMediaTime() + 10
-                    samples.append([
+                    var sample: [String: Double] = [
                         "elapsed_s": CACurrentMediaTime() - start,
                         "resident_mb": Double(residentBytes()) / 1_048_576,
                         "views": Double(countViews(host)),
                         "switches": Double(switches), "scroll_steps": Double(scrollSteps)
-                    ])
+                    ]
+                    #if TRANSCRIPT_CHECKS
+                    if let counts = ConversationTranscript.retainedHosts(in: host) {
+                        sample["retained_hosts"] = Double(counts.retained)
+                        sample["mounted_hosts"] = Double(counts.mounted)
+                        sample["retired_hosts"] = Double(counts.retired)
+                    }
+                    #endif
+                    samples.append(sample)
                     try writeNavigationArtifact("progress.json", ["status": "running", "samples": samples,
                         "history_turns": model.historyTurnCount, "switches": switches, "scroll_steps": scrollSteps])
                 }
@@ -677,7 +685,7 @@ final class NavigationRunner {
             _ = await flushAndWait(host, until: { true })
         }
         model.search = ""
-        let result: [String: Any] = [
+        var result: [String: Any] = [
             "duration_s": CACurrentMediaTime() - start,
             "switches": switches, "scroll_steps": scrollSteps, "search_keystrokes": searches,
             "switch_ms": statistics(switchMs), "scroll_step_ms": statistics(scrollMs),
@@ -686,6 +694,11 @@ final class NavigationRunner {
             "samples": samples,
             "note": "unattended soak on the isolated fixture; no remote agent, no production app state"
         ]
+        #if TRANSCRIPT_CHECKS
+        try await Task.sleep(for: .milliseconds(500))
+        result["retired_hosts_after_settle"] = ConversationTranscript.retainedHosts(in: host)?.retired
+        result["settled_resident_mb"] = residentMB()
+        #endif
         return result
     }
 

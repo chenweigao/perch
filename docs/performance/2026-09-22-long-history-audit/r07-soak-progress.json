@@ -1,0 +1,188 @@
+{
+  "history_turns" : 200,
+  "samples" : [
+    {
+      "elapsed_s" : 0.50627008324954659,
+      "mounted_hosts" : 3,
+      "resident_mb" : 152.203125,
+      "retained_hosts" : 3,
+      "retired_hosts" : 5,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 113
+    },
+    {
+      "elapsed_s" : 11.03968087490648,
+      "mounted_hosts" : 6,
+      "resident_mb" : 157.671875,
+      "retained_hosts" : 6,
+      "retired_hosts" : 1,
+      "scroll_steps" : 252,
+      "switches" : 21,
+      "views" : 90
+    },
+    {
+      "elapsed_s" : 21.077541958307847,
+      "mounted_hosts" : 2,
+      "resident_mb" : 158.53125,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 492,
+      "switches" : 41,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 31.116018374916166,
+      "mounted_hosts" : 2,
+      "resident_mb" : 160.828125,
+      "retained_hosts" : 2,
+      "retired_hosts" : 0,
+      "scroll_steps" : 744,
+      "switches" : 62,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 41.583316958276555,
+      "mounted_hosts" : 2,
+      "resident_mb" : 155.546875,
+      "retained_hosts" : 2,
+      "retired_hosts" : 3,
+      "scroll_steps" : 996,
+      "switches" : 83,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 51.702798208338208,
+      "mounted_hosts" : 2,
+      "resident_mb" : 156.71875,
+      "retained_hosts" : 2,
+      "retired_hosts" : 2,
+      "scroll_steps" : 1248,
+      "switches" : 104,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 61.846409249934368,
+      "mounted_hosts" : 2,
+      "resident_mb" : 159.359375,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 1500,
+      "switches" : 125,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 71.959213791647926,
+      "mounted_hosts" : 2,
+      "resident_mb" : 157.6875,
+      "retained_hosts" : 2,
+      "retired_hosts" : 0,
+      "scroll_steps" : 1752,
+      "switches" : 146,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 81.965133541612886,
+      "mounted_hosts" : 2,
+      "resident_mb" : 160.140625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 0,
+      "scroll_steps" : 2004,
+      "switches" : 167,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 92.120890041580424,
+      "mounted_hosts" : 2,
+      "resident_mb" : 157.78125,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 2256,
+      "switches" : 188,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 102.20846112491563,
+      "mounted_hosts" : 2,
+      "resident_mb" : 154.640625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 2508,
+      "switches" : 209,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 112.4507809166098,
+      "mounted_hosts" : 2,
+      "resident_mb" : 154.9375,
+      "retained_hosts" : 2,
+      "retired_hosts" : 2,
+      "scroll_steps" : 2760,
+      "switches" : 230,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 122.82657408330124,
+      "mounted_hosts" : 2,
+      "resident_mb" : 154.890625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 2,
+      "scroll_steps" : 3012,
+      "switches" : 251,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 133.37398462498095,
+      "mounted_hosts" : 2,
+      "resident_mb" : 154.34375,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 3276,
+      "switches" : 273,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 143.53004358324688,
+      "mounted_hosts" : 2,
+      "resident_mb" : 155.5,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 3528,
+      "switches" : 294,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 153.62848558323458,
+      "mounted_hosts" : 2,
+      "resident_mb" : 154.140625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 2,
+      "scroll_steps" : 3780,
+      "switches" : 315,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 163.80004174995702,
+      "mounted_hosts" : 2,
+      "resident_mb" : 155.140625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 4032,
+      "switches" : 336,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 173.9392453749897,
+      "mounted_hosts" : 2,
+      "resident_mb" : 158.015625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 4284,
+      "switches" : 357,
+      "views" : 100
+    }
+  ],
+  "scroll_steps" : 4284,
+  "status" : "running",
+  "switches" : 357
+}

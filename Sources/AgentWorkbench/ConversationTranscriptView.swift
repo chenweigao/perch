@@ -128,6 +128,7 @@ private final class ConversationDocumentView: NSView {
     #if TRANSCRIPT_CHECKS
     fileprivate var retainedHostCount: Int { controllers.count }
     fileprivate var mountedHostCount: Int { mounted.count }
+    fileprivate static var retiredHostCount: Int { retiredControllers.count }
     fileprivate var readingAnchor: (entry: String, offset: CGFloat)? {
         guard let row = geometry.readingRow(at: viewportRect.minY), contents.indices.contains(row) else { return nil }
         return (contents[row].entry.id, viewportRect.minY - offsets[row])
@@ -456,9 +457,9 @@ extension ConversationTranscript {
         return nil
     }
     /// Fixture-only inspection includes detached hosts, which a view-tree count misses.
-    static func retainedHosts(in root: NSView) -> (retained: Int, mounted: Int)? {
+    static func retainedHosts(in root: NSView) -> (retained: Int, mounted: Int, retired: Int)? {
         if let document = root as? ConversationDocumentView {
-            return (document.retainedHostCount, document.mountedHostCount)
+            return (document.retainedHostCount, document.mountedHostCount, ConversationDocumentView.retiredHostCount)
         }
         for view in root.subviews {
             if let counts = retainedHosts(in: view) { return counts }
