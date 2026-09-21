@@ -87,11 +87,19 @@ actionable, unread, disconnected and ordinary sessions; hover help retains the
 full title, Agent, host, directory and status.
 
 Pin and archive appear on hover, selection or keyboard focus. Restore remains
-visible in archived rows. Actions reserve 48 pt on the right, so revealing them does not
-reflow or truncate the title differently. Running sessions have no quick archive
+visible in archived rows. Hidden actions occupy no width, so the title uses the
+available row space. Revealing actions temporarily narrows the title by 24 pt per
+visible button: 24 pt for pin/restore alone, 48 pt for pin and archive together.
+Running sessions have no quick archive
 action. Archived rows expose restore instead of pin/archive. Other actions are
 available in the row context menu; destructive actions retain the existing
 provider-specific confirmation. There is no separate ellipsis button per row.
+
+For visual acceptance, hover the fixture's long running and completed titles:
+the running row reveals one button, the completed row two. Move away from an
+unselected row and confirm its title expands again. Selection and keyboard focus
+keep actions visible. Repeat with Reduce Motion enabled and ensure clicking a
+quick action does not also open the session.
 
 Rename stores a local Perch display name keyed by the complete session reference.
 It applies to the catalog, header and saved open-view titles and survives reload;

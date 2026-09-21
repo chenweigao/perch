@@ -35,6 +35,8 @@ private struct SidebarPreview: View {
                     }.padding(.horizontal, 10).frame(height: 34)
                 }.buttonStyle(SidebarNavigationStyle(selected: title == "Perch 开源"))
                 section("最近会话")
+                task("运行中 · 验证长标题在只显示置顶按钮时仍尽量完整", status: "Kimi · 运行中", symbol: "circle.dotted")
+                task("已完成 · 验证长标题在操作隐藏后重新占满整行", status: "Kimi · 已完成", symbol: "checkmark.circle")
                 task("离线会话", status: "连接中断 · 状态未同步", symbol: "wifi.slash")
                 ForEach(1...20, id: \.self) { index in
                     task("原生工作台 · 会话 \(index)", status: index == 1 ? "Kimi · 等你处理" : "Kimi · 已完成",

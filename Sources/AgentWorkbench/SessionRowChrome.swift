@@ -1,7 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Shared row geometry; actions have reserved space so hover never moves the title.
+/// Hidden actions give their width back to the title; visible actions use one slot each.
 struct SessionRowChrome<Indicator: View>: View {
     @UILocalization private var L
     let title: String
@@ -22,6 +22,7 @@ struct SessionRowChrome<Indicator: View>: View {
     @FocusState private var focus: Focus?
 
     private var showActions: Bool { hovered || selected || archived || focus != nil }
+    private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 24 : 0 }
     var body: some View {
         HStack(spacing: 0) {
             Button(action: onOpen) {
@@ -55,7 +56,7 @@ struct SessionRowChrome<Indicator: View>: View {
                         .focused($focus, equals: .archive)
                 }
             }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
-                .frame(width: 48, alignment: .trailing)
+                .frame(width: actionWidth, alignment: .trailing).clipped()
                 .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: showActions)
         }.padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
