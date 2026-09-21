@@ -71,7 +71,8 @@ struct WorkbenchDashboard<RowActions: View>: View {
                                 .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
                             ForEach(projection.offline) { row($0, in: .other) }
                         }
-                    }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
             }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
@@ -127,7 +128,8 @@ struct WorkbenchDashboard<RowActions: View>: View {
             if value.items.count > limit && value.section != .attention {
                 DisclosureGroup("展开其余 \(value.items.count - limit) 个会话") {
                     VStack(spacing: 0) { ForEach(value.items.dropFirst(limit)) { row($0, in: value.section) } }
-                }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 12)
+                }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+                    .font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 12)
             }
         }
     }
@@ -161,7 +163,8 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     }
                 }
             }.padding(.top, 10)
-        }.font(.system(size: 12)).foregroundStyle(.secondary)
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+            .font(.system(size: 12)).foregroundStyle(.secondary)
     }
 
     private func storageBanner(_ message: String) -> some View {

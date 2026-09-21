@@ -16,7 +16,7 @@ swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
-    Sources/AgentWorkbench/ConversationActivityBar.swift Tests/ToolVisibilityPreview/App.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ConversationActivityBar.swift Tests/ToolVisibilityPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ToolVisibilityPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

@@ -19,7 +19,7 @@ struct KimiMessageView: View {
                 switch part.type {
                 case "text":
                     if part.isRuntimeContext {
-                        DisclosureGroup("运行上下文") { KimiMarkdown(text: part.text ?? "") }.font(.system(size: 11)).foregroundStyle(.secondary)
+                        DisclosureGroup("运行上下文") { KimiMarkdown(text: part.text ?? "") }.disclosureGroupStyle(WorkbenchDisclosureStyle()).font(.system(size: 11)).foregroundStyle(.secondary)
                     } else { KimiMarkdown(text: part.text ?? "").environment(\.isConversationBodyText, true) }
                 case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
                 case "tool_use":
@@ -681,7 +681,7 @@ private struct ConversationEntryView: View, Equatable {
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
                             }
                         }.padding(.top, 10) }
-                    }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    }.disclosureGroupStyle(WorkbenchDisclosureStyle()).font(.system(size: 12)).foregroundStyle(.secondary)
                 case .thinkingDetails:
                     ThoughtDisclosure(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"))
                 case .thinkingPreview, .thinkingRecord:
@@ -734,8 +734,8 @@ private struct ThoughtToggle: View {
                 Text(title)
                 Spacer(minLength: 0)
             }.font(.system(size: 12)).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
+                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
+        }.buttonStyle(WorkbenchDisclosureButtonStyle()).accessibilityValue(expanded ? "Expanded" : "Collapsed")
     }
 }
 

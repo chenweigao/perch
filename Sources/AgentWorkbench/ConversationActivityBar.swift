@@ -62,7 +62,7 @@ struct ConversationActivityBar: View {
                                 EmptyView()
                             }.font(.system(size: 11)).foregroundStyle(.secondary).layoutPriority(-1)
                             Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-                        }.contentShape(Rectangle())
+                        }.frame(minHeight: 28).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel(Text("本轮活动"))
                         .accessibilityValue(statusTitle).help("查看本轮活动与计划")
                         .highPriorityGesture(SpatialTapGesture().onEnded { value in
@@ -113,7 +113,7 @@ struct ConversationActivityBar: View {
             HStack {
                 Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Button { expanded = false } label: { Image(systemName: "xmark") }
+                Button { expanded = false } label: { Image(systemName: "xmark").frame(width: 28, height: 28).contentShape(Rectangle()) }
                     .buttonStyle(.plain).accessibilityLabel(Text("关闭活动详情"))
             }
             if !online {
@@ -225,6 +225,6 @@ private struct ActivityToolDetails: View {
                 if summary != tool.name { Text(summary).lineLimit(2).foregroundStyle(.secondary) }
                 if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(.secondary) }
             }
-        }
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle())
     }
 }

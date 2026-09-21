@@ -20,7 +20,8 @@ struct KimiActivityView: View {
                 Button { expanded.toggle() } label: {
                     Label("Runtime context", systemImage: expanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
-                }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
+                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(WorkbenchDisclosureButtonStyle()).accessibilityValue(expanded ? "Expanded" : "Collapsed")
             }
             if expanded {
                 ForEach(context) { message in
@@ -92,6 +93,6 @@ struct KimiToolCard: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
                 .help(Text(verbatim: statusLabel))
-        }.padding(.vertical, 3)
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle()).padding(.vertical, 3)
     }
 }

@@ -268,7 +268,7 @@ struct RemoteFilePanel: View {
                 Image(systemName: "doc.text.magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
                 Text("远端文件").font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 0)
-                Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)) }
+                Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板")
             }.padding(.horizontal, 14).frame(height: WorkbenchChrome.headerHeight)
             Divider()
@@ -295,7 +295,7 @@ struct RemoteFilePanel: View {
                     }
                     if !browser.path.isEmpty {
                         HStack(spacing: 7) {
-                            Button { browser.openParent() } label: { Image(systemName: "arrow.up").font(.system(size: 10)) }
+                            Button { browser.openParent() } label: { Image(systemName: "arrow.up").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                                 .buttonStyle(.plain).foregroundStyle(.secondary).help("上一级目录")
                                 .disabled(RemoteFilePath.parent(of: browser.path) == nil)
                             Text(browser.path).font(.system(size: 11, design: .monospaced))

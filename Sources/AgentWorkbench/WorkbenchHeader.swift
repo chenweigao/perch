@@ -94,7 +94,7 @@ struct WorkbenchHeaderActions: View {
                         .menuStyle(.borderlessButton).fixedSize().help("打开任务组")
                 }
                 if model.selectedGroup != nil {
-                    Button { model.editGroup(model.selectedGroup) } label: { Image(systemName: "pencil") }
+                    Button { model.editGroup(model.selectedGroup) } label: { Image(systemName: "pencil").frame(width: 28, height: 28).contentShape(Rectangle()) }
                         .buttonStyle(.plain).help("编辑任务组")
                 }
                 Menu {

@@ -32,13 +32,15 @@ struct WorkbenchSidebar: View {
                 }.buttonStyle(.plain).help("新建任务组")
             }.padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
             ForEach(model.workspace.groups) { group in
+                let items = TaskGroupProjection(group: group, allSessions: model.allSessions, lastSessionID: nil, search: "")
                 Button { model.showHome(groupID: group.id) } label: {
                     HStack(spacing: 9) {
                         Image(systemName: "folder").frame(width: 17)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
-                        Text("\(group.sessions.count)").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text("\(items.totalCount)").font(.system(size: 11)).foregroundStyle(.secondary)
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
+                    .help("\(items.totalCount) 个未归档 · \(items.archivedCount) 个已归档 · \(items.missingCount) 个尚未同步")
                     .contextMenu { Button("编辑任务组") { model.editGroup(group) } }
             }
             if model.workspace.groups.isEmpty {
@@ -227,7 +229,7 @@ private struct ConnectionControls: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("环境与 Agent").foregroundStyle(.secondary); Spacer()
-                Button { dismiss(); model.showAddHost = true } label: { Image(systemName: "plus") }.buttonStyle(.plain).help("添加 SSH 机器")
+                Button { dismiss(); model.showAddHost = true } label: { Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle()) }.buttonStyle(.plain).help("添加 SSH 机器")
             }
             Button { dismiss(); model.showLocalSetup = true } label: { Label("本机 Agent…", systemImage: "laptopcomputer") }
                 .buttonStyle(.plain).padding(.vertical, 4)
@@ -238,12 +240,12 @@ private struct ConnectionControls: View {
             HStack {
                 Label("Kimi · \(kimi.host.name)", systemImage: "bubble.left"); Spacer()
                 Circle().fill(kimi.online ? .green : .orange).frame(width: 5, height: 5)
-                Button { kimi.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接 Kimi")
+                Button { kimi.connect() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }.buttonStyle(.plain).help("重新连接 Kimi")
             }.help(kimi.error ?? kimi.state(locale: L.locale))
             HStack {
                 Label("原生对话", systemImage: "bubble.left.and.bubble.right"); Spacer()
                 Circle().fill(native.online ? .green : .orange).frame(width: 5, height: 5)
-                Button { native.connect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("重新连接原生对话")
+                Button { native.connect() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }.buttonStyle(.plain).help("重新连接原生对话")
             }.help(native.error ?? L("远端持久托管"))
         }.font(.system(size: 11)).padding(15).background(.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
     }
@@ -256,7 +258,7 @@ private struct HostConnectionControl: View {
         HStack {
             Label(connection.host.name, systemImage: "server.rack"); Spacer()
             Circle().fill(connection.online ? .green : .orange).frame(width: 5, height: 5)
-            Button { connection.connect() } label: { Image(systemName: "arrow.clockwise") }
+            Button { connection.connect() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }
                 .buttonStyle(.plain).help("重新连接 Herdr")
         }.contextMenu {
             Button("重新连接 Herdr") { connection.connect() }

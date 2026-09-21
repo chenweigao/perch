@@ -208,7 +208,7 @@ struct ComposerAttachment: View {
                     .clipShape(RoundedRectangle(cornerRadius: 5))
             } else { Image(systemName: "doc").frame(width: 30, height: 34).foregroundStyle(.secondary) }
             Text(file.lastPathComponent).font(.system(size: 11)).lineLimit(1).frame(maxWidth: 130)
-            Button(action: onRemove) { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)) }
+            Button(action: onRemove) { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove attachment")
         }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
     }

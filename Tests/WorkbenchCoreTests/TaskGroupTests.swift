@@ -41,5 +41,18 @@ func checkTaskGroup() {
     precondition(noMatch.sessions.isEmpty && noMatch.resume == nil)
     let filed = TaskGroupProjection(group: group, allSessions: all, lastSessionID: archived.id, search: "")
     precondition(filed.resume == nil)
+    // Sidebar and page totals follow archive/restore and membership changes,
+    // never counting unrelated, archived, or not-yet-synced references as current.
+    let restored = session("archived", .other, updated: 6)
+    let afterRestore = TaskGroupProjection(group: group, allSessions: all.filter { $0.id != archived.id } + [restored],
+                                           lastSessionID: nil, search: "")
+    precondition(afterRestore.totalCount == 5 && afterRestore.archivedCount == 0 && afterRestore.missingCount == 1)
+    var reducedGroup = group
+    reducedGroup.sessions.removeAll { $0 == viewed.reference }
+    let afterRemoval = TaskGroupProjection(group: reducedGroup, allSessions: all, lastSessionID: nil, search: "")
+    precondition(afterRemoval.totalCount == 3 && afterRemoval.archivedCount == 1 && afterRemoval.missingCount == 1)
+    let archivedGroup = WorkItemGroup(name: "Archived", goal: "", nextStep: "", sessions: [archived.reference])
+    let archivedOnly = TaskGroupProjection(group: archivedGroup, allSessions: all, lastSessionID: nil, search: "")
+    precondition(archivedOnly.totalCount == 0 && archivedOnly.archivedCount == 1)
     print("PASS: task group membership, recency, priority, search, resume and missing-session visibility")
 }

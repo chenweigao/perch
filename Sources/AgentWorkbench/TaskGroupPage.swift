@@ -61,7 +61,8 @@ struct TaskGroupPage: View {
                                     .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
                                 ForEach(items.archived) { archivedRow($0) }
                             }
-                        }.disclosureGroupStyle(TaskGroupArchiveDisclosureStyle())
+                        }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+                            .font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     if items.missingCount > 0 {
                         VStack(alignment: .leading, spacing: 8) {
@@ -82,7 +83,7 @@ struct TaskGroupPage: View {
                 VStack(alignment: .leading, spacing: 9) {
                     Text(group.name).font(.system(size: 25, weight: .semibold))
                         .textSelection(.enabled).accessibilityAddTraits(.isHeader)
-                    Text("\(group.sessions.count) 个关联 · \(items.totalCount) 个当前 · \(items.archivedCount) 个已归档")
+                    Text("\(group.sessions.count) 个关联 · \(items.totalCount) 个未归档 · \(items.archivedCount) 个已归档")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 Button("新建会话") { model.showNewKimi = true }
@@ -132,7 +133,7 @@ struct TaskGroupPage: View {
             HStack {
                 Text(title).foregroundStyle(.secondary)
                 if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Button { model.editGroup(group) } label: { Image(systemName: "pencil") }
+                    Button { model.editGroup(group) } label: { Image(systemName: "pencil").frame(width: 28, height: 28).contentShape(Rectangle()) }
                         .buttonStyle(.plain).foregroundStyle(.secondary).help("编辑任务组")
                 }
             }.font(.system(size: 12))
@@ -174,26 +175,5 @@ struct TaskGroupPage: View {
                 .buttonStyle(.borderless).font(.system(size: 11)).disabled(model.managing.contains(session.id) || !model.canArchive(session))
         }.padding(.horizontal, 8).padding(.vertical, 13)
             .contextMenu { SessionActionsMenu(model: model, item: session) }
-    }
-}
-
-/// The full header is a button, so both the label and its surrounding space
-/// expand the archive instead of requiring a click on the disclosure triangle.
-private struct TaskGroupArchiveDisclosureStyle: DisclosureGroupStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button { configuration.isExpanded.toggle() } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .medium)).frame(width: 12).accessibilityHidden(true)
-                    configuration.label
-                    Spacer(minLength: 0)
-                }.font(.system(size: 12)).foregroundStyle(.secondary)
-                    .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
-                    .contentShape(Rectangle())
-            }.buttonStyle(SidebarNavigationStyle())
-                .accessibilityValue(configuration.isExpanded ? Text("已展开") : Text("已收起"))
-            if configuration.isExpanded { configuration.content }
-        }
     }
 }
