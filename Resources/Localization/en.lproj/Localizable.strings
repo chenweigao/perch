@@ -270,3 +270,18 @@
 "状态未同步" = "State not synced";
 "需要处理" = "Needs Attention";
 "有新结果" = "New Result";
+
+/* Model selection */
+"默认模型" = "Default model";
+"选择模型，用于下一条消息" = "Choose a model for your next message";
+"选择模型" = "Choose model";
+"搜索模型或渠道" = "Search models or providers";
+"渠道" = "Provider";
+"全部渠道" = "All providers";
+"使用默认模型" = "Use default model";
+"沿用会话模型" = "Keep session model";
+"暂无可用模型" = "No models available";
+"当前连接尚未提供模型列表，可沿用会话或默认模型。" = "This connection has not supplied a model list. You can keep the session or default model.";
+"没有匹配的模型" = "No matching models";
+"请调整搜索词或渠道筛选。" = "Try another search or provider filter.";
+"用于下一条消息" = "Applies to your next message";
