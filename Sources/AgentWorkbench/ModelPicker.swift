@@ -30,33 +30,48 @@ private struct ModelPickerPanel: View {
     let current: String
     let dismiss: () -> Void
     @State private var query = ""
+    @State private var provider: String?
     @FocusState private var focused: Bool
-    private var groups: [ModelProviderGroup] { ModelCatalog.groups(models, matching: query) }
+    private var groups: [ModelProviderGroup] {
+        ModelCatalog.groups(models.filter { provider == nil || $0.provider == provider }, matching: query)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let provider {
+                HStack {
+                    Button { self.provider = nil; query = ""; focused = true } label: {
+                        Label("Provider", systemImage: "chevron.left")
+                    }.buttonStyle(.plain).accessibilityLabel("返回 Provider 列表")
+                    Spacer()
+                    Text(provider).fontWeight(.medium).lineLimit(1)
+                }.font(.system(size: 13)).padding(14)
+                Divider()
+            }
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("搜索模型或 provider", text: $query).textFieldStyle(.plain).focused($focused)
+                TextField(provider == nil ? "搜索 Provider 或模型" : "搜索模型", text: $query)
+                    .textFieldStyle(.plain).focused($focused)
             }.font(.system(size: 13)).padding(14)
             Divider()
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 3, pinnedViews: [.sectionHeaders]) {
-                    if query.isEmpty {
+                LazyVStack(alignment: .leading, spacing: 3) {
+                    if provider == nil && query.isEmpty {
                         ModelPickerRow(name: current.isEmpty ? "使用默认模型" : "沿用会话模型", detail: current.isEmpty ? nil : current,
                                        selected: selection.isEmpty) { selection = ""; dismiss() }
                     }
                     ForEach(groups) { group in
-                        Section {
+                        if provider == nil {
+                            ModelPickerRow(name: group.id, detail: "\(group.models.count) 个模型",
+                                           selected: group.models.contains { $0.id == (selection.isEmpty ? current : selection) },
+                                           disclosure: true) {
+                                provider = group.id; query = ""; focused = true
+                            }
+                        } else {
                             ForEach(group.models) { model in
                                 ModelPickerRow(name: model.name,
                                                detail: model.capabilities.contains("image_in") ? "支持图片" : nil,
                                                selected: selection == model.id) { selection = model.id; dismiss() }
                             }
-                        } header: {
-                            HStack { Text(group.id); Spacer(); Text("\(group.models.count)").monospacedDigit() }
-                                .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-                                .padding(.horizontal, 10).padding(.top, 14).padding(.bottom, 6)
-                                .frame(maxWidth: .infinity).background(Color(nsColor: .controlBackgroundColor))
                         }
                     }
                     if groups.isEmpty { Text(models.isEmpty ? "暂无可用模型" : "没有匹配的模型").font(.system(size: 12)).foregroundStyle(.secondary).padding(16) }
@@ -71,6 +86,7 @@ private struct ModelPickerRow: View {
     let name: String
     let detail: String?
     let selected: Bool
+    var disclosure = false
     let action: () -> Void
     @State private var hovered = false
     var body: some View {
@@ -82,6 +98,7 @@ private struct ModelPickerRow: View {
                 }
                 Spacer(minLength: 4)
                 if selected { Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)) }
+                if disclosure { Image(systemName: "chevron.right").font(.system(size: 11)).foregroundStyle(.secondary) }
             }.padding(.horizontal, 10).padding(.vertical, 9).contentShape(Rectangle())
                 .background(hovered || selected ? Color.primary.opacity(0.055) : .clear, in: RoundedRectangle(cornerRadius: 6))
         }.buttonStyle(.plain).onHover { hovered = $0 }.accessibilityAddTraits(selected ? .isSelected : [])

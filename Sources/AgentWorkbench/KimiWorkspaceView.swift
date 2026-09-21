@@ -97,10 +97,6 @@ struct KimiWorkspaceView: View {
                         .help("Return 发送 · Shift Return 换行").disabled(!canSend)
                 }
             }.padding(14).workbenchControlSurface()
-            if connection.conversation?.snapshot.session.busy == true {
-                Text("正在处理 · 发送的新消息将加入队列")
-                    .font(.system(size: 11)).foregroundStyle(.tertiary)
-            }
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)

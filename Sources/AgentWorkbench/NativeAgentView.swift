@@ -127,12 +127,16 @@ struct NativeModelControls: View {
             let current = connection.model(for: snapshot)
             HStack(spacing: 10) {
                 Menu {
-                    ForEach(connection.models) { model in
-                        Button {
-                            connection.setModel(model, for: snapshot.id)
-                        } label: {
-                            if model.id == snapshot.model { Label(model.name, systemImage: "checkmark") }
-                            else { Text("\(model.provider) / \(model.name)") }
+                    ForEach(Dictionary(grouping: connection.models, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
+                        Menu(group.key) {
+                            ForEach(group.value) { model in
+                                Button {
+                                    connection.setModel(model, for: snapshot.id)
+                                } label: {
+                                    if model.id == snapshot.model { Label(model.name, systemImage: "checkmark") }
+                                    else { Text(model.name) }
+                                }
+                            }
                         }
                     }
                     if connection.models.isEmpty { Text("正在读取模型列表…") }
