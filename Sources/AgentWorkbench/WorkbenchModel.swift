@@ -226,7 +226,7 @@ final class WorkbenchModel: ObservableObject {
     /// host without an empty case.
     func removeHost(_ host: SSHHost) {
         guard connections.count > 1, let index = connections.firstIndex(where: { $0.id == host.id }) else {
-            managementError = "至少保留一台机器。先添加要用的机器，再移除这一台。"
+            managementError = L("至少保留一台机器。先添加要用的机器，再移除这一台。")
             return
         }
         connections[index].disconnect()
@@ -240,7 +240,7 @@ final class WorkbenchModel: ObservableObject {
         if selectedHostID == host.id { selectedHostID = fallback }
         if hostFilter == host.id { hostFilter = nil }
         do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
-        catch { managementError = "机器已移除，但保存机器列表失败：\(error.localizedDescription)" }
+        catch { managementError = L("机器已移除，但保存机器列表失败：\(error.localizedDescription)") }
         rebuildCatalog(); syncFileViewer(); saveWorkspace()
     }
     func open(_ pane: Pane, on connection: HostConnection, pinned: Bool = false) {

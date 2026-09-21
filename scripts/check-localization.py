@@ -29,7 +29,7 @@ ZH_TABLE = ROOT / "Resources/Localization/zh-Hans.lproj/Localizable.strings"
 SCOPED_FILES = [
     "Sources/AgentWorkbench/SessionSidebar.swift",
     "Sources/AgentWorkbench/WorkspaceSidebarShell.swift",
-    "Sources/AgentWorkbench/WorkspaceView.swift",
+    "Sources/AgentWorkbench/WorkItemGroupEditor.swift",
     "Sources/AgentWorkbench/TaskGroupPage.swift",
     "Sources/AgentWorkbench/ModelPicker.swift",
     "Sources/AgentWorkbench/SessionRowChrome.swift",
