@@ -96,13 +96,14 @@ private struct ConversationDocumentHost: NSViewRepresentable {
 }
 
 /// Reserve history geometry, but only instantiate hosts intersecting the viewport.
-/// Actual measurements replace estimates as rows are read. Controllers retain
-/// disclosure state when detached; no SwiftUI lazy-layout phases are involved.
+/// Actual measurements replace estimates as rows are read. Only nearby controllers
+/// survive detachment; disclosure state lives in ConversationReadingMemory.
 private final class ConversationDocumentView: NSView {
     private var contents: [ConversationEntryView] = []
     private var indices: [String: Int] = [:]
     private var heights: [CGFloat] = []
-    private var offsets: [CGFloat] = []
+    private var geometry = ConversationRowGeometry(heights: [])
+    private var offsets: [CGFloat] { geometry.offsets }
     private var controllers: [String: ConversationEntryController] = [:]
     private var mounted: Set<String> = []
     private var laidOutRange: Range<Int>?
@@ -122,8 +123,12 @@ private final class ConversationDocumentView: NSView {
     private var publicationScheduled = false
     private weak var observedClip: NSClipView?
     private var boundsObserver: NSObjectProtocol?
-    private(set) var totalHeight: CGFloat = 0
+    var totalHeight: CGFloat { geometry.totalHeight }
     private var findObserver: NSObjectProtocol?
+    #if TRANSCRIPT_CHECKS
+    fileprivate var retainedHostCount: Int { controllers.count }
+    fileprivate var mountedHostCount: Int { mounted.count }
+    #endif
     override init(frame: NSRect) {
         super.init(frame: frame)
         findObserver = NotificationCenter.default.addObserver(forName: .init("PerchRevealConversationHit"), object: nil, queue: .main) { [weak self] notice in
@@ -217,6 +222,9 @@ private final class ConversationDocumentView: NSView {
     }
     private static func retire(_ old: [ConversationEntryController]) {
         guard !old.isEmpty else { return }
+        // A queued geometry callback from a retired host must not resize a new
+        // host for the same row (or the next session) while destruction drains.
+        for controller in old { controller.heightChanged = { _ in } }
         // A single drain bounds total release work even during rapid switches.
         // Mutable reference storage releases each graph when it is removed.
         retiredControllers.addObjects(from: old)
@@ -247,12 +255,7 @@ private final class ConversationDocumentView: NSView {
     }
     private func rebuildOffsets() {
         laidOutRange = nil
-        var y: CGFloat = 0
-        offsets = heights.map { height in
-            defer { y += height + 18 }
-            return y
-        }
-        totalHeight = max(0, y - (heights.isEmpty ? 0 : 18))
+        geometry = ConversationRowGeometry(heights: heights)
     }
     private var viewportRect: CGRect {
         if let clip = observedClip {
@@ -269,10 +272,9 @@ private final class ConversationDocumentView: NSView {
         refreshing = true
         defer { refreshing = false }
         let visible = viewportRect
-        var index = offsets.indices.first { offsets[$0] + heights[$0] > max(0, visible.minY) }
-            ?? max(0, contents.count - 1)
+        var index = min(geometry.firstIntersecting(max(0, visible.minY)), contents.count - 1)
         let first = index
-        let end = offsets.indices.dropFirst(first).first { offsets[$0] >= visible.maxY } ?? contents.count
+        let end = max(first, geometry.end(before: visible.maxY))
         // Most wheel deltas stay within the same rows. The clip view moves their
         // pixels; no hosting measurement, frame writes or reattachment is needed.
         if laidOutRange == first..<end { return }
@@ -299,6 +301,13 @@ private final class ConversationDocumentView: NSView {
         for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
         mounted = nextMounted
         laidOutRange = first..<index
+        let retained = geometry.retainedRows(around: first..<index)
+        var retired: [ConversationEntryController] = []
+        for id in Array(controllers.keys) where !mounted.contains(id) {
+            if let row = indices[id], retained.contains(row) { continue }
+            if let controller = controllers.removeValue(forKey: id) { retired.append(controller) }
+        }
+        Self.retire(retired)
         publishHeight()
     }
     private func beginDisclosureChange(_ id: String, animated: Bool) {
@@ -376,7 +385,7 @@ private final class ConversationDocumentView: NSView {
     }
     private func saveReadingPosition() {
         guard restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
-              let index = offsets.indices.last(where: { offsets[$0] <= max(0, clip.bounds.minY - contentOriginY) }),
+              let index = geometry.readingRow(at: max(0, clip.bounds.minY - contentOriginY)),
               contents.indices.contains(index) else { return }
         ConversationReadingMemory.shared.positions[sessionId] = .init(entry: contents[index].entry.id,
             index: index, offset: clip.bounds.minY - contentOriginY - offsets[index])
@@ -421,6 +430,21 @@ private final class ConversationDocumentView: NSView {
         if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
     }
 }
+
+#if TRANSCRIPT_CHECKS
+extension ConversationTranscript {
+    /// Fixture-only inspection includes detached hosts, which a view-tree count misses.
+    static func retainedHosts(in root: NSView) -> (retained: Int, mounted: Int)? {
+        if let document = root as? ConversationDocumentView {
+            return (document.retainedHostCount, document.mountedHostCount)
+        }
+        for view in root.subviews {
+            if let counts = retainedHosts(in: view) { return counts }
+        }
+        return nil
+    }
+}
+#endif
 
 /// Only the environment values used by these rows cross the hosting boundary.
 /// Value equality lets an appearance change update rows without resetting every

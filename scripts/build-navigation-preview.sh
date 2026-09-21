@@ -21,7 +21,7 @@ objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$' | sort)
 done
-swiftc -O -swift-version 5 -parse-as-library "${includes[@]}" \
+swiftc -O -swift-version 5 -D TRANSCRIPT_CHECKS -parse-as-library "${includes[@]}" \
     "${app_files[@]}" Tests/PerformancePreview/Workload.swift \
     Tests/NavigationPreview/History.swift Tests/NavigationPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/NavigationPreview"

@@ -393,6 +393,36 @@ final class NavigationRunner {
         let result: [String: Any] = ["observed_turns": turns.sorted(), "tail_found": tailFound,
                                    "reading_step_ms": statistics(steps), "document_height_after_reading": documentHeight]
         var report = result
+        #if TRANSCRIPT_CHECKS
+        // Reproduce reading upward after a long downward traversal. Inspect the
+        // controller cache as well as mounted views; detached hosts used to grow
+        // with every newly visited row. Timings are application work, not FPS.
+        var upwardSteps: [Double] = []
+        var retention: [[String: Int]] = []
+        var topPasses = 0
+        for _ in 0..<2_000 {
+            let started = CACurrentMediaTime()
+            let y = max(0, scroll.contentView.bounds.minY - scroll.contentView.bounds.height / 2)
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            await withCheckedContinuation { c in DispatchQueue.main.async { c.resume() } }
+            host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            upwardSteps.append((CACurrentMediaTime() - started) * 1_000)
+            guard let counts = ConversationTranscript.retainedHosts(in: scroll), counts.mounted > 0 else {
+                throw NavigationError("upward reading lost the transcript rows")
+            }
+            guard counts.retained <= counts.mounted + 24 else {
+                throw NavigationError("history hosts accumulated: \(counts.retained), mounted: \(counts.mounted)")
+            }
+            retention.append(["retained": counts.retained, "mounted": counts.mounted])
+            topPasses = scroll.contentView.bounds.minY <= 1 ? topPasses + 1 : 0
+            if topPasses == 3 { break }
+        }
+        guard topPasses == 3 else { throw NavigationError("upward reading never reached the beginning") }
+        report["upward_reading_step_ms"] = statistics(upwardSteps)
+        report["upward_reading_samples_ms"] = upwardSteps
+        report["upward_host_counts"] = retention
+        #endif
         report["warm_scroll"] = try await scrollFrames()
         report["switch_after_full_reading"] = try await clickLatency()
         var pulseDelay: [Double] = []
