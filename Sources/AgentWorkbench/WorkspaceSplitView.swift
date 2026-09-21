@@ -114,10 +114,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [backID, forwardID, separatorID, titleID, .flexibleSpace, actionsID]
+            [toggleID, composeID, backID, forwardID, separatorID, titleID, .flexibleSpace, actionsID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            toolbarDefaultItemIdentifiers(toolbar) + [toggleID, composeID]
+            toolbarDefaultItemIdentifiers(toolbar)
         }
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
