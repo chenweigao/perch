@@ -363,3 +363,14 @@
 "先连接一台运行 Agent 的机器" = "Connect a machine running an agent";
 "选择 Agent 和工作目录后开始" = "Choose an agent and working directory to begin";
 "开始第一段会话" = "Start your first conversation";
+
+"%lld 个关联 · %lld 个当前 · %lld 个已归档" = "%lld linked · %lld current · %lld archived";
+"上次会话尚未连接" = "The last session is not connected";
+"从一段新会话开始，或把已有会话关联到这个目标。" = "Start a conversation or link existing sessions to this goal.";
+"已归档 · %lld" = "Archived · %lld";
+"归档会话仍保留在任务组中，恢复后可继续。" = "Archived sessions remain linked to this group. Restore them to continue.";
+"本组会话" = "Group sessions";
+"添加目标：做到什么程度算完成？" = "Add a goal: what does success look like?";
+"管理关联" = "Manage linked sessions";
+"继续上次会话：%@" = "Resume last session: %@";
+"记下回来后先做什么" = "Write down what to do next";

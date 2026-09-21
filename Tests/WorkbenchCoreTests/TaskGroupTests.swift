@@ -24,12 +24,18 @@ func checkTaskGroup() {
     // Reviewed and offline sessions remain visible, in recent-update order.
     precondition(page.sessions.map(\.id) == [offline, viewed, unread, approval].map(\.id))
     precondition(page.totalCount == 4 && page.missingCount == 1)
-    precondition(page.needsAttention.map(\.id) == [approval, unread].map(\.id))
+    precondition(page.needsAttention.map(\.id) == [approval].map(\.id))
     precondition(page.resume == viewed)
+    precondition(page.archivedCount == 1 && page.archived == [archived])
+    precondition(page.totalCount + page.archivedCount + page.missingCount == group.sessions.count)
+    precondition(Set(page.sessions.map(\.id)).isDisjoint(with: Set(page.archived.map(\.id))))
 
     // Search narrows the list (and its archive input), not the continuation or inbox.
     let searched = TaskGroupProjection(group: group, allSessions: all, lastSessionID: viewed.id, search: " UNREAD ")
     precondition(searched.sessions == [unread] && searched.totalCount == 4)
+    precondition(searched.archived.isEmpty && searched.archivedCount == 1)
+    let archiveSearch = TaskGroupProjection(group: group, allSessions: all, lastSessionID: viewed.id, search: " archived ")
+    precondition(archiveSearch.sessions.isEmpty && archiveSearch.archived == [archived])
     precondition(searched.needsAttention == page.needsAttention && searched.resume == viewed)
     let noMatch = TaskGroupProjection(group: group, allSessions: all, lastSessionID: outside.id, search: "outside")
     precondition(noMatch.sessions.isEmpty && noMatch.resume == nil)

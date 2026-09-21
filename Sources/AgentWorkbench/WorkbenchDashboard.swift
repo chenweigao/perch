@@ -182,7 +182,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
 }
 
-private struct QueueRow<Actions: View>: View {
+struct QueueRow<Actions: View>: View {
     let item: WorkspaceSession
     let time: String?
     let metadata: String
