@@ -5,7 +5,8 @@ parses CommonMark/GFM into `ReplyDocument`; SwiftUI renders the document without
 HTML execution or a WebView. Remote image references inside Markdown show their
 alt text; dedicated conversation attachments keep their existing renderer.
 
-The reading column and composer share a 760 pt maximum width. Body text uses the
+The reading column and composer share a 700 pt maximum width. Short replies stay
+left-aligned within that column. Body text uses the
 macOS system font at 14 pt with a 1.625 minimum line-height ratio. H1 uses 16 pt;
 H2–H6 stay at the body size. Headings, strong text and table headers use medium
 weight, including strong text nested inside a heading or inline code. Headings
@@ -13,11 +14,19 @@ have 22 pt of leading space (14 pt in compact lists/quotes) and 7 pt before thei
 following content; the first block has no leading space. Section spacing carries
 the hierarchy without large, heavy titles. List markers use regular weight.
 Inline code stays 1 pt smaller than its surrounding text, with a faint 2.5% label
-color background; table separators use 6% opacity. Nested list
+color background; table separators use 6% opacity. Body paragraphs have 12 pt
+between them; paragraphs within a list item or quote have 8 pt. Compact block
+transitions, such as a paragraph followed by a nested list, have 6 pt of space.
+List rows are measured at the available width: adjacent single-line items have
+a 2 pt gap, increasing to 6 pt when either item spans multiple lines. Nested list
 continuations align with the text, ordered lists preserve their starting number,
 and task markers are read-only. Quotes use a fine left rule. Code uses the system
-monospace font, a quiet header and horizontal scrolling. Tables render as native
-grids, wrapping ordinary cells and scrolling when the columns cannot fit.
+monospace font, a quiet header and horizontal scrolling. Body text, inline paths
+and links use native word wrapping, including oversized unbroken tokens, without
+inserting characters into selectable text. Text and link colors are unchanged.
+Tables render as native grids sized to their viewport, with a 100 pt minimum
+text width and 12 pt horizontal padding per cell. Cells wrap within that width;
+only tables whose minimum column widths exceed the viewport scroll horizontally.
 
 Copy controls preserve the original reply Markdown or the fenced code content.
 Only http, https and mailto Markdown links become clickable. Static text uses
@@ -44,10 +53,16 @@ For a focused typography check, build with `scripts/build.sh`, then run
 `scripts/build-reply-typography-preview.sh` and open
 `build/Reply Typography Preview.app`. The fixture includes a long H1, H2–H6,
 an entirely strong paragraph, mixed Chinese/English, code inside headings,
-links, lists and a table. Inspect it at both normal and narrow window widths:
+links, lists and tables. The width picker compares 420, 700 and 760 pt columns;
+the window can also be resized. Samples include single- and multi-line list
+items, multi-paragraph items, nested lists, long paths/URLs, a three-column table
+with long cells, and a seven-column table that scrolls independently.
+Inspect it at both normal and narrow window widths:
 emphasis should remain distinguishable, headings should wrap without crowding,
 and inline code should blend into prose. Check selection and copying separately;
 the renderer preserves the original Markdown and parsed document structure.
+Copy a wrapped path/URL to check it contains no extra line breaks or invisible
+characters, and confirm column alignment and horizontal scrolling in the tables.
 
 ## Turn visibility and compact chrome
 

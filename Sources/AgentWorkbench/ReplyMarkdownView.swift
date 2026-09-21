@@ -4,7 +4,7 @@ import WorkbenchCore
 
 /// Shared reading metrics keep Kimi, OMP and Qoder aligned with their composers.
 enum ReplyStyle {
-    static let readingWidth: CGFloat = 760
+    static let readingWidth: CGFloat = 700
     static let bodySize: CGFloat = 14
     static let lineHeightRatio: CGFloat = 1.625
     static let ink = Color.primary.opacity(0.88)
@@ -40,12 +40,12 @@ private struct ReplyBlocks: View {
     private func spacing(before block: ReplyBlock, after previous: ReplyBlock?) -> CGFloat {
         if case .rule = previous { return 28 }
         if case .heading = previous { return 7 }
-        if case .paragraph = previous, case .paragraph = block { return 14 }
+        if case .paragraph = previous, case .paragraph = block { return compact ? 8 : 12 }
         switch block {
         case .heading: return compact ? 14 : 22
         case .rule: return 28
         case .code: return compact ? 10 : 18
-        default: return compact ? 0 : 14
+        default: return compact ? 6 : 12
         }
     }
 
@@ -62,7 +62,7 @@ private struct ReplyBlockContent: View, Equatable {
                       weight: .medium, lineHeight: 24)
         case .code(let language, let source): ReplyCode(language: language, source: source)
         case .list(let items):
-            VStack(alignment: .leading, spacing: 0) {
+            ReplyListLayout {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 9) {
                         Text(item.marker).font(.system(size: ReplyStyle.bodySize)).foregroundStyle(ReplyStyle.ink)
@@ -79,6 +79,38 @@ private struct ReplyBlockContent: View, Equatable {
         case .table(let headers, let rows, let alignments):
             ReplyTable(headers: headers, rows: rows, alignments: alignments)
         case .rule: Rectangle().fill(.primary.opacity(0.09)).frame(height: 1)
+        }
+    }
+}
+
+/// Measure wrapped rows at the actual column width without a geometry/state loop.
+private struct ReplyListLayout: Layout {
+    private func measure(width: CGFloat?, subviews: Subviews) -> (size: CGSize, rows: [CGSize], offsets: [CGFloat]) {
+        // SwiftUI also probes the maximum size with an infinite proposal.
+        let columnWidth = width.flatMap { $0.isFinite ? $0 : nil }
+        let rows = subviews.map { $0.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)) }
+        var offsets: [CGFloat] = []
+        var height: CGFloat = 0
+        for index in rows.indices {
+            if index > 0 {
+                let multiline = max(rows[index - 1].height, rows[index].height) > ReplyStyle.bodySize * ReplyStyle.lineHeightRatio * 1.5
+                height += multiline ? 6 : 2
+            }
+            offsets.append(height)
+            height += rows[index].height
+        }
+        return (CGSize(width: columnWidth ?? rows.map(\.width).max() ?? 0, height: height), rows, offsets)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        measure(width: proposal.width, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let measured = measure(width: bounds.width, subviews: subviews)
+        for index in subviews.indices {
+            subviews[index].place(at: CGPoint(x: bounds.minX, y: bounds.minY + measured.offsets[index]),
+                                  anchor: .topLeading, proposal: ProposedViewSize(measured.rows[index]))
         }
     }
 }
@@ -104,6 +136,8 @@ private struct ReplyText: View {
         let result = NSMutableAttributedString()
         let paragraph = NSMutableParagraphStyle()
         paragraph.minimumLineHeight = lineHeight ?? size * ReplyStyle.lineHeightRatio
+        // Wrap oversized paths/URLs in TextKit without altering selectable text.
+        paragraph.lineBreakMode = .byWordWrapping
         paragraph.alignment = alignment == .trailing ? .right : alignment == .center ? .center : .left
         for run in runs {
             let runWeight: NSFont.Weight = run.strong ? .medium : weight
@@ -261,30 +295,34 @@ private struct ReplyTable: View {
     let headers: [[ReplyInline]]
     let rows: [[[ReplyInline]]]
     let alignments: [ReplyAlignment]
+    private let minimumCellWidth: CGFloat = 100
+    private let cellPadding: CGFloat = 12
     var body: some View {
-        // Ordinary comparisons fit the reading column; wide tables alone scroll horizontally.
-        ViewThatFits(in: .horizontal) {
-            grid(minimum: 100)
-            ScrollView(.horizontal) { grid(minimum: 160).fixedSize(horizontal: true, vertical: false) }
+        // Fit the viewport first; only the minimum column widths can cause overflow.
+        ScrollView(.horizontal) {
+            grid.containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
+                max(width, CGFloat(headers.count) * (minimumCellWidth + cellPadding * 2))
+            }
         }
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
-    private func grid(minimum: CGFloat) -> some View {
+    private var grid: some View {
         Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-            row(headers, header: true, minimum: minimum)
+            row(headers, header: true)
             ForEach(Array(rows.enumerated()), id: \.offset) { _, cells in
                 Rectangle().fill(.primary.opacity(0.06)).frame(height: 1).gridCellUnsizedAxes(.horizontal)
-                row(cells, header: false, minimum: minimum)
+                row(cells, header: false)
             }
         }
     }
-    private func row(_ cells: [[ReplyInline]], header: Bool, minimum: CGFloat) -> some View {
+    private func row(_ cells: [[ReplyInline]], header: Bool) -> some View {
         GridRow(alignment: .top) {
             ForEach(Array(headers.indices), id: \.self) { column in
                 let alignment: Alignment = alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading
                 ReplyText(runs: column < cells.count ? cells[column] : [], size: 13, weight: header ? .medium : .regular,
                           alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading)
-                    .frame(minWidth: minimum, maxWidth: .infinity, alignment: alignment)
-                    .padding(.horizontal, 12).padding(.vertical, 10)
+                    .frame(minWidth: minimumCellWidth, maxWidth: .infinity, alignment: alignment)
+                    .padding(.horizontal, cellPadding).padding(.vertical, 10)
             }
         }
     }

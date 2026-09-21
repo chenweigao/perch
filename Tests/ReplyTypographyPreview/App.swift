@@ -1,13 +1,27 @@
 import SwiftUI
 
 @main struct ReplyTypographyPreviewApp: App {
+    @State private var columnWidth = ReplyStyle.readingWidth
     var body: some Scene {
         WindowGroup("正文排版 · 隔离预览") {
-            ScrollView {
-                KimiMarkdown(text: Self.sample)
-                    .frame(maxWidth: ReplyStyle.readingWidth, alignment: .leading)
+            VStack(spacing: 0) {
+                Picker("阅读宽度", selection: $columnWidth) {
+                    Text("窄栏 420").tag(CGFloat(420))
+                    Text("正文 700").tag(ReplyStyle.readingWidth)
+                    Text("原宽 760").tag(CGFloat(760))
+                }.pickerStyle(.segmented).frame(width: 320).padding(16)
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        KimiMarkdown(text: "可以，已经保留文字颜色。下一步查看长回复的阅读节奏。")
+                        Divider()
+                        KimiMarkdown(text: Self.sample)
+                        ReplyCopyButton(text: Self.sample)
+                    }
+                    .frame(maxWidth: columnWidth, alignment: .leading)
                     .padding(.horizontal, 32).padding(.vertical, 28)
                     .frame(maxWidth: .infinity)
+                }
             }.preferredColorScheme(.light).frame(minWidth: 500, minHeight: 500)
         }.defaultSize(width: 880, height: 760)
     }
@@ -57,6 +71,38 @@ import SwiftUI
     ##### 更深一层的小节
 
     连续出现的 `session/list`、`session/prompt`、`session/shutdown` 应融入句子，仍然保留等宽字体的辨识度。
+
+    ## 列表与段落的阅读节奏
+
+    - 单行项目一。
+    - 单行项目二。
+    - 这是一条会随着窗口缩窄而变成多行的说明，用于检查换行后与前后条目的距离。继续补充足够长的中文与 English 内容，确认文字仍与第一行正文对齐，不会回到圆点下方，也不会与下一项挤在一起。
+    - 多行说明后的短项目。
+
+    9. 保留列表原本的起始编号。
+    10. 第二项包含后续段落。
+
+        这是同一项的补充说明，间距应小于独立正文段落，仍与本项文字对齐。
+
+        - 嵌套条目保持从属关系。
+        - 第二个嵌套条目。
+
+    ## 长路径、链接与表格
+
+    行内路径 `Sources/AgentWorkbench/Features/Conversation/Components/Rendering/Typography/LongDirectoryNameWithoutSpaces/ReplyMarkdownView.swift` 应自然换行，选择复制后仍是一条完整路径。
+
+    [https://example.com/documentation/conversation/rendering/typography/LongResourceNameWithoutSpacesToCheckWrappingAndSelectionAtNarrowWidths](https://example.com/documentation/conversation/rendering/typography/LongResourceNameWithoutSpacesToCheckWrappingAndSelectionAtNarrowWidths)
+
+    | 项目 | 文件或说明 | 数量 |
+    | :--- | :--- | ---: |
+    | 长路径 | `Sources/AgentWorkbench/Features/Conversation/Components/Rendering/Typography/ReplyMarkdownView.swift` | 12 |
+    | 长链接 | [阅读完整的中文与 English 排版说明，检查单元格自然换行](https://example.com/reading) | 3 |
+
+    下表列数较多，只在表格内部横向滚动，正文宽度应保持一致。
+
+    | 项目 | A | B | C | D | E | F |
+    | :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+    | 演示数据 | 10 | 20 | 30 | 40 | 50 | 60 |
 
     ###### 最深一层的小节
 
