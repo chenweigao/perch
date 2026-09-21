@@ -296,54 +296,65 @@ struct NewConversationSheet: View {
     @ObservedObject var native: NativeAgentConnection
     @ObservedObject var kimi: KimiConnection
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("new.task.prompt") private var prompt = ""
     @State private var provider: SessionKind = .kimi
     @State private var cwd = ""
     @State private var agentModel = ""
     @State private var creating = false
     @State private var error: String?
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
+    private var canStart: Bool { !creating && !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online) }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("开始新任务").font(.title2.weight(.semibold))
-            Picker("Agent", selection: $provider) { ForEach([SessionKind.kimi, .omp, .qoder], id: \.self) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
+            MessageComposer(text: $prompt, placeholder: "你想完成什么任务？", canSend: canStart, onSend: start)
+                .frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
+            Picker("Agent", selection: $provider) { ForEach([SessionKind.kimi, .omp, .qoder], id: \.self) { Text($0.label).tag($0) } }.pickerStyle(.segmented).disabled(creating)
             Text("\(kimi.host.name) · \(model.selectedGroup?.name ?? "工作台")").font(.callout).foregroundStyle(.secondary)
             HStack {
-                TextField("远端项目绝对路径", text: $cwd).textFieldStyle(.roundedBorder)
-                Menu("最近目录") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }.fixedSize()
+                TextField("远端项目绝对路径", text: $cwd).textFieldStyle(.roundedBorder).disabled(creating)
+                Menu("最近目录") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }.fixedSize().disabled(creating)
             }
             if provider == .kimi {
-                ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel)
+                ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel).disabled(creating)
             } else {
-                TextField(provider == .qoder ? "模型名称（默认 Qwen3.8-Flash）" : "模型（留空沿用远端配置）", text: $agentModel).textFieldStyle(.roundedBorder)
+                TextField(provider == .qoder ? "模型名称（默认 Qwen3.8-Flash）" : "模型（留空沿用远端配置）", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
                 Text("创建独立对话，工具在远端执行；待确认操作会留在这里等你处理。").font(.caption).foregroundStyle(.secondary)
             }
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             HStack {
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
                 Spacer()
-                Button(creating ? "创建中…" : "开始对话") {
-                    creating = true
-                    Task {
-                        do {
-                            if provider == .kimi {
-                                try await kimi.createSession(title: "", cwd: cwd)
-                                if let id = kimi.selectedId { kimi.modelChoices[id] = agentModel }
-                                model.newKimiCreated()
-                            }
-                            else { let session = try await native.create(provider: provider, cwd: cwd, model: agentModel.isEmpty && provider == .qoder ? "Qwen3.8-Flash" : agentModel); model.newNativeCreated(session) }
-                            UserDefaults.standard.set(agentModel, forKey: "new.model.\(provider.rawValue)")
-                            UserDefaults.standard.set(provider.rawValue, forKey: "new.provider")
-                            UserDefaults.standard.set(cwd, forKey: "new.cwd")
-                            dismiss()
-                        } catch { self.error = error.localizedDescription; creating = false }
-                    }
-                }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
-                    .disabled(creating || !cwd.hasPrefix("/") || (provider == .kimi ? !kimi.online : !native.online))
+                Button(creating ? "创建中…" : "开始任务", action: start)
+                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(!canStart)
             }
-        }.padding(28).frame(width: 510).onChange(of: provider) { _, value in agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? "" }.onAppear {
+        }.padding(28).frame(width: 650).onChange(of: provider) { _, value in agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? "" }.onAppear {
             provider = model.selectedReference?.kind == .terminal ? .kimi : model.selectedReference?.kind ?? SessionKind(rawValue: UserDefaults.standard.string(forKey: "new.provider") ?? "kimi") ?? .kimi
             agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
             cwd = model.selectedItem?.directory ?? UserDefaults.standard.string(forKey: "new.cwd") ?? recent.first ?? ""
+        }
+    }
+    private func start() {
+        guard canStart else { return }
+        creating = true
+        let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd
+        Task {
+            do {
+                if selectedProvider == .kimi {
+                    let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text, model: selectedModel)
+                    model.newKimiCreated(session)
+                    await kimi.sendPrompt(for: session.id)
+                } else {
+                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel.isEmpty && selectedProvider == .qoder ? "Qwen3.8-Flash" : selectedModel)
+                    native.drafts[session.id] = text
+                    model.newNativeCreated(session)
+                    native.send()
+                }
+                UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
+                UserDefaults.standard.set(selectedProvider.rawValue, forKey: "new.provider")
+                UserDefaults.standard.set(directory, forKey: "new.cwd")
+                prompt = ""; dismiss()
+            } catch { self.error = error.localizedDescription; creating = false }
         }
     }
 }

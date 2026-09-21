@@ -24,7 +24,8 @@ final class KimiConnection: ObservableObject {
     @Published var manualPermissions: [String: Bool] = [:]
     @Published var drafts: [String: String] = [:]
     @Published var attachments: [String: [URL]] = [:]
-    @Published var sending = false
+    @Published private var sendingSessions: Set<String> = []
+    var sending: Bool { selectedId.map { sendingSessions.contains($0) } ?? false }
     @Published var loading = false
     @Published private(set) var snapshotReady = false
     @Published var loadingOlder = false
@@ -46,6 +47,9 @@ final class KimiConnection: ObservableObject {
     private var savedSelectionKey: String { "kimi.session.\(host.id)" }
 
     init(host: SSHHost) { self.host = host; selectedId = UserDefaults.standard.string(forKey: savedSelectionKey) }
+
+    /// Isolated connection checks use a local HTTP fixture without SSH.
+    init(host: SSHHost, api: KimiAPI) { self.host = host; self.api = api; online = true }
 
     func connect() {
         disconnect()
@@ -287,15 +291,30 @@ final class KimiConnection: ObservableObject {
         sessions.removeAll { $0.id == id }; onSessionsChanged?()
     }
 
-    func createSession(title: String, cwd: String) async throws {
+    @discardableResult
+    func createSession(title: String, cwd: String, initialPrompt: String? = nil, model: String? = nil) async throws -> KimiSession {
         guard let api else { throw WorkbenchError("请先连接 Kimi Web") }
         var body: [String: JSONValue] = ["metadata": .object(["cwd": .string(cwd)])]
         if !title.isEmpty { body["title"] = .string(title) }
         let session = try await api.post(KimiSession.self, "/api/v1/sessions", body: .object(body))
-        try await refreshSessions(); select(session.id)
+        if let initialPrompt { drafts[session.id] = initialPrompt }
+        if let model { modelChoices[session.id] = model }
+        sessions.insert(session, at: 0); onSessionsChanged?()
+        select(session.id)
+        return session
     }
     func sendPrompt() {
-        guard online, snapshotReady, !loading, !sending, let api, let id = selectedId else { return }
+        guard online, snapshotReady, !loading, !sending, let id = selectedId else { return }
+        Task { await sendPrompt(for: id) }
+    }
+    /// A newly created session can accept a prompt before its display snapshot loads.
+    /// Keep the destination fixed even when catalog updates restore another tab.
+    func sendPrompt(for id: String) async {
+        guard online, let api else {
+            actionError = "发送未确认，草稿已保留。请先连接 Kimi。"
+            return
+        }
+        guard !sendingSessions.contains(id) else { return }
         let text = drafts[id] ?? ""
         let files = attachments[id] ?? []
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
@@ -304,34 +323,32 @@ final class KimiConnection: ObservableObject {
         // The server accepts an unrecognised thinking value without failing, so the
         // level is resolved against the target model before it is sent.
         let effort = activeModel(for: id)?.resolve(thinkingChoices[id])
-        sending = true; actionError = nil
-        Task {
-            defer { sending = false }
-            do {
-                var content: [JSONValue] = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    ? [] : [.object(["type": .string("text"), "text": .string(text)])]
-                for file in files {
-                    let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-                    let uploaded = try await api.upload(file, mediaType: mime)
-                    guard let fileId = uploaded["id"].string else { throw WorkbenchError("附件上传响应缺少文件标识") }
-                    if mime.hasPrefix("image/") {
-                        content.append(.object(["type": .string("image"), "source": .object(["kind": .string("file"), "file_id": .string(fileId)]), "name": .string(file.lastPathComponent)]))
-                    } else {
-                        content.append(.object(["type": .string("file"), "file_id": .string(fileId), "name": .string(file.lastPathComponent), "media_type": .string(mime), "size": uploaded["size"]]))
-                    }
+        sendingSessions.insert(id); actionError = nil
+        defer { sendingSessions.remove(id) }
+        do {
+            var content: [JSONValue] = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? [] : [.object(["type": .string("text"), "text": .string(text)])]
+            for file in files {
+                let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+                let uploaded = try await api.upload(file, mediaType: mime)
+                guard let fileId = uploaded["id"].string else { throw WorkbenchError("附件上传响应缺少文件标识") }
+                if mime.hasPrefix("image/") {
+                    content.append(.object(["type": .string("image"), "source": .object(["kind": .string("file"), "file_id": .string(fileId)]), "name": .string(file.lastPathComponent)]))
+                } else {
+                    content.append(.object(["type": .string("file"), "file_id": .string(fileId), "name": .string(file.lastPathComponent), "media_type": .string(mime), "size": uploaded["size"]]))
                 }
-                var body: [String: JSONValue] = [
-                    "prompt_id": .string("awb_\(UUID().uuidString)"),
-                    "content": .array(content)
-                ]
-                if let model = chosenModel, !model.isEmpty { body["model"] = .string(model) }
-                if let effort { body["thinking"] = .string(effort.rawValue) }
-                if manual { body["permission_mode"] = .string("manual") }
-                _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
-                if drafts[id] == text { drafts[id] = "" }
-                attachments[id]?.removeAll { files.contains($0) }
-            } catch { actionError = "发送未确认，草稿已保留。请检查会话后再发送。\n\(error.localizedDescription)" }
-        }
+            }
+            var body: [String: JSONValue] = [
+                "prompt_id": .string("awb_\(UUID().uuidString)"),
+                "content": .array(content)
+            ]
+            if let model = chosenModel, !model.isEmpty { body["model"] = .string(model) }
+            if let effort { body["thinking"] = .string(effort.rawValue) }
+            if manual { body["permission_mode"] = .string("manual") }
+            _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
+            if drafts[id] == text { drafts[id] = "" }
+            attachments[id]?.removeAll { files.contains($0) }
+        } catch { actionError = "发送未确认，草稿已保留。请检查会话后再发送。\n\(error.localizedDescription)" }
     }
     /// The model the next prompt will actually use: the explicit choice if any,
     /// otherwise whatever the session is already configured with.
