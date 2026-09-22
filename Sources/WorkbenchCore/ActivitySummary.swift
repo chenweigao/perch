@@ -34,12 +34,16 @@ public struct ActivitySummaryBatch: Hashable {
     public static func latest(in entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
                               isRunning: Bool, enabled: Bool) -> Self? {
         guard enabled else { return nil }
+        var closed = !isRunning
         for entry in entries.reversed() {
             if entry.presentation == .message && entry.messages.first?.role == "user" { break }
-            guard entry.isExploration, entry.messages.count >= 6 else { continue }
-            return Self(groupID: entry.id,
-                        tools: entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] },
-                        closed: !isRunning || entry.id != entries.last?.id)
+            if entry.activity {
+                let completed = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
+                    .filter { [.succeeded, .returned, .failed].contains($0.status) }
+                if completed.count >= 6 { return Self(groupID: entry.id, tools: completed, closed: closed) }
+            }
+            // The current thought preview belongs to the still-growing stage.
+            if entry.presentation != .thinkingPreview { closed = true }
         }
         return nil
     }
@@ -52,7 +56,7 @@ public struct ActivitySummaryBatch: Hashable {
         // the client. The request contains at most twelve short activity labels.
         records = completed.suffix(12).map { tool in
             Record(id: tool.id, tool: String(tool.name.prefix(48)),
-                   target: String(ToolPresentation.target(tool).prefix(160)),
+                   target: String(ToolPresentation.summaryTarget(tool).prefix(160)),
                    status: tool.status == .succeeded ? "succeeded" : tool.status == .failed ? "failed" : "returned")
         }
         self.closed = closed

@@ -33,7 +33,7 @@ struct KimiMessageView: View {
                 switch part.type {
                 case "text":
                     if part.isRuntimeContext {
-                        DisclosureGroup("运行上下文") { KimiMarkdown(text: part.text ?? "") }.disclosureGroupStyle(WorkbenchDisclosureStyle()).font(.system(size: 11)).foregroundStyle(.secondary)
+                        DisclosureGroup("运行上下文") { KimiMarkdown(text: part.text ?? "") }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
                     } else { KimiMarkdown(text: part.text ?? "").environment(\.isConversationBodyText, true) }
                 case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
                 case "tool_use":
@@ -368,7 +368,10 @@ private final class ConversationDocumentView: NSView {
     }
     private func rebuildOffsets() {
         laidOutRange = nil
-        geometry = ConversationRowGeometry(heights: heights)
+        let spacing = contents.indices.map { index -> CGFloat in
+            index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess ? 6 : 18
+        }
+        geometry = ConversationRowGeometry(heights: heights, spacingAfter: spacing)
     }
     private var viewportRect: CGRect {
         if let clip = observedClip {
@@ -910,14 +913,9 @@ private struct ThoughtToggle: View {
     let title: String
     @Binding var expanded: Bool
     var body: some View {
-        Button { expanded.toggle() } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.right").font(.system(size: 9)).rotationEffect(.degrees(expanded ? 90 : 0))
-                Text(title)
-                Spacer(minLength: 0)
-            }.font(.system(size: 12)).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
-        }.buttonStyle(WorkbenchDisclosureButtonStyle()).accessibilityValue(expanded ? "Expanded" : "Collapsed")
+        DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
+            Text(title).font(.system(size: 12)).foregroundStyle(.secondary)
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
     }
 }
 

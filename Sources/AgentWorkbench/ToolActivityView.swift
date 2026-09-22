@@ -1,8 +1,8 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Adjacent exploration folds as one group. Active and uncertain calls remain
-/// visible, and expanding preserves each call's identity and source order.
+/// Process records keep source order inside one compact disclosure. Active,
+/// failed and uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
     @RememberedExpansion("expanded") private var expanded
@@ -13,53 +13,46 @@ struct KimiActivityView: View {
     var summary: String? = nil
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let context = entry.messages.filter { $0.content.contains(where: \.isRuntimeContext) }
+        let grouped = entry.messages.count > 1 || items.isEmpty
         VStack(alignment: .leading, spacing: 4) {
-            if items.count > 1 {
+            if grouped {
                 if let summary {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("自动摘要").font(.system(size: 11)).foregroundStyle(.secondary)
                         Text(summary).font(.system(size: 13)).lineLimit(2).textSelection(.enabled)
-                    }.padding(.bottom, 3)
+                    }.padding(.leading, 20).padding(.bottom, 3)
                 }
-                Button { expanded.toggle() } label: {
-                    HStack(spacing: 7) {
-                        Image(systemName: expanded ? "chevron.down" : "chevron.right").font(.system(size: 9))
-                        Text("读取与搜索 · \(items.count) 次调用")
+                DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
+                    HStack(spacing: 8) {
+                        if entry.isExploration { Text("读取与搜索 · \(items.count) 次调用").fixedSize() }
+                        else if !items.isEmpty { Text("过程记录 · \(items.count) 次调用").fixedSize() }
+                        else { Text("运行上下文").fixedSize() }
+                        if !expanded {
+                            Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)
+                                .foregroundStyle(.tertiary)
+                        }
                         Spacer(minLength: 0)
                         let attention = items.filter { $0.staysVisible && $0.status != .running }.count
-                        if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange) }
+                        if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
                     }.font(.system(size: 12)).foregroundStyle(.secondary)
-                        .frame(minHeight: 28).contentShape(Rectangle())
-                }.buttonStyle(WorkbenchDisclosureButtonStyle()).accessibilityValue(expanded ? "Expanded" : "Collapsed")
-                if !expanded {
-                    ForEach(Array(items.filter { !$0.staysVisible }.suffix(2))) { tool in
-                        Text(ToolPresentation.target(tool)).font(.system(size: 12)).foregroundStyle(.secondary)
-                            .lineLimit(1).truncationMode(.middle).padding(.leading, 17)
-                            .help(ToolPresentation.path(tool) ?? ToolPresentation.target(tool))
+                }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
+            }
+            // Each phase contains one part. Offset identity also handles thoughts
+            // and tools originating in the same provider message without collisions.
+            ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
+                if let id = message.content.first?.toolCallId, let tool = tools[id] {
+                    if !grouped || expanded || tool.staysVisible {
+                        KimiToolCard(tool: tool, onExpand: { if !grouped { expanded = true } })
+                            .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
+                            .padding(.leading, grouped && expanded ? 20 : 0)
                     }
+                } else if expanded {
+                    KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
+                        .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
+                        .padding(.leading, 20)
                 }
             }
-            ForEach(items.filter { items.count == 1 || expanded || $0.staysVisible }) { tool in
-                KimiToolCard(tool: tool, onExpand: { if items.count == 1 { expanded = true } })
-                    .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
-            }
-            if !context.isEmpty {
-                Button { expanded.toggle() } label: {
-                    Label("Runtime context", systemImage: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
-                }.buttonStyle(WorkbenchDisclosureButtonStyle()).accessibilityValue(expanded ? "Expanded" : "Collapsed")
-            }
-            if expanded {
-                ForEach(context) { message in
-                    // Context may share a message with a tool already rendered above.
-                    ForEach(Array(message.content.enumerated()), id: \.offset) { _, part in
-                        if part.isRuntimeContext { KimiMarkdown(text: part.text ?? "").font(.system(size: 11)).foregroundStyle(.secondary) }
-                    }
-                }
-            }
-        }.padding(.vertical, 2)
+        }
     }
 }
 
@@ -68,7 +61,7 @@ struct KimiToolCard: View {
     var onExpand: (() -> Void)? = nil
     @RememberedExpansion("expanded") private var expanded
     private var summary: String {
-        ToolPresentation.target(tool)
+        ToolPresentation.compactTarget(tool)
     }
     private var label: String {
         switch tool.status {
@@ -111,21 +104,18 @@ struct KimiToolCard: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: symbol).font(.system(size: 11)).accessibilityHidden(true)
-                Text(ToolPresentation.action(tool.name)).font(.system(size: 11)).lineLimit(1)
+                Text(ToolPresentation.action(tool.name)).font(.system(size: 12)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
-                if let directory = ToolPresentation.directory(tool) {
-                    Text(directory).lineLimit(1).truncationMode(.middle).foregroundStyle(.tertiary).layoutPriority(-1)
-                }
                 Spacer(minLength: 0)
                 if attention || tool.status == .running {
+                    Image(systemName: symbol).font(.system(size: 11)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: 11)).fixedSize()
                 }
             }.font(.system(size: 12)).foregroundStyle(attention ? Color.orange : Color.secondary)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
-                .help(Text(verbatim: [ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
-        }.disclosureGroupStyle(WorkbenchDisclosureStyle()).padding(.vertical, 1)
+                .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
             .onChange(of: expanded) { _, value in if value { onExpand?() } }
     }
 }

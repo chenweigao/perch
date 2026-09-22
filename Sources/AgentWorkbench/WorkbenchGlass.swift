@@ -30,6 +30,7 @@ private struct WorkbenchGlassSurface: ViewModifier {
 /// Keep the disclosure's binding and semantics while making its full header clickable.
 struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
     var minHeight: CGFloat = 28
+    var horizontalPadding: CGFloat = 8
 
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -40,7 +41,7 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
                         .frame(width: 12).accessibilityHidden(true)
                     configuration.label
                     Spacer(minLength: 0)
-                }.padding(.horizontal, 8)
+                }.padding(.horizontal, horizontalPadding)
                     .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
                     .contentShape(Rectangle())
             }.buttonStyle(WorkbenchDisclosureButtonStyle())

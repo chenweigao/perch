@@ -7,14 +7,15 @@ public struct ConversationRowGeometry {
     public let totalHeight: CGFloat
     private let heights: [CGFloat]
 
-    public init(heights: [CGFloat]) {
+    public init(heights: [CGFloat], spacingAfter: [CGFloat]? = nil) {
+        precondition(spacingAfter == nil || spacingAfter!.count == heights.count)
         self.heights = heights
         var y: CGFloat = 0
-        offsets = heights.map { height in
-            defer { y += height + 18 }
+        offsets = heights.enumerated().map { index, height in
+            defer { y += height + (index < heights.count - 1 ? spacingAfter?[index] ?? 18 : 0) }
             return y
         }
-        totalHeight = max(0, y - (heights.isEmpty ? 0 : 18))
+        totalHeight = max(0, y)
     }
 
     /// First row whose content extends below y; count means no intersection.

@@ -18,7 +18,7 @@ func checkActivitySummaries() throws {
     precondition(grouped[0].id == first[0].id, "Appending calls must retain the reading/expansion anchor")
     let boundary: [String: Any] = ["id": "guidance", "role": "user", "created_at": "", "content": [["type": "text", "text": "Check the UI too"]]]
     let separated = ConversationTimelineEntry.make(try messages([read(0), boundary, read(1), read(2, name: "Edit"), read(3)]), isRunning: true)
-    precondition(separated.filter(\.activity).count == 4, "Never group across user guidance or edits")
+    precondition(separated.filter(\.activity).count == 2 && separated.last?.messages.count == 3, "User guidance splits stages; edits retain their place inside the next stage")
     let commentary: [String: Any] = ["id": "progress", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "Checking the next file"]]]
     let withCommentary = ConversationTimelineEntry.make(try messages([read(0), commentary, read(1)]), isRunning: true)
     precondition(withCommentary.count == 3)
@@ -38,6 +38,44 @@ func checkActivitySummaries() throws {
                     output: .string("PRIVATE_SOURCE_CONTENT"), status: status)
     }
     let available = Dictionary(uniqueKeysWithValues: (0..<50).map { ("call\($0)", tool($0)) })
+    let thought: [String: Any] = ["id": "thought", "role": "assistant", "created_at": "", "content": [
+        ["type": "thinking", "thinking": "PRIVATE_REASONING"]]]
+    let context: [String: Any] = ["id": "context", "role": "user", "created_at": "", "content": [
+        ["type": "text", "text": "<skill-loaded name='fixture'>PRIVATE_CONTEXT</skill-loaded>"]]]
+    let interleaved = try messages([thought, read(10, name: "Bash"), thought.merging(["id": "thought2"]) { _, new in new },
+        read(11, name: "TodoList"), read(0), read(1), read(2), context, read(3), read(4), read(5)])
+    let stage = ConversationTimelineEntry.make(interleaved, isRunning: true)
+    precondition(stage.count == 1 && stage[0].activity && !stage[0].isExploration)
+    precondition(stage.flatMap(\.messages).flatMap(\.content) == interleaved.flatMap(\.content))
+    let preview = ConversationTimelineEntry.make(Array(interleaved.prefix(1)), isRunning: true)
+    precondition(stage[0].id == preview[0].id, "The live thought anchor survives folding into a process stage")
+    var stageTools = available
+    stageTools["call10"] = VisibleTool(id: "call10", name: "Bash", input: .object(["command": .string("git status")]), status: .returned)
+    stageTools["call11"] = VisibleTool(id: "call11", name: "TodoList", input: nil, status: .returned)
+    let stageBatch = ActivitySummaryBatch.latest(in: stage, tools: stageTools, isRunning: true, enabled: true)
+    precondition(stageBatch?.completedCount == 8 && stageBatch?.shouldRequest(after: nil) == true,
+                 "Two groups of three reads separated by thoughts/context/other tools share a summary threshold")
+    let liveThought = try messages([thought.merging(["id": "live-thought"]) { _, new in new }])
+    let withLiveThought = ConversationTimelineEntry.make(interleaved + liveThought, isRunning: true)
+    precondition(withLiveThought.last?.presentation == .thinkingPreview)
+    precondition(ActivitySummaryBatch.latest(in: withLiveThought, tools: stageTools, isRunning: true, enabled: true)?.closed == false,
+                 "A live thought preview must not prematurely close the activity stage")
+    let withBoundary = ConversationTimelineEntry.make(interleaved + (try messages([commentary])) + liveThought, isRunning: true)
+    precondition(ActivitySummaryBatch.latest(in: withBoundary, tools: stageTools, isRunning: true, enabled: true)?.closed == true,
+                 "Visible commentary closes the preceding stage even when a new thought follows")
+    var incomplete = available
+    for index in [3, 4, 5, 10] { incomplete["call\(index)"] = tool(index, status: .running) }
+    precondition(ActivitySummaryBatch.latest(in: stage, tools: incomplete, isRunning: true, enabled: true) == nil,
+                 "Thought/context records and unfinished tools never count as completed activity")
+    let shell = VisibleTool(id: "shell", name: "Bash", input: .object([
+        "command": .string("git worktree add /private-project/worktree && echo PRIVATE_SCRIPT")]), status: .failed)
+    precondition(ToolPresentation.compactTarget(shell) == "git worktree")
+    precondition(ToolPresentation.summaryTarget(shell) == "Bash", "Shell arguments must not enter summary requests")
+    precondition(ToolPresentation.recentTargets([tool(0), tool(0), tool(0)]) == "File0.swift")
+    precondition(ToolPresentation.recentTargets([tool(0), shell, tool(1)]) == "File0.swift · File1.swift")
+    let privateBatch = ActivitySummaryBatch(groupID: "private", tools: [shell], closed: true)
+    let privateInput = String(decoding: try JSONEncoder().encode(privateBatch.records), as: UTF8.self)
+    precondition(!privateInput.contains("PRIVATE_SCRIPT") && !privateInput.contains("private-project"))
     precondition(ActivitySummaryBatch.latest(in: long, tools: available, isRunning: true, enabled: false) == nil)
     let latest = ActivitySummaryBatch.latest(in: long, tools: available, isRunning: true, enabled: true)
     precondition(latest?.groupID == long[1].id && latest?.completedCount == 24 && latest?.closed == true,

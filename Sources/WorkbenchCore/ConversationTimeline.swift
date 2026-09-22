@@ -4,22 +4,24 @@ import Foundation
 public struct ConversationTimelineEntry: Identifiable, Equatable {
     public enum Presentation: Equatable { case message, activity, commentary, progress, thinkingPreview, thinkingDetails, record, thinkingRecord, emptyOutput }
     public private(set) var messages: [KimiMessage]
-    public let presentation: Presentation
+    public private(set) var presentation: Presentation
     public var activity: Bool { presentation == .activity }
+    public var isProcess: Bool { [.activity, .thinkingPreview, .thinkingDetails, .thinkingRecord].contains(presentation) }
     public var isExploration: Bool {
-        guard activity, let part = messages.first?.content.first, part.type == "tool_use" else { return false }
-        return ToolPresentation.isExploration(part.toolName ?? "")
+        activity && messages.allSatisfy { message in
+            message.content.allSatisfy { $0.type == "tool_use" && ToolPresentation.isExploration($0.toolName ?? "") }
+        }
     }
     private let partOffset: Int
     public var id: String {
         // A tool can start in live state, arrive as an orphan result, then gain its
         // persisted call. Its activity host must survive all three source IDs.
-        if presentation == .activity {
-            for message in messages {
-                for part in message.content {
-                    if let toolID = part.toolCallId { return "activity:tool:\(toolID)" }
-                }
-            }
+        if presentation == .activity, let first = messages.first?.content.first, let toolID = first.toolCallId {
+            return "activity:tool:\(toolID)"
+        }
+        // A thought that later gains tools keeps its original reading anchor.
+        if messages.first?.content.first?.type == "thinking" {
+            return "thinking:\(messages[0].id):\(partOffset)"
         }
         let channel: String
         switch presentation {
@@ -50,6 +52,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
             }
             let hasText = phases.contains { visible($0.message.content[0]) }
             let lastText = phases.lastIndex { visible($0.message.content[0]) }
+            let process: [Presentation] = [.activity, .thinkingDetails, .thinkingRecord]
             for (index, phase) in phases.enumerated() {
                 let presentation: Presentation
                 let part = phase.message.content[0]
@@ -63,13 +66,14 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 } else {
                     presentation = !running && final == nil && index == lastText ? .record : .progress
                 }
-                // Only adjacent read/search calls fold together. Text, thoughts,
-                // edits and user guidance retain their original boundaries.
-                // Bound the expanded host as well as the collapsed row: long
-                // read-only runs must not create a thousands-of-tools SwiftUI tree.
-                if part.type == "tool_use", ToolPresentation.isExploration(part.toolName ?? ""),
-                   entries.last?.isExploration == true, entries.last!.messages.count < 24 {
+                // Process records share one bounded host between visible messages.
+                // Live thinking stays visible; completed thoughts join tools/context
+                // in source order. Never merge across a turn boundary.
+                if process.contains(presentation), let previous = entries.last,
+                   process.contains(previous.presentation), previous.messages.count < 24,
+                   index > 0 {
                     entries[entries.count - 1].messages.append(phase.message)
+                    if presentation == .activity { entries[entries.count - 1].presentation = .activity }
                 } else {
                     entries.append(Self(messages: [phase.message], presentation: presentation, partOffset: phase.offset))
                 }

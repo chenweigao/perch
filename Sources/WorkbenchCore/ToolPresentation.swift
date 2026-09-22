@@ -29,4 +29,35 @@ public enum ToolPresentation {
         guard let path = path(tool), path.contains("/") else { return nil }
         return (path as NSString).deletingLastPathComponent
     }
+
+    /// Compact display only. The full command remains in the tooltip and input.
+    public static func compactTarget(_ tool: VisibleTool) -> String {
+        if let command = tool.input?["command"].string {
+            if let description = tool.input?["description"].string, !description.isEmpty {
+                return String(description.prefix(80))
+            }
+            let words = command.split(maxSplits: 2, whereSeparator: \.isWhitespace)
+            guard let first = words.first else { return tool.name }
+            let executable = (String(first) as NSString).lastPathComponent
+            return String((executable == "git" ? words.prefix(2).joined(separator: " ") : executable).prefix(80))
+        }
+        return target(tool)
+    }
+
+    public static func recentTargets(_ tools: [VisibleTool]) -> String {
+        var seen = Set<String>(), labels: [String] = []
+        for tool in tools.reversed() where !tool.staysVisible {
+            let label = compactTarget(tool)
+            if seen.insert(label).inserted { labels.append(label) }
+            if labels.count == 2 { break }
+        }
+        return labels.reversed().joined(separator: " · ")
+    }
+
+    /// Other tool kinds join summaries without exposing shell arguments or edits.
+    public static func summaryTarget(_ tool: VisibleTool) -> String {
+        if let path = path(tool) { return (path as NSString).lastPathComponent }
+        if isExploration(tool.name), let pattern = tool.input?["pattern"].string { return pattern }
+        return tool.name
+    }
 }

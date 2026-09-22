@@ -1,13 +1,23 @@
 # Compact activity and optional summaries
 
-Perch groups adjacent read/search calls in the transcript. Tool inputs and outputs
-remain available in source order. Running calls, failed calls, missing results,
-disconnections and approvals remain visible when the group is collapsed. A group
-contains at most 24 calls so expanding a long run does not mount an unbounded view.
-Progress text, user guidance, edits and other tool kinds keep separate boundaries.
+Perch folds consecutive tools, completed thoughts and runtime context into one
+process region between user messages and visible agent commentary/replies. Expanding
+preserves source order, including Bash, TodoList and edits. Live thinking stays
+visible as a separate preview until that thought finishes. A pure thinking-only
+response retains its existing presentation. Each region contains at most 24 process
+records so expansion does not mount an unbounded view tree.
 
-Filenames lead tool labels; full paths remain in the tooltip and input details.
-Opening a single tool before more calls arrive keeps its group expanded. The
+Collapsed regions show one line with the call count and up to two distinct recent
+targets. Running calls, failed calls, missing results, disconnections and approvals
+remain visible underneath. Completed calls stay in the disclosure. All process
+headers use the same 12 pt arrow slot, 8 pt title gap and zero outer inset; only
+expanded child records are indented. Adjacent process rows have a 6 pt gap while
+body-message boundaries retain 18 pt spacing.
+
+Filenames lead tool labels. Shell headers use the supplied description, or the
+executable (`git` plus its subcommand); full commands remain in the tooltip and
+input details. Status icons follow the label so Bash and Thoughts titles align.
+Opening a single tool before more records arrive keeps its group expanded. The
 composer owns the stop button; unavailable thinking-effort settings are explained
 inside the model selector rather than occupying the composer toolbar.
 
@@ -38,13 +48,17 @@ Settings provides a direct **Disable** action without deleting the saved endpoin
 
 ## What is sent and when
 
-Only the current user turn's recent read/search activity is eligible. Perch sends
+Only the current user turn's recent process activity is eligible. Perch sends
 up to 12 completed calls, with short tool names, filenames or search terms, IDs and their
-reported outcome. Source contents, tool output, user messages and reasoning are
-not included. The service is asked to describe observed activity, not infer that
+reported outcome. For non-search tools only the tool name and optional filename
+are included; shell arguments, edit contents, tool descriptions, runtime context,
+user messages and reasoning are not sent. The service is asked to describe observed activity, not infer that
 reading a file verified its correctness. `returned` is distinct from `succeeded`.
 
-The first request requires six completed calls in a group. Later requests require
+The first request requires six completed calls in a process region. Thoughts and
+runtime context do not split the count or count as calls; two sets of three reads
+separated by these records can trigger one summary. Other completed tool kinds
+also count. The 24-record rendering limit starts another region. Later requests require
 six new completed calls, a correction to an included event, or changed records
 when that group closes. Requests start at least 15 seconds apart within the
 selected transcript, with only one in flight. Pending changes coalesce to the
@@ -69,7 +83,7 @@ Disabled summaries, preview fixtures and disconnected transcripts skip summary
 candidate lookup and label construction. When enabled, lookup walks backward from
 the transcript tail and stops at the first eligible group or the user boundary;
 it does not first scan the entire current turn to locate that boundary.
-Activity row IDs stop at the first tool ID without allocating arrays for the
+Activity row IDs use the first record's anchor without allocating arrays for the
 whole group. Identical summary text does not publish another transcript update.
 Displayed summaries retain text only; request deduplication retains the attempted
 batches separately. Both caches last for the selected transcript and grow with
@@ -83,7 +97,7 @@ event stream and viewport on macOS before changing cache or rendering architectu
 
 ## Validation
 
-- `swift run WorkbenchChecks` includes grouping/order/identity, live/error
+- `swift run WorkbenchChecks` includes interleaved process grouping/order/identity, live/error
   preservation, summary opt-in, bounded inputs, update thresholds, request shape,
   credential exclusion and truncated-response checks.
 - `scripts/build.sh` validates the complete macOS app. The existing reading,
@@ -91,6 +105,11 @@ event stream and viewport on macOS before changing cache or rendering architectu
 - `python3 scripts/check-scroll-following.py` checks the production scroll path
   after the macOS build. Check single-tool → group expansion, reading while new
   events arrive, and deferred summary publication in the native preview/app.
+- `scripts/build-tool-visibility-preview.sh` includes a **交错过程记录** toggle
+  mirroring the reported Thoughts → Bash → Thoughts → TodoList → three reads →
+  Bash → runtime context → three searches → failed Bash sequence, plus a running
+  read. With summaries disabled, verify the single-line header, deduplicated
+  target, visible failure/live tool, aligned headers, and source order on expansion.
 - Localization and public-source checks run on Linux as well as macOS.
 
 Development verification on Linux does not establish SwiftUI rendering, Keychain

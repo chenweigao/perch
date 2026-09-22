@@ -42,6 +42,12 @@ func checkConversationRowGeometry() {
     let empty = ConversationRowGeometry(heights: [])
     precondition(empty.totalHeight == 0 && empty.firstIntersecting(0) == 0 && empty.end(before: 1) == 0 && empty.readingRow(at: 0) == nil)
 
+    let compact = ConversationRowGeometry(heights: [28, 28, 100], spacingAfter: [6, 18, 18])
+    precondition(compact.offsets == [0, 34, 80] && compact.totalHeight == 180)
+    precondition(compact.readingRow(at: 33) == 0 && compact.firstIntersecting(33) == 1)
+    precondition(compact.readingRow(at: 79) == 1 && compact.firstIntersecting(79) == 2,
+                 "Mixed process/body spacing must preserve reading anchors in both gaps")
+
     // Follow the same retention policy across a long history in both directions.
     let long = ConversationRowGeometry(heights: (0..<10_000).map { CGFloat(40 + $0 % 700) })
     var cached: Set<Int> = []

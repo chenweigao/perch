@@ -25,12 +25,12 @@ func checkNativeAgents() throws {
     """
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(raw.utf8))
     let running = ConversationTimelineEntry.make(Array(messages.dropLast()), isRunning: true)
-    precondition(running.count == 6 && running[2].activity && running[4].presentation == .progress && running[5].activity, "Latest commentary must remain visible while running")
+    precondition(running.count == 5 && running[2].activity && running[3].presentation == .progress && running[4].activity, "Latest commentary must remain visible while running")
     let done = ConversationTimelineEntry.make(messages)
-    precondition(done.count == 8 && done[2].activity && done.last?.presentation == .message)
-    precondition(done[3].messages.contains { $0.id == "n" }, "Runtime notifications must not split a user turn")
+    precondition(done.count == 6 && done[2].activity && done.last?.presentation == .message)
+    precondition(done[2].messages.contains { $0.id == "n" }, "Runtime notifications must not split a user turn")
     precondition(done.last?.messages[0].content.count == 1 && done.last?.messages[0].content[0].text == "最终结果")
-    precondition(done.first { $0.presentation == .thinkingDetails }?.messages[0].content[0].type == "thinking")
+    precondition(done[4].messages.last?.content.first?.type == "thinking")
     let host = UUID()
     let refs = [SessionKind.kimi, .omp, .qoder, .dsh, .codex, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
     precondition(Set(refs.map(\.id)).count == 6)

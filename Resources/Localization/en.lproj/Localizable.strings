@@ -539,3 +539,5 @@
 "配置活动摘要…" = "Configure activity summaries…";
 "默认关闭" = "Off by default";
 "摘要被输出上限截断，请关闭思考或更换模型。" = "The summary hit its output limit. Disable thinking or choose another model.";
+"过程记录 · %lld 次调用" = "Activity · %lld calls";
+"运行上下文" = "Runtime context";
