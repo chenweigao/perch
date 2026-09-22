@@ -811,11 +811,15 @@ struct NavigationPreviewApp: App {
     @State private var status = "点击响应与滚动长帧验收 fixture"
     var body: some Scene {
         WindowGroup("导航与滚动验收") {
+            if ProcessInfo.processInfo.environment["NAVIGATION_JOINT"] == "1" {
+                JointInteractionPreview()
+            } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text(status).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                 NavigationHost(model: model).frame(width: 1180, height: 600)
             }.padding(16).frame(minWidth: 1212, minHeight: 700)
                 .task { await run() }
+            }
         }.defaultSize(width: 1240, height: 800)
     }
     private func run() async {
