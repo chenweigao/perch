@@ -123,6 +123,14 @@ struct SessionDirectoryView: View {
             .onChange(of: sessions.filter(\.online).map(\.id)) { _, ids in
                 if selection.map({ !ids.contains($0) }) ?? true { selection = ids.first }
             }
+            #if PERCH_ACCEPTANCE
+            // Drives the real local @State path; no alternate search algorithm.
+            // The probe does not evaluate `sessions` or add another filter pass.
+            .onReceive(NativeAcceptanceProbe.shared.$query) { value in
+                if let value { query = value }
+            }
+            .background(NativeDirectoryProbe(query: query, selection: selection))
+            #endif
     }
     private func open(_ item: WorkspaceSession) {
         guard item.online else { return }

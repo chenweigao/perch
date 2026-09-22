@@ -136,6 +136,23 @@ final class WorkbenchModel: ObservableObject {
         })
     }
 
+    #if PERCH_ACCEPTANCE
+    /// Full production views with an in-memory native transport. No restoration,
+    /// persistence, connection startup, notifications or user workspace observers.
+    init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection) {
+        kimi = KimiConnection(setupHost: host)
+        self.native = native
+        connections = []
+        configuredEnvironment = true
+        selectedHostID = host.id
+        canSaveWorkspace = false
+        allSessions = sessions
+        workspace.starred = Array(sessions.prefix(4).map(\.reference))
+        workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
+                                          sessions: Array(sessions.prefix(12).map(\.reference)))]
+    }
+    #endif
+
     private func registerEnvironment(kimi: KimiConnection, native: NativeAgentConnection) {
         kimiEnvironments[kimi.host.id] = kimi; nativeEnvironments[native.host.id] = native
         native.onSessionsChanged = { [weak self] in self?.catalogChanged() }

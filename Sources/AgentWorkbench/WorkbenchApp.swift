@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
+#if !PERCH_ACCEPTANCE
 @main
 struct WorkbenchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
@@ -66,6 +67,8 @@ struct WorkbenchApp: App {
         Settings { WorkbenchSettings(model: model).environment(\.locale, appLanguage.resolvedLocale) }
     }
 }
+
+#endif
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var model: WorkbenchModel?

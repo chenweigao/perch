@@ -1,0 +1,59 @@
+{
+  "manifest": {
+    "commit": "3e24df30391775ddb03b957d614c87abf0911437",
+    "source_sha256": "ef94054171612cd7f674819aae86e2e3ac684c75946c2cbcb51d97ee0404ab6f",
+    "configuration": "release -O",
+    "defines": [
+      "PERCH_ACCEPTANCE",
+      "TRANSCRIPT_CHECKS"
+    ],
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "window_points": [
+      1280,
+      820
+    ],
+    "history_turns": 200,
+    "catalog_sessions": 500,
+    "resident_snapshot_count": 8,
+    "binary_sha256": "18c929c6daa1cd35d951dcaa104f1a3f95a7ed483b850b765657ef6ee47f7d93",
+    "capture": "frames",
+    "mode": "frames",
+    "positive_control": true,
+    "supervisor_pid": 42855,
+    "exit_code": 0,
+    "elapsed_s": 89.091812583,
+    "behavior_passed": true,
+    "missing_schemas": [],
+    "trace_exported": true,
+    "app_frame_events_verified": true,
+    "failure": "known main-thread stall was not reported as an app hitch; zero-hitch results cannot certify smoothness"
+  },
+  "frame-summary": {
+    "status": "usable_frame_events",
+    "target_pid": 42860,
+    "activity_start_ns": 3550982208,
+    "activity_end_ns": 6750032083,
+    "activity_seconds": 3.199049875,
+    "update_duration": {
+      "count": 148,
+      "median_ms": 1.833791,
+      "p95_ms": 9.171666,
+      "max_ms": 11.662875
+    },
+    "joined_frame_lifetime": {
+      "count": 147,
+      "median_ms": 23.984666,
+      "p95_ms": 27.787458,
+      "max_ms": 28.932875
+    },
+    "unmatched_update_count": 0,
+    "detected_app_hitches": 0,
+    "hitch_duration_ms": 0.0,
+    "positive_control_spans": 1,
+    "positive_control_detected": false,
+    "frame_lifetime_end_gap_covering_control_ms": [
+      166.666583
+    ],
+    "note": "Durations are Instruments update/frame lifetime records, not screen refresh intervals. Zero detected hitches in a short run does not establish smoothness; the detector needs a separate positive control."
+  }
+}

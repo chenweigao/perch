@@ -1,0 +1,8 @@
+{
+  "assertion": "global frames present but target app update table empty must fail",
+  "exit_code": 1,
+  "result": {
+    "status": "unverified",
+    "error": "no app-owned updates joined to displayed frame lifetimes"
+  }
+}

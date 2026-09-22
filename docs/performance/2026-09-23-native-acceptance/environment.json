@@ -1,0 +1,19 @@
+{
+  "collected": "after fixed repeats; configuration snapshot, not load control",
+  "hardware": {
+    "machine_model": "Mac15,6",
+    "chip_type": "Apple M3 Pro",
+    "physical_memory": "18 GB",
+    "number_processors": "proc 11:5:6:0"
+  },
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+  "displays": [
+    {
+      "_name": "Color LCD",
+      "spdisplays_main": "spdisplays_yes",
+      "spdisplays_online": "spdisplays_yes"
+    }
+  ],
+  "power": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=22151267)\t100%; charged; 0:00 remaining present: true",
+  "thermal_and_background_load": "not controlled or recorded during repeats"
+}

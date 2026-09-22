@@ -1,0 +1,8 @@
+{
+  "build": "passed",
+  "codesign_deep_strict": "passed",
+  "workbench_checks": "passed",
+  "live_ssh": "skipped: WORKBENCH_LIVE_HOST unset",
+  "acceptance_symbols_absent": true,
+  "binary": "build/Perch.app/Contents/MacOS/AgentWorkbench"
+}

@@ -1,0 +1,53 @@
+{
+  "manifest": {
+    "commit": "3e24df30391775ddb03b957d614c87abf0911437",
+    "source_sha256": "33cb9a8786ef8e3b4191cac75af172f3339d31ed8d4770cd751e134345172f3c",
+    "configuration": "release -O",
+    "defines": [
+      "PERCH_ACCEPTANCE",
+      "TRANSCRIPT_CHECKS"
+    ],
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "window_points": [
+      1280,
+      820
+    ],
+    "history_turns": 200,
+    "catalog_sessions": 500,
+    "resident_snapshot_count": 8,
+    "binary_sha256": "24cacc6c55894c924a1ee00550b5258c951eb079f96bf21e10525e6d37c06b6f",
+    "capture": "frames",
+    "mode": "frames",
+    "supervisor_pid": 34014,
+    "exit_code": 0,
+    "elapsed_s": 75.25576745800001,
+    "behavior_passed": true,
+    "missing_schemas": [],
+    "trace_exported": true
+  },
+  "frame-summary": {
+    "status": "usable_frame_events",
+    "target_pid": 34020,
+    "activity_start_ns": 3798738375,
+    "activity_end_ns": 6820755333,
+    "activity_seconds": 3.022016958,
+    "update_duration": {
+      "count": 126,
+      "median_ms": 2.022375,
+      "p95_ms": 8.398125,
+      "max_ms": 11.451125
+    },
+    "joined_frame_lifetime": {
+      "count": 125,
+      "median_ms": 25.163541,
+      "p95_ms": 28.991208,
+      "max_ms": 29.077375
+    },
+    "unmatched_update_count": 0,
+    "detected_app_hitches": 0,
+    "hitch_duration_ms": 0.0,
+    "positive_control_spans": 0,
+    "positive_control_detected": false,
+    "note": "Durations are Instruments update/frame lifetime records, not screen refresh intervals. Zero detected hitches in a short run does not establish smoothness; the detector needs a separate positive control."
+  }
+}

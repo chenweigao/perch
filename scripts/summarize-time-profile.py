@@ -45,7 +45,7 @@ for row in root.findall(".//row"):
     own_names = set()
     for frame in frames:
         binary = frame.find("binary")
-        if binary is not None and resolve(binary).attrib.get("name") in ("NavigationPreview", "PerchDemo", "WorkbenchPreview", "AgentWorkbench"):
+        if binary is not None and resolve(binary).attrib.get("name") in ("NavigationPreview", "PerchDemo", "WorkbenchPreview", "AgentWorkbench", "NativeAcceptance"):
             own_names.add(frame.attrib.get("name", "unknown"))
     for name in own_names:
         app_frames[name] += weight

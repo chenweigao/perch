@@ -1,0 +1,317 @@
+{
+  "manifest": {
+    "commit": "3e24df30391775ddb03b957d614c87abf0911437",
+    "source_sha256": "33cb9a8786ef8e3b4191cac75af172f3339d31ed8d4770cd751e134345172f3c",
+    "configuration": "release -O",
+    "defines": [
+      "PERCH_ACCEPTANCE",
+      "TRANSCRIPT_CHECKS"
+    ],
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "window_points": [
+      1280,
+      820
+    ],
+    "history_turns": 200,
+    "catalog_sessions": 500,
+    "resident_snapshot_count": 8,
+    "binary_sha256": "24cacc6c55894c924a1ee00550b5258c951eb079f96bf21e10525e6d37c06b6f",
+    "capture": "cpu",
+    "mode": "all",
+    "supervisor_pid": 37484,
+    "exit_code": 0,
+    "elapsed_s": 20.837799750000002,
+    "behavior_passed": true,
+    "missing_schemas": [],
+    "trace_exported": true
+  },
+  "phase-cpu": {
+    "DirectoryQuery": {
+      "intervals": 12,
+      "main_sampled_cpu_ms": 1314.0,
+      "relevant_inclusive_ms": {
+        "SessionKind.label.getter": 670.0,
+        "WorkspaceSession.matchesSearch(_:)": 782.0,
+        "closure #1 in SessionDirectoryView.sessions.getter": 788.0,
+        "AppLanguage.localization.getter": 444.0,
+        "AppLanguage.resolvedLocale.getter": 445.0,
+        "SessionDirectoryView.body.getter": 232.0,
+        "SessionDirectoryView.sessions.getter": 792.0,
+        "closure #1 in closure #1 in closure #5 in closure #1 in SessionDirectoryView.body.getter": 448.0,
+        "closure #1 in closure #5 in closure #1 in SessionDirectoryView.body.getter": 448.0,
+        "closure #5 in closure #1 in SessionDirectoryView.body.getter": 448.0,
+        "closure #1 in WorkspaceSession.matchesSearch(_:)": 84.0,
+        "closure #3 in SessionDirectoryView.body.getter": 118.0,
+        "closure #1 in closure #1 in SessionDirectoryView.body.getter": 1.0,
+        "closure #1 in SessionDirectoryView.body.getter": 1.0,
+        "specialized implicit closure #1 in WorkspaceSession.matchesSearch(_:)": 6.0,
+        "closure #1 in closure #1 in closure #1 in closure #5 in closure #1 in SessionDirectoryView.body.getter": 3.0,
+        "implicit closure #2 in SessionDirectoryView.body.getter": 2.0,
+        "AccessibilityNode.resolvedLocale.getter": 1.0
+      },
+      "top": [
+        [
+          "AgentWorkbench_main",
+          1253.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+          1253.0
+        ],
+        [
+          "NSApplicationMain",
+          1253.0
+        ],
+        [
+          "runApp<A>(_:)",
+          1253.0
+        ],
+        [
+          "static NativeAcceptanceApp.$main()",
+          1253.0
+        ],
+        [
+          "specialized runApp(_:)",
+          1253.0
+        ],
+        [
+          "start",
+          1253.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+          1253.0
+        ],
+        [
+          "-[NSApplication run]",
+          1253.0
+        ],
+        [
+          "static App.main()",
+          1253.0
+        ],
+        [
+          "_DPSNextEvent",
+          1252.0
+        ],
+        [
+          "_DPSBlockUntilNextEventMatchingListInMode",
+          1252.0
+        ],
+        [
+          "_BlockUntilNextEventMatchingListInMode",
+          1252.0
+        ],
+        [
+          "RunCurrentEventLoopInMode",
+          1252.0
+        ],
+        [
+          "_CFRunLoopRunSpecificWithOptions",
+          1252.0
+        ],
+        [
+          "ReceiveNextEventCommon",
+          1252.0
+        ],
+        [
+          "<deduplicated_symbol>",
+          1109.0
+        ],
+        [
+          "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+          1094.0
+        ],
+        [
+          "__CFRunLoopDoObservers",
+          1094.0
+        ],
+        [
+          "specialized static NSRunLoop.flushObservers()",
+          972.0
+        ]
+      ]
+    },
+    "SessionSwitch": {
+      "intervals": 16,
+      "main_sampled_cpu_ms": 1834.0,
+      "relevant_inclusive_ms": {
+        "ConversationEntryController.measure(width:)": 198.0,
+        "SessionKind.label.getter": 5.0,
+        "AppLanguage.localization.getter": 3.0,
+        "AppLanguage.resolvedLocale.getter": 3.0
+      },
+      "top": [
+        [
+          "<deduplicated_symbol>",
+          1550.0
+        ],
+        [
+          "_CFRunLoopRunSpecificWithOptions",
+          1231.0
+        ],
+        [
+          "RunCurrentEventLoopInMode",
+          1225.0
+        ],
+        [
+          "ReceiveNextEventCommon",
+          1223.0
+        ],
+        [
+          "_BlockUntilNextEventMatchingListInMode",
+          1222.0
+        ],
+        [
+          "-[NSApplication run]",
+          1219.0
+        ],
+        [
+          "_DPSBlockUntilNextEventMatchingListInMode",
+          1218.0
+        ],
+        [
+          "NSApplicationMain",
+          1217.0
+        ],
+        [
+          "_DPSNextEvent",
+          1216.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+          1215.0
+        ],
+        [
+          "specialized runApp(_:)",
+          1215.0
+        ],
+        [
+          "runApp<A>(_:)",
+          1213.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+          1213.0
+        ],
+        [
+          "static App.main()",
+          1212.0
+        ],
+        [
+          "AgentWorkbench_main",
+          1207.0
+        ],
+        [
+          "static NativeAcceptanceApp.$main()",
+          1207.0
+        ],
+        [
+          "start",
+          1204.0
+        ],
+        [
+          "AG::Graph::UpdateStack::update()",
+          1107.0
+        ],
+        [
+          "NSPerformVisuallyAtomicChange",
+          911.0
+        ],
+        [
+          "0x18f0dd518",
+          897.0
+        ]
+      ]
+    },
+    "HistoryScroll": {
+      "intervals": 1,
+      "main_sampled_cpu_ms": 1330.0,
+      "relevant_inclusive_ms": {
+        "ConversationEntryController.measure(width:)": 186.0
+      },
+      "top": [
+        [
+          "-[NSApplication run]",
+          904.0
+        ],
+        [
+          "NSApplicationMain",
+          903.0
+        ],
+        [
+          "runApp<A>(_:)",
+          903.0
+        ],
+        [
+          "specialized runApp(_:)",
+          903.0
+        ],
+        [
+          "AgentWorkbench_main",
+          902.0
+        ],
+        [
+          "static NativeAcceptanceApp.$main()",
+          902.0
+        ],
+        [
+          "static App.main()",
+          902.0
+        ],
+        [
+          "start",
+          901.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+          860.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+          860.0
+        ],
+        [
+          "_DPSNextEvent",
+          856.0
+        ],
+        [
+          "_DPSBlockUntilNextEventMatchingListInMode",
+          854.0
+        ],
+        [
+          "_BlockUntilNextEventMatchingListInMode",
+          854.0
+        ],
+        [
+          "ReceiveNextEventCommon",
+          854.0
+        ],
+        [
+          "RunCurrentEventLoopInMode",
+          853.0
+        ],
+        [
+          "_CFRunLoopRunSpecificWithOptions",
+          853.0
+        ],
+        [
+          "<deduplicated_symbol>",
+          804.0
+        ],
+        [
+          "__CFRunLoopRun",
+          578.0
+        ],
+        [
+          "CA::Transaction::commit()",
+          448.0
+        ],
+        [
+          "NSPerformVisuallyAtomicChange",
+          421.0
+        ]
+      ]
+    }
+  }
+}

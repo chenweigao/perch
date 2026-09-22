@@ -1,0 +1,413 @@
+[
+  {
+    "run": 1,
+    "manifest": {
+      "commit": "3e24df30391775ddb03b957d614c87abf0911437",
+      "source_sha256": "ef94054171612cd7f674819aae86e2e3ac684c75946c2cbcb51d97ee0404ab6f",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "18c929c6daa1cd35d951dcaa104f1a3f95a7ed483b850b765657ef6ee47f7d93",
+      "capture": "none",
+      "mode": "all",
+      "positive_control": false,
+      "supervisor_pid": 47533,
+      "exit_code": 0,
+      "elapsed_s": 12.641761584000001,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "all",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "rss_after_mb": 187.65625,
+      "rss_before_mb": 148.015625,
+      "rss_settled_mb": 187.65625,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 54.489250062033534,
+        "median": 3.0430416809394956,
+        "p95": 24.57883337046951
+      },
+      "search_sheet": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 112.18408332206309,
+          "median": 96.28591663204134,
+          "p95": 109.34087506029755
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_directory": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 179.20741660054773,
+          "median": 146.16395835764706,
+          "p95": 174.23858330585063
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_switch_ms": {
+        "count": 16,
+        "max": 234.9439999088645,
+        "median": 126.74324994441122,
+        "p95": 199.63895832188427
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "host_counts_last": {
+        "mounted": 3,
+        "retained": 15,
+        "retired": 0
+      },
+      "host_observations": 120
+    }
+  },
+  {
+    "run": 2,
+    "manifest": {
+      "commit": "3e24df30391775ddb03b957d614c87abf0911437",
+      "source_sha256": "ef94054171612cd7f674819aae86e2e3ac684c75946c2cbcb51d97ee0404ab6f",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "18c929c6daa1cd35d951dcaa104f1a3f95a7ed483b850b765657ef6ee47f7d93",
+      "capture": "none",
+      "mode": "all",
+      "positive_control": false,
+      "supervisor_pid": 47686,
+      "exit_code": 0,
+      "elapsed_s": 12.481047208000001,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "all",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "rss_after_mb": 186.875,
+      "rss_before_mb": 147.859375,
+      "rss_settled_mb": 186.875,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 54.79112500324845,
+        "median": 3.1247916631400585,
+        "p95": 20.399375003762543
+      },
+      "search_sheet": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 135.53829165175557,
+          "median": 104.09525001887232,
+          "p95": 115.17400003504008
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_directory": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 188.1374582881108,
+          "median": 152.46033330913633,
+          "p95": 187.3057084158063
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_switch_ms": {
+        "count": 16,
+        "max": 283.096875064075,
+        "median": 119.96000004000962,
+        "p95": 181.66437500622123
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "host_counts_last": {
+        "mounted": 3,
+        "retained": 15,
+        "retired": 0
+      },
+      "host_observations": 120
+    }
+  },
+  {
+    "run": 3,
+    "manifest": {
+      "commit": "3e24df30391775ddb03b957d614c87abf0911437",
+      "source_sha256": "ef94054171612cd7f674819aae86e2e3ac684c75946c2cbcb51d97ee0404ab6f",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "18c929c6daa1cd35d951dcaa104f1a3f95a7ed483b850b765657ef6ee47f7d93",
+      "capture": "none",
+      "mode": "all",
+      "positive_control": false,
+      "supervisor_pid": 47795,
+      "exit_code": 0,
+      "elapsed_s": 12.869328292,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "all",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "rss_after_mb": 187.1875,
+      "rss_before_mb": 148.1875,
+      "rss_settled_mb": 187.1875,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 50.54845835547894,
+        "median": 3.167000017128885,
+        "p95": 22.317333263345063
+      },
+      "search_sheet": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 131.43133325502276,
+          "median": 97.04183333087713,
+          "p95": 110.80470832530409
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_directory": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 183.86104167439044,
+          "median": 143.3967084158212,
+          "p95": 172.33266669791192
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_switch_ms": {
+        "count": 16,
+        "max": 244.0642083529383,
+        "median": 155.0196666503325,
+        "p95": 224.13129173219204
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "host_counts_last": {
+        "mounted": 3,
+        "retained": 15,
+        "retired": 0
+      },
+      "host_observations": 120
+    }
+  }
+]
