@@ -1,0 +1,1089 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 991,
+  "main_sample_rows": 912,
+  "all_threads_sampled_cpu_ms": 991.0,
+  "main_sampled_cpu_ms": 912.0,
+  "main_cpu_ms_per_second": {
+    "4": 117.0,
+    "5": 362.0,
+    "6": 220.0,
+    "7": 177.0,
+    "8": 36.0
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      824.0
+    ],
+    [
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+      489.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      479.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      479.0
+    ],
+    [
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      454.0
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      418.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      407.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      407.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      407.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      407.0
+    ],
+    [
+      "_DPSNextEvent",
+      407.0
+    ],
+    [
+      "-[NSApplication run]",
+      407.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      407.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      407.0
+    ],
+    [
+      "NSApplicationMain",
+      406.0
+    ],
+    [
+      "specialized runApp(_:)",
+      405.0
+    ],
+    [
+      "runApp<A>(_:)",
+      404.0
+    ],
+    [
+      "static App.main()",
+      403.0
+    ],
+    [
+      "start",
+      402.0
+    ],
+    [
+      "main",
+      402.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      307.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      281.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      271.0
+    ],
+    [
+      "ConversationSearch.hits(in:query:running:)",
+      262.0
+    ],
+    [
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      259.0
+    ],
+    [
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      254.0
+    ],
+    [
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      249.0
+    ],
+    [
+      "specialized Collection.map<A, B>(_:)",
+      249.0
+    ],
+    [
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      239.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      236.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      236.0
+    ],
+    [
+      "__CFRunLoopDoObservers",
+      235.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      234.0
+    ],
+    [
+      "GraphHost.flushTransactions()",
+      232.0
+    ],
+    [
+      "AG::Subgraph::update(unsigned int)",
+      232.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      232.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      224.0
+    ],
+    [
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      222.0
+    ],
+    [
+      "specialized static NSRunLoop.flushObservers()",
+      222.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      222.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "langid_consume_string",
+      32.0
+    ],
+    [
+      "specialized BidirectionalCollection._index(_:offsetBy:)",
+      28.0
+    ],
+    [
+      "objc_msgSend",
+      25.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      22.0
+    ],
+    [
+      "_xzm_xzone_malloc_tiny",
+      16.0
+    ],
+    [
+      "_platform_memmove",
+      14.0
+    ],
+    [
+      "swift_retain",
+      13.0
+    ],
+    [
+      "swift_bridgeObjectRelease",
+      11.0
+    ],
+    [
+      "HVF::LoaderHVGL::loadPartAtIndex(unsigned long, HVF::PartCache&, unsigned int)",
+      11.0
+    ],
+    [
+      "__CF_IS_OBJC",
+      11.0
+    ],
+    [
+      "_xzm_free",
+      9.0
+    ],
+    [
+      "String.UTF16View._nativeCopy(into:alignedRange:)",
+      9.0
+    ],
+    [
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      9.0
+    ],
+    [
+      "swift_release",
+      9.0
+    ],
+    [
+      "_CFStringGetCStringPtrInternal",
+      9.0
+    ],
+    [
+      "_StringBreadcrumbs.init(_:)",
+      8.0
+    ],
+    [
+      "_xzm_xzone_malloc",
+      8.0
+    ],
+    [
+      "_platform_memcmp",
+      8.0
+    ],
+    [
+      "_DDScannerHandleState",
+      8.0
+    ],
+    [
+      "_convertJSONString",
+      7.0
+    ],
+    [
+      "icu::UCharsTrie::branchNext(char16_t const*, int, int)",
+      7.0
+    ],
+    [
+      "___chkstk_darwin",
+      6.0
+    ],
+    [
+      "getMethodNoSuper_nolock(objc_class*, objc_selector*)",
+      6.0
+    ],
+    [
+      "mach_msg2_trap",
+      6.0
+    ],
+    [
+      "DDLexerDeterministicScan",
+      6.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      535.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      479.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      479.0
+    ],
+    [
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      454.0
+    ],
+    [
+      "main",
+      402.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      281.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      271.0
+    ],
+    [
+      "ConversationSearch.hits(in:query:running:)",
+      262.0
+    ],
+    [
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      259.0
+    ],
+    [
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      249.0
+    ],
+    [
+      "specialized Collection.map<A, B>(_:)",
+      249.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      236.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      236.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      232.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      224.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      222.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      158.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      142.0
+    ],
+    [
+      "NavigationModel.warm(_:)",
+      96.0
+    ],
+    [
+      "NavigationRunner.warmedTargets()",
+      96.0
+    ],
+    [
+      "static NavigationHistory.conversation(turns:salt:streaming:)",
+      96.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      93.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      93.0
+    ],
+    [
+      "specialized KimiSnapshot.init(from:)",
+      50.0
+    ],
+    [
+      "KimiSnapshot.init(from:)",
+      50.0
+    ],
+    [
+      "protocol witness for Decodable.init(from:) in conformance KimiPage<A>",
+      50.0
+    ],
+    [
+      "KimiPage.init(from:)",
+      50.0
+    ],
+    [
+      "specialized KimiMessage.init(from:)",
+      49.0
+    ],
+    [
+      "KimiMessage.init(from:)",
+      49.0
+    ],
+    [
+      "settle #1 () in NavigationRunner.readingInteractions(searchOnly:)",
+      44.0
+    ],
+    [
+      "partial apply for closure #1 in ConversationDocumentView.init(frame:)",
+      39.0
+    ],
+    [
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      39.0
+    ],
+    [
+      "ConversationDocumentView.reveal(_:)",
+      39.0
+    ],
+    [
+      "ConversationDocumentView.revealEntry(_:highlight:)",
+      39.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.sizeThatFits(_:nsView:context:) in conformance ConversationDocumentHost",
+      37.0
+    ]
+  ],
+  "app_stack_examples": {
+    "<deduplicated_symbol>": [
+      "res_countArrayItems",
+      "0x18e4d6abc",
+      "ures_getByKey",
+      "icu::ZoneMeta::getCanonicalCLDRID(icu::UnicodeString const&, UErrorCode&)",
+      "icu::OlsonTimeZone::OlsonTimeZone(UResourceBundle const*, UResourceBundle const*, icu::UnicodeString const&, UErrorCode&)",
+      "0x18e5de6d8",
+      "icu::TimeZone::createTimeZone(icu::UnicodeString const&)",
+      "uatimezone_open",
+      "_TimeZoneICU.init(identifier:)",
+      "TimeZoneCache.State.bridgedFixed(_:)",
+      "closure #1 in TimeZoneCache.bridgedFixed(_:)",
+      "partial apply for closure #1 in TimeZoneCache.bridgedFixed(_:)",
+      "@objc static NSTimeZone._timeZoneWith(name:)",
+      "-[__NSPlaceholderTimeZone initWithName:]",
+      "+[NSTimeZone timeZoneWithName:]",
+      "-[NSISO8601DateFormatter init]",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "NavigationPreviewApp.run()": [
+      "res_countArrayItems",
+      "0x18e4d6abc",
+      "ures_getByKey",
+      "icu::ZoneMeta::getCanonicalCLDRID(icu::UnicodeString const&, UErrorCode&)",
+      "icu::OlsonTimeZone::OlsonTimeZone(UResourceBundle const*, UResourceBundle const*, icu::UnicodeString const&, UErrorCode&)",
+      "0x18e5de6d8",
+      "icu::TimeZone::createTimeZone(icu::UnicodeString const&)",
+      "uatimezone_open",
+      "_TimeZoneICU.init(identifier:)",
+      "TimeZoneCache.State.bridgedFixed(_:)",
+      "closure #1 in TimeZoneCache.bridgedFixed(_:)",
+      "partial apply for closure #1 in TimeZoneCache.bridgedFixed(_:)",
+      "@objc static NSTimeZone._timeZoneWith(name:)",
+      "-[__NSPlaceholderTimeZone initWithName:]",
+      "+[NSTimeZone timeZoneWithName:]",
+      "-[NSISO8601DateFormatter init]",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "closure #2 in closure #1 in NavigationPreviewApp.body.getter": [
+      "res_countArrayItems",
+      "0x18e4d6abc",
+      "ures_getByKey",
+      "icu::ZoneMeta::getCanonicalCLDRID(icu::UnicodeString const&, UErrorCode&)",
+      "icu::OlsonTimeZone::OlsonTimeZone(UResourceBundle const*, UResourceBundle const*, icu::UnicodeString const&, UErrorCode&)",
+      "0x18e5de6d8",
+      "icu::TimeZone::createTimeZone(icu::UnicodeString const&)",
+      "uatimezone_open",
+      "_TimeZoneICU.init(identifier:)",
+      "TimeZoneCache.State.bridgedFixed(_:)",
+      "closure #1 in TimeZoneCache.bridgedFixed(_:)",
+      "partial apply for closure #1 in TimeZoneCache.bridgedFixed(_:)",
+      "@objc static NSTimeZone._timeZoneWith(name:)",
+      "-[__NSPlaceholderTimeZone initWithName:]",
+      "+[NSTimeZone timeZoneWithName:]",
+      "-[NSISO8601DateFormatter init]",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "NavigationRunner.readingInteractions(searchOnly:)": [
+      "static NavigationHistory.conversation(turns:salt:streaming:)",
+      "NavigationModel.warm(_:)",
+      "NavigationRunner.warmedTargets()",
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "main": [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      "implicit closure #2 in implicit closure #1 in GraphHost.flushTransactions()",
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "closure #1 in static Update.ensure<A>(_:)",
+      "static Update.ensure<A>(_:)",
+      "partial apply for closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "main",
+      "start"
+    ],
+    "specialized Sequence.flatMap<A>(_:)": [
+      "__open_nocancel",
+      "open$NOCANCEL",
+      "__opendir2",
+      "_CFIterateDirectory",
+      "_CFBundleGetBundleVersionForURL",
+      "_CFBundleCreate",
+      "_CFBundleEnsureBundleExistsForImagePath",
+      "_CFBundleGetBundleWithIdentifier",
+      "DDScannerCreateWithTypeAndLocale",
+      "DDScannerCreate",
+      "-[NSDataDetector initWithTypes:error:]",
+      "@nonobjc NSDataDetector.init(types:)",
+      "NSDataDetector.__allocating_init(types:)",
+      "one-time initialization function for linkDetector",
+      "_dispatch_client_callout",
+      "_dispatch_once_callout",
+      "ReplyDocument.linkDetector.unsafeMutableAddressor",
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "static ReplyDocument.linkBareURLs(_:)",
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      "specialized static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.parse(_:)",
+      "ReplyContent.body.getter",
+      "closure #1 in ViewBodyAccessor.updateBody(of:changed:)",
+      "ViewBodyAccessor.updateBody(of:changed:)",
+      "protocol witness for BodyAccessor.updateBody(of:changed:) in conformance ViewBodyAccessor<A>",
+      "closure #1 in StaticBody.updateValue()",
+      "StaticBody.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetValue",
+      "specialized UnaryLayoutComputer.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "StackLayout.makeChildren()",
+      "specialized ViewLayoutEngine.init(layout:context:children:)",
+      "<deduplicated_symbol>",
+      "specialized StatefulRule<>.updateLayoutComputer<A>(layout:environment:attributes:)",
+      "specialized DynamicLayoutComputer.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.dimensions(in:)",
+      "StackLayout.UnmanagedImplementation.resize(_:proposal:proxy:)",
+      "specialized StackLayout.UnmanagedImplementation.sizeChildrenIdeally(in:minorProposalForChild:)",
+      "specialized StackLayout.UnmanagedImplementation.placeChildren1(in:minorProposalForChild:)",
+      "StackLayout.UnmanagedImplementation.placeChildren(in:)",
+      "<deduplicated_symbol>",
+      "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+      "ViewLayoutEngine.sizeThatFits(_:)",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FixedSizeLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "specialized static ViewGraph.sizeThatFits(_:layoutComputer:insets:)",
+      "ViewGraph.sizeThatFits(_:)",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater._sizeThatFits(_:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._sizeThatFits(_:)",
+      "NSHostingController.sizeThatFits(in:)",
+      "ConversationEntryController.measure(width:)",
+      "ConversationDocumentView.refreshVisibleRows()",
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      "PlatformViewRepresentableAdaptor.updateViewProvider(_:context:)",
+      "closure #1 in closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "ViewRendererHost.performExternalUpdate(_:)",
+      "closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "closure #1 in PlatformViewChild.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetValue",
+      "InvalidatableLeafLayoutComputer.view.getter",
+      "InvalidatableLeafLayoutComputer.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "LayoutProxy.size(in:)",
+      "_FrameLayout.sizeThatFits(in:context:child:)",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.dimensions(in:)",
+      "StackLayout.UnmanagedImplementation.resize(_:proposal:proxy:)",
+      "specialized StackLayout.UnmanagedImplementation.sizeChildrenIdeally(in:minorProposalForChild:)",
+      "specialized StackLayout.UnmanagedImplementation.placeChildren1(in:minorProposalForChild:)",
+      "StackLayout.UnmanagedImplementation.placeChildren(in:)",
+      "<deduplicated_symbol>",
+      "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+      "ViewLayoutEngine.sizeThatFits(_:)",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FrameLayout.sizeThatFits(in:context:child:)",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutComputer.sizeThatFits(_:)",
+      "specialized static ScrollViewUtilities.sizeThatFits(in:contentComputer:axes:)",
+      "closure #1 in ScrollViewLayoutComputer.Engine.sizeThatFits(_:)",
+      "ViewSizeCache.get(_:makeValue:)",
+      "protocol witness for LayoutEngine.sizeThatFits(_:) in conformance ScrollViewLayoutComputer.Engine",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "specialized GeometryReaderLayout.placeSubviews(in:proposal:subviews:cache:)",
+      "closure #1 in ViewLayoutEngine.childGeometries(at:origin:)",
+      "ViewLayoutEngine.childGeometries(at:origin:)",
+      "LayoutEngineBox.childGeometries(at:origin:)",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Subgraph::update(unsigned int)",
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "closure #1 in static Update.ensure<A>(_:)",
+      "static Update.ensure<A>(_:)",
+      "partial apply for closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "main",
+      "start"
+    ],
+    "static ReplyDocument.parse(_:)": [
+      "__open_nocancel",
+      "open$NOCANCEL",
+      "__opendir2",
+      "_CFIterateDirectory",
+      "_CFBundleGetBundleVersionForURL",
+      "_CFBundleCreate",
+      "_CFBundleEnsureBundleExistsForImagePath",
+      "_CFBundleGetBundleWithIdentifier",
+      "DDScannerCreateWithTypeAndLocale",
+      "DDScannerCreate",
+      "-[NSDataDetector initWithTypes:error:]",
+      "@nonobjc NSDataDetector.init(types:)",
+      "NSDataDetector.__allocating_init(types:)",
+      "one-time initialization function for linkDetector",
+      "_dispatch_client_callout",
+      "_dispatch_once_callout",
+      "ReplyDocument.linkDetector.unsafeMutableAddressor",
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "static ReplyDocument.linkBareURLs(_:)",
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      "specialized static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.parse(_:)",
+      "ReplyContent.body.getter",
+      "closure #1 in ViewBodyAccessor.updateBody(of:changed:)",
+      "ViewBodyAccessor.updateBody(of:changed:)",
+      "protocol witness for BodyAccessor.updateBody(of:changed:) in conformance ViewBodyAccessor<A>",
+      "closure #1 in StaticBody.updateValue()",
+      "StaticBody.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetValue",
+      "specialized UnaryLayoutComputer.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "StackLayout.makeChildren()",
+      "specialized ViewLayoutEngine.init(layout:context:children:)",
+      "<deduplicated_symbol>",
+      "specialized StatefulRule<>.updateLayoutComputer<A>(layout:environment:attributes:)",
+      "specialized DynamicLayoutComputer.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.dimensions(in:)",
+      "StackLayout.UnmanagedImplementation.resize(_:proposal:proxy:)",
+      "specialized StackLayout.UnmanagedImplementation.sizeChildrenIdeally(in:minorProposalForChild:)",
+      "specialized StackLayout.UnmanagedImplementation.placeChildren1(in:minorProposalForChild:)",
+      "StackLayout.UnmanagedImplementation.placeChildren(in:)",
+      "<deduplicated_symbol>",
+      "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+      "ViewLayoutEngine.sizeThatFits(_:)",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FixedSizeLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "specialized static ViewGraph.sizeThatFits(_:layoutComputer:insets:)",
+      "ViewGraph.sizeThatFits(_:)",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater._sizeThatFits(_:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._sizeThatFits(_:)",
+      "NSHostingController.sizeThatFits(in:)",
+      "ConversationEntryController.measure(width:)",
+      "ConversationDocumentView.refreshVisibleRows()",
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      "PlatformViewRepresentableAdaptor.updateViewProvider(_:context:)",
+      "closure #1 in closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "ViewRendererHost.performExternalUpdate(_:)",
+      "closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "closure #1 in PlatformViewChild.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetValue",
+      "InvalidatableLeafLayoutComputer.view.getter",
+      "InvalidatableLeafLayoutComputer.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "LayoutProxy.size(in:)",
+      "_FrameLayout.sizeThatFits(in:context:child:)",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.dimensions(in:)",
+      "StackLayout.UnmanagedImplementation.resize(_:proposal:proxy:)",
+      "specialized StackLayout.UnmanagedImplementation.sizeChildrenIdeally(in:minorProposalForChild:)",
+      "specialized StackLayout.UnmanagedImplementation.placeChildren1(in:minorProposalForChild:)",
+      "StackLayout.UnmanagedImplementation.placeChildren(in:)",
+      "<deduplicated_symbol>",
+      "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+      "ViewLayoutEngine.sizeThatFits(_:)",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FrameLayout.sizeThatFits(in:context:child:)",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_PaddingLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutProxy.size(in:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x237b40830",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "LayoutComputer.sizeThatFits(_:)",
+      "specialized static ScrollViewUtilities.sizeThatFits(in:contentComputer:axes:)",
+      "closure #1 in ScrollViewLayoutComputer.Engine.sizeThatFits(_:)",
+      "ViewSizeCache.get(_:makeValue:)",
+      "protocol witness for LayoutEngine.sizeThatFits(_:) in conformance ScrollViewLayoutComputer.Engine",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "specialized GeometryReaderLayout.placeSubviews(in:proposal:subviews:cache:)",
+      "closure #1 in ViewLayoutEngine.childGeometries(at:origin:)",
+      "ViewLayoutEngine.childGeometries(at:origin:)",
+      "LayoutEngineBox.childGeometries(at:origin:)",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Subgraph::update(unsigned int)",
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "closure #1 in static Update.ensure<A>(_:)",
+      "static Update.ensure<A>(_:)",
+      "partial apply for closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "main",
+      "start"
+    ],
+    "ConversationSearch.hits(in:query:running:)": [
+      "_platform_memcmp",
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      "MeCab::Dictionary::commonPrefixSearch(char const*, unsigned long, trie_search_result_type_t*, unsigned long) const",
+      "mecab_node_t* MeCab::Tokenizer<mecab_node_t, mecab_path_t>::lookup<false>(char const*, char const*, MeCab::Allocator<mecab_node_t, mecab_path_t>*, MeCab::Lattice*) const",
+      "bool MeCab::Viterbi::viterbi<false, false>(MeCab::Lattice*) const",
+      "MeCab::Viterbi::analyze(MeCab::Lattice*) const",
+      "MeCab::TaggerImpl::parse(MeCab::Lattice*) const",
+      "MeCab::TaggerImpl::parseToNode(char const*, unsigned long)",
+      "CoreNLP::MeCabSubTokenizer::setString(CoreNLP::UStringPiece const*, CFRange)",
+      "CoreNLP::WordDispatchTagger::getNextToken()",
+      "NLStringTokenizerAdvanceToNextToken",
+      "_fetchNextToken",
+      "_FillNextTokenInCache",
+      "DDTokenCacheGetTokensAtPosition",
+      "DDTokenCacheGetTokenOrSubtokenAfterPosition",
+      "DDScannerScanQuery",
+      "DDScannerScanStringWithRangeAndContextOffset",
+      "-[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]",
+      "-[NSRegularExpression(NSMatching) matchesInString:options:range:]",
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "static ReplyDocument.linkBareURLs(_:)",
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      "specialized static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.parse(_:)",
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      "specialized Collection.map<A, B>(_:)",
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "ConversationSearch.hits(in:query:running:)",
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "closure #1 in ConversationSearch.hits(in:query:running:)": [
+      "_platform_memcmp",
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      "MeCab::Dictionary::commonPrefixSearch(char const*, unsigned long, trie_search_result_type_t*, unsigned long) const",
+      "mecab_node_t* MeCab::Tokenizer<mecab_node_t, mecab_path_t>::lookup<false>(char const*, char const*, MeCab::Allocator<mecab_node_t, mecab_path_t>*, MeCab::Lattice*) const",
+      "bool MeCab::Viterbi::viterbi<false, false>(MeCab::Lattice*) const",
+      "MeCab::Viterbi::analyze(MeCab::Lattice*) const",
+      "MeCab::TaggerImpl::parse(MeCab::Lattice*) const",
+      "MeCab::TaggerImpl::parseToNode(char const*, unsigned long)",
+      "CoreNLP::MeCabSubTokenizer::setString(CoreNLP::UStringPiece const*, CFRange)",
+      "CoreNLP::WordDispatchTagger::getNextToken()",
+      "NLStringTokenizerAdvanceToNextToken",
+      "_fetchNextToken",
+      "_FillNextTokenInCache",
+      "DDTokenCacheGetTokensAtPosition",
+      "DDTokenCacheGetTokenOrSubtokenAfterPosition",
+      "DDScannerScanQuery",
+      "DDScannerScanStringWithRangeAndContextOffset",
+      "-[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]",
+      "-[NSRegularExpression(NSMatching) matchesInString:options:range:]",
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "static ReplyDocument.linkBareURLs(_:)",
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      "specialized static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.parse(_:)",
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      "specialized Collection.map<A, B>(_:)",
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "ConversationSearch.hits(in:query:running:)",
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)": [
+      "_platform_memcmp",
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      "(anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned int, unsigned long, unsigned long*, trie_search_result_type_t*, unsigned char const*)",
+      "MeCab::Dictionary::commonPrefixSearch(char const*, unsigned long, trie_search_result_type_t*, unsigned long) const",
+      "mecab_node_t* MeCab::Tokenizer<mecab_node_t, mecab_path_t>::lookup<false>(char const*, char const*, MeCab::Allocator<mecab_node_t, mecab_path_t>*, MeCab::Lattice*) const",
+      "bool MeCab::Viterbi::viterbi<false, false>(MeCab::Lattice*) const",
+      "MeCab::Viterbi::analyze(MeCab::Lattice*) const",
+      "MeCab::TaggerImpl::parse(MeCab::Lattice*) const",
+      "MeCab::TaggerImpl::parseToNode(char const*, unsigned long)",
+      "CoreNLP::MeCabSubTokenizer::setString(CoreNLP::UStringPiece const*, CFRange)",
+      "CoreNLP::WordDispatchTagger::getNextToken()",
+      "NLStringTokenizerAdvanceToNextToken",
+      "_fetchNextToken",
+      "_FillNextTokenInCache",
+      "DDTokenCacheGetTokensAtPosition",
+      "DDTokenCacheGetTokenOrSubtokenAfterPosition",
+      "DDScannerScanQuery",
+      "DDScannerScanStringWithRangeAndContextOffset",
+      "-[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]",
+      "-[NSRegularExpression(NSMatching) matchesInString:options:range:]",
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "static ReplyDocument.linkBareURLs(_:)",
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      "specialized static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.blocks(_:)",
+      "static ReplyDocument.parse(_:)",
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      "specialized Collection.map<A, B>(_:)",
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      "specialized Sequence.flatMap<A>(_:)",
+      "ConversationSearch.hits(in:query:running:)",
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ]
+  },
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}
