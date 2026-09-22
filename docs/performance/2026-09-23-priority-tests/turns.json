@@ -1,0 +1,239 @@
+{
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+    "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+  },
+  "commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+  "empty_conversation": true,
+  "history_prepend": true,
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "hover_dwell_and_exit": true,
+  "hover_frames_ms": {
+    "count": 36,
+    "max_ms": 9.318083291873336,
+    "median_ms": 4.139833385124803,
+    "over_16_7ms": 0,
+    "over_100ms": 0,
+    "p95_ms": 8.268416626378894
+  },
+  "hover_preserves_hosts": true,
+  "jumps": [
+    {
+      "actual": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0199a:0",
+      "expected": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0199a:0",
+      "initial_layout_ms": 2.3572916397824883,
+      "mounted": 1,
+      "offset": 0,
+      "passed": true,
+      "render_stages": {
+        "attributed_text": {
+          "count": 12,
+          "ms": 0.5429165903478861
+        },
+        "host_create": {
+          "count": 1,
+          "ms": 0.30387507285922766
+        },
+        "host_measure": {
+          "count": 1,
+          "ms": 8.28316668048501
+        },
+        "markdown_parse": {
+          "count": 1,
+          "ms": 2.021833322942257
+        },
+        "text_measure": {
+          "count": 12,
+          "ms": 1.2998749734833837
+        }
+      },
+      "retained": 1,
+      "selection_handler_ms": 0.05545828025788069,
+      "target_ready_ms": 21.131833316758275,
+      "turn": 200
+    },
+    {
+      "actual": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0000a:0",
+      "expected": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0000a:0",
+      "initial_layout_ms": 3.338041598908603,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "render_stages": {
+        "attributed_text": {
+          "count": 15,
+          "ms": 0.6278747459873557
+        },
+        "host_create": {
+          "count": 3,
+          "ms": 0.799291767179966
+        },
+        "host_measure": {
+          "count": 3,
+          "ms": 15.006458153948188
+        },
+        "markdown_parse": {
+          "count": 3,
+          "ms": 1.6249166801571846
+        },
+        "text_measure": {
+          "count": 34,
+          "ms": 1.0533328168094158
+        }
+      },
+      "retained": 3,
+      "selection_handler_ms": 0.12904161121696234,
+      "target_ready_ms": 38.352958275936544,
+      "turn": 1
+    },
+    {
+      "actual": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0100a:0",
+      "expected": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0100a:0",
+      "initial_layout_ms": 3.253291710279882,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "render_stages": {
+        "attributed_text": {
+          "count": 15,
+          "ms": 0.38395868614315987
+        },
+        "host_create": {
+          "count": 3,
+          "ms": 0.5489583127200603
+        },
+        "host_measure": {
+          "count": 3,
+          "ms": 9.665333316661417
+        },
+        "markdown_parse": {
+          "count": 3,
+          "ms": 0.9228334529325366
+        },
+        "text_measure": {
+          "count": 34,
+          "ms": 0.8862081449478865
+        }
+      },
+      "retained": 3,
+      "selection_handler_ms": 0.18508336506783962,
+      "target_ready_ms": 26.96145826485008,
+      "turn": 101
+    },
+    {
+      "actual": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0006a:0",
+      "expected": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0006a:0",
+      "initial_layout_ms": 3.2498749205842614,
+      "mounted": 7,
+      "offset": 0,
+      "passed": true,
+      "render_stages": {
+        "attributed_text": {
+          "count": 6,
+          "ms": 0.28804177418351173
+        },
+        "host_create": {
+          "count": 7,
+          "ms": 1.1911249021068215
+        },
+        "host_measure": {
+          "count": 7,
+          "ms": 17.95379165560007
+        },
+        "markdown_parse": {
+          "count": 3,
+          "ms": 0.8312501013278961
+        },
+        "text_measure": {
+          "count": 6,
+          "ms": 0.6577917374670506
+        }
+      },
+      "retained": 7,
+      "selection_handler_ms": 0.11116662062704563,
+      "target_ready_ms": 35.82545823883265,
+      "turn": 7
+    },
+    {
+      "actual": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0198a:0",
+      "expected": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0198a:0",
+      "initial_layout_ms": 2.75537499692291,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "render_stages": {
+        "attributed_text": {
+          "count": 13,
+          "ms": 0.5711248377338052
+        },
+        "host_create": {
+          "count": 3,
+          "ms": 0.7181249093264341
+        },
+        "host_measure": {
+          "count": 3,
+          "ms": 15.529291820712388
+        },
+        "markdown_parse": {
+          "count": 2,
+          "ms": 1.2936667772009969
+        },
+        "text_measure": {
+          "count": 14,
+          "ms": 3.3543750178068876
+        }
+      },
+      "retained": 3,
+      "selection_handler_ms": 0.11666666250675917,
+      "target_ready_ms": 46.07662500347942,
+      "turn": 199
+    },
+    {
+      "actual": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0050a:0",
+      "expected": "text:9B0BE7F9-C3FD-4406-8937-42586D5B7837:omp:session-1:0050a:0",
+      "initial_layout_ms": 2.210041624493897,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "render_stages": {
+        "attributed_text": {
+          "count": 15,
+          "ms": 0.3120832843706012
+        },
+        "host_create": {
+          "count": 3,
+          "ms": 0.3169584088027477
+        },
+        "host_measure": {
+          "count": 3,
+          "ms": 8.911333279684186
+        },
+        "markdown_parse": {
+          "count": 3,
+          "ms": 0.7036250317469239
+        },
+        "text_measure": {
+          "count": 34,
+          "ms": 0.762874842621386
+        }
+      },
+      "retained": 3,
+      "selection_handler_ms": 0.06074993871152401,
+      "target_ready_ms": 25.953250005841255,
+      "turn": 51
+    }
+  ],
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "turns",
+  "rapid_selection_coalescing": true,
+  "recreates_timeline": false,
+  "session_switch": true,
+  "sessions": 500,
+  "status": "passed",
+  "streaming_anchor_preserved": true,
+  "timestamp": "2026-09-22T16:26:41Z"
+}

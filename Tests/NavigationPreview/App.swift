@@ -352,6 +352,7 @@ final class NavigationRunner {
         var offset: CGFloat = 0
         var imageWaitStarted: TimeInterval?
         for _ in 0..<2_000 {
+            NavigationRenderMetrics.stages = [:]
             let started = CACurrentMediaTime()
             scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
             scroll.reflectScrolledClipView(scroll.contentView)
@@ -379,6 +380,7 @@ final class NavigationRunner {
             }
             trace.append(["requested_y": offset, "position": scroll.contentView.bounds.minY,
                           "document_height": scroll.documentView?.bounds.height ?? 0,
+                          "elapsed_ms": steps.last!, "render_stages": NavigationRenderMetrics.report,
                           "turns": frameTurns, "rows": nativeRows])
             let end = max(0, (scroll.documentView?.bounds.height ?? 0) - scroll.contentView.bounds.height)
             let position = scroll.contentView.bounds.minY
@@ -425,9 +427,11 @@ final class NavigationRunner {
         // controller cache as well as mounted views; detached hosts used to grow
         // with every newly visited row. Timings are application work, not FPS.
         var upwardSteps: [Double] = []
+        var upwardStages: [[String: Any]] = []
         var retention: [[String: Int]] = []
         var topPasses = 0
         for _ in 0..<2_000 {
+            NavigationRenderMetrics.stages = [:]
             let started = CACurrentMediaTime()
             let y = max(0, scroll.contentView.bounds.minY - scroll.contentView.bounds.height / 2)
             scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
@@ -435,6 +439,7 @@ final class NavigationRunner {
             await withCheckedContinuation { c in DispatchQueue.main.async { c.resume() } }
             host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
             upwardSteps.append((CACurrentMediaTime() - started) * 1_000)
+            upwardStages.append(NavigationRenderMetrics.report)
             guard let counts = ConversationTranscript.retainedHosts(in: scroll), counts.mounted > 0 else {
                 throw NavigationError("upward reading lost the transcript rows")
             }
@@ -448,6 +453,7 @@ final class NavigationRunner {
         guard topPasses == 3 else { throw NavigationError("upward reading never reached the beginning") }
         report["upward_reading_step_ms"] = statistics(upwardSteps)
         report["upward_reading_samples_ms"] = upwardSteps
+        report["upward_render_stages"] = upwardStages
         report["upward_host_counts"] = retention
         report["resident_mb_after_upward"] = residentMB()
         #endif
@@ -764,6 +770,7 @@ final class NavigationRunner {
     /// switch-only measurement cannot show.
     func roundTrips() async throws -> [String: Any] {
         guard let host = model.host else { throw NavigationError("missing host") }
+        let initialRSS = residentMB()
         // Each cycle must enter a *different* session. Re-selecting the same one
         // leaves the marker already matching, which would time one flush pass
         // instead of an actual switch.
@@ -795,12 +802,23 @@ final class NavigationRunner {
         // then require the list to reflect each keystroke.
         _ = try await switchTo(target, host: host)
         var keystrokes: [Double] = []
+        var idleKeystrokes: [Double] = []
+        var idleStages: [[String: Any]] = [], scrollingStages: [[String: Any]] = []
         var dropped = 0
         let terms = ["项", "项目", "项目 1", "项目", "项", ""]
+        // Same list and search sequence without pending transcript movement.
+        // This distinguishes list updates from the work overlapped by scrolling.
+        host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+        for index in 0..<60 {
+            NavigationRenderMetrics.stages = [:]
+            idleKeystrokes.append(try await applyScope { self.model.search = terms[index % terms.count] })
+            idleStages.append(NavigationRenderMetrics.report)
+        }
         if let scroll = findScrollView(host) {
             let document = scroll.documentView?.bounds.height ?? 0
             let visible = scroll.contentView.bounds.height
             for index in 0..<60 where document > visible + 10 {
+                NavigationRenderMetrics.stages = [:]
                 let offset = (document - visible) * Double(index % 20) / 19
                 scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
                 scroll.reflectScrolledClipView(scroll.contentView)
@@ -815,16 +833,22 @@ final class NavigationRunner {
                     dropped += 1
                 }
                 host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+                scrollingStages.append(NavigationRenderMetrics.report)
             }
         }
         model.search = ""
         _ = await flushAndWait(host, until: { true })
         guard !keystrokes.isEmpty else { throw NavigationError("no keystrokes were measured") }
+        guard dropped == 0 else { throw NavigationError("search updates did not reach the list: \(dropped)") }
 
         return [
             "to_archive_ms": statistics(archive), "to_task_group_ms": statistics(group),
             "back_to_workbench_ms": statistics(back), "to_conversation_ms": statistics(toSession),
             "search_during_scroll_ms": statistics(keystrokes),
+            "search_without_scroll_ms": statistics(idleKeystrokes),
+            "search_without_scroll_render_stages": idleStages,
+            "search_during_scroll_render_stages": scrollingStages,
+            "resident_mb_before": initialRSS, "resident_mb_after": residentMB(),
             "dropped_keystrokes": dropped, "cycles": archive.count,
             "note": "scope changes are timed until the list itself re-renders; search keystrokes are issued between scroll steps, so a dropped keystroke means input did not reach the list while scrolling"
         ]

@@ -1,0 +1,166 @@
+{
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+    "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+  },
+  "history_turns": 200,
+  "downward": {
+    "with_host_creation": {
+      "count": 255,
+      "median_ms": 19.139874959364533,
+      "p95_ms": 26.26483328640461,
+      "max_ms": 33.920916612260044
+    },
+    "without_host_creation": {
+      "count": 101,
+      "median_ms": 3.4556665923446417,
+      "p95_ms": 5.689041689038277,
+      "max_ms": 6.684916676022112
+    },
+    "nested_stage_totals": {
+      "attributed_text": {
+        "count": 1852,
+        "ms": 52.00520739890635
+      },
+      "host_create": {
+        "count": 517,
+        "ms": 42.5043327268213
+      },
+      "host_measure": {
+        "count": 517,
+        "ms": 1154.843666474335
+      },
+      "markdown_parse": {
+        "count": 375,
+        "ms": 131.15470809862018
+      },
+      "text_measure": {
+        "count": 3174,
+        "ms": 198.940210044384
+      }
+    }
+  },
+  "upward": {
+    "with_host_creation": {
+      "count": 247,
+      "median_ms": 13.87850008904934,
+      "p95_ms": 26.962791569530964,
+      "max_ms": 35.20816669333726
+    },
+    "without_host_creation": {
+      "count": 108,
+      "median_ms": 3.7373333470895886,
+      "p95_ms": 5.675541586242616,
+      "max_ms": 13.002333347685635
+    },
+    "nested_stage_totals": {
+      "attributed_text": {
+        "count": 2003,
+        "ms": 50.00066477805376
+      },
+      "host_create": {
+        "count": 506,
+        "ms": 41.626291582360864
+      },
+      "host_measure": {
+        "count": 506,
+        "ms": 1090.7109157415107
+      },
+      "markdown_parse": {
+        "count": 491,
+        "ms": 132.6768744038418
+      },
+      "text_measure": {
+        "count": 3616,
+        "ms": 182.22871120087802
+      }
+    }
+  },
+  "max_retained_hosts": 20,
+  "max_mounted_hosts": 8,
+  "reading_resident_mb": {
+    "resident_mb_after_downward": 148.171875,
+    "resident_mb_after_upward": 155.703125,
+    "resident_mb_before_reading": 120.453125
+  },
+  "roundtrip": {
+    "back_to_workbench_ms": {
+      "count": 20,
+      "max_ms": 9.935874957591295,
+      "median_ms": 9.35725006274879,
+      "over_16_7ms": 0,
+      "over_100ms": 0,
+      "p95_ms": 9.914333350025117
+    },
+    "dropped_keystrokes": 0,
+    "resident_mb_after": 155.0625,
+    "resident_mb_before": 118.609375,
+    "search_during_scroll_ms": {
+      "count": 60,
+      "max_ms": 71.11866667401046,
+      "median_ms": 47.02362499665469,
+      "over_16_7ms": 60,
+      "over_100ms": 0,
+      "p95_ms": 60.917458264157176
+    },
+    "search_without_scroll_ms": {
+      "count": 60,
+      "max_ms": 20.699791726656258,
+      "median_ms": 11.79424999281764,
+      "over_16_7ms": 20,
+      "over_100ms": 0,
+      "p95_ms": 19.852500059641898
+    },
+    "to_archive_ms": {
+      "count": 20,
+      "max_ms": 36.770333303138614,
+      "median_ms": 33.865916659124196,
+      "over_16_7ms": 20,
+      "over_100ms": 0,
+      "p95_ms": 34.917250042781234
+    },
+    "to_conversation_ms": {
+      "count": 20,
+      "max_ms": 81.37858333066106,
+      "median_ms": 38.10941660776734,
+      "over_16_7ms": 20,
+      "over_100ms": 0,
+      "p95_ms": 42.12520830333233
+    },
+    "to_task_group_ms": {
+      "count": 20,
+      "max_ms": 35.39895836729556,
+      "median_ms": 33.377874991856515,
+      "over_16_7ms": 20,
+      "over_100ms": 0,
+      "p95_ms": 34.93391664233059
+    }
+  },
+  "idle_search_nested_stages": {},
+  "scroll_search_nested_stages": {
+    "attributed_text": {
+      "count": 1182,
+      "ms": 38.18583628162742
+    },
+    "host_create": {
+      "count": 246,
+      "ms": 18.21724942419678
+    },
+    "host_measure": {
+      "count": 246,
+      "ms": 485.58500106446445
+    },
+    "markdown_parse": {
+      "count": 234,
+      "ms": 92.55945822224021
+    },
+    "text_measure": {
+      "count": 1677,
+      "ms": 196.61279569845647
+    }
+  },
+  "note": "Step association, not causal speedup. Stage durations overlap. Search runs idle first, then scrolling; fixture scope is not the production search sheet. Times are application work, not display frames."
+}

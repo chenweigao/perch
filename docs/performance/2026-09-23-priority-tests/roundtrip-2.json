@@ -1,0 +1,61 @@
+{
+  "back_to_workbench_ms": {
+    "count": 20,
+    "max_ms": 11.476875049993396,
+    "median_ms": 9.628208354115486,
+    "over_16_7ms": 0,
+    "over_100ms": 0,
+    "p95_ms": 10.650416719727218
+  },
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+    "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+  },
+  "commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+  "cycles": 20,
+  "dropped_keystrokes": 0,
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "roundtrip",
+  "note": "scope changes are timed until the list itself re-renders; search keystrokes are issued between scroll steps, so a dropped keystroke means input did not reach the list while scrolling",
+  "recreates_timeline": false,
+  "search_during_scroll_ms": {
+    "count": 60,
+    "max_ms": 72.71491666324437,
+    "median_ms": 49.32987503707409,
+    "over_16_7ms": 60,
+    "over_100ms": 0,
+    "p95_ms": 62.4880000250414
+  },
+  "sessions": 500,
+  "status": "passed",
+  "timestamp": "2026-09-22T16:26:32Z",
+  "to_archive_ms": {
+    "count": 20,
+    "max_ms": 37.92195825371891,
+    "median_ms": 35.468791611492634,
+    "over_16_7ms": 20,
+    "over_100ms": 0,
+    "p95_ms": 37.19850000925362
+  },
+  "to_conversation_ms": {
+    "count": 20,
+    "max_ms": 105.9866250725463,
+    "median_ms": 39.55866664182395,
+    "over_16_7ms": 20,
+    "over_100ms": 1,
+    "p95_ms": 42.048375005833805
+  },
+  "to_task_group_ms": {
+    "count": 20,
+    "max_ms": 35.554375033825636,
+    "median_ms": 34.15199997834861,
+    "over_16_7ms": 20,
+    "over_100ms": 0,
+    "p95_ms": 35.29220831114799
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "reading-1": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/reading-1/result.json",
+    "sha256": "aec92d166bc223acd9c40f18af7906c744cd3bf6065b8ba802580ed26b69b071",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "reading-2": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/reading-2/result.json",
+    "sha256": "65f5e0431a73a9d01c8c45fbda155e2b16a2ddb4bb4ccce3c8d1152b9cc86579",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "roundtrip-1": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/roundtrip-1/result.json",
+    "sha256": "82a38252af2fa61a01d60865f653b6e8ad3f22121b97a484ef08a0412ff7ac7d",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "roundtrip-2": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/roundtrip-2/result.json",
+    "sha256": "1fd11ff4e53c5eea12ae2ef810c869f8f2d1b857fb34f3d05e4006bbe77df9c0",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "turns": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/turns/result.json",
+    "sha256": "e22e6ae4006f5ad6bac855e480c685425b82a3763b39da9223623802e0a12b71",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "interactions": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/interactions/result.json",
+    "sha256": "13583642ef8d75f895b5492cb25f0785052ddabc116687c4ba2a466fcd4b1282",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "5f7a3b0b7ea4a077b63e0af05cdcc50413ad3b306f7425d225e0344e10d36941",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "staged-reading": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/staged-reading/result.json",
+    "sha256": "76dedb5c08e03c2a83fcf4c808a1fda6432be8e1d556a2cfd888695e96a9f8da",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "staged-roundtrip": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/staged-roundtrip/result.json",
+    "sha256": "298f664e5fd30c0b77a821e79336fb645993d38067c088720a53bdc3f9d7e199",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "profile-reading": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/profile-reading/result.json",
+    "sha256": "14817434ca2cc053f31cf7c58b9f20dc16b6c7e01a4a246176a57214e0e7ec2c",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "profile-roundtrip": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/profile-roundtrip/result.json",
+    "sha256": "14980cd9fc432ec0b3c10601d3de6e4215917f9b262fd9af788fad7d65a2fbd6",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  },
+  "manual-unique": {
+    "status": "passed",
+    "raw": ".local/priority-tests-20260923/manual-unique/result.json",
+    "sha256": "829f75d7d433b7c1dd254008172fe1608e54961b68b115c79af2e488cce67b61",
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+      "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "f24045d8fcfdcaf2e742e32aebc7857331889cc2",
+      "source_sha256": "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+    }
+  }
+}

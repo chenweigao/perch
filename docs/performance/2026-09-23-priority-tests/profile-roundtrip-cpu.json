@@ -1,0 +1,423 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 6185,
+  "main_sample_rows": 6067,
+  "all_threads_sampled_cpu_ms": 6185.0,
+  "main_sampled_cpu_ms": 6067.0,
+  "main_cpu_ms_per_second": {
+    "4": 469.0,
+    "5": 997.0,
+    "6": 994.0,
+    "7": 992.0,
+    "8": 944.0,
+    "9": 861.0,
+    "10": 810.0
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      5430.0
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      4704.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      4697.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      4696.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      4696.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      4696.0
+    ],
+    [
+      "_DPSNextEvent",
+      4694.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      4693.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      4692.0
+    ],
+    [
+      "-[NSApplication run]",
+      4690.0
+    ],
+    [
+      "NSApplicationMain",
+      4688.0
+    ],
+    [
+      "specialized runApp(_:)",
+      4688.0
+    ],
+    [
+      "runApp<A>(_:)",
+      4687.0
+    ],
+    [
+      "static App.main()",
+      4683.0
+    ],
+    [
+      "main",
+      4680.0
+    ],
+    [
+      "start",
+      4678.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      3598.0
+    ],
+    [
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      2876.0
+    ],
+    [
+      "AG::Subgraph::update(unsigned int)",
+      2821.0
+    ],
+    [
+      "__CFRunLoopRun",
+      2696.0
+    ],
+    [
+      "GraphHost.flushTransactions()",
+      2585.0
+    ],
+    [
+      "CA::Transaction::commit()",
+      2561.0
+    ],
+    [
+      "UC::DriverCore::continueProcessing()",
+      2493.0
+    ],
+    [
+      "CA::Transaction::flush_as_runloop_observer(bool)",
+      2469.0
+    ],
+    [
+      "stepTransactionFlush",
+      2467.0
+    ],
+    [
+      "NSPerformVisuallyAtomicChange",
+      2423.0
+    ],
+    [
+      "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+      2380.0
+    ],
+    [
+      "0x18f0dd518",
+      2379.0
+    ],
+    [
+      "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+      2379.0
+    ],
+    [
+      "0x18f0dd4f0",
+      2379.0
+    ],
+    [
+      "-[NSView layoutSubtreeIfNeeded]",
+      2378.0
+    ],
+    [
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      2363.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__",
+      2362.0
+    ],
+    [
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      2362.0
+    ],
+    [
+      "__CFRunLoopDoSources0",
+      2360.0
+    ],
+    [
+      "__CFRunLoopDoSource0",
+      2360.0
+    ],
+    [
+      "_NSViewLayout",
+      2358.0
+    ],
+    [
+      "___NSViewLayout_block_invoke",
+      2357.0
+    ],
+    [
+      "0x18f0a2dd0",
+      2351.0
+    ],
+    [
+      "0x18f0a21ec",
+      2350.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "<deduplicated_symbol>",
+      304.0
+    ],
+    [
+      "__CFStringFoldCharacterClusterAtIndex",
+      254.0
+    ],
+    [
+      "CFStringFindWithOptionsAndLocale",
+      163.0
+    ],
+    [
+      "objc_msgSend",
+      141.0
+    ],
+    [
+      "swift_retain",
+      87.0
+    ],
+    [
+      "swift_release",
+      87.0
+    ],
+    [
+      "_platform_memmove",
+      75.0
+    ],
+    [
+      "DYLD-STUB$$protocol witness for OptionSet.init(rawValue:) in conformance DisplayList.Properties",
+      75.0
+    ],
+    [
+      "objc::lookup8(unsigned char const*, unsigned long, unsigned long long)",
+      72.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      62.0
+    ],
+    [
+      "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      61.0
+    ],
+    [
+      "specialized find1<A>(_:key:filter:)",
+      58.0
+    ],
+    [
+      "_CFXNotificationRegistrarRemoveObservers",
+      55.0
+    ],
+    [
+      "_xzm_free",
+      53.0
+    ],
+    [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      49.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      48.0
+    ],
+    [
+      "swift_conformsToProtocolMaybeInstantiateSuperclasses(swift::TargetMetadata<swift::InProcess> const*, swift::TargetProtocolDescriptor<swift::InProcess> const*, bool)",
+      44.0
+    ],
+    [
+      "___chkstk_darwin",
+      44.0
+    ],
+    [
+      "weak_entry_for_referent",
+      42.0
+    ],
+    [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      41.0
+    ],
+    [
+      "_StringBreadcrumbs.init(_:)",
+      36.0
+    ],
+    [
+      "find1<A>(_:key:filter:)",
+      36.0
+    ],
+    [
+      "_dyld_find_protocol_conformance",
+      35.0
+    ],
+    [
+      "swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const",
+      34.0
+    ],
+    [
+      "mach_msg2_trap",
+      33.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "main",
+      4680.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      1447.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      1186.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      1184.0
+    ],
+    [
+      "NavigationRunner.roundTrips()",
+      1178.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      751.0
+    ],
+    [
+      "NavigationModel.scope.getter",
+      643.0
+    ],
+    [
+      "specialized static SessionCatalog.scope(_:starred:group:hostFilter:search:onlyAttention:showArchived:)",
+      637.0
+    ],
+    [
+      "specialized _ArrayProtocol.filter<A>(_:)",
+      629.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      624.0
+    ],
+    [
+      "closure #1 in static SessionCatalog.scope(_:starred:group:hostFilter:search:onlyAttention:showArchived:)",
+      622.0
+    ],
+    [
+      "ConversationDocumentView.measure(width:)",
+      562.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.sizeThatFits(_:nsView:context:) in conformance ConversationDocumentHost",
+      562.0
+    ],
+    [
+      "closure #1 in NavigationRoot.body.getter",
+      443.0
+    ],
+    [
+      "NavigationRoot.body.getter",
+      443.0
+    ],
+    [
+      "NavigationModel.scopeToken.getter",
+      433.0
+    ],
+    [
+      "closure #1 in closure #1 in NavigationRoot.body.getter",
+      431.0
+    ],
+    [
+      "closure #1 in HostedConversationEntry.body.getter",
+      369.0
+    ],
+    [
+      "specialized applyScope #1 (_:) in NavigationRunner.roundTrips()",
+      266.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      214.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      214.0
+    ],
+    [
+      "closure #1 in closure #1 in closure #1 in NavigationRoot.body.getter",
+      214.0
+    ],
+    [
+      "partial apply for closure #1 in closure #1 in closure #1 in closure #1 in NavigationRoot.body.getter",
+      213.0
+    ],
+    [
+      "ReplyTextView.measure(width:)",
+      203.0
+    ],
+    [
+      "ConversationTranscript.body.getter",
+      135.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      116.0
+    ],
+    [
+      "ReplyContent.body.getter",
+      116.0
+    ],
+    [
+      "closure #2 in static ConversationDocumentView.retire(_:)",
+      112.0
+    ],
+    [
+      "ConversationProjection.update(_:isRunning:)",
+      100.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      99.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      99.0
+    ],
+    [
+      "ReplyTextView.update(_:)",
+      99.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance SelectableReplyText",
+      99.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      98.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      96.0
+    ]
+  ],
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}
