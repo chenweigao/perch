@@ -1,0 +1,66 @@
+{
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "f262ef58ce2f3ff374979f4b7f2ee830ba281402",
+    "source_sha256": "09b008fc4dc77d82e8db0a2d9199a33f7c77f27624700d3b149308937c809308"
+  },
+  "commit": "f262ef58ce2f3ff374979f4b7f2ee830ba281402",
+  "failures": {
+    "checks": []
+  },
+  "fixture-195": {
+    "entry": "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0195b:0",
+    "mounted_rows": [
+      "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0196b:0",
+      "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0196a:0",
+      "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0195b:0"
+    ],
+    "selected": [
+      "fixture-195"
+    ]
+  },
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "interactions",
+  "recreates_timeline": false,
+  "resize": {
+    "after_entry": "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0003b:0",
+    "after_offset": 165,
+    "before_entry": "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0003b:0",
+    "before_offset": 165
+  },
+  "session_return": {
+    "after_entry": "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0003b:0",
+    "after_offset": 165,
+    "before_entry": "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0003b:0",
+    "before_offset": 165
+  },
+  "sessions": 500,
+  "status": "passed",
+  "timestamp": "2026-09-22T16:41:49Z",
+  "中文换行": {
+    "entry": "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0000b:0",
+    "mounted_rows": [
+      "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0001b:0",
+      "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0001a:0",
+      "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0000b:0"
+    ],
+    "selected": [
+      "中文换行"
+    ]
+  },
+  "第 6 轮结果": {
+    "entry": "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0005b:0",
+    "mounted_rows": [
+      "thinking:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0006b:0",
+      "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0006a:0",
+      "text:8679606B-AC41-4E91-9070-2AA23198925E:omp:session-1:0005b:0"
+    ],
+    "selected": [
+      "第 6 轮结果"
+    ]
+  }
+}

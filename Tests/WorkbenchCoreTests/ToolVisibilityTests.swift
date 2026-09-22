@@ -36,8 +36,11 @@ func checkToolVisibility() throws {
     precondition(completedRows.flatMap(\.messages).flatMap(\.content).map(\.type) == ["text", "text", "tool_use", "thinking"],
                  "A completed, deduplicated call stays between its surrounding text and thoughts")
     precondition(completedRows.first(where: \.activity)?.id == activityID(start))
-    let body = ConversationTimelineEntry.make(done.messages).filter { !$0.activity }.flatMap(\.messages).flatMap(\.content)
-    precondition(body.contains { $0.text == "正文必须一直保留" } && body.contains { $0.thinking == "思考可以折叠" })
+    let body = completedRows.filter { !$0.activity }.flatMap(\.messages).flatMap(\.content)
+    precondition(body.contains { $0.text == "正文必须一直保留" })
+    let process = completedRows.filter(\.activity).flatMap(\.messages).flatMap(\.content)
+    precondition(process.contains { $0.thinking == "思考可以折叠" },
+                 "Completed thoughts remain available inside the folded process stage")
     let failure = p.update(user + call + failed, sessionID: "kimi", running: ["t"])
     precondition(failure.tools["t"]?.status == .failed && failure.tools["t"]?.staysVisible == true)
     let unknownSuccess = p.update(user + call + unspecified, sessionID: "kimi")

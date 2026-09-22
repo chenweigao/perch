@@ -1,0 +1,14 @@
+{
+  "upstream": "9eaa00ee9aadaa530f42d8329fa8679ade53c4b3",
+  "head_before_test_fix_commit": "f262ef58ce2f3ff374979f4b7f2ee830ba281402",
+  "app": "build/Perch.app",
+  "binary_sha256": "5b6fd02c77c97b3cd6ab755918eca4d0dcce677d3bea98763a9d85d74e1b08df",
+  "build_log": ".local/experience-build-20260923/build.log",
+  "check_log": ".local/experience-build-20260923/workbench-checks-retry.log",
+  "initial_failure_log": ".local/experience-build-20260923/workbench-checks.log",
+  "configuration": "Release, SwiftPM native",
+  "strict_signature_verified": true,
+  "minimum_macos": "14.0",
+  "linked_sdk": "27.0",
+  "live_ssh": "skipped: WORKBENCH_LIVE_HOST unset"
+}
