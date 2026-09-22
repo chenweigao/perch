@@ -1,0 +1,32 @@
+{
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "1a509fb7a2ff433c69f4a91c55ea15949c088ffafe24bd3dd3ad8d4b9762ad45",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256": "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9"
+  },
+  "commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "scroll",
+  "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+  "recreates_timeline": false,
+  "scroll_step_ms": {
+    "count": 1200,
+    "document_height": 92738,
+    "final_document_height": 93190,
+    "max_ms": 30.15200002118945,
+    "median_ms": 0.6202500080689788,
+    "over_16_7ms": 8,
+    "over_100ms": 0,
+    "p95_ms": 2.281875000335276,
+    "step_points": 8,
+    "viewport_height": 600
+  },
+  "sessions": 500,
+  "status": "passed",
+  "steps": 1200,
+  "timestamp": "2026-09-22T14:21:17Z"
+}

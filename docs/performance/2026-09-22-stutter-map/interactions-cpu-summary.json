@@ -1,0 +1,420 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 886,
+  "main_sample_rows": 836,
+  "all_threads_sampled_cpu_ms": 886.0,
+  "main_sampled_cpu_ms": 836.0,
+  "main_cpu_ms_per_second": {
+    "4": 451.0,
+    "5": 232.0,
+    "6": 141.0,
+    "7": 12.0
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      743.0
+    ],
+    [
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+      450.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      437.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      437.0
+    ],
+    [
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      432.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      366.0
+    ],
+    [
+      "_DPSNextEvent",
+      366.0
+    ],
+    [
+      "NSApplicationMain",
+      366.0
+    ],
+    [
+      "-[NSApplication run]",
+      366.0
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      366.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      366.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      366.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      366.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      366.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      366.0
+    ],
+    [
+      "specialized runApp(_:)",
+      365.0
+    ],
+    [
+      "runApp<A>(_:)",
+      365.0
+    ],
+    [
+      "static App.main()",
+      363.0
+    ],
+    [
+      "start",
+      361.0
+    ],
+    [
+      "main",
+      361.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      265.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      255.0
+    ],
+    [
+      "ConversationSearch.hits(in:query:running:)",
+      244.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      243.0
+    ],
+    [
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      242.0
+    ],
+    [
+      "specialized Collection.map<A, B>(_:)",
+      229.0
+    ],
+    [
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      229.0
+    ],
+    [
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      216.0
+    ],
+    [
+      "AG::Subgraph::update(unsigned int)",
+      212.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      201.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      200.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      197.0
+    ],
+    [
+      "__CFRunLoopRun",
+      197.0
+    ],
+    [
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      194.0
+    ],
+    [
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      189.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      189.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      188.0
+    ],
+    [
+      "-[NSRegularExpression(NSMatching) matchesInString:options:range:]",
+      184.0
+    ],
+    [
+      "DDScannerScanStringWithRangeAndContextOffset",
+      183.0
+    ],
+    [
+      "-[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]",
+      183.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "langid_consume_string",
+      26.0
+    ],
+    [
+      "specialized BidirectionalCollection._index(_:offsetBy:)",
+      24.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      18.0
+    ],
+    [
+      "objc_msgSend",
+      18.0
+    ],
+    [
+      "_platform_memmove",
+      12.0
+    ],
+    [
+      "String.UTF16View._nativeCopy(into:alignedRange:)",
+      10.0
+    ],
+    [
+      "CFStringFindWithOptionsAndLocale",
+      10.0
+    ],
+    [
+      "_xzm_xzone_malloc_tiny",
+      9.0
+    ],
+    [
+      "_xzm_free",
+      9.0
+    ],
+    [
+      "___chkstk_darwin",
+      9.0
+    ],
+    [
+      "_DDScannerHandleState",
+      9.0
+    ],
+    [
+      "_platform_memset",
+      9.0
+    ],
+    [
+      "mach_msg2_trap",
+      8.0
+    ],
+    [
+      "computeLexemsAtPosition",
+      7.0
+    ],
+    [
+      "_swift_stdlib_getBinaryProperties",
+      6.0
+    ],
+    [
+      "getMethodNoSuper_nolock(objc_class*, objc_selector*)",
+      6.0
+    ],
+    [
+      "_platform_memcmp",
+      6.0
+    ],
+    [
+      "swift_getEnumCaseMultiPayload",
+      6.0
+    ],
+    [
+      "DYLD-STUB$$protocol witness for OptionSet.init(rawValue:) in conformance DisplayList.Properties",
+      6.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      6.0
+    ],
+    [
+      "__swift_instantiateConcreteTypeFromMangledNameV2",
+      5.0
+    ],
+    [
+      "swift_bridgeObjectRelease",
+      5.0
+    ],
+    [
+      "__CF_IS_OBJC",
+      5.0
+    ],
+    [
+      "swift_retain",
+      5.0
+    ],
+    [
+      "DDTokenCacheGetTokensAtPosition",
+      5.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      490.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      437.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      437.0
+    ],
+    [
+      "NavigationRunner.readingInteractions(searchOnly:)",
+      432.0
+    ],
+    [
+      "main",
+      361.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      255.0
+    ],
+    [
+      "ConversationSearch.hits(in:query:running:)",
+      244.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      243.0
+    ],
+    [
+      "closure #1 in ConversationSearch.hits(in:query:running:)",
+      242.0
+    ],
+    [
+      "specialized Collection.map<A, B>(_:)",
+      229.0
+    ],
+    [
+      "closure #2 in closure #1 in ConversationSearch.hits(in:query:running:)",
+      229.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      201.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      200.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      197.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      189.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      188.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      112.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      97.0
+    ],
+    [
+      "static NavigationHistory.conversation(turns:salt:streaming:)",
+      95.0
+    ],
+    [
+      "NavigationRunner.warmedTargets()",
+      95.0
+    ],
+    [
+      "NavigationModel.warm(_:)",
+      95.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      65.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      65.0
+    ],
+    [
+      "specialized KimiSnapshot.init(from:)",
+      52.0
+    ],
+    [
+      "KimiSnapshot.init(from:)",
+      52.0
+    ],
+    [
+      "protocol witness for Decodable.init(from:) in conformance KimiPage<A>",
+      51.0
+    ],
+    [
+      "KimiPage.init(from:)",
+      51.0
+    ],
+    [
+      "specialized KimiMessage.init(from:)",
+      50.0
+    ],
+    [
+      "KimiMessage.init(from:)",
+      50.0
+    ],
+    [
+      "settle #1 () in NavigationRunner.readingInteractions(searchOnly:)",
+      46.0
+    ],
+    [
+      "KimiPart.init(from:)",
+      45.0
+    ],
+    [
+      "specialized KimiPart.init(from:)",
+      45.0
+    ],
+    [
+      "Document.init(parsing:source:options:)",
+      42.0
+    ],
+    [
+      "static MarkupParser.parseString(_:source:options:)",
+      42.0
+    ],
+    [
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      35.0
+    ]
+  ],
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}

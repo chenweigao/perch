@@ -1,0 +1,52 @@
+{
+  "failures" : {
+    "checks" : [
+      "resize anchor"
+    ]
+  },
+  "fixture-195" : {
+    "entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0195b:0",
+    "mounted_rows" : [
+      "thinking:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0196b:0",
+      "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0196a:0",
+      "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0195b:0"
+    ],
+    "selected" : [
+      "fixture-195"
+    ]
+  },
+  "resize" : {
+    "after_entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0003a:0",
+    "after_offset" : 168,
+    "before_entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0003a:0",
+    "before_offset" : 165
+  },
+  "session_return" : {
+    "after_entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0003a:0",
+    "after_offset" : 168,
+    "before_entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0003a:0",
+    "before_offset" : 168
+  },
+  "中文换行" : {
+    "entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0000b:0",
+    "mounted_rows" : [
+      "thinking:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0001b:0",
+      "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0001a:0",
+      "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0000b:0"
+    ],
+    "selected" : [
+      "中文换行"
+    ]
+  },
+  "第 6 轮结果" : {
+    "entry" : "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0005b:0",
+    "mounted_rows" : [
+      "thinking:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0006b:0",
+      "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0006a:0",
+      "text:3B150314-16F0-49FB-AE45-4875A1B239F1:omp:session-1:0005b:0"
+    ],
+    "selected" : [
+      "第 6 轮结果"
+    ]
+  }
+}

@@ -1,0 +1,478 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 60593,
+  "main_sample_rows": 59627,
+  "all_threads_sampled_cpu_ms": 60593.0,
+  "main_sampled_cpu_ms": 59627.0,
+  "main_cpu_ms_per_second": {
+    "4": 823.0,
+    "5": 988.0,
+    "6": 978.0,
+    "7": 964.0,
+    "8": 975.0,
+    "9": 990.0,
+    "10": 991.0,
+    "11": 998.0,
+    "12": 926.0,
+    "13": 990.0,
+    "14": 919.0,
+    "15": 972.0,
+    "16": 991.0,
+    "17": 987.0,
+    "18": 985.0,
+    "19": 908.0,
+    "20": 996.0,
+    "21": 995.0,
+    "22": 994.0,
+    "23": 991.0,
+    "24": 869.0,
+    "25": 994.0,
+    "26": 997.0,
+    "27": 994.0,
+    "28": 854.0,
+    "29": 998.0,
+    "30": 997.0,
+    "31": 994.0,
+    "32": 997.0,
+    "33": 872.0,
+    "34": 993.0,
+    "35": 997.0,
+    "36": 998.0,
+    "37": 996.0,
+    "38": 996.0,
+    "39": 999.0,
+    "40": 996.0,
+    "41": 998.0,
+    "42": 998.0,
+    "43": 996.0,
+    "44": 970.0,
+    "45": 972.0,
+    "46": 996.0,
+    "47": 1000.0,
+    "48": 999.0,
+    "49": 995.0,
+    "50": 994.0,
+    "51": 999.0,
+    "52": 997.0,
+    "53": 996.0,
+    "54": 998.0,
+    "55": 997.0,
+    "56": 999.0,
+    "57": 992.0,
+    "58": 997.0,
+    "59": 996.0,
+    "60": 1000.0,
+    "61": 995.0,
+    "62": 927.0,
+    "63": 993.0,
+    "64": 895.0,
+    "65": 26.0
+  },
+  "main_inclusive_top": [
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      52566.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      52495.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      52460.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      52426.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      52380.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      52347.0
+    ],
+    [
+      "_DPSNextEvent",
+      52342.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      52296.0
+    ],
+    [
+      "-[NSApplication run]",
+      52260.0
+    ],
+    [
+      "NSApplicationMain",
+      52193.0
+    ],
+    [
+      "specialized runApp(_:)",
+      52093.0
+    ],
+    [
+      "runApp<A>(_:)",
+      52017.0
+    ],
+    [
+      "static App.main()",
+      51914.0
+    ],
+    [
+      "main",
+      51814.0
+    ],
+    [
+      "start",
+      51718.0
+    ],
+    [
+      "__CFRunLoopRun",
+      44960.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      40588.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      26209.0
+    ],
+    [
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      22475.0
+    ],
+    [
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      21887.0
+    ],
+    [
+      "LayoutEngineBox.sizeThatFits(_:)",
+      21664.0
+    ],
+    [
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      21610.0
+    ],
+    [
+      "0x237b40830",
+      21607.0
+    ],
+    [
+      "LayoutProxy.size(in:)",
+      21596.0
+    ],
+    [
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      21497.0
+    ],
+    [
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      21494.0
+    ],
+    [
+      "CA::Transaction::commit()",
+      20976.0
+    ],
+    [
+      "NSPerformVisuallyAtomicChange",
+      20836.0
+    ],
+    [
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FixedSizeLayout",
+      20596.0
+    ],
+    [
+      "0x18f0dd4f0",
+      20561.0
+    ],
+    [
+      "0x18f0dd518",
+      20550.0
+    ],
+    [
+      "ViewLayoutEngine.sizeThatFits(_:)",
+      20487.0
+    ],
+    [
+      "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+      20479.0
+    ],
+    [
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      20463.0
+    ],
+    [
+      "StackLayout.UnmanagedImplementation.placeChildren(in:)",
+      20431.0
+    ],
+    [
+      "specialized StackLayout.UnmanagedImplementation.placeChildren1(in:minorProposalForChild:)",
+      20430.0
+    ],
+    [
+      "LayoutProxy.dimensions(in:)",
+      20428.0
+    ],
+    [
+      "StackLayout.UnmanagedImplementation.resize(_:proposal:proxy:)",
+      20421.0
+    ],
+    [
+      "CA::Transaction::flush_as_runloop_observer(bool)",
+      20325.0
+    ],
+    [
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      20313.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "_CFXNotificationRegistrarRemoveObservers",
+      15019.0
+    ],
+    [
+      "objc_msgSend",
+      1949.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      1466.0
+    ],
+    [
+      "weak_entry_for_referent",
+      653.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      600.0
+    ],
+    [
+      "_xzm_free",
+      516.0
+    ],
+    [
+      "_platform_memmove",
+      508.0
+    ],
+    [
+      "swift_release",
+      483.0
+    ],
+    [
+      "DYLD-STUB$$protocol witness for OptionSet.init(rawValue:) in conformance DisplayList.Properties",
+      391.0
+    ],
+    [
+      "swift_retain",
+      372.0
+    ],
+    [
+      "__CF_IS_OBJC",
+      367.0
+    ],
+    [
+      "icu::UnicodeSet::add(int const*, int, signed char)",
+      366.0
+    ],
+    [
+      "u_strFromUTF8WithSub",
+      327.0
+    ],
+    [
+      "langid_consume_string",
+      321.0
+    ],
+    [
+      "_platform_memset",
+      295.0
+    ],
+    [
+      "___chkstk_darwin",
+      261.0
+    ],
+    [
+      "A8_mark_constmask(BltDepth const*, BltOp const*, MODE)",
+      261.0
+    ],
+    [
+      "specialized find1<A>(_:key:filter:)",
+      251.0
+    ],
+    [
+      "objc_release",
+      251.0
+    ],
+    [
+      "_xzm_xzone_malloc",
+      233.0
+    ],
+    [
+      "__kdebug_trace64",
+      220.0
+    ],
+    [
+      "swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const",
+      218.0
+    ],
+    [
+      "__CFStringHash",
+      205.0
+    ],
+    [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      203.0
+    ],
+    [
+      "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+      203.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "main",
+      51814.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      17938.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      13804.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      11909.0
+    ],
+    [
+      "closure #1 in ConversationViewport.refresh()",
+      11212.0
+    ],
+    [
+      "closure #1 in HostedConversationEntry.body.getter",
+      9504.0
+    ],
+    [
+      "NavigationRunner.soak(seconds:)",
+      2953.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      2867.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      2863.0
+    ],
+    [
+      "ReplyTextView.measure(width:)",
+      2758.0
+    ],
+    [
+      "closure #2 in static ConversationDocumentView.retire(_:)",
+      2153.0
+    ],
+    [
+      "ReplyContent.body.getter",
+      2014.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      2011.0
+    ],
+    [
+      "ConversationDocumentView.measure(width:)",
+      1993.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.sizeThatFits(_:nsView:context:) in conformance ConversationDocumentHost",
+      1993.0
+    ],
+    [
+      "specialized SelectableReplyText.makeNSView(context:)",
+      1977.0
+    ],
+    [
+      "ReplyText.body.getter",
+      1962.0
+    ],
+    [
+      "ReplyText.attributed.getter",
+      1950.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      1754.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      1754.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      1737.0
+    ],
+    [
+      "specialized ReplyListLayout.measure(width:subviews:)",
+      1721.0
+    ],
+    [
+      "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ReplyListLayout",
+      1709.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      1653.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      1648.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance SelectableReplyText",
+      1647.0
+    ],
+    [
+      "ReplyTextView.update(_:)",
+      1645.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      1637.0
+    ],
+    [
+      "static ConversationFileReference.matches(in:)",
+      1448.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      1216.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      1214.0
+    ],
+    [
+      "NSRegularExpression.__allocating_init(pattern:options:)",
+      1055.0
+    ],
+    [
+      "@nonobjc NSRegularExpression.init(pattern:options:)",
+      1053.0
+    ],
+    [
+      "@objc ReplyTextView.init(frame:textContainer:)",
+      1048.0
+    ],
+    [
+      "ConversationTranscript.body.getter",
+      844.0
+    ]
+  ],
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}

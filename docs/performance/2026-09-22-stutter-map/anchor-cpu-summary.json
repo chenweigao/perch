@@ -1,0 +1,417 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 298,
+  "main_sample_rows": 265,
+  "all_threads_sampled_cpu_ms": 298.0,
+  "main_sampled_cpu_ms": 265.0,
+  "main_cpu_ms_per_second": {
+    "4": 265.0
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      238.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      158.0
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      152.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      144.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      144.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      144.0
+    ],
+    [
+      "runApp<A>(_:)",
+      144.0
+    ],
+    [
+      "specialized runApp(_:)",
+      144.0
+    ],
+    [
+      "_DPSNextEvent",
+      144.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      144.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      144.0
+    ],
+    [
+      "NSApplicationMain",
+      144.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      144.0
+    ],
+    [
+      "-[NSApplication run]",
+      144.0
+    ],
+    [
+      "main",
+      143.0
+    ],
+    [
+      "start",
+      143.0
+    ],
+    [
+      "static App.main()",
+      143.0
+    ],
+    [
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      131.0
+    ],
+    [
+      "AG::Subgraph::update(unsigned int)",
+      129.0
+    ],
+    [
+      "__CFRunLoopDoObservers",
+      121.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      121.0
+    ],
+    [
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      120.0
+    ],
+    [
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      119.0
+    ],
+    [
+      "GraphHost.flushTransactions()",
+      115.0
+    ],
+    [
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      114.0
+    ],
+    [
+      "specialized static NSRunLoop.flushObservers()",
+      114.0
+    ],
+    [
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      113.0
+    ],
+    [
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      112.0
+    ],
+    [
+      "closure #1 in static Update.ensure<A>(_:)",
+      111.0
+    ],
+    [
+      "static Update.ensure<A>(_:)",
+      111.0
+    ],
+    [
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+      110.0
+    ],
+    [
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      109.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      107.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      107.0
+    ],
+    [
+      "partial apply for closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      106.0
+    ],
+    [
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      106.0
+    ],
+    [
+      "partial apply for closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      106.0
+    ],
+    [
+      "closure #1 in closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      106.0
+    ],
+    [
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      106.0
+    ],
+    [
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      91.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "<deduplicated_symbol>",
+      9.0
+    ],
+    [
+      "getMethodNoSuper_nolock(objc_class*, objc_selector*)",
+      8.0
+    ],
+    [
+      "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+      6.0
+    ],
+    [
+      "_xzm_free",
+      5.0
+    ],
+    [
+      "objc_msgSend",
+      5.0
+    ],
+    [
+      "swift_release",
+      4.0
+    ],
+    [
+      "swift_retain",
+      4.0
+    ],
+    [
+      "swift::MetadataCacheEntryBase<swift::GenericCacheEntry, void const*>::awaitSatisfyingState(swift::ConcurrencyControl&, swift::MetadataRequest)",
+      3.0
+    ],
+    [
+      "_swift_stdlib_getBinaryProperties",
+      3.0
+    ],
+    [
+      "langid_consume_string",
+      3.0
+    ],
+    [
+      "DYLD-STUB$$protocol witness for OptionSet.init(rawValue:) in conformance DisplayList.Properties",
+      3.0
+    ],
+    [
+      "lstat",
+      2.0
+    ],
+    [
+      "String.UTF16View._nativeCopy(into:alignedRange:)",
+      2.0
+    ],
+    [
+      "__swift_memcpy1_1",
+      2.0
+    ],
+    [
+      "DYLD-STUB$$swift_bridgeObjectRelease",
+      2.0
+    ],
+    [
+      "specialized static String._uncheckedFromUTF8(_:isASCII:)",
+      2.0
+    ],
+    [
+      "util::UntypedTable::lookup(void*, void**) const",
+      2.0
+    ],
+    [
+      "TcmapUnicodeTable::MapRange(CFRange, unsigned short*) const",
+      2.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      2.0
+    ],
+    [
+      "_platform_memmove",
+      2.0
+    ],
+    [
+      "getMethodFromRelativeList(relative_list_list_t<method_list_t>*, objc_selector*)",
+      2.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      2.0
+    ],
+    [
+      "__rename",
+      2.0
+    ],
+    [
+      "_platform_memset",
+      2.0
+    ],
+    [
+      "mach_msg2_trap",
+      2.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "main",
+      143.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      124.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      107.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      107.0
+    ],
+    [
+      "NavigationRunner.prependAnchor()",
+      87.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      75.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      64.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      46.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      46.0
+    ],
+    [
+      "settle #1 () in NavigationRunner.prependAnchor()",
+      38.0
+    ],
+    [
+      "NavigationRunner.switchTo(_:host:)",
+      27.0
+    ],
+    [
+      "NavigationModel.warm(_:)",
+      20.0
+    ],
+    [
+      "static NavigationHistory.conversation(turns:salt:streaming:)",
+      20.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.sizeThatFits(_:nsView:context:) in conformance ConversationDocumentHost",
+      19.0
+    ],
+    [
+      "ConversationDocumentView.measure(width:)",
+      19.0
+    ],
+    [
+      "closure #1 in HostedConversationEntry.body.getter",
+      15.0
+    ],
+    [
+      "ConversationTranscript.body.getter",
+      14.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      14.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      14.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      14.0
+    ],
+    [
+      "ReplyContent.body.getter",
+      14.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      13.0
+    ],
+    [
+      "ReplyTextView.measure(width:)",
+      13.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.linkBareURLs(_:)",
+      12.0
+    ],
+    [
+      "specialized Sequence.flatMap<A>(_:)",
+      12.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      12.0
+    ],
+    [
+      "@objc ConversationDocumentView.setFrameSize(_:)",
+      12.0
+    ],
+    [
+      "ConversationDocumentView.restoreReadingPosition()",
+      12.0
+    ],
+    [
+      "ConversationDocumentView.setFrameSize(_:)",
+      12.0
+    ],
+    [
+      "KimiSnapshot.init(from:)",
+      11.0
+    ],
+    [
+      "protocol witness for Decodable.init(from:) in conformance KimiPage<A>",
+      11.0
+    ],
+    [
+      "specialized KimiMessage.init(from:)",
+      11.0
+    ],
+    [
+      "KimiPage.init(from:)",
+      11.0
+    ],
+    [
+      "KimiMessage.init(from:)",
+      11.0
+    ],
+    [
+      "specialized KimiSnapshot.init(from:)",
+      10.0
+    ]
+  ],
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}

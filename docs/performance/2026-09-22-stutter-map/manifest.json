@@ -1,0 +1,37 @@
+{
+  "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+  "macos": "26.6.2",
+  "xcode": "Xcode 27.0\nBuild version 27A266a",
+  "memory_bytes": 19327352832,
+  "fixed_parameters": {
+    "history_turns": 200,
+    "sessions": 500,
+    "host_width_pt": 1180,
+    "host_height_pt": 600,
+    "scroll_viewport_height_pt": 600,
+    "build": "Release -O, SwiftPM native, Swift 6.4"
+  },
+  "baseline_build": {
+    "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256": "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9",
+    "fixture_sha256": "1a509fb7a2ff433c69f4a91c55ea15949c088ffafe24bd3dd3ad8d4b9762ad45",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0"
+  },
+  "manual_build": {
+    "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256": "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9",
+    "fixture_sha256": "e2c509dd00712ff51000ae36ef7cf3c1c8a087c74bee354c1cbe1f50fc1688b5",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0"
+  },
+  "baseline_binary_sha256": "a135cbe7ff54154dfc6b3cbb8b4075f11ceb4c034aa129ac98b072db3b0562f0",
+  "manual_binary_sha256": "39f91cada39a8f78ded68d4d4f4050e390dc781909aff3e911c3ffab1d1acc2f",
+  "image": {
+    "width": 4096,
+    "height": 3072,
+    "bytes": 48390,
+    "sha256": "a28a1485a1f7bc4bf332b17bf0ad1c16fe9126961877be118889cf05c9e983d9"
+  },
+  "raw_artifacts": ".local/stutter-map/ (private, not committed)"
+}

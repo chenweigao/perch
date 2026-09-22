@@ -1,0 +1,10 @@
+{
+  "status": "exited",
+  "mode": "soak",
+  "timeout_s": 180,
+  "binary_sha256": "adc10b3929d85479212d5d77fd294fbf6e6f554b0f63ef5d15e36f582afc1d10",
+  "pid": 42814,
+  "exit_code": 0,
+  "elapsed_s": 64.273017292,
+  "passed": true
+}

@@ -1,0 +1,18 @@
+diff --git a/Tests/NavigationPreview/App.swift b/Tests/NavigationPreview/App.swift
+index e32e7e7..2cd1f87 100644
+--- a/Tests/NavigationPreview/App.swift
++++ b/Tests/NavigationPreview/App.swift
+@@ -810,6 +810,13 @@ final class NavigationRunner {
+                         "views": Double(countViews(host)),
+                         "switches": Double(switches), "scroll_steps": Double(scrollSteps)
+                     ]
++                    // Does the notification registry grow even while hosts remain bounded?
++                    // Opt-in: producing this diagnostic string is outside step timings.
++                    if ProcessInfo.processInfo.environment["NAVIGATION_OBSERVERS"] == "1" {
++                        let registry = NotificationCenter.default.debugDescription
++                        sample["notification_registry_lines"] = Double(registry.split(separator: "\n").count)
++                        sample["notification_registry_bytes"] = Double(registry.utf8.count)
++                    }
+                     #if TRANSCRIPT_CHECKS
+                     if let counts = ConversationTranscript.retainedHosts(in: host) {
+                         sample["retained_hosts"] = Double(counts.retained)

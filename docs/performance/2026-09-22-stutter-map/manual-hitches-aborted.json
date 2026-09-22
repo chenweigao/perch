@@ -1,0 +1,14 @@
+{
+  "status": "aborted_during_postprocessing",
+  "reason": "After 90s recording, postprocessing exceeded seven minutes, consumed about 70 percent CPU and generated a 25 GiB incomplete trace. Terminated only this task recorder; removed its incomplete generated trace, retained logs and file size inventory.",
+  "largest_generated_files": [
+    {
+      "path": "Trace1.run/Attachments/trace-data.atrc",
+      "bytes": 26420605048
+    },
+    {
+      "path": "Trace1.run/RunIssues.storedata",
+      "bytes": 53248
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "1a509fb7a2ff433c69f4a91c55ea15949c088ffafe24bd3dd3ad8d4b9762ad45",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256": "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9"
+  },
+  "commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+  "empty_conversation": true,
+  "history_prepend": true,
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "hover_dwell_and_exit": true,
+  "hover_frames_ms": {
+    "count": 36,
+    "max_ms": 15.726250014267862,
+    "median_ms": 3.772333380766213,
+    "over_16_7ms": 0,
+    "over_100ms": 0,
+    "p95_ms": 7.289500092156231
+  },
+  "hover_preserves_hosts": true,
+  "jumps": [
+    {
+      "actual": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0199a:0",
+      "expected": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0199a:0",
+      "initial_layout_ms": 1.6552499728277326,
+      "mounted": 1,
+      "offset": 0,
+      "passed": true,
+      "retained": 1,
+      "selection_handler_ms": 0.061125028878450394,
+      "target_ready_ms": 33.97620830219239,
+      "turn": 200
+    },
+    {
+      "actual": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0000a:0",
+      "expected": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0000a:0",
+      "initial_layout_ms": 1.2211666908115149,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "retained": 3,
+      "selection_handler_ms": 0.07458333857357502,
+      "target_ready_ms": 34.30412500165403,
+      "turn": 1
+    },
+    {
+      "actual": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0100a:0",
+      "expected": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0100a:0",
+      "initial_layout_ms": 1.8668749835342169,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "retained": 3,
+      "selection_handler_ms": 0.1141249667853117,
+      "target_ready_ms": 48.78824995830655,
+      "turn": 101
+    },
+    {
+      "actual": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0006a:0",
+      "expected": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0006a:0",
+      "initial_layout_ms": 1.8196665914729238,
+      "mounted": 7,
+      "offset": 0,
+      "passed": true,
+      "retained": 7,
+      "selection_handler_ms": 0.10816659778356552,
+      "target_ready_ms": 53.698833333328366,
+      "turn": 7
+    },
+    {
+      "actual": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0198a:0",
+      "expected": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0198a:0",
+      "initial_layout_ms": 1.6421666368842125,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "retained": 3,
+      "selection_handler_ms": 0.1887916587293148,
+      "target_ready_ms": 74.0803750231862,
+      "turn": 199
+    },
+    {
+      "actual": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0050a:0",
+      "expected": "text:405BF4A4-21F3-4BDB-8E4F-A7B2B1679E9F:omp:session-1:0050a:0",
+      "initial_layout_ms": 1.8291249871253967,
+      "mounted": 3,
+      "offset": 0,
+      "passed": true,
+      "retained": 3,
+      "selection_handler_ms": 0.11816667392849922,
+      "target_ready_ms": 52.264624973759055,
+      "turn": 51
+    }
+  ],
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "turns",
+  "rapid_selection_coalescing": true,
+  "recreates_timeline": false,
+  "session_switch": true,
+  "sessions": 500,
+  "status": "passed",
+  "streaming_anchor_preserved": true,
+  "timestamp": "2026-09-22T14:21:58Z"
+}

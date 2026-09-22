@@ -1,0 +1,155 @@
+{
+  "build" : {
+    "compiler" : "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256" : "1a509fb7a2ff433c69f4a91c55ea15949c088ffafe24bd3dd3ad8d4b9762ad45",
+    "package_resolved_sha256" : "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit" : "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256" : "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9"
+  },
+  "commit" : "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+  "duration_s" : 122.84740562504157,
+  "final_resident_mb" : 239.46875,
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "idle_resident_mb" : 129.46875,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "soak",
+  "note" : "unattended soak on the isolated fixture; no remote agent, no production app state",
+  "recreates_timeline" : false,
+  "retired_hosts_after_settle" : 10,
+  "samples" : [
+    {
+      "elapsed_s" : 0.73682266671676189,
+      "mounted_hosts" : 3,
+      "resident_mb" : 166.5,
+      "retained_hosts" : 3,
+      "retired_hosts" : 5,
+      "scroll_steps" : 12,
+      "switches" : 1,
+      "views" : 113
+    },
+    {
+      "elapsed_s" : 11.041765916743316,
+      "mounted_hosts" : 4,
+      "resident_mb" : 187.234375,
+      "retained_hosts" : 4,
+      "retired_hosts" : 0,
+      "scroll_steps" : 180,
+      "switches" : 15,
+      "views" : 127
+    },
+    {
+      "elapsed_s" : 21.059043000102974,
+      "mounted_hosts" : 2,
+      "resident_mb" : 185.203125,
+      "retained_hosts" : 2,
+      "retired_hosts" : 5,
+      "scroll_steps" : 312,
+      "switches" : 26,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 32.095655583427288,
+      "mounted_hosts" : 1,
+      "resident_mb" : 197.625,
+      "retained_hosts" : 1,
+      "retired_hosts" : 3,
+      "scroll_steps" : 444,
+      "switches" : 37,
+      "views" : 74
+    },
+    {
+      "elapsed_s" : 42.28673045837786,
+      "mounted_hosts" : 2,
+      "resident_mb" : 223.421875,
+      "retained_hosts" : 2,
+      "retired_hosts" : 7,
+      "scroll_steps" : 564,
+      "switches" : 47,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 52.872304708347656,
+      "mounted_hosts" : 2,
+      "resident_mb" : 280.75,
+      "retained_hosts" : 2,
+      "retired_hosts" : 3,
+      "scroll_steps" : 660,
+      "switches" : 55,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 65.358184791752137,
+      "mounted_hosts" : 2,
+      "resident_mb" : 266.09375,
+      "retained_hosts" : 2,
+      "retired_hosts" : 12,
+      "scroll_steps" : 696,
+      "switches" : 58,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 79.8896948749898,
+      "mounted_hosts" : 2,
+      "resident_mb" : 263.765625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 7,
+      "scroll_steps" : 732,
+      "switches" : 61,
+      "views" : 79
+    },
+    {
+      "elapsed_s" : 94.410172875039279,
+      "mounted_hosts" : 2,
+      "resident_mb" : 280.890625,
+      "retained_hosts" : 2,
+      "retired_hosts" : 21,
+      "scroll_steps" : 780,
+      "switches" : 65,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 107.70055250008591,
+      "mounted_hosts" : 2,
+      "resident_mb" : 292.671875,
+      "retained_hosts" : 2,
+      "retired_hosts" : 15,
+      "scroll_steps" : 816,
+      "switches" : 68,
+      "views" : 100
+    },
+    {
+      "elapsed_s" : 122.68047029175796,
+      "mounted_hosts" : 2,
+      "resident_mb" : 239.859375,
+      "retained_hosts" : 2,
+      "retired_hosts" : 15,
+      "scroll_steps" : 852,
+      "switches" : 71,
+      "views" : 100
+    }
+  ],
+  "scroll_step_ms" : {
+    "count" : 852,
+    "max_ms" : 3002.4924167664722,
+    "median_ms" : 70.865791640244424,
+    "over_16_7ms" : 851,
+    "over_100ms" : 203,
+    "p95_ms" : 406.93379170261323
+  },
+  "scroll_steps" : 852,
+  "search_keystrokes" : 9,
+  "sessions" : 500,
+  "settled_resident_mb" : 229,
+  "status" : "passed",
+  "switch_ms" : {
+    "count" : 71,
+    "max_ms" : 2627.2047084057704,
+    "median_ms" : 82.044125068932772,
+    "over_16_7ms" : 71,
+    "over_100ms" : 17,
+    "p95_ms" : 146.13370841834694
+  },
+  "switches" : 71,
+  "timestamp" : "2026-09-22T14:46:34Z"
+}

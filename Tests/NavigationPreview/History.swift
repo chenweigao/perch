@@ -90,6 +90,12 @@ enum NavigationHistory {
                 """]]))
             }
         }
+        // Exercise actual attachment decoding without a remote service or user files.
+        if let path = ProcessInfo.processInfo.environment["NAVIGATION_IMAGE_FIXTURE"] {
+            let encoded = try Data(contentsOf: URL(fileURLWithPath: path)).base64EncodedString()
+            messages.append(message("image-fixture", "assistant", [["type": "image", "name": "fixture-4k.png",
+                "source": ["kind": "base64", "data": encoded]]]))
+        }
         let session: [String: Any] = [
             "id": "navigation-fixture", "title": "导航验收", "updated_at": "2026-09-21", "busy": streaming,
             "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/deterministic"]

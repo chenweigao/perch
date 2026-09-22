@@ -1,0 +1,8 @@
+Starting recording with the SwiftUI template. Launching process: NavigationPreview. Time limit: 90.0 s
+Ctrl-C to stop the recording
+Reached specified time limit, ending recording...
+Run issues were detected (trace is still ready to be viewed):
+* [Error] Cannot enable layout tracing on an unsupported device
+
+Recording failed with errors. Saving output file...
+Output file saved as: run.trace

@@ -1,0 +1,420 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 1197,
+  "main_sample_rows": 1146,
+  "all_threads_sampled_cpu_ms": 1197.0,
+  "main_sampled_cpu_ms": 1146.0,
+  "main_cpu_ms_per_second": {
+    "4": 315.0,
+    "5": 223.0,
+    "6": 417.0,
+    "7": 191.0
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      1019.0
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      692.0
+    ],
+    [
+      "_DPSNextEvent",
+      686.0
+    ],
+    [
+      "NSApplicationMain",
+      686.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      686.0
+    ],
+    [
+      "-[NSApplication run]",
+      686.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      686.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      686.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      686.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      686.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      686.0
+    ],
+    [
+      "specialized runApp(_:)",
+      685.0
+    ],
+    [
+      "runApp<A>(_:)",
+      685.0
+    ],
+    [
+      "start",
+      683.0
+    ],
+    [
+      "main",
+      683.0
+    ],
+    [
+      "static App.main()",
+      683.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      622.0
+    ],
+    [
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      438.0
+    ],
+    [
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+      431.0
+    ],
+    [
+      "AG::Subgraph::update(unsigned int)",
+      425.0
+    ],
+    [
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      418.0
+    ],
+    [
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      401.0
+    ],
+    [
+      "GraphHost.flushTransactions()",
+      394.0
+    ],
+    [
+      "NSPerformVisuallyAtomicChange",
+      375.0
+    ],
+    [
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      369.0
+    ],
+    [
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      368.0
+    ],
+    [
+      "CA::Transaction::commit()",
+      362.0
+    ],
+    [
+      "-[NSView layoutSubtreeIfNeeded]",
+      362.0
+    ],
+    [
+      "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+      361.0
+    ],
+    [
+      "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+      361.0
+    ],
+    [
+      "__CFRunLoopRun",
+      357.0
+    ],
+    [
+      "__CFRunLoopDoObservers",
+      352.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      352.0
+    ],
+    [
+      "0x18f0dd4f0",
+      339.0
+    ],
+    [
+      "0x18f0dd518",
+      339.0
+    ],
+    [
+      "0x18f0a21ec",
+      337.0
+    ],
+    [
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      337.0
+    ],
+    [
+      "0x18f0a2dd0",
+      337.0
+    ],
+    [
+      "___NSViewLayout_block_invoke",
+      337.0
+    ],
+    [
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      336.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "<deduplicated_symbol>",
+      40.0
+    ],
+    [
+      "objc_msgSend",
+      30.0
+    ],
+    [
+      "_platform_memmove",
+      18.0
+    ],
+    [
+      "_xzm_free",
+      16.0
+    ],
+    [
+      "swift_release",
+      15.0
+    ],
+    [
+      "iokit_user_client_trap",
+      13.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      11.0
+    ],
+    [
+      "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      11.0
+    ],
+    [
+      "_xzm_xzone_malloc_tiny",
+      10.0
+    ],
+    [
+      "mach_msg2_trap",
+      10.0
+    ],
+    [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      10.0
+    ],
+    [
+      "specialized find1<A>(_:key:filter:)",
+      10.0
+    ],
+    [
+      "_convertJSONString",
+      8.0
+    ],
+    [
+      "swift_bridgeObjectRelease",
+      8.0
+    ],
+    [
+      "_platform_memcmp",
+      8.0
+    ],
+    [
+      "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+      8.0
+    ],
+    [
+      "_swift_stdlib_getBinaryProperties",
+      8.0
+    ],
+    [
+      "__CF_IS_OBJC",
+      8.0
+    ],
+    [
+      "DYLD-STUB$$protocol witness for OptionSet.init(rawValue:) in conformance DisplayList.Properties",
+      8.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      8.0
+    ],
+    [
+      "swift_retain",
+      8.0
+    ],
+    [
+      "__kdebug_trace64",
+      7.0
+    ],
+    [
+      "_xzm_xzone_malloc_freelist_outlined",
+      7.0
+    ],
+    [
+      "_platform_memset",
+      7.0
+    ],
+    [
+      "___chkstk_darwin",
+      7.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "main",
+      683.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      451.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      301.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      301.0
+    ],
+    [
+      "NavigationRunner.turnNavigation()",
+      277.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      164.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      147.0
+    ],
+    [
+      "static NavigationHistory.conversation(turns:salt:streaming:)",
+      115.0
+    ],
+    [
+      "partial apply for closure #1 in ConversationDocumentView.updateNavigator()",
+      113.0
+    ],
+    [
+      "ConversationDocumentView.revealEntry(_:highlight:)",
+      113.0
+    ],
+    [
+      "closure #1 in ConversationTurnNavigation.select(_:)",
+      113.0
+    ],
+    [
+      "NavigationModel.warm(_:)",
+      101.0
+    ],
+    [
+      "NavigationRunner.warmedTargets()",
+      101.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      72.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      72.0
+    ],
+    [
+      "KimiPage.init(from:)",
+      64.0
+    ],
+    [
+      "KimiSnapshot.init(from:)",
+      64.0
+    ],
+    [
+      "protocol witness for Decodable.init(from:) in conformance KimiPage<A>",
+      64.0
+    ],
+    [
+      "specialized KimiSnapshot.init(from:)",
+      64.0
+    ],
+    [
+      "specialized KimiMessage.init(from:)",
+      61.0
+    ],
+    [
+      "KimiMessage.init(from:)",
+      61.0
+    ],
+    [
+      "closure #1 in HostedConversationEntry.body.getter",
+      54.0
+    ],
+    [
+      "ConversationTranscript.body.getter",
+      52.0
+    ],
+    [
+      "KimiPart.init(from:)",
+      42.0
+    ],
+    [
+      "specialized KimiPart.init(from:)",
+      42.0
+    ],
+    [
+      "settle #1 () in NavigationRunner.turnNavigation()",
+      37.0
+    ],
+    [
+      "ConversationProjection.update(_:isRunning:)",
+      24.0
+    ],
+    [
+      "ReplyContent.body.getter",
+      23.0
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      23.0
+    ],
+    [
+      "ReplyTextView.measure(width:)",
+      21.0
+    ],
+    [
+      "specialized SelectableReplyText.makeNSView(context:)",
+      21.0
+    ],
+    [
+      "static ReplyDocument.blocks(_:)",
+      19.0
+    ],
+    [
+      "static ReplyDocument.linkBareURLs(_:)",
+      19.0
+    ],
+    [
+      "closure #1 in static ReplyDocument.blocks(_:)",
+      19.0
+    ],
+    [
+      "specialized static ReplyDocument.blocks(_:)",
+      19.0
+    ]
+  ],
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}

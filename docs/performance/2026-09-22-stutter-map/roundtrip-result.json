@@ -1,0 +1,61 @@
+{
+  "back_to_workbench_ms": {
+    "count": 20,
+    "max_ms": 10.294500039890409,
+    "median_ms": 8.672416675835848,
+    "over_16_7ms": 0,
+    "over_100ms": 0,
+    "p95_ms": 10.040666675195098
+  },
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "1a509fb7a2ff433c69f4a91c55ea15949c088ffafe24bd3dd3ad8d4b9762ad45",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256": "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9"
+  },
+  "commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+  "cycles": 20,
+  "dropped_keystrokes": 0,
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "roundtrip",
+  "note": "scope changes are timed until the list itself re-renders; search keystrokes are issued between scroll steps, so a dropped keystroke means input did not reach the list while scrolling",
+  "recreates_timeline": false,
+  "search_during_scroll_ms": {
+    "count": 60,
+    "max_ms": 89.4299999345094,
+    "median_ms": 48.995916615240276,
+    "over_16_7ms": 60,
+    "over_100ms": 0,
+    "p95_ms": 65.70291670504957
+  },
+  "sessions": 500,
+  "status": "passed",
+  "timestamp": "2026-09-22T14:20:30Z",
+  "to_archive_ms": {
+    "count": 20,
+    "max_ms": 33.971874974668026,
+    "median_ms": 32.5060416944325,
+    "over_16_7ms": 20,
+    "over_100ms": 0,
+    "p95_ms": 33.85500004515052
+  },
+  "to_conversation_ms": {
+    "count": 20,
+    "max_ms": 102.90641663596034,
+    "median_ms": 37.09620831068605,
+    "over_16_7ms": 20,
+    "over_100ms": 1,
+    "p95_ms": 41.5067917201668
+  },
+  "to_task_group_ms": {
+    "count": 20,
+    "max_ms": 35.48320836853236,
+    "median_ms": 32.75958332233131,
+    "over_16_7ms": 20,
+    "over_100ms": 0,
+    "p95_ms": 34.89341668318957
+  }
+}

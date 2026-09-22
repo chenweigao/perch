@@ -1,0 +1,117 @@
+{
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256": "0c52fe0cd8ffe1c7c7f700aecb9f213c2d33828c5113d882f7b0c40658f600b8",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+    "source_sha256": "3e0d0ef68717d6025bcfa7d3007d7bda8f513bd69e970919b7a7d6de8bed6ec9"
+  },
+  "commit": "8ba9396dd4f719c413759a2e1a5e9fe0992ef42e",
+  "duration_s": 60.138540041749366,
+  "final_resident_mb": 185.296875,
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "idle_resident_mb": 112.671875,
+  "macos": "Version 26.6.2 (Build 25G83)",
+  "mode": "soak",
+  "note": "unattended soak on the isolated fixture; no remote agent, no production app state",
+  "recreates_timeline": false,
+  "retired_hosts_after_settle": 0,
+  "samples": [
+    {
+      "elapsed_s": 0.5661094166571274,
+      "mounted_hosts": 3,
+      "notification_registry_bytes": 35,
+      "notification_registry_lines": 1,
+      "resident_mb": 153.84375,
+      "retained_hosts": 3,
+      "retired_hosts": 5,
+      "scroll_steps": 12,
+      "switches": 1,
+      "views": 113
+    },
+    {
+      "elapsed_s": 10.752980333403684,
+      "mounted_hosts": 5,
+      "notification_registry_bytes": 35,
+      "notification_registry_lines": 1,
+      "resident_mb": 163.9375,
+      "retained_hosts": 5,
+      "retired_hosts": 0,
+      "scroll_steps": 240,
+      "switches": 20,
+      "views": 79
+    },
+    {
+      "elapsed_s": 21.19601695833262,
+      "mounted_hosts": 2,
+      "notification_registry_bytes": 35,
+      "notification_registry_lines": 1,
+      "resident_mb": 165.3125,
+      "retained_hosts": 2,
+      "retired_hosts": 0,
+      "scroll_steps": 492,
+      "switches": 41,
+      "views": 79
+    },
+    {
+      "elapsed_s": 31.696039708331227,
+      "mounted_hosts": 2,
+      "notification_registry_bytes": 35,
+      "notification_registry_lines": 1,
+      "resident_mb": 181.6875,
+      "retained_hosts": 2,
+      "retired_hosts": 2,
+      "scroll_steps": 720,
+      "switches": 60,
+      "views": 79
+    },
+    {
+      "elapsed_s": 42.18913895834703,
+      "mounted_hosts": 2,
+      "notification_registry_bytes": 35,
+      "notification_registry_lines": 1,
+      "resident_mb": 184.625,
+      "retained_hosts": 2,
+      "retired_hosts": 0,
+      "scroll_steps": 948,
+      "switches": 79,
+      "views": 79
+    },
+    {
+      "elapsed_s": 52.569039250025526,
+      "mounted_hosts": 2,
+      "notification_registry_bytes": 35,
+      "notification_registry_lines": 1,
+      "resident_mb": 186.234375,
+      "retained_hosts": 2,
+      "retired_hosts": 7,
+      "scroll_steps": 1176,
+      "switches": 98,
+      "views": 100
+    }
+  ],
+  "scroll_step_ms": {
+    "count": 1344,
+    "max_ms": 75.03341662231833,
+    "median_ms": 39.09083339385688,
+    "over_16_7ms": 1343,
+    "over_100ms": 0,
+    "p95_ms": 63.81824996788055
+  },
+  "scroll_steps": 1344,
+  "search_keystrokes": 14,
+  "sessions": 500,
+  "settled_resident_mb": 177.5625,
+  "status": "passed",
+  "switch_ms": {
+    "count": 112,
+    "max_ms": 92.00537495780736,
+    "median_ms": 45.05862505175173,
+    "over_16_7ms": 112,
+    "over_100ms": 0,
+    "p95_ms": 58.638749993406236
+  },
+  "switches": 112,
+  "timestamp": "2026-09-22T14:29:19Z"
+}

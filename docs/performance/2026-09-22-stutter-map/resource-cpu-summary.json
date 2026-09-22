@@ -1,0 +1,428 @@
+{
+  "after_s": 4.0,
+  "sample_rows": 8151,
+  "main_sample_rows": 8111,
+  "all_threads_sampled_cpu_ms": 8151.0,
+  "main_sampled_cpu_ms": 8111.0,
+  "main_cpu_ms_per_second": {
+    "4": 79.0,
+    "8": 1.0,
+    "10": 1.0,
+    "15": 796.0,
+    "16": 999.0,
+    "17": 999.0,
+    "18": 999.0,
+    "19": 1000.0,
+    "20": 997.0,
+    "21": 1000.0,
+    "22": 1000.0,
+    "23": 240.0
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      7782.0
+    ],
+    [
+      "-[NSApplication run]",
+      7481.0
+    ],
+    [
+      "runApp<A>(_:)",
+      7479.0
+    ],
+    [
+      "static App.main()",
+      7479.0
+    ],
+    [
+      "main",
+      7479.0
+    ],
+    [
+      "NSApplicationMain",
+      7479.0
+    ],
+    [
+      "specialized runApp(_:)",
+      7479.0
+    ],
+    [
+      "start",
+      7479.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      7448.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      7448.0
+    ],
+    [
+      "_DPSNextEvent",
+      7447.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      7447.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      7447.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      7447.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      7447.0
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      7446.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      6727.0
+    ],
+    [
+      "__CFRunLoopDoObservers",
+      4050.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      4048.0
+    ],
+    [
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      4014.0
+    ],
+    [
+      "GraphHost.flushTransactions()",
+      3985.0
+    ],
+    [
+      "AG::Graph::value_ref(AG::AttributeID, unsigned int, AGSwiftMetadata const*, unsigned char&)",
+      3950.0
+    ],
+    [
+      "specialized static NSRunLoop.flushObservers()",
+      3948.0
+    ],
+    [
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      3948.0
+    ],
+    [
+      "AGGraphGetWeakValue",
+      3921.0
+    ],
+    [
+      "NSPerformVisuallyAtomicChange",
+      3864.0
+    ],
+    [
+      "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+      3803.0
+    ],
+    [
+      "-[NSView layoutSubtreeIfNeeded]",
+      3803.0
+    ],
+    [
+      "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+      3803.0
+    ],
+    [
+      "specialized GraphHost.runTransaction(_:do:id:)",
+      3769.0
+    ],
+    [
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      3753.0
+    ],
+    [
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      3752.0
+    ],
+    [
+      "_NSViewLayout",
+      3745.0
+    ],
+    [
+      "___NSViewLayout_block_invoke",
+      3740.0
+    ],
+    [
+      "0x18f0dd518",
+      3734.0
+    ],
+    [
+      "0x18f0dd4f0",
+      3733.0
+    ],
+    [
+      "0x18f0a2dd0",
+      3727.0
+    ],
+    [
+      "0x18f0a21ec",
+      3724.0
+    ],
+    [
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      3717.0
+    ],
+    [
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      3715.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "<deduplicated_symbol>",
+      574.0
+    ],
+    [
+      "swift_release",
+      243.0
+    ],
+    [
+      "swift_retain",
+      205.0
+    ],
+    [
+      "DYLD-STUB$$protocol witness for OptionSet.init(rawValue:) in conformance DisplayList.Properties",
+      195.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      169.0
+    ],
+    [
+      "specialized find1<A>(_:key:filter:)",
+      153.0
+    ],
+    [
+      "___chkstk_darwin",
+      144.0
+    ],
+    [
+      "find1<A>(_:key:filter:)",
+      137.0
+    ],
+    [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      135.0
+    ],
+    [
+      "_platform_memmove",
+      110.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      110.0
+    ],
+    [
+      "swift_bridgeObjectRelease",
+      96.0
+    ],
+    [
+      "swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const",
+      94.0
+    ],
+    [
+      "swift_bridgeObjectRetain",
+      86.0
+    ],
+    [
+      "objc_msgSend",
+      84.0
+    ],
+    [
+      "AG::LayoutDescriptor::Compare::operator()(unsigned char const*, unsigned char const*, unsigned char const*, unsigned long, unsigned long, unsigned int)",
+      83.0
+    ],
+    [
+      "type metadata accessor for EnvironmentPropertyKey<EnvironmentValues.__Key_glassEffectBackdropObserver>",
+      82.0
+    ],
+    [
+      "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      78.0
+    ],
+    [
+      "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+      69.0
+    ],
+    [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      63.0
+    ],
+    [
+      "_xzm_free",
+      54.0
+    ],
+    [
+      "AGGraphGetValue",
+      52.0
+    ],
+    [
+      "AGGraphSetOutputValue",
+      51.0
+    ],
+    [
+      "initializeWithCopy for ClosedRange<>.Index",
+      48.0
+    ],
+    [
+      "_stringCompareFastUTF8Abnormal(_:_:expecting:)",
+      46.0
+    ]
+  ],
+  "main_app_inclusive_top": [
+    [
+      "main",
+      7479.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      722.0
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      614.0
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      614.0
+    ],
+    [
+      "NavigationRunner.resourceComparison(seconds:)",
+      606.0
+    ],
+    [
+      "ConversationTranscript.body.getter",
+      246.0
+    ],
+    [
+      "NavigationRoot.body.getter",
+      160.0
+    ],
+    [
+      "closure #1 in NavigationRoot.body.getter",
+      160.0
+    ],
+    [
+      "closure #1 in closure #1 in NavigationRoot.body.getter",
+      132.0
+    ],
+    [
+      "KimiToolCard.body.getter",
+      117.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+      115.0
+    ],
+    [
+      "closure #2 in KimiToolCard.body.getter",
+      113.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+      112.0
+    ],
+    [
+      "ConversationProjection.update(_:isRunning:)",
+      104.0
+    ],
+    [
+      "closure #1 in closure #2 in KimiToolCard.body.getter",
+      103.0
+    ],
+    [
+      "NavigationModel.scope.getter",
+      92.0
+    ],
+    [
+      "static ToolPresentation.action(_:)",
+      85.0
+    ],
+    [
+      "specialized static SessionCatalog.scope(_:starred:group:hostFilter:search:onlyAttention:showArchived:)",
+      85.0
+    ],
+    [
+      "initializeWithCopy for WorkspaceSession",
+      84.0
+    ],
+    [
+      "specialized _ArrayProtocol.filter<A>(_:)",
+      76.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows()",
+      73.0
+    ],
+    [
+      "closure #1 in closure #1 in closure #1 in NavigationRoot.body.getter",
+      68.0
+    ],
+    [
+      "partial apply for closure #1 in closure #1 in closure #1 in closure #1 in NavigationRoot.body.getter",
+      64.0
+    ],
+    [
+      "default argument 1 of L(_:locale:)",
+      63.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      62.0
+    ],
+    [
+      "destroy for WorkspaceSession",
+      62.0
+    ],
+    [
+      "_stringCompare(_:_:expecting:)",
+      55.0
+    ],
+    [
+      "static String.== infix(_:_:)",
+      55.0
+    ],
+    [
+      "AppLanguage.resolvedLocale.getter",
+      54.0
+    ],
+    [
+      "NavigationModel.scopeToken.getter",
+      52.0
+    ],
+    [
+      "static KimiMessage.__derived_struct_equals(_:_:)",
+      51.0
+    ],
+    [
+      "specialized static Array<A>.== infix(_:_:)",
+      51.0
+    ],
+    [
+      "protocol witness for static Equatable.== infix(_:_:) in conformance KimiMessage",
+      51.0
+    ],
+    [
+      "AppLanguage.localization.getter",
+      50.0
+    ],
+    [
+      "static KimiPart.__derived_struct_equals(_:_:)",
+      50.0
+    ]
+  ],
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}

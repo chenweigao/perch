@@ -1,0 +1,57 @@
+{
+  "scope": "startup and idle only; layout tracing unsupported, no claimed interaction cause graph",
+  "updates": {
+    "DynamicViewList<_ConditionalContent<JointInteractionPreview, ModifiedContent>>": [
+      1,
+      1.212125,
+      1.212125
+    ],
+    "UnwrapConditional<ViewDescriptor, _ConditionalContent<JointInteractionPreview, ModifiedContent>, JointInteractionPreview>": [
+      1,
+      0.007875,
+      0.007875
+    ],
+    "JointInteractionPreview.body": [
+      1,
+      35791.715583,
+      35791.715583
+    ],
+    "ConversationTranscript.body": [
+      6,
+      12.332165,
+      6.375375
+    ],
+    "EquatableView<ReplyContent>.Child": [
+      6,
+      0.0051649999999999995,
+      0.001291
+    ],
+    "ReplyContent.body": [
+      5,
+      19.347247999999997,
+      10.777875
+    ],
+    "_TaskValueModifier2<ConversationTranscript.SummaryObservation>.Child": [
+      6,
+      0.064747,
+      0.019875
+    ],
+    "ValueActionDispatcher<_ValueActionModifier2<ConversationTranscript.SummaryObservation>>": [
+      6,
+      0.019539,
+      0.005333
+    ],
+    "KimiAttachmentView.body": [
+      3,
+      0.19041599999999997,
+      0.135708
+    ],
+    "UnwrapConditional<ViewDescriptor, _ConditionalContent<_ConditionalContent, EmptyView>, KimiAttachmentView>": [
+      1,
+      0.002541,
+      0.002541
+    ]
+  },
+  "valid_for_performance": false,
+  "reason": "Unsupported layout tracing; startup includes abnormal instrumented intervals. Retained solely as failure evidence."
+}
