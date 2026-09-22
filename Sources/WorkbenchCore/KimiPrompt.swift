@@ -26,8 +26,15 @@ public struct KimiPrompt: Decodable, Identifiable, Equatable, Sendable {
     public init(id: String, content: [JSONValue]) {
         promptId = id; status = "sending"; self.content = content
     }
-    public static func reconcile(local: [Self], remote: [Self], messages: [KimiMessage]) -> [Self] {
+    /// `messages` must be every history message the client currently holds, not just the
+    /// snapshot's trailing page: a long turn pushes the user message out of that window,
+    /// and a prompt whose message is never found would stay "running" forever. When the
+    /// session has gone idle (`settled`), a prompt the server no longer reports after
+    /// running it has its outcome in the transcript, so its bubble is retired. Queued,
+    /// blocked and unacknowledged text is never dropped this way.
+    public static func reconcile(local: [Self], remote: [Self], messages: [KimiMessage], settled: Bool = false) -> [Self] {
         let visible = Set(messages.map(\.id))
+        let reported = Set(remote.map(\.id))
         var merged = local
         for prompt in remote {
             if let index = merged.firstIndex(where: { $0.id == prompt.id }) {
@@ -39,7 +46,11 @@ public struct KimiPrompt: Decodable, Identifiable, Equatable, Sendable {
                 if let error { merged[index].error = error }
             } else { merged.append(prompt) }
         }
-        return merged.filter { !visible.contains($0.userMessageId ?? $0.id) }
+        return merged.filter { prompt in
+            let historyID = prompt.userMessageId.flatMap { $0.isEmpty ? nil : $0 } ?? prompt.id
+            if visible.contains(historyID) { return false }
+            return !(settled && prompt.status == "running" && !reported.contains(prompt.id))
+        }
     }
 }
 

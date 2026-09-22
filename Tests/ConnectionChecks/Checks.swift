@@ -91,6 +91,7 @@ struct ConnectionChecks {
     static func main() async throws {
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
+        try await checkKimiPendingSettle()
         try await checkKimiSelectionIsolation()
         try await checkSendFailureIsolation()
         try await checkImmediateSelection()

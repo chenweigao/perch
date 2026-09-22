@@ -9,13 +9,14 @@ private final class LaunchProtocol: URLProtocol {
     static var creations = 0
     static var promptStatus = "running"
     static var failSteer = false
+    static var dropPrompts = false
     static var steered: [String] = []
     static var accepted: [[String: Any]] = []
     static func reset(snapshotFailure: Bool = false, promptFailure: Bool = false, status: String = "running", steerFailure: Bool = false) {
         lock.lock(); defer { lock.unlock() }
         failSnapshot = snapshotFailure; failPrompt = promptFailure
         submissions = []; creations = 0; accepted = []; steered = []
-        promptStatus = status; failSteer = steerFailure
+        promptStatus = status; failSteer = steerFailure; dropPrompts = false
     }
     static var sent: [(String, JSONValue)] {
         lock.lock(); defer { lock.unlock() }; return submissions
@@ -45,7 +46,7 @@ private final class LaunchProtocol: URLProtocol {
             if Self.failSteer { status = 503 }
             result = ["steered": true]
         } else if path.hasSuffix("/prompts") && request.httpMethod == "GET" {
-            result = ["active": NSNull(), "queued": Self.steered.isEmpty || Self.failSteer ? Self.accepted : []]
+            result = ["active": NSNull(), "queued": Self.dropPrompts ? [] : (Self.steered.isEmpty || Self.failSteer ? Self.accepted : [])]
         } else if path.hasSuffix("/prompts") {
             var data = request.httpBody ?? Data()
             if let stream = request.httpBodyStream {
@@ -131,4 +132,27 @@ func checkKimiSteering() async throws {
         client.disconnect()
         print("PASS: Kimi \(mode), accepted id, visible message, no duplicate submission")
     }
+}
+
+@MainActor
+func checkKimiPendingSettle() async throws {
+    LaunchProtocol.reset(status: "running")
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [LaunchProtocol.self]
+    let api = KimiAPI(baseURL: URL(string: "http://fixture.invalid")!, token: "fixture", configuration: configuration)
+    let host = SSHHost(name: "Settle fixture", destination: "fixture")
+    let client = KimiConnection(host: host, api: api)
+    client.drafts["done"] = "已完成的长任务"
+    await client.sendPrompt(for: "done")
+    precondition(client.pendingPrompts["done"]?.first?.status == "running")
+    // The turn is over: the server no longer reports the prompt, and a long turn
+    // pushed its user message out of the snapshot's trailing message page.
+    LaunchProtocol.dropPrompts = true
+    client.select("done")
+    await ConnectionChecks.settle { client.snapshotReady }
+    precondition(client.pendingPrompts["done"]?.isEmpty != false,
+                 "A settled turn retires its pending bubble even when the user message is out of the snapshot page")
+    client.disconnect()
+    UserDefaults.standard.removeObject(forKey: "kimi.session.\(host.id)")
+    print("PASS: Kimi pending bubble settles when its turn is over")
 }

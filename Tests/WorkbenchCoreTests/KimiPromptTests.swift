@@ -23,5 +23,23 @@ func checkKimiPrompts() throws {
     var running = prompt; running.status = "running"
     precondition(KimiPrompt.reconcile(local: [steerFailed], remote: [running], messages: []).first?.error == nil,
                  "Once the message runs, its old steer warning is no longer actionable")
+    // A long turn pushes the user message out of the snapshot's trailing page. Once the
+    // session is idle and the server no longer reports the prompt, its outcome is in the
+    // transcript and the bubble must retire instead of showing "Running" forever.
+    precondition(KimiPrompt.reconcile(local: [running], remote: [], messages: [], settled: true).isEmpty,
+                 "An idle session retires a prompt the server no longer reports")
+    precondition(KimiPrompt.reconcile(local: [running], remote: [], messages: []).count == 1,
+                 "A running turn keeps its prompt until the turn settles")
+    precondition(KimiPrompt.reconcile(local: [running], remote: [running], messages: [], settled: true).count == 1,
+                 "A prompt the server still reports is not retired")
+    precondition(KimiPrompt.reconcile(local: [prompt], remote: [], messages: [], settled: true).count == 1,
+                 "Queued text was never run and is never retired by idleness")
+    var unacked = local; unacked.status = "sending"
+    precondition(KimiPrompt.reconcile(local: [unacked], remote: [], messages: [], settled: true).count == 1,
+                 "Unacknowledged text is never retired by idleness")
+    // An empty user_message_id must fall back to the prompt id for the history match.
+    let unnamed = try decoder.decode(KimiPrompt.self, from: Data(#"{"prompt_id":"self-id","user_message_id":"","status":"running","content":[]}"#.utf8))
+    let ownMessage = try decoder.decode(KimiMessage.self, from: Data(#"{"id":"self-id","role":"user","content":[],"created_at":"now"}"#.utf8))
+    precondition(KimiPrompt.reconcile(local: [unnamed], remote: [], messages: [ownMessage]).isEmpty)
     print("PASS: Kimi pending queue recovery, identity reconciliation, no duplicate bubble")
 }

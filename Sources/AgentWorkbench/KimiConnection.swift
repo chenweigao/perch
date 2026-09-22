@@ -237,9 +237,14 @@ final class KimiConnection: ObservableObject {
         guard selectionToken == selectionGeneration, id == selectedId else { throw CancellationError() }
         let prompts = try await api.get(KimiPromptQueue.self, "/api/v1/sessions/\(id)/prompts")
         guard selectionToken == selectionGeneration, id == selectedId else { throw CancellationError() }
+        // The snapshot's message page is only the trailing window. The conversation
+        // retains older pages it has seen, and both are needed to recognise a prompt's
+        // user message after a long turn pushed it out of the window.
+        let retained = conversation?.snapshot.session.id == id ? conversation?.messages ?? [] : []
         pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [],
                                                 remote: prompts.queued + (prompts.active.map { [$0] } ?? []),
-                                                messages: value.messages.items)
+                                                messages: retained + value.messages.items,
+                                                settled: !value.session.busy)
         if let current = conversation, value.epoch == current.snapshot.epoch, value.asOfSeq < current.lastSeq {
             // Keep newer events from this same server epoch, but settle the read.
             // Otherwise a refresh can leave the cached conversation unsendable.
