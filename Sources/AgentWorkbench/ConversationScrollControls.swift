@@ -81,7 +81,7 @@ struct ReturnToLatestButton: View {
                 if hasNewReply { Text("New reply") }
             }.font(.system(size: 12, weight: .medium)).padding(.horizontal, 10).frame(height: 32)
                 .workbenchFloatingSurface()
-                .overlay(Circle().strokeBorder(.primary.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.primary.opacity(0.08)))
                 .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
         }.buttonStyle(.plain).help("Return to latest reply").accessibilityLabel("Return to latest reply")
             .padding(.bottom, 8)
