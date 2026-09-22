@@ -9,8 +9,10 @@ if ! git -C "$checkout" apply --reverse --check "$patch_file" 2>/dev/null; then
     git -C "$checkout" apply --check "$patch_file"
     git -C "$checkout" apply "$patch_file"
 fi
-swift build --configuration "$configuration"
-bin_dir="$(swift build --configuration "$configuration" --show-bin-path)"
+# Swift 6.4's SwiftBuild backend stamps the deployment target as the linked SDK,
+# which disables the native floating sidebar. Native preserves the actual SDK.
+swift build --build-system native --configuration "$configuration"
+bin_dir="$(swift build --build-system native --configuration "$configuration" --show-bin-path)"
 app_dir="$PWD/build/Perch.app"
 rm -rf "$app_dir"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"

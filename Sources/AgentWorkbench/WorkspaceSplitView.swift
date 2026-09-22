@@ -70,8 +70,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         controller.splitView.dividerStyle = .thin
         controller.splitView.autosaveName = "WorkbenchWorkspace"
 
-        // The old saved layout contains separate title/actions items.
-        let toolbar = NSToolbar(identifier: "WorkbenchCenteredToolbar")
+        let toolbar = NSToolbar(identifier: "WorkbenchToolbar")
         toolbar.delegate = coordinator
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = true
@@ -114,8 +113,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
         private let composeID = NSToolbarItem.Identifier("WorkbenchCompose")
         private let separatorID = NSToolbarItem.Identifier("WorkbenchSidebarSeparator")
-        private let contentID = NSToolbarItem.Identifier("WorkbenchContentHeader")
-        private lazy var contentHeader = WorkbenchContentToolbarView(header: headerHost, actions: actionsHost, detail: contentHost.view)
+        private let titleID = NSToolbarItem.Identifier("WorkbenchTitle")
+        private let actionsID = NSToolbarItem.Identifier("WorkbenchActions")
 
         init(_ view: WorkspaceSplitView) {
             sidebarHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.sidebar, locale: view.locale))
@@ -136,7 +135,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, backID, forwardID, separatorID, contentID]
+            [toggleID, backID, forwardID, separatorID, titleID, .flexibleSpace, actionsID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
             toolbarDefaultItemIdentifiers(toolbar) + [composeID]
@@ -177,9 +176,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.target = self
                 item.action = #selector(compose)
                 item.isBordered = false
-            } else if id == contentID {
+            } else if id == titleID {
                 item.label = L("当前会话")
-                item.view = contentHeader
+                item.view = headerHost
+                item.isBordered = false
+                item.visibilityPriority = .high
+            } else if id == actionsID {
+                item.label = L("会话操作")
+                item.view = actionsHost
                 item.isBordered = false
                 item.visibilityPriority = .user
             }
@@ -196,7 +200,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 case forwardID: item.label = L("Forward"); item.toolTip = item.label + " · ⌘]"
                 case toggleID: item.label = L("切换侧栏"); item.toolTip = L("显示或隐藏侧栏")
                 case composeID: item.label = L("新建任务"); item.toolTip = L("新建任务 · ⌘N")
-                case contentID: item.label = L("当前会话")
+                case titleID: item.label = L("当前会话")
+                case actionsID: item.label = L("会话操作")
                 default: break
                 }
                 if let button = item.view as? NSButton {
@@ -232,52 +237,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         @objc private func compose() { newConversation() }
         @objc private func goBack() { navigate(-1); controller?.workspaceToolbar?.validateVisibleItems() }
         @objc private func goForward() { navigate(1); controller?.workspaceToolbar?.validateVisibleItems() }
-    }
-}
-
-/// One flexible item fills the remaining toolbar. Use the actual detail bounds
-/// for centering, including when collapsed navigation occupies its leading edge.
-private final class WorkbenchContentToolbarView: NSView {
-    private weak var detail: NSView?
-    private var titleCenter: NSLayoutConstraint!
-
-    init(header: NSView, actions: NSView, detail: NSView) {
-        self.detail = detail
-        super.init(frame: .zero)
-        translatesAutoresizingMaskIntoConstraints = false
-        for child in [header, actions] {
-            child.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(child)
-        }
-        actions.setContentCompressionResistancePriority(.required, for: .horizontal)
-        actions.setContentHuggingPriority(.required, for: .horizontal)
-        titleCenter = header.centerXAnchor.constraint(equalTo: centerXAnchor)
-        NSLayoutConstraint.activate([
-            widthAnchor.constraint(greaterThanOrEqualToConstant: 240),
-            widthAnchor.constraint(lessThanOrEqualToConstant: 10000),
-            heightAnchor.constraint(equalToConstant: WorkbenchChrome.controlSize),
-            titleCenter,
-            header.centerYAnchor.constraint(equalTo: centerYAnchor),
-            header.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor),
-            header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -WorkbenchChrome.controlSpacing),
-            header.widthAnchor.constraint(lessThanOrEqualToConstant: 440),
-            actions.trailingAnchor.constraint(equalTo: trailingAnchor),
-            actions.centerYAnchor.constraint(equalTo: centerYAnchor),
-        ])
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    func alignTitle() {
-        guard let detail, window != nil, detail.window === window else { return }
-        let center = detail.convert(NSPoint(x: detail.bounds.midX, y: detail.bounds.midY), to: self)
-        let offset = center.x - bounds.midX
-        if titleCenter.constant != offset { titleCenter.constant = offset }
-    }
-
-    override func layout() {
-        alignTitle()
-        super.layout()
     }
 }
 
@@ -322,14 +281,6 @@ private final class WorkbenchDetailController: NSViewController {
 
 final class WorkbenchSplitController: NSSplitViewController {
     var workspaceToolbar: NSToolbar?
-
-    override func viewDidLayout() {
-        super.viewDidLayout()
-        for item in workspaceToolbar?.items ?? [] {
-            (item.view as? WorkbenchContentToolbarView)?.alignTitle()
-        }
-    }
-
     override func viewDidAppear() {
         super.viewDidAppear()
         guard let window = view.window else { return }

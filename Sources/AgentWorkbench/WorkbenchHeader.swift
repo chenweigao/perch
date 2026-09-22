@@ -15,7 +15,7 @@ struct WorkbenchHeader: View {
             Image(systemName: item?.reference.kind.symbol ?? (model.showArchived ? "archivebox" : model.onlyAttention ? "tray" : model.showSessionDirectory ? "list.bullet" : model.selectedGroup == nil ? "square.grid.2x2" : "folder"))
                 .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
             Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
-        }.frame(maxWidth: .infinity, alignment: .center)
+        }.frame(minWidth: 100, maxWidth: 440, alignment: .leading)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
