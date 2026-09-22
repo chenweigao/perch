@@ -47,20 +47,39 @@ struct ConversationTranscript: View {
     var liveTools: [KimiLiveTool] = []
     var online = true
     var memoryKey: String?
+    // Preview/benchmark transcripts never invoke a user's configured service.
+    var allowsActivitySummaries = false
+    var followsLatest = true
     @State private var toolProjection = ToolVisibilityProjection()
     @State private var projection = ConversationProjection()
+    @ObservedObject private var summarySettings = ActivitySummarySettings.shared
+    @StateObject private var summaryController = ActivitySummaryController()
     @Environment(\.self) private var environment
     @State private var measured: (session: String, height: CGFloat)?
     @State private var contentOriginY: CGFloat = 0
     var body: some View {
         let visible = toolProjection.update(messages, sessionID: sessionId, live: liveTools, running: running, online: online)
         let snapshot = projection.update(visible.messages, isRunning: isRunning)
+        let start = snapshot.entries.lastIndex { $0.messages.first?.role == "user" && $0.presentation == .message } ?? 0
+        let summaryEntry = snapshot.entries.dropFirst(start).last { entry in
+            entry.isExploration && entry.messages.count >= 6
+        }
+        let batch = summaryEntry.map { entry in
+            ActivitySummaryBatch(groupID: entry.id,
+                tools: entry.messages.flatMap(\.content).compactMap { visible.tools[$0.toolCallId ?? ""] },
+                closed: !isRunning || entry.id != snapshot.entries.last?.id)
+        }
+        let observation = SummaryObservation(session: memoryKey ?? sessionId, batch: batch,
+            running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
+            settingsRevision: summarySettings.revision)
         let contents = snapshot.entries.map { entry in
             let ids = Set(entry.messages.flatMap(\.content).compactMap(\.toolCallId))
             let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
                 if let value = visible.tools[id] { result[id] = value }
             }
-            return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId, memoryKey: (memoryKey ?? sessionId) + ":" + entry.id)
+            let summary = summarySettings.configuration.enabled ? summaryController.summaries[entry.id]?.text : nil
+            return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId,
+                memoryKey: (memoryKey ?? sessionId) + ":" + entry.id, activitySummary: summary)
         }
         ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: memoryKey ?? sessionId,
                                  appearance: ConversationEntryAppearance(environment),
@@ -71,6 +90,19 @@ struct ConversationTranscript: View {
             .onGeometryChange(for: CGFloat.self) {
                 $0.frame(in: .named("conversation-content")).minY
             } action: { contentOriginY = $0 }
+            .task(id: observation) {
+                summaryController.observe(session: observation.session, batch: batch, running: isRunning,
+                                          online: observation.online, following: followsLatest, settings: summarySettings)
+            }
+            .onDisappear { summaryController.cancel() }
+    }
+    private struct SummaryObservation: Hashable {
+        let session: String
+        let batch: ActivitySummaryBatch?
+        let running: Bool
+        let online: Bool
+        let following: Bool
+        let settingsRevision: Int
     }
 }
 
@@ -383,6 +415,11 @@ private final class ConversationDocumentView: NSView {
     }
     private func updateHeight(_ id: String, height: CGFloat) {
         guard let index = indices[id], heightAnimation?.id != id, heights[index] != height else { return }
+        if ConversationReadingMemory.shared.following[sessionId] == false,
+           let reading = geometry.readingRow(at: viewportRect.minY), index < reading {
+            saveReadingPosition()
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+        }
         if disclosureRow == id {
             disclosureRow = nil
             heightAnimation = (id, heights[index], height, ProcessInfo.processInfo.systemUptime)
@@ -768,16 +805,18 @@ private struct ConversationEntryView: View, Equatable {
     let api: KimiAPI?
     let sessionId: String
     let memoryKey: String
+    var activitySummary: String? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
+            && lhs.activitySummary == rhs.activitySummary
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
                 switch entry.presentation {
                 case .activity:
-                    KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId)
+                    KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId, summary: activitySummary)
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: 12) {

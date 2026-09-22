@@ -5,6 +5,8 @@ struct WorkbenchSettings: View {
     @ObservedObject var model: WorkbenchModel
     @State private var showLocal = false
     @State private var showSSH = false
+    @State private var showSummary = false
+    @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @State private var editingHost: SSHHost?
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     var body: some View {
@@ -30,11 +32,18 @@ struct WorkbenchSettings: View {
                 if let error = model.notificationError { Text(error).font(.caption).foregroundStyle(.orange) }
             }
             Section("界面") {
+                HStack {
+                    Button("配置活动摘要…") { showSummary = true }
+                    Spacer()
+                    Text(summarySettings.configuration.enabled ? "已开启" : "默认关闭").foregroundStyle(.secondary)
+                    if summarySettings.configuration.enabled { Button("关闭") { summarySettings.disable() } }
+                }
                 Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).frame(width: 440, height: 420)
+        }.formStyle(.grouped).frame(width: 460, height: 480)
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
+            .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
             .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
     }
 }

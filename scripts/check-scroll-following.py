@@ -11,6 +11,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
     ["swift", "build", "-c", "release", "--show-bin-path"], cwd=ROOT, text=True).strip())
 files = ["ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory",
+         "ActivitySummarySettings", "ActivitySummaryController",
          "ConversationScrollControls", "ReplyMarkdownView", "KimiAttachmentView",
          "ConversationActivityBar", "WorkbenchGlass"]
 includes = ["-I", str(BIN / "Modules")]

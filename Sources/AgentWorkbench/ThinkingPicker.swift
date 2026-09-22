@@ -29,9 +29,6 @@ struct ThinkingPicker: View {
                 .disabled(disabled)
                 .help("Thinking effort for the next turn. Available levels depend on the model.")
                 .accessibilityLabel("Choose thinking effort")
-        } else if model != nil {
-            Text("Thinking unavailable").font(.system(size: 11)).foregroundStyle(.tertiary)
-                .help("This model does not offer adjustable thinking effort.")
         }
     }
 }

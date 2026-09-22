@@ -5,6 +5,7 @@ struct ModelPicker: View {
     let models: [ModelOption]
     @Binding var selection: String
     var current = ""
+    var effortUnavailable = false
     @State private var presented = false
     private var effective: String { selection.isEmpty ? current : selection }
     private var option: ModelOption? { models.first { $0.id == effective } }
@@ -30,7 +31,7 @@ struct ModelPicker: View {
                 .accessibilityLabel(Text("选择模型"))
                 .accessibilityValue(effective)
                 .popover(isPresented: $presented, arrowEdge: .top) {
-                    ModelPickerPanel(models: models, selection: $selection, current: current) {
+                    ModelPickerPanel(models: models, selection: $selection, current: current, effortUnavailable: effortUnavailable) {
                         presented = false
                     }
                 }
@@ -42,6 +43,7 @@ private struct ModelPickerPanel: View {
     let models: [ModelOption]
     @Binding var selection: String
     let current: String
+    var effortUnavailable = false
     let dismiss: () -> Void
     @State private var query = ""
     @State private var provider = ""
@@ -67,6 +69,10 @@ private struct ModelPickerPanel: View {
                 }.pickerStyle(.menu)
             }.font(.system(size: 13)).padding(14)
             Divider()
+            if effortUnavailable {
+                Text("此模型未提供思考档位设置。")
+                    .font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
+            }
             ModelPickerRow(title: current.isEmpty ? Text("使用默认模型") : Text("沿用会话模型"),
                            detail: current.isEmpty ? nil : current, selected: selection.isEmpty) {
                 selection = ""

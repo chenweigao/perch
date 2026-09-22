@@ -3,9 +3,13 @@ import Foundation
 /// Folding is based on the turn's available output, never on an assumed final summary.
 public struct ConversationTimelineEntry: Identifiable, Equatable {
     public enum Presentation: Equatable { case message, activity, commentary, progress, thinkingPreview, thinkingDetails, record, thinkingRecord, emptyOutput }
-    public let messages: [KimiMessage]
+    public private(set) var messages: [KimiMessage]
     public let presentation: Presentation
     public var activity: Bool { presentation == .activity }
+    public var isExploration: Bool {
+        guard activity, let part = messages.first?.content.first, part.type == "tool_use" else { return false }
+        return ToolPresentation.isExploration(part.toolName ?? "")
+    }
     private let partOffset: Int
     public var id: String {
         // A tool can start in live state, arrive as an orphan result, then gain its
@@ -55,7 +59,16 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 } else {
                     presentation = !running && final == nil && index == lastText ? .record : .progress
                 }
-                entries.append(Self(messages: [phase.message], presentation: presentation, partOffset: phase.offset))
+                // Only adjacent read/search calls fold together. Text, thoughts,
+                // edits and user guidance retain their original boundaries.
+                // Bound the expanded host as well as the collapsed row: long
+                // read-only runs must not create a thousands-of-tools SwiftUI tree.
+                if part.type == "tool_use", ToolPresentation.isExploration(part.toolName ?? ""),
+                   entries.last?.isExploration == true, entries.last!.messages.count < 24 {
+                    entries[entries.count - 1].messages.append(phase.message)
+                } else {
+                    entries.append(Self(messages: [phase.message], presentation: presentation, partOffset: phase.offset))
+                }
             }
             if !hasText && !phases.contains(where: { thinking($0.message.content[0]) }) && !running && turn.contains(where: { $0.role == "assistant" }) {
                 entries.append(Self(messages: [turn[0]], presentation: .emptyOutput, partOffset: 0))

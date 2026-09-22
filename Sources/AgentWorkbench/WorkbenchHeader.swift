@@ -41,9 +41,6 @@ struct WorkbenchHeaderActions: View {
         return nil
     }
     private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil }
-    private var canStop: Bool {
-        (model.showKimi && kimi.canStop) || (model.showNative && native.canStop)
-    }
     var body: some View {
         HStack(spacing: 12) {
             if let item, !item.directory.isEmpty {
@@ -62,12 +59,6 @@ struct WorkbenchHeaderActions: View {
                     Image(systemName: "doc.text.magnifyingglass").font(.system(size: 11))
                         .frame(width: 28, height: 28).workbenchControlSurface()
                 }.buttonStyle(.plain).help("查看远端文件（只读）").accessibilityLabel("查看远端文件")
-            }
-            if canStop {
-                Button { if model.showKimi { kimi.abort() } else { native.stop() } } label: {
-                    Image(systemName: "stop.fill").font(.system(size: 9)).frame(width: 28, height: 28)
-                        .workbenchControlSurface()
-                }.buttonStyle(.plain).help("Stop task").accessibilityLabel("Stop task")
             }
             if !model.showDashboard {
                 Menu {

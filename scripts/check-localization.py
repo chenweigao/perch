@@ -39,6 +39,8 @@ SCOPED_FILES = [
     "Sources/AgentWorkbench/RemoteSetupView.swift",
     "Sources/AgentWorkbench/LocalAgentSetupSheet.swift",
     "Sources/AgentWorkbench/WorkbenchSettings.swift",
+    "Sources/AgentWorkbench/ActivitySummarySettings.swift",
+    "Sources/AgentWorkbench/ToolActivityView.swift",
     "Sources/AgentWorkbench/WorkbenchView.swift",
     "Sources/AgentWorkbench/WorkbenchApp.swift",
     "Sources/AgentWorkbench/WorkbenchHeader.swift",

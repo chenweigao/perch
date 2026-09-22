@@ -28,7 +28,8 @@ struct NativeAgentView: View {
                     }) {
                         ConversationTranscript(messages: s.messages, sessionId: s.id,
                                                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
-                                               isRunning: s.busy, online: connection.online, memoryKey: readingKey)
+                                               isRunning: s.busy, online: connection.online, memoryKey: readingKey,
+                                               allowsActivitySummaries: true, followsLatest: follow)
                         NativeRunControls(connection: connection, sessionID: s.id)
                         Color.clear.frame(height: 1).id("pending-interactions")
                         ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }
@@ -89,7 +90,7 @@ struct NativeAgentView: View {
                             apply(command, completion, to: s.id)
                         }
                     }
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         MessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                                       set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
                                         placeholder: L("Continue this task, or type / for commands…"),
@@ -109,7 +110,7 @@ struct NativeAgentView: View {
                                                  onStop: { connection.stop() },
                                                  onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
                         }
-                    }.padding(14).workbenchControlSurface()
+                    }.padding(12).workbenchControlSurface()
                     ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
@@ -189,6 +190,10 @@ struct NativeModelControls: View {
                         }
                     }
                     if connection.models.isEmpty { Text("Loading models…") }
+                    if current?.supportsThinking == false {
+                        Divider()
+                        Text("此模型未提供思考档位设置。")
+                    }
                 } label: {
                     Text(current?.name ?? (snapshot.model.isEmpty ? "Choose model" : snapshot.model))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)

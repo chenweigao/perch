@@ -79,7 +79,7 @@ struct KimiWorkspaceView: View {
                     apply(command, completion, to: sessionID)
                 }
             }
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 if let files = connection.attachments[sessionID], !files.isEmpty {
                     ScrollView(.horizontal) {
                         HStack {
@@ -102,7 +102,8 @@ struct KimiWorkspaceView: View {
                     ModelPicker(models: ModelCatalog.options(connection.models),
                                 selection: Binding(get: { connection.modelChoices[sessionID] ?? "" },
                                                    set: { connection.modelChoices[sessionID] = $0 }),
-                                current: connection.conversation?.snapshot.session.model ?? "")
+                                current: connection.conversation?.snapshot.session.model ?? "",
+                                effortUnavailable: connection.activeModel(for: sessionID)?.supportsThinking == false)
                     ThinkingPicker(model: connection.activeModel(for: sessionID),
                                    current: connection.thinkingChoices[sessionID],
                                    disabled: connection.sending) { level in
@@ -119,7 +120,7 @@ struct KimiWorkspaceView: View {
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
                 }
-            }.padding(14).workbenchControlSurface()
+            }.padding(12).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
@@ -205,7 +206,8 @@ private struct KimiTimeline: View {
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.busy,
-                                           liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey)
+                                           liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
+                                           allowsActivitySummaries: true, followsLatest: follow)
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         VStack(alignment: .leading, spacing: 8) {
                             PendingMessageContent(text: prompt.text, status: prompt.label)

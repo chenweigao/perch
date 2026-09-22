@@ -37,7 +37,12 @@ app_files=(
     Sources/AgentWorkbench/WorkspaceSplitView.swift
 )
 # The historical baseline predates the extracted tool component.
-if [[ "$variant" == current ]]; then app_files+=(Sources/AgentWorkbench/ToolActivityView.swift); fi
+if [[ "$variant" == current ]]; then
+    app_files+=(Sources/AgentWorkbench/ToolActivityView.swift)
+    if [[ -z "$source_ref" ]] || git cat-file -e "$source_ref:Sources/AgentWorkbench/ActivitySummaryController.swift" 2>/dev/null; then
+        app_files+=(Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift)
+    fi
+fi
 # Refresh only this fixture's copied source directory, never any checkout.
 rm -rf "$snapshot_root/Sources"
 if [[ "$variant" == baseline ]]; then
