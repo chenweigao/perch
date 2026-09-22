@@ -363,6 +363,7 @@ struct NewConversationSheet: View {
     @State private var attachments: [URL] = []
     @State private var chooseFiles = false
     @State private var showSetup = false
+    @FocusState private var cwdFocused: Bool
     private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
@@ -377,9 +378,20 @@ struct NewConversationSheet: View {
         return !creating && hasContent && modelIsValid && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/")
             && availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online)
     }
+    /// Menu triggers on this sheet match the composer row: a 12pt value with a quiet chevron.
+    private struct SheetMenuLabel<Content: View>: View {
+        let content: Content
+        init(@ViewBuilder content: () -> Content) { self.content = content() }
+        var body: some View {
+            HStack(spacing: 5) {
+                content
+                Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+            }.font(.system(size: 12)).padding(.vertical, 6).contentShape(Rectangle())
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Start a task").font(.title2.weight(.semibold))
+            Text("新建任务").font(.title2.weight(.semibold))
             if let group = model.selectedGroup { Text(group.name).foregroundStyle(.secondary) }
             VStack(alignment: .leading, spacing: 10) {
                 if !attachments.isEmpty {
@@ -391,10 +403,12 @@ struct NewConversationSheet: View {
                         }
                     }
                 }
-                MessageComposer(text: $prompt, placeholder: "What would you like to work on?", canSend: canStart, onSend: start,
+                MessageComposer(text: $prompt, placeholder: L("想做点什么？"),
+                                accessibilityLabel: L("任务描述"),
+                                canSend: canStart, onSend: start,
                                 onFiles: provider == .kimi ? addAttachments : nil,
                                 onError: { error = $0 })
-            }.frame(minHeight: 100).padding(14).workbenchControlSurface().disabled(creating)
+            }.frame(minHeight: 80, alignment: .top).padding(14).workbenchControlSurface().disabled(creating)
             if provider != .kimi && !attachments.isEmpty {
                 Text("Choose Kimi or remove the attachments to start this task.").font(.caption).foregroundStyle(.secondary)
             }
@@ -404,13 +418,25 @@ struct NewConversationSheet: View {
                     ForEach(model.connections) { connection in
                         Button(connection.host.name) { agentModel = ""; model.activateAgentEnvironment(connection.id) }
                     }
-                } label: { Label(kimi.host.name, systemImage: "server.rack") }
-                Picker("Agent", selection: Binding(get: { provider }, set: { selectProvider($0) })) {
-                    ForEach(availableProviders, id: \.self) { Text($0.label).tag($0) }
-                }.frame(width: 200)
+                } label: {
+                    SheetMenuLabel { Label(kimi.host.name, systemImage: "server.rack") }
+                }.menuStyle(.borderlessButton).fixedSize()
+                    .accessibilityLabel("运行环境")
+                Menu {
+                    ForEach(availableProviders, id: \.self) { kind in
+                        Button {
+                            selectProvider(kind)
+                        } label: {
+                            if kind == provider { Label(kind.label, systemImage: "checkmark") } else { Text(kind.label) }
+                        }
+                    }
+                } label: {
+                    SheetMenuLabel { Text(provider.label) }
+                }.menuStyle(.borderlessButton).fixedSize()
+                    .accessibilityLabel("选择 Agent")
                 Spacer()
                 if provider == .kimi {
-                    ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel)
+                    ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel, emphasizesSelection: true)
                 } else if provider == .codex {
                     ModelControlWidth {
                         Menu {
@@ -422,21 +448,37 @@ struct NewConversationSheet: View {
                                     else { Text(option.name) }
                                 }
                             }
-                            if codexModels.isEmpty { Text("Loading models…") }
+                            if codexModels.isEmpty { Text("正在读取模型…") }
                         } label: {
-                            Text(selectedCodexModel?.name ?? "Choose Codex model")
-                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        }.menuStyle(.borderlessButton).disabled(codexModels.isEmpty)
+                            SheetMenuLabel {
+                                Text(selectedCodexModel?.name ?? "选择 Codex 模型")
+                                    .foregroundStyle(selectedCodexModel != nil ? .primary : .secondary)
+                            }
+                        }.menuStyle(.borderlessButton).fixedSize().disabled(codexModels.isEmpty)
                     }
                 }
             }.disabled(creating)
-            HStack {
-                Image(systemName: "folder")
-                TextField("Project directory (absolute path)", text: $cwd).textFieldStyle(.roundedBorder)
-                Menu("Recent") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "folder").foregroundStyle(.secondary)
+                    TextField("项目目录（绝对路径）", text: $cwd).textFieldStyle(.plain).focused($cwdFocused)
+                }.padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(cwdFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12),
+                                          lineWidth: cwdFocused ? 2 : 1)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { cwdFocused = true }
+                Menu {
+                    ForEach(recent, id: \.self) { path in Button(path) { cwd = path } }
+                } label: {
+                    SheetMenuLabel { Text("最近使用") }
+                }.menuStyle(.borderlessButton).fixedSize()
             }.disabled(creating)
             if provider != .kimi && provider != .codex {
-                TextField(provider == .dsh ? "Model (default: the dsh catalog's current route)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
+                TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
             if !availableProviders.contains(provider) || !(provider == .kimi ? kimi.online : native.online) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -454,13 +496,16 @@ struct NewConversationSheet: View {
                     }
                 }
             }
-            Button("配置其他 Agent…") { showSetup = true }.font(.caption)
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             HStack {
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
+                Button("配置其他 Agent…") { showSetup = true }
+                    .font(.caption).buttonStyle(.plain).foregroundStyle(.secondary).disabled(creating)
                 Spacer()
-                Button(creating ? "Starting…" : "Start task", action: start).keyboardShortcut(.defaultAction)
+                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
+                    .controlSize(.large)
+                Button(creating ? L("正在启动…") : L("开始任务"), action: start).keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent).disabled(!canStart)
+                    .controlSize(.large)
             }
         }.padding(24).frame(width: 650)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in

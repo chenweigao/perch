@@ -6,6 +6,9 @@ struct ModelPicker: View {
     @Binding var selection: String
     var current = ""
     var effortUnavailable = false
+    /// Sheets that pick a model for a new task show the choice as primary text;
+    /// the composer row keeps the quiet secondary look.
+    var emphasizesSelection = false
     @State private var presented = false
     private var effective: String { selection.isEmpty ? current : selection }
     private var option: ModelOption? { models.first { $0.id == effective } }
@@ -16,15 +19,17 @@ struct ModelPicker: View {
                 HStack(spacing: 5) {
                     if let option {
                         Text(option.name).lineLimit(1).truncationMode(.middle).layoutPriority(1)
+                            .foregroundStyle(emphasizesSelection ? .primary : .secondary)
                         Text("· \(option.provider)").foregroundStyle(.secondary).lineLimit(1)
                     } else if effective.isEmpty {
-                        Text("默认模型")
+                        Text("默认模型").foregroundStyle(.secondary)
                     } else {
                         Text(effective).lineLimit(1).truncationMode(.middle)
+                            .foregroundStyle(emphasizesSelection ? .primary : .secondary)
                     }
                     Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium))
                         .foregroundStyle(.secondary)
-                }.font(.system(size: 12)).foregroundStyle(.secondary)
+                }.font(.system(size: 12))
                     .padding(.vertical, 6).contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .help(Text("选择模型，用于下一条消息"))

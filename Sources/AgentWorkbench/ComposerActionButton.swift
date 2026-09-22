@@ -52,7 +52,7 @@ struct ComposerAddButton: View {
     var onChoose: () -> Void = {}
     var body: some View {
         Button(action: onChoose) {
-            Image(systemName: "plus").font(.system(size: 17)).frame(width: 23, height: 25)
+            Image(systemName: "plus").font(.system(size: 17)).frame(width: 28, height: 28).contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(.secondary)
             .disabled(disabled || !supportsFiles)
             .help(supportsFiles ? "Add images or files" : "Attachments are not supported by this agent connection")

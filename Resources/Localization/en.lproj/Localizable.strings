@@ -544,3 +544,12 @@
 "摘要被输出上限截断，请关闭思考或更换模型。" = "The summary hit its output limit. Disable thinking or choose another model.";
 "过程记录 · %lld 次调用" = "Activity · %lld calls";
 "运行上下文" = "Runtime context";
+"想做点什么？" = "What would you like to work on?";
+"任务描述" = "Task prompt";
+"正在启动…" = "Starting…";
+"最近使用" = "Recent";
+"项目目录（绝对路径）" = "Project directory (absolute path)";
+"选择 Agent" = "Choose agent";
+"选择 Codex 模型" = "Choose Codex model";
+"正在读取模型…" = "Loading models…";
+"模型（默认使用 dsh 目录的当前路由）" = "Model (default: the dsh catalog's current route)";
