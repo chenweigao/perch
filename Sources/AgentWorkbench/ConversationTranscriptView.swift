@@ -43,8 +43,9 @@ struct KimiMessageView: View {
                 default: EmptyView()
                 }
             }
-        }.padding(isUserMessage ? 15 : 0).frame(maxWidth: .infinity, alignment: .leading)
+        }.padding(isUserMessage ? 15 : 0)
             .background(isUserMessage ? kimiPaper : .clear, in: RoundedRectangle(cornerRadius: 16))
+            .frame(maxWidth: .infinity, alignment: isUserMessage ? .trailing : .leading)
             .padding(.leading, isUserMessage ? 65 : 0)
             .padding(.vertical, isUserMessage ? 10 : 0)
     }
