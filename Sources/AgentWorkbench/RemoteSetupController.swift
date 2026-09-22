@@ -57,7 +57,7 @@ final class RemoteSetupController: ObservableObject {
     }
     var needsBridge: Bool { [.omp, .qoder, .dsh].contains(provider) }
     var canContinue: Bool { ready && !busy }
-    var canFinish: Bool { projectVerified && ready && !busy && (provider != .kimi || !modelID.isEmpty) }
+    var canFinish: Bool { projectVerified && ready && !busy }
     var launch: TaskLaunchDefaults { TaskLaunchDefaults(hostID: hostID, provider: provider, directory: directory, model: modelID) }
     var installURL: URL {
         switch provider {
@@ -248,6 +248,7 @@ final class RemoteSetupController: ObservableObject {
     }
     func verifyProject() {
         run {
+            self.verifiedDirectory = nil
             guard self.directory.hasPrefix("/"), !self.directory.contains(where: { $0.isNewline || $0.asciiValue == 0 }) else {
                 throw WorkbenchError(L("请输入远端项目的绝对路径。"))
             }

@@ -68,9 +68,16 @@ Linux validation does not establish macOS compilation, SwiftUI layout, Terminal
 Apple events or a complete first-task SSH round trip. Those remain separate
 acceptance checks.
 
-On 2026-09-22, the Linux checks passed: 49 bridge tests, 4 installer tests,
+On 2026-09-22, the Linux checks passed: 49 bridge tests, 5 installer tests,
 4 localization tests and 17 publication tests. The live OMP 18.1.16 setup probe
 read 15 configured models after normalizing its `{ "models": [...] }` response;
 it did not send a prompt. Its first sandboxed attempt failed with a read-only
 CLI database, and the original check was replayed with normal user permissions.
 The macOS build and WorkbenchChecks could not run on that host (`swift` absent).
+
+The review reproduced installer cancellation waiting for a local SSH child to
+exit. The installer now handles cancellation while waiting, terminates that local
+client and closes its output pipes; a regression check verifies this without SSH.
+The initial service probes also use the cancellable command runner. Choosing a
+default Kimi model remains valid, a failed directory recheck revokes its previous
+validation, and the in-composer repair flow offers conversation agents only.

@@ -101,7 +101,8 @@ final class NativeAgentConnection: ObservableObject {
     }
     private func establish(_ token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
-        let data = try await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", host.destination, "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"])
+        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+            command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
         guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError("原生对话托管服务未安装或不可用") }

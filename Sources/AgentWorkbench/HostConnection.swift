@@ -79,11 +79,8 @@ final class HostConnection: ObservableObject, Identifiable {
     private func establish(token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
         stateMessage = "连接中"
-        let data = try await ProcessRunner.run("/usr/bin/ssh", [
-            "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-            "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=1",
-            host.destination, "herdr status --json"
-        ])
+        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+            command: "herdr status --json"))
         try Task.checkCancellation()
         guard generation == token else { throw CancellationError() }
         let status = try JSONDecoder().decode(RemoteStatus.self, from: data)

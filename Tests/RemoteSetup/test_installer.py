@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,5 +50,21 @@ class InstallerTests(unittest.TestCase):
             result, calls = self.run_installer(*arguments)
             self.assertEqual(result.returncode, 2)
             self.assertEqual(calls, [])
+
+    def test_cancel_stops_local_client_and_closes_output_pipes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / 'ssh'
+            binary.write_text('#!/usr/bin/env python3\nimport os, time\nprint(os.getpid(), flush=True)\ntime.sleep(5)\n')
+            binary.chmod(0o700)
+            env = dict(os.environ, PATH=directory + os.pathsep + os.environ['PATH'])
+            with subprocess.Popen(['bash', str(ROOT / 'scripts/install-native-service.sh'), 'fixture', '--provider=omp'],
+                                  env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+                client = int(process.stdout.readline())
+                started = time.monotonic()
+                process.terminate()
+                process.communicate(timeout=3)
+                self.assertLess(time.monotonic() - started, 3)
+                self.assertEqual(process.returncode, 130)
+                with self.assertRaises(ProcessLookupError): os.kill(client, 0)
 
 if __name__ == '__main__': unittest.main()

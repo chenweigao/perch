@@ -170,7 +170,8 @@ final class KimiConnection: ObservableObject {
     private func establish(token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
         // Read this server's existing credential through SSH; keep it only in process memory.
-        let data = try await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", host.destination, "cat " + RemoteSetup.remotePath(host.kimiTokenPath)])
+        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+            command: "cat " + RemoteSetup.remotePath(host.kimiTokenPath)))
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !secret.isEmpty else { throw WorkbenchError("远端 Kimi Web 凭证为空") }

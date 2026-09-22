@@ -37,8 +37,11 @@ func checkRemoteSetup() async throws {
         preconditionFailure("timeout accepted")
     } catch { precondition(Date().timeIntervalSince(started) < 3) }
     let check = Task { try await SetupCommandRunner.run("/bin/sleep", ["5"]) }
+    try await Task.sleep(for: .milliseconds(100))
+    let cancelled = Date()
     check.cancel()
     do { _ = try await check.value; preconditionFailure("cancelled check succeeded") }
     catch is CancellationError {} // Cancellation must not turn into a connection failure.
+    precondition(Date().timeIntervalSince(cancelled) < 3)
     print("PASS: remote setup migration, selected adapters, aliases, path quoting, timeout and cancellation")
 }

@@ -9,10 +9,15 @@ struct AddHostSheet: View {
     @State private var advanced = false
     @State private var showFolders = false
     private var onReady: ((TaskLaunchDefaults) -> Void)?
+    private var providers: [SessionKind] { RemoteSetup.agents.filter { onReady == nil || $0 != .terminal } }
 
     init(model: WorkbenchModel, host: SSHHost? = nil, onReady: ((TaskLaunchDefaults) -> Void)? = nil) {
         self.model = model; self.onReady = onReady
-        _setup = StateObject(wrappedValue: RemoteSetupController(host: host))
+        let controller = RemoteSetupController(host: host)
+        if onReady != nil && controller.provider == .terminal {
+            controller.provider = host?.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi
+        }
+        _setup = StateObject(wrappedValue: controller)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -86,7 +91,7 @@ struct AddHostSheet: View {
             Label(setup.destination, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.secondary)
             Text("选择要使用的 Agent。只检查所选 Agent 所需的环境。").foregroundStyle(.secondary)
             Picker("Agent", selection: $setup.provider) {
-                ForEach(RemoteSetup.agents, id: \.self) { kind in Text(kind.label).tag(kind) }
+                ForEach(providers, id: \.self) { kind in Text(kind.label).tag(kind) }
             }.pickerStyle(.segmented).disabled(setup.busy)
             if setup.provider == .kimi {
                 DisclosureGroup("高级设置", isExpanded: $advanced) {
