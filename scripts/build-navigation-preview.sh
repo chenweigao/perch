@@ -4,7 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 app_dir="$PWD/build/Navigation Preview.app"
-bin_dir="$(swift build -c release --show-bin-path)"
+# This fixture links SwiftPM object files directly. Use the native layout;
+# Xcode 27 defaults to Swift Build, whose Products directory has no .build objects.
+swift build --build-system native -c release --target WorkbenchCore
+bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
     Sources/AgentWorkbench/ToolActivityView.swift

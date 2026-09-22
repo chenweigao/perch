@@ -520,6 +520,7 @@ final class NavigationRunner {
 
         var jumps: [[String: Any]] = []
         for index in [199, 0, 100, 6, 198, 50] {
+            NavigationRenderMetrics.stages = [:]
             let expected = navigator.snapshot.turns[index].id
             ConversationReadingMemory.shared.following[targets[0]] = true
             let start = CACurrentMediaTime()
@@ -534,6 +535,7 @@ final class NavigationRunner {
                 host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
             }
             let ready = (CACurrentMediaTime() - start) * 1_000
+            let stages = NavigationRenderMetrics.report
             try await settle()
             let anchor = ConversationTranscript.readingAnchor(in: scroll)
             let hosts = ConversationTranscript.retainedHosts(in: scroll)
@@ -541,7 +543,7 @@ final class NavigationRunner {
                 && navigator.current == index && ConversationReadingMemory.shared.following[targets[0]] == false
             jumps.append(["turn": index + 1, "expected": expected, "actual": anchor?.entry ?? "",
                           "offset": anchor?.offset ?? -1, "initial_layout_ms": initial,
-                          "selection_handler_ms": handler, "target_ready_ms": ready,
+                          "selection_handler_ms": handler, "target_ready_ms": ready, "render_stages": stages,
                           "mounted": hosts?.mounted ?? 0, "retained": hosts?.retained ?? 0, "passed": passed])
             try writeNavigationArtifact("turn-navigation-detail.json", ["jumps": jumps])
             guard passed else { throw NavigationError("turn jump failed: \(jumps.last!)") }

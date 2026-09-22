@@ -2,6 +2,20 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
+#if TRANSCRIPT_CHECKS
+/// Nested stages are reported separately; their durations must not be summed.
+enum NavigationRenderMetrics {
+    static var stages: [String: (count: Int, ms: Double)] = [:]
+    static func record(_ stage: String, since start: TimeInterval) {
+        let old = stages[stage] ?? (0, 0)
+        stages[stage] = (old.count + 1, old.ms + (CACurrentMediaTime() - start) * 1_000)
+    }
+    static var report: [String: Any] {
+        stages.mapValues { ["count": $0.count, "ms": $0.ms] as [String: Any] }
+    }
+}
+#endif
+
 private let kimiPaper = Color.primary.opacity(0.035)
 
 struct KimiMessageView: View {
@@ -330,7 +344,24 @@ private final class ConversationDocumentView: NSView {
 
     func measure(width: CGFloat?) -> CGSize {
         let nextWidth = max(1, width?.isFinite == true ? width! : ReplyStyle.readingWidth)
-        if columnWidth != nextWidth { laidOutRange = nil }
+        if columnWidth != nextWidth {
+            // AppKit can adjust the clip origin when wrapping changes, even if
+            // no row above the reader changes height. Capture before measuring.
+            if ConversationReadingMemory.shared.following[sessionId] == false, restoreTarget == nil {
+                saveReadingPosition()
+                let target = ConversationReadingMemory.shared.positions[sessionId]
+                let session = sessionId
+                // Finish AppKit's resize transaction before restoring; restoring
+                // during measurement is overwritten by the clip-view adjustment.
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.sessionId == session, self.columnWidth == nextWidth,
+                          ConversationReadingMemory.shared.following[session] == false else { return }
+                    self.restoreTarget = target
+                    self.restoreReadingPosition()
+                }
+            }
+            laidOutRange = nil
+        }
         columnWidth = nextWidth
         refreshVisibleRows()
         return CGSize(width: columnWidth, height: totalHeight)
@@ -373,10 +404,16 @@ private final class ConversationDocumentView: NSView {
                 }
                 controllers[id] = controller
             }
+            // Give a cold host its real window and width before asking SwiftUI
+            // for its size. Measuring detached builds a graph that attachment
+            // immediately invalidates and lays out again.
+            if controller.view.superview !== self {
+                controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: heights[index])
+                addSubview(controller.view)
+            }
             let height = controller.measure(width: columnWidth).height
             updateHeight(id, height: height)
             controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: height)
-            if controller.view.superview !== self { addSubview(controller.view) }
             nextMounted.insert(id)
             index += 1
         }
@@ -437,6 +474,7 @@ private final class ConversationDocumentView: NSView {
     private func rowHeightChanged(_ id: String, height: CGFloat) {
         updateHeight(id, height: height)
         publishHeight()
+        restoreReadingPosition()
         viewport?.refresh()
     }
     private func publishHeight() {
@@ -604,6 +642,10 @@ private final class ConversationEntryController: NSViewController {
 
     init(content: ConversationEntryView, appearance: ConversationEntryAppearance,
          disclosureChanged: @escaping (Bool) -> Void, heightChanged: @escaping (CGFloat) -> Void) {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("host_create", since: start) }
+        #endif
         self.content = content
         self.appearance = appearance
         self.heightChanged = heightChanged
@@ -671,6 +713,10 @@ private final class ConversationEntryController: NSViewController {
         if let cached = sizes.first(where: { $0.width == width }) {
             height = cached.height
         } else {
+            #if TRANSCRIPT_CHECKS
+            let start = CACurrentMediaTime()
+            defer { NavigationRenderMetrics.record("host_measure", since: start) }
+            #endif
             height = ceil(host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
             if sizes.count == 8 { sizes.removeFirst() }
             sizes.append((width, height))

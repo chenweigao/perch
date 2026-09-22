@@ -252,24 +252,9 @@ private struct ConversationTurnRail: View {
             let selected = selectedID.flatMap { id in turns.firstIndex { $0.id == id } }
             let availableWidth = max(1, geometry.size.width - railWidth - 12)
             ZStack(alignment: .topLeading) {
-                Canvas { context, size in
-                    // Dense histories share painted ticks, while hit testing and
-                    // keyboard navigation still address every individual turn.
-                    for y in layout.ticks {
-                        context.fill(Path(CGRect(x: 12, y: y, width: 7, height: 2)), with: .color(.secondary.opacity(0.3)))
-                    }
-                    let y = layout.y(for: current)
-                    context.fill(Path(CGRect(x: 9, y: y, width: 17, height: 2)), with: .color(.primary.opacity(0.8)))
-                    if let selected {
-                        let y = layout.y(for: selected)
-                        context.fill(Path(roundedRect: CGRect(x: 5, y: y - 7, width: 25, height: 16), cornerRadius: 5), with: .color(.primary.opacity(0.1)))
-                        context.fill(Path(CGRect(x: 8, y: y, width: 19, height: 2)), with: .color(.primary))
-                    }
-                    if let hovered = hover.index {
-                        let y = layout.y(for: hovered)
-                        context.fill(Path(CGRect(x: 9, y: y, width: 17, height: 2)), with: .color(.primary.opacity(0.55)))
-                    }
-                }
+                ConversationTurnMarks(layout: layout, current: current, selected: selected,
+                                      hovered: hover.index, focus: hover.focus?.index, keyboardFocused: focused,
+                                      reduceMotion: reduceMotion)
                 .frame(width: railWidth, height: layout.height)
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
@@ -299,7 +284,7 @@ private struct ConversationTurnRail: View {
                 if let index = hover.index, let previewY = hover.previewY, turns.indices.contains(index) {
                     let turn = turns[index]
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(index + 1) / \(count)").font(.system(size: 10)).foregroundStyle(.tertiary)
+                        Text("\(index + 1) / \(count)").font(.system(size: 10)).monospacedDigit().foregroundStyle(.tertiary)
                         Group {
                             if turn.prompt.isEmpty { Text("Attachment") }
                             else { Text(turn.prompt) }
@@ -308,18 +293,72 @@ private struct ConversationTurnRail: View {
                             Text(turn.reply).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(3)
                         }
                     }
+                    .transaction { $0.animation = nil } // Neighbor text changes without crossfading.
                     .padding(12).frame(width: min(340, availableWidth), height: 136, alignment: .topLeading)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.primary.opacity(0.09)))
-                    .shadow(color: .black.opacity(0.1), radius: 10, y: 4)
+                    .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.06)))
+                    .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
                     .offset(x: railWidth, y: min(max(0, previewY - 28), max(0, height - 136)))
                     .allowsHitTesting(false).accessibilityHidden(true)
                     .transition(.opacity)
                 }
             }.padding(.vertical, 16)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: hover.previewY != nil)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hover.previewY != nil)
                 .onChange(of: height) { _, _ in hover.reset() }
                 .onDisappear { hover.reset() }
+        }
+    }
+}
+
+/// Bounded drawing for dense histories. Motion changes emphasis, never the
+/// vertical mapping shared by drawing and selection.
+private struct ConversationTurnMarks: View {
+    let layout: ConversationTurnRailGeometry
+    let current: Int
+    let selected: Int?
+    let hovered: Int?
+    let focus: Int?
+    let keyboardFocused: Bool
+    let reduceMotion: Bool
+    var body: some View {
+        ZStack {
+            Canvas { context, _ in
+                for y in layout.ticks {
+                    let index = layout.index(at: y)
+                    let strength = focus.map { layout.expanded.contains(index) ? max(0, 1 - CGFloat(abs(index - $0)) / 5) : 0 } ?? 0
+                    let width = 7 + 6 * strength
+                    context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: y, width: width, height: 2), cornerRadius: 1),
+                                 with: .color(.primary.opacity(0.24 + 0.12 * Double(strength))))
+                }
+            }
+            // Opacity is composited without rebuilding paths every animation
+            // frame. Hit targets and the current/selected marker never animate.
+            .opacity(focus == nil ? 0.75 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: focus != nil)
+            Canvas { context, _ in
+                func tick(y: CGFloat, width: CGFloat, opacity: Double, height: CGFloat = 2) {
+                    context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: y, width: width, height: height), cornerRadius: height / 2),
+                                 with: .color(.primary.opacity(opacity)))
+                }
+                if let hovered, hovered != selected {
+                    let y = layout.y(for: hovered)
+                    context.fill(Path(roundedRect: CGRect(x: 4, y: y - 6, width: 24, height: 14), cornerRadius: 5),
+                                 with: .color(.primary.opacity(0.045)))
+                    tick(y: y, width: 14, opacity: 0.55)
+                }
+                tick(y: layout.y(for: current), width: 20, opacity: 0.85)
+                if keyboardFocused {
+                    let y = layout.y(for: selected ?? current)
+                    context.stroke(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: 5),
+                                   with: .color(.primary.opacity(0.18)), lineWidth: 1)
+                }
+                if let selected {
+                    let y = layout.y(for: selected)
+                    context.fill(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: 5),
+                                 with: .color(.primary.opacity(0.09)))
+                    tick(y: y, width: 20, opacity: 1, height: 2.5)
+                }
+            }
         }
     }
 }

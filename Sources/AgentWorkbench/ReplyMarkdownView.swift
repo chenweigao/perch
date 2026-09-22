@@ -19,8 +19,15 @@ struct KimiMarkdown: View {
 /// Static history is not reparsed when the surrounding conversation streams updates.
 private struct ReplyContent: View, Equatable {
     let text: String
+    private var blocks: [ReplyBlock] {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("markdown_parse", since: start) }
+        #endif
+        return ReplyDocument.parse(text)
+    }
     var body: some View {
-        ReplyBlocks(blocks: ReplyDocument.parse(text))
+        ReplyBlocks(blocks: blocks)
             .foregroundStyle(ReplyStyle.ink)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -133,6 +140,10 @@ private struct ReplyText: View {
     var alignment: TextAlignment = .leading
     var lineHeight: CGFloat? = nil
     private var attributed: NSAttributedString {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("attributed_text", since: start) }
+        #endif
         let result = NSMutableAttributedString()
         let paragraph = NSMutableParagraphStyle()
         paragraph.minimumLineHeight = lineHeight ?? size * ReplyStyle.lineHeightRatio
@@ -237,6 +248,10 @@ final class ReplyTextView: NSTextView {
         let width = max(1, proposed?.isFinite == true ? proposed! : 1_000_000)
         if let cached = measurements.first(where: { $0.width == width }) { return cached.size }
         guard let storage = textStorage else { return .zero }
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("text_measure", since: start) }
+        #endif
         // Measure independently from NSTextView's drawing container: Grid probes
         // multiple widths, and those probes must never reflow the displayed text.
         let used = storage.boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude),

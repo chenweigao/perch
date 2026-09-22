@@ -20,7 +20,8 @@ func checkActivitySummaries() throws {
     let separated = ConversationTimelineEntry.make(try messages([read(0), boundary, read(1), read(2, name: "Edit"), read(3)]), isRunning: true)
     precondition(separated.filter(\.activity).count == 4, "Never group across user guidance or edits")
     let commentary: [String: Any] = ["id": "progress", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "Checking the next file"]]]
-    precondition(ConversationTimelineEntry.make(try messages([read(0), commentary, read(1)]), isRunning: true).count == 3)
+    let withCommentary = ConversationTimelineEntry.make(try messages([read(0), commentary, read(1)]), isRunning: true)
+    precondition(withCommentary.count == 3)
     let long = ConversationTimelineEntry.make(try messages((0..<50).map { read($0) }), isRunning: true)
     precondition(long.map { $0.messages.count } == [24, 24, 2], "Expanded groups must remain bounded")
 
