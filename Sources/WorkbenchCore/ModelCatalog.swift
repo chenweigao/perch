@@ -5,6 +5,9 @@ public struct ModelOption: Identifiable, Equatable {
     public let provider: String
     public let name: String
     public let capabilities: [String]
+    public init(id: String, provider: String, name: String, capabilities: [String] = []) {
+        self.id = id; self.provider = provider; self.name = name; self.capabilities = capabilities
+    }
 }
 public struct ModelProviderGroup: Identifiable, Equatable {
     public let id: String

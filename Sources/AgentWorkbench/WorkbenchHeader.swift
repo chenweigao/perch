@@ -74,9 +74,9 @@ struct WorkbenchHeaderActions: View {
                     if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
                     else if model.showNative { Button("重新连接") { native.connect() } }
                     else {
-                        Button(model.selectedConnection.wantsConnection ? L("断开本地连接") : L("连接终端")) {
-                            if model.selectedConnection.wantsConnection { model.selectedConnection.disconnect() }
-                            else { model.selectedConnection.connect() }
+                        Button(model.selectedConnection?.wantsConnection == true ? L("断开本地连接") : L("连接终端")) {
+                            if model.selectedConnection?.wantsConnection == true { model.selectedConnection?.disconnect() }
+                            else { model.selectedConnection?.connect() }
                         }
                         Button("新建远端终端…") { model.showNewTerminal = true }
                     }
@@ -98,8 +98,8 @@ struct WorkbenchHeaderActions: View {
                         .buttonStyle(.plain).help("编辑任务组")
                 }
                 Menu {
-                    Button("原生对话…") { model.showNewKimi = true }
-                    Button("远端终端…") { model.showNewTerminal = true }.disabled(!model.selectedConnection.online)
+                    Button("原生对话…") { model.startNewTask() }
+                    Button("远端终端…") { model.showNewTerminal = true }.disabled(model.selectedConnection?.online != true)
                     Button("任务组…") { model.editGroup() }
                 } label: { Label("新建", systemImage: "plus") }.menuStyle(.borderlessButton).fixedSize()
                 if isHome {

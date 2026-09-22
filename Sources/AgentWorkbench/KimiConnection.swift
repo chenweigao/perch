@@ -4,9 +4,9 @@ import WorkbenchCore
 
 @MainActor
 final class KimiConnection: ObservableObject {
-    let host: SSHHost
+    private(set) var host: SSHHost
     var onSessionsChanged: (() -> Void)?
-    let port = 58627
+    var port: Int { host.kimiPort }
     @Published private(set) var sessions: [KimiSession] = []
     @Published private(set) var selectedId: String?
     @Published private(set) var conversation: KimiConversation?
@@ -79,10 +79,19 @@ final class KimiConnection: ObservableObject {
 
     init(host: SSHHost) { self.host = host; selectedId = UserDefaults.standard.string(forKey: savedSelectionKey); loadDrafts() }
 
+    /// Setup never restores drafts, selection or an existing conversation.
+    init(setupHost: SSHHost) { self.host = setupHost }
+
     /// Isolated connection checks use a local HTTP fixture without SSH.
     init(host: SSHHost, api: KimiAPI) { self.host = host; self.api = api; online = true }
 
+    func updateHost(_ value: SSHHost) {
+        if value.kimiPort != host.kimiPort || value.kimiTokenPath != host.kimiTokenPath || value.destination != host.destination { disconnect() }
+        host = value
+    }
+
     func connect() {
+        guard !host.destination.isEmpty else { return }
         disconnect()
         let token = UUID(); generation = token; connecting = true; error = nil
         task = Task { [weak self] in
@@ -161,7 +170,7 @@ final class KimiConnection: ObservableObject {
     private func establish(token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
         // Read this server's existing credential through SSH; keep it only in process memory.
-        let data = try await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", host.destination, "cat ~/.kimi-code/server.token"])
+        let data = try await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", host.destination, "cat " + RemoteSetup.remotePath(host.kimiTokenPath)])
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !secret.isEmpty else { throw WorkbenchError("远端 Kimi Web 凭证为空") }

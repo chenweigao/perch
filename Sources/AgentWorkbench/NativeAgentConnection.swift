@@ -4,7 +4,7 @@ import WorkbenchCore
 
 @MainActor
 final class NativeAgentConnection: ObservableObject {
-    let host: SSHHost
+    private(set) var host: SSHHost
     @Published private(set) var sessions: [NativeAgentSession] = []
     @Published private(set) var snapshot: NativeAgentSnapshot?
     @Published private(set) var selectedID: String?
@@ -54,11 +54,21 @@ final class NativeAgentConnection: ObservableObject {
     }
 
     init(host: SSHHost) { self.host = host; requestTransport = nil; loadDrafts() }
+    /// A setup probe must never drain the user's persisted outbox.
+    init(setupHost: SSHHost) { self.host = setupHost; requestTransport = nil }
     /// Used by the isolated connection contract checks; no SSH or App is started.
     init(host: SSHHost, transport: @escaping (String, JSONValue?) async throws -> Data) {
         self.host = host; requestTransport = transport; online = true
     }
+    func updateHost(_ value: SSHHost) {
+        if value.destination != host.destination { disconnect() }
+        host = value
+    }
+    func setupStatus(provider: SessionKind) async throws -> JSONValue {
+        try await request("/setup?provider=" + provider.rawValue)
+    }
     func connect() {
+        guard !host.destination.isEmpty else { return }
         disconnect(); let token = UUID(); generation = token
         task = Task {
             while !Task.isCancelled && generation == token {

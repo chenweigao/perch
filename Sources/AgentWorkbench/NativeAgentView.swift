@@ -354,13 +354,16 @@ struct NewConversationSheet: View {
     @State private var error: String?
     @State private var attachments: [URL] = []
     @State private var chooseFiles = false
+    @State private var showSetup = false
+    private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
+    private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
     /// Attachments ride the Kimi session channel; native adapters have none, so an
     /// attachment-only draft can start a Kimi task but never a native one.
     private var canStart: Bool {
         let hasContent = !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
-        return !creating && hasContent && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/") && (provider == .kimi ? kimi.online : native.online)
+        return !creating && hasContent && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/") && (availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online))
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -387,10 +390,10 @@ struct NewConversationSheet: View {
                 ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                 Menu {
                     ForEach(model.connections) { connection in
-                        Button(connection.host.name) { model.activateAgentEnvironment(connection.id) }
+                        Button(connection.host.name) { agentModel = ""; model.activateAgentEnvironment(connection.id) }
                     }
                 } label: { Label(kimi.host.name, systemImage: "server.rack") }
-                Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach([SessionKind.kimi, .omp, .qoder, .dsh], id: \.self) { Text($0.label).tag($0) } }.frame(width: 200)
+                Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach(availableProviders, id: \.self) { Text($0.label).tag($0) } }.frame(width: 200)
                 Spacer()
                 if provider == .kimi { ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel) }
             }.disabled(creating)
@@ -400,11 +403,25 @@ struct NewConversationSheet: View {
                 Menu("Recent") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }
             }.disabled(creating)
             if provider != .kimi {
-                TextField(provider == .qoder ? "Model (default: Qwen3.8-Flash)" : provider == .dsh ? "Model (default: the dsh catalog's current route)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
+                TextField(provider == .dsh ? "Model (default: the dsh catalog's current route)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
-            if !(provider == .kimi ? kimi.online : native.online) {
-                Text("Connecting to \(kimi.host.name)…").font(.caption).foregroundStyle(.secondary)
+            if !availableProviders.contains(provider) || !(provider == .kimi ? kimi.online : native.online) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let connectionError {
+                        Text(connectionError).font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+                    } else {
+                        Text(LocalizedStringKey(availableProviders.isEmpty ? "此机器尚未配置原生 Agent。" : "正在连接所选 Agent…"))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Button("检查与修复连接") { showSetup = true }
+                        if availableProviders.contains(provider) {
+                            Button("重新连接") { if provider == .kimi { kimi.connect() } else { native.connect() } }
+                        }
+                    }
+                }
             }
+            Button("配置其他 Agent…") { showSetup = true }.font(.caption)
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             HStack {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)
@@ -416,9 +433,22 @@ struct NewConversationSheet: View {
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
             }
+            .sheet(isPresented: $showSetup) {
+                AddHostSheet(model: model, host: kimi.host) { launch in
+                    provider = launch.provider; cwd = launch.directory; agentModel = launch.model
+                }
+            }
+            .onChange(of: kimi.host.id) { _, _ in
+                if !availableProviders.contains(provider) { provider = availableProviders.first ?? .kimi }
+            }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
             .onAppear {
-                if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data) {
+                if let launch = model.launchAfterSetup {
+                    model.launchAfterSetup = nil
+                    model.activateAgentEnvironment(launch.hostID)
+                    provider = launch.provider; cwd = launch.directory; agentModel = launch.model
+                } else if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data),
+                          model.connections.contains(where: { $0.id == saved.hostID }) {
                     provider = saved.provider; cwd = saved.directory; agentModel = saved.model
                     model.activateAgentEnvironment(saved.hostID)
                 } else {
@@ -429,6 +459,7 @@ struct NewConversationSheet: View {
                     cwd = groupItem?.directory ?? model.selectedItem?.directory ?? UserDefaults.standard.string(forKey: "new.cwd") ?? recent.first ?? ""
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
                 }
+                if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
             }
     }
     private func addAttachments(_ files: [URL]) {
@@ -446,7 +477,7 @@ struct NewConversationSheet: View {
                     model.newKimiCreated(session)
                     await kimi.sendPrompt(for: session.id)
                 } else {
-                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel.isEmpty && selectedProvider == .qoder ? "Qwen3.8-Flash" : selectedModel)
+                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel)
                     native.drafts[session.id] = text
                     model.newNativeCreated(session)
                     native.send()

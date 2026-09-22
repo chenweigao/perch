@@ -32,10 +32,10 @@ struct WorkbenchApp: App {
                 }
             }
             CommandGroup(replacing: .newItem) {
-                Button(L("新建任务…")) { model.showNewKimi = true }.keyboardShortcut("n")
-                Button(L("添加机器…")) { model.showAddHost = true }.keyboardShortcut("n", modifiers: [.command, .shift])
+                Button(L("新建任务…")) { model.startNewTask() }.keyboardShortcut("n")
+                Button(L("添加机器…")) { model.configureHost() }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button(L("新建远端终端…")) { model.showNewTerminal = true }.keyboardShortcut("t")
-                    .disabled(!model.selectedConnection.online)
+                    .disabled(model.selectedConnection?.online != true)
             }
             CommandMenu(L("Conversation")) {
                 Button(L("搜索任务")) { model.showSessionSearch = true }.keyboardShortcut("k")

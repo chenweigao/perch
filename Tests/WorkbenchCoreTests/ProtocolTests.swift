@@ -21,6 +21,7 @@ struct ProtocolTests {
         try checkBatchArchive()
         try checkRunControl()
         try checkConnectivity()
+        try await checkRemoteSetup()
         try checkDashboard()
         checkTaskGroup()
         checkSidebar()

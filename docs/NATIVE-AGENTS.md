@@ -17,12 +17,14 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN 或 DeepSeek，默
 远端安装位置：`~/.local/share/agent-workbench/native`。会话目录保存工作台转译后的消息、状态和上游 resume 标识；不会保存 OMP get_state 中的模型 headers、认证配置。SDK 使用独立 npm 目录，不替换全局 CLI。dsh 会话使用独立的 `DSH_HOME`（托管目录下 `dsh-home/`），不读写用户的 `~/.dsh`；遥测显式 `DSH_TELEMETRY_MODE=DISABLED`；模型凭据沿用远端 `DEEPSEEK_API_KEY` 环境变量，桥不接触。
 
 ```sh
-./scripts/install-native-service.sh dev-env
-# 追加 dsh 运行时（钉版 deepseek-harness-sdk，自带单文件运行时，目标机无需 Node）：
-./scripts/install-native-service.sh dev-env --with-dsh
+# App 内可直接点击「安装 / 更新桥接组件」，也可显式指定机器与 Agent：
+./scripts/install-native-service.sh my-server --provider=omp
+./scripts/install-native-service.sh my-server --provider=qoder
+./scripts/install-native-service.sh my-server --provider=dsh
+# 保留旧的全套安装方式：<host> 或 <host> --with-dsh
 ```
 
-目标需 Python 3、Node.js 18+、已登录的 qoderclicn 1.1.58 与 omp 18.1.16。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。Mac 连接时启动或复用托管服务。更新脚本不会杀死运行中的托管服务；更新运行中的服务前，先等待自己的会话安全结束。
+所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。Mac 连接时启动或复用托管服务。更新脚本不会杀死运行中的托管服务；更新运行中的服务前，先等待自己的会话安全结束。
 
 Mac 当前每 400 ms 查询轻量目录和选中对话的 revision；未变化时不传输或重建整段历史。只在会话元数据变化时更新全局队列，流式内容局限于原生对话视图。正文、Markdown 和按发生顺序展示的工具摘要与 Kimi 共用；工具完成后仍保留摘要，仅参数和输出按需展开。
 
@@ -48,3 +50,14 @@ OMP 运行中默认使用 `steer` RPC，菜单可选“下一轮发送”。需�
 消息发送后在会话正文显示完整文字和状态。RPC 确认只表示已接收；观察到运行时的 user message 回显后才合并到历史。引导不会替换当前 turnId，停止仍针对当前任务。失败或未确认的消息保持可见，不自动重放。
 
 更新桥接文件后，已运行的服务仍是旧代码；应等自己的运行中会话结束后再重启服务，不能为了升级中断已有任务。
+
+## 接入检查
+
+向导通过经鉴权的 `GET /setup?provider=omp|qoder|dsh` 检查所选运行时；
+不会因为缺少未选 Agent 而报错。检查在会话锁之外执行，不向模型发送消息。
+OMP 每次重新读取模型配置，只返回名称、provider 和 id，不返回 headers 或密钥。
+Qoder SDK 没有独立登录检查接口，首条消息验证鉴权；dsh 只检查桥接进程是否具有
+`DEEPSEEK_API_KEY`，不读取或返回值，模型在首次 ACP 会话握手时读取。
+
+旧服务返回“未知路径”时先更新组件，等进行中任务结束后再重启服务；安装器不会
+终止旧服务。新建任务中的空模型沿用运行时默认值，不再注入固定的 Qoder 模型。

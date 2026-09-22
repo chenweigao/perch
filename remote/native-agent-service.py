@@ -20,7 +20,9 @@ def model_catalog():
         if MODELS is None:
             out=subprocess.run(['omp','models','--json','--no-extensions'],capture_output=True,text=True,timeout=60)
             if out.returncode!=0: raise ValueError('读取 omp 模型列表失败：'+(out.stderr or '').strip()[:200])
-            MODELS=json.loads(out.stdout)
+            payload=json.loads(out.stdout)
+            items=payload['models'] if isinstance(payload,dict) else payload
+            MODELS=[{k:m[k] for k in ('id','provider','name','contextWindow','thinking') if k in m} for m in items]
         return MODELS
 
 def dsh_binary():
@@ -66,6 +68,48 @@ def combined_catalog():
         if dsh: return dsh
         raise
     return (omp if isinstance(omp, list) else []) + dsh
+
+def setup_status(provider):
+    """Readiness for the selected adapter only; never sends a model prompt.
+
+    This runs outside LOCK, so CLI discovery cannot block active conversations.
+    Return names/IDs and booleans only, never CLI configuration or credentials.
+    """
+    if provider not in ('omp', 'qoder', 'dsh'):
+        raise ValueError('Unknown setup provider')
+    try:
+        binary = dsh_binary() if provider == 'dsh' else shutil.which('omp' if provider == 'omp' else 'qoderclicn')
+    except ValueError:
+        binary = None
+    result = {'installed': bool(binary), 'models': [], 'modelCheck': 'unverified', 'credentialCheck': 'unverified'}
+    if not binary: return result
+    version = subprocess.run([binary, '--version'], capture_output=True, text=True, timeout=10)
+    if version.returncode != 0:
+        result.update(installed=False, error='The agent version command failed. Check it in an SSH terminal.')
+        return result
+    result['version'] = version.stdout.strip()[:120]
+    if provider == 'omp':
+        # Do not use the cached catalog: setup must see changes made by login/configuration.
+        probe = subprocess.run([binary, 'models', '--json', '--no-extensions'], capture_output=True, text=True, timeout=20)
+        if probe.returncode != 0:
+            result['error'] = 'Could not read the OMP model catalog. Run omp models --json --no-extensions in an SSH terminal.'
+            return result
+        payload = json.loads(probe.stdout)
+        catalog = payload['models'] if isinstance(payload, dict) else payload
+        result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
+                            for m in catalog if isinstance(m, dict) and m.get('id')]
+        result['modelCheck'] = 'configured' if result['models'] else 'missing'
+    elif provider == 'qoder':
+        result['sdkInstalled'] = (ROOT / 'node_modules/@qodercn-ai/qodercn-agent-sdk/package.json').is_file()
+        result['nodeInstalled'] = bool(shutil.which('node'))
+        # The SDK resolves the model and login at the first query; no model-list API.
+        result['modelCheck'] = 'runtime-default'
+    else:
+        result['credentialCheck'] = 'present' if os.environ.get('DEEPSEEK_API_KEY') else 'missing'
+        result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
+                            for m in dsh_catalog() if m.get('id')]
+        result['modelCheck'] = 'session-handshake'
+    return result
 
 def save(path, value):
     tmp = path.with_suffix('.tmp')
@@ -573,6 +617,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))) or b'{}') if post else {}
             path=urlparse(self.path).path.split('/')
+            if urlparse(self.path).path == '/setup' and not post:
+                provider = parse_qs(urlparse(self.path).query).get('provider', [''])[0]
+                return self.respond(200, setup_status(provider))
             if self.path=='/models' and not post:
                 return self.respond(200,{'models':combined_catalog()})
             with LOCK:

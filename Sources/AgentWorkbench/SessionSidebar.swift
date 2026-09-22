@@ -17,7 +17,7 @@ struct WorkbenchSidebar: View {
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个 SSH"),
                               onSearch: { model.showSessionSearch = true },
-                              onNew: { model.showNewKimi = true },
+                              onNew: { model.startNewTask() },
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
                               onArchive: { model.showArchive() }) {
             if !projection.favorites.isEmpty {
@@ -238,7 +238,6 @@ struct ArchivedSessionsView: View {
 }
 
 private struct ConnectionControls: View {
-    @UILocalization private var L
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
@@ -247,47 +246,55 @@ private struct ConnectionControls: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("环境与 Agent").foregroundStyle(.secondary); Spacer()
-                Button { dismiss(); model.showAddHost = true } label: { Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle()) }.buttonStyle(.plain).help("添加 SSH 机器")
+                Button { dismiss(); model.configureHost() } label: { Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle()) }
+                    .buttonStyle(.plain).help("添加 SSH 机器")
             }
             Button { dismiss(); model.showLocalSetup = true } label: { Label("本机 Agent…", systemImage: "laptopcomputer") }
                 .buttonStyle(.plain).padding(.vertical, 4)
+            if model.connections.isEmpty { Text("添加机器后，选择要连接的 Agent。").foregroundStyle(.secondary) }
             ForEach(model.connections) { connection in
-                HostConnectionControl(connection: connection, canRemove: model.connections.count > 1,
-                                      onRemove: { dismiss(); model.pendingHostRemoval = connection.host })
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Button {
+                            model.activateAgentEnvironment(connection.id)
+                            model.showHome(groupID: model.selectedGroupID); model.hostFilter = connection.id
+                        } label: {
+                            Label(connection.host.name, systemImage: model.selectedHostID == connection.id ? "checkmark.circle" : "server.rack")
+                        }.buttonStyle(.plain)
+                        Spacer()
+                        Button { dismiss(); model.configureHost(connection.host) } label: { Image(systemName: "gearshape") }
+                            .buttonStyle(.plain).help("配置与检查 Agent")
+                    }.contextMenu {
+                        Button("配置与检查 Agent") { dismiss(); model.configureHost(connection.host) }
+                        Button("移除机器…", role: .destructive) { dismiss(); model.pendingHostRemoval = connection.host }
+                    }
+                    if model.selectedHostID == connection.id {
+                        if connection.host.enabledAgents.contains(.kimi) {
+                            agentStatus("Kimi", online: kimi.online, error: kimi.error) { kimi.connect() }
+                        }
+                        if connection.host.hasNativeAgents {
+                            agentStatus(connection.host.enabledAgents.filter { [.omp, .qoder, .dsh].contains($0) }.map(\.label).joined(separator: " · "),
+                                        online: native.online, error: native.error) { native.connect() }
+                        }
+                        if connection.host.enabledAgents.contains(.terminal) {
+                            agentStatus("Herdr", online: connection.online, error: connection.error) { connection.connect() }
+                        }
+                    }
+                }.padding(.vertical, 6)
             }
-            HStack {
-                Label("Kimi · \(kimi.host.name)", systemImage: "bubble.left"); Spacer()
-                Circle().fill(kimi.online ? .green : .orange).frame(width: 5, height: 5)
-                Button { kimi.connect() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }.buttonStyle(.plain).help("重新连接 Kimi")
-            }.help(kimi.error ?? kimi.state(locale: L.locale))
-            HStack {
-                Label("原生对话", systemImage: "bubble.left.and.bubble.right"); Spacer()
-                Circle().fill(native.online ? .green : .orange).frame(width: 5, height: 5)
-                Button { native.connect() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }.buttonStyle(.plain).help("重新连接原生对话")
-            }.help(native.error ?? L("远端持久托管"))
         }.font(.system(size: 11)).padding(15).background(.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
     }
-}
-private struct HostConnectionControl: View {
-    @ObservedObject var connection: HostConnection
-    let canRemove: Bool
-    let onRemove: () -> Void
-    var body: some View {
-        HStack {
-            Label(connection.host.name, systemImage: "server.rack"); Spacer()
-            Circle().fill(connection.online ? .green : .orange).frame(width: 5, height: 5)
-            Button { connection.connect() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                .buttonStyle(.plain).help("重新连接 Herdr")
-        }.contextMenu {
-            Button("重新连接 Herdr") { connection.connect() }
-            Button("断开 Herdr") { connection.disconnect() }
-            // The last machine stays: the terminal surface resolves its connection from
-            // the selected host without an empty case.
-            if canRemove {
-                Divider()
-                Button("移除机器…", role: .destructive) { onRemove() }
+    private func agentStatus(_ name: String, online: Bool, error: String?, reconnect: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Circle().fill(online ? .green : .orange).frame(width: 5, height: 5)
+                Text(name); Spacer()
+                Text(LocalizedStringKey(online ? "已连接" : error == nil ? "未连接" : "需要处理")).foregroundStyle(.secondary)
+                Button(action: reconnect) { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }
+                    .buttonStyle(.plain).help("重新连接")
             }
-        }
+            if let error, !online { Text(error).font(.caption).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled) }
+        }.padding(.leading, 12)
     }
 }
 
@@ -297,7 +304,7 @@ struct KimiSelectionContent: View {
     @ObservedObject var connection: KimiConnection
     var body: some View {
         if connection.conversation?.snapshot.session.id == model.selectedReference?.terminalID {
-            KimiWorkspaceView(connection: connection, onNew: { model.showNewKimi = true }, onInput: {},
+            KimiWorkspaceView(connection: connection, onNew: { model.startNewTask() }, onInput: {},
                               onResultDisplayed: { model.reviewDisplayed($0, on: connection.host.id) }).id(model.selectedReference?.id)
         } else {
             VStack(spacing: 14) {

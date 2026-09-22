@@ -63,9 +63,11 @@ corresponding agent runtime are required for remote sessions.
 open build/Perch.app
 ```
 
-Configure SSH access first, then add your host in Perch. Kimi currently uses port
-`58627`; on a fresh installation the default SSH alias is `dev-env`. See the
-[setup guide](docs/GETTING-STARTED.md) for connection details and troubleshooting.
+Choose **Connect a remote machine** on the home screen, or **Environment → +**.
+The setup wizard verifies SSH, checks your chosen agent, offers installation and
+login actions, then lets you browse a remote directory and start your first task.
+Kimi's port and token-file path are editable in Advanced settings. Fresh installs
+start without a preset host. See the [setup guide](docs/GETTING-STARTED.md).
 
 `⌘N` new conversation · `⌘K` search · `Return` send · `Shift Return` new line
 

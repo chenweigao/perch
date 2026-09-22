@@ -5,6 +5,7 @@ struct WorkbenchSettings: View {
     @ObservedObject var model: WorkbenchModel
     @State private var showLocal = false
     @State private var showSSH = false
+    @State private var editingHost: SSHHost?
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     var body: some View {
         Form {
@@ -16,7 +17,10 @@ struct WorkbenchSettings: View {
             }
             Section("Agent 与执行环境") {
                 Button("管理本机 Agent…") { showLocal = true }
-                Button("添加 SSH 环境…") { showSSH = true }
+                Button("添加 SSH 环境…") { editingHost = nil; showSSH = true }
+                ForEach(model.connections) { connection in
+                    Button(connection.host.name) { editingHost = connection.host; showSSH = true }
+                }
                 Text("远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -31,6 +35,6 @@ struct WorkbenchSettings: View {
             }
         }.formStyle(.grouped).frame(width: 440, height: 420)
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
-            .sheet(isPresented: $showSSH) { AddHostSheet(model: model) }
+            .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
     }
 }

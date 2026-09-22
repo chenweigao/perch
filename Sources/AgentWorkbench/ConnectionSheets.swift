@@ -1,34 +1,6 @@
 import SwiftUI
 import WorkbenchCore
 
-struct AddHostSheet: View {
-    @ObservedObject var model: WorkbenchModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var destination = ""
-    @State private var error: String?
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("添加机器").font(.title2.weight(.semibold))
-            Text("复用 ~/.ssh/config 中的别名、密钥与跳板机设置。首次连接请先在系统终端确认主机指纹。")
-                .font(.callout).foregroundStyle(.secondary)
-            Form {
-                TextField("SSH 地址", text: $destination, prompt: Text("dev-env 或 user@host"))
-                TextField("显示名称", text: $name, prompt: Text("可选"))
-            }
-            if let error { Text(error).foregroundStyle(.red).font(.caption) }
-            HStack {
-                Spacer()
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("添加并连接") {
-                    do { try model.addHost(name: name, destination: destination); dismiss() }
-                    catch { self.error = error.localizedDescription }
-                }.keyboardShortcut(.defaultAction).disabled(destination.isEmpty)
-            }
-        }.padding(28).frame(width: 440)
-    }
-}
-
 struct NewTerminalSheet: View {
     @UILocalization private var L
     @ObservedObject var connection: HostConnection
@@ -69,9 +41,13 @@ struct NewTerminalSheet: View {
                 }.keyboardShortcut(.defaultAction).disabled(creating || workspaceID.isEmpty || !cwd.hasPrefix("/"))
             }
         }.padding(28).frame(width: 480)
+            .onChange(of: connection.snapshot?.workspaces.first?.id) { _, id in
+                if workspaceID.isEmpty { workspaceID = id ?? "" }
+            }
             .onAppear {
                 workspaceID = connection.snapshot?.workspaces.first?.id ?? ""
-                cwd = connection.snapshot?.panes.first?.cwd ?? ""
+                cwd = model.launchAfterSetup?.directory ?? connection.snapshot?.panes.first?.cwd ?? ""
+                model.launchAfterSetup = nil
             }
     }
 }

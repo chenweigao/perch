@@ -21,7 +21,7 @@ struct WorkbenchView: View {
                 }.padding(26).frame(minWidth: 550)
             }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
-            .sheet(isPresented: $model.showAddHost) { AddHostSheet(model: model) }
+            .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: model.setupHost) }
             .sheet(isPresented: $model.showSessionSearch) {
                 SessionDirectoryView(model: model, isSearchSheet: true).frame(width: 640, height: 520)
             }
@@ -34,7 +34,9 @@ struct WorkbenchView: View {
             }
             .onChange(of: model.selectedReference) { _, _ in SelectionActionsController.shared.hide() }
             .onChange(of: model.showDashboard) { _, _ in SelectionActionsController.shared.hide() }
-            .sheet(isPresented: $model.showNewTerminal) { NewTerminalSheet(connection: model.selectedConnection, model: model) }
+            .sheet(isPresented: $model.showNewTerminal) {
+                if let connection = model.selectedConnection { NewTerminalSheet(connection: connection, model: model) }
+            }
             .sheet(isPresented: $model.showNewKimi) { NewConversationSheet(model: model, native: model.native, kimi: model.kimi) }
             .sheet(item: $model.renamingSession) { item in RenameSessionSheet(model: model, item: item) }
             .sheet(item: $model.groupingSession) { item in SessionGroupsSheet(model: model, item: item) }
@@ -66,7 +68,7 @@ private struct WorkbenchWorkspace: View, Equatable {
 
     var body: some View {
         WorkspaceSplitView(
-            newConversation: { model.showNewKimi = true },
+            newConversation: { model.startNewTask() },
             canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
             sidebar: { WorkbenchSidebar(model: model) },
@@ -115,7 +117,7 @@ private struct WorkbenchDetail: View {
                             attentionOnly: model.onlyAttention, projection: model.dashboardProjection,
                             context: model.dashboardContext, isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
-                            onNewTask: { model.showNewKimi = true },
+                            onNewTask: { model.startNewTask() },
                             onOpen: { model.open($0) },
                             onMarkReviewed: { model.markReviewed($0) },
                             rowActions: { SessionActionsMenu(model: model, item: $0) },
@@ -123,7 +125,7 @@ private struct WorkbenchDetail: View {
                             onUndoArchive: { model.undoBatchArchive() },
                             onRetryArchive: { model.retryBatchArchive() },
                             onStartLocal: { model.showLocalSetup = true },
-                            onConnectRemote: { model.showAddHost = true },
+                            onConnectRemote: { model.configureHost() },
                             onShowInbox: { model.showInbox() },
                             onShowAll: { model.showAllSessions() },
                             onShowHome: { model.showHome() })

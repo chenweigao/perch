@@ -40,6 +40,9 @@ final class WorkbenchModel: ObservableObject {
     @Published var search = ""
     @Published var onlyAttention = false
     @Published var showAddHost = false
+    @Published var setupHost: SSHHost?
+    @Published var launchAfterSetup: TaskLaunchDefaults?
+    @Published var pendingSetupLaunch = false
     @Published var showNewTerminal = false
     @Published var showNewKimi = false
     @Published var showRenderReport = false
@@ -64,9 +67,10 @@ final class WorkbenchModel: ObservableObject {
     private var navigatingHistory = false
     @Published var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
-    private let workspaceURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac")
         .appendingPathComponent("workspace.json")
+    private let workspaceURL = WorkbenchModel.workspaceFileURL
     private lazy var workspaceWriter = WorkspaceWriter(url: workspaceURL)
     private var canSaveWorkspace = true
     private var started = false
@@ -76,20 +80,20 @@ final class WorkbenchModel: ObservableObject {
     init() {
         let hosts: [SSHHost]
         if let data = UserDefaults.standard.data(forKey: "hosts"),
-           let saved = try? JSONDecoder().decode([SSHHost].self, from: data), !saved.isEmpty {
-            hosts = saved; configuredEnvironment = true
-        } else {
-            // Session references and drafts use the host UUID across launches. Keep
-            // that identity stable without marking the machine list as configured.
-            let id = UserDefaults.standard.string(forKey: "defaultHostID").flatMap(UUID.init(uuidString:)) ?? UUID()
-            UserDefaults.standard.set(id.uuidString, forKey: "defaultHostID")
+           let saved = try? JSONDecoder().decode([SSHHost].self, from: data) {
+            hosts = saved
+        } else if let id = UserDefaults.standard.string(forKey: "defaultHostID").flatMap(UUID.init(uuidString:)),
+                  let saved = try? WorkspaceFile.load(from: Self.workspaceFileURL),
+                  saved.pinned.contains(where: { $0.session.hostID == id }) {
+            // Preserve real sessions from releases that used the implicit host.
             hosts = [SSHHost(id: id, name: "dev-env", destination: "dev-env")]
-            configuredEnvironment = false
-        }
-        kimi = KimiConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
-        native = NativeAgentConnection(host: hosts.first { $0.destination == "dev-env" } ?? hosts[0])
+        } else { hosts = [] }
+        configuredEnvironment = !hosts.isEmpty
+        let initialHost = hosts.first ?? .unconfigured
+        kimi = KimiConnection(host: initialHost)
+        native = NativeAgentConnection(host: initialHost)
         connections = hosts.map(HostConnection.init)
-        selectedHostID = hosts[0].id
+        selectedHostID = initialHost.id
         do {
             workspace = try WorkspaceFile.load(from: workspaceURL)
             openedSessions = workspace.pinned
@@ -106,7 +110,7 @@ final class WorkbenchModel: ObservableObject {
         notifications.start()
         notifications.onOpen = { [weak self] id in self?.openNotifiedTask(id) }
         for connection in connections { observe(connection) }
-        registerEnvironment(kimi: kimi, native: native)
+        if !hosts.isEmpty { registerEnvironment(kimi: kimi, native: native) }
         for host in hosts where host.id != kimi.host.id {
             registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
         }
@@ -122,8 +126,9 @@ final class WorkbenchModel: ObservableObject {
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.connections.filter { $0.wantsConnection }.forEach { $0.connect() }
-                self?.kimi.connect(); self?.native.connect()
+                guard let self else { return }
+                self.connections.filter { $0.wantsConnection }.forEach { $0.connect() }
+                self.connectEnabledAgents()
             }
         })
     }
@@ -136,22 +141,65 @@ final class WorkbenchModel: ObservableObject {
         kimi.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
     }
     func activateAgentEnvironment(_ hostID: UUID) {
-        guard kimi.host.id != hostID, let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }
-        kimi = nextKimi; native = nextNative
-        if started { if !kimi.online { kimi.connect() }; if !native.online { native.connect() } }
-        selectedHostID = hostID
+        guard let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }
+        kimi = nextKimi; native = nextNative; selectedHostID = hostID
+        if started { connectEnabledAgents() }
+    }
+    private func connectEnabledAgents() {
+        if kimi.host.enabledAgents.contains(.kimi), !kimi.online, !kimi.connecting { kimi.connect() }
+        if native.host.hasNativeAgents, !native.online { native.connect() }
+    }
+    func startNewTask() { if connections.isEmpty { configureHost() } else { showNewKimi = true } }
+    func configureHost(_ host: SSHHost? = nil) { setupHost = host; showAddHost = true }
+    func finishSetup(_ host: SSHHost, launch: TaskLaunchDefaults?, startTask: Bool) throws {
+        try RemoteSetup.validate(host)
+        guard !connections.contains(where: { $0.id != host.id && $0.host.destination == host.destination }) else {
+            throw WorkbenchError(L("此 SSH 地址已添加。请从环境入口配置已有机器。"))
+        }
+        var saved = connections.map(\.host)
+        if let index = saved.firstIndex(where: { $0.id == host.id }) { saved[index] = host }
+        else { saved.append(host) }
+        let data = try JSONEncoder().encode(saved)
+        if let connection = connections.first(where: { $0.id == host.id }) {
+            connection.updateHost(host)
+            kimiEnvironments[host.id]?.updateHost(host); nativeEnvironments[host.id]?.updateHost(host)
+            if !host.enabledAgents.contains(.terminal) { connection.disconnect() }
+            if !host.enabledAgents.contains(.kimi) { kimiEnvironments[host.id]?.disconnect() }
+            if !host.hasNativeAgents { nativeEnvironments[host.id]?.disconnect() }
+        } else {
+            let connection = HostConnection(host: host); observe(connection); connections.append(connection)
+            registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
+        }
+        UserDefaults.standard.set(data, forKey: "hosts")
+        configuredEnvironment = true
+        activateAgentEnvironment(host.id)
+        showHome(groupID: selectedGroupID)
+        if started, host.enabledAgents.contains(.terminal) { selectedConnection?.connect() }
+        if let launch {
+            let key = "new.task.defaults." + (selectedGroupID?.uuidString ?? "global")
+            UserDefaults.standard.set(try JSONEncoder().encode(launch), forKey: key)
+        }
+        launchAfterSetup = startTask ? launch : nil
+        pendingSetupLaunch = startTask
+    }
+    func setupDismissed() {
+        setupHost = nil
+        guard pendingSetupLaunch else { return }
+        pendingSetupLaunch = false
+        if launchAfterSetup?.provider == .terminal { showNewTerminal = true }
+        else { showNewKimi = true }
     }
     func reconnectSelectedEnvironment() {
         if showKimi { kimi.connect() }
         else if showNative { native.connect() }
-        else { selectedConnection.connect() }
+        else { selectedConnection?.connect() }
     }
     var selectedReference: SessionReference? { openedSessions.first { $0.session.id == tabs.selectedID }?.session }
     var showNative: Bool { !showDashboard && [.omp, .qoder, .dsh].contains(selectedReference?.kind) }
     var showKimi: Bool { !showDashboard && selectedReference?.kind == .kimi }
     var selectedTerminalID: String? { selectedReference?.kind == .terminal ? tabs.selectedID : nil }
     var previewTerminalID: String? { tabs.previewID }
-    var selectedConnection: HostConnection { connections.first { $0.id == selectedHostID }! }
+    var selectedConnection: HostConnection? { connections.first { $0.id == selectedHostID } }
     var selectedTerminal: AttachedTerminal? { terminals.first { $0.id == selectedTerminalID } }
     var selectedGroup: WorkItemGroup? { workspace.groups.first { $0.id == selectedGroupID } }
     var pendingRestoration: [SavedTerminal] {
@@ -217,35 +265,23 @@ final class WorkbenchModel: ObservableObject {
         connection.onSnapshot = { [weak self] in self?.snapshotUpdated() }
         connection.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
     }
-    func addHost(name: String, destination: String) throws {
-        try SSHCommand.validateDestination(destination)
-        let connection = HostConnection(host: SSHHost(name: name.isEmpty ? destination : name, destination: destination))
-        observe(connection); connections.append(connection)
-        registerEnvironment(kimi: KimiConnection(host: connection.host), native: NativeAgentConnection(host: connection.host))
-        UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts")
-        configuredEnvironment = true
-        connection.connect()
-    }
-    /// Removing a machine is local bookkeeping: it disconnects this Mac and drops the
-    /// entry, while remote agents and terminals keep running. Saved references are kept,
-    /// so a task group still reports what is no longer in the list. One machine always
-    /// remains, because the terminal surface resolves its connection from the selected
-    /// host without an empty case.
     func removeHost(_ host: SSHHost) {
-        guard connections.count > 1, let index = connections.firstIndex(where: { $0.id == host.id }) else {
-            managementError = L("至少保留一台机器。先添加要用的机器，再移除这一台。")
-            return
-        }
+        guard let index = connections.firstIndex(where: { $0.id == host.id }) else { return }
         connections[index].disconnect()
         kimiEnvironments[host.id]?.disconnect(); nativeEnvironments[host.id]?.disconnect()
         kimiEnvironments.removeValue(forKey: host.id); nativeEnvironments.removeValue(forKey: host.id)
         connections.remove(at: index)
         for saved in openedSessions where saved.session.hostID == host.id { close(saved.session.id) }
         terminals.removeAll { $0.hostID == host.id }
-        let fallback = connections[0].host.id
+        let fallback = connections.first?.host.id ?? SSHHost.unconfigured.id
         if selectedHostID == host.id { selectedHostID = fallback }
         // A terminal on a surviving machine remains the target of host actions.
         if kimi.host.id == host.id || native.host.id == host.id { activateAgentEnvironment(selectedHostID) }
+        if connections.isEmpty {
+            kimi = KimiConnection(host: .unconfigured); native = NativeAgentConnection(host: .unconfigured)
+            showDashboard = true; tabs.showOverview()
+        }
+        configuredEnvironment = !connections.isEmpty
         if hostFilter == host.id { hostFilter = nil }
         do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
         catch { managementError = L("机器已移除，但保存机器列表失败：\(error.localizedDescription)") }
@@ -323,7 +359,7 @@ final class WorkbenchModel: ObservableObject {
         guard !started else { return }
         if let reference = selectedReference, reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
         started = true
-        connections.forEach { $0.connect() }; kimi.connect(); native.connect()
+        connections.filter { $0.host.enabledAgents.contains(.terminal) }.forEach { $0.connect() }; connectEnabledAgents()
     }
     func showHome(groupID: UUID? = nil) {
         onlyAttention = false; search = ""; showSessionDirectory = false

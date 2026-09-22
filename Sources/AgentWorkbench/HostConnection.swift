@@ -3,8 +3,8 @@ import WorkbenchCore
 
 @MainActor
 final class HostConnection: ObservableObject, Identifiable {
-    nonisolated let host: SSHHost
-    nonisolated var id: UUID { host.id }
+    @Published private(set) var host: SSHHost
+    nonisolated let id: UUID
     @Published private(set) var snapshot: Snapshot?
     @Published private var stateMessage: String.LocalizationValue = "未连接"
     var state: String { L(stateMessage) }
@@ -22,7 +22,8 @@ final class HostConnection: ObservableObject, Identifiable {
     private var generation = UUID()
     var onSnapshot: (() -> Void)?
 
-    init(host: SSHHost) { self.host = host }
+    init(host: SSHHost) { self.host = host; self.id = host.id }
+    func updateHost(_ host: SSHHost) { self.host = host }
 
     func connect() {
         disconnect()

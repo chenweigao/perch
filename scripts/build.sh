@@ -21,6 +21,10 @@ done
 cp -R "$PWD/Resources/Localization/"*.lproj "$app_dir/Contents/Resources/"
 cp Resources/Brand/Perch.icns "$app_dir/Contents/Resources/Perch.icns"
 cp Resources/Info.plist "$app_dir/Contents/Info.plist"
+mkdir -p "$app_dir/Contents/Resources/RemoteSetup/scripts" "$app_dir/Contents/Resources/RemoteSetup/remote"
+cp scripts/install-native-service.sh "$app_dir/Contents/Resources/RemoteSetup/scripts/"
+cp remote/native-agent-service.py remote/qoder-worker.mjs remote/package.json "$app_dir/Contents/Resources/RemoteSetup/remote/"
+
 mkdir -p "$app_dir/Contents/Resources/Licenses"
 cp .build/checkouts/libghostty-spm/LICENSE "$app_dir/Contents/Resources/Licenses/GhosttyKit.txt"
 cp .build/checkouts/MSDisplayLink/LICENSE "$app_dir/Contents/Resources/Licenses/MSDisplayLink.txt"

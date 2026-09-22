@@ -56,8 +56,9 @@
 open build/Perch.app
 ```
 
-先配置 SSH，再在 Perch 中添加主机。Kimi 当前使用 `58627` 端口，首次启动默认 SSH
-别名为 `dev-env`。连接说明与构建排障见[快速开始](docs/GETTING-STARTED.md)。
+从首页「连接远程机器」或「环境 → ＋」进入向导：验证 SSH、检查所选 Agent、
+按提示安装或登录，再浏览远端目录并开始首个任务。Kimi 端口与令牌文件路径可在
+「高级设置」中修改。首次启动没有预设机器。详见[快速开始](docs/GETTING-STARTED.md)。
 
 `⌘N` 新建对话 · `⌘K` 搜索 · `Return` 发送 · `Shift Return` 换行
 

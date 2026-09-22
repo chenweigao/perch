@@ -475,4 +475,84 @@ class HandlerContractTests(unittest.TestCase):
         self.assertEqual(self.s.snapshot()['commandResult']['error'],'nothing to compact')
         self.assertIsNone(self.s.state['error'])
 
+class SetupTests(unittest.TestCase):
+    def result(self, stdout='', code=0):
+        return type('Result', (), {'returncode': code, 'stdout': stdout, 'stderr': ''})()
+
+    def test_qoder_does_not_require_or_discover_omp(self):
+        calls = []
+        def which(binary):
+            calls.append(binary)
+            return '/fixture/' + binary if binary in ('qoderclicn', 'node') else None
+        with patch.object(broker.shutil, 'which', side_effect=which), patch.object(broker.subprocess, 'run', return_value=self.result('1.1.58')) as run:
+            status = broker.setup_status('qoder')
+        self.assertTrue(status['installed'])
+        self.assertNotIn('omp', calls)
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(status['credentialCheck'], 'unverified')
+        self.assertEqual(status['modelCheck'], 'runtime-default')
+
+    def test_omp_rechecks_catalog_and_returns_no_credentials(self):
+        catalog = [{'id':'fixture', 'provider':'test', 'name':'Fixture', 'apiKey':'PRIVATE', 'headers':{'Authorization':'PRIVATE'}}]
+        with patch.object(broker.shutil, 'which', return_value='/fixture/omp'), patch.object(broker.subprocess, 'run', side_effect=[self.result('18.1.16'), self.result(json.dumps(catalog))]) as run, patch.object(broker, 'MODELS', [{'id':'stale'}]):
+            status = broker.setup_status('omp')
+        self.assertEqual(status['modelCheck'], 'configured')
+        self.assertEqual(status['models'], [{'id':'fixture', 'provider':'test', 'name':'Fixture'}])
+        self.assertEqual(run.call_count, 2)
+        self.assertNotIn('PRIVATE', json.dumps(status))
+        self.assertEqual(status['credentialCheck'], 'unverified')
+
+    def test_omp_18_catalog_envelope_is_shared_by_setup_and_composer(self):
+        catalog = {'models':[{'id':'fixture','provider':'test','name':'Fixture','thinking':['high'],
+                              'contextWindow':1000,'headers':{'Authorization':'PRIVATE'}}]}
+        with patch.object(broker.shutil, 'which', return_value='/fixture/omp'), patch.object(broker.subprocess, 'run', side_effect=[self.result('18.1.16'), self.result(json.dumps(catalog))]):
+            status = broker.setup_status('omp')
+        self.assertEqual(status['modelCheck'], 'configured')
+        self.assertEqual(len(status['models']), 1)
+        with patch.object(broker, 'MODELS', None), patch.object(broker, 'dsh_catalog', return_value=[]), patch.object(broker.subprocess, 'run', return_value=self.result(json.dumps(catalog))):
+            models = broker.combined_catalog()
+        self.assertEqual(models[0]['id'], 'fixture')
+        self.assertEqual(models[0]['thinking'], ['high'])
+        self.assertNotIn('PRIVATE', json.dumps(models))
+
+    def test_dsh_missing_and_present_credentials_are_distinguished_without_values(self):
+        for value, expected in [('', 'missing'), ('fixture-secret-value', 'present')]:
+            with patch.object(broker, 'dsh_binary', return_value='/fixture/dsh'), patch.object(broker.subprocess, 'run', return_value=self.result('0.1.5-rc.1')), patch.object(broker, 'dsh_catalog', return_value=[]), patch.dict(os.environ, {'DEEPSEEK_API_KEY':value}):
+                status = broker.setup_status('dsh')
+            self.assertEqual(status['credentialCheck'], expected)
+            self.assertEqual(status['modelCheck'], 'session-handshake')
+            self.assertNotIn('fixture-secret-value', json.dumps(status))
+
+    def test_missing_runtime_is_not_ready(self):
+        with patch.object(broker.shutil, 'which', return_value=None), patch.object(broker.subprocess, 'run') as run:
+            self.assertFalse(broker.setup_status('omp')['installed'])
+            run.assert_not_called()
+
+    def test_empty_models_and_failed_version_are_not_ready(self):
+        with patch.object(broker.shutil, 'which', return_value='/fixture/omp'), patch.object(broker.subprocess, 'run', side_effect=[self.result('18.1.16'), self.result('[]')]):
+            self.assertEqual(broker.setup_status('omp')['modelCheck'], 'missing')
+        with patch.object(broker.shutil, 'which', return_value='/fixture/omp'), patch.object(broker.subprocess, 'run', return_value=self.result(code=1)):
+            self.assertFalse(broker.setup_status('omp')['installed'])
+
+    def test_setup_endpoint_requires_auth_and_does_not_hold_session_lock(self):
+        broker.TOKEN = 'fixture-token'
+        handler = object.__new__(broker.Handler)
+        handler.path = '/setup?provider=qoder'; handler.headers = {'Authorization':'Bearer fixture-token'}
+        handler.rfile = io.BytesIO(); responses = []
+        handler.respond = lambda status, body: responses.append((status, body))
+        def setup(provider):
+            acquired = []
+            def access_sessions():
+                with broker.LOCK: acquired.append(True)
+            worker = threading.Thread(target=access_sessions); worker.start(); worker.join(timeout=1)
+            self.assertFalse(worker.is_alive(), 'setup must not block active tasks')
+            self.assertEqual(provider, 'qoder')
+            return {'installed': True}
+        with patch.object(broker, 'setup_status', side_effect=setup) as check:
+            handler.handle_request(False)
+            self.assertEqual(responses[-1], (200, {'installed':True}))
+            handler.headers = {}; handler.handle_request(False)
+            self.assertEqual(responses[-1][0], 401)
+            self.assertEqual(check.call_count, 1)
+
 if __name__=='__main__': unittest.main()

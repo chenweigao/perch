@@ -37,7 +37,7 @@ struct TaskGroupPage: View {
                             Text("从一段新会话开始，或把已有会话关联到这个目标。")
                                 .font(.system(size: 13)).foregroundStyle(.secondary)
                             HStack {
-                                Button("新建会话") { model.showNewKimi = true }
+                                Button("新建会话") { model.startNewTask() }
                                 Button("关联已有会话") { model.editGroup(group, sessionsOnly: true) }
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
@@ -86,7 +86,7 @@ struct TaskGroupPage: View {
                     Text("\(group.sessions.count) 个关联 · \(items.totalCount) 个未归档 · \(items.archivedCount) 个已归档")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
-                Button("新建会话") { model.showNewKimi = true }
+                Button("新建会话") { model.startNewTask() }
                 Menu {
                     Button("关联已有会话") { model.editGroup(group, sessionsOnly: true) }
                     Button("编辑任务组") { model.editGroup(group) }
