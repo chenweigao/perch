@@ -60,15 +60,8 @@ struct ConversationTranscript: View {
     var body: some View {
         let visible = toolProjection.update(messages, sessionID: sessionId, live: liveTools, running: running, online: online)
         let snapshot = projection.update(visible.messages, isRunning: isRunning)
-        let start = snapshot.entries.lastIndex { $0.messages.first?.role == "user" && $0.presentation == .message } ?? 0
-        let summaryEntry = snapshot.entries.dropFirst(start).last { entry in
-            entry.isExploration && entry.messages.count >= 6
-        }
-        let batch = summaryEntry.map { entry in
-            ActivitySummaryBatch(groupID: entry.id,
-                tools: entry.messages.flatMap(\.content).compactMap { visible.tools[$0.toolCallId ?? ""] },
-                closed: !isRunning || entry.id != snapshot.entries.last?.id)
-        }
+        let batch = ActivitySummaryBatch.latest(in: snapshot.entries, tools: visible.tools,
+            isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online)
         let observation = SummaryObservation(session: memoryKey ?? sessionId, batch: batch,
             running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
             settingsRevision: summarySettings.revision)
@@ -77,7 +70,7 @@ struct ConversationTranscript: View {
             let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
                 if let value = visible.tools[id] { result[id] = value }
             }
-            let summary = summarySettings.configuration.enabled ? summaryController.summaries[entry.id]?.text : nil
+            let summary = summarySettings.configuration.enabled ? summaryController.summaries[entry.id] : nil
             return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId,
                 memoryKey: (memoryKey ?? sessionId) + ":" + entry.id, activitySummary: summary)
         }

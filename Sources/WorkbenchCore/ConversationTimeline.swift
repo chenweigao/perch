@@ -14,8 +14,12 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
     public var id: String {
         // A tool can start in live state, arrive as an orphan result, then gain its
         // persisted call. Its activity host must survive all three source IDs.
-        if presentation == .activity, let toolID = messages.flatMap(\.content).compactMap(\.toolCallId).first {
-            return "activity:tool:\(toolID)"
+        if presentation == .activity {
+            for message in messages {
+                for part in message.content {
+                    if let toolID = part.toolCallId { return "activity:tool:\(toolID)" }
+                }
+            }
         }
         let channel: String
         switch presentation {

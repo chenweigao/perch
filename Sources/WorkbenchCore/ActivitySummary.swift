@@ -29,6 +29,21 @@ public struct ActivitySummaryBatch: Hashable {
     public let records: [Record]
     public let closed: Bool
 
+    /// Search from the live tail, stopping at the current user turn. Disabled
+    /// summaries do not scan history or construct activity labels.
+    public static func latest(in entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
+                              isRunning: Bool, enabled: Bool) -> Self? {
+        guard enabled else { return nil }
+        for entry in entries.reversed() {
+            if entry.presentation == .message && entry.messages.first?.role == "user" { break }
+            guard entry.isExploration, entry.messages.count >= 6 else { continue }
+            return Self(groupID: entry.id,
+                        tools: entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] },
+                        closed: !isRunning || entry.id != entries.last?.id)
+        }
+        return nil
+    }
+
     public init(groupID: String, tools: [VisibleTool], closed: Bool) {
         self.groupID = groupID
         let completed = tools.filter { [.succeeded, .returned, .failed].contains($0.status) }

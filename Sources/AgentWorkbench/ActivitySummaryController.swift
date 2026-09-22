@@ -5,8 +5,7 @@ import WorkbenchCore
 /// Owned by the selected transcript. One request at a time; only new completed
 /// activity schedules work. Disabling, changing settings or leaving cancels it.
 @MainActor final class ActivitySummaryController: ObservableObject {
-    struct Summary { let text: String; let batch: ActivitySummaryBatch }
-    @Published private(set) var summaries: [String: Summary] = [:]
+    @Published private(set) var summaries: [String: String] = [:]
     private var attempts: [String: ActivitySummaryBatch] = [:]
     private var pending: ActivitySummaryBatch?
     private var worker: Task<Void, Never>?
@@ -15,19 +14,22 @@ import WorkbenchCore
     private var configurationRevision = -1
     private var observedRunning = false
     private var following = true
-    private var deferred: [String: Summary] = [:]
+    private var deferred: [String: String] = [:]
     private var generation = 0
 
     func observe(session: String, batch: ActivitySummaryBatch?, running: Bool, online: Bool, following: Bool,
                  settings: ActivitySummarySettings) {
         if self.session != session || configurationRevision != settings.revision {
-            cancel(); summaries = [:]; deferred = [:]; attempts = [:]; observedRunning = false
+            cancel()
+            if !summaries.isEmpty { summaries = [:] }
+            deferred = [:]; attempts = [:]; observedRunning = false
             self.session = session; configurationRevision = settings.revision
         }
         guard settings.configuration.enabled, online else { cancel(); return }
         self.following = following
         if following && !deferred.isEmpty {
-            summaries.merge(deferred) { _, latest in latest }
+            let changes = deferred.filter { summaries[$0.key] != $0.value }
+            if !changes.isEmpty { summaries.merge(changes) { _, latest in latest } }
             deferred = [:]
         }
         if running { observedRunning = true }
@@ -56,9 +58,11 @@ import WorkbenchCore
                     guard !Task.isCancelled, generation == version else { return }
                     // A newer completed batch can supersede this response while it runs.
                     if pending?.groupID != next.groupID || pending?.records == next.records {
-                        let summary = Summary(text: text, batch: next)
-                        if self.following { summaries[next.groupID] = summary }
-                        else { deferred[next.groupID] = summary }
+                        if self.following {
+                            // Publishing identical text would rerun transcript projection
+                            // and layout even though no row's presentation changed.
+                            if summaries[next.groupID] != text { summaries[next.groupID] = text }
+                        } else { deferred[next.groupID] = text }
                     }
                 } catch {
                     // Rules remain visible. A failure is not retried without new events.

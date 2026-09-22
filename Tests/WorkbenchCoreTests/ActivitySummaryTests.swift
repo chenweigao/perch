@@ -36,6 +36,19 @@ func checkActivitySummaries() throws {
         VisibleTool(id: "call\(index)", name: "Read", input: .object(["path": .string("/private-project/File\(index).swift")]),
                     output: .string("PRIVATE_SOURCE_CONTENT"), status: status)
     }
+    let available = Dictionary(uniqueKeysWithValues: (0..<50).map { ("call\($0)", tool($0)) })
+    precondition(ActivitySummaryBatch.latest(in: long, tools: available, isRunning: true, enabled: false) == nil)
+    let latest = ActivitySummaryBatch.latest(in: long, tools: available, isRunning: true, enabled: true)
+    precondition(latest?.groupID == long[1].id && latest?.completedCount == 24 && latest?.closed == true,
+                 "A short live tail must select the preceding eligible group in the same turn")
+    let active = ActivitySummaryBatch.latest(in: grouped, tools: available, isRunning: true, enabled: true)
+    precondition(active?.groupID == grouped[0].id && active?.closed == false)
+    let ended = ActivitySummaryBatch.latest(in: grouped, tools: available, isRunning: false, enabled: true)
+    precondition(ended?.closed == true)
+    let nextTurn = ConversationTimelineEntry.make(sources + (try messages([boundary, read(12)])), isRunning: true)
+    precondition(ActivitySummaryBatch.latest(in: nextTurn, tools: available, isRunning: true, enabled: true) == nil,
+                 "Reverse lookup must not summarize the preceding user turn")
+
     let batch = ActivitySummaryBatch(groupID: "group", tools: (0..<6).map { tool($0) }, closed: false)
     precondition(batch.shouldRequest(after: nil))
     precondition(!batch.shouldRequest(after: batch), "Repeated polling cannot incur additional cost")

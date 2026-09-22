@@ -63,6 +63,24 @@ truncated response leaves the rule-based group available. Historical sessions
 opened after completion are not automatically summarized. Native preview and
 benchmark fixtures cannot invoke the configured service.
 
+## Performance
+
+Disabled summaries, preview fixtures and disconnected transcripts skip summary
+candidate lookup and label construction. When enabled, lookup walks backward from
+the transcript tail and stops at the first eligible group or the user boundary;
+it does not first scan the entire current turn to locate that boundary.
+Activity row IDs stop at the first tool ID without allocating arrays for the
+whole group. Identical summary text does not publish another transcript update.
+Displayed summaries retain text only; request deduplication retains the attempted
+batches separately. Both caches last for the selected transcript and grow with
+summarized groups; this is not a constant-memory cache.
+
+These changes remove specific CPU/allocation work, but are not measured frame-time
+improvements. The remaining native profiling priorities are transcript projection
+and row reconciliation during streaming in long histories, and height changes when
+a new summary arrives. Validate with summaries off/on using the same history,
+event stream and viewport on macOS before changing cache or rendering architecture.
+
 ## Validation
 
 - `swift run WorkbenchChecks` includes grouping/order/identity, live/error
