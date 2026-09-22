@@ -2,6 +2,33 @@ import Foundation
 import WorkbenchCore
 
 func checkConversationRowGeometry() {
+    // Every painted turn remains addressable through the lens, including the
+    // first/last turn and highly compressed history outside the neighborhood.
+    for count in [2, 40, 200, 2_000] {
+        for height in [CGFloat(80), 568, 900] {
+            let plain = ConversationTurnRailGeometry(count: count, height: height)
+            for focus in [0, 1, count / 2, count - 2, count - 1] {
+                let pointer = plain.y(for: focus)
+                let lens = ConversationTurnRailGeometry(count: count, height: height,
+                    focus: .init(index: focus, y: pointer))
+                precondition(lens.index(at: pointer) == focus, "Opening a lens must retain the entry under the pointer")
+                var previous: CGFloat = -1
+                for index in 0..<count {
+                    let y = lens.y(for: index)
+                    precondition(y > previous && y >= 0 && y <= lens.height)
+                    precondition(lens.index(at: y) == index, "Painting and selection must use identical coordinates")
+                    previous = y
+                }
+                precondition(lens.ticks.count <= Int(height / 5) + 3)
+                if height / CGFloat(count) < 10 {
+                    for index in lens.expanded.dropLast() {
+                        precondition(lens.y(for: index + 1) - lens.y(for: index) >= 17,
+                                     "Dense neighbors need usable hit targets")
+                    }
+                }
+            }
+        }
+    }
     let heights: [CGFloat] = [0, 10, 160, 0, 42, 300]
     let geometry = ConversationRowGeometry(heights: heights)
     precondition(geometry.totalHeight == heights.reduce(0, +) + CGFloat(heights.count - 1) * 18)

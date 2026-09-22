@@ -462,14 +462,78 @@ final class NavigationRunner {
         guard let navigator = ConversationTranscript.navigator(in: scroll), navigator.snapshot.turns.count == 200 else {
             throw NavigationError("missing 200-turn navigator")
         }
+        let originalAnchor = ConversationTranscript.readingAnchor(in: scroll)
+        let originalHosts = ConversationTranscript.retainedHosts(in: scroll)
+        let railHeight = max(1, scroll.contentView.bounds.height - 32)
+        let plain = ConversationTurnRailGeometry(count: 200, height: railHeight)
+        navigator.hover.move(y: plain.y(for: 100), count: 200, height: railHeight)
+        guard navigator.hover.previewY == nil else { throw NavigationError("preview opened without dwell") }
+        try await Task.sleep(for: .milliseconds(160))
+        guard navigator.hover.focus?.index == 100, let cardY = navigator.hover.previewY else {
+            throw NavigationError("dwell did not open local lens")
+        }
+        let lens = ConversationTurnRailGeometry(count: 200, height: railHeight, focus: navigator.hover.focus)
+        var hoverFrames: [Double] = []
+        for _ in 0..<4 {
+            for index in lens.expanded {
+                let start = CACurrentMediaTime()
+                navigator.hover.move(y: lens.y(for: index), count: 200, height: railHeight)
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+                hoverFrames.append((CACurrentMediaTime() - start) * 1_000)
+                guard navigator.hover.index == index, navigator.hover.previewY == cardY else {
+                    throw NavigationError("neighbor selection moved the preview card")
+                }
+            }
+        }
+        let hoverHosts = ConversationTranscript.retainedHosts(in: scroll)
+        guard hoverHosts?.retained == originalHosts?.retained, hoverHosts?.mounted == originalHosts?.mounted,
+              ConversationTranscript.readingAnchor(in: scroll)?.entry == originalAnchor?.entry else {
+            throw NavigationError("hover mounted or scrolled transcript rows")
+        }
+        // Hold the real window for visual inspection, without synthesizing
+        // pointer events or including the pause in interaction timings.
+        if ProcessInfo.processInfo.environment["NAVIGATION_INSPECT_HOVER"] == "1" {
+            try await Task.sleep(for: .seconds(30))
+        }
+        navigator.hover.leave()
+        try await Task.sleep(for: .milliseconds(35))
+        navigator.hover.move(y: lens.y(for: 100), count: 200, height: railHeight)
+        guard navigator.hover.previewY == cardY else { throw NavigationError("brief pointer exit collapsed the lens") }
+        navigator.hover.leave()
+        try await Task.sleep(for: .milliseconds(120))
+        guard navigator.hover.previewY == nil, navigator.hover.focus == nil else { throw NavigationError("hover did not close") }
+
+        let selection = ConversationTurnNavigation()
+        selection.update(session: "coalescing", turns: navigator.snapshot.turns, current: 0)
+        var revealed: [String] = []
+        selection.reveal = { revealed.append($0) }
+        selection.select(6); selection.select(100); selection.select(198)
+        guard revealed.isEmpty, selection.selectedID == navigator.snapshot.turns[198].id else {
+            throw NavigationError("selection did not publish before rendering")
+        }
+        try await Task.sleep(for: .milliseconds(10))
+        guard revealed == [navigator.snapshot.turns[198].id] else { throw NavigationError("rapid selections rendered intermediate rows") }
+        selection.select(50)
+        selection.update(session: "replacement", turns: [], current: 0)
+        try await Task.sleep(for: .milliseconds(10))
+        guard revealed.count == 1, selection.selectedID == nil else { throw NavigationError("pending jump crossed sessions") }
+
         var jumps: [[String: Any]] = []
         for index in [199, 0, 100, 6, 198, 50] {
             let expected = navigator.snapshot.turns[index].id
             ConversationReadingMemory.shared.following[targets[0]] = true
             let start = CACurrentMediaTime()
             navigator.select(index)
+            let handler = (CACurrentMediaTime() - start) * 1_000
+            guard navigator.selectedID == expected else { throw NavigationError("missing immediate selection feedback") }
             host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
             let initial = (CACurrentMediaTime() - start) * 1_000
+            for _ in 0..<100 {
+                if ConversationTranscript.readingAnchor(in: scroll)?.entry == expected && navigator.current == index { break }
+                try await Task.sleep(for: .milliseconds(1))
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            }
+            let ready = (CACurrentMediaTime() - start) * 1_000
             try await settle()
             let anchor = ConversationTranscript.readingAnchor(in: scroll)
             let hosts = ConversationTranscript.retainedHosts(in: scroll)
@@ -477,6 +541,7 @@ final class NavigationRunner {
                 && navigator.current == index && ConversationReadingMemory.shared.following[targets[0]] == false
             jumps.append(["turn": index + 1, "expected": expected, "actual": anchor?.entry ?? "",
                           "offset": anchor?.offset ?? -1, "initial_layout_ms": initial,
+                          "selection_handler_ms": handler, "target_ready_ms": ready,
                           "mounted": hosts?.mounted ?? 0, "retained": hosts?.retained ?? 0, "passed": passed])
             try writeNavigationArtifact("turn-navigation-detail.json", ["jumps": jumps])
             guard passed else { throw NavigationError("turn jump failed: \(jumps.last!)") }
@@ -517,7 +582,8 @@ final class NavigationRunner {
         try await settle()
         guard navigator.snapshot.turns.isEmpty else { throw NavigationError("empty conversation retained navigation") }
         return ["jumps": jumps, "streaming_anchor_preserved": true, "history_prepend": true,
-                "session_switch": true, "empty_conversation": true]
+                "session_switch": true, "empty_conversation": true, "hover_frames_ms": statistics(hoverFrames),
+                "hover_preserves_hosts": true, "hover_dwell_and_exit": true, "rapid_selection_coalescing": true]
     }
 
     /// Does an arriving older page preserve the exact row and intra-row offset?

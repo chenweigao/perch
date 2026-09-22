@@ -6,8 +6,12 @@ jump to the question. Up/Down and accessibility increment/decrement move one
 turn at a time. Escape dismisses keyboard focus. The dark tick tracks the turn
 at the top of the reading viewport.
 
-The rail is hidden for zero or one turn. Dense histories share painted ticks,
-while pointer position and keyboard movement still address individual turns.
+The rail is hidden for zero or one turn. Dense histories share painted ticks.
+After a 120 ms dwell, a fixed neighborhood opens to roughly 18 pt hit targets;
+painting and pointer selection use the same mapping. Moving between neighbors
+updates excerpts immediately without moving or resizing the card. A 90 ms exit
+grace avoids collapsing it when the pointer briefly crosses the edge. Moving
+outside the expanded neighborhood and dwelling opens a new neighborhood.
 Kimi's existing **Load earlier messages** button expands the indexed history;
 the rail does not fetch remote history on hover.
 
@@ -20,6 +24,9 @@ the rail does not fetch remote history on hover.
 - The native document maps stable entry IDs to its existing virtual geometry.
   Selecting a turn pauses follow mode and directly reveals its row. Existing
   Return-to-latest behavior resumes following.
+- Selection feedback is published before deferred row mounting. Pending choices
+  coalesce to the latest destination and are cancelled on session replacement.
+  A brief border marks the destination question, respecting Reduce Motion.
 - Current-turn updates use the coalesced viewport pass and a binary lookup of
   turn starts. Immutable rail inputs keep outgoing views safe when a session
   is replaced or cleared.
@@ -57,3 +64,31 @@ Reports are in `.local/turn-navigation-verified`, `.local/search-verified`, and
 `.local/prepend-verified`. Live SSH validation was skipped because
 `WORKBENCH_LIVE_HOST` was unset. Native fixture results do not certify a real
 remote-provider session.
+
+### Interaction polish, 2026-09-22
+
+Rebased on `d72cbcc`. Release build/signature, core and connection checks passed;
+the native 200-turn checks also passed for dwell, exit grace, fixed card
+position, unchanged mounted/retained hosts on hover, rapid selection
+coalescing, session cancellation, jumps, streaming, prepend, and empty state.
+Search and history-anchor regression checks passed.
+
+Two short native runs measured 36 neighboring preview switches each. Their
+layout/display p95 was 14–16 ms; the second run had one 18 ms sample. Selection
+handlers took 0.03–0.11 ms. Destination layout readiness ranged 36–100 ms
+across the two runs. This improves immediate input handling and avoids
+intermediate jumps; it does **not** establish faster cold Markdown rendering
+or end-to-end 60 fps. The timings exclude hardware input and compositor
+presentation. Reports live in `.local/turn-polish/after` and
+`.local/turn-polish/final`; the baseline is `.local/turn-polish/before`.
+
+Native joint-fixture UI checks also kept turn 94 in view while the stream
+advanced from 151 to 277 of 300 updates at 10 Hz. Switching to session B and
+back restored turn 94 and its draft; Return-to-latest restored turn 201.
+This used local synthetic conversations, not a live remote model.
+The expanded rail/card were inspected in the native window; clicking the
+expanded tick for turn 105 landed on the question shown in its preview.
+
+For visual inspection, set `NAVIGATION_INSPECT_HOVER=1` when running the `turns`
+fixture; it holds the expanded rail and preview in the real window for 30
+seconds, outside the measured interaction interval.

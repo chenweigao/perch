@@ -172,13 +172,29 @@ private final class ConversationDocumentView: NSView {
             _ = select(in: view)
         }
     }
-    private func revealEntry(_ id: String) {
+    private func revealEntry(_ id: String, highlight: Bool = false) {
         guard let index = indices[id], let clip = observedClip else { return }
         ConversationReadingMemory.shared.following[sessionId] = false
         viewport?.pauseFollowing?()
         clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
         enclosingScrollView?.reflectScrolledClipView(clip)
         refreshVisibleRows()
+        if highlight, let view = controllers[id]?.view {
+            let marker = CALayer()
+            marker.frame = view.bounds.insetBy(dx: 1, dy: 1)
+            marker.cornerRadius = 12
+            marker.borderWidth = 1
+            marker.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
+            marker.actions = ["opacity": NSNull()]
+            view.layer?.addSublayer(marker)
+            if rowAppearance?.reduceMotion != true {
+                let fade = CABasicAnimation(keyPath: "opacity")
+                fade.fromValue = 1; fade.toValue = 0; fade.duration = 0.6
+                marker.add(fade, forKey: "arrival")
+                marker.opacity = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { marker.removeFromSuperlayer() }
+        }
         saveReadingPosition()
         viewport?.refresh()
     }
@@ -191,7 +207,7 @@ private final class ConversationDocumentView: NSView {
             if turnRows[middle] <= row { lower = middle + 1 } else { upper = middle }
         }
         viewport?.navigator.update(session: sessionId, turns: navigation, current: max(0, lower - 1))
-        viewport?.navigator.reveal = { [weak self] id in self?.revealEntry(id) }
+        viewport?.navigator.reveal = { [weak self] id in self?.revealEntry(id, highlight: true) }
     }
     var heightChanged: (CGFloat) -> Void = { _ in }
     override var isFlipped: Bool { true }

@@ -143,24 +143,92 @@ final class ConversationTurnNavigation: ObservableObject {
         var current = 0
     }
     @Published private(set) var snapshot = Snapshot()
+    @Published private(set) var selectedID: String?
+    let hover = ConversationTurnHover()
+    private var selectionTask: Task<Void, Never>?
     var current: Int { snapshot.current }
     var reveal: ((String) -> Void)?
 
     func update(session: String, turns: [ConversationTurnSummary], current: Int) {
+        if snapshot.session != session {
+            selectionTask?.cancel()
+            selectedID = nil
+            hover.reset()
+        } else if snapshot.turns.count != turns.count { hover.reset() }
         let next = Snapshot(session: session, turns: turns, current: current)
         if snapshot != next { snapshot = next }
     }
     func select(_ index: Int) {
         guard snapshot.turns.indices.contains(index) else { return }
-        reveal?(snapshot.turns[index].id)
+        let id = snapshot.turns[index].id
+        let session = snapshot.session
+        selectionTask?.cancel()
+        selectedID = id
+        // Publish selection before mounting cold Markdown rows. Rapid choices
+        // in the same event turn coalesce to the user's final destination.
+        selectionTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard !Task.isCancelled, let self, self.snapshot.session == session else { return }
+            self.reveal?(id)
+            do { try await Task.sleep(for: .milliseconds(600)) } catch { return }
+            self.selectedID = nil
+        }
     }
+    deinit { selectionTask?.cancel() }
+}
+
+/// Dwell only on entry or when moving out of the expanded neighborhood. Once
+/// open, neighboring excerpts switch immediately and share one card position.
+final class ConversationTurnHover: ObservableObject {
+    @Published private(set) var index: Int?
+    @Published private(set) var focus: ConversationTurnRailGeometry.Focus?
+    @Published private(set) var previewY: CGFloat?
+    private var opening: Task<Void, Never>?
+    private var closing: Task<Void, Never>?
+    private var candidate: Int?
+
+    func move(y: CGFloat, count: Int, height: CGFloat) {
+        closing?.cancel(); closing = nil
+        let geometry = ConversationTurnRailGeometry(count: count, height: height, focus: focus)
+        let next = geometry.index(at: y)
+        if index != next { index = next }
+        if previewY != nil && geometry.expanded.contains(next) {
+            opening?.cancel(); opening = nil; candidate = nil
+            return
+        }
+        guard candidate != next else { return }
+        candidate = next
+        opening?.cancel()
+        opening = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
+            guard let self else { return }
+            self.focus = .init(index: next, y: y)
+            self.previewY = y
+            self.candidate = nil
+        }
+    }
+    func leave() {
+        opening?.cancel(); opening = nil; candidate = nil
+        closing?.cancel()
+        closing = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .milliseconds(90)) } catch { return }
+            self?.reset()
+        }
+    }
+    func reset() {
+        opening?.cancel(); closing?.cancel()
+        opening = nil; closing = nil; candidate = nil
+        index = nil; focus = nil; previewY = nil
+    }
+    deinit { opening?.cancel(); closing?.cancel() }
 }
 
 private struct ConversationTurnNavigator: View {
     @ObservedObject var model: ConversationTurnNavigation
     var body: some View {
         if model.snapshot.turns.count > 1 {
-            ConversationTurnRail(turns: model.snapshot.turns, current: model.current, select: model.select)
+            ConversationTurnRail(turns: model.snapshot.turns, current: model.current,
+                                 selectedID: model.selectedID, hover: model.hover, select: model.select)
                 .id(model.snapshot.session)
         }
     }
@@ -169,50 +237,55 @@ private struct ConversationTurnNavigator: View {
 private struct ConversationTurnRail: View {
     let turns: [ConversationTurnSummary]
     let current: Int
+    let selectedID: String?
+    @ObservedObject var hover: ConversationTurnHover
     let select: (Int) -> Void
-    @State private var hovered: Int?
     @FocusState private var focused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let railWidth: CGFloat = 32
     private var count: Int { turns.count }
 
     var body: some View {
         GeometryReader { geometry in
             let height = max(1, geometry.size.height - 32)
-            let step = min(14, height / CGFloat(count))
-            let trackHeight = step * CGFloat(count)
+            let layout = ConversationTurnRailGeometry(count: count, height: height, focus: hover.focus)
+            let selected = selectedID.flatMap { id in turns.firstIndex { $0.id == id } }
             let availableWidth = max(1, geometry.size.width - railWidth - 12)
             ZStack(alignment: .topLeading) {
                 Canvas { context, size in
                     // Dense histories share painted ticks, while hit testing and
                     // keyboard navigation still address every individual turn.
-                    let ticks = min(count, max(1, Int(trackHeight / 5)))
-                    for tick in 0..<ticks {
-                        let y = (CGFloat(tick) + 0.5) * trackHeight / CGFloat(ticks)
+                    for y in layout.ticks {
                         context.fill(Path(CGRect(x: 12, y: y, width: 7, height: 2)), with: .color(.secondary.opacity(0.3)))
                     }
-                    let y = (CGFloat(current) + 0.5) * step
+                    let y = layout.y(for: current)
                     context.fill(Path(CGRect(x: 9, y: y, width: 17, height: 2)), with: .color(.primary.opacity(0.8)))
-                    if let hovered {
-                        let y = (CGFloat(hovered) + 0.5) * step
+                    if let selected {
+                        let y = layout.y(for: selected)
+                        context.fill(Path(roundedRect: CGRect(x: 5, y: y - 7, width: 25, height: 16), cornerRadius: 5), with: .color(.primary.opacity(0.1)))
+                        context.fill(Path(CGRect(x: 8, y: y, width: 19, height: 2)), with: .color(.primary))
+                    }
+                    if let hovered = hover.index {
+                        let y = layout.y(for: hovered)
                         context.fill(Path(CGRect(x: 9, y: y, width: 17, height: 2)), with: .color(.primary.opacity(0.55)))
                     }
                 }
-                .frame(width: railWidth, height: trackHeight)
+                .frame(width: railWidth, height: layout.height)
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
                     switch phase {
-                    case .active(let point): hovered = index(at: point.y, step: step)
-                    case .ended: hovered = nil
+                    case .active(let point): hover.move(y: point.y, count: count, height: height)
+                    case .ended: hover.leave()
                     }
                 }
                 .onTapGesture { point in
                     focused = true
-                    select(index(at: point.y, step: step))
+                    select(layout.index(at: point.y))
                 }
                 .focusable().focused($focused).focusEffectDisabled()
-                .onKeyPress(.upArrow) { hovered = nil; select(max(0, current - 1)); return .handled }
-                .onKeyPress(.downArrow) { hovered = nil; select(min(count - 1, current + 1)); return .handled }
-                .onKeyPress(.escape) { focused = false; hovered = nil; return .handled }
+                .onKeyPress(.upArrow) { hover.reset(); select(max(0, (selected ?? current) - 1)); return .handled }
+                .onKeyPress(.downArrow) { hover.reset(); select(min(count - 1, (selected ?? current) + 1)); return .handled }
+                .onKeyPress(.escape) { focused = false; hover.reset(); return .handled }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Conversation turns"))
                 .accessibilityValue(Text("\(current + 1) / \(count): \(turns[current].prompt)"))
@@ -223,7 +296,7 @@ private struct ConversationTurnRail: View {
                     @unknown default: break
                     }
                 }
-                if let index = hovered, turns.indices.contains(index) {
+                if let index = hover.index, let previewY = hover.previewY, turns.indices.contains(index) {
                     let turn = turns[index]
                     VStack(alignment: .leading, spacing: 6) {
                         Text("\(index + 1) / \(count)").font(.system(size: 10)).foregroundStyle(.tertiary)
@@ -235,17 +308,18 @@ private struct ConversationTurnRail: View {
                             Text(turn.reply).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(3)
                         }
                     }
-                    .padding(12).frame(width: min(340, availableWidth), alignment: .leading)
+                    .padding(12).frame(width: min(340, availableWidth), height: 136, alignment: .topLeading)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.primary.opacity(0.09)))
                     .shadow(color: .black.opacity(0.1), radius: 10, y: 4)
-                    .offset(x: railWidth, y: min(max(0, (CGFloat(index) + 0.5) * step - 28), max(0, height - 150)))
+                    .offset(x: railWidth, y: min(max(0, previewY - 28), max(0, height - 136)))
                     .allowsHitTesting(false).accessibilityHidden(true)
+                    .transition(.opacity)
                 }
             }.padding(.vertical, 16)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: hover.previewY != nil)
+                .onChange(of: height) { _, _ in hover.reset() }
+                .onDisappear { hover.reset() }
         }
-    }
-    private func index(at y: CGFloat, step: CGFloat) -> Int {
-        min(count - 1, max(0, Int(y / step)))
     }
 }
