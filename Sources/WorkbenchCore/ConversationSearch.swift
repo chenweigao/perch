@@ -21,7 +21,7 @@ public final class ConversationSearch {
         var next: [String: Entry] = [:]
         defer { entries = next }
         return ConversationTimelineEntry.make(messages, isRunning: running).flatMap { entry -> [ConversationSearchHit] in
-            let sources = entry.messages.flatMap(\.content).filter { $0.type == "text" && !$0.isRuntimeContext }.compactMap(\.text)
+            let sources = entry.messages.flatMap(\.content).filter { $0.type == "text" }.compactMap(\.visibleText)
             let cached: Entry
             if let previous = entries[entry.id], previous.sources == sources {
                 cached = previous

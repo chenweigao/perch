@@ -111,6 +111,26 @@ public struct KimiPart: Decodable, Equatable, Sendable {
             || (value.hasPrefix("<notification ") && value.hasSuffix("</notification>"))
             || (value.hasPrefix("<skill-loaded ") && value.hasSuffix("</skill-loaded>"))
     }
+    /// kimi-code prepends a one-line summary (for example "User activated the
+    /// skill …") to the `<skill-loaded>` block. The line stays visible as the user
+    /// bubble — folding the whole part would drop the turn boundary — while the
+    /// skill body collapses instead of dumping the full SKILL.md into the chat.
+    public var skillContextSplit: (prefix: String, context: String)? {
+        guard type == "text", let text, !isRuntimeContext else { return nil }
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard value.hasSuffix("</skill-loaded>"), let cut = value.firstIndex(of: "\n") else { return nil }
+        let prefix = String(value[..<cut]).trimmingCharacters(in: .whitespaces)
+        let context = String(value[cut...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prefix.isEmpty, context.hasPrefix("<skill-loaded ") else { return nil }
+        return (prefix, context)
+    }
+    /// Text standing in for the part in excerpts and search: the visible prefix of
+    /// a split skill context, nothing for folded runtime context, the body otherwise.
+    public var visibleText: String? {
+        if isRuntimeContext { return nil }
+        if let split = skillContextSplit { return split.prefix }
+        return text
+    }
     public let type: String
     public let text: String?
     public let thinking: String?

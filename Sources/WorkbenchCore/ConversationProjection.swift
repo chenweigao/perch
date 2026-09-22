@@ -72,7 +72,7 @@ public struct ConversationTurnSummary: Identifiable, Equatable {
         func excerpt(_ message: KimiMessage) -> String {
             var value = ""
             for part in message.content where part.type == "text" && !part.isRuntimeContext {
-                value += " " + String((part.text ?? "").prefix(320 - value.count))
+                value += " " + String((part.skillContextSplit?.prefix ?? part.text ?? "").prefix(320 - value.count))
                 if value.count >= 320 { break }
             }
             return value.split(whereSeparator: \.isWhitespace).joined(separator: " ")

@@ -26,14 +26,20 @@ struct KimiMessageView: View {
     private var isUserMessage: Bool {
         message.role == "user" && !message.content.allSatisfy(\.isRuntimeContext)
     }
+    private func runtimeContext(_ text: String) -> some View {
+        DisclosureGroup("运行上下文") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
 
             ForEach(Array(message.content.enumerated()), id: \.offset) { _, part in
                 switch part.type {
                 case "text":
-                    if part.isRuntimeContext {
-                        DisclosureGroup("运行上下文") { KimiMarkdown(text: part.text ?? "") }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
+                    if let split = part.skillContextSplit {
+                        KimiMarkdown(text: split.prefix).environment(\.isConversationBodyText, true)
+                        runtimeContext(split.context)
+                    } else if part.isRuntimeContext {
+                        runtimeContext(part.text ?? "")
                     } else { KimiMarkdown(text: part.text ?? "").environment(\.isConversationBodyText, true) }
                 case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
                 case "tool_use":
