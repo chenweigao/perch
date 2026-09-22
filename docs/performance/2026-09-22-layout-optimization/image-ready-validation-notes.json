@@ -1,0 +1,6 @@
+{
+  "initial_representation_probe": "NSImage representation dimensions did not expose the physical CGImage size; switched the assertion to cgImage(forProposedRect:context:hints:).",
+  "initial_reading": "The image row was still 15pt after the original reading driver finished; excluded those snapshots from matched-image memory/latency conclusions.",
+  "pending_task_probe": "Waiting for async task completion alone still left the geometry at 15pt. Removed the pending-task counter.",
+  "final_reading": "Wait for the fixed 4:3 fixture row to display at least its 340pt image height, with a 5 second failure limit. Actual row 363pt; full history 106770pt, matching the earlier baseline."
+}

@@ -9,15 +9,19 @@ import subprocess
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("mode", choices=["reading", "scroll", "small-scroll", "roundtrip", "interactions", "anchor", "turns", "resource", "soak"])
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--app", type=Path, help="Use a fixed A/B fixture build")
+parser.add_argument("--image-fixture", type=Path, help="Include the same local attachment in each fixture history")
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 out = args.output.resolve()
 out.mkdir(parents=True, exist_ok=False)
-app = root / "build/Navigation Preview.app"
+app = args.app.resolve() if args.app else root / "build/Navigation Preview.app"
 binary = app / "Contents/MacOS/NavigationPreview"
 metadata = json.loads((app / "Contents/Resources/build.json").read_text())
 metadata.update(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
                 mode=args.mode, template="Time Profiler", history_turns=200, sessions=500)
+if args.image_fixture:
+    metadata["image_sha256"] = hashlib.sha256(args.image_fixture.read_bytes()).hexdigest()
 (out / "manifest.json").write_text(json.dumps(metadata, indent=2))
 env = {"NAVIGATION_AUTORUN": "scroll" if args.mode == "small-scroll" else args.mode,
        "NAVIGATION_TURNS": "200", "NAVIGATION_SESSIONS": "500", "NAVIGATION_SWITCHES": "20",
@@ -25,6 +29,8 @@ env = {"NAVIGATION_AUTORUN": "scroll" if args.mode == "small-scroll" else args.m
        "NAVIGATION_WINDOW_SECONDS": "8", "NAVIGATION_SOAK_SECONDS": "60"}
 if args.mode == "small-scroll":
     env["NAVIGATION_SCROLL_STEP_POINTS"] = "8"
+if args.image_fixture:
+    env["NAVIGATION_IMAGE_FIXTURE"] = str(args.image_fixture.resolve())
 command = ["xcrun", "xctrace", "record", "--template", "Time Profiler", "--time-limit", "180s",
            "--output", str(out / "run.trace")]
 for key, value in env.items():

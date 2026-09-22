@@ -1,0 +1,109 @@
+diff --git a/Sources/AgentWorkbench/ReplyMarkdownView.swift b/Sources/AgentWorkbench/ReplyMarkdownView.swift
+index aa6ea92..feb6160 100644
+--- a/Sources/AgentWorkbench/ReplyMarkdownView.swift
++++ b/Sources/AgentWorkbench/ReplyMarkdownView.swift
+@@ -36,10 +36,34 @@ private struct ReplyContent: View, Equatable {
+ private struct ReplyBlocks: View {
+     let blocks: [ReplyBlock]
+     var compact = false
++    private var groups: [Range<Int>] {
++        var result: [Range<Int>] = []
++        var index = 0
++        while index < blocks.count {
++            let start = index
++            index += 1
++            if case .paragraph = blocks[start] {
++                // Keep the final block independent: streaming its text must not
++                // invalidate the native layout of completed paragraphs.
++                while index < blocks.count - 1, case .paragraph = blocks[index] { index += 1 }
++            }
++            result.append(start..<index)
++        }
++        return result
++    }
+     var body: some View {
+         VStack(alignment: .leading, spacing: 0) {
+-            ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
+-                ReplyBlockContent(block: block).equatable().padding(.top, index == 0 ? 0 : spacing(before: block, after: index > 0 ? blocks[index - 1] : nil))
++            ForEach(groups, id: \.lowerBound) { group in
++                Group {
++                    if group.count > 1 {
++                        ReplyParagraphs(paragraphs: blocks[group].compactMap {
++                            if case .paragraph(let runs) = $0 { return runs }
++                            return nil
++                        }, spacing: compact ? 8 : 12).equatable()
++                    } else {
++                        ReplyBlockContent(block: blocks[group.lowerBound]).equatable()
++                    }
++                }.padding(.top, group.lowerBound == 0 ? 0 : spacing(before: blocks[group.lowerBound], after: blocks[group.lowerBound - 1]))
+             }
+         }.frame(maxWidth: .infinity, alignment: .leading)
+     }
+@@ -58,6 +82,13 @@ private struct ReplyBlocks: View {
+ 
+ }
+ 
++/// One TextKit view owns a continuous run of completed paragraphs.
++private struct ReplyParagraphs: View, Equatable {
++    let paragraphs: [[ReplyInline]]
++    let spacing: CGFloat
++    var body: some View { ReplyText(paragraphs: paragraphs, paragraphSpacing: spacing) }
++}
++
+ /// Completed Markdown blocks preserve their view tree while the tail streams.
+ private struct ReplyBlockContent: View, Equatable {
+     let block: ReplyBlock
+@@ -134,11 +165,24 @@ private extension EnvironmentValues {
+ 
+ private struct ReplyText: View {
+     @Environment(\.replyInk) private var ink
+-    let runs: [ReplyInline]
++    let paragraphs: [[ReplyInline]]
++    var paragraphSpacing: CGFloat = 0
+     var size: CGFloat = ReplyStyle.bodySize
+     var weight: NSFont.Weight = .regular
+     var alignment: TextAlignment = .leading
+     var lineHeight: CGFloat? = nil
++    init(runs: [ReplyInline], size: CGFloat = ReplyStyle.bodySize, weight: NSFont.Weight = .regular,
++         alignment: TextAlignment = .leading, lineHeight: CGFloat? = nil) {
++        paragraphs = [runs]
++        self.size = size
++        self.weight = weight
++        self.alignment = alignment
++        self.lineHeight = lineHeight
++    }
++    init(paragraphs: [[ReplyInline]], paragraphSpacing: CGFloat) {
++        self.paragraphs = paragraphs
++        self.paragraphSpacing = paragraphSpacing
++    }
+     private var attributed: NSAttributedString {
+         #if TRANSCRIPT_CHECKS
+         let start = CACurrentMediaTime()
+@@ -150,7 +194,10 @@ private struct ReplyText: View {
+         // Wrap oversized paths/URLs in TextKit without altering selectable text.
+         paragraph.lineBreakMode = .byWordWrapping
+         paragraph.alignment = alignment == .trailing ? .right : alignment == .center ? .center : .left
+-        for run in runs {
++        for (index, runs) in paragraphs.enumerated() {
++            if index > 0 { result.append(NSAttributedString(string: "\n", attributes: [.paragraphStyle: paragraph])) }
++            let start = result.length
++            for run in runs {
+             let runWeight: NSFont.Weight = run.strong ? .medium : weight
+             var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
+                                 : NSFont.systemFont(ofSize: size, weight: runWeight)
+@@ -160,7 +207,14 @@ private struct ReplyText: View {
+             ]
+             if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
+             if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
+-            result.append(NSAttributedString(string: run.text, attributes: attributes))
++                result.append(NSAttributedString(string: run.text, attributes: attributes))
++            }
++            if index > 0, result.length > start {
++                let firstLine = (result.string as NSString).paragraphRange(for: NSRange(location: start, length: 0))
++                let spaced = paragraph.mutableCopy() as! NSMutableParagraphStyle
++                spaced.paragraphSpacingBefore = paragraphSpacing
++                result.addAttribute(.paragraphStyle, value: spaced, range: firstLine)
++            }
+         }
+         for (range, reference) in ConversationFileReference.matches(in: result.string) {
+             if result.attribute(.link, at: range.location, effectiveRange: nil) == nil {

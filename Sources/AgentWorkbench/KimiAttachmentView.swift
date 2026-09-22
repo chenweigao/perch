@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 import SwiftUI
 import WorkbenchCore
 
@@ -8,7 +9,12 @@ struct KimiAttachmentView: View {
     let sessionId: String
     @State private var image: NSImage?
     @State private var error: String?
+    @Environment(\.displayScale) private var displayScale
     private var fileId: String? { part.source?["file_id"].string ?? part.fileId }
+    private struct ImageRequest: Equatable {
+        let fileId: String?
+        let scale: CGFloat
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let image { Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 340).frame(maxWidth: 600, alignment: .leading) }
@@ -27,15 +33,47 @@ struct KimiAttachmentView: View {
                 }
             }.foregroundStyle(.secondary)
             if let error { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
-        }.task(id: fileId) {
+        }.task(id: ImageRequest(fileId: fileId, scale: displayScale)) {
             guard part.type == "image" else { return }
             do {
-                if part.source?["kind"].string == "base64", let encoded = part.source?["data"].string, let data = Data(base64Encoded: encoded) { image = NSImage(data: data) }
-                else if let fileId, let api { image = NSImage(data: try await api.request(mediaPath(fileId))) }
+                let data: Data
+                if part.source?["kind"].string == "base64", let encoded = part.source?["data"].string, let decoded = Data(base64Encoded: encoded) { data = decoded }
+                else if let fileId, let api { data = try await api.request(mediaPath(fileId)) }
+                else { return }
+                let decoded = try await AttachmentImageDecoder.shared.image(data: data, maxPixels: 600 * displayScale)
+                try Task.checkCancellation()
+                image = decoded
+            } catch is CancellationError {
+                // Leaving history or switching sessions must not publish stale images.
             } catch { self.error = "图片读取失败：" + error.localizedDescription }
         }
     }
     private func mediaPath(_ id: String) -> String {
         part.source?["kind"].string == "file" || part.type == "file" ? "/api/v1/files/\(id)" : "/api/v1/sessions/\(sessionId)/media/\(id)"
+    }
+}
+
+/// Serialize native decoding away from the main actor. Cancelled, queued rows
+/// exit before decoding; only the view's display-sized bitmap reaches rendering.
+actor AttachmentImageDecoder {
+    static let shared = AttachmentImageDecoder()
+    func image(data: Data, maxPixels: CGFloat) throws -> NSImage? {
+        try Task.checkCancellation()
+        #if TRANSCRIPT_CHECKS
+        precondition(!Thread.isMainThread, "Attachment decoding ran on the main thread")
+        #endif
+        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              CGImageSourceGetCount(source) == 1 else {
+            // Keep NSImage's existing handling of vector and multi-frame formats.
+            return NSImage(data: data)
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+            kCGImageSourceShouldCacheImmediately: true
+        ]
+        guard let bitmap = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return NSImage(cgImage: bitmap, size: .zero)
     }
 }

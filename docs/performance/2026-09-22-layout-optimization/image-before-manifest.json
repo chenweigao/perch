@@ -1,0 +1,14 @@
+{
+  "source_commit": "c6324b56b7b24a637d725e5ce1b9c72790fed051",
+  "source_sha256": "8b7a7dad34b3bb35142891a6da4987c8e0992fe40bb53c5d3214d8aaa4f33f78",
+  "fixture_sha256": "2e4bea57e0125b38798fee34692d7db7d19f4bd3dead3ee106df7240bbe3ccac",
+  "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+  "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+  "binary_sha256": "e4cd5c333324072140acb03be349d18a2b770339cbee8dcd9e6b24844305bfb0",
+  "mode": "reading",
+  "template": "Time Profiler",
+  "history_turns": 200,
+  "sessions": 500,
+  "image_sha256": "a28a1485a1f7bc4bf332b17bf0ad1c16fe9126961877be118889cf05c9e983d9",
+  "record_exit_code": 0
+}

@@ -2,6 +2,7 @@ import AppKit
 import Darwin
 import QuartzCore
 import SwiftUI
+import ImageIO
 import WorkbenchCore
 
 // Isolated click-response and scroll fixture. It hosts the production
@@ -349,6 +350,7 @@ final class NavigationRunner {
         var trace: [[String: Any]] = []
         var tailFound = false
         var offset: CGFloat = 0
+        var imageWaitStarted: TimeInterval?
         for _ in 0..<2_000 {
             let started = CACurrentMediaTime()
             scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
@@ -381,7 +383,25 @@ final class NavigationRunner {
             let end = max(0, (scroll.documentView?.bounds.height ?? 0) - scroll.contentView.bounds.height)
             let position = scroll.contentView.bounds.minY
             bottomPasses = abs(end - position) < 1 ? bottomPasses + 1 : 0
-            if bottomPasses == 3 { break }
+            if bottomPasses == 3 {
+                #if TRANSCRIPT_CHECKS
+                if ProcessInfo.processInfo.environment["NAVIGATION_IMAGE_FIXTURE"] != nil {
+                    // The fixed 4:3 image fixture displays at 340pt tall. A 15pt
+                    // name-only row is not image coverage, even after decode ends:
+                    // its new SwiftUI geometry still has to reach the document.
+                    let imageRow = nativeRows.first { ($0["id"] as? String) == lastEntryID }
+                    if (imageRow?["height"] as? CGFloat ?? 0) < 340 {
+                        if imageWaitStarted == nil { imageWaitStarted = CACurrentMediaTime() }
+                        if CACurrentMediaTime() - imageWaitStarted! > 5 { throw NavigationError("image never reached the displayed row") }
+                        try await Task.sleep(for: .milliseconds(10))
+                        bottomPasses = 0
+                        offset = end
+                        continue
+                    }
+                }
+                #endif
+                break
+            }
             offset = min(end, position + scroll.contentView.bounds.height / 2)
         }
         if let directory = ProcessInfo.processInfo.environment["NAVIGATION_RESULTS"] {
@@ -445,6 +465,44 @@ final class NavigationRunner {
     }
 
     #if TRANSCRIPT_CHECKS
+    /// Check decoded pixel bounds and formats before the actual-window replay.
+    func imageDecoding() async throws -> [String: Any] {
+        let data = try Data(contentsOf: URL(fileURLWithPath: "Tests/Fixtures/stutter-map-4k.png"))
+        let image = try await AttachmentImageDecoder.shared.image(data: data, maxPixels: 1200)
+        guard let large = image?.cgImage(forProposedRect: nil, context: nil, hints: nil), large.width == 1200, large.height == 900 else {
+            throw NavigationError("4K image has unexpected size: \(String(describing: image?.size))")
+        }
+        let small = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 4,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 32, bitsPerPixel: 32)!
+        memset(small.bitmapData!, 0, 128)
+        let smallPNG = small.representation(using: .png, properties: [:])!
+        let smallImage = try await AttachmentImageDecoder.shared.image(data: smallPNG, maxPixels: 1200)
+        let smallBitmap = smallImage?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        guard smallBitmap?.width == 8, smallBitmap?.height == 4 else {
+            throw NavigationError("small image was upscaled")
+        }
+        // Multi-frame data keeps the original NSImage representation.
+        let gif = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(gif, "com.compuserve.gif" as CFString, 2, nil)!
+        CGImageDestinationAddImage(destination, small.cgImage!, nil)
+        small.bitmapData![0] = 255
+        CGImageDestinationAddImage(destination, small.cgImage!, nil)
+        guard CGImageDestinationFinalize(destination) else { throw NavigationError("GIF fixture generation failed") }
+        let animated = try await AttachmentImageDecoder.shared.image(data: gif as Data, maxPixels: 1200)
+        let frames = (animated?.representations.first as? NSBitmapImageRep)?.value(forProperty: .frameCount) as? Int
+        guard frames == 2 else { throw NavigationError("multi-frame image lost frames") }
+        let cancelled = Task { try await AttachmentImageDecoder.shared.image(data: data, maxPixels: 1200) }
+        cancelled.cancel()
+        do {
+            _ = try await cancelled.value
+            throw NavigationError("cancelled decode continued")
+        } catch is CancellationError { }
+        return ["thumbnail_pixels": [large.width, large.height], "small_pixels": [8, 4],
+                "preserved_frames": frames!, "cancelled_before_decode": true,
+                "off_main_thread_precondition": "enabled for all fixture decodes"]
+    }
+
     /// Exercise the same selection action as the rail against cold, virtualized
     /// rows. No search selection or full-history layout assists these jumps.
     func turnNavigation() async throws -> [String: Any] {
@@ -989,6 +1047,7 @@ struct NavigationPreviewApp: App {
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
             if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
+            else if mode == "image" { report.merge(try await runner.imageDecoding()) { a, _ in a } }
             else if mode == "turns" { report.merge(try await runner.turnNavigation()) { a, _ in a } }
             else if mode == "search" { report.merge(try await runner.readingInteractions(searchOnly: true)) { a, _ in a } }
             else if mode == "interactions" { report.merge(try await runner.readingInteractions()) { a, _ in a } }

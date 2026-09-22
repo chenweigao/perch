@@ -1,0 +1,29 @@
+{
+  "build" : {
+    "compiler" : "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "fixture_sha256" : "b20ccbf0822611e9addffc6016971b661ec906d621ad6f1456c0ffde8a7c270d",
+    "package_resolved_sha256" : "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit" : "90197946b317c4434baba8af469303a0de502d9c",
+    "source_sha256" : "f59579d546178f5c52d130f9ba2e246085e46dc8e29f425eed206e825bff31d2"
+  },
+  "cancelled_before_decode" : true,
+  "commit" : "90197946b317c4434baba8af469303a0de502d9c",
+  "history_source" : "navigation-mixed",
+  "history_turns" : 200,
+  "macos" : "Version 26.6.2 (Build 25G83)",
+  "mode" : "image",
+  "off_main_thread_precondition" : "enabled for all fixture decodes",
+  "preserved_frames" : 2,
+  "recreates_timeline" : false,
+  "sessions" : 500,
+  "small_pixels" : [
+    8,
+    4
+  ],
+  "status" : "passed",
+  "thumbnail_pixels" : [
+    1200,
+    900
+  ],
+  "timestamp" : "2026-09-22T15:34:57Z"
+}

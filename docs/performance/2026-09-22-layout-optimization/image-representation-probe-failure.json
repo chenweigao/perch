@@ -1,0 +1,6 @@
+{
+  "error" : "4K image was not downsampled to the display bound",
+  "history_turns" : 200,
+  "mode" : "image",
+  "status" : "failed"
+}

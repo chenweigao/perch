@@ -1,0 +1,17 @@
+{
+  "product_baseline": "ae53ec4",
+  "source_commit_at_build": "86865f99d1a36aebaac133e299dd0ea3a510ef34",
+  "build_command": "./scripts/build.sh",
+  "build_backend": "SwiftPM native, release",
+  "minimum_macos": "14.0",
+  "linked_sdk": "27.0",
+  "binary_sha256": "ad198cce923efce77835cf79ec7065f19c237cd3feabe4288f1bbbab686b1855",
+  "signature_verification": "codesign --verify --deep --strict: passed",
+  "WorkbenchChecks": "passed; live SSH skipped because WORKBENCH_LIVE_HOST was unset",
+  "merged_fixture_checks": [
+    "image decode bounds, small image, multi-frame, cancellation, off-main assertion",
+    "search selection, resize anchor, session return with fixture image"
+  ],
+  "artifact": "build/Perch.app",
+  "pushed": false
+}
