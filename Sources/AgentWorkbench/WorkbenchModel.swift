@@ -700,13 +700,15 @@ final class WorkbenchModel: ObservableObject {
         }
     }
     private func snapshotUpdated() {
+        var reviewed = workspace.reviewedRevisions
         var changed = false
         for connection in connections where connection.online {
             for pane in connection.snapshot?.panes ?? [] where pane.status != "done" {
                 let id = SessionReference(hostID: connection.id, terminalID: pane.id).id
-                if workspace.reviewedRevisions.removeValue(forKey: id) != nil { changed = true }
+                if reviewed.removeValue(forKey: id) != nil { changed = true }
             }
         }
+        if changed { workspace.reviewedRevisions = reviewed }
         catalogChanged()
         if changed { saveWorkspace() }
     }

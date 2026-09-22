@@ -123,7 +123,13 @@ final class NativeAgentConnection: ObservableObject {
             guard let api else { throw WorkbenchError("请先连接原生对话服务") }
             data = try await api.request(path, method: body == nil ? "GET" : "POST", body: body)
         }
-        return try NativeAgentWire.decode(T.self, from: data)
+        return try await Self.decodeResponse(T.self, from: data)
+    }
+    // A changed snapshot can contain the entire history. Keep decoding off the
+    // main actor while the caller retains its selection/cancellation checks.
+    nonisolated private static func decodeResponse<T: Decodable>(_ type: T.Type, from data: Data) async throws -> T {
+        try Task.checkCancellation()
+        return try NativeAgentWire.decode(type, from: data)
     }
     func refresh() async throws {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
@@ -368,7 +374,8 @@ final class NativeAgentConnection: ObservableObject {
     }
     private func reconcileStops() {
         for session in sessions {
-            guard let reference = reference(session.id), let attempt = stops.attempt(for: reference) else { continue }
+            let reference = SessionReference(hostID: host.id, terminalID: session.id, kind: session.provider)
+            guard let attempt = stops.attempt(for: reference) else { continue }
             guard attempt.turn == session.turnId else {
                 stops.clear(reference); continue
             }
