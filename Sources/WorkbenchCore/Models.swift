@@ -9,7 +9,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
     public var kimiTokenPath: String
 
     public init(id: UUID = UUID(), name: String, destination: String,
-                enabledAgents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .terminal],
+                enabledAgents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .terminal],
                 kimiPort: Int = 58627, kimiTokenPath: String = "~/.kimi-code/server.token") {
         self.id = id; self.name = name; self.destination = destination
         self.enabledAgents = enabledAgents; self.kimiPort = kimiPort; self.kimiTokenPath = kimiTokenPath
@@ -21,11 +21,11 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         name = try c.decode(String.self, forKey: .name)
         destination = try c.decode(String.self, forKey: .destination)
         // Existing saved hosts retain their previous connections until reconfigured.
-        enabledAgents = try c.decodeIfPresent([SessionKind].self, forKey: .enabledAgents) ?? [.kimi, .omp, .qoder, .dsh, .terminal]
+        enabledAgents = try c.decodeIfPresent([SessionKind].self, forKey: .enabledAgents) ?? [.kimi, .omp, .qoder, .dsh, .codex, .terminal]
         kimiPort = try c.decodeIfPresent(Int.self, forKey: .kimiPort) ?? 58627
         kimiTokenPath = try c.decodeIfPresent(String.self, forKey: .kimiTokenPath) ?? "~/.kimi-code/server.token"
     }
-    public var hasNativeAgents: Bool { enabledAgents.contains { [.omp, .qoder, .dsh].contains($0) } }
+    public var hasNativeAgents: Bool { enabledAgents.contains { [.omp, .qoder, .dsh, .codex].contains($0) } }
     /// Inert view state for an empty workspace; never listed, saved or connected.
     public static let unconfigured = SSHHost(id: UUID(uuidString: "00000000-0000-4000-8000-000000000000")!,
                                             name: "", destination: "", enabledAgents: [])

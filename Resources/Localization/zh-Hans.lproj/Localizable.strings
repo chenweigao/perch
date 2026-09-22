@@ -369,10 +369,12 @@
 
 /* Remote agent setup */
 "Agent 已连接" = "Agent 已连接";
+"Codex CLI 尚未登录。请在远端运行 codex login 后重试。" = "Codex CLI 尚未登录。请在远端运行 codex login 后重试。";
+"Codex app-server 未返回模型。请检查远端 Codex 安装与登录。" = "Codex app-server 未返回模型。请检查远端 Codex 安装与登录。";
 "Kimi 服务可用，但没有已配置的模型。" = "Kimi 服务可用，但没有已配置的模型。";
 "Kimi 端口须为 1–65535。" = "Kimi 端口须为 1–65535。";
 "OMP 未返回模型。请在远端配置模型后重试。" = "OMP 未返回模型。请在远端配置模型后重试。";
-"Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时。已有任务不会被终止。" = "Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时。已有任务不会被终止。";
+"Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。" = "Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。";
 "Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。";
 "SSH 别名或 user@host" = "SSH 别名或 user@host";
 "SSH 已连接，但未能读取远端主目录。请检查远端 shell 的启动输出。" = "SSH 已连接，但未能读取远端主目录。请检查远端 shell 的启动输出。";
@@ -380,7 +382,8 @@
 "从 SSH 配置选择" = "从 SSH 配置选择";
 "令牌路径须为远端绝对路径或以 ~/ 开头。" = "令牌路径须为远端绝对路径或以 ~/ 开头。";
 "使用主目录" = "使用主目录";
-"使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。" = "使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。";
+"使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 与 Codex 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。" = "使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 与 Codex 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。";
+"已确认 Codex 登录并读取 app-server 模型目录；检查未发送任务。" = "已确认 Codex 登录并读取 app-server 模型目录；检查未发送任务。";
 "使用此环境" = "使用此环境";
 "保存，稍后开始" = "保存，稍后开始";
 "其他自动连接的 Agent" = "其他自动连接的 Agent";

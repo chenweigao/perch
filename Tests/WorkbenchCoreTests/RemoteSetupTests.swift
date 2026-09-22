@@ -10,6 +10,8 @@ func checkRemoteSetup() async throws {
                        kimiPort: 60123, kimiTokenPath: "~/custom token/credential")
     let restored = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(host))
     precondition(restored == host && !restored.hasNativeAgents)
+    let codexHost = SSHHost(id: id, name: "Codex", destination: "fixture", enabledAgents: [.codex])
+    precondition(codexHost.hasNativeAgents)
     precondition(SSHHost.unconfigured.enabledAgents.isEmpty && SSHHost.unconfigured.destination.isEmpty)
     precondition(RemoteSetup.sshAliases("Host alpha beta # comment\nHost * !blocked *.example\nHost=gamma\nHost alpha") == ["alpha", "beta", "gamma"])
     try RemoteSetup.validate(host)

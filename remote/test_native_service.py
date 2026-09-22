@@ -110,6 +110,192 @@ class ProtocolTests(unittest.TestCase):
         tool=broker.normalize({'role':'user','content':[{'type':'tool_result','tool_use_id':'x','content':'ok'}]},'tool')
         self.assertEqual(tool['content'][0]['tool_call_id'],'x')
 
+class FakeCodex:
+    def __init__(self, *args, **kwargs):
+        self.calls=[]; self.responses=[]; self.closed=False
+        owner=self
+        self.process=type('Process',(),{'poll':lambda _self:0 if owner.closed else None})()
+        self.results={
+            'thread/start':{'thread':{'id':'native-thread','model':'gpt-codex','reasoningEffort':'medium'}},
+            'thread/resume':{'thread':{'id':'native-thread','model':'gpt-codex','reasoningEffort':'medium'}},
+            'thread/items/list':{'data':[],'nextCursor':None},
+            'turn/start':{'turn':{'id':'turn-native','status':'inProgress'}},
+        }
+        self.on_frame=None; self.on_exit=None
+    def initialize(self): self.calls.append(('initialize',{}))
+    def request(self, method, params, timeout=60):
+        self.calls.append((method,params))
+        result=self.results.get(method,{})
+        if isinstance(result,list): return result.pop(0)
+        return result
+    def respond(self, request_id, result=None, error=None):
+        self.responses.append((request_id,result,error))
+    def close(self): self.closed=True
+
+class CodexProtocolTests(unittest.TestCase):
+    def setUp(self):
+        broker.SESSIONS.clear(); broker.CODEX_MODELS=None
+    def session(self, identity='native-thread', resume=True):
+        state=dict(id=identity,provider='codex',cwd=folder.name,title='Codex',model='gpt-codex',thinking='medium',
+                   busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None)
+        if resume: state['resume']='native-thread'
+        s=broker.Session(state); fake=FakeCodex(); s.codex=fake; s.codex_attached=resume
+        broker.SESSIONS[identity]=s
+        return s,fake
+    def test_thread_start_uses_native_id(self):
+        s,fake=self.session('temporary',False)
+        native=s.codex_start_thread()
+        self.assertEqual(native,'native-thread')
+        self.assertEqual(s.state['id'],'native-thread')
+        self.assertIs(broker.SESSIONS['native-thread'],s)
+        self.assertNotIn('temporary',broker.SESSIONS)
+        method,params=fake.calls[-1]
+        self.assertEqual(method,'thread/start')
+        self.assertEqual(params['cwd'],folder.name)
+        self.assertEqual(params['approvalPolicy'],'on-request')
+        self.assertEqual(params['approvalsReviewer'],'user')
+        self.assertEqual(params['sandbox'],'workspace-write')
+    def test_resume_hydrates_native_items_with_pagination(self):
+        s,fake=self.session(); s.codex_attached=False
+        fake.results['thread/resume']={'thread':{'id':'native-thread','model':'gpt-codex'}}
+        fake.results['thread/items/list']=[
+            {'data':[{'turnId':'t1','item':{'type':'userMessage','id':'u1','content':[{'type':'text','text':'问题'}]}}], 'nextCursor':'next'},
+            {'data':[{'turnId':'t1','item':{'type':'agentMessage','id':'a1','text':'答案'}}], 'nextCursor':None}]
+        s.codex_ensure(True)
+        self.assertEqual([m['role'] for m in s.state['messages']],['user','assistant'])
+        self.assertEqual(s.state['messages'][1]['content'][0]['text'],'答案')
+        resume=next(params for method,params in fake.calls if method=='thread/resume')
+        self.assertTrue(resume['excludeTurns'])
+        pages=[params for method,params in fake.calls if method=='thread/items/list']
+        self.assertEqual(pages[0],{'threadId':'native-thread','sortDirection':'asc','limit':100})
+        self.assertEqual(pages[1]['cursor'],'next')
+    def test_turn_start_steer_and_stream_completion(self):
+        s,fake=self.session()
+        receipt=s.prompt({'text':'开始','requestId':'request-1'})
+        self.assertEqual(receipt['status'],'accepted')
+        method,params=next(call for call in fake.calls if call[0]=='turn/start')
+        self.assertEqual(params,{'threadId':'native-thread','input':[{'type':'text','text':'开始'}],
+                                 'clientUserMessageId':'request-1','model':'gpt-codex','effort':'medium'})
+        steer=s.steer({'text':'只读分析','requestId':'steer-1'})
+        self.assertEqual(steer['status'],'accepted')
+        steer_params=next(params for method,params in fake.calls if method=='turn/steer')
+        self.assertEqual(steer_params['expectedTurnId'],'turn-native')
+        self.assertEqual(steer_params['clientUserMessageId'],'steer-1')
+
+        s.codex_frame(fake,{'method':'item/agentMessage/delta','params':{'threadId':'native-thread','itemId':'a1','delta':'草稿'}})
+        self.assertEqual(s.state['messages'][-1]['content'][0]['text'],'草稿')
+        s.codex_frame(fake,{'method':'item/completed','params':{'threadId':'native-thread','item':{'type':'agentMessage','id':'a1','text':'最终答案'}}})
+        self.assertEqual(s.state['messages'][-1]['content'][0]['text'],'最终答案')
+        s.codex_frame(fake,{'method':'item/reasoning/summaryTextDelta','params':{'threadId':'native-thread','itemId':'r1','summaryIndex':0,'delta':'分析中'}})
+        s.codex_frame(fake,{'method':'item/completed','params':{'threadId':'native-thread','item':{'type':'reasoning','id':'r1','summary':['最终分析'],'content':[]}}})
+        reasoning=next(m for m in s.state['messages'] if m['id']=='codex:r1')
+        self.assertEqual(reasoning['content'][0]['thinking'],'最终分析')
+        s.codex_frame(fake,{'method':'item/plan/delta','params':{'threadId':'native-thread','itemId':'p1','delta':'计划草稿'}})
+        s.codex_frame(fake,{'method':'item/completed','params':{'threadId':'native-thread','item':{'type':'plan','id':'p1','text':'最终计划'}}})
+        plan=next(m for m in s.state['messages'] if m['id']=='codex:p1')
+        self.assertEqual(plan['content'][0]['thinking'],'最终计划')
+        s.codex_frame(fake,{'method':'item/started','params':{'threadId':'native-thread','item':{'type':'commandExecution','id':'c1','command':'pwd','cwd':folder.name,'status':'inProgress'}}})
+        s.codex_frame(fake,{'method':'item/commandExecution/outputDelta','params':{'threadId':'native-thread','itemId':'c1','delta':'partial'}})
+        s.codex_frame(fake,{'method':'item/completed','params':{'threadId':'native-thread','item':{'type':'commandExecution','id':'c1','command':'pwd','cwd':folder.name,'status':'completed','aggregatedOutput':'final'}}})
+        tool=next(m for m in s.state['messages'] if m['id']=='codex-tool:c1')
+        result=next(m for m in s.state['messages'] if m['id']=='codex-result:c1')
+        self.assertEqual(tool['content'][0]['tool_name'],'shell')
+        self.assertEqual(result['content'][0]['output'][0]['text'],'final')
+        s.codex_frame(fake,{'method':'thread/tokenUsage/updated','params':{'threadId':'native-thread','tokenUsage':{'total':{'totalTokens':1234},'modelContextWindow':200000}}})
+        self.assertEqual(s.state['context'],{'tokens':1234,'limit':200000})
+        s.codex_frame(fake,{'method':'turn/completed','params':{'threadId':'native-thread','turn':{'id':'turn-native','status':'completed'}}})
+        self.assertFalse(s.state['busy']); self.assertEqual(s.state['completed'],1)
+        self.assertEqual(s.state['turnState'],'completed')
+    def test_approvals_questions_and_unknown_reverse_requests(self):
+        s,fake=self.session()
+        requests=[
+            (1,'item/commandExecution/requestApproval',{'threadId':'native-thread','command':['git','status'],'cwd':folder.name},True,{'decision':'accept'}),
+            (2,'item/fileChange/requestApproval',{'threadId':'native-thread','itemId':'f1','reason':'edit'},False,{'decision':'decline'}),
+            (3,'item/permissions/requestApproval',{'threadId':'native-thread','permissions':{'network':True}},True,{'permissions':{'network':True},'scope':'turn'}),
+            (4,'item/permissions/requestApproval',{'threadId':'native-thread','permissions':{'network':True}},False,{'permissions':{},'scope':'turn'}),
+            (5,'execCommandApproval',{'conversationId':'native-thread','command':['pwd']},False,{'decision':{'denied':{'rejection':'用户在 Perch 中拒绝了该操作'}}}),
+        ]
+        for wire,method,params,allow,expected in requests:
+            s.codex_frame(fake,{'id':wire,'method':method,'params':params})
+            interaction='codex-request-'+str(wire)
+            self.assertIn(interaction,[x['id'] for x in s.state['interactions']])
+            s.codex_answer(interaction,{'allow':allow})
+            self.assertEqual(fake.responses[-1],(wire,expected,None))
+        s.codex_frame(fake,{'id':6,'method':'item/tool/requestUserInput','params':{'threadId':'native-thread','questions':[
+            {'id':'first','question':'Choose','header':'A','options':[{'label':'one'}]},
+            {'id':'second','question':'Choose','header':'B','options':[{'label':'two'}]}]}})
+        questions=s.state['interactions'][0]['input']['questions']
+        self.assertEqual([q['question'] for q in questions],['Choose','Choose (2)'])
+        s.codex_answer('codex-request-6',{'allow':True,'answers':{'Choose':'one','Choose (2)':'two'}})
+        self.assertEqual(fake.responses[-1][1],{'answers':{'first':{'answers':['one']},'second':{'answers':['two']}}})
+        s.codex_frame(fake,{'id':7,'method':'mcpServer/elicitation/request','params':{'threadId':'native-thread','serverName':'demo','message':'Configure','requestedSchema':{
+            'type':'object','properties':{'enabled':{'title':'Enabled','type':'boolean'},'tags':{'title':'Tags','type':'array','items':{'type':'string'}}}}}})
+        s.codex_answer('codex-request-7',{'allow':True,'answers':{'Enabled':'yes','Tags':'one, two'}})
+        self.assertEqual(fake.responses[-1][1],{'action':'accept','content':{'enabled':True,'tags':['one','two']}})
+        s.codex_frame(fake,{'id':8,'method':'future/request','params':{'threadId':'native-thread'}})
+        self.assertEqual(fake.responses[-1],(8,None,{'code':-32601,'message':'unsupported by the Perch bridge'}))
+
+class CodexHandlerContractTests(unittest.TestCase):
+    def setUp(self):
+        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.CODEX_MODELS=None
+        self.s,self.fake=CodexProtocolTests().session()
+    def request(self,path,body=None):
+        handler=object.__new__(broker.Handler); raw=json.dumps(body or {}).encode()
+        handler.path=path; handler.headers={'Authorization':'Bearer test-token','Content-Length':str(len(raw))}
+        handler.rfile=io.BytesIO(raw); result=[]
+        handler.respond=lambda code,payload:result.append((code,payload))
+        handler.handle_request(body is not None)
+        return result[0]
+    def test_create_returns_native_thread_id_and_catalog_default(self):
+        broker.SESSIONS.clear(); fake=FakeCodex()
+        catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium','ultra'],'defaultThinking':'medium'}]
+        with patch.object(broker,'codex_catalog',return_value=catalog), patch.object(broker,'CodexAppServer',side_effect=lambda *args,**kwargs:fake):
+            code,payload=self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex'})
+        self.assertEqual(code,200); self.assertEqual(payload['id'],'native-thread')
+        self.assertEqual(payload['provider'],'codex'); self.assertEqual(payload['thinking'],'medium')
+        self.assertIn('native-thread',broker.SESSIONS)
+    def test_create_rejects_model_and_effort_outside_catalog(self):
+        catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
+        with patch.object(broker,'codex_catalog',return_value=catalog):
+            self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'unknown'})[0],400)
+            self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex','thinking':'ultra'})[0],400)
+    def test_codex_catalog_discovery_runs_outside_session_lock(self):
+        broker.SESSIONS.clear(); fake=FakeCodex(); observed=[]
+        catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
+        def discover():
+            def probe():
+                acquired=broker.LOCK.acquire(blocking=False); observed.append(acquired)
+                if acquired: broker.LOCK.release()
+            worker=threading.Thread(target=probe); worker.start(); worker.join()
+            return catalog
+        with patch.object(broker,'codex_catalog',side_effect=discover), patch.object(broker,'CodexAppServer',side_effect=lambda *args,**kwargs:fake):
+            self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex'})[0],200)
+        self.assertEqual(observed,[True])
+    def test_non_codex_mutations_skip_codex_catalog(self):
+        with patch.object(broker,'codex_catalog',side_effect=AssertionError('unexpected Codex discovery')):
+            code,created=self.request('/sessions',{'provider':'omp','cwd':folder.name})
+            self.assertEqual(code,200)
+            sid=created['id']
+            self.assertEqual(self.request('/sessions/'+sid+'/model',{'provider':'openai','model':'gpt'})[0],200)
+            self.assertEqual(self.request('/sessions/'+sid+'/thinking',{'level':'high'})[0],200)
+    def test_model_effort_interrupt_archive_and_delete_use_native_contracts(self):
+        catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium','ultra'],'defaultThinking':'medium'}]
+        with patch.object(broker,'codex_catalog',return_value=catalog):
+            self.assertEqual(self.request('/sessions/native-thread/model',{'provider':'codex','model':'gpt-codex'})[0],200)
+            self.assertEqual(self.request('/sessions/native-thread/thinking',{'level':'ultra'})[0],200)
+            self.assertEqual(self.request('/sessions/native-thread/thinking',{'level':'invalid'})[0],400)
+        self.s.state.update(busy=True,turnId='turn-native')
+        self.assertEqual(self.request('/sessions/native-thread/abort',{'turnId':'turn-native'})[0],200)
+        self.assertIn(('turn/interrupt',{'threadId':'native-thread','turnId':'turn-native'}),self.fake.calls)
+        self.s.state.update(busy=False,stopRequested=False)
+        self.assertEqual(self.request('/sessions/native-thread/archive',{'archived':True})[0],200)
+        self.assertEqual(self.request('/sessions/native-thread/archive',{'archived':False})[0],200)
+        self.assertIn(('thread/archive',{'threadId':'native-thread'}),self.fake.calls)
+        self.assertIn(('thread/unarchive',{'threadId':'native-thread'}),self.fake.calls)
+        self.assertEqual(self.request('/sessions/native-thread/delete',{})[0],200)
+        self.assertIn(('thread/delete',{'threadId':'native-thread'}),self.fake.calls)
+        self.assertNotIn('native-thread',broker.SESSIONS)
+
 class DshProtocolTests(unittest.TestCase):
     OPTIONS = [
         {'id':'model','name':'Model','category':'model','type':'select','currentValue':'["deepseek-official","deepseek-v4-flash"]',
@@ -522,6 +708,24 @@ class SetupTests(unittest.TestCase):
             self.assertEqual(status['credentialCheck'], expected)
             self.assertEqual(status['modelCheck'], 'session-handshake')
             self.assertNotIn('fixture-secret-value', json.dumps(status))
+
+    def test_codex_checks_login_and_returns_only_catalog_identity(self):
+        catalog = [{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['high'],
+                    'apiKey':'PRIVATE','headers':{'Authorization':'PRIVATE'}}]
+        with patch.object(broker.shutil, 'which', return_value='/fixture/codex'), patch.object(broker.subprocess, 'run', side_effect=[self.result('codex-cli 0.155.1'), self.result('Logged in with a private account')]) as run, patch.object(broker, 'codex_catalog', return_value=catalog):
+            status = broker.setup_status('codex')
+        self.assertEqual(status['credentialCheck'], 'present')
+        self.assertEqual(status['modelCheck'], 'configured')
+        self.assertEqual(status['models'], [{'id':'gpt-codex','name':'GPT Codex','provider':'codex'}])
+        self.assertNotIn('PRIVATE', json.dumps(status))
+        self.assertNotIn('private account', json.dumps(status))
+        self.assertEqual(run.call_args_list[1].args[0], ['/fixture/codex','login','status'])
+
+    def test_codex_missing_login_does_not_start_app_server(self):
+        with patch.object(broker.shutil, 'which', return_value='/fixture/codex'), patch.object(broker.subprocess, 'run', side_effect=[self.result('codex-cli 0.155.1'), self.result(code=1)]), patch.object(broker, 'codex_catalog', side_effect=AssertionError('login failure must stop before app-server')):
+            status = broker.setup_status('codex')
+        self.assertEqual(status['credentialCheck'], 'missing')
+        self.assertEqual(status['models'], [])
 
     def test_missing_runtime_is_not_ready(self):
         with patch.object(broker.shutil, 'which', return_value=None), patch.object(broker.subprocess, 'run') as run:

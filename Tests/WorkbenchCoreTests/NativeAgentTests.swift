@@ -32,10 +32,13 @@ func checkNativeAgents() throws {
     precondition(done.last?.messages[0].content.count == 1 && done.last?.messages[0].content[0].text == "最终结果")
     precondition(done.first { $0.presentation == .thinkingDetails }?.messages[0].content[0].type == "thinking")
     let host = UUID()
-    let refs = [SessionKind.kimi, .omp, .qoder, .dsh, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
-    precondition(Set(refs.map(\.id)).count == 5)
+    let refs = [SessionKind.kimi, .omp, .qoder, .dsh, .codex, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
+    precondition(Set(refs.map(\.id)).count == 6)
+    precondition(SessionKind.codex.label == "Codex")
     var workspace = LocalWorkspace(); refs.forEach { workspace.toggleStar($0) }
     let restored = try JSONDecoder().decode(LocalWorkspace.self, from: JSONEncoder().encode(workspace))
     precondition(restored.starred == refs)
+    let codex = try NativeAgentWire.decode(NativeAgentSession.self, from: Data(#"{"id":"0199-thread","provider":"codex","title":"Codex","cwd":"/tmp","busy":false,"archived":false,"updated":0,"completed":0,"pending":0,"model":"gpt-6-astra","error":null}"#.utf8))
+    precondition(codex.id == "0199-thread" && codex.provider == .codex)
     print("PASS: chronological tool summaries, visible final answer, native provider identity and persistence")
 }

@@ -32,6 +32,13 @@ class InstallerTests(unittest.TestCase):
             self.assertIn('StrictHostKeyChecking=yes', call)
             self.assertIn('BatchMode=yes', call)
 
+    def test_codex_only_deploys_bridge_files(self):
+        result, calls = self.run_installer('fixture', '--provider=codex')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(calls), 2)
+        self.assertNotIn('npm', json.dumps(calls))
+        self.assertNotIn('pip', json.dumps(calls))
+
     def test_qoder_installs_sdk_without_lifecycle_scripts(self):
         result, calls = self.run_installer('fixture', '--provider=qoder')
         self.assertEqual(result.returncode, 0, result.stderr)

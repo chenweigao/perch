@@ -147,7 +147,7 @@ struct AddHostSheet: View {
             if setup.failedCheck == "runtime", let command = setup.installCommand {
                 DisclosureGroup("安装 Agent") {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。")
+                        Text("使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 与 Codex 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。")
                             .font(.caption).foregroundStyle(.secondary)
                         Text(command).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                         Button("在终端安装") { setup.openTerminal(command: command) }
@@ -155,7 +155,7 @@ struct AddHostSheet: View {
                 }
             }
             if setup.needsBridge && ["runtime", "service"].contains(setup.failedCheck ?? "") {
-                Text("Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时。已有任务不会被终止。")
+                Text("Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。")
                     .font(.caption).foregroundStyle(.secondary)
                 Button("安装 / 更新桥接组件") { setup.installBridge() }
             }

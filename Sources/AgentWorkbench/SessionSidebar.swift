@@ -273,7 +273,7 @@ private struct ConnectionControls: View {
                             agentStatus("Kimi", online: kimi.online, error: kimi.error) { kimi.connect() }
                         }
                         if connection.host.hasNativeAgents {
-                            agentStatus(connection.host.enabledAgents.filter { [.omp, .qoder, .dsh].contains($0) }.map(\.label).joined(separator: " · "),
+                            agentStatus(connection.host.enabledAgents.filter { [.omp, .qoder, .dsh, .codex].contains($0) }.map(\.label).joined(separator: " · "),
                                         online: native.online, error: native.error) { native.connect() }
                         }
                         if connection.host.enabledAgents.contains(.terminal) {

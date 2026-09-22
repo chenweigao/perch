@@ -17,9 +17,9 @@ final class NativeAgentConnection: ObservableObject {
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     @Published var queue = OutboundQueue() { didSet { persistDrafts() } }
     @Published var stops = StopController()
-    /// The bridge's combined catalog: OMP answers `omp models`, dsh contributes its
-    /// ACP config options after each handshake, and a Qoder session keeps an empty
-    /// list rather than being offered models it cannot switch to.
+    /// The bridge's combined catalog: OMP answers `omp models`, Codex answers
+    /// `model/list`, and dsh contributes its ACP config options after each handshake.
+    /// Qoder keeps an empty list rather than being offered models it cannot switch to.
     @Published private(set) var models: [AgentModel] = []
     var onSessionsChanged: (() -> Void)?
     private var api: KimiAPI?

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SSH-only loopback broker. Owns Agent stdin independently of any Mac client."""
-import argparse, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, secrets, shutil, subprocess, sys, threading, time, uuid
+import argparse, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, subprocess, sys, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-workbench/native')).expanduser()
@@ -10,6 +10,7 @@ os.umask(0o077)
 LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
+CODEX_MODELS = None
 MODEL_LOCK = threading.Lock()
 DSH_MODELS = None
 
@@ -61,24 +62,17 @@ def dsh_catalog():
         if path.exists(): DSH_MODELS = json.loads(path.read_text())
     return DSH_MODELS or []
 
-def combined_catalog():
-    dsh = dsh_catalog()
-    try: omp = model_catalog()
-    except Exception:
-        if dsh: return dsh
-        raise
-    return (omp if isinstance(omp, list) else []) + dsh
-
 def setup_status(provider):
     """Readiness for the selected adapter only; never sends a model prompt.
 
     This runs outside LOCK, so CLI discovery cannot block active conversations.
     Return names/IDs and booleans only, never CLI configuration or credentials.
     """
-    if provider not in ('omp', 'qoder', 'dsh'):
+    if provider not in ('omp', 'qoder', 'dsh', 'codex'):
         raise ValueError('Unknown setup provider')
     try:
-        binary = dsh_binary() if provider == 'dsh' else shutil.which('omp' if provider == 'omp' else 'qoderclicn')
+        if provider == 'dsh': binary = dsh_binary()
+        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'codex':'codex'}[provider])
     except ValueError:
         binary = None
     result = {'installed': bool(binary), 'models': [], 'modelCheck': 'unverified', 'credentialCheck': 'unverified'}
@@ -104,16 +98,159 @@ def setup_status(provider):
         result['nodeInstalled'] = bool(shutil.which('node'))
         # The SDK resolves the model and login at the first query; no model-list API.
         result['modelCheck'] = 'runtime-default'
-    else:
+    elif provider == 'dsh':
         result['credentialCheck'] = 'present' if os.environ.get('DEEPSEEK_API_KEY') else 'missing'
         result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
                             for m in dsh_catalog() if m.get('id')]
         result['modelCheck'] = 'session-handshake'
+    else:
+        login = subprocess.run([binary, 'login', 'status'], capture_output=True, text=True, timeout=10)
+        result['credentialCheck'] = 'present' if login.returncode == 0 else 'missing'
+        if login.returncode != 0: return result
+        try: catalog = codex_catalog()
+        except Exception:
+            result['error'] = 'Could not read the Codex model catalog. Run codex app-server in an SSH terminal.'
+            return result
+        result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': 'codex'}
+                            for m in catalog if isinstance(m, dict) and m.get('id')]
+        result['modelCheck'] = 'configured' if result['models'] else 'missing'
     return result
 
 def save(path, value):
     tmp = path.with_suffix('.tmp')
     tmp.write_text(json.dumps(value, ensure_ascii=False)); tmp.replace(path)
+
+class CodexAppServer:
+    def __init__(self, cwd, on_frame=None, on_exit=None, stderr_path=None):
+        binary = shutil.which('codex')
+        if not binary: raise ValueError('未找到 codex CLI，请先安装并登录 Codex')
+        self.on_frame = on_frame; self.on_exit = on_exit; self.closing = False
+        self.write_lock = threading.Lock(); self.pending_lock = threading.Lock()
+        self.pending = {}; self.next_id = 0; self.frames = queue.Queue()
+        self.stderr = open(stderr_path, 'a') if stderr_path else subprocess.DEVNULL
+        self.process = subprocess.Popen([binary,'app-server','--listen','stdio://'],cwd=cwd,
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True)
+        threading.Thread(target=self.dispatch,daemon=True).start()
+        threading.Thread(target=self.read,daemon=True).start()
+
+    def initialize(self):
+        self.request('initialize', {'clientInfo':{'name':'perch','title':'Perch','version':'1'},
+                                    'capabilities':{'experimentalApi':True}}, timeout=20)
+        self.notify('initialized', {})
+
+    def send(self, value):
+        if self.process.poll() is not None: raise ValueError('Codex app-server 已退出')
+        with self.write_lock:
+            self.process.stdin.write(json.dumps(value,ensure_ascii=False)+'\n'); self.process.stdin.flush()
+
+    def request(self, method, params, timeout=60):
+        with self.pending_lock:
+            self.next_id += 1; request_id = 'perch-' + str(self.next_id)
+            slot = {'event':threading.Event()}; self.pending[request_id] = slot
+        try: self.send({'jsonrpc':'2.0','id':request_id,'method':method,'params':params})
+        except Exception:
+            with self.pending_lock: self.pending.pop(request_id,None)
+            raise
+        if not slot['event'].wait(timeout):
+            with self.pending_lock: self.pending.pop(request_id,None)
+            raise ValueError('Codex app-server 请求超时：'+method)
+        frame = slot['frame']
+        if frame.get('error'):
+            error = frame['error']; message = error.get('message') if isinstance(error,dict) else str(error)
+            raise ValueError('Codex 拒绝 '+method+'：'+(message or '未知错误'))
+        return frame.get('result') or {}
+
+    def notify(self, method, params):
+        self.send({'jsonrpc':'2.0','method':method,'params':params})
+
+    def respond(self, request_id, result=None, error=None):
+        frame = {'jsonrpc':'2.0','id':request_id}
+        if error is not None: frame['error'] = error
+        else: frame['result'] = result or {}
+        self.send(frame)
+
+    def read(self):
+        failure = None
+        try:
+            for line in self.process.stdout:
+                frame = json.loads(line)
+                if 'method' in frame:
+                    self.frames.put(frame); continue
+                request_id = frame.get('id')
+                with self.pending_lock: slot = self.pending.pop(request_id,None)
+                if slot is not None:
+                    slot['frame'] = frame; slot['event'].set()
+        except Exception as e: failure = str(e)
+        finally:
+            if failure is None and not self.closing: failure = 'Codex app-server 已退出'
+            with self.pending_lock:
+                pending = list(self.pending.values()); self.pending.clear()
+            for slot in pending:
+                slot['frame'] = {'error':{'message':failure or 'Codex app-server 已关闭'}}; slot['event'].set()
+            self.frames.put(None)
+            if self.on_exit: self.on_exit(self, failure)
+
+    def dispatch(self):
+        while True:
+            frame = self.frames.get()
+            if frame is None: return
+            try:
+                if self.on_frame: self.on_frame(frame)
+                elif 'id' in frame: self.respond(frame['id'], error={'code':-32601,'message':'unsupported by catalog client'})
+            except Exception:
+                if 'id' in frame:
+                    try: self.respond(frame['id'], error={'code':-32603,'message':'Perch failed to handle request'})
+                    except Exception: pass
+
+    def close(self):
+        self.closing = True
+        try: self.process.stdin.close()
+        except Exception: pass
+        if self.process.poll() is None: self.process.terminate()
+        if self.stderr is not subprocess.DEVNULL:
+            try: self.stderr.close()
+            except Exception: pass
+
+def codex_catalog():
+    global CODEX_MODELS
+    with MODEL_LOCK:
+        if CODEX_MODELS is not None: return CODEX_MODELS
+        client = CodexAppServer(str(ROOT))
+        try:
+            client.initialize(); items = []; cursor = None
+            while True:
+                params = {'includeHidden':False}
+                if cursor: params['cursor'] = cursor
+                page = client.request('model/list', params)
+                items.extend(page.get('data') or []); cursor = page.get('nextCursor')
+                if not cursor: break
+            CODEX_MODELS = [
+                {'id':m.get('model') or m['id'],'provider':'codex','name':m.get('displayName') or m.get('model') or m['id'],
+                 'thinking':[x.get('reasoningEffort') for x in m.get('supportedReasoningEfforts',[]) if x.get('reasoningEffort')],
+                 'defaultThinking':m.get('defaultReasoningEffort')}
+                for m in items if m.get('id') and not m.get('hidden',False)
+            ]
+            return CODEX_MODELS
+        finally: client.close()
+
+def codex_selection(model, thinking=None, catalog=None):
+    if not model: raise ValueError('请选择 Codex 模型')
+    source = codex_catalog() if catalog is None else catalog
+    entry = next((item for item in source if item.get('id') == model), None)
+    if entry is None: raise ValueError('Codex 不认识该模型，请刷新模型列表后重试')
+    if thinking and thinking not in entry.get('thinking',[]): raise ValueError('当前 Codex 模型不支持该思考强度')
+    return entry, thinking or entry.get('defaultThinking')
+
+def combined_catalog():
+    entries = list(dsh_catalog()); errors = []
+    for discover in (model_catalog, codex_catalog):
+        try:
+            values = discover()
+            if isinstance(values,list): entries.extend(values)
+        except Exception as e: errors.append(e)
+    if entries: return entries
+    if errors: raise errors[0]
+    return []
 
 def text_parts(content):
     if isinstance(content, str): return [{'type':'text','text':content}]
@@ -136,10 +273,10 @@ class Session:
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
-        # dsh (ACP) runtime-only state: wire request routing, the prompt waiting for
-        # the handshake, per-message block assembly and pending permission options.
         self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
         self.acp_blocks = {}; self.permission_options = {}
+        self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
+        self.codex_interactions = {}
         # Version 1 stored command results as plain strings in existing histories.
         previous=state.get('commandResult')
         if isinstance(previous,str):
@@ -155,10 +292,15 @@ class Session:
             'pending':len(self.state['interactions']), 'cancelled':self.state.get('cancelled',False),
             'thinking':self.state.get('thinking'), 'context':self.state.get('context'),
             'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState'),
-            'steer':self.state['provider']=='omp'}
+            'steer':self.state['provider'] in ('omp','codex')}
+    def active_receipt(self):
+        turn = self.state.get('turnId')
+        direct = self.state.get('requests',{}).get(turn)
+        if direct: return direct
+        return next((r for r in self.state.get('requests',{}).values() if r.get('runtimeTurnId')==turn),None)
     def finish(self, status):
         self.state['turnState']=status
-        receipt=self.state.get('requests',{}).get(self.state.get('turnId'))
+        receipt=self.active_receipt()
         if receipt:
             receipt['status']=status
             receipt['error']=self.state.get('error')
@@ -173,36 +315,43 @@ class Session:
             return copy.deepcopy(receipt)
         if s['busy'] or s['archived']: raise ValueError('会话正在运行或已归档')
         if not text.strip(): raise ValueError('消息不能为空')
-        if not self.process or self.process.poll() is not None: self.launch()
+        if s['provider']=='codex': self.codex_ensure(True)
+        elif not self.process or self.process.poll() is not None: self.launch()
         receipt={'id':request_id,'digest':digest,'text':text,'status':'submitting'}
         receipts[request_id]=receipt
         s.update(busy=True,error=None,cancelled=False,stopRequested=False,stopAcknowledged=False,
                  updated=time.time(),turnId=request_id,turnState='submitting')
         if not s['messages']: s['title']=text[:60]
-        if s['provider']=='qoder' or s['provider']=='dsh': self.upsert({'role':'user','content':text},request_id)
+        if s['provider'] in ('qoder','dsh','codex'): self.upsert({'role':'user','content':text},request_id)
         if s['provider']=='dsh':
-            # ACP needs initialize + session/new|resume before the first prompt; the
-            # read thread flushes this once the handshake lands.
             self.pending_prompt=(request_id,text)
             try:
                 if self.ready.is_set(): self.acp_flush_prompt()
             except Exception as e:
-                # The write may or may not have landed; never claim submission.
                 s['busy']=False; s['error']=str(e); self.finish('unknown')
             self.touch(True)
             return copy.deepcopy(receipt)
-        # Persist before writing: a service crash between disk and stdin leaves an
-        # unknown outcome, never permission to execute the instruction a second time.
         self.touch(True)
         try:
-            self.send({'type':'prompt','id':request_id,'message':text})
-            receipt['status']='submitted'; s['turnState']='submitted'
+            if s['provider']=='codex':
+                params={'threadId':s['resume'],'input':[{'type':'text','text':text}],
+                        'clientUserMessageId':request_id}
+                if s.get('model'): params['model']=s['model']
+                if s.get('thinking'): params['effort']=s['thinking']
+                turn=(self.codex.request('turn/start',params).get('turn') or {})
+                if not turn.get('id'): raise ValueError('Codex turn/start 未返回 turn id')
+                s['turnId']=turn['id']; receipt['runtimeTurnId']=turn['id']
+                receipt['status']='accepted'; s['turnState']='running' if turn.get('status')=='inProgress' else 'accepted'
+            else:
+                self.send({'type':'prompt','id':request_id,'message':text})
+                receipt['status']='submitted'; s['turnState']='submitted'
         except Exception as e:
             s['busy']=False; s['error']=str(e); self.finish('unknown')
         self.touch(True)
         return copy.deepcopy(receipt)
     def launch(self):
         s = self.state
+        if s['provider']=='codex': self.codex_ensure(True); return
         env = None
         if s['provider'] == 'omp':
             args = ['omp','--mode','rpc-ui','--cwd',s['cwd'],'--approval-mode','always-ask','--no-title','--session-dir',str(ROOT/'omp-sessions')]
@@ -211,8 +360,6 @@ class Session:
             if s.get('thinking'): args += ['--thinking',s['thinking']]
         elif s['provider'] == 'dsh':
             args = [dsh_binary(),'--profile','acp']
-            # A dedicated home keeps workbench sessions out of the user's own ~/.dsh,
-            # and telemetry stays off unless the user turns it on themselves.
             env = dict(os.environ, DSH_HOME=str(ROOT/'dsh-home'), DSH_TELEMETRY_MODE='DISABLED')
         else:
             cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which('qoderclicn')}
@@ -224,13 +371,311 @@ class Session:
         self.process = subprocess.Popen(args,cwd=s['cwd'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=open(ROOT/(s['id']+'.stderr'),'a'),text=True,start_new_session=True,env=env)
         threading.Thread(target=self.read,daemon=True).start()
         if s['provider'] == 'dsh':
-            # The handshake is asynchronous; the prompt stays parked in
-            # pending_prompt until session/new|resume answers.
             self.acp_request('initialize', {'protocolVersion':1,'clientCapabilities':{'fs':{'readTextFile':False,'writeTextFile':False}}}, 'initialize')
     def send(self, value):
         if not self.process or self.process.poll() is not None: raise ValueError('远端进程已退出，请重新发送以恢复会话')
         with self.write_lock:
             self.process.stdin.write(json.dumps(value,ensure_ascii=False)+'\n'); self.process.stdin.flush()
+    def codex_open_params(self):
+        params={'cwd':self.state['cwd'],'approvalPolicy':'on-request','approvalsReviewer':'user','sandbox':'workspace-write'}
+        if self.state.get('model'): params['model']=self.state['model']
+        return params
+    def codex_ensure(self, attach=True):
+        if self.codex and self.codex.process.poll() is None:
+            if not attach or self.codex_attached: return self.codex
+        else:
+            client=CodexAppServer(self.state['cwd'],stderr_path=ROOT/(self.state['id']+'.stderr'))
+            client.on_frame=lambda frame: self.codex_frame(client,frame)
+            client.on_exit=self.codex_exit
+            self.codex=client; self.codex_attached=False
+            try: client.initialize()
+            except Exception:
+                client.close(); self.codex=None
+                raise
+        if attach and not self.codex_attached:
+            if not self.state.get('resume'):
+                self.codex_start_thread()
+            else:
+                params=self.codex_open_params() | {'threadId':self.state['resume'],'excludeTurns':True}
+                result=self.codex.request('thread/resume',params)
+                self.codex_apply_thread(result)
+                self.codex_attached=True
+                self.codex_hydrate()
+                self.touch(True)
+        return self.codex
+    def codex_start_thread(self):
+        self.codex_ensure(False)
+        result=self.codex.request('thread/start',self.codex_open_params())
+        thread=result.get('thread') or {}
+        native_id=thread.get('id')
+        if not native_id: raise ValueError('Codex thread/start 未返回 thread id')
+        old_id=self.state['id']; old_path=self.path
+        if native_id in SESSIONS and SESSIONS[native_id] is not self: raise ValueError('Codex 返回了已存在的 thread id')
+        self.state['id']=native_id; self.state['resume']=native_id
+        self.path=ROOT/'sessions'/(native_id+'.json')
+        if SESSIONS.get(old_id) is self:
+            del SESSIONS[old_id]; SESSIONS[native_id]=self
+        self.codex_apply_thread(result); self.codex_attached=True; self.persist()
+        if old_path != self.path and old_path.exists(): old_path.unlink()
+        return native_id
+    def codex_apply_thread(self, result):
+        s=self.state; thread=result.get('thread') or {}
+        if thread.get('id') and s.get('resume') and thread['id']!=s['resume']:
+            raise ValueError('Codex 返回了不匹配的 thread id')
+        s['model']=result.get('model') or thread.get('model') or s.get('model','')
+        s['provider_id']=result.get('modelProvider') or thread.get('modelProvider') or s.get('provider_id')
+        if not s.get('thinking'):
+            if 'reasoningEffort' in result: s['thinking']=result.get('reasoningEffort')
+            elif 'reasoningEffort' in thread: s['thinking']=thread.get('reasoningEffort')
+        if thread.get('updatedAt'): s['updated']=thread['updatedAt']
+    def codex_hydrate(self):
+        self.state['messages']=[]; self.codex_parts={}; self.codex_outputs={}
+        cursor=None
+        while True:
+            params={'threadId':self.state['resume'],'sortDirection':'asc','limit':100}
+            if cursor: params['cursor']=cursor
+            page=self.codex.request('thread/items/list',params)
+            for entry in page.get('data') or []:
+                self.codex_item(entry.get('item') or {},True)
+            cursor=page.get('nextCursor')
+            if not cursor: break
+    def codex_text(self, value):
+        if value is None: return ''
+        if isinstance(value,str): return value
+        if isinstance(value,list):
+            texts=[]
+            for item in value:
+                if isinstance(item,str): texts.append(item)
+                elif isinstance(item,dict):
+                    text=item.get('text') or item.get('output_text')
+                    texts.append(text if isinstance(text,str) else json.dumps(item,ensure_ascii=False))
+                else: texts.append(str(item))
+            return '\n'.join(texts)
+        return json.dumps(value,ensure_ascii=False,indent=2)
+    def codex_reasoning_text(self, item_id):
+        parts=self.codex_parts.get(item_id) or {}
+        values=[]
+        for kind in ('summary','content'):
+            values.extend(text for _,text in sorted((parts.get(kind) or {}).items()) if text)
+        return '\n'.join(values)
+    def codex_item(self, item, completed=False, timestamp=None):
+        kind=item.get('type'); item_id=item.get('id')
+        if not kind or not item_id: return
+        stamp=(timestamp/1000 if isinstance(timestamp,(int,float)) and timestamp>100000000000 else timestamp) or time.time()
+        if kind=='userMessage':
+            text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
+            identity=item.get('clientId') or 'codex:'+item_id
+            receipt=self.state.get('requests',{}).get(identity)
+            if receipt:
+                receipt['runtimeId']=item_id
+                if receipt.get('mode')=='steer': receipt.update(status='consumed',error=None)
+                elif receipt.get('status') in ('submitting','submitted','accepted'): receipt['status']='running'
+            self.upsert({'role':'user','content':text,'timestamp':stamp},identity)
+            return
+        if kind=='agentMessage':
+            if completed or item.get('text'):
+                text=item.get('text',''); self.codex_parts[item_id]={'text':text}
+            else: text=(self.codex_parts.get(item_id) or {}).get('text','')
+            self.upsert({'role':'assistant','content':[{'type':'text','text':text}],'timestamp':stamp},'codex:'+item_id)
+            return
+        if kind in ('reasoning','plan'):
+            if completed or kind=='plan' or item.get('content') or item.get('summary'):
+                if kind=='plan': parts={'summary':{},'content':{0:item.get('text','')}}
+                else:
+                    parts={'summary':{i:text for i,text in enumerate(item.get('summary') or [])},
+                           'content':{i:text for i,text in enumerate(item.get('content') or [])}}
+                self.codex_parts[item_id]=parts
+            text=self.codex_reasoning_text(item_id)
+            self.upsert({'role':'assistant','content':[{'type':'thinking','thinking':text}],'timestamp':stamp},'codex:'+item_id)
+            return
+        tool_name=None; tool_input={}; output=None; failed=False
+        if kind=='commandExecution':
+            tool_name='shell'; tool_input={'command':item.get('command',''),'cwd':item.get('cwd','')}
+            output=item.get('aggregatedOutput')
+            if output is None: output=self.codex_outputs.get(item_id)
+            failed=item.get('status') in ('failed','declined')
+        elif kind=='fileChange':
+            tool_name='apply_patch'; tool_input={'changes':item.get('changes') or []}
+            if completed: output='文件修改'+('已完成' if item.get('status')=='completed' else '失败：'+str(item.get('status')))
+            failed=item.get('status') in ('failed','declined')
+        elif kind=='mcpToolCall':
+            tool_name=(item.get('server','mcp')+'/'+item.get('tool','tool')).strip('/')
+            tool_input=item.get('arguments') if item.get('arguments') is not None else {}
+            output=item.get('result') if item.get('result') is not None else item.get('error')
+            failed=item.get('status')=='failed' or item.get('error') is not None
+        elif kind=='dynamicToolCall':
+            tool_name='/'.join(x for x in (item.get('namespace'),item.get('tool')) if x) or 'tool'
+            tool_input=item.get('arguments') if item.get('arguments') is not None else {}
+            output=item.get('contentItems'); failed=item.get('status')=='failed' or item.get('success') is False
+        elif kind=='webSearch':
+            tool_name='web_search'; tool_input={'query':item.get('query',''),'action':item.get('action')}
+            output=item.get('results')
+        elif kind=='functionCallOutput':
+            tool_name='/'.join(x for x in (item.get('namespace'),item.get('name')) if x) or 'function'
+            output=item.get('output')
+        elif kind=='collabAgentToolCall':
+            tool_name='agent/'+str(item.get('tool','tool')); tool_input={'prompt':item.get('prompt'),'receivers':item.get('receiverThreadIds') or []}
+            output=item.get('agentsStates'); failed=item.get('status') in ('failed','interrupted')
+        elif kind=='imageView':
+            tool_name='view_image'; tool_input={'path':item.get('path')}; output=item.get('path')
+        elif kind=='imageGeneration':
+            tool_name='image_generation'; output=item.get('result') or item.get('failure'); failed=item.get('failure') is not None
+        else: return
+        self.upsert({'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':tool_name,'arguments':tool_input}],'timestamp':stamp},'codex-tool:'+item_id)
+        if completed or output is not None:
+            self.upsert({'role':'toolResult','toolCallId':item_id,'content':self.codex_text(output),'isError':failed,'timestamp':stamp},'codex-result:'+item_id)
+    def codex_question_interaction(self, interaction_id, method, params):
+        questions=[]; mapping={}
+        def unique_label(value):
+            base=value or '问题'; shown=base; suffix=2
+            while shown in mapping:
+                shown='%s (%d)' % (base,suffix); suffix+=1
+            return shown
+        if method=='item/tool/requestUserInput':
+            for question in params.get('questions') or []:
+                shown=unique_label(question.get('question') or question.get('id'))
+                questions.append({'id':question.get('id'),'header':question.get('header',''),'question':shown,
+                                  'options':question.get('options') or []})
+                mapping[shown]={'id':question.get('id'),'type':'string'}
+        else:
+            schema=params.get('requestedSchema') or {}
+            for name,field in (schema.get('properties') or {}).items():
+                shown=unique_label(field.get('title') or field.get('description') or name)
+                raw_options=field.get('enum') or ((field.get('items') or {}).get('enum'))
+                titled=field.get('oneOf') or ((field.get('items') or {}).get('anyOf')) or []
+                options=[{'label':str(value),'description':''} for value in (raw_options or [])]
+                options += [{'label':str(value.get('title') or value.get('const')),'description':''} for value in titled]
+                questions.append({'id':name,'header':params.get('serverName','MCP'),'question':shown,'options':options})
+                mapping[shown]={'id':name,'type':field.get('type','string')}
+        self.codex_interactions[interaction_id]['questions']=mapping
+        return {'id':interaction_id,'name':'AskUserQuestion','title':params.get('message') or 'Codex 请求输入',
+                'input':{'questions':questions}}
+    def codex_frame(self, client, frame):
+        with LOCK:
+            if client is not self.codex or self.deleted:
+                if 'id' in frame:
+                    try: client.respond(frame['id'],error={'code':-32000,'message':'session is no longer attached'})
+                    except Exception: pass
+                return
+            method=frame.get('method'); params=frame.get('params') or {}
+            thread_id=params.get('threadId') or params.get('conversationId')
+            if thread_id and self.state.get('resume') and thread_id!=self.state['resume']:
+                if 'id' in frame: client.respond(frame['id'],error={'code':-32602,'message':'thread id does not match this session'})
+                return
+            if 'id' in frame:
+                approvals=('item/commandExecution/requestApproval','item/fileChange/requestApproval',
+                           'item/permissions/requestApproval','execCommandApproval','applyPatchApproval')
+                questions=('item/tool/requestUserInput','mcpServer/elicitation/request')
+                if method not in approvals+questions:
+                    client.respond(frame['id'],error={'code':-32601,'message':'unsupported by the Perch bridge'})
+                    return
+                interaction_id='codex-request-'+str(frame['id'])
+                pending={'wireId':frame['id'],'method':method,'params':params}
+                self.codex_interactions[interaction_id]=pending
+                if method in questions and not (method=='mcpServer/elicitation/request' and params.get('mode')=='url'):
+                    interaction=self.codex_question_interaction(interaction_id,method,params)
+                else:
+                    if method in ('item/commandExecution/requestApproval','execCommandApproval'):
+                        command=params.get('command') or []
+                        if isinstance(command,list): command=' '.join(command)
+                        name='shell'; value={'command':command,'cwd':params.get('cwd'),'reason':params.get('reason')}
+                    elif method in ('item/fileChange/requestApproval','applyPatchApproval'):
+                        name='apply_patch'; value={'itemId':params.get('itemId') or params.get('callId'),'reason':params.get('reason'),
+                                                  'grantRoot':params.get('grantRoot'),'changes':params.get('fileChanges')}
+                    elif method=='item/permissions/requestApproval':
+                        name='request_permissions'; value={'cwd':params.get('cwd'),'reason':params.get('reason'),'permissions':params.get('permissions')}
+                    else:
+                        name='mcp_elicitation'; value={'server':params.get('serverName'),'message':params.get('message'),'url':params.get('url')}
+                    interaction={'id':interaction_id,'type':'interaction','name':name,'title':'Codex 请求确认','input':value}
+                self.state['interactions'].append(interaction); self.touch(True); return
+            if method=='turn/started':
+                turn=params.get('turn') or {}; turn_id=turn.get('id')
+                if turn_id: self.state['turnId']=turn_id
+                self.state['busy']=True; self.state['error']=None; self.state['updated']=time.time(); self.finish('running'); self.touch(True); return
+            if method=='turn/completed':
+                turn=params.get('turn') or {}; status=turn.get('status'); error=turn.get('error') or {}
+                self.state['busy']=False; self.state['interactions']=[]; self.codex_interactions={}; self.state['updated']=time.time()
+                if status=='interrupted': self.state['cancelled']=True; self.state['stopAcknowledged']=True
+                elif status=='failed': self.state['error']=error.get('message') if isinstance(error,dict) else str(error)
+                elif not self.state.get('cancelled') and not self.state.get('error'): self.state['completed']+=1
+                self.finish('stopped' if status=='interrupted' else 'failed' if status=='failed' else 'completed')
+                for receipt in self.state.get('requests',{}).values():
+                    if receipt.get('mode')=='steer' and receipt.get('turnId')==turn.get('id') and receipt['status'] in ('submitted','accepted'):
+                        receipt.update(status='unknown',error='本轮已结束，尚未观察到引导消息进入上下文')
+                self.touch(True); return
+            if method in ('item/started','item/completed'):
+                key='completedAtMs' if method=='item/completed' else 'startedAtMs'
+                self.codex_item(params.get('item') or {},method=='item/completed',params.get(key)); self.touch(method=='item/completed'); return
+            if method=='item/agentMessage/delta':
+                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'text':''})
+                part['text']=part.get('text','')+params.get('delta','')
+                self.upsert({'role':'assistant','content':[{'type':'text','text':part['text']}],'timestamp':time.time()},'codex:'+str(item_id)); self.touch(); return
+            if method=='item/plan/delta':
+                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
+                part.setdefault('content',{})[0]=part.setdefault('content',{}).get(0,'')+params.get('delta','')
+                self.upsert({'role':'assistant','content':[{'type':'thinking','thinking':self.codex_reasoning_text(item_id)}],'timestamp':time.time()},'codex:'+str(item_id)); self.touch(); return
+            if method in ('item/reasoning/textDelta','item/reasoning/summaryTextDelta'):
+                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
+                key='summary' if method.endswith('summaryTextDelta') else 'content'
+                index=params.get('summaryIndex') if key=='summary' else params.get('contentIndex')
+                part.setdefault(key,{})[index]=part.setdefault(key,{}).get(index,'')+params.get('delta','')
+                text=self.codex_reasoning_text(item_id)
+                self.upsert({'role':'assistant','content':[{'type':'thinking','thinking':text}],'timestamp':time.time()},'codex:'+str(item_id)); self.touch(); return
+            if method=='item/commandExecution/outputDelta':
+                item_id=params.get('itemId'); self.codex_outputs[item_id]=self.codex_outputs.get(item_id,'')+params.get('delta','')
+                self.upsert({'role':'toolResult','toolCallId':item_id,'content':self.codex_outputs[item_id],'isError':False,'timestamp':time.time()},'codex-result:'+str(item_id)); self.touch(); return
+            if method=='thread/tokenUsage/updated':
+                usage=params.get('tokenUsage') or {}; total=usage.get('total') or {}
+                self.state['context']={'tokens':total.get('totalTokens'),'limit':usage.get('modelContextWindow')}; self.touch(); return
+            if method=='serverRequest/resolved':
+                wire_id=params.get('requestId')
+                ids=[key for key,value in self.codex_interactions.items() if value.get('wireId')==wire_id]
+                for key in ids: self.codex_interactions.pop(key,None)
+                if ids:
+                    self.state['interactions']=[x for x in self.state['interactions'] if x.get('id') not in ids]; self.touch(True)
+    def codex_answer(self, interaction_id, body):
+        pending=self.codex_interactions.get(interaction_id)
+        if not pending: raise ValueError('该 Codex 请求已失效，请同步会话后重试')
+        method=pending['method']; params=pending['params']; allow=bool(body.get('allow')) and not body.get('cancelled')
+        if method=='item/tool/requestUserInput':
+            values=body.get('answers') or {}; answers={}
+            for shown,question in pending.get('questions',{}).items():
+                if shown not in values: raise ValueError('请回答所有问题')
+                answers[question['id']]={'answers':[str(values[shown])]}
+            result={'answers':answers}
+        elif method=='mcpServer/elicitation/request':
+            if not allow: result={'action':'decline'}
+            elif params.get('mode')=='url': result={'action':'accept'}
+            else:
+                values=body.get('answers') or {}; content={}
+                for shown,question in pending.get('questions',{}).items():
+                    if shown not in values: raise ValueError('请回答所有问题')
+                    value=values[shown]; kind=question['type']
+                    if kind=='boolean': value=str(value).lower() in ('true','yes','1','是')
+                    elif kind=='integer': value=int(value)
+                    elif kind=='number': value=float(value)
+                    elif kind=='array': value=[x.strip() for x in str(value).split(',') if x.strip()]
+                    content[question['id']]=value
+                result={'action':'accept','content':content}
+        elif method in ('item/commandExecution/requestApproval','item/fileChange/requestApproval'):
+            result={'decision':'accept' if allow else 'decline'}
+        elif method=='item/permissions/requestApproval':
+            result={'permissions':params.get('permissions') if allow else {},'scope':'turn'}
+        else:
+            result={'decision':'approved' if allow else {'denied':{'rejection':'用户在 Perch 中拒绝了该操作'}}}
+        self.codex.respond(pending['wireId'],result=result)
+        self.codex_interactions.pop(interaction_id,None)
+        self.state['interactions']=[x for x in self.state['interactions'] if x.get('id')!=interaction_id]
+        self.touch(True)
+    def codex_exit(self, client, failure):
+        with LOCK:
+            if client is not self.codex: return
+            self.codex=None; self.codex_attached=False
+            if self.deleted or not failure: return
+            self.state['error']=failure
+            if self.state['busy']:
+                self.finish('unknown'); self.state['busy']=False
+            self.state['interactions']=[]; self.codex_interactions={}; self.touch(True)
     def acp_request(self, method, params, kind):
         self.acp_next_id += 1
         request_id = self.acp_next_id
@@ -377,7 +822,7 @@ class Session:
         self.state['messages'].append(value)
     def steer(self, body):
         s=self.state; request_id=body.get('requestId'); text=body.get('text','')
-        if s['provider']!='omp': raise ValueError('当前 Agent 不支持运行中引导')
+        if s['provider'] not in ('omp','codex'): raise ValueError('当前 Agent 不支持运行中引导')
         if not isinstance(request_id,str) or not request_id or not text.strip():
             raise ValueError('缺少 requestId 或消息内容')
         receipts=s.setdefault('requests',{}); digest=hashlib.sha256(text.encode()).hexdigest()
@@ -388,11 +833,20 @@ class Session:
         # The turn can finish between the client's snapshot and this request.
         if not s['busy']: return self.prompt(body)
         if s.get('stopRequested'): raise ValueError('正在停止，请等待停止完成')
-        receipt={'id':request_id,'digest':digest,'text':text,'status':'submitted',
+        receipt={'id':request_id,'digest':digest,'text':text,'status':'submitting',
                  'mode':'steer','turnId':s.get('turnId')}
         receipts[request_id]=receipt
+        if s['provider']=='codex': self.upsert({'role':'user','content':text},request_id)
         self.touch(True)
-        try: self.send({'type':'steer','id':request_id,'message':text})
+        try:
+            if s['provider']=='codex':
+                self.codex_ensure(True)
+                self.codex.request('turn/steer',{'threadId':s['resume'],'expectedTurnId':s['turnId'],
+                                                 'input':[{'type':'text','text':text}],
+                                                 'clientUserMessageId':request_id})
+                receipt['status']='accepted'
+            else:
+                self.send({'type':'steer','id':request_id,'message':text}); receipt['status']='submitted'
         except Exception as e: receipt.update(status='unknown',error=str(e))
         self.touch(True)
         return copy.deepcopy(receipt)
@@ -622,18 +1076,42 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, setup_status(provider))
             if self.path=='/models' and not post:
                 return self.respond(200,{'models':combined_catalog()})
+            codex_models=None
+            if post and self.path=='/sessions' and body.get('provider')=='codex':
+                codex_models=codex_catalog()
+            elif post and len(path)>=4 and path[1]=='sessions' and path[3] in ('model','thinking'):
+                with LOCK:
+                    target=SESSIONS.get(path[2])
+                    needs_codex_catalog=target is not None and target.state.get('provider')=='codex'
+                if needs_codex_catalog: codex_models=codex_catalog()
             with LOCK:
                 if self.path=='/health': result={'version':2}
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
-                    if body['provider'] not in ('omp','qoder','dsh') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
-                    sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':body['provider'],'title':body.get('title') or '新对话','cwd':body['cwd'],'model':body.get('model',''),'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
-                    s.persist(); SESSIONS[sid]=s
-                    if body['provider']=='dsh':
-                        # Launch at create so the ACP handshake lands before the first
-                        # prompt and the model picker has a live catalog to show.
-                        try: s.launch()
-                        except Exception as e: s.state['error']=str(e); s.touch(True)
+                    if body['provider'] not in ('omp','qoder','dsh','codex') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
+                    model=body.get('model',''); thinking=body.get('thinking')
+                    if body['provider']=='codex': _,thinking=codex_selection(model,thinking,codex_models)
+                    sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':body['provider'],'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
+                    SESSIONS[sid]=s
+                    if body['provider']=='codex':
+                        try: s.codex_start_thread()
+                        except Exception:
+                            s.deleted=True
+                            if s.codex and s.state.get('resume'):
+                                try: s.codex.request('thread/delete',{'threadId':s.state['resume']})
+                                except Exception: pass
+                            if s.codex: s.codex.close()
+                            for key,value in list(SESSIONS.items()):
+                                if value is s: del SESSIONS[key]
+                            if s.path.exists(): s.path.unlink()
+                            raise
+                    else:
+                        s.persist()
+                        if body['provider']=='dsh':
+                            # Launch at create so the ACP handshake lands before the first
+                            # prompt and the model picker has a live catalog to show.
+                            try: s.launch()
+                            except Exception as e: s.state['error']=str(e); s.touch(True)
                     result=s.summary()
                 elif len(path)>=3 and path[1]=='sessions':
                     s=SESSIONS[path[2]]
@@ -649,11 +1127,17 @@ class Handler(BaseHTTPRequestHandler):
                         elif action=='steer':
                             result=s.steer(body)
                         elif action=='model':
-                            if s.state['provider'] not in ('omp','dsh'): raise ValueError('当前 Agent 不支持切换模型')
+                            if s.state['provider'] not in ('omp','dsh','codex'): raise ValueError('当前 Agent 不支持切换模型')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                             provider,model=body.get('provider',''),body.get('model','')
                             if not provider or not model: raise ValueError('请同时指定 provider 和模型')
-                            if s.state['provider']=='dsh':
+                            if s.state['provider']=='codex':
+                                if provider!='codex': raise ValueError('Codex 不认识该模型，请刷新模型列表后重试')
+                                entry,_=codex_selection(model,catalog=codex_models)
+                                s.state['model']=model; s.state['provider_id']='codex'
+                                if s.state.get('thinking') not in entry.get('thinking',[]): s.state['thinking']=entry.get('defaultThinking')
+                                s.touch(True)
+                            elif s.state['provider']=='dsh':
                                 # Send the runtime's own opaque option value back rather
                                 # than re-serializing [provider, model] ourselves.
                                 options = s.state.get('acpOptions') or []
@@ -674,10 +1158,14 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'id':'state','type':'get_state'})
                                 s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
                         elif action=='thinking':
-                            if s.state['provider'] not in ('omp','dsh'): raise ValueError('当前 Agent 不支持设置思考强度')
+                            if s.state['provider'] not in ('omp','dsh','codex'): raise ValueError('当前 Agent 不支持设置思考强度')
                             level=body.get('level','')
                             if not level: raise ValueError('请指定思考强度')
-                            if s.state['provider']=='dsh':
+                            if s.state['provider']=='codex':
+                                if s.state['busy']: raise ValueError('请先停止或完成当前任务')
+                                codex_selection(s.state.get('model'),level,codex_models)
+                                s.state['thinking']=level; s.touch(True)
+                            elif s.state['provider']=='dsh':
                                 if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                                 options = s.state.get('acpOptions') or []
                                 effort = next((o for o in options if o.get('id')=='reasoning_effort'), {})
@@ -715,7 +1203,9 @@ class Handler(BaseHTTPRequestHandler):
                         elif action=='abort':
                             if not body.get('turnId') or body['turnId']!=s.state.get('turnId'): raise ValueError('轮次已变化，请重新同步')
                             if s.state['busy'] and not s.state.get('stopRequested'):
-                                if s.state['provider']=='dsh':
+                                if s.state['provider']=='codex':
+                                    s.codex_ensure(True).request('turn/interrupt',{'threadId':s.state['resume'],'turnId':body['turnId']})
+                                elif s.state['provider']=='dsh':
                                     if s.pending_prompt is not None:
                                         # The prompt never reached the runtime, so the
                                         # stop settles locally instead of on the wire.
@@ -729,7 +1219,9 @@ class Handler(BaseHTTPRequestHandler):
                                 s.state['stopRequested']=True; s.touch(True)
                         elif action=='answer':
                             item=next(x for x in s.snapshot()['interactions'] if x['id']==body['id'])
-                            if s.state['provider']=='omp':
+                            if s.state['provider']=='codex':
+                                s.codex_answer(body['id'],body)
+                            elif s.state['provider']=='omp':
                                 answer={'type':'extension_ui_response','id':body['id']}
                                 if body.get('cancelled'): answer['cancelled']=True
                                 elif item['method']=='confirm': answer['confirmed']=body.get('allow',False)
@@ -750,16 +1242,22 @@ class Handler(BaseHTTPRequestHandler):
                                 s.permission_options.pop(body['id'], None)
                             else:
                                 s.send({'type':'answer',**body})
-                            s.state['interactions']=[x for x in s.state['interactions'] if x['id']!=body['id']]; s.touch(True)
+                            if s.state['provider']!='codex':
+                                s.state['interactions']=[x for x in s.state['interactions'] if x['id']!=body['id']]; s.touch(True)
                         elif action=='archive':
                             if s.state['busy']: raise ValueError('请先停止或完成任务')
+                            if s.state['provider']=='codex':
+                                method='thread/archive' if body['archived'] else 'thread/unarchive'
+                                s.codex_ensure(False).request(method,{'threadId':s.state['resume']})
                             s.state['archived']=body['archived']; s.touch(True)
                         elif action=='delete':
                             if s.state['busy']: raise ValueError('请先停止或完成任务')
+                            if s.state['provider']=='codex':
+                                s.codex_ensure(False).request('thread/delete',{'threadId':s.state['resume']})
                             s.deleted = True
+                            if s.codex: s.codex.close()
                             if s.process and s.process.poll() is None: s.process.stdin.close()
-                            # Deletion removes Workbench transcript only; upstream history remains available in the CLI.
-                            s.path.unlink(); del SESSIONS[s.state['id']]
+                            s.path.unlink(missing_ok=True); del SESSIONS[s.state['id']]
                         else: raise ValueError('未知操作')
                         if action not in ('prompt','steer'): result={'ok':True}
                 else: raise ValueError('未知路径')

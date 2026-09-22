@@ -164,20 +164,23 @@ struct NativeAgentView: View {
 }
 
 /// Model, reasoning effort and remaining context for runtimes that accept route
-/// changes — OMP via set_model/set_thinking_level, dsh via ACP config options. A
-/// Qoder session keeps the plain label.
+/// changes. OMP and dsh expose their native controls, while Codex choices come from
+/// app-server's model catalog. A Qoder session keeps the plain label.
 struct NativeModelControls: View {
     @ObservedObject var connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
+    private var availableModels: [AgentModel] {
+        snapshot.provider == .codex ? connection.models.filter { $0.provider == "codex" } : connection.models
+    }
 
     var body: some View {
-        if snapshot.provider == .omp || snapshot.provider == .dsh {
-            let current = connection.model(for: snapshot)
+        if snapshot.provider == .omp || snapshot.provider == .dsh || snapshot.provider == .codex {
+            let current = availableModels.first { $0.id == snapshot.model }
             HStack(spacing: 10) {
                 ModelControlWidth {
                 Menu {
-                    ForEach(Dictionary(grouping: connection.models, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
+                    ForEach(Dictionary(grouping: availableModels, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
                         Menu(group.key) {
                             ForEach(group.value) { model in
                                 Button {
@@ -189,7 +192,7 @@ struct NativeModelControls: View {
                             }
                         }
                     }
-                    if connection.models.isEmpty { Text("Loading models…") }
+                    if availableModels.isEmpty { Text("Loading models…") }
                     if current?.supportsThinking == false {
                         Divider()
                         Text("此模型未提供思考档位设置。")
@@ -204,7 +207,7 @@ struct NativeModelControls: View {
                     .help(snapshot.busy ? "Models cannot be changed while running" : "Change the model for the next turn")
                 }
                 ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking),
-                               disabled: !connection.online) { level in
+                               disabled: !connection.online || snapshot.busy) { level in
                     connection.setThinking(level, for: snapshot.id)
                 }
             }.task(id: snapshot.id) { await connection.loadModels() }
@@ -364,11 +367,15 @@ struct NewConversationSheet: View {
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
+    private var codexModels: [AgentModel] { native.models.filter { $0.provider == "codex" } }
+    private var selectedCodexModel: AgentModel? { codexModels.first { $0.id == agentModel } }
     /// Attachments ride the Kimi session channel; native adapters have none, so an
     /// attachment-only draft can start a Kimi task but never a native one.
     private var canStart: Bool {
         let hasContent = !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
-        return !creating && hasContent && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/") && (availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online))
+        let modelIsValid = provider != .codex || selectedCodexModel != nil
+        return !creating && hasContent && modelIsValid && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/")
+            && availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -398,16 +405,37 @@ struct NewConversationSheet: View {
                         Button(connection.host.name) { agentModel = ""; model.activateAgentEnvironment(connection.id) }
                     }
                 } label: { Label(kimi.host.name, systemImage: "server.rack") }
-                Picker("Agent", selection: Binding(get: { provider }, set: { provider = $0; agentModel = UserDefaults.standard.string(forKey: "new.model.\($0.rawValue)") ?? "" })) { ForEach(availableProviders, id: \.self) { Text($0.label).tag($0) } }.frame(width: 200)
+                Picker("Agent", selection: Binding(get: { provider }, set: { selectProvider($0) })) {
+                    ForEach(availableProviders, id: \.self) { Text($0.label).tag($0) }
+                }.frame(width: 200)
                 Spacer()
-                if provider == .kimi { ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel) }
+                if provider == .kimi {
+                    ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel)
+                } else if provider == .codex {
+                    ModelControlWidth {
+                        Menu {
+                            ForEach(codexModels) { option in
+                                Button {
+                                    agentModel = option.id
+                                } label: {
+                                    if option.id == agentModel { Label(option.name, systemImage: "checkmark") }
+                                    else { Text(option.name) }
+                                }
+                            }
+                            if codexModels.isEmpty { Text("Loading models…") }
+                        } label: {
+                            Text(selectedCodexModel?.name ?? "Choose Codex model")
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }.menuStyle(.borderlessButton).disabled(codexModels.isEmpty)
+                    }
+                }
             }.disabled(creating)
             HStack {
                 Image(systemName: "folder")
                 TextField("Project directory (absolute path)", text: $cwd).textFieldStyle(.roundedBorder)
                 Menu("Recent") { ForEach(recent, id: \.self) { path in Button(path) { cwd = path } } }
             }.disabled(creating)
-            if provider != .kimi {
+            if provider != .kimi && provider != .codex {
                 TextField(provider == .dsh ? "Model (default: the dsh catalog's current route)" : "Model (empty uses the agent default)", text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
             if !availableProviders.contains(provider) || !(provider == .kimi ? kimi.online : native.online) {
@@ -466,6 +494,21 @@ struct NewConversationSheet: View {
                 }
                 if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
             }
+            .task(id: provider) {
+                guard provider == .codex else { return }
+                await native.loadModels()
+                guard !Task.isCancelled, provider == .codex else { return }
+                selectCodexModel()
+            }
+    }
+    private func selectProvider(_ value: SessionKind) {
+        provider = value
+        agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? ""
+    }
+    private func selectCodexModel() {
+        if selectedCodexModel != nil { return }
+        let saved = UserDefaults.standard.string(forKey: "new.model.codex") ?? ""
+        agentModel = codexModels.first { $0.id == saved }?.id ?? codexModels.first?.id ?? ""
     }
     private func addAttachments(_ files: [URL]) {
         for file in files where !attachments.contains(file) { attachments.append(file) }

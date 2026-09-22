@@ -1,10 +1,10 @@
 import Foundation
 
-/// Reasoning effort. Both runtimes accept an unrecognised value without failing —
-/// OMP answers success and leaves the level null, Kimi returns code 0 — so a level
-/// is only ever sent after checking it against the target model's own list.
+/// Reasoning effort. A level is only sent after checking it against the target
+/// model's own catalog entry, because unsupported values are not rejected
+/// consistently by every runtime.
 public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
-    case off, minimal, low, medium, high, xhigh, max, auto
+    case off, minimal, low, medium, high, xhigh, max, ultra, auto
 
     public var label: String {
         switch self {
@@ -15,6 +15,7 @@ public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
         case .high: return "High"
         case .xhigh: return "Extra high"
         case .max: return "Max"
+        case .ultra: return "Ultra"
         case .auto: return "Auto"
         }
     }
@@ -28,8 +29,8 @@ public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
 /// An empty `thinking` list means the model has no reasoning control, which must be
 /// shown as unavailable rather than as a default level.
 public struct AgentModel: Identifiable, Equatable, Sendable {
-    /// What the runtime expects back when selecting: OMP's provider + id pair is
-    /// carried separately because `set_model` rejects a combined "provider/id".
+    /// What the runtime expects back when selecting: provider and id stay separate
+    /// because some native adapters reject a combined "provider/id".
     public let id: String
     public let provider: String
     public let name: String
@@ -56,9 +57,9 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
 }
 
 public enum ModelSelectionCatalog {
-    /// Parses `omp models --json`. Verified against 17.1.4 locally and 18.1.16 on the
-    /// remote host: both emit provider, id, selector, name, contextWindow and a
-    /// thinking array.
+    /// Parses the native service's combined catalog. OMP and Codex entries share
+    /// provider, id, name, contextWindow and thinking fields; a runtime may also
+    /// report its default effort.
     public static func parseOMP(_ value: JSONValue) -> [AgentModel] {
         let items: [JSONValue]
         if case .array(let list) = value { items = list }
@@ -72,9 +73,7 @@ public enum ModelSelectionCatalog {
                               name: item["name"].string ?? id,
                               contextWindow: item["contextWindow"].int,
                               thinking: levels,
-                              // OMP states no default, so the highest offered level is
-                              // not assumed to be active.
-                              defaultThinking: nil)
+                              defaultThinking: ThinkingLevel.parse(item["defaultThinking"].string))
         }
     }
 

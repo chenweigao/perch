@@ -1,9 +1,9 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Reasoning effort for the selected model. Both runtimes accept an unrecognised
-/// level silently, so only the levels the model itself declares are offered, and a
-/// model without a declared set shows why the control is unavailable.
+/// Reasoning effort for the selected model. Native runtimes do not reject every
+/// unrecognised level consistently, so only levels declared by the selected model
+/// are offered, and a model without a declared set explains why this is unavailable.
 struct ThinkingPicker: View {
     let model: AgentModel?
     let current: ThinkingLevel?

@@ -55,7 +55,7 @@ final class RemoteSetupController: ObservableObject {
                 enabledAgents: RemoteSetup.agents.filter { enabledAgents.contains($0) || $0 == provider },
                 kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath)
     }
-    var needsBridge: Bool { [.omp, .qoder, .dsh].contains(provider) }
+    var needsBridge: Bool { [.omp, .qoder, .dsh, .codex].contains(provider) }
     var canContinue: Bool { ready && !busy }
     var canFinish: Bool { projectVerified && ready && !busy }
     var launch: TaskLaunchDefaults { TaskLaunchDefaults(hostID: hostID, provider: provider, directory: directory, model: modelID) }
@@ -65,6 +65,7 @@ final class RemoteSetupController: ObservableObject {
         case .omp: return URL(string: "https://github.com/can1357/oh-my-pi#install")!
         case .qoder: return URL(string: "https://docs.qoder.cn/cli/installation")!
         case .dsh: return URL(string: "https://github.com/deepseek-ai/deepseek-harness")!
+        case .codex: return URL(string: "https://github.com/openai/codex#installation")!
         case .terminal: return URL(string: "https://github.com/herdrdev/herdr")!
         }
     }
@@ -73,6 +74,7 @@ final class RemoteSetupController: ObservableObject {
         case .kimi: return "npm install -g @moonshot-ai/kimi-code@2.0.2"
         case .omp: return "bun install -g @oh-my-pi/pi-coding-agent@18.1.16"
         case .qoder: return "npm install -g @qodercn-ai/qoderclicn@1.1.58"
+        case .codex: return "npm install -g @openai/codex@0.155.1"
         case .dsh, .terminal: return nil
         }
     }
@@ -81,6 +83,7 @@ final class RemoteSetupController: ObservableObject {
         case .kimi: return "kimi"
         case .omp: return "omp"
         case .qoder: return "qoderclicn"
+        case .codex: return "codex login"
         case .dsh: return "" // The user's shell/profile owns DEEPSEEK_API_KEY.
         case .terminal: return "herdr"
         }
@@ -223,6 +226,17 @@ final class RemoteSetupController: ObservableObject {
                 throw WorkbenchError(L("桥接进程未读取到 DEEPSEEK_API_KEY。请在远端配置服务环境；若桥已运行，等任务结束后重启再检查。"))
             }
             mark("models", .information, L("已检测到远端凭据；模型目录在首次 ACP 会话握手时读取，鉴权在发送时验证。"))
+        case .codex:
+            guard status["credentialCheck"].string == "present" else {
+                throw WorkbenchError(L("Codex CLI 尚未登录。请在远端运行 codex login 后重试。"))
+            }
+            models = status["models"].array.compactMap { entry in
+                guard let id = entry["id"].string else { return nil }
+                return ModelOption(id: id, provider: "codex", name: entry["name"].string ?? id)
+            }
+            guard !models.isEmpty else { throw WorkbenchError(L("Codex app-server 未返回模型。请检查远端 Codex 安装与登录。")) }
+            if !models.contains(where: { $0.id == modelID }) { modelID = models.first?.id ?? "" }
+            mark("models", .passed, L("已确认 Codex 登录并读取 app-server 模型目录；检查未发送任务。"))
         default: break
         }
         hint = ""

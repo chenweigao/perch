@@ -7,6 +7,9 @@ private final class TransportFixture {
     var receipts: [String: String] = [:]
     var prompts: [String] = []
     var steers: [String] = []
+    var creates: [(SessionKind, String)] = []
+    var modelChanges: [(String, String, String)] = []
+    var thinkingChanges: [(String, String)] = []
     var losePromptResponse = false
     var holdPromptResponse = false
     var pendingPrompt: CheckedContinuation<Void, Error>?
@@ -29,7 +32,18 @@ private final class TransportFixture {
     func request(_ path: String, _ body: JSONValue?) async throws -> Data {
         let parts = path.split(separator: "?")[0].split(separator: "/").map(String.init)
         var result: [String: Any] = [:]
-        if path == "/sessions" {
+        if path == "/models" {
+            result = ["models": [["id": "gpt-codex", "provider": "codex", "name": "GPT Codex",
+                                  "thinking": ["low", "medium", "ultra"], "defaultThinking": "medium"]]]
+        } else if path == "/sessions", let body {
+            let provider = SessionKind(rawValue: body["provider"].string ?? "")!
+            let id = provider == .codex ? "native-codex-thread" : "created"
+            creates.append((provider, body["model"].string ?? ""))
+            sessions[id] = ["id": id, "provider": provider.rawValue, "title": "created", "cwd": body["cwd"].string ?? "/fixture",
+                            "busy": false, "archived": false, "updated": 2.0, "completed": 0,
+                            "pending": 0, "model": body["model"].string ?? "", "cancelled": false, "steer": provider == .codex]
+            result = sessions[id]!
+        } else if path == "/sessions" {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
         } else if parts.count == 4 && parts[2] == "requests" {
@@ -64,6 +78,14 @@ private final class TransportFixture {
                 let key = body!["requestId"].string!
                 steers.append(key); receipts[key] = "accepted"
                 result = ["id": key, "status": "accepted"]
+            case "model":
+                let provider = body?["provider"].string ?? "", model = body?["model"].string ?? ""
+                modelChanges.append((id, provider, model)); sessions[id]?["model"] = model
+                result = ["ok": true]
+            case "thinking":
+                let level = body?["level"].string ?? ""
+                thinkingChanges.append((id, level)); sessions[id]?["thinking"] = level
+                result = ["ok": true]
             case "abort":
                 abortedTurns.append((id, body?["turnId"].string))
                 // An old optimistic cancellation flag is still not terminal evidence.
@@ -194,7 +216,37 @@ struct ConnectionChecks {
         try await client.refresh()
         precondition(client.queue.allItems.isEmpty && lost.prompts.count == 1)
         precondition(connection.queue.items(for: b).count == 1)
+        try await checkCodexConnection()
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
+    }
+
+    @MainActor
+    static func checkCodexConnection() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Codex", destination: "fixture"), transport: fixture.request)
+        await client.loadModels()
+        guard let model = client.models.first(where: { $0.provider == "codex" }) else {
+            preconditionFailure("Codex model catalog was not decoded")
+        }
+        precondition(model.defaultThinking == .medium && model.thinking.last == .ultra)
+        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id)
+        precondition(session.id == "native-codex-thread" && session.provider == .codex)
+        precondition(fixture.creates.count == 1 && fixture.creates[0].0 == .codex && fixture.creates[0].1 == model.id)
+        await settle { client.snapshot?.id == session.id }
+
+        client.setModel(model, for: session.id)
+        await settle { fixture.modelChanges.count == 1 && fixture.thinkingChanges.count == 1 }
+        precondition(fixture.modelChanges[0].1 == "codex" && fixture.modelChanges[0].2 == model.id)
+        precondition(fixture.thinkingChanges[0].1 == "medium")
+
+        client.drafts[session.id] = "start native turn"; client.send()
+        await settle { fixture.prompts.last == session.id && !client.sending }
+        try await client.refresh()
+        precondition(client.modes(for: session.id) == [.steer, .nextTurn])
+        client.drafts[session.id] = "guide native turn"; client.send(mode: .steer)
+        await settle { fixture.steers.count == 1 && !client.sending }
+        client.disconnect()
+        print("PASS: Codex native thread identity, catalog effort, model actions and steering")
     }
 
     @MainActor

@@ -32,6 +32,14 @@ func checkModelSelection() throws {
     // Entries missing an id are dropped rather than shown as a blank row.
     precondition(!ompModels.contains { $0.id.isEmpty })
 
+    let combinedCatalog = try json("""
+    [{"id":"gpt-6-astra","provider":"codex","name":"GPT-6-Astra",
+      "thinking":["low","medium","high","xhigh","max","ultra"],"defaultThinking":"medium"}]
+    """)
+    let codex = ModelSelectionCatalog.parseOMP(combinedCatalog)[0]
+    precondition(codex.provider == "codex" && codex.defaultThinking == .medium)
+    precondition(codex.thinking.last == .ultra && ThinkingLevel.parse("ULTRA") == .ultra)
+
     // Shape observed from Kimi /api/v1/models on the remote host.
     let kimiItems = try json("""
     [{"provider":"bailian","model":"bailian/kimi-k3","display_name":"kimi-k3",

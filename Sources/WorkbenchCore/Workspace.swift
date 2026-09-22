@@ -1,9 +1,9 @@
 import Foundation
 
 public enum SessionKind: String, Codable, Sendable {
-    case terminal, kimi, omp, qoder, dsh
+    case terminal, kimi, omp, qoder, dsh, codex
     public var symbol: String { self == .terminal ? "terminal" : "bubble.left.and.text.bubble.right" }
-    public var label: String { [Self.terminal: L("终端"), .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN", .dsh: "DeepSeek"][self]! }
+    public var label: String { [Self.terminal: L("终端"), .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN", .dsh: "DeepSeek", .codex: "Codex"][self]! }
 }
 
 public struct SessionReference: Codable, Hashable, Identifiable, Sendable {
