@@ -17,6 +17,19 @@
 <key>NSAppleEventsUsageDescription</key><string>Perch opens Terminal so you can complete SSH login and remote agent setup.</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>NSLocalNetworkUsageDescription</key><string>Perch connects to the activity summary service you configure on your local network.</string>
-<key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+<key>NSAppTransportSecurity</key><dict>
+    <key>NSAllowsLocalNetworking</key><true/>
+    <!-- macOS 14+ requires explicit exceptions for HTTP IP literals. Summary
+         endpoints are user-configured, so allow IPv4/IPv6 literals without
+         embedding a deployment address or disabling ATS for DNS domains. -->
+    <key>NSExceptionDomains</key><dict>
+        <key>0.0.0.0/0</key><dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+        </dict>
+        <key>::/0</key><dict>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+        </dict>
+    </dict>
+</dict>
 <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
 </dict></plist>

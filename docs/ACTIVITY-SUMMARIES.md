@@ -46,6 +46,27 @@ Endpoint and model fields have no built-in LAN address or credential. A self-hos
 LAN deployment uses the same configuration path as any other compatible service.
 Settings provides a direct **Disable** action without deleting the saved endpoint.
 
+### HTTP IP endpoints on macOS
+
+On macOS 14 and later, `NSAllowsLocalNetworking` alone does not cover HTTP
+connections to IP literals. Perch's packaged `Info.plist` also declares IPv4 and
+IPv6 CIDR exceptions (`0.0.0.0/0`, `::/0`) with
+`NSExceptionAllowsInsecureHTTPLoads` for user-configured IP endpoints. These are
+app-wide IP exceptions, not a per-request setting; they permit HTTP IP endpoints
+outside private address ranges as well. DNS domains retain the existing ATS
+policy, including the local-name exception. No global `NSAllowsArbitraryLoads`,
+certificate-validation override, or built-in deployment address is added.
+
+If **Test connection** reports that App Transport Security requires a secure
+connection, rebuild and replace the installed app, then fully quit and relaunch
+it. Changing the saved URL or API key cannot update a running app's transport
+policy. `scripts/build.sh` copies `Resources/Info.plist` into
+`build/Perch.app/Contents/Info.plist` before signing. Retest from that app's settings;
+a successful command-line request does not validate the app's ATS policy.
+
+References: Apple's [local networking rules](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking)
+and [IP/CIDR exception syntax](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsexceptiondomains).
+
 ## What is sent and when
 
 Only the current user turn's recent process activity is eligible. Perch sends
