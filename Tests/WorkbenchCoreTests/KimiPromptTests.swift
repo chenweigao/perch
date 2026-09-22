@@ -34,6 +34,13 @@ func checkKimiPrompts() throws {
                  "A prompt the server still reports is not retired")
     precondition(KimiPrompt.reconcile(local: [prompt], remote: [], messages: [], settled: true).count == 1,
                  "Queued text was never run and is never retired by idleness")
+    // A steered prompt leaves the server queue at steer time and its content enters
+    // history under a merged id, so the turn settling is its only retirement signal.
+    var steered = prompt; steered.status = "steered"
+    precondition(KimiPrompt.reconcile(local: [steered], remote: [], messages: [], settled: true).isEmpty,
+                 "A steered prompt retires when its turn settles")
+    precondition(KimiPrompt.reconcile(local: [steered], remote: [], messages: []).count == 1,
+                 "A steered prompt waits for its context while the turn runs")
     var unacked = local; unacked.status = "sending"
     precondition(KimiPrompt.reconcile(local: [unacked], remote: [], messages: [], settled: true).count == 1,
                  "Unacknowledged text is never retired by idleness")

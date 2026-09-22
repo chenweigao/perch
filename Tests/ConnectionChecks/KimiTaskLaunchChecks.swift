@@ -10,13 +10,14 @@ private final class LaunchProtocol: URLProtocol {
     static var promptStatus = "running"
     static var failSteer = false
     static var dropPrompts = false
+    static var busyOverride: Bool?
     static var steered: [String] = []
     static var accepted: [[String: Any]] = []
     static func reset(snapshotFailure: Bool = false, promptFailure: Bool = false, status: String = "running", steerFailure: Bool = false) {
         lock.lock(); defer { lock.unlock() }
         failSnapshot = snapshotFailure; failPrompt = promptFailure
         submissions = []; creations = 0; accepted = []; steered = []
-        promptStatus = status; failSteer = steerFailure; dropPrompts = false
+        promptStatus = status; failSteer = steerFailure; dropPrompts = false; busyOverride = nil
     }
     static var sent: [(String, JSONValue)] {
         lock.lock(); defer { lock.unlock() }; return submissions
@@ -30,7 +31,7 @@ private final class LaunchProtocol: URLProtocol {
         var status = 200
         var result: [String: Any] = [:]
         func session(_ id: String, updated: String) -> [String: Any] {
-            ["id": id, "title": "", "updated_at": updated, "busy": Self.promptStatus == "queued",
+            ["id": id, "title": "", "updated_at": updated, "busy": Self.busyOverride ?? (Self.promptStatus == "queued"),
              "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/model"]]
         }
         if path == "/api/v1/sessions" {
@@ -153,6 +154,23 @@ func checkKimiPendingSettle() async throws {
     precondition(client.pendingPrompts["done"]?.isEmpty != false,
                  "A settled turn retires its pending bubble even when the user message is out of the snapshot page")
     client.disconnect()
+    UserDefaults.standard.removeObject(forKey: "kimi.session.\(host.id)")
+
+    // A steered prompt leaves the server queue at steer time and its content enters
+    // history under a merged id, so only the turn settling can retire its bubble.
+    LaunchProtocol.reset(status: "queued")
+    let steeredAPI = KimiAPI(baseURL: URL(string: "http://fixture.invalid")!, token: "fixture", configuration: configuration)
+    let steeredClient = KimiConnection(host: host, api: steeredAPI)
+    steeredClient.drafts["done"] = "引导一下"
+    await steeredClient.sendPrompt(for: "done", mode: .steer)
+    precondition(steeredClient.pendingPrompts["done"]?.first?.status == "steered")
+    LaunchProtocol.dropPrompts = true
+    LaunchProtocol.busyOverride = false
+    steeredClient.select("done")
+    await ConnectionChecks.settle { steeredClient.snapshotReady }
+    precondition(steeredClient.pendingPrompts["done"]?.isEmpty != false,
+                 "A steered bubble retires when its turn settles")
+    steeredClient.disconnect()
     UserDefaults.standard.removeObject(forKey: "kimi.session.\(host.id)")
     print("PASS: Kimi pending bubble settles when its turn is over")
 }
