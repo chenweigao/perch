@@ -73,6 +73,25 @@ func checkConversationPresentation() throws {
     [{"id":"context","role":"user","created_at":"2","content":[{"type":"text","text":"<skill-loaded name='config'>runtime reference</skill-loaded>"}]}]
     """)
     precondition(context[0].content[0].isRuntimeContext)
+    let navigationProjection = ConversationProjection()
+    let summaries = navigationProjection.update(progress + context + final, isRunning: false).navigation
+    precondition(summaries.count == 1 && summaries[0].id == done[0].id)
+    precondition(summaries[0].prompt == "检查" && summaries[0].reply == "已经修复")
+    precondition(navigationProjection.update(thoughts, isRunning: true).navigation.isEmpty,
+                 "Partial history without a user turn must not create a false navigation stop")
+    let pendingSummary = navigationProjection.update([progress[0]] + thoughts, isRunning: true).navigation
+    precondition(pendingSummary.count == 1 && pendingSummary[0].reply.isEmpty,
+                 "Preview must not expose thinking or tool output as an answer")
+    let attachment = try messages("""
+    [{"id":"file-user","role":"user","created_at":"6","content":[{"type":"file","name":"notes.txt"}]}]
+    """)
+    precondition(navigationProjection.update(attachment, isRunning: false).navigation[0].prompt == "notes.txt")
+    let olderAndCurrent = navigationProjection.update(attachment + progress + final, isRunning: false).navigation
+    precondition(olderAndCurrent.last == summaries.first, "Prepending history must preserve turn identity and preview")
+    let changedSummary = navigationProjection.update(progress + both, isRunning: true).navigation
+    precondition(changedSummary[0].id == summaries[0].id && changedSummary[0].reply == "阶段概要")
+    let revisedSummary = navigationProjection.update(progress + final, isRunning: false).navigation
+    precondition(revisedSummary == summaries, "Streaming completion must refresh the reply excerpt")
     precondition(ConversationTimelineEntry.make(context).allSatisfy(\.activity), "Runtime context alone is not a completed agent response")
     let withContext = ConversationTimelineEntry.make(progress + context, isRunning: true)
     precondition(withContext.last?.activity == true && withContext.last?.messages.first?.id == "context")

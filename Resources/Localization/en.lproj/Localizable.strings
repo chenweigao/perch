@@ -504,3 +504,6 @@
 "主目录" = "Home directory";
 "上级目录" = "Parent directory";
 "使用此目录" = "Use this directory";
+/* Conversation turn navigation */
+"Conversation turns" = "Loaded conversation turns";
+"Attachment" = "Attachment";

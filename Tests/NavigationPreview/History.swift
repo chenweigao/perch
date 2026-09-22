@@ -14,7 +14,7 @@ enum NavigationHistory {
     /// `salt` makes each fixture session a distinct conversation. Without it every
     /// session shares one set of message IDs, so a switch looks like an edit of the
     /// same rows rather than a move to different ones.
-    static func conversation(turns: Int, salt: String = "") throws -> KimiConversation {
+    static func conversation(turns: Int, salt: String = "", streaming: Bool = false) throws -> KimiConversation {
         var messages: [[String: Any]] = []
         func message(_ suffix: String, _ role: String, _ content: [[String: Any]]) -> [String: Any] {
             let id = salt + suffix
@@ -91,14 +91,17 @@ enum NavigationHistory {
             }
         }
         let session: [String: Any] = [
-            "id": "navigation-fixture", "title": "导航验收", "updated_at": "2026-09-21", "busy": false,
+            "id": "navigation-fixture", "title": "导航验收", "updated_at": "2026-09-21", "busy": streaming,
             "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/deterministic"]
         ]
-        let snapshot: [String: Any] = [
+        var snapshot: [String: Any] = [
             "as_of_seq": 1, "epoch": "navigation-epoch", "session": session,
             "messages": ["items": messages, "has_more": false],
             "pending_approvals": [], "pending_questions": []
         ]
+        if streaming {
+            snapshot["in_flight_turn"] = ["turn_id": 201, "assistant_text": "", "thinking_text": "", "running_tools": []]
+        }
         let data = try JSONSerialization.data(withJSONObject: snapshot, options: [.sortedKeys])
         return KimiConversation(try KimiWire.decoder().decode(KimiSnapshot.self, from: data))
     }

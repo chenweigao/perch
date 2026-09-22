@@ -139,10 +139,12 @@ private struct NavigationConversation: View {
     @ObservedObject var model: NavigationModel
     var body: some View {
             ScrollViewReader { proxy in
-                ConversationScrollView {
+                ConversationScrollView(onScroll: { ConversationReadingMemory.shared.following[model.selected] = $0 }, onContentSizeChange: {
+                    if ConversationReadingMemory.shared.following[model.selected] == true { proxy.scrollTo("bottom", anchor: .bottom) }
+                }) {
                     if let conversation = model.conversation {
                         ConversationTranscript(messages: conversation.displayMessages,
-                                               sessionId: model.selected, isRunning: false)
+                                               sessionId: model.selected, isRunning: conversation.snapshot.session.busy)
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }.overlay(alignment: .topLeading) {
@@ -443,6 +445,81 @@ final class NavigationRunner {
     }
 
     #if TRANSCRIPT_CHECKS
+    /// Exercise the same selection action as the rail against cold, virtualized
+    /// rows. No search selection or full-history layout assists these jumps.
+    func turnNavigation() async throws -> [String: Any] {
+        let targets = try warmedTargets()
+        guard let host = model.host else { throw NavigationError("missing host") }
+        _ = try await switchTo(targets[0], host: host)
+        guard let scroll = findScrollView(host) else { throw NavigationError("missing scroll") }
+        func settle() async throws {
+            for _ in 0..<12 {
+                try await Task.sleep(for: .milliseconds(16))
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            }
+        }
+        try await settle()
+        guard let navigator = ConversationTranscript.navigator(in: scroll), navigator.snapshot.turns.count == 200 else {
+            throw NavigationError("missing 200-turn navigator")
+        }
+        var jumps: [[String: Any]] = []
+        for index in [199, 0, 100, 6, 198, 50] {
+            let expected = navigator.snapshot.turns[index].id
+            ConversationReadingMemory.shared.following[targets[0]] = true
+            let start = CACurrentMediaTime()
+            navigator.select(index)
+            host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            let initial = (CACurrentMediaTime() - start) * 1_000
+            try await settle()
+            let anchor = ConversationTranscript.readingAnchor(in: scroll)
+            let hosts = ConversationTranscript.retainedHosts(in: scroll)
+            let passed = anchor?.entry == expected && abs(anchor?.offset ?? 100) <= 1
+                && navigator.current == index && ConversationReadingMemory.shared.following[targets[0]] == false
+            jumps.append(["turn": index + 1, "expected": expected, "actual": anchor?.entry ?? "",
+                          "offset": anchor?.offset ?? -1, "initial_layout_ms": initial,
+                          "mounted": hosts?.mounted ?? 0, "retained": hosts?.retained ?? 0, "passed": passed])
+            try writeNavigationArtifact("turn-navigation-detail.json", ["jumps": jumps])
+            guard passed else { throw NavigationError("turn jump failed: \(jumps.last!)") }
+            guard (hosts?.retained ?? 1000) < 40 else { throw NavigationError("jump retained distant hosts") }
+        }
+        // Add a live tail while the reader is parked at an earlier turn.
+        let before = ConversationTranscript.readingAnchor(in: scroll)!
+        let streaming = try NavigationHistory.conversation(turns: 200, salt: targets[0] + ":", streaming: true)
+        model.conversation?.reconcile(streaming.snapshot)
+        for tick in 0..<20 {
+            let event: [String: Any] = ["type": "assistant.delta", "session_id": "navigation-fixture",
+                "epoch": "navigation-epoch", "seq": 1, "volatile": true, "offset": tick * 6,
+                "payload": ["turnId": 201, "delta": "Token "]]
+            _ = model.conversation?.apply(try KimiWire.decodeEvent(from: JSONSerialization.data(withJSONObject: event)))
+            try await Task.sleep(for: .milliseconds(16))
+        }
+        try await settle()
+        let after = ConversationTranscript.readingAnchor(in: scroll)
+        guard after?.entry == before.entry, abs((after?.offset ?? 100) - before.offset) <= 1 else {
+            throw NavigationError("live tail moved navigation anchor")
+        }
+        let olderPage = try KimiWire.decoder().decode(KimiPage<KimiMessage>.self, from: Data("""
+        {"items":[{"id":"older-user","role":"user","created_at":"0000","content":[{"type":"text","text":"Earlier question"}]},
+        {"id":"older-answer","role":"assistant","created_at":"0001","content":[{"type":"text","text":"Earlier answer"}]}],"has_more":false}
+        """.utf8))
+        model.conversation?.prepend(olderPage)
+        try await settle()
+        guard navigator.snapshot.turns.count == 201, navigator.snapshot.turns[navigator.current].id == before.entry,
+              ConversationTranscript.readingAnchor(in: scroll)?.entry == before.entry else {
+            throw NavigationError("history prepend changed selected turn")
+        }
+        _ = try await switchTo(targets[1], host: host)
+        try await settle()
+        guard navigator.snapshot.session == targets[1], navigator.snapshot.turns.allSatisfy({ !$0.id.contains(targets[0]) }) else {
+            throw NavigationError("navigator retained outgoing session")
+        }
+        model.conversation = nil
+        try await settle()
+        guard navigator.snapshot.turns.isEmpty else { throw NavigationError("empty conversation retained navigation") }
+        return ["jumps": jumps, "streaming_anchor_preserved": true, "history_prepend": true,
+                "session_switch": true, "empty_conversation": true]
+    }
+
     /// Does an arriving older page preserve the exact row and intra-row offset?
     /// Use the production prepend and native document, with no remote state.
     func prependAnchor() async throws -> [String: Any] {
@@ -844,6 +921,7 @@ struct NavigationPreviewApp: App {
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
             if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
+            else if mode == "turns" { report.merge(try await runner.turnNavigation()) { a, _ in a } }
             else if mode == "search" { report.merge(try await runner.readingInteractions(searchOnly: true)) { a, _ in a } }
             else if mode == "interactions" { report.merge(try await runner.readingInteractions()) { a, _ in a } }
             else if mode == "anchor" { report.merge(try await runner.prependAnchor()) { a, _ in a } }

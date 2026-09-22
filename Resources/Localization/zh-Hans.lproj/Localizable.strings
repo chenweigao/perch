@@ -462,3 +462,6 @@
 "主目录" = "主目录";
 "上级目录" = "上级目录";
 "使用此目录" = "使用此目录";
+/* Conversation turn navigation */
+"Conversation turns" = "已加载的会话轮次";
+"Attachment" = "附件";

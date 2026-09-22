@@ -62,7 +62,7 @@ struct ConversationTranscript: View {
             }
             return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId, memoryKey: (memoryKey ?? sessionId) + ":" + entry.id)
         }
-        ConversationDocumentHost(contents: contents, sessionId: memoryKey ?? sessionId,
+        ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: memoryKey ?? sessionId,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
                                  contentOriginY: contentOriginY) { height in
@@ -76,6 +76,7 @@ struct ConversationTranscript: View {
 
 private struct ConversationDocumentHost: NSViewRepresentable {
     let contents: [ConversationEntryView]
+    let navigation: [ConversationTurnSummary]
     let sessionId: String
     let appearance: ConversationEntryAppearance
     let viewport: ConversationViewport?
@@ -84,7 +85,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     func makeNSView(context: Context) -> ConversationDocumentView { ConversationDocumentView() }
     func updateNSView(_ view: ConversationDocumentView, context: Context) {
         view.heightChanged = heightChanged
-        view.configure(contents, sessionId: sessionId, appearance: appearance,
+        view.configure(contents, navigation: navigation, sessionId: sessionId, appearance: appearance,
                        viewport: viewport, contentOriginY: contentOriginY)
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ConversationDocumentView, context: Context) -> CGSize? {
@@ -101,6 +102,8 @@ private struct ConversationDocumentHost: NSViewRepresentable {
 private final class ConversationDocumentView: NSView {
     private var contents: [ConversationEntryView] = []
     private var indices: [String: Int] = [:]
+    private var navigation: [ConversationTurnSummary] = []
+    private var turnRows: [Int] = []
     private var heights: [CGFloat] = []
     private var geometry = ConversationRowGeometry(heights: [])
     private var offsets: [CGFloat] { geometry.offsets }
@@ -126,6 +129,7 @@ private final class ConversationDocumentView: NSView {
     var totalHeight: CGFloat { geometry.totalHeight }
     private var findObserver: NSObjectProtocol?
     #if TRANSCRIPT_CHECKS
+    fileprivate var navigator: ConversationTurnNavigation? { viewport?.navigator }
     fileprivate var retainedHostCount: Int { controllers.count }
     fileprivate var mountedHostCount: Int { mounted.count }
     fileprivate static var retiredHostCount: Int { retiredControllers.count }
@@ -143,10 +147,7 @@ private final class ConversationDocumentView: NSView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
-        guard let index = indices[target.hit.entryID], let clip = observedClip else { return }
-        clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
-        enclosingScrollView?.reflectScrolledClipView(clip)
-        refreshVisibleRows()
+        revealEntry(target.hit.entryID)
         DispatchQueue.main.async { [weak self] in
             guard let self, self.sessionId == target.session,
                   let view = self.controllers[target.hit.entryID]?.view else { return }
@@ -171,10 +172,31 @@ private final class ConversationDocumentView: NSView {
             _ = select(in: view)
         }
     }
+    private func revealEntry(_ id: String) {
+        guard let index = indices[id], let clip = observedClip else { return }
+        ConversationReadingMemory.shared.following[sessionId] = false
+        viewport?.pauseFollowing?()
+        clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
+        enclosingScrollView?.reflectScrolledClipView(clip)
+        refreshVisibleRows()
+        saveReadingPosition()
+        viewport?.refresh()
+    }
+
+    fileprivate func updateNavigator() {
+        let row = geometry.readingRow(at: max(0, viewportRect.minY)) ?? 0
+        var lower = 0, upper = turnRows.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if turnRows[middle] <= row { lower = middle + 1 } else { upper = middle }
+        }
+        viewport?.navigator.update(session: sessionId, turns: navigation, current: max(0, lower - 1))
+        viewport?.navigator.reveal = { [weak self] id in self?.revealEntry(id) }
+    }
     var heightChanged: (CGFloat) -> Void = { _ in }
     override var isFlipped: Bool { true }
 
-    func configure(_ next: [ConversationEntryView], sessionId: String,
+    func configure(_ next: [ConversationEntryView], navigation: [ConversationTurnSummary], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
                    contentOriginY: CGFloat) {
         // An older page changes every subsequent row's y, but not the reader's
@@ -208,6 +230,8 @@ private final class ConversationDocumentView: NSView {
         let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
         contents = next
         indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
+        self.navigation = navigation
+        turnRows = navigation.compactMap { indices[$0.id] }
         heights = next.map { previous[$0.entry.id] ?? ConversationReadingMemory.shared.measuredHeights[sessionId]?[$0.entry.id] ?? 160 }
         self.rowAppearance = appearance
         for id in Array(controllers.keys) {
@@ -223,6 +247,7 @@ private final class ConversationDocumentView: NSView {
         restoreReadingPosition()
         refreshVisibleRows()
         publishHeight()
+        viewport?.refresh()
     }
     /// Releasing hundreds of hosting graphs in the selection transaction stalls
     /// the main thread. Drain a small batch between frames, on AppKit's thread.
@@ -449,6 +474,13 @@ private final class ConversationDocumentView: NSView {
 
 #if TRANSCRIPT_CHECKS
 extension ConversationTranscript {
+    static func navigator(in root: NSView) -> ConversationTurnNavigation? {
+        if let document = root as? ConversationDocumentView { return document.navigator }
+        for view in root.subviews {
+            if let navigation = navigator(in: view) { return navigation }
+        }
+        return nil
+    }
     static func readingAnchor(in root: NSView) -> (entry: String, offset: CGFloat)? {
         if let document = root as? ConversationDocumentView { return document.readingAnchor }
         for view in root.subviews {
@@ -645,10 +677,11 @@ private final class ConversationEntryController: NSViewController {
 final class ConversationViewport {
     fileprivate weak var view: NSView?
     var pauseFollowing: (() -> Void)?
+    let navigator = ConversationTurnNavigation()
     private let rows = NSHashTable<NSView>.weakObjects()
     private var scheduled = false
     fileprivate func add(_ row: NSView) { rows.add(row); refresh() }
-    fileprivate func remove(_ row: NSView) { rows.remove(row) }
+    fileprivate func remove(_ row: NSView) { rows.remove(row); refresh() }
     func refresh() {
         guard !scheduled else { return }
         scheduled = true
@@ -657,7 +690,14 @@ final class ConversationViewport {
             self.scheduled = false
             // Coalesce scroll and layout updates into one document pass.
             for row in self.rows.allObjects {
-                if let document = row as? ConversationDocumentView { document.refreshVisibleRows() }
+                if let document = row as? ConversationDocumentView {
+                    document.refreshVisibleRows()
+                    document.updateNavigator()
+                }
+            }
+            if self.rows.allObjects.isEmpty {
+                self.navigator.update(session: "", turns: [], current: 0)
+                self.navigator.reveal = nil
             }
         }
     }
