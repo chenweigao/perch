@@ -33,8 +33,9 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 Divider().padding(.vertical, 6)
                 navigation("已归档", symbol: "archivebox", selected: page == .archive, action: onArchive)
                 Button { showEnvironments.toggle() } label: {
-                    HStack(spacing: 9) {
-                        Image(systemName: "desktopcomputer").frame(width: 17)
+                    HStack(spacing: WorkbenchChrome.labelSpacing) {
+                        Image(systemName: "desktopcomputer").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
                         Text("环境")
                         Spacer(minLength: 4)
                         Text(environmentSummary).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
@@ -42,8 +43,10 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle()).popover(isPresented: $showEnvironments, arrowEdge: .trailing) { environments }
                 SettingsLink {
-                    HStack(spacing: 9) {
-                        Image(systemName: "gearshape").frame(width: 17); Text("设置"); Spacer(); Text("⌘,").foregroundStyle(.tertiary)
+                    HStack(spacing: WorkbenchChrome.labelSpacing) {
+                        Image(systemName: "gearshape").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
+                        Text("设置"); Spacer(); Text("⌘,").foregroundStyle(.tertiary)
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
             }.padding(.horizontal, 10).padding(.bottom, 10)
@@ -53,8 +56,9 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,
                             count: Int = 0, shortcut: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 9) {
-                Image(systemName: symbol).frame(width: 17)
+            HStack(spacing: WorkbenchChrome.labelSpacing) {
+                Image(systemName: symbol).font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                    .frame(width: WorkbenchChrome.sidebarSymbolWidth)
                 Text(title); Spacer(minLength: 4)
                 if count > 0 { Text("\(count)").font(.system(size: 11, weight: .medium)).monospacedDigit().foregroundStyle(.secondary) }
                 if let shortcut { Text(shortcut).foregroundStyle(.tertiary) }

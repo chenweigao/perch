@@ -1,10 +1,6 @@
 import SwiftUI
 import WorkbenchCore
 
-enum WorkbenchChrome {
-    static let headerHeight: CGFloat = 44
-}
-
 /// Title changes follow workspace selection, independently of streaming state.
 struct WorkbenchHeader: View {
     @UILocalization private var L
@@ -15,11 +11,11 @@ struct WorkbenchHeader: View {
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: WorkbenchChrome.labelSpacing) {
             Image(systemName: item?.reference.kind.symbol ?? (model.showArchived ? "archivebox" : model.onlyAttention ? "tray" : model.showSessionDirectory ? "list.bullet" : model.selectedGroup == nil ? "square.grid.2x2" : "folder"))
-                .font(.system(size: 13)).foregroundStyle(.secondary)
+                .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
             Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
-        }.frame(minWidth: 100, maxWidth: 440, alignment: .leading)
+        }.frame(maxWidth: .infinity, alignment: .center)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
@@ -42,7 +38,7 @@ struct WorkbenchHeaderActions: View {
     }
     private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil }
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: WorkbenchChrome.controlSpacing) {
             if let item, !item.directory.isEmpty {
                 Label(URL(fileURLWithPath: item.directory).lastPathComponent, systemImage: "folder")
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
@@ -56,8 +52,7 @@ struct WorkbenchHeaderActions: View {
             }
             if !model.showDashboard, model.selectedHost != nil {
                 Button { model.toggleFileViewer() } label: {
-                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 11))
-                        .frame(width: 28, height: 28).workbenchControlSurface()
+                    WorkbenchToolbarSymbol(name: "doc.text.magnifyingglass").workbenchControlSurface()
                 }.buttonStyle(.plain).help("查看远端文件（只读）").accessibilityLabel("查看远端文件")
             }
             if !model.showDashboard {
@@ -72,8 +67,9 @@ struct WorkbenchHeaderActions: View {
                         Button("新建远端终端…") { model.showNewTerminal = true }
                     }
                     if let item { Divider(); SessionActionsMenu(model: model, item: item) }
-                } label: { Image(systemName: "ellipsis").frame(width: 28, height: 28).workbenchControlSurface() }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("会话操作")
+                } label: { WorkbenchToolbarSymbol(name: "ellipsis").workbenchControlSurface() }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
             } else {
                 if isHome && !model.workspace.groups.isEmpty {
                     Menu {
@@ -85,14 +81,15 @@ struct WorkbenchHeaderActions: View {
                         .menuStyle(.borderlessButton).fixedSize().help("打开任务组")
                 }
                 if model.selectedGroup != nil {
-                    Button { model.editGroup(model.selectedGroup) } label: { Image(systemName: "pencil").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                        .buttonStyle(.plain).help("编辑任务组")
+                    Button { model.editGroup(model.selectedGroup) } label: { WorkbenchToolbarSymbol(name: "pencil").workbenchControlSurface() }
+                        .buttonStyle(.plain).help("编辑任务组").accessibilityLabel("编辑任务组")
                 }
                 Menu {
                     Button("原生对话…") { model.startNewTask() }
                     Button("远端终端…") { model.showNewTerminal = true }.disabled(model.selectedConnection?.online != true)
                     Button("任务组…") { model.editGroup() }
-                } label: { Label("新建", systemImage: "plus") }.menuStyle(.borderlessButton).fixedSize()
+                } label: { WorkbenchToolbarSymbol(name: "plus").workbenchControlSurface() }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("新建").accessibilityLabel("新建")
                 if isHome {
                     let projection = model.dashboardProjection
                     Menu {
@@ -100,8 +97,9 @@ struct WorkbenchHeaderActions: View {
                             .disabled(projection.archiveCount == 0 || model.isArchiving)
                         Text("仅归档本轮正常结束且已查看的会话。")
                         if let reason = projection.blockedSummary { Text(reason) }
-                    } label: { Image(systemName: "ellipsis").frame(width: 28, height: 28) }
-                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("工作台操作")
+                    } label: { WorkbenchToolbarSymbol(name: "ellipsis").workbenchControlSurface() }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("工作台操作").accessibilityLabel("工作台操作")
                 }
             }
         }.fixedSize(horizontal: true, vertical: false)

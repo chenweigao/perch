@@ -34,8 +34,9 @@ struct WorkbenchSidebar: View {
             ForEach(model.workspace.groups) { group in
                 let items = TaskGroupProjection(group: group, allSessions: model.allSessions, lastSessionID: nil, search: "")
                 Button { model.showHome(groupID: group.id) } label: {
-                    HStack(spacing: 9) {
-                        Image(systemName: "folder").frame(width: 17)
+                    HStack(spacing: WorkbenchChrome.labelSpacing) {
+                        Image(systemName: "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
                         Text("\(items.totalCount)").font(.system(size: 11)).foregroundStyle(.secondary)
                     }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
