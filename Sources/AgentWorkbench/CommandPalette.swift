@@ -1,9 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Suggestions for a slash draft, rendered above the composer. Entirely driven by
-/// the command list the runtime reported, so a session with no commands shows
-/// nothing rather than a hard-coded menu.
+/// Suggestions for a slash draft, using the commands exposed by its provider.
 struct CommandPalette: View {
     let completion: CommandCompletion
     let selection: Int
@@ -30,7 +28,7 @@ struct CommandPalette: View {
                     }
             }
             Divider()
-            Text("↑↓ 选择 · Return 补全 · Esc 关闭。补全只填入输入框，不会立即执行。")
+            Text("↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭")
                 .font(.system(size: 10)).foregroundStyle(.secondary).padding(10)
         }.frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))

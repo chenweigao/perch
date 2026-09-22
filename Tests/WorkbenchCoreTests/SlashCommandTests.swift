@@ -59,9 +59,31 @@ func checkSlashCommands() throws {
     precondition(withArgs.command.name == "compact" && withArgs.arguments == "soft 认证模块")
     // An alias resolves to the command it belongs to.
     precondition(SlashCommands.invocation(in: "/models", from: commands)?.command.name == "model")
-    // Ordinary text, unknown commands and multi-line drafts stay prompts.
+    // Ordinary text and unknown commands stay prompts; command arguments may be
+    // multi-line, as when pasting an objective from a document.
     precondition(SlashCommands.invocation(in: "compact the code", from: commands) == nil)
     precondition(SlashCommands.invocation(in: "/unknown thing", from: commands) == nil)
-    precondition(SlashCommands.invocation(in: "/compact\nand more", from: commands) == nil)
+    precondition(SlashCommands.invocation(in: "/compact\nand more", from: commands)?.arguments == "and more")
+    precondition(SlashCommands.invocation(in: "/compact\tkeep APIs", from: commands)?.arguments == "keep APIs")
+    func parsed(_ text: String, _ expected: KimiCommand?) throws {
+        let value = try KimiCommand.parse(text)
+        precondition(value == expected)
+    }
+    try parsed("/goal", .goalStatus)
+    try parsed("/goal status", .goalStatus)
+    try parsed("/goal 修复滚动\n保留历史", .goalStart("修复滚动\n保留历史"))
+    try parsed("/goal -- cancel the broken operation", .goalStart("cancel the broken operation"))
+    for control in ["pause", "resume", "cancel"] { try parsed("/goal " + control, .goalControl(control)) }
+    try parsed("/compact 保留接口和约束", .compact("保留接口和约束"))
+    try parsed("/plan on", .plan(true))
+    try parsed("/plan off", .plan(false))
+    try parsed("/help", .help)
+    try parsed("请解释 /goal", nil)
+    for invalid in ["/goal --", "/goal pause something", "/goal replace new", "/goal next task", "/plan", "/plan invalid", "/help extra"] {
+        do { _ = try KimiCommand.parse(invalid); preconditionFailure("Invalid command must retain the draft") }
+        catch is WorkbenchError { }
+    }
+    let noGoal = try KimiWire.decode(KimiGoal?.self, from: Data(#"{"code":0,"data":null}"#.utf8))
+    precondition(noGoal == nil)
     print("PASS: runtime command parsing, palette open rules, subcommand completion, alias resolution and slash invocation")
 }

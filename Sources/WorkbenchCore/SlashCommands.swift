@@ -5,6 +5,7 @@ import Foundation
 public struct AgentCommand: Decodable, Identifiable, Equatable, Sendable {
     public struct Input: Decodable, Equatable, Sendable {
         public let hint: String?
+        public init(hint: String) { self.hint = hint }
     }
     public let name: String
     public let description: String?
@@ -67,11 +68,11 @@ public enum SlashCommands {
     /// a slash message from being sent to the model as a literal prompt.
     public static func invocation(in draft: String, from commands: [AgentCommand]) -> (command: AgentCommand, arguments: String)? {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasPrefix("/"), !trimmed.contains("\n") else { return nil }
+        guard trimmed.hasPrefix("/") else { return nil }
         let body = trimmed.dropFirst()
-        let head = String(body.prefix { $0 != " " })
+        let head = String(body.prefix { !$0.isWhitespace })
         guard let command = commands.first(where: { $0.name == head || ($0.aliases ?? []).contains(head) }) else { return nil }
-        let arguments = String(body.dropFirst(head.count)).trimmingCharacters(in: .whitespaces)
+        let arguments = String(body.dropFirst(head.count)).trimmingCharacters(in: .whitespacesAndNewlines)
         return (command, arguments)
     }
 }

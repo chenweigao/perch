@@ -381,3 +381,30 @@
 "Retry" = "Retry";
 "Unable to load this conversation." = "Unable to load this conversation.";
 "Choose Kimi or remove the attachments to start this task." = "Choose Kimi or remove the attachments to start this task.";
+
+/* Composer commands */
+"Start or manage a goal" = "Start or manage a goal";
+"Compact conversation context" = "Compact conversation context";
+"Change plan mode" = "Change plan mode";
+"Show available commands" = "Show available commands";
+"Usage: /help" = "Usage: /help";
+"Usage: /plan on or /plan off" = "Usage: /plan on or /plan off";
+"Use /goal status, pause, resume, cancel, or /goal -- followed by an objective. Replace and next are not available here." = "Use /goal status, pause, resume, cancel, or /goal -- followed by an objective. Replace and next are not available here.";
+"Enter an objective after /goal." = "Enter an objective after /goal.";
+"Remove attachments before running a command." = "Remove attachments before running a command.";
+"Wait for the current task to finish before running this command." = "Wait for the current task to finish before running this command.";
+"No active goal." = "No active goal.";
+"Compaction requested. Watch the conversation for progress." = "Compaction requested. Watch the conversation for progress.";
+"Goal created. Sending the objective to start work." = "Goal created. Sending the objective to start work.";
+"Goal paused. An active turn can still finish; use Stop to interrupt it." = "Goal paused. An active turn can still finish; use Stop to interrupt it.";
+"Goal removed. An active turn can still finish; use Stop to interrupt it." = "Goal removed. An active turn can still finish; use Stop to interrupt it.";
+"Goal resume requested." = "Goal resume requested.";
+"Plan mode enabled." = "Plan mode enabled.";
+"Plan mode disabled." = "Plan mode disabled.";
+"This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation." = "This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation.";
+"↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭" = "↑↓ Choose · Tab Complete · Return Run a complete command · Esc Close";
+"Run command" = "Run command";
+"Goal created. First message accepted." = "Goal created. First message accepted.";
+"Goal created; the first message is unconfirmed. Check the conversation before sending again." = "Goal created; the first message is unconfirmed. Check the conversation before sending again.";
+"Choose a model before starting a goal." = "Choose a model before starting a goal.";
+"Continue this task, or type / for commands…" = "Continue this task, or type / for commands…";

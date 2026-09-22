@@ -254,6 +254,7 @@ public struct KimiConversation: Sendable {
             return false
         case "error": error = p["error"]["message"].string ?? p["message"].string; return true
         case "turn.started", "turn.ended", "turn.step.started", "turn.step.completed", "turn.step.interrupted", "tool.call.started", "tool.result",
+             "compaction.started", "compaction.blocked", "compaction.cancelled", "compaction.completed", "goal.updated",
              "event.approval.requested", "event.approval.resolved", "event.question.requested", "event.question.answered", "event.question.dismissed",
              "prompt.submitted", "prompt.queued", "prompt.steered", "turn.steer", "prompt.started", "prompt.completed", "prompt.aborted": return true
         default: return false

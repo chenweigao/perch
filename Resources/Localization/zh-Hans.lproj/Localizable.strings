@@ -339,3 +339,30 @@
 "Retry" = "重试";
 "Unable to load this conversation." = "无法读取此会话。";
 "Choose Kimi or remove the attachments to start this task." = "请选择 Kimi 或移除附件，再开始任务。";
+
+/* Composer commands */
+"Start or manage a goal" = "开始或管理目标";
+"Compact conversation context" = "压缩对话上下文";
+"Change plan mode" = "切换计划模式";
+"Show available commands" = "查看可用命令";
+"Usage: /help" = "用法：/help";
+"Usage: /plan on or /plan off" = "用法：/plan on 或 /plan off";
+"Use /goal status, pause, resume, cancel, or /goal -- followed by an objective. Replace and next are not available here." = "请使用 /goal status、pause、resume、cancel，或 /goal -- 目标内容。当前入口不支持 replace 和 next。";
+"Enter an objective after /goal." = "请在 /goal 后输入目标。";
+"Remove attachments before running a command." = "执行命令前请先移除附件。";
+"Wait for the current task to finish before running this command." = "请等待当前任务完成后再执行此命令。";
+"No active goal." = "当前没有目标。";
+"Compaction requested. Watch the conversation for progress." = "已请求压缩上下文，请留意会话进展。";
+"Goal created. Sending the objective to start work." = "目标已创建，正在发送目标正文以开始执行。";
+"Goal paused. An active turn can still finish; use Stop to interrupt it." = "目标已暂停，当前轮次仍可继续完成；如需中断，请点击停止。";
+"Goal removed. An active turn can still finish; use Stop to interrupt it." = "目标已移除，当前轮次仍可继续完成；如需中断，请点击停止。";
+"Goal resume requested." = "已请求继续目标。";
+"Plan mode enabled." = "计划模式已开启。";
+"Plan mode disabled." = "计划模式已关闭。";
+"This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation." = "此 Agent 尚未向 Perch 开放 /goal，请在其终端或 Kimi 会话中使用。";
+"↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭" = "↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭";
+"Run command" = "执行命令";
+"Goal created. First message accepted." = "目标已创建，首条消息已接收。";
+"Goal created; the first message is unconfirmed. Check the conversation before sending again." = "目标已创建，但首条消息尚未确认。请检查会话后再发送。";
+"Choose a model before starting a goal." = "开始目标前请先选择模型。";
+"Continue this task, or type / for commands…" = "继续此任务，或输入 / 使用命令…";

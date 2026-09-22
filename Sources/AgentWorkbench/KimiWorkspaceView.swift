@@ -15,11 +15,12 @@ struct KimiWorkspaceView: View {
     let onResultDisplayed: (KimiSession) -> Void
     @State private var chooseFiles = false
     @State private var activityReview = 0
+    @State private var palette = CommandPaletteState()
     var body: some View {
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
-                if let problem = connection.actionError ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
+                if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: conversation.displayMessages, isRunning: conversation.snapshot.session.busy,
@@ -53,6 +54,7 @@ struct KimiWorkspaceView: View {
             }
             if let problem = connection.error { errorBanner("连接中断，显示的是最近同步的内容。\n" + problem) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(.white)
+            .onChange(of: connection.selectedId) { _, _ in palette = CommandPaletteState() }
             .tint(kimiAccent)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do {
@@ -67,6 +69,16 @@ struct KimiWorkspaceView: View {
 
     private func composer(sessionID: String) -> some View {
         VStack(spacing: 10) {
+            if let feedback = connection.commandFeedback[sessionID] {
+                Text(feedback).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    .lineLimit(4).help(feedback)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let completion = palette.completion(for: connection.drafts[sessionID] ?? "", in: KimiCommand.catalog) {
+                CommandPalette(completion: completion, selection: palette.selection) { command in
+                    apply(command, completion, to: sessionID)
+                }
+            }
             VStack(alignment: .leading, spacing: 12) {
                 if let files = connection.attachments[sessionID], !files.isEmpty {
                     ScrollView(.horizontal) {
@@ -78,11 +90,13 @@ struct KimiWorkspaceView: View {
                     }
                 }
                 MessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
-                                              set: { onInput(); connection.drafts[sessionID] = $0 }),
+                                              set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0) }),
+                                placeholder: L("Continue this task, or type / for commands…"),
                                 accessibilityLabel: "Message Kimi", canSend: canSend,
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
-                                onError: { connection.actionError = $0 })
+                                onError: { connection.actionError = $0 },
+                                onKey: { handle($0, for: sessionID) })
                 HStack(spacing: 10) {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
                     ModelPicker(models: ModelCatalog.options(connection.models),
@@ -101,9 +115,9 @@ struct KimiWorkspaceView: View {
                         set: { connection.manualPermissions[sessionID] = $0 }))
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
-                                         queuedSendTitle: "Steer",
+                                         queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
-                                         onQueue: { connection.sendPrompt(mode: .nextTurn) })
+                                         onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
                 }
             }.padding(14).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
@@ -112,16 +126,41 @@ struct KimiWorkspaceView: View {
             return files.contains(where: \.isFileURL)
         }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
     }
+    private func handle(_ key: ComposerKey, for id: String) -> Bool {
+        let draft = connection.drafts[id] ?? ""
+        guard let completion = palette.completion(for: draft, in: KimiCommand.catalog) else { return false }
+        switch key {
+        case .up: palette.move(-1, count: completion.matches.count)
+        case .down: palette.move(1, count: completion.matches.count)
+        case .enter, .tab:
+            guard let command = palette.choice(in: completion) else { return false }
+            if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
+            apply(command, completion, to: id)
+        case .escape: palette.dismiss(draft)
+        }
+        return true
+    }
+    private func apply(_ command: AgentCommand, _ completion: CommandCompletion, to id: String) {
+        onInput()
+        let draft = SlashCommands.draft(applying: command, to: completion)
+        connection.drafts[id] = draft
+        palette.draftChanged(draft)
+    }
     private func addAttachments(_ files: [URL], to sessionID: String) {
         for file in files where !(connection.attachments[sessionID] ?? []).contains(file) {
             onInput(); connection.attachments[sessionID, default: []].append(file)
         }
     }
+    private var isCommandDraft: Bool {
+        let draft = connection.drafts[connection.selectedId ?? ""] ?? ""
+        return SlashCommands.invocation(in: draft, from: KimiCommand.catalog) != nil
+    }
     private var canSend: Bool {
-        connection.online && connection.snapshotReady && !connection.sending && !connection.isStopping &&
+        return connection.online && connection.snapshotReady && !connection.sending && !connection.isStopping &&
+        (isCommandDraft ||
         (!(connection.modelChoices[connection.selectedId ?? ""] ?? "").isEmpty || connection.conversation?.snapshot.session.model.isEmpty == false) &&
         (!(connection.drafts[connection.selectedId ?? ""] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-         !(connection.attachments[connection.selectedId ?? ""] ?? []).isEmpty)
+         !(connection.attachments[connection.selectedId ?? ""] ?? []).isEmpty))
     }
     private func errorBanner(_ text: String, canRetry: Bool = false) -> some View {
         HStack(alignment: .top) {
