@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """SSH-only loopback broker. Owns Agent stdin independently of any Mac client."""
-import argparse, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, subprocess, sys, threading, time, uuid
+import argparse, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, urllib.request, uuid, warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-workbench/native')).expanduser()
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
+SERVICE_VERSION = 2
 LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
@@ -1085,7 +1086,7 @@ class Handler(BaseHTTPRequestHandler):
                     needs_codex_catalog=target is not None and target.state.get('provider')=='codex'
                 if needs_codex_catalog: codex_models=codex_catalog()
             with LOCK:
-                if self.path=='/health': result={'version':2}
+                if self.path=='/health': result={'version':SERVICE_VERSION}
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
                     if body['provider'] not in ('omp','qoder','dsh','codex') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
@@ -1266,27 +1267,78 @@ class Handler(BaseHTTPRequestHandler):
     def respond(self,status,body):
         data=json.dumps(body,ensure_ascii=False).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
 
+def endpoint_request(endpoint, path, timeout=2):
+    request=urllib.request.Request('http://127.0.0.1:'+str(endpoint['port'])+path,
+        headers={'Authorization':'Bearer '+endpoint['token']})
+    return json.loads(urllib.request.urlopen(request,timeout=timeout).read())
+
+def running_endpoint(path):
+    if not path.exists(): return None, None
+    try:
+        endpoint=json.loads(path.read_text())
+        return endpoint, endpoint_request(endpoint,'/health')
+    except Exception: return None, None
+
+def active_session(session):
+    command=session.get('commandResult')
+    return bool(session.get('busy') or session.get('pending') or
+        session.get('turnState') in ('submitting','submitted','accepted','running') or
+        isinstance(command,dict) and command.get('status')=='running')
+
+def reusable_endpoint(path):
+    endpoint,health=running_endpoint(path)
+    if endpoint is None: return None
+    if health.get('version')==SERVICE_VERSION: return endpoint
+    try:
+        catalog=endpoint_request(endpoint,'/sessions')
+        sessions=catalog.get('sessions')
+        if not isinstance(sessions,list): raise ValueError('invalid session catalog')
+    except Exception:
+        return endpoint | {'restartPending':-1}
+    active=sum(1 for session in sessions if active_session(session))
+    if active: return endpoint | {'restartPending':active}
+    try:
+        snapshots=[]
+        for session in sessions:
+            identity=session.get('id')
+            if not isinstance(identity,str) or not identity: raise ValueError('invalid session identity')
+            snapshots.append(endpoint_request(endpoint,'/sessions/'+identity))
+    except Exception:
+        return endpoint | {'restartPending':-1}
+    active=sum(1 for session in snapshots if active_session(session))
+    if active: return endpoint | {'restartPending':active}
+    pid=endpoint.get('pid')
+    if type(pid) is not int or pid<=1 or pid==os.getpid(): return endpoint | {'restartPending':-1}
+    try: os.kill(pid,signal.SIGTERM)
+    except ProcessLookupError: pass
+    except OSError: return endpoint | {'restartPending':-1}
+    else:
+        for _ in range(50):
+            time.sleep(.1)
+            try: endpoint_request(endpoint,'/health',timeout=1)
+            except Exception: break
+        else: return endpoint | {'restartPending':-1}
+    return None
+
+def ensure_service():
+    endpoint_path=ROOT/'endpoint.json'
+    endpoint=reusable_endpoint(endpoint_path)
+    if endpoint is not None: return endpoint
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore',ResourceWarning)
+        with open(ROOT/'service.log','a') as log:
+            process=subprocess.Popen([sys.executable,__file__],stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+        del process
+    for _ in range(100):
+        time.sleep(.1)
+        endpoint,health=running_endpoint(endpoint_path)
+        if endpoint is not None and health.get('version')==SERVICE_VERSION: return endpoint
+    raise SystemExit('托管服务未启动')
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--ensure',action='store_true'); args=parser.parse_args()
     if args.ensure:
-        import urllib.request
-        endpoint=ROOT/'endpoint.json'
-        if endpoint.exists():
-            d=json.loads(endpoint.read_text())
-            try:
-                request=urllib.request.Request('http://127.0.0.1:'+str(d['port'])+'/health',headers={'Authorization':'Bearer '+d['token']})
-                urllib.request.urlopen(request,timeout=2).read(); print(json.dumps(d)); sys.exit(0)
-            except Exception: pass
-        subprocess.Popen([sys.executable,__file__],stdin=subprocess.DEVNULL,stdout=open(ROOT/'service.log','a'),stderr=subprocess.STDOUT,start_new_session=True)
-        for _ in range(100):
-            time.sleep(.1)
-            if endpoint.exists():
-                d=json.loads(endpoint.read_text())
-                try:
-                    request=urllib.request.Request('http://127.0.0.1:'+str(d['port'])+'/health',headers={'Authorization':'Bearer '+d['token']})
-                    urllib.request.urlopen(request,timeout=1).read(); print(json.dumps(d)); sys.exit(0)
-                except Exception: pass
-        raise SystemExit('托管服务未启动')
+        print(json.dumps(ensure_service())); sys.exit(0)
     lockfile=open(ROOT/'service.lock','w'); fcntl.flock(lockfile,fcntl.LOCK_EX|fcntl.LOCK_NB)
     TOKEN=secrets.token_urlsafe(32); load()
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler)

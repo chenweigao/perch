@@ -193,7 +193,7 @@ final class RemoteSetupController: ObservableObject {
         try Task.checkCancellation()
         mark("runtime", .passed)
         mark("service", .checking)
-        hint = L("安装或更新 Perch 桥接组件后重新检查。正在运行的旧服务需等任务结束后再手动重启。")
+        hint = L("安装或更新 Perch 桥接组件后重新检查。空闲的旧服务会自动安全重启；有任务运行时会等待任务结束。")
         _ = try await ssh("test -f ~/.local/share/agent-workbench/native/native-agent-service.py")
         try Task.checkCancellation()
         let connection = NativeAgentConnection(setupHost: host); native = connection; connection.connect()
@@ -290,7 +290,7 @@ final class RemoteSetupController: ObservableObject {
             let arguments = [root.appendingPathComponent("scripts/install-native-service.sh").path, self.destination, "--provider=" + self.provider.rawValue]
             _ = try await SetupCommandRunner.run("/bin/bash", arguments, timeout: 180)
             try Task.checkCancellation()
-            self.hint = L("组件已安装。请重新检查。已有服务不会被终止；旧版本需等任务结束后手动重启。")
+            self.hint = L("组件已安装。请重新检查；Perch 会在旧服务空闲时自动安全重启，且不会中断运行中的任务。")
         }
     }
     func openTerminal(command: String? = nil) {

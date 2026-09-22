@@ -1,7 +1,7 @@
-import importlib.util, io, json, os, pathlib, tempfile, threading, unittest
+import importlib.util, io, json, os, pathlib, subprocess, sys, tempfile, threading, time, unittest
 from unittest.mock import patch
 
-folder=tempfile.TemporaryDirectory(); os.environ['AWB_NATIVE_ROOT']=folder.name
+folder=tempfile.TemporaryDirectory(); unittest.addModuleCleanup(folder.cleanup); os.environ['AWB_NATIVE_ROOT']=folder.name
 spec=importlib.util.spec_from_file_location('broker',pathlib.Path(__file__).with_name('native-agent-service.py'))
 broker=importlib.util.module_from_spec(spec); spec.loader.exec_module(broker)
 
@@ -661,6 +661,111 @@ class HandlerContractTests(unittest.TestCase):
         self.assertEqual(self.s.snapshot()['commandResult']['error'],'nothing to compact')
         self.assertIsNone(self.s.state['error'])
 
+class UpgradeLifecycleTests(unittest.TestCase):
+    legacy_server = r'''
+import json, os, pathlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+root=pathlib.Path(os.environ['AWB_NATIVE_ROOT'])
+token='legacy-token'
+busy=os.environ.get('LEGACY_BUSY')=='1'
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self,*args): pass
+    def do_GET(self):
+        if self.headers.get('Authorization')!='Bearer '+token:
+            body={'error':'Unauthorized'}; status=401
+        elif self.path=='/health': body={'version':1}; status=200
+        elif self.path=='/sessions': body={'sessions':[{'id':'legacy-session','busy':busy,'pending':0}]}; status=200
+        elif self.path=='/sessions/legacy-session': body={'id':'legacy-session','busy':busy,'pending':0}; status=200
+        else: body={'error':'unknown'}; status=404
+        data=json.dumps(body).encode(); self.send_response(status); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
+server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+(root/'endpoint.json').write_text(json.dumps({'port':server.server_port,'token':token,'pid':os.getpid()}))
+server.serve_forever()
+'''
+    def endpoint(self, directory, pid=1234):
+        value={'port':43210,'token':'fixture-token','pid':pid}
+        path=pathlib.Path(directory)/'endpoint.json'; path.write_text(json.dumps(value))
+        return path,value
+    def test_current_service_is_reused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            with patch.object(broker,'endpoint_request',return_value={'version':broker.SERVICE_VERSION}), patch.object(broker.os,'kill') as kill:
+                self.assertEqual(broker.reusable_endpoint(path),endpoint)
+                kill.assert_not_called()
+    def test_active_legacy_service_is_preserved(self):
+        sessions=({'id':'s','busy':True,'pending':0},{'id':'s','busy':False,'pending':1})
+        sessions+=tuple({'id':'s','busy':False,'pending':0,'turnState':state}
+            for state in ('submitting','submitted','accepted','running'))
+        for session in sessions:
+            with self.subTest(session=session), tempfile.TemporaryDirectory() as directory:
+                path,endpoint=self.endpoint(directory)
+                responses=[{'version':broker.SERVICE_VERSION-1},{'sessions':[session]}]
+                with patch.object(broker,'endpoint_request',side_effect=responses), patch.object(broker.os,'kill') as kill:
+                    self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':1})
+                    kill.assert_not_called()
+    def test_running_legacy_command_is_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            summary={'id':'s','busy':False,'pending':0,'turnState':'completed'}
+            snapshot=summary|{'commandResult':{'status':'running'}}
+            responses=[{'version':1},{'sessions':[summary]},snapshot]
+            with patch.object(broker,'endpoint_request',side_effect=responses), patch.object(broker.os,'kill') as kill:
+                self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':1})
+                kill.assert_not_called()
+    def test_unverifiable_legacy_service_is_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            with patch.object(broker,'endpoint_request',side_effect=[{'version':1},OSError('unavailable')]), patch.object(broker.os,'kill') as kill:
+                self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':-1})
+                kill.assert_not_called()
+    def test_idle_legacy_service_is_retired(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,_=self.endpoint(directory)
+            idle={'id':'s','busy':False,'pending':0,'turnState':'completed'}
+            responses=[{'version':1},{'sessions':[idle]},idle,ConnectionRefusedError()]
+            with patch.object(broker,'endpoint_request',side_effect=responses), patch.object(broker.os,'kill') as kill, patch.object(broker.time,'sleep'):
+                self.assertIsNone(broker.reusable_endpoint(path))
+                kill.assert_called_once_with(1234,broker.signal.SIGTERM)
+    def start_legacy(self, directory, busy=False):
+        env=dict(os.environ,AWB_NATIVE_ROOT=directory,LEGACY_BUSY='1' if busy else '0')
+        process=subprocess.Popen([sys.executable,'-c',self.legacy_server],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
+        path=pathlib.Path(directory)/'endpoint.json'
+        for _ in range(100):
+            if process.poll() is not None:
+                error=process.stderr.read(); process.stderr.close(); self.fail(error)
+            try:
+                endpoint=json.loads(path.read_text())
+                if broker.endpoint_request(endpoint,'/health')['version']==1: return process,path
+            except Exception: time.sleep(.02)
+        process.terminate(); process.wait(timeout=2); process.stderr.close()
+        self.fail('legacy fixture did not start')
+    def stop_endpoint(self, endpoint):
+        try: os.kill(endpoint['pid'],broker.signal.SIGTERM)
+        except ProcessLookupError: return
+        for _ in range(100):
+            try: broker.endpoint_request(endpoint,'/health',timeout=.1)
+            except Exception: return
+            time.sleep(.02)
+        self.fail('service did not stop')
+    def test_ensure_replaces_an_idle_legacy_process_end_to_end(self):
+        with tempfile.TemporaryDirectory() as directory:
+            legacy,path=self.start_legacy(directory); endpoint=None
+            try:
+                env=dict(os.environ,AWB_NATIVE_ROOT=directory)
+                script=pathlib.Path(__file__).with_name('native-agent-service.py')
+                result=subprocess.run([sys.executable,str(script),'--ensure'],env=env,capture_output=True,text=True,timeout=15)
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertEqual(result.stderr,'')
+                endpoint=json.loads(result.stdout)
+                self.assertEqual(broker.endpoint_request(endpoint,'/health')['version'],broker.SERVICE_VERSION)
+                legacy.wait(timeout=2)
+            finally:
+                try:
+                    if endpoint is not None: self.stop_endpoint(endpoint)
+                finally:
+                    if legacy.poll() is None: legacy.terminate()
+                    legacy.wait(timeout=2); legacy.stderr.close()
+
 class SetupTests(unittest.TestCase):
     def result(self, stdout='', code=0):
         return type('Result', (), {'returncode': code, 'stdout': stdout, 'stderr': ''})()
@@ -695,7 +800,7 @@ class SetupTests(unittest.TestCase):
             status = broker.setup_status('omp')
         self.assertEqual(status['modelCheck'], 'configured')
         self.assertEqual(len(status['models']), 1)
-        with patch.object(broker, 'MODELS', None), patch.object(broker, 'dsh_catalog', return_value=[]), patch.object(broker.subprocess, 'run', return_value=self.result(json.dumps(catalog))):
+        with patch.object(broker, 'MODELS', None), patch.object(broker, 'dsh_catalog', return_value=[]), patch.object(broker, 'codex_catalog', return_value=[]), patch.object(broker.subprocess, 'run', return_value=self.result(json.dumps(catalog))):
             models = broker.combined_catalog()
         self.assertEqual(models[0]['id'], 'fixture')
         self.assertEqual(models[0]['thinking'], ['high'])

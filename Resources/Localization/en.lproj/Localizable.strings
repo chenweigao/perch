@@ -445,7 +445,7 @@
 "安装 / 更新桥接组件" = "Install / update bridge";
 "安装 Agent" = "Install agent";
 "安装 Kimi，并确保非交互 SSH 可以运行 kimi --version。" = "Install Kimi and make sure kimi --version works through non-interactive SSH.";
-"安装或更新 Perch 桥接组件后重新检查。正在运行的旧服务需等任务结束后再手动重启。" = "Install or update the Perch bridge and check again. Wait for tasks to finish before manually restarting an older running service.";
+"安装或更新 Perch 桥接组件后重新检查。空闲的旧服务会自动安全重启；有任务运行时会等待任务结束。" = "Install or update the Perch bridge and check again. An idle old service restarts automatically; a busy service waits for its tasks to finish.";
 "安装说明" = "Installation guide";
 "已检测到远端凭据；模型目录在首次 ACP 会话握手时读取，鉴权在发送时验证。" = "Remote credentials are present. Models are read during the first ACP session handshake; authentication is verified when sending.";
 "开始任务" = "Start task";
@@ -455,6 +455,8 @@
 "服务连接" = "Service connection";
 "服务连接超时。检查远端服务是否正在运行，以及 SSH 是否允许端口转发。" = "Service connection timed out. Check that the remote service is running and SSH allows forwarding.";
 "未找到可运行的 Agent。安装后请确认 SSH 命令可以读取其版本。" = "No runnable agent was found. After installing it, make sure its version command works over SSH.";
+"桥接组件已更新，但远端仍有任务运行。任务结束后重新检查；Perch 会自动安全重启服务。" = "The bridge update is installed, but remote tasks are still running. Check again after they finish; Perch will restart the service safely.";
+"桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。" = "The bridge update is installed, but Perch could not verify that the old service is idle. To avoid interrupting tasks, restart the bridge manually in the remote terminal.";
 "桥接进程未读取到 DEEPSEEK_API_KEY。请在远端配置服务环境；若桥已运行，等任务结束后重启再检查。" = "The bridge has no DEEPSEEK_API_KEY. Configure the remote service environment. If the bridge is running, wait for tasks to finish before restarting and checking again.";
 "检查 Agent" = "Check agent";
 "检查 SSH 别名或主机名；端口、用户名和跳板机可配置在 ~/.ssh/config。" = "Check the SSH alias or hostname. Set the port, user and jump host in ~/.ssh/config.";
@@ -472,7 +474,8 @@
 "登录 / 配置模型…" = "Sign in / configure models…";
 "目录可访问" = "Directory accessible";
 "端口、密钥与跳板机配置在 ~/.ssh/config。首次连接需在终端确认主机指纹；需要口令的密钥请先加入 SSH agent。" = "Configure ports, keys and jump hosts in ~/.ssh/config. Confirm the host fingerprint in Terminal on first connection. Add passphrase-protected keys to your SSH agent.";
-"组件已安装。请重新检查。已有服务不会被终止；旧版本需等任务结束后手动重启。" = "Components installed. Check again. Existing services remain running; wait for tasks to finish before manually restarting an older version.";
+"请更新原生对话桥接服务后重新连接" = "Update the native conversation bridge, then reconnect.";
+"组件已安装。请重新检查；Perch 会在旧服务空闲时自动安全重启，且不会中断运行中的任务。" = "Components installed. Check again; Perch will safely restart the old service when it is idle without interrupting running tasks.";
 "终端中的 Agent 与模型由你使用的 CLI 管理。" = "Agents and models in a terminal are managed by your CLI.";
 "绝对路径" = "Absolute path";
 "继续" = "Continue";

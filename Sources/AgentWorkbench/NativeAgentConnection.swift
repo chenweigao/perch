@@ -105,6 +105,12 @@ final class NativeAgentConnection: ObservableObject {
             command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
+        if let pending = endpoint["restartPending"].int {
+            if pending > 0 {
+                throw WorkbenchError(L("桥接组件已更新，但远端仍有任务运行。任务结束后重新检查；Perch 会自动安全重启服务。"))
+            }
+            throw WorkbenchError(L("桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。"))
+        }
         guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError("原生对话托管服务未安装或不可用") }
         let local = try KimiAPI.availableLoopbackPort()
         let folder = URL(fileURLWithPath: "/tmp/awb-native-\(UUID().uuidString.prefix(10))")
@@ -120,7 +126,7 @@ final class NativeAgentConnection: ObservableObject {
             if FileManager.default.fileExists(atPath: control) {
                 api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(local)")!, token: secret)
                 let health: JSONValue = try await request("/health")
-                guard health["version"].int == 2 else { throw WorkbenchError("请更新原生对话桥接服务后重新连接") }
+                guard health["version"].int == 2 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
