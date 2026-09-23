@@ -409,7 +409,19 @@ struct NewConversationSheet: View {
     }
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
-    private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
+    private var recent: [String] { recentDirectories(for: kimi.host.id) }
+    /// Directory defaults stay scoped to their host: a path valid on one machine
+    /// does not exist on another, so the selected session and the last-used
+    /// directory must not leak across environments.
+    private func recentDirectories(for hostID: UUID) -> [String] {
+        Array(Set(model.allSessions.filter { $0.reference.hostID == hostID }.map(\.directory).filter { $0.hasPrefix("/") })).sorted()
+    }
+    private func savedDirectoryKey(for hostID: UUID) -> String { "new.cwd.\(hostID.uuidString)" }
+    private func defaultDirectory(for hostID: UUID) -> String {
+        if let selected = model.selectedItem, selected.reference.hostID == hostID { return selected.directory }
+        if let saved = UserDefaults.standard.string(forKey: savedDirectoryKey(for: hostID)) { return saved }
+        return recentDirectories(for: hostID).first ?? ""
+    }
     private var codexModels: [AgentModel] { native.models(for: .codex) }
     private var nativeModelOptions: [ModelOption] { ModelCatalog.options(native.models(for: provider)) }
     private var showsNativePicker: Bool { (provider == .omp || provider == .dsh) && !nativeModelOptions.isEmpty }
@@ -461,7 +473,11 @@ struct NewConversationSheet: View {
                 ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                 Menu {
                     ForEach(model.connections) { connection in
-                        Button { agentModel = ""; model.activateAgentEnvironment(connection.id) } label: {
+                        Button {
+                            agentModel = ""
+                            model.activateAgentEnvironment(connection.id)
+                            cwd = defaultDirectory(for: connection.id)
+                        } label: {
                             Label { Text(connection.host.name) } icon: { HostIdentityIcon.menuImage(for: connection.id) }
                                 .labelStyle(.titleAndIcon)
                         }
@@ -603,7 +619,7 @@ struct NewConversationSheet: View {
                     provider = groupItem?.reference.kind ?? model.selectedReference?.kind ?? .kimi
                     if provider == .terminal { provider = .kimi }
                     if let host = groupItem?.reference.hostID { model.activateAgentEnvironment(host) }
-                    cwd = groupItem?.directory ?? model.selectedItem?.directory ?? UserDefaults.standard.string(forKey: "new.cwd") ?? recent.first ?? ""
+                    cwd = groupItem?.directory ?? defaultDirectory(for: model.kimi.host.id)
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
                 }
                 if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
@@ -645,7 +661,7 @@ struct NewConversationSheet: View {
                 }
                 UserDefaults.standard.set(try JSONEncoder().encode(defaults), forKey: defaultsKey)
                 UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
-                UserDefaults.standard.set(directory, forKey: "new.cwd")
+                UserDefaults.standard.set(directory, forKey: savedDirectoryKey(for: kimi.host.id))
                 prompt = ""; attachments = []; dismiss()
             } catch { self.error = error.localizedDescription; creating = false }
         }
