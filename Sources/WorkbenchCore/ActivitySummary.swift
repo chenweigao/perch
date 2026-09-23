@@ -122,13 +122,7 @@ public struct ActivitySummaryBatch: Hashable {
     }
 
     private static func commandCategory(_ tool: VisibleTool) -> String? {
-        guard let command = tool.input?["command"].string?.lowercased() else { return nil }
-        let executable = command.split(whereSeparator: \.isWhitespace).first.map { ($0 as NSString).lastPathComponent } ?? ""
-        if command.contains(" test") || ["pytest", "xctest"].contains(executable) { return "test" }
-        if command.contains(" lint") || executable.contains("lint") { return "lint" }
-        if command.contains(" build") || ["xcodebuild", "swiftc"].contains(executable) { return "build" }
-        if executable == "git" { return "git" }
-        return nil
+        ShellActivity.command(tool).flatMap(ShellActivity.parse)?.category
     }
 }
 
@@ -234,7 +228,7 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
         var body: [String: Any] = [
             "model": configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
             "messages": [["role": "system", "content": instructions], ["role": "user", "content": input]],
-            "stream": false, "temperature": 0, "max_tokens": 180
+            "stream": false, "temperature": 0, "max_tokens": 512
         ]
         if configuration.disableThinking { body["chat_template_kwargs"] = ["enable_thinking": false] }
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.withoutEscapingSlashes])
@@ -259,13 +253,13 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
     }
 
     public static func responseText(_ data: Data) throws -> String {
-        String(try completionText(data).prefix(240))
+        try completionText(data)
     }
 
     public static func responseResult(_ data: Data, evidenceIDs: Set<String>) throws -> ActivitySummaryResult {
         let text = try completionText(data)
         guard let payload = jsonPayload(text) else {
-            return ActivitySummaryResult(subject: "", phase: .mixed, summary: String(text.prefix(240)))
+            return ActivitySummaryResult(subject: "", phase: .mixed, summary: text)
         }
         guard let result = try? JSONDecoder().decode(ModelResult.self, from: payload),
               let phase = result.phase,
@@ -277,7 +271,7 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
         }.prefix(3)
         return ActivitySummaryResult(
             subject: String((result.subject ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)),
-            phase: phase, summary: String(summary.prefix(240)), evidenceIDs: Array(evidence),
+            phase: phase, summary: summary, evidenceIDs: Array(evidence),
             shouldUpdate: result.shouldUpdate ?? true)
     }
 

@@ -12,11 +12,14 @@ struct ActivityNarrativeHistoryView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(narrative.headline).font(.system(size: 12, weight: .medium))
+                    .fixedSize(horizontal: false, vertical: true)
                 if let detail = narrative.detail, !detail.isEmpty {
                     Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
+        .textSelection(.enabled)
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: [narrative.headline, narrative.detail]
@@ -55,6 +58,9 @@ struct KimiActivityView: View {
                         if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
                     }.font(.system(size: 12)).foregroundStyle(.secondary)
                 }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
+            }
+            if expanded, let narrative {
+                ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, 20)
             }
             // Each phase contains one part. Offset identity also handles thoughts
             // and tools originating in the same provider message without collisions.

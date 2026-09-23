@@ -32,14 +32,11 @@ public enum ToolPresentation {
 
     /// Compact display only. The full command remains in the tooltip and input.
     public static func compactTarget(_ tool: VisibleTool) -> String {
-        if let command = tool.input?["command"].string {
+        if let command = ShellActivity.command(tool) {
             if let description = tool.input?["description"].string, !description.isEmpty {
-                return String(description.prefix(80))
+                return description
             }
-            let words = command.split(maxSplits: 2, whereSeparator: \.isWhitespace)
-            guard let first = words.first else { return tool.name }
-            let executable = (String(first) as NSString).lastPathComponent
-            return String((executable == "git" ? words.prefix(2).joined(separator: " ") : executable).prefix(80))
+            return ShellActivity.parse(command)?.compactTarget ?? L("准备命令环境")
         }
         return target(tool)
     }

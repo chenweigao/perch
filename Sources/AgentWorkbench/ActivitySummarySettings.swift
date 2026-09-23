@@ -21,11 +21,14 @@ import WorkbenchCore
     }
     func save(_ value: ActivitySummaryConfiguration, apiKey: String) async throws {
         if value.enabled && !value.isValid { throw ActivitySummaryError.configuration }
-        let data = try JSONEncoder().encode(value)
         try await Task.detached(priority: .utility) {
             try ActivitySummaryCredential.write(apiKey)
         }.value
-        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+        try updateConfiguration(value)
+    }
+    func updateConfiguration(_ value: ActivitySummaryConfiguration) throws {
+        if value.enabled && !value.isValid { throw ActivitySummaryError.configuration }
+        UserDefaults.standard.set(try JSONEncoder().encode(value), forKey: Self.defaultsKey)
         configuration = value
         revision += 1
     }
@@ -141,7 +144,13 @@ struct ActivitySummarySettingsSheet: View {
             do {
                 let result = try await ActivitySummaryClient().summarize(configuration: config, apiKey: key,
                     batch: .init(groupID: "example", tools: tools, closed: true), language: AppLanguage.current.localization)
-                if !Task.isCancelled { testResult = result.summary }
+                guard !Task.isCancelled else { return }
+                testResult = L("摘要测试通过：\(result.summary)")
+                if config.nameSessions {
+                    let name = try await SessionNamingClient().name(configuration: config, apiKey: key,
+                        excerpt: "Improve the model picker in a sample coding app", language: AppLanguage.current.localization)
+                    if !Task.isCancelled { testResult = L("摘要与自动命名测试通过。示例名称：\(name)") }
+                }
             } catch {
                 if !Task.isCancelled { self.error = error.localizedDescription }
             }

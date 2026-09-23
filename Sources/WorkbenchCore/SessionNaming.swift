@@ -6,7 +6,8 @@ import Foundation
 public enum SessionNaming {
     /// First user-typed text, trimmed and bounded. Messages that only carry
     /// runtime context, compaction summaries or attachments produce no candidate.
-    public static func excerpt(from messages: [KimiMessage], limit: Int = 400) -> String? {
+    public static func excerpt(from messages: [KimiMessage], limit: Int = 400, hasOlder: Bool = false) -> String? {
+        guard !hasOlder else { return nil }
         for message in messages where message.role == "user" && !message.isCompactionSummary {
             let text = message.content.filter { $0.type == "text" && !$0.isRuntimeContext }
                 .compactMap(\.text).joined(separator: " ")
@@ -72,7 +73,7 @@ public final class SessionNamingClient: NSObject, URLSessionTaskDelegate, @unche
         var body: [String: Any] = [
             "model": configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
             "messages": [["role": "system", "content": instructions], ["role": "user", "content": excerpt]],
-            "stream": false, "temperature": 0, "max_tokens": 60
+            "stream": false, "temperature": 0, "max_tokens": 160
         ]
         if configuration.disableThinking { body["chat_template_kwargs"] = ["enable_thinking": false] }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
