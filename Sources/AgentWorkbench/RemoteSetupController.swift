@@ -25,6 +25,7 @@ final class RemoteSetupController: ObservableObject {
     @Published private(set) var checks: [Check] = []
     @Published private(set) var busy = false
     @Published private(set) var ready = false
+    @Published private(set) var awaitingInstallCheck = false
     @Published private(set) var error: String?
     @Published private(set) var hint = ""
     @Published private(set) var failedCheck: String?
@@ -40,6 +41,7 @@ final class RemoteSetupController: ObservableObject {
     private var kimi: KimiConnection?
     private var native: NativeAgentConnection?
     private var terminal: HostConnection?
+    private var kimiBinaryPath = ""
 
     init(host: SSHHost? = nil) {
         original = host; hostID = host?.id ?? UUID()
@@ -58,6 +60,10 @@ final class RemoteSetupController: ObservableObject {
     var needsBridge: Bool { [.omp, .qoder, .dsh, .codex, .claude].contains(provider) }
     var canContinue: Bool { ready && !busy }
     var canFinish: Bool { projectVerified && ready && !busy }
+    var checkAgentTitle: String {
+        if awaitingInstallCheck { return L("已安装，重新检查") }
+        return ready ? L("重新检查") : L("检查 Agent")
+    }
     var launch: TaskLaunchDefaults { TaskLaunchDefaults(hostID: hostID, provider: provider, directory: directory, model: modelID) }
     var installURL: URL {
         switch provider {
@@ -82,7 +88,7 @@ final class RemoteSetupController: ObservableObject {
     }
     var loginCommand: String {
         switch provider {
-        case .kimi: return "kimi"
+        case .kimi: return kimiBinaryPath.isEmpty ? "kimi" : SSHCommand.quote(kimiBinaryPath)
         case .omp: return "omp"
         case .qoder: return "qoderclicn"
         case .codex: return "codex login"
@@ -93,13 +99,14 @@ final class RemoteSetupController: ObservableObject {
     }
     func invalidateAgent() {
         cancel(); ready = false; verifiedDirectory = nil; checks = []; models = []; modelID = ""
+        awaitingInstallCheck = false; kimiBinaryPath = ""
         error = nil; hint = ""; failedCheck = nil
     }
     func invalidateProject() { error = nil }
     func back() {
-        cancel(); error = nil; hint = ""; failedCheck = nil
+        cancel(); error = nil; hint = ""; failedCheck = nil; awaitingInstallCheck = false
         if step == .project { step = .agent; verifiedDirectory = nil }
-        else { step = .machine; ready = false; checks = [] }
+        else { step = .machine; ready = false; checks = []; kimiBinaryPath = "" }
     }
     func cancel() {
         task?.cancel(); task = nil; disconnectProbes(); busy = false
@@ -148,16 +155,18 @@ final class RemoteSetupController: ObservableObject {
     private func mark(_ id: String, _ status: Status, _ detail: String = "") {
         if let index = checks.firstIndex(where: { $0.id == id }) { checks[index].status = status; checks[index].detail = detail }
     }
-    private func awaitConnection(online: () -> Bool, error: () -> String?) async throws {
+    private func awaitConnection(allowRetries: Bool = false, online: () -> Bool, error: () -> String?) async throws {
         for _ in 0..<350 {
             try Task.checkCancellation()
             if online() { return }
-            if let error = error() { throw WorkbenchError(error) }
+            if !allowRetries, let error = error() { throw WorkbenchError(error) }
             try await Task.sleep(for: .milliseconds(100))
         }
+        if let error = error() { throw WorkbenchError(error) }
         throw WorkbenchError(L("服务连接超时。检查远端服务是否正在运行，以及 SSH 是否允许端口转发。"))
     }
     func checkAgent() {
+        awaitingInstallCheck = false
         run {
             self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
             try RemoteSetup.validate(self.host)
@@ -170,16 +179,40 @@ final class RemoteSetupController: ObservableObject {
             self.ready = true
         }
     }
-    private func checkKimi() async throws {
+    private func checkKimiRuntime() async throws -> KimiRuntime {
+        kimiBinaryPath = ""
         mark("runtime", .checking)
-        hint = L("安装 Kimi，并确保非交互 SSH 可以运行 kimi --version。")
-        let version = try await ssh("command -v kimi >/dev/null && kimi --version")
+        hint = L("正在检查远端 Kimi 与运行环境。")
+        let output = try await ssh(RemoteSetup.kimiRuntimeProbeCommand)
         try Task.checkCancellation()
-        mark("runtime", .passed, String(decoding: version, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
+        switch RemoteSetup.parseKimiRuntimeProbe(output) {
+        case .ready(let runtime):
+            kimiBinaryPath = runtime.path
+            let suffix = runtime.source == .npmPrefix ? " · " + L("npm 全局目录") : ""
+            mark("runtime", .passed, runtime.version.trimmingCharacters(in: .whitespacesAndNewlines) + suffix)
+            return runtime
+        case .missing(let prefix):
+            let location = prefix.map { "\($0)/bin" } ?? L("npm 全局目录")
+            throw WorkbenchError(L("未找到 Kimi。已检查非交互 SSH PATH 和 \(location)，请安装后重新检查。"))
+        case .npmMissing:
+            throw WorkbenchError(L("未找到 Kimi 或 npm。请先安装 Node.js 22.19+ 与 npm，再安装 Kimi。"))
+        case .nodeMissing:
+            throw WorkbenchError(L("已找到 npm，但未找到 Node.js。请安装 Node.js 22.19 或更高版本。"))
+        case .nodeTooOld(let version):
+            throw WorkbenchError(L("远端 Node.js \(version) 版本过低；Kimi 2.0.2 需要 Node.js 22.19 或更高版本。"))
+        case .npmFailed:
+            throw WorkbenchError(L("无法读取远端 npm 全局安装目录。请运行 npm prefix -g 检查 npm 配置。"))
+        case .unusable(let path, let reason):
+            throw WorkbenchError(L("Kimi 可执行文件 \(path) 无法运行：\(reason)"))
+        case .invalid:
+            throw WorkbenchError(L("无法识别远端 Kimi 检查结果。请在终端运行 kimi --version。"))
+        }
+    }
+    private func checkKimiServiceAndModels(allowRetries: Bool = false) async throws {
         mark("service", .checking)
-        hint = L("启动 Kimi Web 后重新检查；已有服务请核对高级设置中的端口与令牌路径。")
+        hint = L("正在连接 Kimi Web；已有服务请核对高级设置中的端口与令牌路径。")
         let connection = KimiConnection(setupHost: host); kimi = connection; connection.connect()
-        try await awaitConnection(online: { connection.online }, error: { connection.error })
+        try await awaitConnection(allowRetries: allowRetries, online: { connection.online }, error: { connection.error })
         mark("service", .passed, "127.0.0.1:\(host.kimiPort)")
         mark("models", .checking)
         models = ModelCatalog.options(connection.models)
@@ -188,6 +221,10 @@ final class RemoteSetupController: ObservableObject {
         if !models.contains(where: { $0.id == modelID }) { modelID = models.first?.id ?? "" }
         mark("models", .passed, L("模型列表已读取；实际模型鉴权将在首条消息时验证。"))
         hint = ""
+    }
+    private func checkKimi() async throws {
+        _ = try await checkKimiRuntime()
+        try await checkKimiServiceAndModels()
     }
     private func checkNative() async throws {
         mark("runtime", .checking)
@@ -282,11 +319,18 @@ final class RemoteSetupController: ObservableObject {
         }
     }
     func startKimi() {
+        awaitingInstallCheck = false
         run {
+            self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
             try RemoteSetup.validate(self.host)
-            _ = try await self.ssh(RemoteSetup.kimiStartCommand(port: self.host.kimiPort))
+            defer { if !Task.isCancelled { self.disconnectProbes() } }
+            let runtime = try await self.checkKimiRuntime()
+            self.hint = L("正在启动并连接 Kimi Web。")
+            _ = try await self.ssh(RemoteSetup.kimiStartCommand(binaryPath: runtime.path, port: self.host.kimiPort))
             try Task.checkCancellation()
-            self.hint = L("启动命令已提交。请重新检查连接；启动日志位于远端 ~/.local/state/perch/kimi-web.log。")
+            try await self.checkKimiServiceAndModels(allowRetries: true)
+            try Task.checkCancellation()
+            self.ready = true
         }
     }
     func installBridge() {
@@ -302,7 +346,14 @@ final class RemoteSetupController: ObservableObject {
             self.hint = L("组件已安装。请重新检查；Perch 会在旧服务空闲时自动安全重启，且不会中断运行中的任务。")
         }
     }
+    func openInstallTerminal() {
+        guard let command = installCommand else { return }
+        launchTerminal(command: command, awaitingInstall: true)
+    }
     func openTerminal(command: String? = nil) {
+        launchTerminal(command: command, awaitingInstall: false)
+    }
+    private func launchTerminal(command: String?, awaitingInstall: Bool) {
         do {
             let shell = try RemoteSetup.terminalCommand(destination: destination, command: command)
             let literal = shell.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -310,7 +361,12 @@ final class RemoteSetupController: ObservableObject {
             run {
                 _ = try await SetupCommandRunner.run("/usr/bin/osascript", ["-e", "tell application \"Terminal\"\nactivate\ndo script \"\(literal)\"\nend tell"])
                 try Task.checkCancellation()
-                self.hint = L("在终端完成操作后，返回 Perch 重新检查。")
+                if awaitingInstall {
+                    self.awaitingInstallCheck = true
+                    self.hint = L("终端安装完成后，返回此处选择“已安装，重新检查”。")
+                } else {
+                    self.hint = L("在终端完成操作后，返回 Perch 重新检查。")
+                }
             }
         } catch { self.error = error.localizedDescription }
     }

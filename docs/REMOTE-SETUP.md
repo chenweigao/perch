@@ -24,6 +24,12 @@ controls. This takes inspiration from [Codex's SSH connection workflow](https://
   dsh's model handshake are explicitly reported as first-message/session checks.
 - Failed/cancelled checks cannot save a host or open a task. Remote installation
   and service startup are explicit buttons; cancellation does not undo them.
+- Kimi detection first uses the non-interactive SSH `PATH`, then checks
+  `npm prefix -g` for the installed executable. It does not modify remote shell
+  startup files. After an external Terminal installation, the setup button makes
+  the required recheck explicit.
+- Starting Kimi Web uses the executable path found by that probe, waits for the
+  service connection, and continues through the model check in the same action.
 - The same machine UUID, agent, checked project path and selected model are
   passed to the existing task composer. No duplicate task-creation path is added.
 - Removing a machine only disconnects the Mac and removes the local entry. The
@@ -52,8 +58,9 @@ python3 scripts/check-host-lifecycle.py
 ```
 
 WorkbenchChecks covers endpoint migration, shell quoting, SSH validation,
-whitespace in remote directory names, check cancellation and timeouts. The host
-lifecycle executable uses isolated preferences and checks empty first run, setup
+Kimi discovery through both `PATH` and the npm global prefix, safe startup using
+the discovered path, whitespace in remote directory names, check cancellation
+and timeouts. The host lifecycle executable uses isolated preferences and checks empty first run, setup
 handoff, endpoint/draft persistence, probe isolation and last-host removal.
 
 Manual interaction checks on macOS: start with isolated preferences; connect a
