@@ -180,6 +180,10 @@ final class NativeAgentConnection: ObservableObject {
         }
         drainQueues()
     }
+    /// Only the selected session's messages are held, so other sessions offer nothing.
+    func loadedMessages(for id: String) -> [KimiMessage]? {
+        snapshot?.id == id ? snapshot?.messages : nil
+    }
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
         selectedID = id; snapshot = nil; actionError = nil

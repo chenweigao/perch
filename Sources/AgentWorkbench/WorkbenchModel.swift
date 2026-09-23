@@ -669,6 +669,17 @@ final class WorkbenchModel: ObservableObject {
         }
         rebuildCatalog(); saveWorkspace()
     }
+    /// Excerpt for a user-triggered name suggestion, from messages already
+    /// loaded locally; a session never opened this launch offers nothing.
+    func namingExcerpt(for reference: SessionReference) -> String? {
+        let messages: [KimiMessage]?
+        switch reference.kind {
+        case .kimi: messages = kimiEnvironments[reference.hostID]?.loadedMessages(for: reference.terminalID)
+        case .terminal: messages = nil
+        default: messages = nativeEnvironments[reference.hostID]?.loadedMessages(for: reference.terminalID)
+        }
+        return messages.flatMap { SessionNaming.excerpt(from: $0) }
+    }
     /// One automatic naming attempt per session, only while its remote title
     /// is still a placeholder. Kimi waits for the first completed turn so a
     /// server-side title wins the race; native bridge titles never improve.
