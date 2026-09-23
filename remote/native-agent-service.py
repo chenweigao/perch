@@ -121,6 +121,25 @@ def save(path, value):
     tmp = path.with_suffix('.tmp')
     tmp.write_text(json.dumps(value, ensure_ascii=False)); tmp.replace(path)
 
+def codex_spawn_env():
+    env = dict(os.environ)
+    if any(env.get(key) for key in ('http_proxy', 'https_proxy', 'all_proxy',
+                                    'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY')): return env
+    try:
+        urllib.request.urlopen('http://127.0.0.1:9090/version', timeout=1).close()
+        values = {}
+        for line in (pathlib.Path.home()/'proxy.env').read_text().splitlines():
+            line = line.strip()
+            if line.startswith('export '): line = line[7:].lstrip()
+            if not line or line.startswith('#') or '=' not in line: continue
+            key, _, val = line.partition('=')
+            val = val.strip().strip('"\'')
+            if val.startswith('$'): val = values.get(val[1:], '')
+            if val: values[key.strip()] = val
+        env.update(values)
+    except Exception: pass
+    return env
+
 class CodexAppServer:
     def __init__(self, cwd, on_frame=None, on_exit=None, stderr_path=None):
         binary = shutil.which('codex')
@@ -130,7 +149,7 @@ class CodexAppServer:
         self.pending = {}; self.next_id = 0; self.frames = queue.Queue()
         self.stderr = open(stderr_path, 'a') if stderr_path else subprocess.DEVNULL
         self.process = subprocess.Popen([binary,'app-server','--listen','stdio://'],cwd=cwd,
-            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True)
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True,env=codex_spawn_env())
         threading.Thread(target=self.dispatch,daemon=True).start()
         threading.Thread(target=self.read,daemon=True).start()
 
