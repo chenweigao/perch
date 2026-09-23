@@ -103,7 +103,10 @@ func checkActivitySummaries() throws {
     let currentTurn = ActivitySummaryBatch.latest(in: twoTurns, tools: available, isRunning: true, enabled: true)
     precondition(currentTurn?.userRequest == "Check the UI too", "Only the current turn request should be sent")
     let longBoundary: [String: Any] = ["id": "long-request", "role": "user", "created_at": "", "content": [
-        ["type": "text", "text": String(repeating: "word \n", count: 120)]]]
+        // The excerpt prefixes 480 raw chars before normalizing; a 6-char unit
+        // like "word \n" divides 480 exactly, lands on a token boundary and
+        // normalizes to 399 chars, so truncation to 400 never engages.
+        ["type": "text", "text": String(repeating: "words \n", count: 120)]]]
     let longRequestTurn = ConversationTimelineEntry.make(try messages(
         [longBoundary] + (12..<18).map { read($0) }), isRunning: true)
     let requestExcerpt = ActivitySummaryBatch.latest(in: longRequestTurn, tools: available, isRunning: true, enabled: true)?.userRequest
