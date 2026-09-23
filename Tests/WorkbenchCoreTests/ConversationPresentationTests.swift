@@ -122,6 +122,22 @@ func checkConversationPresentation() throws {
     [{"id":"prose","role":"user","created_at":"5","content":[{"type":"text","text":"第一行说明\n第二行说明\n<skill-loaded name=\"x\">body</skill-loaded>"}]}]
     """#)
     precondition(prose[0].content[0].skillContextSplit == nil, "Only a single summary line may fold; multi-line prose stays literal")
+    // A Skill tool result is injected as a note line ahead of a
+    // `trigger="model-tool"` block. The Skill call already shows in the process
+    // record, so the whole injection folds as runtime context: no user bubble,
+    // no turn boundary, no excerpts — while user-slash activations stay visible.
+    let toolLoad = try messages(#"""
+    [{"id":"toolload","role":"user","created_at":"6","content":[{"type":"text","text":"Skill tool loaded instructions for this request. Follow them.\n\n<skill-loaded name=\"check-kimi-code-docs\" trigger=\"model-tool\" source=\"builtin\" dir=\"builtin://check-kimi-code-docs\" args=\"排查\">private instructions</skill-loaded>"}]}]
+    """#)
+    let toolLoadPart = toolLoad[0].content[0]
+    precondition(toolLoadPart.isRuntimeContext)
+    precondition(toolLoadPart.skillContextSplit == nil && toolLoadPart.visibleText == nil)
+    precondition(!toolLoad[0].isUserPrompt)
+    precondition(ConversationTimelineEntry.make(toolLoad).allSatisfy(\.activity),
+                 "A Skill tool load joins the process record instead of opening a turn")
+    let toolLoadNavigation = ConversationProjection().update(toolLoad + final, isRunning: false).navigation
+    precondition(toolLoadNavigation.isEmpty, "A Skill tool load must not anchor navigation")
+    precondition(SessionNaming.excerpt(from: toolLoad) == nil, "A Skill tool load must not name the session")
     // Attachment metadata arrives as a standalone `<system>…</system>` text part
     // next to the typed prompt and the image. It folds as runtime context while
     // the prompt, turn boundary, excerpts and naming stay anchored on the typed text.
