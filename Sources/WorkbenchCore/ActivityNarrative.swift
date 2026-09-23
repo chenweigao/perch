@@ -222,6 +222,9 @@ public enum ActivityNarrativeProjection {
         }
 
         for entry in currentEntries {
+            // This placeholder reuses the first message for the empty-output UI;
+            // it is not a second observation of that message's tools.
+            guard entry.presentation != .emptyOutput else { continue }
             if entry.presentation == .progress {
                 let text = entry.messages.flatMap(\.content).compactMap(\.visibleText)
                 .map({ ActivityNarrativeSnapshot.clean($0) }).filter({ !$0.isEmpty }).joined(separator: " ")

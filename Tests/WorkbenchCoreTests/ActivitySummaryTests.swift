@@ -242,6 +242,13 @@ func checkActivitySummaries() throws {
     precondition(ActivitySummaryBatch.latest(in: currentStageEntries, tools: currentTools,
                                              isRunning: true, enabled: false) == nil)
 
+    let toolOnlyEnded = try timeline([user(), call("read0"), call("edit1", name: "Edit")], running: false)
+    let endedNarrative = ActivityNarrativeProjection.make(entries: toolOnlyEnded,
+        tools: currentTools, isRunning: false)
+    precondition(endedNarrative.stages.count == 2 && endedNarrative.current?.phase == .editing,
+        "The empty-output placeholder must not replay the first tool as another stage")
+    precondition(Set(endedNarrative.stages.map { $0.narrative.stageID }).count == endedNarrative.stages.count)
+
     let initial = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
                                        tools: [read0, read1], closed: false)
     precondition(initial.shouldRequest(after: nil), "The first meaningful stage can be summarized immediately")
