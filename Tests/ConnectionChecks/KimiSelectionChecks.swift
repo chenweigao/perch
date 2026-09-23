@@ -64,6 +64,19 @@ private final class SelectionProtocol: URLProtocol {
         func message(_ id: String) -> [String: Any] {
             ["id": id, "role": "user", "created_at": "1", "content": [["type": "text", "text": id]]]
         }
+        func task(_ id: String, kind: String, _ description: String, status: String, output: String? = nil) -> [String: Any] {
+            var value: [String: Any] = ["id": id, "session_id": "fixture", "kind": kind, "description": description,
+                                        "status": status, "created_at": "2026-09-23T08:00:00.000Z",
+                                        "run_in_background": true]
+            if kind == "bash" { value["command"] = "npm test" }
+            if let output { value["output_preview"] = output; value["output_bytes"] = output.utf8.count }
+            return value
+        }
+        func turn(_ id: String, _ ordinal: Int) -> [String: Any] {
+            ["kind": "turn", "turnId": id, "ordinal": ordinal, "state": "completed", "prompt": "fixture \(id)",
+             "steps": [["kind": "step", "stepId": "\(id).1", "turnId": id, "ordinal": 1, "state": "completed",
+                        "frames": [["kind": "text", "frameId": "\(id).1.f1", "role": "assistant", "text": "fixture text"]]]]]
+        }
         let result: [String: Any]
         if path == "/api/v1/sessions" {
             result = ["items": [session("a", "catalog"), session("b", "catalog")], "has_more": false]
@@ -85,6 +98,18 @@ private final class SelectionProtocol: URLProtocol {
                 result = ["objective": "Fixture goal", "status": "paused", "turnsUsed": 2, "tokensUsed": 42]
             } else if path.hasSuffix("/messages") {
                 result = ["items": [message(id + "-older")], "has_more": false]
+            } else if path.hasSuffix("/tasks") {
+                result = ["items": [task("task_1", kind: "bash", "运行测试", status: "running"),
+                                    task("task_2", kind: "subagent", "定位输入问题", status: "completed")]]
+            } else if path.hasSuffix("/transcript") {
+                let older = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
+                    .queryItems?.contains { $0.name == "before_turn" } == true
+                result = ["agent_id": "agent_01", "has_more": !older, "seq": older ? 39 : 41,
+                          "items": older ? [turn("t0", 0)] : [turn("t1", 1), turn("t2", 2)]]
+            } else if path.hasSuffix(":cancel") {
+                result = ["cancelled": true]
+            } else if path.contains("/tasks/") {
+                result = task("task_1", kind: "bash", "运行测试", status: "running", output: "PASS: fixture")
             } else { preconditionFailure("Unexpected selection fixture route: \(path)") }
         }
         let envelope: [String: Any] = fail ? ["msg": "fixture unavailable"] : ["code": 0, "data": result]
@@ -107,7 +132,7 @@ private func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "disconnect"] {
+    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "task board", "subagent transcript", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -182,6 +207,61 @@ func checkKimiSelectionIsolation() async throws {
                 precondition(client.drafts["a"] == "fix scrolling", "A created goal must not be created again when retrying its starter")
                 precondition(client.actionError != nil && client.pendingPrompts["a"]?.first?.status == "unknown")
                 precondition(SelectionProtocol.submitted("/api/v1/sessions/a/profile").count == 1)
+            case "task board":
+                client.select("a")
+                let list = "/api/v1/sessions/a/tasks"
+                await ConnectionChecks.settle { client.conversation?.tasks.background.count == 2 }
+                precondition(SelectionProtocol.count(list) == 1, "Selecting a session reads its task list once")
+                precondition(client.conversation?.tasks.background.map(\.id) == ["task_1", "task_2"])
+                precondition(client.conversation?.tasks.backgroundTasks.first?.command == "npm test")
+                precondition(client.conversation?.tasks.runningCount == 1)
+                guard let task = client.conversation?.tasks.background.first else {
+                    throw WorkbenchError("The task list stayed empty")
+                }
+                client.loadTaskOutput(task)
+                await ConnectionChecks.settle { client.conversation?.tasks.outputs["task_1"] != nil }
+                precondition(client.conversation?.tasks.output(of: task) == "PASS: fixture")
+                precondition(SelectionProtocol.count(list + "/task_1") == 1)
+                client.reloadSelected()
+                await ConnectionChecks.settle { SelectionProtocol.count(list) == 2 }
+                precondition(client.conversation?.tasks.outputs["task_1"] == "PASS: fixture",
+                             "A snapshot refresh keeps the tail already read")
+                client.cancelTask(task)
+                await ConnectionChecks.settle { SelectionProtocol.count(list) == 3 && client.stoppingTasks.isEmpty }
+                precondition(SelectionProtocol.submitted(list + "/task_1:cancel").count == 1)
+                precondition(client.stoppingTasks.isEmpty && client.taskListError == nil && client.actionError == nil)
+                precondition(client.conversation?.tasks.background.map(\.id) == ["task_1", "task_2"],
+                             "The list, not the acknowledgement, reports the task state")
+                SelectionProtocol.fail(list, true)
+                await client.refreshTasks()
+                precondition(client.taskListError != nil && client.actionError == nil,
+                             "A failed task read stays out of the session error banner")
+                precondition(client.conversation?.tasks.background.count == 2, "A failed read keeps the last known list")
+                SelectionProtocol.fail(list, false)
+                await client.refreshTasks()
+                precondition(client.taskListError == nil)
+            case "subagent transcript":
+                client.select("a")
+                await ConnectionChecks.settle { client.conversation?.tasks.background.count == 2 }
+                await client.openSubagentTranscript("agent_01")
+                precondition(client.subagentTranscript?.turns.map(\.turnId) == ["t1", "t2"])
+                precondition(client.subagentTranscript?.seq == 41 && client.subagentTranscript?.hasMoreOlder == true)
+                precondition(!client.loadingSubagentTranscript && client.subagentTranscriptError == nil)
+                precondition(SelectionProtocol.count("/api/v1/sessions/a/transcript") == 1)
+                precondition(client.subagentTranscript?.turns.first?.steps?.first?.frames?.first?.text == "fixture text")
+                await client.loadOlderSubagentTurns()
+                precondition(client.subagentTranscript?.turns.map(\.turnId) == ["t0", "t1", "t2"], "Older turns are prepended")
+                precondition(client.subagentTranscript?.seq == 41, "An older page must not move the watermark back")
+                precondition(client.subagentTranscript?.hasMoreOlder == false)
+                await client.loadOlderSubagentTurns()
+                precondition(SelectionProtocol.count("/api/v1/sessions/a/transcript") == 2, "No further page means no further read")
+                client.closeSubagentTranscript()
+                precondition(client.subagentTranscript == nil)
+                SelectionProtocol.fail("/api/v1/sessions/a/transcript", true)
+                await client.openSubagentTranscript("agent_01")
+                precondition(client.subagentTranscriptError != nil && client.actionError == nil,
+                             "A failed transcript read stays out of the session error banner")
+                precondition(client.subagentTranscript == nil)
             case "catalog callback":
                 try await client.refreshSessions()
                 SelectionProtocol.hold("/api/v1/sessions/b/snapshot")

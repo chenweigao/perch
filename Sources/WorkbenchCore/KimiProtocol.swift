@@ -43,6 +43,14 @@ public enum KimiWire {
     public static func decodeEvent(from data: Data) throws -> KimiEvent {
         try decoder().decode(EventResponse.self, from: data).value
     }
+    /// A transcript delivery carries a typed operation batch in its payload
+    /// instead of a session event, so it is decoded separately from the same bytes.
+    public static func decodeTranscript<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        try decoder().decode(TranscriptEnvelope<T>.self, from: data).payload
+    }
+    private struct TranscriptEnvelope<T: Decodable>: Decodable {
+        let payload: T
+    }
     private struct EventResponse: Decodable {
         let value: KimiEvent
         private enum CodingKeys: String, CodingKey { case type, code, msg }
@@ -226,7 +234,8 @@ public struct KimiSnapshot: Decodable, Sendable {
     public let inFlightTurn: KimiInFlight?
     public let pendingApprovals: [KimiApproval]
     public let pendingQuestions: [KimiQuestion]
-    public let subagents: [JSONValue]?
+    /// Absent on servers that predate the subagent roster.
+    public let subagents: [KimiTask]?
 }
 public struct KimiEvent: Decodable, Sendable {
     public let type: String
@@ -235,6 +244,8 @@ public struct KimiEvent: Decodable, Sendable {
     public let volatile: Bool?
     public let offset: Int?
     public let sessionId: String?
+    /// Envelope time, the only clock a subagent lifecycle event carries.
+    public let timestamp: String?
     public let payload: JSONValue
 }
 
@@ -246,9 +257,13 @@ public struct KimiConversation: Sendable {
     public private(set) var hasOlder: Bool
     public var error: String?
     public var notice: String?
+    /// Subagent roster and background tasks of this session. It survives a
+    /// snapshot refresh, which replaces the roster but not the task list.
+    public var tasks: KimiTaskBoard
     public init(_ snapshot: KimiSnapshot) {
         self.snapshot = snapshot; messages = snapshot.messages.items
         live = snapshot.inFlightTurn; lastSeq = snapshot.asOfSeq; hasOlder = snapshot.messages.hasMore
+        tasks = KimiTaskBoard(subagents: snapshot.subagents ?? [])
     }
     public mutating func reconcile(_ snapshot: KimiSnapshot) {
         let previousNotice = notice
@@ -257,7 +272,9 @@ public struct KimiConversation: Sendable {
         let old = messages
         let sameEpoch = self.snapshot.epoch == snapshot.epoch
         let hadLoadedOlder = hasOlder
+        let previousTasks = tasks
         self = KimiConversation(snapshot)
+        tasks.keepBackground(from: previousTasks)
         if snapshot.session.lastTurnReason == "failed" { error = previousError }
         if live != nil && live?.turnId == previousTurn { notice = previousNotice }
         if sameEpoch, let first = messages.first {
@@ -280,6 +297,9 @@ public struct KimiConversation: Sendable {
             guard seq > lastSeq else { return false }; lastSeq = seq
         }
         let p = event.payload
+        // Subagent lifecycle only moves the local roster; the snapshot stays
+        // authoritative and is not re-read for it.
+        tasks.apply(event)
         if let agent = p["agentId"].string, agent != "main" { return false }
         switch event.type {
         case "assistant.delta", "thinking.delta":

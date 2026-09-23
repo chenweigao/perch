@@ -63,6 +63,8 @@ private final class LaunchProtocol: URLProtocol {
             result = ["prompt_id": body["prompt_id"].string!, "user_message_id": body["prompt_id"].string!,
                       "status": Self.promptStatus, "content": (try! JSONSerialization.jsonObject(with: data) as! [String: Any])["content"]!]
             if Self.failPrompt { status = 503 } else { Self.accepted.append(result) }
+        } else if path.hasSuffix("/tasks") {
+            result = ["items": []]
         } else { preconditionFailure("Unexpected route: \(path)") }
         Self.lock.unlock()
         let envelope: [String: Any] = status == 200 ? ["code": 0, "data": result] : ["msg": "fixture unavailable"]
