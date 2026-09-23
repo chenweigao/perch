@@ -531,7 +531,10 @@ struct NewConversationSheet: View {
             .task(id: catalogID) {
                 // A native catalog is now needed before any session exists. Qoder
                 // reports none and Kimi reads its own connection.
-                if native.online && (provider == .omp || provider == .dsh || provider == .codex) { await native.loadModels() }
+                guard native.online && (provider == .omp || provider == .dsh || provider == .codex) else { return }
+                await native.loadModels()
+                guard !Task.isCancelled else { return }
+                if provider == .codex { selectCodexModel() }
             }
             .onAppear {
                 if let launch = model.launchAfterSetup {
@@ -551,12 +554,6 @@ struct NewConversationSheet: View {
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
                 }
                 if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
-            }
-            .task(id: provider) {
-                guard provider == .codex else { return }
-                await native.loadModels()
-                guard !Task.isCancelled, provider == .codex else { return }
-                selectCodexModel()
             }
     }
     private func selectProvider(_ value: SessionKind) {
