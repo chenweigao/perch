@@ -151,7 +151,7 @@ def save(path, value):
     tmp = path.with_suffix('.tmp')
     tmp.write_text(json.dumps(value, ensure_ascii=False)); tmp.replace(path)
 
-def codex_spawn_env():
+def proxy_aware_spawn_env():
     env = dict(os.environ)
     if any(env.get(key) for key in ('http_proxy', 'https_proxy', 'all_proxy',
                                     'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY')): return env
@@ -179,7 +179,7 @@ class CodexAppServer:
         self.pending = {}; self.next_id = 0; self.frames = queue.Queue()
         self.stderr = open(stderr_path, 'a') if stderr_path else subprocess.DEVNULL
         self.process = subprocess.Popen([binary,'app-server','--listen','stdio://'],cwd=cwd,
-            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True,env=codex_spawn_env())
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True,env=proxy_aware_spawn_env())
         threading.Thread(target=self.dispatch,daemon=True).start()
         threading.Thread(target=self.read,daemon=True).start()
 
@@ -443,6 +443,9 @@ class Session:
             cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which(cli)}
             if not cfg['binary']: raise ValueError('未找到 ' + cli)
             args = ['node',str(ROOT/worker),json.dumps(cfg)]
+            # The Claude CLI also phones home (feature flags, telemetry) outside the
+            # model gateway; without the proxy env those calls stall the turn silently.
+            if s['provider'] == 'claude': env = proxy_aware_spawn_env()
         self.ready.clear()
         self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
         self.acp_blocks = {}; self.permission_options = {}

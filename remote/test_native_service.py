@@ -5,12 +5,12 @@ folder=tempfile.TemporaryDirectory(); unittest.addModuleCleanup(folder.cleanup);
 spec=importlib.util.spec_from_file_location('broker',pathlib.Path(__file__).with_name('native-agent-service.py'))
 broker=importlib.util.module_from_spec(spec); spec.loader.exec_module(broker)
 
-class CodexSpawnEnvironmentTests(unittest.TestCase):
+class ProxySpawnEnvironmentTests(unittest.TestCase):
     def test_preserves_existing_proxy_variants_without_probing(self):
         for key in ('http_proxy', 'https_proxy', 'all_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY'):
             with self.subTest(key=key), patch.dict(os.environ, {key:'http://existing-proxy:8080'}, clear=True), \
                  patch.object(broker.urllib.request, 'urlopen') as probe:
-                self.assertEqual(broker.codex_spawn_env(), {key:'http://existing-proxy:8080'})
+                self.assertEqual(broker.proxy_aware_spawn_env(), {key:'http://existing-proxy:8080'})
                 probe.assert_not_called()
 
     def test_loads_proxy_file_when_parent_has_no_proxy(self):
@@ -18,7 +18,7 @@ class CodexSpawnEnvironmentTests(unittest.TestCase):
         with patch.dict(os.environ, {'PATH':'/usr/bin'}, clear=True), \
              patch.object(broker.urllib.request, 'urlopen') as probe, \
              patch.object(pathlib.Path, 'read_text', return_value=content):
-            self.assertEqual(broker.codex_spawn_env(), {'PATH':'/usr/bin', 'https_proxy':'http://127.0.0.1:7890',
+            self.assertEqual(broker.proxy_aware_spawn_env(), {'PATH':'/usr/bin', 'https_proxy':'http://127.0.0.1:7890',
                                                        'no_proxy':'localhost,127.0.0.1', 'NO_PROXY':'localhost,127.0.0.1'})
             probe.assert_called_once_with('http://127.0.0.1:9090/version', timeout=1)
 
@@ -145,6 +145,7 @@ class ProtocolTests(unittest.TestCase):
         process=type('Process',(),{})()
         with patch.object(broker.subprocess,'Popen',return_value=process) as popen, \
              patch.object(broker.threading,'Thread'), \
+             patch.object(broker,'proxy_aware_spawn_env',return_value={'https_proxy':'http://127.0.0.1:7890'}), \
              patch.object(broker.shutil,'which',return_value='/usr/local/bin/claude'):
             s.launch()
         args=popen.call_args.args[0]
@@ -154,6 +155,8 @@ class ProtocolTests(unittest.TestCase):
         cfg=json.loads(args[2])
         self.assertEqual(cfg['binary'],'/usr/local/bin/claude')
         self.assertEqual(cfg['cwd'],'/tmp')
+        # The worker needs the proxy env, otherwise the CLI's phone-home calls stall silently.
+        self.assertEqual(popen.call_args.kwargs['env'],{'https_proxy':'http://127.0.0.1:7890'})
     def test_claude_interrupt_is_not_an_error(self):
         s=self.session('claude');s.state['cancelled']=True
         s.event({'type':'result','is_error':True,'errors':['Operation aborted']})
