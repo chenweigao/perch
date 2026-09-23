@@ -33,6 +33,7 @@ SCOPED_FILES = [
     "Sources/AgentWorkbench/TaskGroupPage.swift",
     "Sources/AgentWorkbench/ModelPicker.swift",
     "Sources/AgentWorkbench/ConversationActivityBar.swift",
+    "Sources/AgentWorkbench/KimiSubagentSheet.swift",
     "Sources/AgentWorkbench/SessionRowChrome.swift",
     "Sources/AgentWorkbench/RenameSessionSheet.swift",
     "Sources/AgentWorkbench/ConnectionSheets.swift",

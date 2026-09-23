@@ -72,6 +72,11 @@ private final class SelectionProtocol: URLProtocol {
             if let output { value["output_preview"] = output; value["output_bytes"] = output.utf8.count }
             return value
         }
+        func turn(_ id: String, _ ordinal: Int) -> [String: Any] {
+            ["kind": "turn", "turnId": id, "ordinal": ordinal, "state": "completed", "prompt": "fixture \(id)",
+             "steps": [["kind": "step", "stepId": "\(id).1", "turnId": id, "ordinal": 1, "state": "completed",
+                        "frames": [["kind": "text", "frameId": "\(id).1.f1", "role": "assistant", "text": "fixture text"]]]]]
+        }
         let result: [String: Any]
         if path == "/api/v1/sessions" {
             result = ["items": [session("a", "catalog"), session("b", "catalog")], "has_more": false]
@@ -96,6 +101,11 @@ private final class SelectionProtocol: URLProtocol {
             } else if path.hasSuffix("/tasks") {
                 result = ["items": [task("task_1", kind: "bash", "运行测试", status: "running"),
                                     task("task_2", kind: "subagent", "定位输入问题", status: "completed")]]
+            } else if path.hasSuffix("/transcript") {
+                let older = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
+                    .queryItems?.contains { $0.name == "before_turn" } == true
+                result = ["agent_id": "agent_01", "has_more": !older, "seq": older ? 39 : 41,
+                          "items": older ? [turn("t0", 0)] : [turn("t1", 1), turn("t2", 2)]]
             } else if path.hasSuffix(":cancel") {
                 result = ["cancelled": true]
             } else if path.contains("/tasks/") {
@@ -122,7 +132,7 @@ private func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "task board", "disconnect"] {
+    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "task board", "subagent transcript", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -230,6 +240,28 @@ func checkKimiSelectionIsolation() async throws {
                 SelectionProtocol.fail(list, false)
                 await client.refreshTasks()
                 precondition(client.taskListError == nil)
+            case "subagent transcript":
+                client.select("a")
+                await ConnectionChecks.settle { client.conversation?.tasks.background.count == 2 }
+                await client.openSubagentTranscript("agent_01")
+                precondition(client.subagentTranscript?.turns.map(\.turnId) == ["t1", "t2"])
+                precondition(client.subagentTranscript?.seq == 41 && client.subagentTranscript?.hasMoreOlder == true)
+                precondition(!client.loadingSubagentTranscript && client.subagentTranscriptError == nil)
+                precondition(SelectionProtocol.count("/api/v1/sessions/a/transcript") == 1)
+                precondition(client.subagentTranscript?.turns.first?.steps?.first?.frames?.first?.text == "fixture text")
+                await client.loadOlderSubagentTurns()
+                precondition(client.subagentTranscript?.turns.map(\.turnId) == ["t0", "t1", "t2"], "Older turns are prepended")
+                precondition(client.subagentTranscript?.seq == 41, "An older page must not move the watermark back")
+                precondition(client.subagentTranscript?.hasMoreOlder == false)
+                await client.loadOlderSubagentTurns()
+                precondition(SelectionProtocol.count("/api/v1/sessions/a/transcript") == 2, "No further page means no further read")
+                client.closeSubagentTranscript()
+                precondition(client.subagentTranscript == nil)
+                SelectionProtocol.fail("/api/v1/sessions/a/transcript", true)
+                await client.openSubagentTranscript("agent_01")
+                precondition(client.subagentTranscriptError != nil && client.actionError == nil,
+                             "A failed transcript read stays out of the session error banner")
+                precondition(client.subagentTranscript == nil)
             case "catalog callback":
                 try await client.refreshSessions()
                 SelectionProtocol.hold("/api/v1/sessions/b/snapshot")

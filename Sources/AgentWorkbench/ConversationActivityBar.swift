@@ -48,6 +48,7 @@ struct ConversationActivityBar: View {
     var onTaskOutput: (KimiTask) -> Void = { _ in }
     var onTaskStop: (KimiTask) -> Void = { _ in }
     var onTasksRefresh: () -> Void = {}
+    var onOpenTranscript: (KimiTask) -> Void = { _ in }
     @State private var expanded = false
     @State private var pointerAnchor: CGRect?
     @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
@@ -205,7 +206,8 @@ struct ConversationActivityBar: View {
                     }
                     KimiTaskSections(board: board, loadingOutput: loadingTaskOutput, stopping: stoppingTasks,
                                      listError: taskListError, onLoadOutput: onTaskOutput,
-                                     onStop: onTaskStop, onRefresh: onTasksRefresh)
+                                     onStop: onTaskStop, onRefresh: onTasksRefresh,
+                                     onOpenTranscript: onOpenTranscript)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
             if let externalFailure {
@@ -303,6 +305,7 @@ struct KimiTaskSections: View {
     var onLoadOutput: (KimiTask) -> Void = { _ in }
     var onStop: (KimiTask) -> Void = { _ in }
     var onRefresh: () -> Void = {}
+    var onOpenTranscript: (KimiTask) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -338,7 +341,8 @@ struct KimiTaskSections: View {
                 KimiTaskRow(task: task, output: board.output(of: task),
                             isLoadingOutput: loadingOutput.contains(task.id),
                             isStopping: stopping.contains(task.id), readsOutput: readsOutput,
-                            onLoadOutput: { onLoadOutput(task) }, onStop: { onStop(task) })
+                            onLoadOutput: { onLoadOutput(task) }, onStop: { onStop(task) },
+                            onOpenTranscript: { onOpenTranscript(task) })
             }
         }
     }
@@ -354,6 +358,7 @@ private struct KimiTaskRow: View {
     let readsOutput: Bool
     var onLoadOutput: () -> Void = {}
     var onStop: () -> Void = {}
+    var onOpenTranscript: () -> Void = {}
     @State private var expanded = false
 
     private var symbol: String {
@@ -416,6 +421,10 @@ private struct KimiTaskRow: View {
                 if let reason = task.suspendedReason { meta("暂停原因", reason) }
                 meta("任务 ID", task.id)
             }.font(.system(size: 11))
+            if task.transcriptAgentId != nil {
+                Button("查看过程") { onOpenTranscript() }.buttonStyle(.borderless)
+                    .help("读取这个子 Agent 自己的轮次、思考与工具调用")
+            }
             if readsOutput || output != nil {
                 Text("输出").fontWeight(.medium).foregroundStyle(.secondary)
                 if isLoadingOutput {

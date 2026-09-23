@@ -27,6 +27,7 @@ private struct ActivityPreview: View {
     @State private var readOutputs: Set<String> = []
     @State private var stops = 0
     @State private var listRefreshes = 0
+    @State private var transcriptOpens = 0
     private var busy: Bool { phase != "Done" && phase != "Failed" }
     private var messages: [KimiMessage] {
         var rows: [[String: Any]] = [
@@ -116,7 +117,7 @@ private struct ActivityPreview: View {
                 ForEach(["Provider", "Local", "External", "External failure", "None"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
             Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · External retries: \(retryCount) · Turn: \(turn)")
-            Text("Output reads: \(readOutputs.sorted().joined(separator: ", ")) · Stops: \(stops) · List refreshes: \(listRefreshes)")
+            Text("Output reads: \(readOutputs.sorted().joined(separator: ", ")) · Stops: \(stops) · List refreshes: \(listRefreshes) · Transcripts: \(transcriptOpens)")
             Button("Next turn") { turn += 1; phase = "Thinking" }
             Spacer()
             ConversationActivityBar(activity: ConversationActivity(
@@ -133,7 +134,7 @@ private struct ActivityPreview: View {
                 board: board,
                 taskListError: failTaskList ? "Fixture task list unavailable" : nil,
                 onTaskOutput: { readOutputs.insert($0.id) }, onTaskStop: { _ in stops += 1 },
-                onTasksRefresh: { listRefreshes += 1 })
+                onTasksRefresh: { listRefreshes += 1 }, onOpenTranscript: { _ in transcriptOpens += 1 })
                 .frame(width: narrow ? 340 : 840)
             Text("Continue this task, or share a new idea…").foregroundStyle(.secondary)
                 .frame(width: narrow ? 308 : 808, height: 64, alignment: .topLeading).padding(16).workbenchControlSurface()

@@ -70,6 +70,12 @@ public struct KimiTask: Decodable, Identifiable, Equatable, Sendable {
     }
     public var isRunning: Bool { status == "running" }
     public var isFailed: Bool { status == "failed" }
+    /// The agent whose transcript this row can open. A roster entry is keyed by
+    /// its agent id; a detached child reports that id next to its own task id.
+    public var transcriptAgentId: String? {
+        guard kind == "subagent" else { return nil }
+        return agentId ?? id
+    }
 
     /// Server timestamps are JavaScript `toISOString()` values, so they always
     /// carry fractional seconds.

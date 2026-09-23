@@ -43,6 +43,14 @@ public enum KimiWire {
     public static func decodeEvent(from data: Data) throws -> KimiEvent {
         try decoder().decode(EventResponse.self, from: data).value
     }
+    /// A transcript delivery carries a typed operation batch in its payload
+    /// instead of a session event, so it is decoded separately from the same bytes.
+    public static func decodeTranscript<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        try decoder().decode(TranscriptEnvelope<T>.self, from: data).payload
+    }
+    private struct TranscriptEnvelope<T: Decodable>: Decodable {
+        let payload: T
+    }
     private struct EventResponse: Decodable {
         let value: KimiEvent
         private enum CodingKeys: String, CodingKey { case type, code, msg }

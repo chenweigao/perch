@@ -16,6 +16,7 @@ struct KimiWorkspaceView: View {
     @State private var chooseFiles = false
     @State private var activityReview = 0
     @State private var palette = CommandPaletteState()
+    @State private var transcriptSubject: KimiTask?
     var body: some View {
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
@@ -39,7 +40,8 @@ struct KimiWorkspaceView: View {
                     taskListError: connection.taskListError,
                     onTaskOutput: { connection.loadTaskOutput($0) },
                     onTaskStop: { connection.cancelTask($0) },
-                    onTasksRefresh: { Task { await connection.refreshTasks() } })
+                    onTasksRefresh: { Task { await connection.refreshTasks() } },
+                    onOpenTranscript: { transcriptSubject = $0 })
                     .id(conversation.snapshot.session.id)
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
                 composer(sessionID: conversation.snapshot.session.id).id(conversation.snapshot.session.id)
@@ -71,6 +73,10 @@ struct KimiWorkspaceView: View {
                         addAttachments(urls, to: id)
                     }
                 } catch { connection.actionError = error.localizedDescription }
+            }
+            .sheet(item: $transcriptSubject) { task in
+                KimiSubagentTranscriptSheet(agentId: task.transcriptAgentId ?? task.id, subject: task,
+                                            connection: connection)
             }
 
     }

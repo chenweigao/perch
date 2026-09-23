@@ -25,7 +25,7 @@ Liquid Glass controls on macOS 26. Designed for a focused, fluid reading experie
 
 - **Native conversations.** Streaming replies, Markdown, thinking and tool results, with details that expand when you need them.
 - **A workspace for your tasks.** Group sessions, pin important work, archive finished conversations and return to your previous workspace.
-- **Know what needs you.** See running tasks, pending questions and results waiting to be read, plus Kimi's subagents and background tasks with their output tails.
+- **Know what needs you.** See running tasks, pending questions and results waiting to be read, plus Kimi's subagents (including their own transcripts) and background tasks with their output tails.
 - **Keep your CLI workflow.** Use native chat for supported agents and Ghostty terminals for CLI sessions through Herdr.
 - **Inspect the work.** Open remote files and read Git diffs alongside a conversation (experimental).
 - **Remote execution, local control.** Files and tools run on your server. Closing the Mac app leaves managed remote sessions running.

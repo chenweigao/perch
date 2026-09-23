@@ -990,7 +990,7 @@ private struct ThoughtToggle: View {
     }
 }
 
-private struct ThoughtDisclosure: View {
+struct ThoughtDisclosure: View {
     let text: String
     @RememberedExpansion("thought") private var expanded
     var body: some View {

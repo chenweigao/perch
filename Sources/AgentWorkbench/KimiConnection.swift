@@ -51,6 +51,12 @@ final class KimiConnection: ObservableObject {
     /// The task list is auxiliary information. A failed read stays in its own
     /// panel instead of presenting itself as a session error.
     @Published private(set) var taskListError: String?
+    /// One subagent transcript at a time: the sheet that reads it owns the
+    /// subscription, and closing it unsubscribes that agent again.
+    @Published private(set) var subagentTranscript: KimiSubagentTranscript?
+    @Published private(set) var subagentTranscriptError: String?
+    @Published private(set) var loadingSubagentTranscript = false
+    @Published private(set) var loadingOlderSubagentTurns = false
     @Published private var sendingSessions: Set<String> = []
     var sending: Bool { selectedId.map { sendingSessions.contains($0) } ?? false }
     @Published var loading = false
@@ -127,7 +133,7 @@ final class KimiConnection: ObservableObject {
                     models = catalog["items"].array
                     try await refreshSessions()
                     let ws = try api.webSocket(); socket = ws; ws.resume()
-                    let hello = try await receive(ws)
+                    let (hello, _) = try await receive(ws)
                     guard hello.type == "server_hello", hello.payload["protocol_version"].int == 2 else {
                         throw WorkbenchError("此 Kimi Web 的事件协议尚未支持")
                     }
@@ -139,6 +145,9 @@ final class KimiConnection: ObservableObject {
                             try await subscribe(id)
                         } catch is CancellationError { if Task.isCancelled { throw CancellationError() } }
                         await refreshTasks()
+                        // A reconnect drops every subscription, including an open
+                        // subagent transcript, so read and subscribe it again.
+                        if let agentId = subagentTranscript?.agentId { await openSubagentTranscript(agentId) }
                     }
                     onSessionsChanged?()
                     let heartbeat = Task {
@@ -159,8 +168,8 @@ final class KimiConnection: ObservableObject {
                     }
                     defer { heartbeat.cancel(); poll.cancel(); ws.cancel(with: .goingAway, reason: nil) }
                     while !Task.isCancelled && generation == token {
-                        let event = try await receive(ws)
-                        do { try await handle(event) }
+                        let (event, data) = try await receive(ws)
+                        do { try await handle(event, data: data) }
                         catch is CancellationError { if Task.isCancelled { throw CancellationError() } }
                     }
                 } catch is CancellationError { break }
@@ -181,6 +190,7 @@ final class KimiConnection: ObservableObject {
         task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel(); taskRefresh?.cancel()
         historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
         snapshotReady = false
+        subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; stateMessage = "未连接"
     }
     private func closeTransport() {
@@ -242,6 +252,8 @@ final class KimiConnection: ObservableObject {
     func select(_ id: String) {
         guard id != selectedId || (!snapshotReady && !loading) else { return }
         if let conversation { cachedConversations.store(conversation) }
+        // Unsubscribe while the previous session is still the selected one.
+        closeSubagentTranscript()
         selectedId = id; UserDefaults.standard.set(id, forKey: savedSelectionKey)
         conversation = cachedConversations.take(id)
         loadSelected(id)
@@ -306,7 +318,13 @@ final class KimiConnection: ObservableObject {
             "agent_filter": .object([id: .array([.string("main")])])
         ])
     }
-    private func handle(_ event: KimiEvent) async throws {
+    private func handle(_ event: KimiEvent, data: Data) async throws {
+        // Transcript frames belong to the open subagent sheet; they never enter
+        // the main conversation fold.
+        if event.type.hasPrefix("transcript.") {
+            applyTranscript(event, data: data)
+            return
+        }
         if event.type == "error", event.sessionId == nil {
             actionError = event.payload["msg"].string ?? "Kimi 事件通道出错"
             if event.payload["fatal"] == .bool(true) { throw WorkbenchError(actionError!) }
@@ -334,11 +352,13 @@ final class KimiConnection: ObservableObject {
             if event.volatile == true, let id = selectedId { try await subscribe(id) }
         }
     }
-    private func receive(_ ws: URLSessionWebSocketTask) async throws -> KimiEvent {
+    /// The raw frame stays available: a transcript delivery is decoded into its
+    /// own typed payload from the same bytes.
+    private func receive(_ ws: URLSessionWebSocketTask) async throws -> (KimiEvent, Data) {
         let message = try await ws.receive()
         let data: Data
         switch message { case .data(let d): data = d; case .string(let s): data = Data(s.utf8); @unknown default: throw WorkbenchError("未知 WebSocket 消息") }
-        return try KimiWire.decodeEvent(from: data)
+        return (try KimiWire.decodeEvent(from: data), data)
     }
     private func sendFrame(_ ws: URLSessionWebSocketTask, type: String, payload: [String: JSONValue]) async throws {
         let frame = JSONValue.object(["type": .string(type), "id": .string(UUID().uuidString), "payload": .object(payload)])
@@ -419,6 +439,85 @@ final class KimiConnection: ObservableObject {
             } catch {
                 if id == selectedId { taskListError = "停止未确认：" + error.localizedDescription }
             }
+        }
+    }
+    /// Turn-granular pages; the transcript API accepts 1 to 100 turns.
+    private static let transcriptPageSize = 20
+    /// The block grade streams whole frames. The delta grade would add
+    /// per-character appends, which this client does not fold.
+    private static let transcriptGrade = "block"
+
+    /// Reads one subagent's transcript, then subscribes to its operations from
+    /// that page's watermark. Reading again refreshes both. Without an event
+    /// channel the page stays readable and the reader can refresh it explicitly.
+    func openSubagentTranscript(_ agentId: String) async {
+        guard online, let api, let id = selectedId else { return }
+        loadingSubagentTranscript = true; subagentTranscriptError = nil
+        defer { loadingSubagentTranscript = false }
+        do {
+            let page = try await api.get(KimiTranscriptPage.self,
+                                         "/api/v1/sessions/\(id)/transcript?agent_id=\(agentId)&page_size=\(Self.transcriptPageSize)")
+            guard selectedId == id else { return }
+            var transcript = KimiSubagentTranscript(agentId: agentId)
+            transcript.load(page, prepend: false)
+            subagentTranscript = transcript
+            guard let socket else { return }
+            var payload: [String: JSONValue] = ["session_id": .string(id),
+                                                "transcript": .object([agentId: .string(Self.transcriptGrade)])]
+            if let seq = page.seq { payload["transcript_since"] = .object([agentId: .number(Double(seq))]) }
+            try await sendFrame(socket, type: "subscribe_v2", payload: payload)
+        } catch is CancellationError {
+        } catch {
+            if selectedId == id { subagentTranscriptError = error.localizedDescription }
+        }
+    }
+    func loadOlderSubagentTurns() async {
+        guard online, let api, let id = selectedId, !loadingOlderSubagentTurns,
+              let transcript = subagentTranscript, transcript.hasMoreOlder,
+              let oldest = transcript.turns.first?.turnId else { return }
+        loadingOlderSubagentTurns = true
+        defer { loadingOlderSubagentTurns = false }
+        do {
+            let page = try await api.get(KimiTranscriptPage.self,
+                                         "/api/v1/sessions/\(id)/transcript?agent_id=\(transcript.agentId)&page_size=\(Self.transcriptPageSize)&before_turn=\(oldest)")
+            guard selectedId == id, subagentTranscript?.agentId == transcript.agentId else { return }
+            var updated = subagentTranscript ?? transcript
+            updated.load(page, prepend: true)
+            subagentTranscript = updated
+        } catch is CancellationError {
+        } catch {
+            if selectedId == id { subagentTranscriptError = error.localizedDescription }
+        }
+    }
+    /// Closing the sheet releases the subscription; the child keeps running.
+    func closeSubagentTranscript() {
+        guard let transcript = subagentTranscript else { return }
+        subagentTranscript = nil; subagentTranscriptError = nil
+        guard let socket, let id = selectedId else { return }
+        Task { [weak self] in
+            try? await self?.sendFrame(socket, type: "unsubscribe_v2", payload: [
+                "session_id": .string(id), "agent_ids": .array([.string(transcript.agentId)])
+            ])
+        }
+    }
+    private func applyTranscript(_ event: KimiEvent, data: Data) {
+        guard event.sessionId == selectedId, let transcript = subagentTranscript else { return }
+        do {
+            var updated = transcript
+            switch event.type {
+            case "transcript.reset":
+                let reset = try KimiWire.decodeTranscript(KimiTranscriptReset.self, from: data)
+                guard reset.agentId == transcript.agentId else { return }
+                updated.apply(reset)
+            case "transcript.ops":
+                let batch = try KimiWire.decodeTranscript(KimiTranscriptOpsBatch.self, from: data)
+                guard batch.agentId == transcript.agentId else { return }
+                updated.apply(batch)
+            default: return
+            }
+            subagentTranscript = updated
+        } catch {
+            subagentTranscriptError = error.localizedDescription
         }
     }
     func setArchived(_ id: String, archived: Bool, refresh: Bool = true) async throws {
