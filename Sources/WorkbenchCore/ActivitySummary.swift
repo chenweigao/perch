@@ -231,7 +231,7 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
             "stream": false, "temperature": 0, "max_tokens": 180
         ]
         if configuration.disableThinking { body["chat_template_kwargs"] = ["enable_thinking": false] }
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.withoutEscapingSlashes])
         return request
     }
 
