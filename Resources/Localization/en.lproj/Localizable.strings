@@ -651,3 +651,15 @@
 "验证" = "Validating";
 "验证改动" = "Validating changes";
 "上下文已压缩" = "Context compacted";
+
+"继续此任务…" = "Continue this task…";
+"上下文用量未同步" = "Context usage not synced";
+"上下文用量未知" = "Context usage unknown";
+"上下文剩余约 %@" = "About %@ context remaining";
+"已用 %@ / %@ tokens" = "%@ / %@ tokens used";
+"未同步" = "Not synced";
+"上下文将满" = "Context nearly full";
+"最近一次 Agent 上报的用量，不含未发送草稿；运行中可能继续增长。" = "Latest usage reported by the agent. Excludes unsent drafts and may grow while running.";
+"Agent 尚未提供可用的上下文用量。" = "The agent has not reported usable context usage yet.";
+"上报时间" = "Reported";
+"上报时间未提供" = "Report time unavailable";

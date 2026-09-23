@@ -97,6 +97,7 @@ func checkModelSelection() throws {
     precondition(kimi.remainingPercent == 88 && kimi.pressure == .comfortable)
     precondition(ContextBudget(used: 800_000, limit: 1_000_000)?.pressure == .tight)
     precondition(ContextBudget(used: 960_000, limit: 1_000_000)?.pressure == .critical)
+    precondition(ContextBudget(used: 29, limit: 100)?.remainingPercent == 71)
     // Reported usage above the window cannot produce a negative remaining.
     guard let over = ContextBudget(used: 500_000, limit: 272_000) else { fatalError("budget") }
     precondition(over.remaining == 0 && over.remainingPercent == 0 && over.pressure == .critical)
