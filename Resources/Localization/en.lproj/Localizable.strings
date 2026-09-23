@@ -605,3 +605,5 @@
 "选择权限级别" = "Choose permission level";
 "权限级别：%@" = "Permission level: %@";
 "当前 Agent 不支持动态切换权限" = "This agent does not support changing permissions during a session.";
+
+"上下文已压缩" = "Context compacted";
