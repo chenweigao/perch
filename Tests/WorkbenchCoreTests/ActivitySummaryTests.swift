@@ -365,6 +365,15 @@ func checkActivitySummaries() throws {
     precondition(ActivitySummaryBatch(groupID: "long-stage", tools: revisedOutput, closed: false, includeToolOutput: true)
         .shouldRequest(after: longStage), "Recent result text corrections remain visible")
 
+    var retainedCorrection = manyResults
+    retainedCorrection[1_996] = VisibleTool(id: "edit-1996", name: "Edit", input: manyResults[1_996].input,
+        output: .string("Corrected fourth-last result"), status: .returned)
+    precondition(ActivitySummaryBatch(groupID: "long-stage", tools: retainedCorrection, closed: false, includeToolOutput: true)
+        .shouldRequest(after: longStage), "Payload corrections inside the prompt but outside the last three results must refresh")
+    let evictedKeys = ActivitySummaryBatch(groupID: "long-stage", tools: manyResults + (0..<30).map { tool("read-\($0)") },
+        closed: false, includeToolOutput: true)
+    precondition(!evictedKeys.shouldRequest(after: longStage), "Read-window eviction of older key results is not a correction")
+
     let legacyConfig = try JSONDecoder().decode(ActivitySummaryConfiguration.self, from: Data(#"{"enabled":true}"#.utf8))
     precondition(!legacyConfig.includeToolOutput, "Upgrades must not enable output sharing")
 

@@ -54,11 +54,11 @@ public struct ActivitySummaryBatch: Hashable {
     public let recentProgress: [String]
     public let records: [Record]
     public let closed: Bool
-    // Scheduling retains only a fingerprint and three recent results, independent
-    // of read-window eviction. Older results contribute identity/status metadata;
-    // their potentially large output is never copied into retained batch state.
+    // Scheduling retains only a fingerprint and key results in the bounded prompt
+    // window. Older results contribute identity/status metadata, never output.
+    // Payload comparisons use shared IDs so read-window eviction is not an event.
     private let keyResultFingerprint: Int
-    private let recentKeyResults: [Record]
+    private let retainedKeyResults: [Record]
 
     public static func latest(in entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
                               isRunning: Bool, enabled: Bool, includeToolOutput: Bool = false) -> Self? {
@@ -106,19 +106,24 @@ public struct ActivitySummaryBatch: Hashable {
             recentResults.append(tool)
         }
         keyResultFingerprint = fingerprint.finalize()
-        recentKeyResults = recentResults.map(record)
-        let resultIDs = Set(recentKeyResults.map(\.id))
+        let resultIDs = Set(recentResults.map(\.id))
         let recentIDs = Set(meaningful.filter { !resultIDs.contains($0.id) }
             .suffix(12 - resultIDs.count).map(\.id))
-        records = meaningful.filter { resultIDs.contains($0.id) || recentIDs.contains($0.id) }.map(record)
+        let selected = meaningful.filter { resultIDs.contains($0.id) || recentIDs.contains($0.id) }
+        records = selected.map(record)
+        retainedKeyResults = selected.filter { Self.isKeyResult($0) }.map(record)
         self.closed = closed
     }
 
     public func shouldRequest(after previous: Self?) -> Bool {
         guard !records.isEmpty else { return false }
         guard let previous, previous.groupID == groupID else { return true }
+        let previousResults = Dictionary(uniqueKeysWithValues: previous.retainedKeyResults.map { ($0.id, $0) })
+        let correctedPayload = retainedKeyResults.contains { record in
+            previousResults[record.id].map { $0 != record } ?? false
+        }
         return phase != previous.phase || keyResultFingerprint != previous.keyResultFingerprint
-            || recentKeyResults != previous.recentKeyResults
+            || correctedPayload
             || (closed && !previous.closed) || recentProgress != previous.recentProgress
             || userRequest != previous.userRequest
     }
