@@ -26,7 +26,12 @@ final class RemoteFileBrowser: ObservableObject {
     @Published private(set) var gitStatus: RemoteGitStatus?
     @Published private(set) var gitPath: String?
     @Published private(set) var gitDiff: RemoteGitDiff?
+    @Published private(set) var gitDirectory = ""
+    @Published private(set) var gitWorktrees: [RemoteGitWorktree] = []
+    @Published var gitInput = ""
     @Published var gitStaged = false
+    private var gitDirectoryHints: [String] = []
+    private var gitSelectionExplicit = false
     private var generation = 0
     private var reader: RemoteReader?
     private var task: Task<Void, Never>?
@@ -34,11 +39,15 @@ final class RemoteFileBrowser: ObservableObject {
     var hostName: String { host?.name ?? "未选择主机" }
 
     /// Switching sessions must never leave another host's path or content on screen.
-    func configure(host: SSHHost?, cwd: String) {
-        guard self.host?.id != host?.id || self.cwd != cwd else { return }
+    func configure(host: SSHHost?, cwd: String, gitDirectoryHints: [String] = []) {
+        guard self.host?.id != host?.id || self.cwd != cwd else {
+            self.gitDirectoryHints = gitDirectoryHints
+            return
+        }
         cancel()
         self.host = host
         self.cwd = cwd
+        self.gitDirectoryHints = gitDirectoryHints
         input = ""
         path = ""
         content = nil
@@ -46,6 +55,10 @@ final class RemoteFileBrowser: ObservableObject {
         gitStatus = nil
         gitPath = nil
         gitDiff = nil
+        gitDirectory = ""
+        gitWorktrees = []
+        gitInput = cwd
+        gitSelectionExplicit = false
         targetLine = nil
     }
 
@@ -85,13 +98,40 @@ final class RemoteFileBrowser: ObservableObject {
         }
     }
 
-    /// Git inspection reads the same host and the session's working directory.
-    /// It is read-only: status and diff only, never a write or history operation.
     func loadGitStatus() {
-        guard let host, !cwd.isEmpty else {
-            error = cwd.isEmpty ? "当前会话没有远端工作目录。" : "当前会话没有可用的远端主机。"
+        guard host != nil else { error = "当前会话没有可用的远端主机。"; return }
+        if !gitDirectory.isEmpty {
+            loadGitStatus(directories: [gitDirectory], allowSuggestion: false)
             return
         }
+        var candidates = gitDirectoryHints
+        candidates.append(cwd)
+        candidates = candidates.filter { !$0.isEmpty }.reduce(into: []) { values, value in
+            if !values.contains(value) { values.append(value) }
+        }
+        guard !candidates.isEmpty else { error = "当前会话没有远端工作目录。"; return }
+        loadGitStatus(directories: candidates, allowSuggestion: !gitSelectionExplicit)
+    }
+
+    func submitGitDirectory() {
+        let resolved: String
+        do { resolved = try RemoteFilePath.resolve(gitInput, cwd: cwd) }
+        catch { self.error = error.localizedDescription; return }
+        gitSelectionExplicit = true
+        gitDirectory = resolved
+        loadGitStatus(directories: [resolved], allowSuggestion: false)
+    }
+
+    func selectGitWorktree(_ directory: String) {
+        guard gitWorktrees.contains(where: { $0.path == directory && $0.selectable }) else { return }
+        gitSelectionExplicit = true
+        gitDirectory = directory
+        gitInput = directory
+        loadGitStatus(directories: [directory], allowSuggestion: false)
+    }
+
+    private func loadGitStatus(directories: [String], allowSuggestion: Bool) {
+        guard let host else { return }
         cancel()
         generation += 1
         let token = generation
@@ -99,15 +139,43 @@ final class RemoteFileBrowser: ObservableObject {
         error = nil
         gitPath = nil
         gitDiff = nil
-        run(RemoteGitCommand.statusCommand(directory: cwd), destination: host.destination, token: token) { browser, data in
-            browser.gitStatus = try RemoteGitCommand.parseStatus(data)
+        run(RemoteGitCommand.statusCommand(directories: directories), destination: host.destination, token: token) { browser, data in
+            let status = try RemoteGitCommand.parseStatus(data)
+            if allowSuggestion, let suggested = browser.suggestedWorktree(in: status.worktrees),
+               suggested.path != status.root {
+                browser.gitDirectory = suggested.path
+                browser.gitInput = suggested.path
+                browser.loadGitStatus(directories: [suggested.path], allowSuggestion: false)
+                return
+            }
+            browser.gitStatus = status
+            browser.gitWorktrees = status.worktrees
+            if let root = status.root {
+                browser.gitDirectory = root
+                browser.gitInput = root
+            } else {
+                browser.gitWorktrees = []
+            }
         } failed: { browser in
             browser.gitStatus = nil
         }
     }
 
+    private func suggestedWorktree(in worktrees: [RemoteGitWorktree]) -> RemoteGitWorktree? {
+        for hint in gitDirectoryHints {
+            let path = (hint as NSString).standardizingPath
+            let matches = worktrees.filter { worktree in
+                guard worktree.selectable else { return false }
+                let root = (worktree.path as NSString).standardizingPath
+                return path == root || path.hasPrefix(root == "/" ? root : root + "/")
+            }
+            if let match = matches.max(by: { $0.path.count < $1.path.count }) { return match }
+        }
+        return nil
+    }
+
     func loadGitDiff(_ entry: RemoteGitEntry) {
-        guard let host else { return }
+        guard let host, let root = gitStatus?.root else { return }
         cancel()
         generation += 1
         let token = generation
@@ -122,7 +190,7 @@ final class RemoteFileBrowser: ObservableObject {
             return
         }
         let staged = gitStaged
-        run(RemoteGitCommand.diffCommand(directory: cwd, path: entry.path, staged: staged),
+        run(RemoteGitCommand.diffCommand(directory: root, path: entry.path, staged: staged),
             destination: host.destination, token: token) { browser, data in
             browser.gitDiff = try RemoteGitCommand.parseDiff(data)
         } failed: { browser in
@@ -130,10 +198,10 @@ final class RemoteFileBrowser: ObservableObject {
         }
     }
 
-    /// Switching between staged and worktree re-reads the same file rather than
+    /// Switching between staged and unstaged re-reads the same file rather than
     /// leaving the previous range's diff on screen under the new label.
     func reloadGitDiff() {
-        guard case .changes(_, let entries) = gitStatus, let path = gitPath,
+        guard case .changes(_, _, let entries) = gitStatus, let path = gitPath,
               let entry = entries.first(where: { $0.path == path }) else { return }
         loadGitDiff(entry)
     }
@@ -305,18 +373,40 @@ struct RemoteFilePanel: View {
                     }
                 } else {
                     HStack(spacing: 7) {
-                        Picker("", selection: $browser.gitStaged) {
-                            Text("工作区改动").tag(false)
-                            Text("已暂存").tag(true)
-                        }.pickerStyle(.segmented).labelsHidden()
-                            .onChange(of: browser.gitStaged) { _, _ in browser.reloadGitDiff() }
+                        TextField("Git 仓库或 worktree 目录", text: $browser.gitInput)
+                            .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                            .onSubmit { browser.submitGitDirectory() }
                         if browser.loading {
                             Button("取消") { browser.cancel() }.controlSize(.small)
                         } else {
-                            Button("刷新") { browser.loadGitStatus() }.controlSize(.small)
+                            let changed = browser.gitInput != browser.gitDirectory
+                            Button(changed ? "载入" : "刷新") {
+                                if changed { browser.submitGitDirectory() } else { browser.loadGitStatus() }
+                            }.controlSize(.small)
+                                .disabled(browser.gitInput.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
                     }
-                    Text("只读：仅执行 status 与 diff，不做任何写操作。")
+                    if !browser.gitWorktrees.isEmpty {
+                        HStack(spacing: 7) {
+                            Text("工作树").font(.system(size: 11)).foregroundStyle(.secondary)
+                            Picker("工作树", selection: Binding(
+                                get: { browser.gitDirectory },
+                                set: { browser.selectGitWorktree($0) }
+                            )) {
+                                ForEach(browser.gitWorktrees) { worktree in
+                                    Text(worktreeLabel(worktree)).tag(worktree.path).disabled(!worktree.selectable)
+                                }
+                            }.pickerStyle(.menu).labelsHidden().help(browser.gitDirectory)
+                        }
+                    }
+                    HStack(spacing: 7) {
+                        Picker("", selection: $browser.gitStaged) {
+                            Text("未暂存").tag(false)
+                            Text("已暂存").tag(true)
+                        }.pickerStyle(.segmented).labelsHidden()
+                            .onChange(of: browser.gitStaged) { _, _ in browser.reloadGitDiff() }
+                    }
+                    Text("只读：仅执行 worktree list、status 与 diff，不做任何写操作。")
                         .font(.system(size: 10)).foregroundStyle(.secondary)
                 }
             }.padding(.horizontal, 14).padding(.vertical, 12)
@@ -340,10 +430,10 @@ struct RemoteFilePanel: View {
         } else {
             switch browser.gitStatus {
             case .notARepository:
-                notice("当前远端工作目录不是 Git 仓库。", symbol: "questionmark.folder", tint: .secondary)
+                notice("所选目录不是可用的 Git 工作树。", symbol: "questionmark.folder", tint: .secondary)
             case .clean:
-                notice("工作区干净，没有未提交的改动。", symbol: "checkmark.circle", tint: .secondary)
-            case .changes(_, let entries):
+                notice("所选工作树干净，没有未提交的改动。", symbol: "checkmark.circle", tint: .secondary)
+            case .changes(_, _, let entries):
                 VSplitView {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 1) {
@@ -363,7 +453,7 @@ struct RemoteFilePanel: View {
                     diffPane
                 }
             case nil:
-                notice("读取当前远端工作目录的 Git 改动。", symbol: "arrow.triangle.branch", tint: .secondary)
+                notice("读取远端 Git 工作树的改动。", symbol: "arrow.triangle.branch", tint: .secondary)
             }
         }
     }
@@ -385,7 +475,7 @@ struct RemoteFilePanel: View {
         case .binary: notice("二进制文件差异，不做预览。", symbol: "doc.zipper", tint: .secondary)
         case .empty: notice("该文件在当前范围内没有差异。", symbol: "equal.circle", tint: .secondary)
         case .untracked: notice("未跟踪文件，没有 tracked diff；可在「文件」页查看内容。", symbol: "plus.circle", tint: .secondary)
-        case .notARepository: notice("当前远端工作目录不是 Git 仓库。", symbol: "questionmark.folder", tint: .secondary)
+        case .notARepository: notice("所选工作树不再是 Git 仓库。", symbol: "questionmark.folder", tint: .secondary)
         case nil: notice("选择一个文件查看差异。", symbol: "doc.text.magnifyingglass", tint: .secondary)
         }
     }
@@ -464,6 +554,18 @@ struct RemoteFilePanel: View {
                 notice("输入远端路径后打开。只读查看，不修改远端内容。", symbol: "doc.text", tint: .secondary)
             }
         }
+    }
+
+    private func worktreeLabel(_ worktree: RemoteGitWorktree) -> String {
+        let directory = (worktree.path as NSString).lastPathComponent
+        let revision = worktree.branchName ?? (worktree.detached ? "detached \(worktree.head.prefix(8))" : "无分支")
+        var states: [String] = []
+        if worktree.current { states.append("当前") }
+        if worktree.locked { states.append("已锁定") }
+        if worktree.prunable { states.append("不可用") }
+        if worktree.bare { states.append("bare") }
+        let suffix = states.isEmpty ? "" : " · " + states.joined(separator: " · ")
+        return "\(revision) · \(directory)\(suffix)"
     }
 
     private func numbered(_ text: String) -> String {

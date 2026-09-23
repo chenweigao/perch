@@ -675,7 +675,23 @@ final class WorkbenchModel: ObservableObject {
     }
     private func syncFileViewer() {
         guard showFileViewer else { return }
-        fileBrowser.configure(host: selectedHost, cwd: selectedItem?.directory ?? "")
+        let directory = selectedItem?.directory ?? ""
+        var messages: [KimiMessage] = []
+        var liveTools: [KimiLiveTool] = []
+        if let reference = selectedReference, reference.kind == .kimi,
+           let conversation = kimiEnvironments[reference.hostID]?.conversation,
+           conversation.snapshot.session.id == reference.terminalID {
+            messages = conversation.messages
+            liveTools = conversation.live?.runningTools ?? []
+        } else if let reference = selectedReference,
+                  [.omp, .qoder, .dsh, .codex].contains(reference.kind),
+                  let snapshot = nativeEnvironments[reference.hostID]?.snapshot,
+                  snapshot.id == reference.terminalID {
+            messages = snapshot.messages
+        }
+        let hints = RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
+                                                       sessionDirectory: directory)
+        fileBrowser.configure(host: selectedHost, cwd: directory, gitDirectoryHints: hints)
     }
     func forgetRestoration(_ saved: SavedTerminal) { close(saved.session.id) }
     private func saveWorkspace() {
