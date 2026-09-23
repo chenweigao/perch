@@ -2,7 +2,7 @@ import Foundation
 
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
-    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .terminal]
+    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal]
 
     public static func sshAliases(_ config: String) -> [String] {
         var aliases = Set<String>()

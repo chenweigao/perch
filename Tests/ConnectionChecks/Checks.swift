@@ -59,12 +59,14 @@ private final class TransportFixture {
             result = sessions[id]!
         } else if parts.count == 3 && parts[2] == "permission", let body {
             let id = parts[1], mode = body["mode"].string!
-            guard sessions[id]?["provider"] as? String == SessionKind.qoder.rawValue else {
+            guard let raw = sessions[id]?["provider"] as? String,
+                  let provider = SessionKind(rawValue: raw),
+                  [.qoder, .claude].contains(provider) else {
                 throw WorkbenchError("permission is fixed")
             }
-            sessions[id]?["permission"] = Self.permission(.qoder, mode)
+            sessions[id]?["permission"] = Self.permission(provider, mode)
             permissionChanges.append((id, mode))
-            result = ["ok": true, "permission": Self.permission(.qoder, mode)]
+            result = ["ok": true, "permission": Self.permission(provider, mode)]
         } else if path == "/sessions" {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
@@ -241,6 +243,7 @@ struct ConnectionChecks {
         precondition(connection.queue.items(for: b).count == 1)
         try await checkCodexConnection()
         try await checkQoderPermission()
+        try await checkClaudePermission()
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
     }
 
@@ -258,6 +261,7 @@ struct ConnectionChecks {
         precondition(client.models(for: .omp).map(\.id) == ["gpt-5.4-mini"])
         precondition(client.models(for: .dsh).map(\.id) == ["deepseek-v4-flash"])
         precondition(client.models(for: .qoder).isEmpty, "Qoder reports no catalog and must not borrow another runtime's")
+        precondition(client.models(for: .claude).isEmpty, "Claude reports no catalog and must not borrow another runtime's")
         precondition(client.modelsError == nil && client.actionError == nil)
         // A failed read keeps the last good list and reports to the model control,
         // not as a conversation banner nobody asked for.
@@ -329,6 +333,31 @@ struct ConnectionChecks {
                      "Qoder permission changes must be saved while the current turn is busy")
         client.disconnect()
         print("PASS: Qoder permission selection applies to the next turn while busy")
+    }
+
+    @MainActor
+    static func checkClaudePermission() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Claude", destination: "fixture"), transport: fixture.request)
+        let session = try await client.create(provider: .claude, cwd: "/fixture", model: "", permissionMode: "acceptEdits")
+        precondition(session.permission?.selected == "acceptEdits" && session.permission?.scope == .nextTurn)
+        precondition(fixture.creates.first?.2 == "acceptEdits")
+        fixture.sessions[session.id]?["busy"] = true
+        try await client.refresh()
+        client.setPermission("plan", for: session.id)
+        await settle {
+            fixture.permissionChanges.count == 1
+                && fixture.permissionChanges[0].0 == session.id
+                && fixture.permissionChanges[0].1 == "plan"
+                && client.sessions.first { $0.id == session.id }?.permission?.selected == "plan"
+        }
+        precondition(client.sessions.first { $0.id == session.id }?.permission?.selected == "plan",
+                     "Claude permission changes must be saved while the current turn is busy")
+        // Qoder-only modes must not validate against the Claude catalog.
+        client.setPermission("dontAsk", for: session.id)
+        precondition(client.actionError != nil && fixture.permissionChanges.count == 1)
+        client.disconnect()
+        print("PASS: Claude permission selection applies to the next turn while busy")
     }
 
     @MainActor

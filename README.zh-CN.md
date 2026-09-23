@@ -28,7 +28,7 @@
 - **保留 CLI 工作流**：已适配的 Agent 使用原生对话，其他 CLI 通过 Herdr 使用 Ghostty 终端。
 - **查看工作内容**：在对话旁查看远程文件与只读 Git diff（实验性）。
 - **远端执行，本地掌控**：文件与工具操作在服务器执行，关闭 Mac App 不会结束托管中的远端会话。
-- **明确的权限模式**：可按 Agent 设置默认值并在新建任务时覆盖，高风险模式需要再次确认；Kimi 与 Qoder 可从后续消息或轮次调整，OMP 与 Codex 在创建会话时固定。
+- **明确的权限模式**：可按 Agent 设置默认值并在新建任务时覆盖，高风险模式需要再次确认；Kimi、Qoder 与 Claude Code 可从后续消息或轮次调整，OMP 与 Codex 在创建会话时固定。
 
 ## 接入方式
 
@@ -37,18 +37,19 @@
 | Kimi Code | Kimi Web API + SSH | 原生对话 |
 | Oh My Pi（OMP） | 远端桥接 RPC | 原生对话 |
 | Qoder CN | 远端桥接官方 Agent SDK | 原生对话 |
+| Claude Code | 远端桥接官方 Agent SDK | 原生对话 |
 | DeepSeek Harness（dsh） | 远端桥接 ACP | 原生对话 |
 | Codex | 远端桥接 `codex app-server` stdio JSON-RPC | 原生对话 |
 | 其他 CLI Agent | Herdr + SSH | 终端 |
 
 原生接入共用对话组件。欢迎扩展 RPC、SDK 或 ACP 适配器；目前不宣称任意协议即插即用。
-已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / dsh / Codex](docs/NATIVE-AGENTS.md)。
+已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / dsh / Codex / Claude Code](docs/NATIVE-AGENTS.md)。
 凭据和模型由对应 CLI 配置，Perch 不直连模型服务商。
 
 目前支持发现本机 OMP，本机原生对话尚未接通。Kimi、远端 OMP 与 Codex 支持运行中即时引导，
 也可显式选择下一轮发送。Codex 沿用原生 thread ID 和历史，模型与思考强度来自 `model/list`；
-app-server 发起的每个审批与提问都会显示并等待明确回答，不会自动允许或静默拒绝。Qoder CN / dsh
-支持停止与下一轮消息排队；Herdr 中的现有会话继续使用终端。
+app-server 发起的每个审批与提问都会显示并等待明确回答，不会自动允许或静默拒绝。Qoder CN / dsh /
+Claude Code 支持停止与下一轮消息排队；Herdr 中的现有会话继续使用终端。
 
 ## 构建运行
 
