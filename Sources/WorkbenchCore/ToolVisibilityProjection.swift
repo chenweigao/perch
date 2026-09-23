@@ -40,7 +40,7 @@ public final class ToolVisibilityProjection {
         if self.sessionID != sessionID {
             self.sessionID = sessionID; observed = [:]; order = []
         }
-        let anchor = messages.last(where: { $0.role == "user" && !$0.content.allSatisfy(\.isRuntimeContext) })?.id
+        let anchor = messages.last(where: { $0.isUserPrompt })?.id
         for tool in live {
             if observed[tool.id] == nil { order.append(tool.id) }
             observed[tool.id] = ObservedLive(tool: tool, anchor: observed[tool.id]?.anchor ?? anchor)
@@ -80,12 +80,12 @@ public final class ToolVisibilityProjection {
         func appendUnrecorded(after turn: String?) {
             for id in order where observed[id]?.anchor == turn && calls[id] == nil && results[id] == nil && emitted.insert(id).inserted {
                 let part = present(id: id, call: nil, result: nil)
-                normalized.append(KimiMessage(id: "tool-live:\(id)", role: "assistant", content: [part], createdAt: ""))
+                normalized.append(KimiMessage(id: "tool-live:\(id)", role: "assistant", content: [part], createdAt: "", metadata: nil))
             }
         }
         var currentAnchor: String?
         for message in messages {
-            if message.role == "user" && !message.content.allSatisfy(\.isRuntimeContext) {
+            if message.isUserPrompt {
                 appendUnrecorded(after: currentAnchor)
                 currentAnchor = message.id
             }
@@ -102,9 +102,9 @@ public final class ToolVisibilityProjection {
                 }
                 return part
             }
-            normalized.append(KimiMessage(id: message.id, role: message.role, content: content, createdAt: message.createdAt))
+            normalized.append(KimiMessage(id: message.id, role: message.role, content: content, createdAt: message.createdAt, metadata: message.metadata))
             if !orphanParts.isEmpty {
-                normalized.append(KimiMessage(id: "tool-orphan:\(message.id)", role: "assistant", content: orphanParts, createdAt: message.createdAt))
+                normalized.append(KimiMessage(id: "tool-orphan:\(message.id)", role: "assistant", content: orphanParts, createdAt: message.createdAt, metadata: nil))
             }
         }
         appendUnrecorded(after: currentAnchor)
@@ -115,7 +115,7 @@ public final class ToolVisibilityProjection {
     /// current turn can be considered running; older missing results stay unknown.
     public static func runningIDs(in messages: [KimiMessage], busy: Bool) -> Set<String> {
         guard busy else { return [] }
-        let start = messages.lastIndex { $0.role == "user" && !$0.content.allSatisfy(\.isRuntimeContext) } ?? 0
+        let start = messages.lastIndex { $0.isUserPrompt } ?? 0
         let parts = messages.dropFirst(start).flatMap(\.content)
         return Set(parts.filter { $0.type == "tool_use" }.compactMap(\.toolCallId))
             .subtracting(messages.flatMap(\.content).filter { $0.type == "tool_result" }.compactMap(\.toolCallId))

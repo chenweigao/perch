@@ -148,6 +148,17 @@ public struct KimiMessage: Decodable, Identifiable, Equatable, Sendable {
     public let role: String
     public let content: [KimiPart]
     public let createdAt: String
+    public let metadata: JSONValue?
+    /// Compaction summaries arrive as user-role messages; the origin marker is
+    /// the only thing distinguishing them from user-typed prompts.
+    public var isCompactionSummary: Bool {
+        metadata?["origin"]["kind"].string == "compaction_summary"
+    }
+    /// Turns the person actually opened. Runtime-context injections and compaction
+    /// summaries share the user role but never start or anchor one.
+    public var isUserPrompt: Bool {
+        role == "user" && !isCompactionSummary && !content.allSatisfy(\.isRuntimeContext)
+    }
 }
 public struct KimiLiveTool: Decodable, Identifiable, Sendable {
     public let toolCallId: String

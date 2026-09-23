@@ -21,7 +21,7 @@ public final class ConversationProjection {
         var groups: [[KimiMessage]] = []
         var group: [KimiMessage] = []
         for message in messages {
-            if message.role == "user" && !message.content.allSatisfy(\.isRuntimeContext) && !group.isEmpty {
+            if message.isUserPrompt && !group.isEmpty {
                 groups.append(group); group = []
             }
             group.append(message)
@@ -67,8 +67,7 @@ public struct ConversationTurnSummary: Identifiable, Equatable {
     public let reply: String
 
     static func make(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
-        guard let user = messages.first, user.role == "user",
-              !user.content.allSatisfy(\.isRuntimeContext), let entry = entries.first else { return nil }
+        guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
         func excerpt(_ message: KimiMessage) -> String {
             var value = ""
             for part in message.content where part.type == "text" && !part.isRuntimeContext {

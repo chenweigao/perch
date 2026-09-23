@@ -47,7 +47,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
             var phases: [(message: KimiMessage, offset: Int)] = []
             for message in turn {
                 for (offset, part) in message.content.enumerated() where visible(part) || thinking(part) || part.type == "tool_use" || part.isRuntimeContext {
-                    phases.append((KimiMessage(id: message.id, role: message.role, content: [part], createdAt: message.createdAt), offset))
+                    phases.append((KimiMessage(id: message.id, role: message.role, content: [part], createdAt: message.createdAt, metadata: message.metadata), offset))
                 }
             }
             let hasText = phases.contains { visible($0.message.content[0]) }
@@ -85,9 +85,10 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
         }
         for message in messages where !message.content.isEmpty {
             if message.role == "tool" || message.content.allSatisfy({ $0.type == "tool_result" }) { continue }
-            let user = message.role == "user" && !message.content.allSatisfy(\.isRuntimeContext)
-            if user { flush(running: false); entries.append(Self(messages: [message], presentation: .message, partOffset: 0)) }
-            else { turn.append(message) }
+            // Compaction summaries keep their own row but never open a turn.
+            if message.isUserPrompt || message.isCompactionSummary {
+                flush(running: false); entries.append(Self(messages: [message], presentation: .message, partOffset: 0))
+            } else { turn.append(message) }
         }
         flush(running: isRunning)
         return entries
@@ -98,7 +99,7 @@ extension KimiConversation {
     /// Include volatile output in the same folding policy as persisted messages.
     public var displayMessages: [KimiMessage] {
         guard let live else { return messages }
-        let start = messages.lastIndex { $0.role == "user" && !$0.content.allSatisfy(\.isRuntimeContext) }.map { $0 + 1 } ?? 0
+        let start = messages.lastIndex { $0.isUserPrompt }.map { $0 + 1 } ?? 0
         let last = messages[start...].last { $0.role == "assistant" }
         var parts: [KimiPart] = []
         for (type, value) in [("thinking", live.thinkingText), ("text", live.assistantText)] where !value.isEmpty {
@@ -107,6 +108,6 @@ extension KimiConversation {
                                   toolCallId: nil, toolName: nil, input: nil, output: nil, isError: nil, source: nil, fileId: nil, name: nil))
         }
         guard !parts.isEmpty else { return messages }
-        return messages + [KimiMessage(id: "live:\(live.turnId)", role: "assistant", content: parts, createdAt: "")]
+        return messages + [KimiMessage(id: "live:\(live.turnId)", role: "assistant", content: parts, createdAt: "", metadata: nil)]
     }
 }

@@ -122,6 +122,24 @@ func checkConversationPresentation() throws {
     [{"id":"prose","role":"user","created_at":"5","content":[{"type":"text","text":"第一行说明\n第二行说明\n<skill-loaded name=\"x\">body</skill-loaded>"}]}]
     """#)
     precondition(prose[0].content[0].skillContextSplit == nil, "Only a single summary line may fold; multi-line prose stays literal")
+    // Compaction summaries arrive as user-role messages but are harness artifacts:
+    // they keep their own collapsed row and never anchor turns, navigation or tools.
+    let compaction = try messages("""
+    [{"id":"compact","role":"user","created_at":"7","content":[{"type":"text","text":"当前任务：继续优化"}],"metadata":{"origin":{"kind":"compaction_summary"}}}]
+    """)
+    precondition(compaction[0].isCompactionSummary)
+    precondition(!compaction[0].isUserPrompt)
+    precondition(progress[0].isUserPrompt && !progress[0].isCompactionSummary)
+    precondition(ConversationTimelineEntry.make(compaction).map(\.presentation) == [.message],
+                 "A compaction summary keeps its own row instead of joining the process stage")
+    precondition(ConversationTimelineEntry.make(progress + compaction + final).contains { $0.presentation == .message && $0.messages[0].id == "compact" },
+                 "A mid-conversation compaction keeps its chronological row")
+    let compactedNavigation = ConversationProjection().update(progress + compaction + final, isRunning: false).navigation
+    precondition(compactedNavigation.count == 1 && compactedNavigation[0].prompt == "检查",
+                 "Compaction summaries never start a navigation stop or supply its excerpt")
+    precondition(SessionNaming.excerpt(from: compaction) == nil, "Compaction summaries are not user-typed titles")
+    precondition(ToolVisibilityProjection.runningIDs(in: progress + compaction, busy: true) == ["x", "y"],
+                 "Tool windows anchor on the real prompt, not the compaction summary")
     // Cached presentation is exactly the uncached policy across live edits, completion,
     // pagination and a switch to a different conversation (no ID/count-only invalidation).
     let projection = ConversationProjection()

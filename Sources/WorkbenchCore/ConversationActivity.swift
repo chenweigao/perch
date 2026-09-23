@@ -17,7 +17,7 @@ public struct ConversationActivity {
     public init(messages: [KimiMessage], isRunning: Bool, liveTools: [KimiLiveTool] = [],
                 running: Set<String> = [], online: Bool = true, isThinking: Bool = false,
                 isResponding: Bool = false, pendingCount: Int = 0, isStopping: Bool = false) {
-        let start = messages.lastIndex { $0.role == "user" && !$0.content.allSatisfy(\.isRuntimeContext) } ?? 0
+        let start = messages.lastIndex { $0.isUserPrompt } ?? 0
         let current = Array(messages.dropFirst(start))
         let projection = ToolVisibilityProjection().update(current, sessionID: "activity", live: liveTools,
                                                           running: running, online: online)

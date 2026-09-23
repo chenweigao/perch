@@ -5,9 +5,9 @@ import Foundation
 /// back to the remote agent or the agent's context.
 public enum SessionNaming {
     /// First user-typed text, trimmed and bounded. Messages that only carry
-    /// runtime context or attachments produce no candidate.
+    /// runtime context, compaction summaries or attachments produce no candidate.
     public static func excerpt(from messages: [KimiMessage], limit: Int = 400) -> String? {
-        for message in messages where message.role == "user" {
+        for message in messages where message.role == "user" && !message.isCompactionSummary {
             let text = message.content.filter { $0.type == "text" && !$0.isRuntimeContext }
                 .compactMap(\.text).joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)

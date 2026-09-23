@@ -23,11 +23,12 @@ struct KimiMessageView: View {
     let tools: [String: VisibleTool]
     let api: KimiAPI?
     let sessionId: String
-    private var isUserMessage: Bool {
-        message.role == "user" && !message.content.allSatisfy(\.isRuntimeContext)
-    }
+    private var isUserMessage: Bool { message.isUserPrompt }
     private func runtimeContext(_ text: String) -> some View {
         DisclosureGroup("运行上下文") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
+    }
+    private func compactionSummary(_ text: String) -> some View {
+        DisclosureGroup("上下文压缩摘要") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -35,7 +36,9 @@ struct KimiMessageView: View {
             ForEach(Array(message.content.enumerated()), id: \.offset) { _, part in
                 switch part.type {
                 case "text":
-                    if let split = part.skillContextSplit {
+                    if message.isCompactionSummary {
+                        compactionSummary(part.text ?? "")
+                    } else if let split = part.skillContextSplit {
                         KimiMarkdown(text: split.prefix).environment(\.isConversationBodyText, true)
                         runtimeContext(split.context)
                     } else if part.isRuntimeContext {

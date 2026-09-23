@@ -9,7 +9,7 @@ public struct ConversationTodo: Identifiable, Equatable {
 
     /// The floating list belongs to the latest user turn, not the whole session.
     public static func floating(in messages: [KimiMessage], isRunning: Bool) -> [Self] {
-        let start = messages.lastIndex { $0.role == "user" && !$0.content.allSatisfy(\.isRuntimeContext) } ?? messages.startIndex
+        let start = messages.lastIndex { $0.isUserPrompt } ?? messages.startIndex
         let items = current(in: Array(messages[start...]))
         return isRunning || items.contains(where: { $0.status != .done }) ? items : []
     }
