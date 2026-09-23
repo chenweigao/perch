@@ -49,6 +49,19 @@ struct WorkbenchHeaderActions: View {
         return nil
     }
     private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil }
+    /// The scope narrows the action queue, so it is offered on the workbench and on its
+    /// inbox. The archive and the session directory list everything on purpose.
+    private var showsScope: Bool {
+        model.showDashboard && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil
+    }
+    /// Bound to the resolved facet, so a group that no longer exists reads as "all"
+    /// rather than as an invisible selection.
+    private var groupScope: Binding<UUID?> {
+        Binding(get: { model.scopeGroup?.id }, set: { model.setScope(groupID: $0) })
+    }
+    private var hostScope: Binding<UUID?> {
+        Binding(get: { model.scopeHost?.id }, set: { model.setScope(hostID: $0) })
+    }
     var body: some View {
         HStack(spacing: WorkbenchChrome.controlSpacing) {
             if let item, !item.directory.isEmpty {
@@ -83,14 +96,33 @@ struct WorkbenchHeaderActions: View {
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                     .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
             } else {
-                if isHome && !model.workspace.groups.isEmpty {
+                // One control owns the queue's scope. Two menus about task groups, one
+                // filtering and one navigating, would not tell those apart; the sidebar
+                // and each session's menu already lead to a group's own page.
+                if showsScope {
                     Menu {
-                        Button("全部任务组") { model.showHome() }
-                        ForEach(model.workspace.groups) { group in
-                            Button(group.name) { model.showHome(groupID: group.id) }
+                        Picker("任务组", selection: groupScope) {
+                            Text("全部任务组").tag(UUID?.none)
+                            ForEach(model.workspace.groups) { group in Text(group.name).tag(Optional(group.id)) }
                         }
-                    } label: { Text("全部任务组").font(.system(size: 12)).foregroundStyle(.secondary) }
-                        .menuStyle(.borderlessButton).fixedSize().help("打开任务组")
+                        Picker("机器", selection: hostScope) {
+                            Text("全部机器").tag(UUID?.none)
+                            ForEach(model.connections) { connection in
+                                Text(connection.host.name).tag(Optional(connection.id))
+                            }
+                        }
+                        if !model.activeScope.isEmpty {
+                            Divider()
+                            Button("清除筛选") { model.clearScope() }
+                        }
+                    } label: {
+                        WorkbenchToolbarSymbol(name: model.activeScope.isEmpty
+                            ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                            .workbenchControlSurface()
+                    }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize)
+                        .help("筛选工作台").accessibilityLabel("筛选工作台")
                 }
                 if model.selectedGroup != nil {
                     Button { model.editGroup(model.selectedGroup) } label: { WorkbenchToolbarSymbol(name: "pencil").workbenchControlSurface() }

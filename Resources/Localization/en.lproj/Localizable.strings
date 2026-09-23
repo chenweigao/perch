@@ -665,3 +665,14 @@
 "上报时间未提供" = "Report time unavailable";
 "Load all turns" = "Load all turns";
 "Loaded conversation turns" = "Loaded conversation turns";
+"任务组：%@" = "Groups: %@";
+"打开任务组 %@" = "Open group %@";
+"机器" = "Machine";
+"全部机器" = "All machines";
+"筛选工作台" = "Filter the workbench";
+"筛选中" = "Filtered";
+"取消筛选：%@" = "Remove filter: %@";
+"全部清除" = "Clear all";
+"清除筛选" = "Clear Filters";
+"当前范围内没有待处理或运行中的事项" = "Nothing pending or running in the current scope";
+"当前筛选下没有会话" = "No sessions match the current filters";

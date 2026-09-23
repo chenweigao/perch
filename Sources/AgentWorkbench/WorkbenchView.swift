@@ -93,7 +93,8 @@ private struct WorkbenchDetail: View {
         }
     }
 
-    private var conversation: some View {
+    @ViewBuilder private var conversation: some View {
+        let index = model.groupIndex
         VStack(spacing: 0) {
             if let notice = model.taskNotice {
                 HStack {
@@ -121,6 +122,7 @@ private struct WorkbenchDetail: View {
                             onOpen: { model.open($0) },
                             onMarkReviewed: { model.markReviewed($0) },
                             rowActions: { SessionActionsMenu(model: model, item: $0) },
+                            groupNames: { index[$0.id] },
                             onForgetRestoration: { model.forgetRestoration($0) },
                             onUndoArchive: { model.undoBatchArchive() },
                             onRetryArchive: { model.retryBatchArchive() },
@@ -128,7 +130,9 @@ private struct WorkbenchDetail: View {
                             onConnectRemote: { model.configureHost() },
                             onShowInbox: { model.showInbox() },
                             onShowAll: { model.showAllSessions() },
-                            onShowHome: { model.showHome() })
+                            onShowHome: { model.showHome() },
+                            onClearScope: { model.clearScope($0) },
+                            onClearAllScopes: { model.clearScope() })
                     }
                 }
                 else if model.showKimi {

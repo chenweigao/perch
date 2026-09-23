@@ -91,6 +91,18 @@ func checkDashboard() throws {
     let unconfigured = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: false)
     precondition(unconfigured.emptyState == nil)
 
+    // A filter that hides everything must not be reported as "nothing has been started",
+    // or the advice sends the user off to create a session instead of clearing it.
+    let filteredEmpty = DashboardProjection(sessions: [], subjects: [:], hasConfiguredEnvironment: true, filtered: true)
+    precondition(filteredEmpty.emptyState == .noMatches)
+    precondition(DashboardProjection(sessions: [], subjects: [:], hasConfiguredEnvironment: false,
+                                     filtered: true).emptyState == .noMatches)
+    // A filter that still leaves rows reads exactly like an unfiltered queue.
+    let filteredQuiet = DashboardProjection(sessions: [session("done", section: .other)],
+                                            subjects: Dictionary(uniqueKeysWithValues: [subject("done")]),
+                                            hasConfiguredEnvironment: true, filtered: true)
+    precondition(filteredQuiet.emptyState == .nothingPending && filteredQuiet.archiveCount == 1)
+
     // The batch keeps the caller's concurrency bound.
     let bounded = DashboardProjection(sessions: sessions, subjects: subjects, hasConfiguredEnvironment: true, concurrencyLimit: 2)
     precondition(bounded.archivePlan.concurrencyLimit == 2)
@@ -122,6 +134,23 @@ func checkDashboard() throws {
     precondition(DashboardContext() == DashboardContext())
     precondition(DashboardContext(storageError: "工作台保存失败") != DashboardContext())
 
+    // The active scope travels with the queue it narrows, named the way the user named
+    // it, so a shorter list explains itself instead of looking like missing sessions.
+    // Facets stay separate: dropping a group filter keeps the machine it ran on.
+    let scoped = DashboardContext(scope: ActiveScope(groupName: "Perch", hostName: "dev-env"))
+    precondition(scoped.scope.facets.map(\.name) == ["Perch", "dev-env"])
+    precondition(scoped.scope.facets.map(\.kind) == [.group, .host])
+    precondition(scoped.scope.facets.map(\.symbol) == ["folder", "server.rack"])
+    precondition(ActiveScope().isEmpty && ActiveScope().facets.isEmpty)
+    precondition(ActiveScope(groupName: "Perch").facets.map(\.kind) == [.group])
+    precondition(ActiveScope(hostName: "dev-env").facets.map(\.kind) == [.host])
+    precondition(DashboardContext(scope: ActiveScope(groupName: "Perch")) != DashboardContext())
+    // The two facets are independent, so clearing one leaves the other narrowing.
+    var both = DashboardScope(groupID: UUID(), hostID: UUID())
+    both.groupID = nil
+    precondition(both.groupID == nil && both.hostID != nil)
+    precondition(DashboardScope() == DashboardScope() && both != DashboardScope())
+
     // Queue rows carry how long something has waited. A source with no timestamp
     // reports nothing rather than a fabricated "just now", and a remote clock that
     // runs ahead of this Mac is not rendered as a negative wait.
@@ -133,5 +162,5 @@ func checkDashboard() throws {
     precondition(SessionTime.label(since: now.timeIntervalSince1970 - 720, waiting: false, now: now) == "12 分钟前")
     precondition(SessionTime.label(since: now.timeIntervalSince1970 - 7_200, waiting: false, now: now) == "2 小时前")
     precondition(SessionTime.label(since: now.timeIntervalSince1970 - 180_000, waiting: false, now: now) == "2 天前")
-    print("PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run empty states, single inbox narrowing, restore context and queue row times")
+    print("PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run and filtered empty states, single inbox narrowing, restore context, active scope and queue row times")
 }

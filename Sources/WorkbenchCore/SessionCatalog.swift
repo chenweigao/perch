@@ -15,7 +15,10 @@ public enum SessionCatalog {
                              onlyAttention: Bool, showArchived: Bool) -> SessionScope {
         let sessions = all.filter { item in
             item.archived == showArchived &&
-            (group.map { $0.sessions.contains(item.reference) } ?? (hostFilter == nil || hostFilter == item.reference.hostID)) &&
+            // A group spans machines, so the two facets narrow together instead of
+            // one replacing the other.
+            (group.map { $0.sessions.contains(item.reference) } ?? true) &&
+            (hostFilter == nil || hostFilter == item.reference.hostID) &&
             (search.isEmpty || "\(item.title) \(item.directory) \(item.detail) \(item.hostName)".localizedCaseInsensitiveContains(search)) &&
             // The inbox is only what needs a person right now. Unread results stay in
             // the workbench review section, which is also what the sidebar count means.

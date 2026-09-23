@@ -14,6 +14,7 @@ struct WorkbenchSidebar: View {
     }
     var body: some View {
         let projection = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
+        let index = model.groupIndex
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个 SSH"),
                               onSearch: { model.showSessionSearch = true },
@@ -22,7 +23,7 @@ struct WorkbenchSidebar: View {
                               onArchive: { model.showArchive() }) {
             if !projection.favorites.isEmpty {
                 heading("置顶")
-                ForEach(projection.favorites) { item in sessionRow(item) }
+                ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
             }
             HStack {
                 Text("任务组").font(.system(size: 11)).foregroundStyle(.secondary)
@@ -61,7 +62,7 @@ struct WorkbenchSidebar: View {
                 }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
             }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
-            ForEach(projection.recent) { item in sessionRow(item) }
+            ForEach(projection.recent) { item in sessionRow(item, groups: index[item.id]) }
             if projection.recent.isEmpty {
                 Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
                     .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
@@ -78,8 +79,9 @@ struct WorkbenchSidebar: View {
         Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
             .frame(height: 24).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
     }
-    private func sessionRow(_ item: WorkspaceSession) -> some View {
-        SessionSidebarRow(model: model, item: item, selected: !model.showDashboard && item.id == model.tabs.selectedID,
+    private func sessionRow(_ item: WorkspaceSession, groups: [String]) -> some View {
+        SessionSidebarRow(model: model, item: item, groups: groups,
+                          selected: !model.showDashboard && item.id == model.tabs.selectedID,
                           onOpen: { model.open(item) })
     }
 }
@@ -96,6 +98,7 @@ struct SessionDirectoryView: View {
     var body: some View {
         let result = search.update(model.allSessions, query: query, locale: L.locale)
         let sessions = result.sessions
+        let index = model.groupIndex
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L(key: isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
@@ -110,7 +113,8 @@ struct SessionDirectoryView: View {
                 ScrollView {
                     LazyVStack(spacing: 4) {
                         ForEach(sessions) { item in
-                            SessionSidebarRow(model: model, item: item, selected: item.id == selection,
+                            SessionSidebarRow(model: model, item: item, groups: index[item.id],
+                                              selected: item.id == selection,
                                               onOpen: { open(item) }).id(item.id)
                         }
                         if sessions.isEmpty { Text("没有找到会话").foregroundStyle(.secondary).padding(24) }
@@ -157,12 +161,23 @@ private struct SessionSidebarRow: View {
     @UILocalization private var L
     let model: WorkbenchModel
     let item: WorkspaceSession
+    /// Task groups this session belongs to. The subtitle is already spoken for by
+    /// attention and offline states, so membership stays in the tooltip.
+    var groups: [String] = []
     let selected: Bool
     let onOpen: () -> Void
     private var subtitle: String? {
         if item.archived { return nil }
         if !item.online { return L("离线 · 状态未同步") }
         return item.section == .attention ? item.detail : nil
+    }
+    private var tooltip: String {
+        var lines = [item.title, "\(item.reference.kind.label) · \(item.hostName) · \(item.directory)", item.detail]
+        if !groups.isEmpty {
+            let names = groups.joined(separator: "、")
+            lines.append(L("任务组：\(names)"))
+        }
+        return lines.joined(separator: "\n")
     }
     var body: some View {
         SessionRowChrome(title: item.title, subtitle: subtitle,
@@ -176,7 +191,7 @@ private struct SessionSidebarRow: View {
             SessionStatusIndicator(item: item)
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
-            .help("\(item.title)\n\(item.reference.kind.label) · \(item.hostName) · \(item.directory)\n\(item.detail)")
+            .help(tooltip)
     }
 }
 
@@ -193,6 +208,13 @@ struct SessionActionsMenu: View {
             }
         }
         Button { model.groupingSession = item } label: { Label("分组…", systemImage: "folder") }
+        // Membership is only useful if it leads somewhere, so any list offers the jump
+        // to the group's own page, where its goal and next step live.
+        ForEach(model.workspace.groups.filter { $0.sessions.contains(item.reference) }) { group in
+            Button { model.showHome(groupID: group.id) } label: {
+                Label("打开任务组 \(group.name)", systemImage: "arrow.right")
+            }
+        }
         Divider()
         Button { model.setArchived(item, archived: !item.archived) } label: {
             Label(item.archived ? L("恢复归档") : item.reference.kind == .terminal ? L("归档到本机") : L("归档会话"), systemImage: "archivebox")
@@ -236,12 +258,13 @@ struct ArchivedSessionsView: View {
     @ObservedObject var model: WorkbenchModel
     var body: some View {
         let sessions = model.scopedSessions
+        let index = model.groupIndex
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 Text("已归档").font(.title.weight(.semibold))
                 Text("Kimi 归档与服务端同步；终端归档只整理本机列表，不结束远端进程。").foregroundStyle(.secondary)
                 ForEach(sessions) { item in
-                    SessionSidebarRow(model: model, item: item, selected: false, onOpen: {})
+                    SessionSidebarRow(model: model, item: item, groups: index[item.id], selected: false, onOpen: {})
                 }
                 if sessions.isEmpty { Text("没有归档会话").foregroundStyle(.secondary) }
             }.padding(32).frame(maxWidth: 950).frame(maxWidth: .infinity, alignment: .leading)
@@ -271,7 +294,7 @@ private struct ConnectionControls: View {
                     HStack {
                         Button {
                             model.activateAgentEnvironment(connection.id)
-                            model.showHome(groupID: model.selectedGroupID); model.hostFilter = connection.id
+                            model.showHome(groupID: model.selectedGroupID); model.setScope(hostID: connection.id)
                         } label: {
                             HStack(spacing: 6) {
                                 HostIdentityLabel(hostID: connection.id, name: connection.host.name)
