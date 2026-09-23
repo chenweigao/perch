@@ -1,7 +1,17 @@
 import Foundation
 
-public enum DashboardScope: Equatable, Sendable {
-    case all, group(UUID)
+/// Which sessions the workbench queue is allowed to show, by identity.
+///
+/// The facets are independent and narrow together: a group can span machines, so
+/// picking one must not decide the other. This is the filter the model holds;
+/// `ActiveScope` is the same state spelled out in names for the screen.
+public struct DashboardScope: Equatable, Sendable {
+    public var groupID: UUID?
+    public var hostID: UUID?
+
+    public init(groupID: UUID? = nil, hostID: UUID? = nil) {
+        self.groupID = groupID; self.hostID = hostID
+    }
 }
 
 public struct DashboardSection: Identifiable, Equatable, Sendable {
@@ -14,14 +24,37 @@ public struct DashboardSection: Identifiable, Equatable, Sendable {
 /// What the workbench offers when there is nothing to act on. A first run needs a
 /// way to set up an environment, not an empty list that looks broken.
 public enum DashboardEmptyState: Equatable, Sendable {
-    case noEnvironment, noSessions, nothingPending
+    case noEnvironment, noSessions, nothingPending, noMatches
 
     public var title: String {
         switch self {
         case .noEnvironment: return "先连接一台运行 Agent 的机器"
         case .noSessions: return "选择 Agent 和工作目录后开始"
         case .nothingPending: return "当前范围内没有待处理或运行中的事项"
+        case .noMatches: return "当前筛选下没有会话"
         }
+    }
+}
+
+/// The facets currently narrowing the queue, named as the user named them.
+///
+/// A filter that is not on screen reads as missing sessions, so the queue carries
+/// its own scope beside the rows it explains. Clearing is per facet: a group filter
+/// and a machine filter answer different questions and one is often still wanted.
+public struct ActiveScope: Equatable, Sendable {
+    public struct Facet: Hashable, Sendable {
+        public enum Kind: Hashable, Sendable { case group, host }
+        public let kind: Kind
+        public let name: String
+        public var symbol: String { kind == .group ? "folder" : "server.rack" }
+    }
+
+    public let facets: [Facet]
+    public var isEmpty: Bool { facets.isEmpty }
+
+    public init(groupName: String? = nil, hostName: String? = nil) {
+        facets = [groupName.map { Facet(kind: .group, name: $0) },
+                  hostName.map { Facet(kind: .host, name: $0) }].compactMap { $0 }
     }
 }
 
@@ -32,9 +65,11 @@ public enum DashboardEmptyState: Equatable, Sendable {
 public struct DashboardContext: Equatable, Sendable {
     public let pendingRestoration: [SavedTerminal]
     public let storageError: String?
+    public let scope: ActiveScope
 
-    public init(pendingRestoration: [SavedTerminal] = [], storageError: String? = nil) {
-        self.pendingRestoration = pendingRestoration; self.storageError = storageError
+    public init(pendingRestoration: [SavedTerminal] = [], storageError: String? = nil,
+                scope: ActiveScope = ActiveScope()) {
+        self.pendingRestoration = pendingRestoration; self.storageError = storageError; self.scope = scope
     }
 }
 
@@ -55,8 +90,11 @@ public struct DashboardProjection: Equatable, Sendable {
     /// whether one is reachable right now. The app keeps a built-in connection so the
     /// terminal surface always has one, so counting connections would hide the first run,
     /// and counting online connections would show it during every reconnect.
+    /// `filtered` says the caller narrowed the sessions before handing them over.
+    /// Without it an empty queue would advise setting up an agent or starting a
+    /// session when the only thing wrong is the active filter.
     public init(sessions: [WorkspaceSession], subjects: [String: ArchiveSubject],
-                hasConfiguredEnvironment: Bool, concurrencyLimit: Int = 4) {
+                hasConfiguredEnvironment: Bool, concurrencyLimit: Int = 4, filtered: Bool = false) {
         let visible = sessions.filter { !$0.archived }
         let live = visible.filter(\.online)
         attention = DashboardSection(section: .attention, items: live.filter { $0.section == .attention })
@@ -71,10 +109,13 @@ public struct DashboardProjection: Equatable, Sendable {
         archivePlan = BatchArchivePlan(subjects: scoped, concurrencyLimit: concurrencyLimit)
         blocked = archivePlan.blocked.reduce(into: [:]) { counts, item in counts[item.block, default: 0] += 1 }
 
-        // An empty list means one of two different things, and setup advice belongs only
-        // to the first of them: nothing has been set up yet, or nothing has been started.
-        // Sessions already listed are proof enough that an environment works.
-        if visible.isEmpty { emptyState = hasConfiguredEnvironment ? .noSessions : .noEnvironment }
+        // An empty list means one of three different things, and setup advice belongs only
+        // to the first two: nothing has been set up yet, nothing has been started, or a
+        // filter is hiding everything. Sessions already listed are proof enough that an
+        // environment works, and a filter is the caller's own doing.
+        if visible.isEmpty {
+            emptyState = filtered ? .noMatches : (hasConfiguredEnvironment ? .noSessions : .noEnvironment)
+        }
         else if attention.isEmpty && running.isEmpty && review.isEmpty { emptyState = .nothingPending }
         else { emptyState = nil }
     }

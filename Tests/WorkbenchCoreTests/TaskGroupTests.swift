@@ -54,5 +54,40 @@ func checkTaskGroup() {
     let archivedGroup = WorkItemGroup(name: "Archived", goal: "", nextStep: "", sessions: [archived.reference])
     let archivedOnly = TaskGroupProjection(group: archivedGroup, allSessions: all, lastSessionID: nil, search: "")
     precondition(archivedOnly.totalCount == 0 && archivedOnly.archivedCount == 1)
-    print("PASS: task group membership, recency, priority, search, resume and missing-session visibility")
+
+    // A row names the groups it belongs to, in sidebar order, and only the first is
+    // spelled out so the group badge does not take the title's width.
+    let secondHost = UUID()
+    let remote = WorkspaceSession(reference: SessionReference(hostID: secondHost, terminalID: "remote", kind: .kimi),
+                                  title: "remote", directory: "/tmp/project", hostName: "remote-host", detail: "Kimi",
+                                  online: true, section: .review, canMarkReviewed: true, updatedAt: 8)
+    let spanning = WorkItemGroup(name: "Spanning", goal: "", nextStep: "",
+                                 sessions: [unread.reference, remote.reference])
+    let index = SessionGroupIndex(groups: [group, spanning])
+    precondition(index[unread.id] == ["Group", "Spanning"])
+    precondition(index[approval.id] == ["Group"])
+    precondition(index[outside.id].isEmpty)
+    precondition(SessionGroupIndex.label(index[unread.id]) == "Group +1")
+    precondition(SessionGroupIndex.label(index[approval.id]) == "Group")
+    precondition(SessionGroupIndex.label(index[outside.id]) == nil)
+    // Membership is read from the saved references, so a badge survives a session that
+    // has not reconnected and is not in the catalog yet.
+    precondition(index[missing.id] == ["Group"])
+
+    // A group spans machines, so the two facets narrow together instead of one
+    // replacing the other, and neither may widen past the other.
+    let catalog = all + [remote]
+    let bothHosts = SessionCatalog.scope(catalog, starred: [], group: spanning, hostFilter: nil,
+                                         search: "", onlyAttention: false, showArchived: false)
+    precondition(bothHosts.sessions.map(\.id) == [unread.id, remote.id])
+    let remoteOnly = SessionCatalog.scope(catalog, starred: [], group: spanning, hostFilter: secondHost,
+                                          search: "", onlyAttention: false, showArchived: false)
+    precondition(remoteOnly.sessions.map(\.id) == [remote.id])
+    let localOnly = SessionCatalog.scope(catalog, starred: [], group: spanning, hostFilter: host,
+                                         search: "", onlyAttention: false, showArchived: false)
+    precondition(localOnly.sessions.map(\.id) == [unread.id])
+    let unscoped = SessionCatalog.scope(catalog, starred: [], group: nil, hostFilter: nil,
+                                        search: "", onlyAttention: false, showArchived: false)
+    precondition(unscoped.sessions.count == catalog.count - 1)
+    print("PASS: task group membership, recency, priority, search, resume, missing-session visibility, row group badges and combined group/machine scoping")
 }
