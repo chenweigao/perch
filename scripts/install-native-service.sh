@@ -11,7 +11,8 @@ for arg in "$@"; do
     --provider=qoder) provider="qoder" ;;
     --provider=dsh) provider="dsh"; with_dsh=1 ;;
     --provider=codex) provider="codex" ;;
-    -h|--help) echo "usage: $0 <host> [--provider=omp|qoder|dsh|codex] [--with-dsh]"; exit 0 ;;
+    --provider=claude) provider="claude" ;;
+    -h|--help) echo "usage: $0 <host> [--provider=omp|qoder|dsh|codex|claude] [--with-dsh]"; exit 0 ;;
     *) remote_host="$arg" ;;
   esac
 done
@@ -39,8 +40,8 @@ run_client() {
 }
 # This installs only the Workbench broker and SDK; it does not replace the user's CLI.
 run_client ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 "$remote_host" 'mkdir -p ~/.local/share/agent-workbench/native; chmod 700 ~/.local/share/agent-workbench/native'
-run_client scp -q -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 remote/native-agent-service.py remote/qoder-worker.mjs remote/package.json "$remote_host:.local/share/agent-workbench/native/"
-if [[ "$provider" == "all" || "$provider" == "qoder" ]]; then
+run_client scp -q -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 remote/native-agent-service.py remote/qoder-worker.mjs remote/claude-worker.mjs remote/package.json "$remote_host:.local/share/agent-workbench/native/"
+if [[ "$provider" == "all" || "$provider" == "qoder" || "$provider" == "claude" ]]; then
   run_client ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 "$remote_host" 'cd ~/.local/share/agent-workbench/native && npm install --ignore-scripts'
 fi
 if [ "$with_dsh" = "1" ]; then

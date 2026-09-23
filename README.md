@@ -29,7 +29,7 @@ Liquid Glass controls on macOS 26. Designed for a focused, fluid reading experie
 - **Keep your CLI workflow.** Use native chat for supported agents and Ghostty terminals for CLI sessions through Herdr.
 - **Inspect the work.** Open remote files and read Git diffs alongside a conversation (experimental).
 - **Remote execution, local control.** Files and tools run on your server. Closing the Mac app leaves managed remote sessions running.
-- **Explicit permission modes.** Choose adapter-specific defaults and per-task overrides; high-risk modes require confirmation. Kimi and Qoder can change for a later message or turn, while OMP and Codex are fixed when a session is created.
+- **Explicit permission modes.** Choose adapter-specific defaults and per-task overrides; high-risk modes require confirmation. Kimi, Qoder and Claude Code can change for a later message or turn, while OMP and Codex are fixed when a session is created.
 
 ## Agent connections
 
@@ -38,13 +38,14 @@ Liquid Glass controls on macOS 26. Designed for a focused, fluid reading experie
 | Kimi Code | Kimi Web API over SSH | Native conversation |
 | Oh My Pi (OMP) | RPC through the remote bridge | Native conversation |
 | Qoder CN | Official Agent SDK through the remote bridge | Native conversation |
+| Claude Code | Official Agent SDK through the remote bridge | Native conversation |
 | DeepSeek Harness (dsh) | ACP through the remote bridge | Native conversation |
 | Codex | `codex app-server` JSON-RPC over stdio through the remote bridge | Native conversation |
 | Other CLI agents | Herdr + SSH | Terminal |
 
 Native integrations share the same conversation UI. Additional RPC, SDK or ACP
 adapters are welcome; arbitrary protocol compatibility is not automatic.
-See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / dsh / Codex setup](docs/NATIVE-AGENTS.md)
+See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / dsh / Codex / Claude Code setup](docs/NATIVE-AGENTS.md)
 for tested versions and recovery limits. Agent credentials and model configuration
 stay with the CLI; Perch does not connect directly to model providers.
 
@@ -52,7 +53,7 @@ Local OMP discovery is available, but local native conversations are not connect
 yet. Kimi, remote OMP and Codex support steering during a running task, with an
 explicit next-turn option. Codex keeps its native thread ID and history, takes model
 and reasoning-effort choices from `model/list`, and surfaces every app-server approval
-or question for an explicit response. Qoder CN / dsh support stopping and next-turn
+or question for an explicit response. Qoder CN / dsh / Claude Code support stopping and next-turn
 queueing. Pending messages appear in the conversation until runtime history confirms
 them. Existing Herdr sessions remain terminal sessions.
 

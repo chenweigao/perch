@@ -19,9 +19,10 @@ PERMISSION_MODES = {
     'qoder': ('default', 'acceptEdits', 'plan', 'dontAsk', 'auto', 'bypassPermissions'),
     'dsh': ('runtime-managed',),
     'codex': ('read-only', 'workspace-ask', 'workspace-auto', 'full-access'),
+    'claude': ('default', 'acceptEdits', 'plan', 'bypassPermissions'),
 }
-PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask'}
-PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session'}
+PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask', 'claude':'default'}
+PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session', 'claude':'next-turn'}
 
 def permission_mode(provider, value=None):
     mode = value if value is not None else PERMISSION_DEFAULTS[provider]
@@ -93,11 +94,11 @@ def setup_status(provider):
     This runs outside LOCK, so CLI discovery cannot block active conversations.
     Return names/IDs and booleans only, never CLI configuration or credentials.
     """
-    if provider not in ('omp', 'qoder', 'dsh', 'codex'):
+    if provider not in ('omp', 'qoder', 'dsh', 'codex', 'claude'):
         raise ValueError('Unknown setup provider')
     try:
         if provider == 'dsh': binary = dsh_binary()
-        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'codex':'codex'}[provider])
+        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'codex':'codex', 'claude':'claude'}[provider])
     except ValueError:
         binary = None
     result = {'installed': bool(binary), 'models': [], 'modelCheck': 'unverified', 'credentialCheck': 'unverified'}
@@ -120,6 +121,11 @@ def setup_status(provider):
         result['modelCheck'] = 'configured' if result['models'] else 'missing'
     elif provider == 'qoder':
         result['sdkInstalled'] = (ROOT / 'node_modules/@qodercn-ai/qodercn-agent-sdk/package.json').is_file()
+        result['nodeInstalled'] = bool(shutil.which('node'))
+        # The SDK resolves the model and login at the first query; no model-list API.
+        result['modelCheck'] = 'runtime-default'
+    elif provider == 'claude':
+        result['sdkInstalled'] = (ROOT / 'node_modules/@anthropic-ai/claude-agent-sdk/package.json').is_file()
         result['nodeInstalled'] = bool(shutil.which('node'))
         # The SDK resolves the model and login at the first query; no model-list API.
         result['modelCheck'] = 'runtime-default'
@@ -390,7 +396,7 @@ class Session:
         s.update(busy=True,error=None,cancelled=False,stopRequested=False,stopAcknowledged=False,
                  updated=time.time(),turnId=request_id,turnState='submitting')
         if not s['messages']: s['title']=text[:60]
-        if s['provider'] in ('qoder','dsh','codex'): self.upsert({'role':'user','content':text},request_id)
+        if s['provider'] in ('qoder','dsh','codex','claude'): self.upsert({'role':'user','content':text},request_id)
         if s['provider']=='dsh':
             self.pending_prompt=(request_id,text)
             try:
@@ -412,7 +418,7 @@ class Session:
                 receipt['status']='accepted'; s['turnState']='running' if turn.get('status')=='inProgress' else 'accepted'
             else:
                 message={'type':'prompt','id':request_id,'message':text}
-                if s['provider']=='qoder': message['permissionMode']=s['permissionMode']
+                if s['provider'] in ('qoder','claude'): message['permissionMode']=s['permissionMode']
                 self.send(message)
                 receipt['status']='submitted'; s['turnState']='submitted'
         except Exception as e:
@@ -432,9 +438,11 @@ class Session:
             args = [dsh_binary(),'--profile','acp']
             env = dict(os.environ, DSH_HOME=str(ROOT/'dsh-home'), DSH_TELEMETRY_MODE='DISABLED')
         else:
-            cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which('qoderclicn')}
-            if not cfg['binary']: raise ValueError('未找到 qoderclicn')
-            args = ['node',str(ROOT/'qoder-worker.mjs'),json.dumps(cfg)]
+            cli = 'qoderclicn' if s['provider'] == 'qoder' else 'claude'
+            worker = 'qoder-worker.mjs' if s['provider'] == 'qoder' else 'claude-worker.mjs'
+            cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which(cli)}
+            if not cfg['binary']: raise ValueError('未找到 ' + cli)
+            args = ['node',str(ROOT/worker),json.dumps(cfg)]
         self.ready.clear()
         self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
         self.acp_blocks = {}; self.permission_options = {}
@@ -969,7 +977,7 @@ class Session:
             s['stopAcknowledged']=True; durable=True
         elif t == 'agent_end':
             if e.get('isTerminal') is False: return
-            if provider=='qoder' and s.get('stopAcknowledged'): s['cancelled']=True
+            if provider in ('qoder','claude') and s.get('stopAcknowledged'): s['cancelled']=True
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
             if not s.get('cancelled') and not s['error']: s['completed']+=1
             self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
@@ -1016,11 +1024,11 @@ class Session:
             commands=[c for c in (e.get('commands') or []) if c.get('name')]
             if commands == s.get('commands'): return
             s['commands']=commands
-        elif provider == 'qoder' and t == 'interaction': s['interactions'].append(e); durable=True
-        elif provider == 'qoder' and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
-        elif provider == 'qoder' and t in ('assistant','user'):
+        elif provider in ('qoder','claude') and t == 'interaction': s['interactions'].append(e); durable=True
+        elif provider in ('qoder','claude') and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
+        elif provider in ('qoder','claude') and t in ('assistant','user'):
             self.upsert(e['message'], e.get('uuid') or e['message'].get('id') or str(uuid.uuid4())); s.pop('partial',None); durable=True
-        elif provider == 'qoder' and t == 'stream_event':
+        elif provider in ('qoder','claude') and t == 'stream_event':
             ev=e['event']; et=ev['type']
             if et=='message_start': s['partial']={'role':'assistant','content':[]}
             elif et=='content_block_start':
@@ -1031,10 +1039,10 @@ class Session:
                     if delta['type']=='text_delta': parts[idx]['text']=parts[idx].get('text','')+delta['text']
                     elif delta['type']=='thinking_delta': parts[idx]['thinking']=parts[idx].get('thinking','')+delta['thinking']
             else: return
-        elif provider == 'qoder' and t == 'result':
+        elif provider in ('qoder','claude') and t == 'result':
             s['resume']=e.get('session_id',s.get('resume')); durable=True
-            if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result','Qoder 执行失败')
-        elif provider == 'qoder' and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
+            if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider=='qoder' else 'Claude')+' 执行失败')
+        elif provider in ('qoder','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
             if e.get('error'):
                 s['error']='dsh 握手失败：'+str(e['error'].get('message','initialize 被拒绝'))
@@ -1233,8 +1241,8 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'id':'state','type':'get_state'})
                                 s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
                         elif action=='permission':
-                            if s.state['provider'] != 'qoder': raise ValueError('当前 Agent 的权限在创建会话时固定')
-                            mode=permission_mode('qoder',body.get('mode'))
+                            if s.state['provider'] not in ('qoder','claude'): raise ValueError('当前 Agent 的权限在创建会话时固定')
+                            mode=permission_mode(s.state['provider'],body.get('mode'))
                             s.state['permissionMode']=mode; s.touch(True)
                             result={'ok':True,'permission':permission_capability(s.state)}
                         elif action=='thinking':

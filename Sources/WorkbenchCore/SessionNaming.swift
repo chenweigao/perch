@@ -24,7 +24,7 @@ public enum SessionNaming {
         switch kind {
         case .terminal: return false
         case .kimi: return trimmed.isEmpty
-        case .omp, .qoder, .dsh, .codex:
+        case .omp, .qoder, .dsh, .codex, .claude:
             // The bridge's default title is a literal, not a localized string.
             if trimmed.isEmpty || trimmed == "新对话" { return true }
             guard let first = firstUserText else { return false }

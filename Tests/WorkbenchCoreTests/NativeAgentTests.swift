@@ -33,8 +33,8 @@ func checkNativeAgents() throws {
     precondition(done.last?.messages[0].content.count == 1 && done.last?.messages[0].content[0].text == "最终结果")
     precondition(done[4].messages.last?.content.first?.type == "thinking")
     let host = UUID()
-    let refs = [SessionKind.kimi, .omp, .qoder, .dsh, .codex, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
-    precondition(Set(refs.map(\.id)).count == 6)
+    let refs = [SessionKind.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal].map { SessionReference(hostID: host, terminalID: "same", kind: $0) }
+    precondition(Set(refs.map(\.id)).count == 7)
     precondition(SessionKind.codex.label == "Codex")
     var workspace = LocalWorkspace(); refs.forEach { workspace.toggleStar($0) }
     let restored = try JSONDecoder().decode(LocalWorkspace.self, from: JSONEncoder().encode(workspace))
@@ -47,7 +47,8 @@ func checkNativeAgents() throws {
         (.omp, ["always-ask", "write", "yolo"], "always-ask", .newSession),
         (.qoder, ["default", "acceptEdits", "plan", "dontAsk", "auto", "bypassPermissions"], "default", .nextTurn),
         (.dsh, ["runtime-managed"], "runtime-managed", .runtimeManaged),
-        (.codex, ["read-only", "workspace-ask", "workspace-auto", "full-access"], "workspace-ask", .newSession)
+        (.codex, ["read-only", "workspace-ask", "workspace-auto", "full-access"], "workspace-ask", .newSession),
+        (.claude, ["default", "acceptEdits", "plan", "bypassPermissions"], "default", .nextTurn)
     ]
     for (provider, modes, safeDefault, scope) in expectedPermissions {
         precondition(PermissionCatalog.options(for: provider).map(\.id) == modes)
@@ -59,6 +60,7 @@ func checkNativeAgents() throws {
     precondition(PermissionCatalog.option("auto", for: .kimi)?.risk == .dangerous)
     precondition(PermissionCatalog.option("yolo", for: .omp)?.risk == .dangerous)
     precondition(PermissionCatalog.option("bypassPermissions", for: .qoder)?.risk == .dangerous)
+    precondition(PermissionCatalog.option("bypassPermissions", for: .claude)?.risk == .dangerous)
     precondition(PermissionCatalog.option("full-access", for: .codex)?.risk == .dangerous)
 
     let suiteName = "PermissionDefaultsTests.\(UUID().uuidString)"

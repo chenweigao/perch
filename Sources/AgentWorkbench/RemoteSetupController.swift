@@ -55,7 +55,7 @@ final class RemoteSetupController: ObservableObject {
                 enabledAgents: RemoteSetup.agents.filter { enabledAgents.contains($0) || $0 == provider },
                 kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath)
     }
-    var needsBridge: Bool { [.omp, .qoder, .dsh, .codex].contains(provider) }
+    var needsBridge: Bool { [.omp, .qoder, .dsh, .codex, .claude].contains(provider) }
     var canContinue: Bool { ready && !busy }
     var canFinish: Bool { projectVerified && ready && !busy }
     var launch: TaskLaunchDefaults { TaskLaunchDefaults(hostID: hostID, provider: provider, directory: directory, model: modelID) }
@@ -66,6 +66,7 @@ final class RemoteSetupController: ObservableObject {
         case .qoder: return URL(string: "https://docs.qoder.cn/cli/installation")!
         case .dsh: return URL(string: "https://github.com/deepseek-ai/deepseek-harness")!
         case .codex: return URL(string: "https://github.com/openai/codex#installation")!
+        case .claude: return URL(string: "https://code.claude.com/docs/en/setup")!
         case .terminal: return URL(string: "https://github.com/herdrdev/herdr")!
         }
     }
@@ -75,6 +76,7 @@ final class RemoteSetupController: ObservableObject {
         case .omp: return "bun install -g @oh-my-pi/pi-coding-agent@18.1.16"
         case .qoder: return "npm install -g @qodercn-ai/qoderclicn@1.1.58"
         case .codex: return "npm install -g @openai/codex@0.155.1"
+        case .claude: return "npm install -g @anthropic-ai/claude-code@2.1.280"
         case .dsh, .terminal: return nil
         }
     }
@@ -84,6 +86,7 @@ final class RemoteSetupController: ObservableObject {
         case .omp: return "omp"
         case .qoder: return "qoderclicn"
         case .codex: return "codex login"
+        case .claude: return "claude"
         case .dsh: return "" // The user's shell/profile owns DEEPSEEK_API_KEY.
         case .terminal: return "herdr"
         }
@@ -188,8 +191,8 @@ final class RemoteSetupController: ObservableObject {
     }
     private func checkNative() async throws {
         mark("runtime", .checking)
-        hint = L("远端需要 Python 3；Qoder 还需要 Node.js 与 npm。")
-        _ = try await ssh(provider == .qoder ? "python3 --version && node --version" : "python3 --version")
+        hint = L("远端需要 Python 3；Qoder 与 Claude Code 还需要 Node.js 与 npm。")
+        _ = try await ssh(provider == .qoder || provider == .claude ? "python3 --version && node --version" : "python3 --version")
         try Task.checkCancellation()
         mark("runtime", .passed)
         mark("service", .checking)
@@ -221,6 +224,12 @@ final class RemoteSetupController: ObservableObject {
                 throw WorkbenchError(L("缺少 Qoder SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。"))
             }
             mark("models", .information, L("Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。"))
+        case .claude:
+            guard status["sdkInstalled"] == .bool(true), status["nodeInstalled"] == .bool(true) else {
+                mark("service", .needsAction); failedCheck = "service"
+                throw WorkbenchError(L("缺少 Claude Code SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。"))
+            }
+            mark("models", .information, L("Claude Code 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。"))
         case .dsh:
             guard status["credentialCheck"].string == "present" else {
                 throw WorkbenchError(L("桥接进程未读取到 DEEPSEEK_API_KEY。请在远端配置服务环境；若桥已运行，等任务结束后重启再检查。"))

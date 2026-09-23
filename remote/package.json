@@ -1,1 +1,1 @@
-{"name":"agent-workbench-native","private":true,"type":"module","dependencies":{"@qodercn-ai/qodercn-agent-sdk":"1.0.45"}}
+{"name":"agent-workbench-native","private":true,"type":"module","dependencies":{"@qodercn-ai/qodercn-agent-sdk":"1.0.45","@anthropic-ai/claude-agent-sdk":"0.3.280"}}
