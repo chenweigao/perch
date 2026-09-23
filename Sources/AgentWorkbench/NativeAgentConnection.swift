@@ -135,7 +135,7 @@ final class NativeAgentConnection: ObservableObject {
             if FileManager.default.fileExists(atPath: control) {
                 api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(local)")!, token: secret)
                 let health: JSONValue = try await request("/health")
-                guard health["version"].int == 3 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+                guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
