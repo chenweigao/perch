@@ -110,11 +110,12 @@ struct KimiWorkspaceView: View {
                                    disabled: connection.sending) { level in
                         connection.thinkingChoices[sessionID] = level
                     }
+                    PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
+                                     disabled: connection.sending) { mode in
+                        connection.setPermission(mode, for: sessionID)
+                    }
                     Spacer(minLength: 8)
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget)
-                    ComposerOptionsButton(manualApproval: Binding(
-                        get: { connection.manualPermissions[sessionID] == true },
-                        set: { connection.manualPermissions[sessionID] = $0 }))
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",

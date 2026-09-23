@@ -13,7 +13,8 @@ private struct ToolbarPreview: View {
     @State private var text = ""
     @State private var model = "lan/qwen3.8-flash-next"
     @State private var effort: ThinkingLevel? = .xhigh
-    @State private var manual = false
+    @State private var permissionProvider = SessionKind.kimi.rawValue
+    @State private var permissionMode = "manual"
     @State private var narrow = false
     @State private var low = false
     @State private var running = false
@@ -22,6 +23,11 @@ private struct ToolbarPreview: View {
     @State private var emptyModels = false
     @State private var stopCount = 0
     @State private var sendCount = 0
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex]
+    private var selectedProvider: SessionKind { SessionKind(rawValue: permissionProvider) ?? .kimi }
+    private var permissionCapability: PermissionCapability {
+        PermissionCatalog.capability(for: selectedProvider, selected: permissionMode)
+    }
     private var canSend: Bool { !offline && !stopping && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private func send() { sendCount += 1; text = ""; running = true }
     private let models = ModelCatalog.options([
@@ -34,6 +40,17 @@ private struct ToolbarPreview: View {
         VStack(spacing: 24) {
             HStack { Text("Offline layout preview"); Spacer(); Toggle("Narrow", isOn: $narrow); Toggle("Low context", isOn: $low) }
             HStack {
+                Picker("Permission provider", selection: $permissionProvider) {
+                    ForEach(permissionProviders, id: \.rawValue) { provider in
+                        Text(provider.label).tag(provider.rawValue)
+                    }
+                }
+                .frame(width: 180)
+                .onChange(of: permissionProvider) { _, value in
+                    guard let provider = SessionKind(rawValue: value),
+                          let mode = PermissionCatalog.safeDefault(for: provider) else { return }
+                    permissionMode = mode
+                }
                 Toggle("Empty model list", isOn: $emptyModels)
                 Text("Next message: \(model.isEmpty ? "session model (lan/qwen3.8-flash-next)" : model)")
                     .font(.caption).textSelection(.enabled)
@@ -56,7 +73,10 @@ private struct ToolbarPreview: View {
                                    current: effort, disabled: false) { effort = $0 }
                     Spacer(minLength: 8)
                     ContextMeter(budget: ContextBudget(used: low ? 95 : 13, limit: 100))
-                    ComposerOptionsButton(manualApproval: $manual)
+                    PermissionPicker(provider: selectedProvider, capability: permissionCapability,
+                                     disabled: offline, allowsSelection: selectedProvider != .dsh) {
+                        permissionMode = $0
+                    }
                     ComposerActionButton(isRunning: running, isStopping: stopping, canSend: canSend,
                                          canStop: running && !offline && !stopping, onSend: send) {
                         stopCount += 1; stopping = true

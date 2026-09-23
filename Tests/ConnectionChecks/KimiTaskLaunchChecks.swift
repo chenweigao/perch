@@ -84,7 +84,7 @@ func checkKimiTaskLaunch() async throws {
         // Match WorkbenchModel restoring its currently open tab on catalog changes.
         connection.onSessionsChanged = { [weak connection] in connection?.select("old") }
         connection.drafts["old"] = "Existing draft must not be sent"
-        let created = try await connection.createSession(title: "", cwd: "/fixture", initialPrompt: "新任务只发送一次", model: "chosen/model")
+        let created = try await connection.createSession(title: "", cwd: "/fixture", initialPrompt: "新任务只发送一次", model: "chosen/model", permissionMode: "auto")
         precondition(created.id == "new")
         // A selection/snapshot change must not retarget or suppress the launch.
         connection.select("old")
@@ -93,6 +93,12 @@ func checkKimiTaskLaunch() async throws {
         precondition(sent.count == 1 && sent[0].0 == "/api/v1/sessions/new/prompts")
         precondition(sent[0].1["content"].array.first?["text"].string == "新任务只发送一次")
         precondition(sent[0].1["model"].string == "chosen/model")
+        precondition(sent[0].1["permission_mode"].string == "auto")
+        if mode != "snapshot-failure" {
+            await ConnectionChecks.settle { connection.conversation?.snapshot.session.id == "old" }
+            precondition(connection.permissionCapability(for: "old").selected == nil,
+                         "A historical Kimi session without permission_mode must stay inherited")
+        }
         precondition(connection.drafts["old"] == "Existing draft must not be sent")
         precondition(LaunchProtocol.creations == 1)
         if mode == "prompt-failure" {

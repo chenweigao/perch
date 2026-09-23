@@ -28,6 +28,14 @@ private struct ToolPreview: View {
     })
     private let live = try! KimiWire.decoder().decode([KimiLiveTool].self, from: Data(#"[{"tool_call_id":"read-1","name":"Read","args":{"path":"/fixture/Sample.swift"},"last_progress":"已读取 20 行，正在继续"}]"#.utf8))
     private var messages: [KimiMessage] {
+        if ProcessInfo.processInfo.environment["TOOL_VISIBILITY_COMPACTION"] == "1" {
+            let text = "The conversation so far has been compacted to free up context. What follows is your own working summary of this task.\n\n标题之前的摘要正文必须保留。\n\n## Context Recovery Plan\n正常恢复计划必须保留。\n\n## Context Recovery\n仅供 agent 使用的内部说明。"
+            let rows: [[String: Any]] = (1...2).map { index in
+                ["id": "compaction-\(index)", "role": "user", "created_at": "\(index)",
+                 "content": [["type": "text", "text": text]], "metadata": ["origin": ["kind": "compaction_summary"]]]
+            }
+            return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
+        }
         if processPreview { return processMessages }
         var rows: [[String: Any]] = [
             ["id": "u", "role": "user", "created_at": "1", "content": [["type": "text", "text": "检查虚构项目中的 Sample.swift"]]],

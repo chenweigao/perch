@@ -4,8 +4,9 @@ import WorkbenchCore
 func checkNativeAgents() throws {
     let unchanged = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"unchanged":true}"#.utf8))
     precondition(unchanged.snapshot == nil)
-    let snapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"a","provider":"omp","title":"A","cwd":"/tmp","busy":false,"revision":2,"completed":0,"model":"m","messages":[{"id":"m","role":"assistant","created_at":"now","content":[{"type":"text","text":"中文"}]}],"interactions":[],"error":"runtime failed"}"#.utf8))
+    let snapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"a","provider":"omp","title":"A","cwd":"/tmp","busy":false,"revision":2,"completed":0,"model":"m","permission":{"selected":"write","options":["always-ask","write","yolo"],"scope":"new-session"},"messages":[{"id":"m","role":"assistant","created_at":"now","content":[{"type":"text","text":"中文"}]}],"interactions":[],"error":"runtime failed"}"#.utf8))
     precondition(snapshot.snapshot?.messages.first?.createdAt == "now" && snapshot.snapshot?.error == "runtime failed")
+    precondition(snapshot.snapshot?.permission == PermissionCapability(selected: "write", options: ["always-ask", "write", "yolo"], scope: .newSession))
     let receipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"request","status":"failed","error":"rejected"}"#.utf8))
     precondition(receipt.status == "failed" && receipt.error == "rejected", "Receipt errors are payloads, not request errors")
     do {
@@ -40,5 +41,36 @@ func checkNativeAgents() throws {
     precondition(restored.starred == refs)
     let codex = try NativeAgentWire.decode(NativeAgentSession.self, from: Data(#"{"id":"0199-thread","provider":"codex","title":"Codex","cwd":"/tmp","busy":false,"archived":false,"updated":0,"completed":0,"pending":0,"model":"gpt-6-astra","error":null}"#.utf8))
     precondition(codex.id == "0199-thread" && codex.provider == .codex)
-    print("PASS: chronological tool summaries, visible final answer, native provider identity and persistence")
+
+    let expectedPermissions: [(SessionKind, [String], String, PermissionChangeScope)] = [
+        (.kimi, ["manual", "yolo", "auto"], "manual", .nextMessage),
+        (.omp, ["always-ask", "write", "yolo"], "always-ask", .newSession),
+        (.qoder, ["default", "acceptEdits", "plan", "dontAsk", "auto", "bypassPermissions"], "default", .nextTurn),
+        (.dsh, ["runtime-managed"], "runtime-managed", .runtimeManaged),
+        (.codex, ["read-only", "workspace-ask", "workspace-auto", "full-access"], "workspace-ask", .newSession)
+    ]
+    for (provider, modes, safeDefault, scope) in expectedPermissions {
+        precondition(PermissionCatalog.options(for: provider).map(\.id) == modes)
+        precondition(PermissionCatalog.safeDefault(for: provider) == safeDefault)
+        precondition(PermissionCatalog.scope(for: provider) == scope)
+    }
+    let dshPermission = PermissionCatalog.capability(for: .dsh)
+    precondition(dshPermission.selected == "runtime-managed" && dshPermission.options.isEmpty && !dshPermission.canSelect)
+    precondition(PermissionCatalog.option("auto", for: .kimi)?.risk == .dangerous)
+    precondition(PermissionCatalog.option("yolo", for: .omp)?.risk == .dangerous)
+    precondition(PermissionCatalog.option("bypassPermissions", for: .qoder)?.risk == .dangerous)
+    precondition(PermissionCatalog.option("full-access", for: .codex)?.risk == .dangerous)
+
+    let suiteName = "PermissionDefaultsTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    defaults.set("auto-review", forKey: "codex.defaultPermissionMode")
+    precondition(PermissionDefaults.mode(for: .codex, defaults: defaults) == "workspace-ask")
+    defaults.set("full-access", forKey: "codex.defaultPermissionMode")
+    precondition(PermissionDefaults.mode(for: .codex, defaults: defaults) == "full-access")
+    PermissionDefaults.set("auto", for: .kimi, defaults: defaults)
+    precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "auto")
+    PermissionDefaults.restoreSafeDefault(for: .kimi, defaults: defaults)
+    precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "manual")
+    print("PASS: chronological tool summaries, native identity, permission catalogs, wire decoding and default migration")
 }
