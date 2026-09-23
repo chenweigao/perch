@@ -14,7 +14,13 @@ struct WorkbenchHeader: View {
         HStack(spacing: WorkbenchChrome.labelSpacing) {
             Image(systemName: item?.reference.kind.symbol ?? (model.showArchived ? "archivebox" : model.onlyAttention ? "tray" : model.showSessionDirectory ? "list.bullet" : model.selectedGroup == nil ? "square.grid.2x2" : "folder"))
                 .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
-            Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
+                if let item {
+                    Text(item.hostName.isEmpty ? item.reference.kind.label : "\(item.reference.kind.label) · \(item.hostName)")
+                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                }
+            }
         }.frame(minWidth: 100, maxWidth: 440, alignment: .leading)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
