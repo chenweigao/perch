@@ -9,6 +9,11 @@ struct ModelPicker: View {
     /// Sheets that pick a model for a new task show the choice as primary text;
     /// the composer row keeps the quiet secondary look.
     var emphasizesSelection = false
+    var compact = false
+    var thinkingModel: AgentModel? = nil
+    var thinking: ThinkingLevel? = nil
+    var thinkingDisabled = false
+    var onThinking: ((ThinkingLevel) -> Void)? = nil
     @State private var presented = false
     private var effective: String { selection.isEmpty ? current : selection }
     private var option: ModelOption? { models.first { $0.id == effective } }
@@ -20,7 +25,7 @@ struct ModelPicker: View {
                     if let option {
                         Text(option.name).lineLimit(1).truncationMode(.middle).layoutPriority(1)
                             .foregroundStyle(emphasizesSelection ? .primary : .secondary)
-                        Text("· \(option.provider)").foregroundStyle(.secondary).lineLimit(1)
+                        if !compact { Text("· \(option.provider)").foregroundStyle(.secondary).lineLimit(1) }
                     } else if effective.isEmpty {
                         Text("默认模型").foregroundStyle(.secondary)
                     } else {
@@ -36,8 +41,15 @@ struct ModelPicker: View {
                 .accessibilityLabel(Text("选择模型"))
                 .accessibilityValue(effective)
                 .popover(isPresented: $presented, arrowEdge: .top) {
-                    ModelPickerPanel(models: models, selection: $selection, current: current, effortUnavailable: effortUnavailable) {
-                        presented = false
+                    VStack(spacing: 0) {
+                        if let thinkingModel, let onThinking, thinkingModel.supportsThinking {
+                            ThinkingPicker(model: thinkingModel, current: thinking, disabled: thinkingDisabled, onSelect: onThinking)
+                                .padding(12)
+                            Divider()
+                        }
+                        ModelPickerPanel(models: models, selection: $selection, current: current, effortUnavailable: effortUnavailable) {
+                            presented = false
+                        }
                     }
                 }
         }

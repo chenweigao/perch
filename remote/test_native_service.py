@@ -257,6 +257,29 @@ class CodexProtocolTests(unittest.TestCase):
                 if stored is not None: state['permissionMode']=stored
                 self.assertEqual(broker.Session(state).state['permissionMode'],expected)
 
+    def test_context_uses_last_request_and_shrinks_after_compaction(self):
+        s,fake=self.session()
+        for cumulative,current in [(300000,80000),(600000,12000)]:
+            s.codex_frame(fake,{'method':'thread/tokenUsage/updated','params':{
+                'threadId':'native-thread','tokenUsage':{
+                    'total':{'totalTokens':cumulative},'last':{'totalTokens':current},
+                    'modelContextWindow':200000}}})
+            self.assertEqual(s.state['context']['tokens'],current)
+            self.assertEqual(s.summary()['context']['tokens'],current)
+        s.codex_frame(fake,{'method':'item/started','params':{
+            'threadId':'native-thread','item':{'type':'contextCompaction','id':'compact'}}})
+        self.assertIsNone(s.state['context'])
+        s.codex_frame(fake,{'method':'thread/tokenUsage/updated','params':{
+            'threadId':'native-thread','tokenUsage':{
+                'total':{'totalTokens':999999},'modelContextWindow':200000}}})
+        self.assertIsNone(s.state['context']['tokens'])
+
+    def test_restored_codex_context_waits_for_fresh_usage(self):
+        s,_=self.session()
+        s.state['context']={'tokens':999999,'limit':200000}
+        restored=broker.Session(dict(s.state))
+        self.assertIsNone(restored.state['context'])
+
     def test_resume_hydrates_native_items_with_pagination(self):
         s,fake=self.session(); s.codex_attached=False
         fake.results['thread/resume']={'thread':{'id':'native-thread','model':'gpt-codex'}}
@@ -336,8 +359,10 @@ class CodexProtocolTests(unittest.TestCase):
         result=next(m for m in s.state['messages'] if m['id']=='codex-result:c1')
         self.assertEqual(tool['content'][0]['tool_name'],'shell')
         self.assertEqual(result['content'][0]['output'][0]['text'],'final')
-        s.codex_frame(fake,{'method':'thread/tokenUsage/updated','params':{'threadId':'native-thread','tokenUsage':{'total':{'totalTokens':1234},'modelContextWindow':200000}}})
-        self.assertEqual(s.state['context'],{'tokens':1234,'limit':200000})
+        s.codex_frame(fake,{'method':'thread/tokenUsage/updated','params':{'threadId':'native-thread','tokenUsage':{'total':{'totalTokens':999999},'last':{'totalTokens':1234},'modelContextWindow':200000}}})
+        self.assertEqual(s.state['context']['tokens'],1234)
+        self.assertEqual(s.state['context']['limit'],200000)
+        self.assertGreater(s.state['context']['reportedAt'],0)
         s.codex_frame(fake,{'method':'turn/completed','params':{'threadId':'native-thread','turn':{'id':'turn-native','status':'completed'}}})
         self.assertFalse(s.state['busy']); self.assertEqual(s.state['completed'],1)
         self.assertEqual(s.state['turnState'],'completed')

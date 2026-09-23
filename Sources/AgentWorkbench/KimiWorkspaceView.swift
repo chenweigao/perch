@@ -92,7 +92,7 @@ struct KimiWorkspaceView: View {
                 }
                 MessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
                                               set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0) }),
-                                placeholder: L("Continue this task, or type / for commands…"),
+                                placeholder: L("继续此任务…"),
                                 accessibilityLabel: "Message Kimi", canSend: canSend,
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
@@ -104,25 +104,24 @@ struct KimiWorkspaceView: View {
                                 selection: Binding(get: { connection.modelChoices[sessionID] ?? "" },
                                                    set: { connection.modelChoices[sessionID] = $0 }),
                                 current: connection.conversation?.snapshot.session.model ?? "",
-                                effortUnavailable: connection.activeModel(for: sessionID)?.supportsThinking == false)
-                    ThinkingPicker(model: connection.activeModel(for: sessionID),
-                                   current: connection.thinkingChoices[sessionID],
-                                   disabled: connection.sending) { level in
-                        connection.thinkingChoices[sessionID] = level
-                    }
+                                effortUnavailable: connection.activeModel(for: sessionID)?.supportsThinking == false,
+                                compact: true, thinkingModel: connection.activeModel(for: sessionID),
+                                thinking: connection.thinkingChoices[sessionID], thinkingDisabled: connection.sending,
+                                onThinking: { connection.thinkingChoices[sessionID] = $0 })
                     PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
                                      disabled: connection.sending) { mode in
                         connection.setPermission(mode, for: sessionID)
                     }
                     Spacer(minLength: 8)
-                    ContextMeter(budget: connection.conversation?.snapshot.session.budget)
+                    ContextMeter(budget: connection.conversation?.snapshot.session.budget,
+                                 isStale: !connection.online || !connection.snapshotReady)
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
                 }
-            }.padding(12).workbenchControlSurface()
+            }.padding(12).composerSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)

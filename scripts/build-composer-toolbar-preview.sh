@@ -2,7 +2,7 @@
 # Standalone native visual fixture. No hosts, workspace state, or remote agents are loaded.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-bin_dir="$(swift build -c release --show-bin-path)"
+bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 app_dir="$PWD/build/Composer Toolbar Preview.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"

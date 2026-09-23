@@ -346,6 +346,7 @@ class Session:
         provider = state.get('provider')
         if provider in PERMISSION_MODES:
             state['permissionMode'] = restore_permission_mode(provider, state.get('permissionMode'))
+        if provider == 'codex': state['context'] = None
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
@@ -695,6 +696,8 @@ class Session:
                         receipt.update(status='unknown',error='本轮已结束，尚未观察到引导消息进入上下文')
                 self.touch(True); return
             if method in ('item/started','item/completed'):
+                if method == 'item/started' and (params.get('item') or {}).get('type') == 'contextCompaction':
+                    self.state['context'] = None
                 key='completedAtMs' if method=='item/completed' else 'startedAtMs'
                 self.codex_item(params.get('item') or {},method=='item/completed',params.get(key)); self.touch(method=='item/completed'); return
             if method=='item/agentMessage/delta':
@@ -719,8 +722,10 @@ class Session:
                 item_id=params.get('itemId'); self.codex_outputs[item_id]=self.codex_outputs.get(item_id,'')+params.get('delta','')
                 self.upsert({'role':'toolResult','toolCallId':item_id,'content':self.codex_outputs[item_id],'isError':False,'timestamp':time.time()},'codex-result:'+str(item_id)); self.touch(); return
             if method=='thread/tokenUsage/updated':
-                usage=params.get('tokenUsage') or {}; total=usage.get('total') or {}
-                self.state['context']={'tokens':total.get('totalTokens'),'limit':usage.get('modelContextWindow')}; self.touch(); return
+                usage=params.get('tokenUsage') or {}; last=usage.get('last') or {}
+                # total is cumulative across requests, not the active context window.
+                self.state['context']={'tokens':last.get('totalTokens'),'limit':usage.get('modelContextWindow'),
+                                       'reportedAt':time.time()}; self.touch(); return
             if method=='serverRequest/resolved':
                 wire_id=params.get('requestId')
                 ids=[key for key,value in self.codex_interactions.items() if value.get('wireId')==wire_id]
@@ -1233,7 +1238,7 @@ class Handler(BaseHTTPRequestHandler):
                             if s.state['provider']=='codex':
                                 if provider!='codex': raise ValueError('Codex 不认识该模型，请刷新模型列表后重试')
                                 entry,_=codex_selection(model,catalog=codex_models)
-                                s.state['model']=model; s.state['provider_id']='codex'
+                                s.state['model']=model; s.state['provider_id']='codex'; s.state['context']=None
                                 if s.state.get('thinking') not in entry.get('thinking',[]): s.state['thinking']=entry.get('defaultThinking')
                                 s.touch(True)
                             elif s.state['provider']=='dsh':

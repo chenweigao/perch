@@ -61,28 +61,29 @@ private struct ToolbarPreview: View {
                 Button("Confirm stopped") { stopping = false; running = false }.disabled(!stopping)
                 Text("Sends: \(sendCount) · Stops: \(stopCount)").font(.caption).monospacedDigit()
             }
-            VStack(alignment: .leading, spacing: 12) {
-                MessageComposer(text: $text, canSend: canSend, onSend: send)
+            VStack(alignment: .leading, spacing: 8) {
+                MessageComposer(text: $text, placeholder: L("继续此任务…"), canSend: canSend, onSend: send)
                 HStack(spacing: 10) {
                     Button {} label: { Image(systemName: "plus").font(.system(size: 17)).frame(width: 23, height: 25) }
                         .buttonStyle(.plain).foregroundStyle(.secondary).help("Add images or files").accessibilityLabel("Add images or files")
                     ModelPicker(models: emptyModels ? [] : models, selection: $model,
-                                current: "lan/qwen3.8-flash-next")
-                    ThinkingPicker(model: AgentModel(id: model, provider: "lan", name: model,
-                                                     thinking: [.low, .medium, .high, .xhigh], defaultThinking: .xhigh),
-                                   current: effort, disabled: false) { effort = $0 }
-                    Spacer(minLength: 8)
-                    ContextMeter(budget: ContextBudget(used: low ? 95 : 13, limit: 100))
+                                current: "lan/qwen3.8-flash-next", compact: true,
+                                thinkingModel: AgentModel(id: model, provider: "lan", name: model,
+                                                          thinking: [.low, .medium, .high, .xhigh], defaultThinking: .xhigh),
+                                thinking: effort, onThinking: { effort = $0 })
                     PermissionPicker(provider: selectedProvider, capability: permissionCapability,
                                      disabled: offline, allowsSelection: selectedProvider != .dsh) {
                         permissionMode = $0
                     }
+                    Spacer(minLength: 8)
+                    ContextMeter(budget: ContextBudget(used: low ? 95 : 29, limit: 100),
+                                 isStale: offline)
                     ComposerActionButton(isRunning: running, isStopping: stopping, canSend: canSend,
                                          canStop: running && !offline && !stopping, onSend: send) {
                         stopCount += 1; stopping = true
                     }
                 }
-            }.padding(14).workbenchControlSurface().frame(width: narrow ? 540 : 840)
+            }.padding(12).composerSurface().frame(width: narrow ? 540 : 840)
         }.padding(20)
     }
 }

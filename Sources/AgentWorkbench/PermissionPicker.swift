@@ -14,6 +14,7 @@ struct PermissionPicker: View {
     let allowsSelection: Bool
     let onSelect: (String) -> Void
     @State private var pendingDangerousOption: PermissionOption?
+    @State private var showingDetails = false
 
     init(provider: SessionKind, capability: PermissionCapability,
          layout: PermissionPickerLayout = .compact, disabled: Bool = false,
@@ -102,22 +103,35 @@ struct PermissionPicker: View {
             } label: {
                 permissionLabel
             }
-            .menuStyle(.borderlessButton).menuIndicator(.visible).fixedSize()
+            .menuStyle(.borderlessButton).menuIndicator(layout == .compact ? .hidden : .visible).fixedSize()
             .disabled(disabled)
-            .help(detail + "\n" + capability.scope.label)
+            .help(title + "\n" + detail + "\n" + capability.scope.label)
             .accessibilityLabel(L("选择权限级别"))
         } else {
-            permissionLabel
-                .help(detail + "\n" + capability.scope.label)
+            Button { showingDetails.toggle() } label: { permissionLabel }
+                .buttonStyle(.plain)
+                .help(title + "\n" + detail)
                 .accessibilityLabel(L("权限级别：\(title)"))
+                .popover(isPresented: $showingDetails) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(title).font(.headline)
+                        Text(detail)
+                        Text(capability.scope.label).foregroundStyle(.secondary)
+                    }.font(.callout).padding(16).frame(width: 280, alignment: .leading)
+                }
         }
     }
 
     private var permissionLabel: some View {
-        Label(title, systemImage: symbol)
-            .font(.system(size: layout == .compact ? 12 : 13))
-            .foregroundStyle(riskColor)
-            .fixedSize()
+        HStack(spacing: 4) {
+            Image(systemName: symbol)
+            if layout == .form || risk != .standard { Text(title) }
+        }
+        .font(.system(size: layout == .compact ? 12 : 13))
+        .foregroundStyle(riskColor)
+        .frame(minWidth: 28, minHeight: 28)
+        .contentShape(Rectangle())
+        .fixedSize()
     }
 
     private var symbol: String {

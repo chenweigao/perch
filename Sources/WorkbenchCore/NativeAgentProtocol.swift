@@ -56,6 +56,7 @@ public struct NativeAgentSession: Decodable, Identifiable, Equatable {
 public struct ContextUsage: Decodable, Equatable, Sendable {
     public let tokens: Int?
     public let limit: Int?
+    public let reportedAt: Double?
 }
 public struct NativeAgentSnapshot: Decodable {
     public let id: String
