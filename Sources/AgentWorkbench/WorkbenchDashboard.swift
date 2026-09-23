@@ -29,7 +29,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 28) {
+            // Sections already lay out their rows eagerly. Lazy placement of
+            // these variable-height groups can loop when catalog updates move
+            // rows between sections while scrolled (also in the full inbox).
+            VStack(alignment: .leading, spacing: 28) {
                 if let error = context.storageError { storageBanner(error) }
                 introduction
                 if attentionOnly {
@@ -82,6 +85,9 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
             }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
                 .frame(maxWidth: 944).frame(maxWidth: .infinity)
+                #if PERCH_ACCEPTANCE
+                .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly))
+                #endif
         }
     }
 

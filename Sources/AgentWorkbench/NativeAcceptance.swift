@@ -10,7 +10,22 @@ import os
     @Published var query: String?
     var renderedQuery: String?
     var selection: String?
+    var dashboardProjection: DashboardProjection?
+    var dashboardAttentionOnly = false
+    weak var dashboardView: NSView?
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
+}
+
+struct NativeDashboardProbe: NSViewRepresentable {
+    let projection: DashboardProjection
+    let attentionOnly: Bool
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        let probe = NativeAcceptanceProbe.shared
+        probe.dashboardProjection = projection
+        probe.dashboardAttentionOnly = attentionOnly
+        probe.dashboardView = view
+    }
 }
 
 struct NativeDirectoryProbe: NSViewRepresentable {
@@ -172,6 +187,9 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             if mode == "switching" {
                 report.merge(try await switching(window)) { _, new in new }
             }
+            if mode == "dashboard" {
+                report.merge(try await dashboard(window)) { _, new in new }
+            }
             if mode == "all" {
                 var switches: [Double] = []
                 for index in 1...16 {
@@ -189,7 +207,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "paging"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "paging", "dashboard"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -232,6 +250,50 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             if report["status"] as? String != "passed" { exit(1) }
             NSApp.terminate(nil)
         }
+    }
+    private func dashboard(_ window: NSWindow) async throws -> [String: Any] {
+        var durations: [Double] = []
+        for step in 0..<60 {
+            // Whole sections appear/disappear while their rows change height,
+            // order and status. Exercise both the bounded home and full inbox.
+            let sessions = fixture.sessions.enumerated().map { index, item in
+                let sections: [WorkQueueSection] = [.attention, .review, .running, .other]
+                let section = step % 6 == 0 ? .other : sections[(index + step) % sections.count]
+                return WorkspaceSession(reference: item.reference,
+                    title: item.title + (step % 2 == 0 ? String(repeating: " · 长标题换行 English", count: 12) : ""),
+                    directory: item.directory, hostName: item.hostName, detail: "工作台刷新 \(step)",
+                    online: (index + step) % 17 != 16, section: section,
+                    canMarkReviewed: section == .review, archived: item.archived,
+                    updatedAt: Double((index + step * 7) % 500))
+            }
+            let start = CACurrentMediaTime()
+            model.acceptanceUpdateCatalog(sessions)
+            if step % 3 == 1 { model.showInbox() } else { model.showHome() }
+            let expected = model.dashboardProjection
+            try await settle(window, "dashboard refresh \(step)") {
+                self.probe.dashboardProjection == expected &&
+                self.probe.dashboardAttentionOnly == self.model.onlyAttention &&
+                self.probe.dashboardView?.enclosingScrollView != nil
+            }
+            let scroll = probe.dashboardView!.enclosingScrollView!
+            let extent = max(0, (scroll.documentView?.bounds.height ?? 0) - scroll.contentView.bounds.height)
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: step % 2 == 0 ? extent : extent / 2))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            await Task.yield(); flush(window)
+            durations.append((CACurrentMediaTime() - start) * 1000)
+            try writeReport(["status": "running", "dashboard_updates": step + 1], name: "dashboard-progress.json")
+        }
+        model.acceptanceUpdateCatalog(fixture.sessions); model.showHome()
+        try await settle(window, "dashboard idle") { self.probe.dashboardProjection == self.model.dashboardProjection }
+        let cpu = processCPU()
+        try await Task.sleep(for: .seconds(2))
+        let idleCPU = processCPU() - cpu
+        guard idleCPU < 1 else { throw WorkbenchError("Dashboard kept consuming CPU: \(idleCPU)s / 2s") }
+        model.open(fixture.sessions[0])
+        try await settle(window, "return from dashboard") { self.hasMountedMessage(window, session: "session-0") }
+        return ["dashboard_updates": durations.count, "dashboard_update_ms": stats(durations),
+                "dashboard_idle_cpu_seconds_over_2s": idleCPU,
+                "dashboard_contract": "rendered projection and inbox state; scrolling during section/height/order changes; return to transcript; offline fixture"]
     }
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
         var durations: [Double] = []
