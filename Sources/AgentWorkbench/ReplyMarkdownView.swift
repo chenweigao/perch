@@ -99,9 +99,18 @@ private struct ReplyBlockContent: View, Equatable {
 
 /// Measure wrapped rows at the actual column width without a geometry/state loop.
 private struct ReplyListLayout: Layout {
-    private func measure(width: CGFloat?, subviews: Subviews) -> (size: CGSize, rows: [CGSize], offsets: [CGFloat]) {
+    struct Measurement {
+        let width: CGFloat?
+        let size: CGSize
+        let rows: [CGSize]
+        let offsets: [CGFloat]
+    }
+    func makeCache(subviews: Subviews) -> [Measurement] { [] }
+    func updateCache(_ cache: inout [Measurement], subviews: Subviews) { cache.removeAll(keepingCapacity: true) }
+    private func measure(width: CGFloat?, subviews: Subviews, cache: inout [Measurement]) -> Measurement {
         // SwiftUI also probes the maximum size with an infinite proposal.
         let columnWidth = width.flatMap { $0.isFinite ? $0 : nil }
+        if let measured = cache.first(where: { $0.width == columnWidth }) { return measured }
         let rows = subviews.map { $0.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)) }
         var offsets: [CGFloat] = []
         var height: CGFloat = 0
@@ -113,15 +122,19 @@ private struct ReplyListLayout: Layout {
             offsets.append(height)
             height += rows[index].height
         }
-        return (CGSize(width: columnWidth ?? rows.map(\.width).max() ?? 0, height: height), rows, offsets)
+        let measured = Measurement(width: columnWidth,
+            size: CGSize(width: columnWidth ?? rows.map(\.width).max() ?? 0, height: height), rows: rows, offsets: offsets)
+        if cache.count == 4 { cache.removeFirst() }
+        cache.append(measured)
+        return measured
     }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        measure(width: proposal.width, subviews: subviews).size
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout [Measurement]) -> CGSize {
+        measure(width: proposal.width, subviews: subviews, cache: &cache).size
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let measured = measure(width: bounds.width, subviews: subviews)
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout [Measurement]) {
+        let measured = measure(width: bounds.width, subviews: subviews, cache: &cache)
         for index in subviews.indices {
             subviews[index].place(at: CGPoint(x: bounds.minX, y: bounds.minY + measured.offsets[index]),
                                   anchor: .topLeading, proposal: ProposedViewSize(measured.rows[index]))

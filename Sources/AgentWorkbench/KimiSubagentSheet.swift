@@ -9,6 +9,7 @@ struct KimiSubagentTranscriptSheet: View {
     let subject: KimiTask
     @ObservedObject var connection: KimiConnection
     @Environment(\.dismiss) private var dismiss
+    @State private var visibleRow: String?
 
     private var transcript: KimiSubagentTranscript? {
         guard let value = connection.subagentTranscript, value.agentId == agentId else { return nil }
@@ -20,6 +21,7 @@ struct KimiSubagentTranscriptSheet: View {
             header
             Divider()
             ScrollView { content.padding(16) }
+                .scrollPosition(id: $visibleRow)
             Divider()
             footer
         }.frame(width: 640, height: 600)
@@ -61,9 +63,19 @@ struct KimiSubagentTranscriptSheet: View {
                 Text("这个子 Agent 还没有可见的轮次。").foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 80)
             }
-            LazyVStack(alignment: .leading, spacing: 18) {
-                ForEach(transcript.turns) { turn in turnView(turn) }
-            }
+            LazyVStack(alignment: .leading, spacing: 8) {
+                // Flatten the turn/step hierarchy before building lazy children:
+                // one long turn must not become one enormous layout unit.
+                ForEach(rows(in: transcript)) { row in
+                    switch row {
+                    case .header(let turn):
+                        turnHeader(turn).padding(.top, turn.id == transcript.turns.first?.id ? 0 : 10)
+                    case .frame(let frame): frameView(frame)
+                    case .error(_, let text):
+                        Text(text).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
+                    }
+                }
+            }.scrollTargetLayout()
         } else if connection.loadingSubagentTranscript {
             ProgressView().frame(maxWidth: .infinity, minHeight: 120)
         }
@@ -73,7 +85,28 @@ struct KimiSubagentTranscriptSheet: View {
         }
     }
 
-    private func turnView(_ turn: KimiTranscriptItem) -> some View {
+    private enum Row: Identifiable {
+        case header(KimiTranscriptItem)
+        case frame(KimiTranscriptFrame)
+        case error(String, String)
+        var id: String {
+            switch self {
+            case .header(let turn): return "turn:" + turn.id
+            case .frame(let frame): return "frame:" + frame.frameId
+            case .error(let id, _): return "error:" + id
+            }
+        }
+    }
+    private func rows(in transcript: KimiSubagentTranscript) -> [Row] {
+        transcript.turns.flatMap { turn in
+            var rows: [Row] = [.header(turn)]
+            rows += (turn.steps ?? []).flatMap { ($0.frames ?? []).map(Row.frame) }
+            if let error = turn.error, !error.isEmpty { rows.append(.error(turn.id, error)) }
+            return rows
+        }
+    }
+
+    private func turnHeader(_ turn: KimiTranscriptItem) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: turnSymbol(turn.state))
@@ -86,12 +119,7 @@ struct KimiSubagentTranscriptSheet: View {
                 }
                 Spacer()
             }.accessibilityElement(children: .combine)
-            ForEach(turn.steps ?? []) { step in
-                ForEach(step.frames ?? []) { frame in frameView(frame) }
-            }
-            if let error = turn.error, !error.isEmpty {
-                Text(error).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
-            }
+
         }
     }
 

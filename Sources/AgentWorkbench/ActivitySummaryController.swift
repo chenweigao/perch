@@ -123,8 +123,11 @@ struct ActivityNarrativeFailure: Equatable {
                 self.sessions[next.session] = state
                 self.lastRequest = Date()
                 do {
+                    let key = try await settings.apiKey()
+                    guard !Task.isCancelled, self.generation == version,
+                          settings.revision == next.settingsRevision else { return }
                     let result = try await ActivitySummaryClient().summarize(
-                        configuration: next.configuration, apiKey: try settings.apiKey(),
+                        configuration: next.configuration, apiKey: key,
                         batch: next.batch, language: AppLanguage.current.localization,
                         previous: state.results[next.batch.groupID])
                     guard !Task.isCancelled, self.generation == version,

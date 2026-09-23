@@ -14,36 +14,17 @@ import WorkbenchCore
         configuration = UserDefaults.standard.data(forKey: Self.defaultsKey)
             .flatMap { try? JSONDecoder().decode(ActivitySummaryConfiguration.self, from: $0) } ?? .init()
     }
-    private var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "dev.agentworkbench.activity-summary",
-         kSecAttrAccount as String: "api-key"]
+    func apiKey(allowInteraction: Bool = false) async throws -> String {
+        try await Task.detached(priority: .utility) {
+            try ActivitySummaryCredential.read(allowInteraction: allowInteraction)
+        }.value
     }
-    func apiKey() throws -> String {
-        var request = query
-        request[kSecReturnData as String] = true
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(request as CFDictionary, &result)
-        if status == errSecItemNotFound { return "" }
-        guard status == errSecSuccess, let data = result as? Data else { throw keychainError(status) }
-        return String(decoding: data, as: UTF8.self)
-    }
-    func save(_ value: ActivitySummaryConfiguration, apiKey: String) throws {
+    func save(_ value: ActivitySummaryConfiguration, apiKey: String) async throws {
         if value.enabled && !value.isValid { throw ActivitySummaryError.configuration }
         let data = try JSONEncoder().encode(value)
-        let status: OSStatus
-        if apiKey.isEmpty {
-            status = SecItemDelete(query as CFDictionary)
-        } else {
-            let attributes = [kSecValueData as String: Data(apiKey.utf8)]
-            let update = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-            if update == errSecItemNotFound {
-                var item = query.merging(attributes) { _, new in new }
-                item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-                status = SecItemAdd(item as CFDictionary, nil)
-            } else { status = update }
-        }
-        guard status == errSecSuccess || (apiKey.isEmpty && status == errSecItemNotFound) else { throw keychainError(status) }
+        try await Task.detached(priority: .utility) {
+            try ActivitySummaryCredential.write(apiKey)
+        }.value
         UserDefaults.standard.set(data, forKey: Self.defaultsKey)
         configuration = value
         revision += 1
@@ -53,7 +34,42 @@ import WorkbenchCore
         UserDefaults.standard.set(try? JSONEncoder().encode(configuration), forKey: Self.defaultsKey)
         revision += 1
     }
-    private func keychainError(_ status: OSStatus) -> NSError {
+}
+
+/// Security.framework can wait on securityd or an authorization dialog. Never
+/// perform these synchronous calls on the UI executor. Background requests must
+/// fail with a retryable error instead of opening a credential dialog.
+private enum ActivitySummaryCredential {
+    static var query: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: "dev.agentworkbench.activity-summary",
+         kSecAttrAccount as String: "api-key"]
+    }
+    static func read(allowInteraction: Bool) throws -> String {
+        var request = query
+        request[kSecReturnData as String] = true
+        if !allowInteraction { request[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(request as CFDictionary, &result)
+        if status == errSecItemNotFound { return "" }
+        guard status == errSecSuccess, let data = result as? Data else { throw failure(status) }
+        return String(decoding: data, as: UTF8.self)
+    }
+    static func write(_ apiKey: String) throws {
+        let status: OSStatus
+        if apiKey.isEmpty { status = SecItemDelete(query as CFDictionary) }
+        else {
+            let attributes = [kSecValueData as String: Data(apiKey.utf8)]
+            let update = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+            if update == errSecItemNotFound {
+                var item = query.merging(attributes) { _, new in new }
+                item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                status = SecItemAdd(item as CFDictionary, nil)
+            } else { status = update }
+        }
+        guard status == errSecSuccess || (apiKey.isEmpty && status == errSecItemNotFound) else { throw failure(status) }
+    }
+    private static func failure(_ status: OSStatus) -> NSError {
         NSError(domain: NSOSStatusErrorDomain, code: Int(status), userInfo: [NSLocalizedDescriptionKey: L("无法访问摘要服务的钥匙串凭据。")])
     }
 }
@@ -68,6 +84,7 @@ struct ActivitySummarySettingsSheet: View {
     @State private var testing = false
     @State private var testTask: Task<Void, Never>?
     @State private var credentialLoaded = false
+    @State private var saving = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -91,18 +108,22 @@ struct ActivitySummarySettingsSheet: View {
             if let testResult { Text(testResult).font(.callout).textSelection(.enabled) }
             HStack {
                 Button(testing ? "正在测试…" : "测试连接（发送示例）") { test() }
-                    .disabled(testing || !configuration.isValid || !credentialLoaded)
+                    .disabled(testing || saving || !configuration.isValid || !credentialLoaded)
                 Spacer()
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction).disabled(saving)
                 Button("保存") {
-                    do { try settings.save(configuration, apiKey: apiKey); dismiss() }
-                    catch { self.error = error.localizedDescription }
-                }.keyboardShortcut(.defaultAction).disabled(testing || !credentialLoaded || (configuration.enabled && !configuration.isValid))
+                    saving = true
+                    Task {
+                        defer { saving = false }
+                        do { try await settings.save(configuration, apiKey: apiKey); dismiss() }
+                        catch { self.error = error.localizedDescription }
+                    }
+                }.keyboardShortcut(.defaultAction).disabled(testing || saving || !credentialLoaded || (configuration.enabled && !configuration.isValid))
             }
         }.padding(24).frame(width: 540)
-            .onAppear {
+            .task {
                 configuration = settings.configuration
-                do { apiKey = try settings.apiKey(); credentialLoaded = true }
+                do { apiKey = try await settings.apiKey(allowInteraction: true); credentialLoaded = true }
                 catch { self.error = error.localizedDescription }
             }
             .onDisappear { testTask?.cancel() }

@@ -123,7 +123,10 @@ struct ConversationScrollView<Content: View>: View {
                     .padding(.horizontal, 36).frame(maxWidth: .infinity)
                     .coordinateSpace(name: "conversation-content")
                     .background {
-                        ConversationScrollObserver(onScroll: onScroll, onNearTop: onNearTop)
+                        ConversationScrollObserver(onScroll: { following in
+                            conversationViewport.userScrolled()
+                            onScroll(following)
+                        }, onNearTop: onNearTop)
                     }
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }))
