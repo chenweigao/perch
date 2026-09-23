@@ -96,7 +96,7 @@ composer label. A choice applies to the next prompt; opening or searching the
 picker does not change the remote session. New Kimi conversations share this
 picker. OMP and DeepSeek read the same popover from the bridge catalog, where each
 entry names the runtime that can route it, so neither is offered the other's
-models; the new-task sheet uses it too and keeps a typed id for models the catalog
+models; the new-task page uses it too and keeps a typed id for models the catalog
 does not list. Qoder's SDK reports no catalog, so it stays with a typed model id
 and no runtime switching capability is inferred for it.
 
