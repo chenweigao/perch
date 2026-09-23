@@ -17,7 +17,13 @@ struct WorkbenchHeader: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
                 if let item {
-                    Text(item.hostName.isEmpty ? item.reference.kind.label : "\(item.reference.kind.label) · \(item.hostName)")
+                    HStack(spacing: 5) {
+                        Text(item.reference.kind.label)
+                        if !item.hostName.isEmpty {
+                            Text("·")
+                            HostIdentityLabel(hostID: item.reference.hostID, name: item.hostName)
+                        }
+                    }
                         .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
                 }
             }

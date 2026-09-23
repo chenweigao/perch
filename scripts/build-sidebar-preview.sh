@@ -6,7 +6,7 @@ app_dir="$PWD/build/Sidebar Preview.app"
 mkdir -p "$app_dir/Contents/MacOS"
 swiftc -O -swift-version 5 -parse-as-library \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
-    Sources/AgentWorkbench/SessionRowChrome.swift Tests/SidebarPreview/App.swift -o "$app_dir/Contents/MacOS/SidebarPreview"
+    Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionRowChrome.swift Tests/SidebarPreview/App.swift -o "$app_dir/Contents/MacOS/SidebarPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

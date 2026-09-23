@@ -333,7 +333,10 @@ struct KimiNewSession: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("新建 Kimi 会话").font(.title2.bold())
-            Text("在 \(connection.host.name) 的项目目录中开始工作。").foregroundStyle(.secondary)
+            Label {
+                Text("在 \(connection.host.name) 的项目目录中开始工作。")
+            } icon: { HostIdentityIcon(hostID: connection.host.id) }
+                .foregroundStyle(.secondary)
             TextField("会话名称（可选）", text: $title).textFieldStyle(.roundedBorder)
             TextField("远端项目绝对路径", text: $cwd).textFieldStyle(.roundedBorder)
             if let error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }

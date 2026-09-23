@@ -17,7 +17,7 @@ swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
-    Sources/AgentWorkbench/SessionRowChrome.swift Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/CommandPalette.swift Tests/PublicDemo/App.swift \
+    Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionRowChrome.swift Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/CommandPalette.swift Tests/PublicDemo/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/PerchDemo"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
