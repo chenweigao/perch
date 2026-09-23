@@ -24,13 +24,17 @@ struct ModelPicker: View {
                 HStack(spacing: 5) {
                     if let option {
                         Text(option.name).lineLimit(1).truncationMode(.middle).layoutPriority(1)
-                            .foregroundStyle(emphasizesSelection ? .primary : .secondary)
+                            .foregroundStyle(emphasizesSelection || compact ? .primary : .secondary)
                         if !compact { Text("· \(option.provider)").foregroundStyle(.secondary).lineLimit(1) }
                     } else if effective.isEmpty {
                         Text("默认模型").foregroundStyle(.secondary)
                     } else {
                         Text(effective).lineLimit(1).truncationMode(.middle)
-                            .foregroundStyle(emphasizesSelection ? .primary : .secondary)
+                            .foregroundStyle(emphasizesSelection || compact ? .primary : .secondary)
+                    }
+                    if let thinkingModel, thinkingModel.supportsThinking {
+                        Text(thinkingModel.resolve(thinking)?.label ?? "Default")
+                            .foregroundStyle(.secondary).fixedSize()
                     }
                     Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium))
                         .foregroundStyle(.secondary)

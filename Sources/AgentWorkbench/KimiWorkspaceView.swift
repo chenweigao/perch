@@ -121,7 +121,7 @@ struct KimiWorkspaceView: View {
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
                 }
-            }.padding(12).composerSurface()
+            }.padding(12).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)

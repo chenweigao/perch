@@ -17,12 +17,12 @@ struct ThinkingPicker: View {
                     Button {
                         onSelect(level)
                     } label: {
-                        if level == (current ?? model.defaultThinking) { Label(level.label, systemImage: "checkmark") } else { Text(level.label) }
+                        if level == model.resolve(current) { Label(level.label, systemImage: "checkmark") } else { Text(level.label) }
                     }
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Text("Thinking: \(current?.label ?? model.defaultThinking?.label ?? "Default")")
+                    Text("Thinking: \(model.resolve(current)?.label ?? "Default")")
                         .font(.system(size: 12))
                 }.foregroundStyle(.secondary)
             }.menuStyle(.borderlessButton).menuIndicator(.visible).fixedSize()

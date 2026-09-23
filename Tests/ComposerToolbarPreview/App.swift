@@ -83,7 +83,7 @@ private struct ToolbarPreview: View {
                         stopCount += 1; stopping = true
                     }
                 }
-            }.padding(12).composerSurface().frame(width: narrow ? 540 : 840)
+            }.padding(12).workbenchControlSurface().frame(width: narrow ? 540 : 840)
         }.padding(20)
     }
 }

@@ -122,7 +122,7 @@ struct NativeAgentView: View {
                                                  onStop: { connection.stop() },
                                                  onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
                         }
-                    }.padding(12).composerSurface()
+                    }.padding(12).workbenchControlSurface()
                     ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
@@ -207,7 +207,7 @@ struct NativeModelControls: View {
                     if availableModels.isEmpty { Text(connection.modelsError ?? "Loading models…") }
                     if let current, current.supportsThinking {
                         Divider()
-                        ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking),
+                        ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
                                        disabled: !connection.online || snapshot.busy) { level in
                             connection.setThinking(level, for: snapshot.id)
                         }
@@ -217,8 +217,14 @@ struct NativeModelControls: View {
                         Text("此模型未提供思考档位设置。")
                     }
                 } label: {
-                    Text(current?.name ?? (snapshot.model.isEmpty ? "Choose model" : snapshot.model))
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    HStack(spacing: 5) {
+                        Text(current?.name ?? (snapshot.model.isEmpty ? "Choose model" : snapshot.model))
+                            .foregroundStyle(.primary).lineLimit(1).truncationMode(.middle)
+                        if let current, current.supportsThinking {
+                            Text(current.resolve(ThinkingLevel.parse(session?.thinking ?? snapshot.thinking))?.label ?? "Default")
+                                .foregroundStyle(.secondary).fixedSize()
+                        }
+                    }.font(.system(size: 12))
                 }.menuStyle(.borderlessButton)
                     // Switching mid-turn would attribute the running transcript to the
                     // wrong model, so the runtime rejects it and so does the UI.

@@ -19,7 +19,7 @@ struct MessageComposer: View {
     /// Lets an attached suggestion list claim navigation keys. Returning false leaves
     /// the key to normal editing, so the composer stays a text editor.
     var onKey: ((ComposerKey) -> Bool)? = nil
-    @State private var height: CGFloat = 28
+    @State private var height: CGFloat = 40
 
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
@@ -120,7 +120,7 @@ struct ComposerEditor: NSViewRepresentable {
         func measure() {
             guard let editor, let layout = editor.layoutManager, let container = editor.textContainer else { return }
             layout.ensureLayout(for: container)
-            let measured = min(180, max(28, ceil(layout.usedRect(for: container).height + 8)))
+            let measured = min(180, max(40, ceil(layout.usedRect(for: container).height + 8)))
             guard measured != parent.height else { return }
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.parent.height != measured else { return }
