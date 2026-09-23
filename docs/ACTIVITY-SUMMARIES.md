@@ -121,7 +121,9 @@ A local stage becomes eligible at its first meaningful tool, even before complet
 It refreshes on a phase change, key result (such as an edit, test/build, or Git write),
 failure/status correction, changed public progress, or closure. Repeated reads,
 read-window eviction, shell setup, sleep, and empty terminal polls do not trigger
-requests. A terminal poll with an explicit exit code is a result. Failures are never
+requests. Scheduling retains only three recent key results plus an identity/status
+fingerprint of earlier results, so stored batches and their comparisons do not
+grow with stage history. A terminal poll with an explicit exit code is a result. Failures are never
 suppressed as idle waiting. Provider-native and commentary stages retain priority
 and do not create an external request.
 
