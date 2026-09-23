@@ -244,14 +244,14 @@ func checkActivitySummaries() throws {
 
     let initial = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
                                        tools: [read0, read1], closed: false)
-    precondition(initial.shouldRequest(after: nil), "The first external refinement starts at two completed tools")
+    precondition(initial.shouldRequest(after: nil), "The first meaningful stage can be summarized immediately")
     precondition(!initial.shouldRequest(after: initial), "Repeated observation must not incur another request")
     let plusThree = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
                                          tools: [read0, read1, read2, read3, tool("read4")], closed: false)
     precondition(!plusThree.shouldRequest(after: initial))
     let plusFour = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
                                         tools: [read0, read1, read2, read3, tool("read4"), tool("read5")], closed: false)
-    precondition(plusFour.shouldRequest(after: initial), "The same stage refreshes after four more completions")
+    precondition(!plusFour.shouldRequest(after: initial), "Read counts alone must never refresh a stage")
     let closed = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
                                       tools: [read0, read1], closed: true)
     precondition(closed.shouldRequest(after: initial), "Closing a stage gets one final refresh")
@@ -260,9 +260,9 @@ func checkActivitySummaries() throws {
     precondition(corrected.shouldRequest(after: initial), "An authoritative status correction invalidates the prior batch")
     let nextStage = ActivitySummaryBatch(groupID: "next-stage", phase: .editing,
                                          tools: [edit0, edit1], closed: false)
-    precondition(nextStage.shouldRequest(after: initial), "A new semantic stage has its own threshold")
+    precondition(nextStage.shouldRequest(after: initial), "A new semantic stage triggers immediately")
     let oneTool = ActivitySummaryBatch(groupID: "one", tools: [read0], closed: true)
-    precondition(!oneTool.shouldRequest(after: nil))
+    precondition(oneTool.shouldRequest(after: nil), "Short tasks also get a summary")
 
     let sensitiveCommand = "swift test --filter PRIVATE_COMMAND_ARGUMENT"
     let sensitive = VisibleTool(id: "sensitive", name: "Bash", input: .object([
@@ -301,9 +301,50 @@ func checkActivitySummaries() throws {
     let requestEntries = try timeline([requestWithRuntime, call("read0"), call("read1")])
     let requestBatch = ActivitySummaryBatch.latest(in: requestEntries,
         tools: [read0.id: read0, read1.id: read1], isRunning: true, enabled: true)
-    precondition(requestBatch?.userRequest.count == 400 && requestBatch?.userRequest.contains("\n") == false)
+    precondition(requestBatch?.userRequest == String(repeating: "abcdefghij \n", count: 100),
+                 "The full current user request must survive, including its tail and line breaks")
     precondition(requestBatch?.userRequest.contains("PRIVATE_REQUEST_CONTEXT") == false,
                  "Runtime context must not enter the request excerpt")
+
+    let longProgress = "A public progress update " + String(repeating: "detail ", count: 100)
+    let progressEntries = try timeline([user("old", "Old request"), progress("old-progress", "OLD_PROGRESS"),
+        user(), progress("p0", "Older current progress"), progress("p1", "Inspecting inputs"),
+        progress("p2", longProgress), thought(), call("read0"), call("edit1", name: "Edit")])
+    let contextBatch = ActivitySummaryBatch.latest(in: progressEntries,
+        tools: [read0.id: read0, edit1.id: edit1], isRunning: true, enabled: true)!
+    precondition(contextBatch.recentProgress == ["Older current progress", "Inspecting inputs", longProgress])
+    precondition(!contextBatch.recentProgress.joined().contains("PRIVATE_REASONING"))
+    let started = ActivitySummaryBatch(groupID: "test", phase: .validating,
+        tools: [tool("test", name: "Bash", status: .running, input: .object(["command": .string("swift test")]))], closed: false)
+    precondition(started.shouldRequest(after: nil) && started.records[0].status == "running")
+    let passed = ActivitySummaryBatch(groupID: "test", phase: .validating,
+        tools: [tool("test", name: "Bash", status: .succeeded, input: .object(["command": .string("swift test")]))], closed: false)
+    precondition(passed.shouldRequest(after: started), "A single test result is a key event")
+    let idleWait = VisibleTool(id: "wait", name: "Bash", input: .object(["command": .string("sleep 2")]),
+        output: .object(["exit_code": .number(0)]), status: .succeeded)
+    let poll = tool("poll", name: "write_stdin", input: .object(["chars": .string("")]))
+    let justWaits = ActivitySummaryBatch(groupID: "waits", tools: [idleWait, poll], closed: false)
+    precondition(!justWaits.shouldRequest(after: nil))
+    let moreReadsAndWaits = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
+        tools: [read0, read1, idleWait, poll] + (0..<30).map { tool("r\($0)") }, closed: false)
+    precondition(!moreReadsAndWaits.shouldRequest(after: initial), "Polling and read-window eviction are not events")
+    let failedWait = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
+        tools: [read0, read1, tool("wait", name: "Bash", status: .failed,
+        input: .object(["command": .string("sleep 2")]))], closed: false)
+    precondition(failedWait.shouldRequest(after: initial), "Failures must not be hidden as waiting")
+    let explicitResult = VisibleTool(id: "final-poll", name: "write_stdin", input: .object(["chars": .string("")]),
+        output: .object(["exit_code": .number(1), "output": .string(String(repeating: "x", count: 1000) + "FINAL_ERROR")]), status: .returned)
+    let outputBatch = ActivitySummaryBatch(groupID: "test", phase: .validating,
+        tools: [explicitResult], closed: true, includeToolOutput: true)
+    precondition(outputBatch.records[0].exitCode == 1 && outputBatch.records[0].status == "returned")
+    precondition(outputBatch.records[0].outputExcerpt!.count == 600)
+    precondition(outputBatch.records[0].outputExcerpt!.hasSuffix("FINAL_ERROR"))
+    precondition(outputBatch.shouldRequest(after: passed), "A final poll with an exit code is a result, not idle polling")
+    let retained = ActivitySummaryBatch(groupID: "test", tools: [explicitResult] + (0..<30).map { tool("r\($0)") }, closed: true)
+    precondition(retained.records.count == 12 && retained.records.first?.id == "final-poll",
+        "Key results must remain available even after many reads")
+    let legacyConfig = try JSONDecoder().decode(ActivitySummaryConfiguration.self, from: Data(#"{"enabled":true}"#.utf8))
+    precondition(!legacyConfig.includeToolOutput, "Upgrades must not enable output sharing")
 
     let client = ActivitySummaryClient()
     var config = ActivitySummaryConfiguration()
@@ -333,12 +374,23 @@ func checkActivitySummaries() throws {
     precondition(prompt["current_phase"] as? String == "validating")
     precondition(prompt["group_closed"] as? Bool == true && activities.count == 2)
     precondition(previousPrompt["phase"] as? String == "exploring")
+    let contextRequest = try client.request(configuration: config, apiKey: "", batch: contextBatch, language: "en")
+    let contextBody = String(decoding: contextRequest.httpBody!, as: UTF8.self)
+    precondition(contextBody.contains("recent_progress") && contextBody.contains(longProgress))
+    precondition(!contextBody.contains("OLD_PROGRESS") && !contextBody.contains("PRIVATE_REASONING"))
     let bodyText = String(decoding: request.httpBody!, as: UTF8.self)
     precondition(!bodyText.contains(sensitiveCommand) && !bodyText.contains("PRIVATE_TOOL_OUTPUT"))
     precondition(!bodyText.contains("test-token"))
     precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 512)
     precondition((body["chat_template_kwargs"] as? [String: Bool])?["enable_thinking"] == false)
     precondition(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
+    let outputDisabled = try client.request(configuration: config, apiKey: "", batch: outputBatch, language: "en")
+    precondition(!String(decoding: outputDisabled.httpBody!, as: UTF8.self).contains("FINAL_ERROR"),
+        "The request boundary also enforces the output opt-in")
+    config.includeToolOutput = true
+    let outputEnabled = try client.request(configuration: config, apiKey: "", batch: outputBatch, language: "en")
+    precondition(String(decoding: outputEnabled.httpBody!, as: UTF8.self).contains("FINAL_ERROR"))
+    config.includeToolOutput = false
     config.disableThinking = false
     let standard = try client.request(configuration: config, apiKey: "", batch: privateBatch, language: "en")
     let standardBody = try JSONSerialization.jsonObject(with: standard.httpBody!) as! [String: Any]

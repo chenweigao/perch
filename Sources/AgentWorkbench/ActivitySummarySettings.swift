@@ -102,10 +102,13 @@ struct ActivitySummarySettingsSheet: View {
                 TextField("Base URL（含 /v1）", text: $configuration.baseURL, prompt: Text("http://localhost:8000/v1"))
                 TextField("模型名称", text: $configuration.model, prompt: Text("qwen3.8-flash-next"))
                 SecureField("API Key（可选，保存在钥匙串）", text: $apiKey)
+                Toggle("附带工具输出摘录", isOn: $configuration.includeToolOutput)
+                    .disabled(!configuration.enabled)
+                    .help("默认关闭。开启后，每条工具结果最多发送 600 字符的文本摘录，可能包含源码、命令或其他敏感内容。")
                 Toggle("关闭 Qwen 思考", isOn: $configuration.disableThinking)
                     .help("仅用于支持 chat_template_kwargs.enable_thinking 的服务，可减少摘要的延迟与开销。")
             }
-            Text("使用 OpenAI 兼容的 Chat Completions 接口。外部润色仅发送当前轮用户请求开头（不超过 400 字符）、相关路径、搜索条件、工具类别与状态；不发送完整命令、源码、编辑内容、工具输出、思考或运行上下文。自动命名仍只发送首条用户消息开头。内容不会写回 Agent 上下文。")
+            Text("使用 OpenAI 兼容的 Chat Completions 接口。发送当前轮完整用户文本、最近三条 Agent 公开进展、上一条摘要，以及最多 12 条活动的路径、搜索条件、工具类别、状态和可用退出码；这些公开文本可能包含代码。工具输出摘录需单独开启；不额外发送完整命令参数、编辑内容、私有思考或运行上下文。阶段开始、关键结果、错误和结束时更新，重复读取与等待不触发更新。自动命名仍只发送首条用户消息开头。内容不会写回 Agent 上下文。")
                 .font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             if let testResult { Text(testResult).font(.callout).textSelection(.enabled) }

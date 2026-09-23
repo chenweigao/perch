@@ -121,7 +121,8 @@ struct ConversationTranscript: View {
         let narrative = ActivityNarrativeProjection.make(entries: snapshot.entries, tools: visible.tools,
                                                            isRunning: isRunning)
         let batch = ActivitySummaryBatch.latest(in: snapshot.entries, tools: visible.tools,
-            isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online)
+            isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online,
+            includeToolOutput: summarySettings.configuration.includeToolOutput)
         let narrativeKey = [narrative.current?.stageID, narrative.current?.headline,
                             narrative.current?.detail, narrative.current?.source.rawValue,
                             narrative.current?.lifecycle.rawValue,

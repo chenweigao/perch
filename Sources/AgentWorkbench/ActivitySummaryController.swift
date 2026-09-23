@@ -35,8 +35,26 @@ struct ActivityNarrativeFailure: Equatable {
     private var pending: Pending?
     private var worker: Task<Void, Never>?
     private var activeSession: String?
+    private var activeGroupID: String?
     private var lastRequest = Date.distantPast
     private var generation = 0
+    private var observedSession: String?
+    private let minimumInterval: TimeInterval
+    typealias Summarizer = (ActivitySummaryConfiguration, ActivitySummaryBatch, ActivitySummaryResult?) async throws -> ActivitySummaryResult
+    private let summarize: Summarizer
+
+    init(minimumInterval: TimeInterval = 8, summarize: Summarizer? = nil) {
+        self.minimumInterval = minimumInterval
+        self.summarize = summarize ?? { configuration, batch, previous in
+            let settings = ActivitySummarySettings.shared
+            let revision = settings.revision
+            let key = try await settings.apiKey()
+            try Task.checkCancellation()
+            guard settings.revision == revision else { throw CancellationError() }
+            return try await ActivitySummaryClient().summarize(configuration: configuration, apiKey: key,
+                batch: batch, language: AppLanguage.current.localization, previous: previous)
+        }
+    }
 
     func narrative(session: String) -> ActivityNarrative? { sessions[session]?.current }
     func row(session: String, entryID: String) -> ActivityNarrativeRow? { sessions[session]?.rows[entryID] }
@@ -46,7 +64,8 @@ struct ActivityNarrativeFailure: Equatable {
     func observe(session: String, snapshot: ActivityNarrativeSnapshot, batch: ActivitySummaryBatch?,
                  running: Bool, online: Bool, following: Bool,
                  settings: ActivitySummarySettings) {
-        if let activeSession, activeSession != session { cancelRequest() }
+        if let observedSession, observedSession != session { cancelRequest() }
+        observedSession = session
         var state = sessions[session] ?? SessionState()
         state.touched = Date()
         state.base = snapshot
@@ -55,6 +74,7 @@ struct ActivityNarrativeFailure: Equatable {
             if activeSession == session { cancelRequest() }
             if pending?.session == session { pending = nil }
             state.settingsRevision = settings.revision
+            state.attempts = [:]
         }
         let rendered = snapshot.applying(state.results)
         state.current = rendered.current
@@ -72,10 +92,7 @@ struct ActivityNarrativeFailure: Equatable {
         trimSessions()
 
         guard settings.configuration.enabled, online, state.observedRunning, let batch else {
-            if snapshot.current?.source == .provider || snapshot.current?.source == .commentary {
-                if activeSession == session { cancelRequest() }
-                if pending?.session == session { pending = nil }
-            }
+            if activeSession == session || pending?.session == session { cancelRequest() }
             return
         }
         guard batch.shouldRequest(after: state.attempts[batch.groupID]) else { return }
@@ -104,14 +121,24 @@ struct ActivityNarrativeFailure: Equatable {
                 if self.generation == version {
                     self.worker = nil
                     self.activeSession = nil
+                    self.activeGroupID = nil
                 }
             }
-            while !Task.isCancelled, let next = self.pending {
-                self.pending = nil
-                self.activeSession = next.session
-                let delay = max(0, 8 - Date().timeIntervalSince(self.lastRequest))
+            while !Task.isCancelled, self.pending != nil {
+                let delay = max(0, self.minimumInterval - Date().timeIntervalSince(self.lastRequest))
                 do { if delay > 0 { try await Task.sleep(for: .seconds(delay)) } }
                 catch { return }
+                // Select after the throttle so a burst sends the newest event.
+                guard let next = self.pending else { return }
+                self.pending = nil
+                self.activeSession = next.session
+                self.activeGroupID = next.batch.groupID
+                defer {
+                    if self.generation == version {
+                        self.activeSession = nil
+                        self.activeGroupID = nil
+                    }
+                }
                 guard !Task.isCancelled, self.generation == version,
                       settings.configuration.enabled,
                       settings.revision == next.settingsRevision else { return }
@@ -123,19 +150,33 @@ struct ActivityNarrativeFailure: Equatable {
                 self.sessions[next.session] = state
                 self.lastRequest = Date()
                 do {
-                    let key = try await settings.apiKey()
+                    // Stage order is scoped to the current turn; never carry an
+                    // unrelated request's summary into the next turn.
+                    let previous = state.base.stages.prefix { $0.narrative.stageID != next.batch.groupID }
+                        .reversed().compactMap { stage -> ActivitySummaryResult? in
+                            let narrative = stage.narrative
+                            if let result = state.results[narrative.stageID] { return result }
+                            guard narrative.source == .provider || narrative.source == .commentary else { return nil }
+                            return ActivitySummaryResult(subject: narrative.subject, phase: narrative.phase,
+                                summary: narrative.headline)
+                        }.first
+                    let prior = state.results[next.batch.groupID] ?? previous
+                    let result = try await self.summarize(next.configuration, next.batch, prior)
                     guard !Task.isCancelled, self.generation == version,
-                          settings.revision == next.settingsRevision else { return }
-                    let result = try await ActivitySummaryClient().summarize(
-                        configuration: next.configuration, apiKey: key,
-                        batch: next.batch, language: AppLanguage.current.localization,
-                        previous: state.results[next.batch.groupID])
-                    guard !Task.isCancelled, self.generation == version,
+                          settings.revision == next.settingsRevision,
                           var current = self.sessions[next.session] else { return }
+                    if let pending = self.pending, pending.session == next.session,
+                       pending.batch.groupID == next.batch.groupID,
+                       pending.batch.shouldRequest(after: next.batch) { continue }
                     if current.base.stages.contains(where: { $0.narrative.stageID == next.batch.groupID
                         && $0.narrative.source == .local }) {
-                        if current.results[next.batch.groupID] == nil || result.shouldUpdate {
+                        if result.shouldUpdate {
                             current.results[next.batch.groupID] = result
+                        } else if current.results[next.batch.groupID] == nil, let prior {
+                            // Keep the prior wording when the model reports no
+                            // material change, without carrying stale evidence IDs.
+                            current.results[next.batch.groupID] = ActivitySummaryResult(
+                                subject: prior.subject, phase: prior.phase, summary: prior.summary)
                         }
                         current.failure = nil
                         current.retryBatch = nil
@@ -147,7 +188,8 @@ struct ActivityNarrativeFailure: Equatable {
                         self.trimStages()
                     }
                 } catch {
-                    if Task.isCancelled { return }
+                    if Task.isCancelled || self.generation != version || settings.revision != next.settingsRevision { return }
+                    if self.pending?.session == next.session { continue }
                     guard var current = self.sessions[next.session] else { continue }
                     current.failure = ActivityNarrativeFailure(message: error.localizedDescription, date: Date())
                     current.retryBatch = next.batch
@@ -158,10 +200,15 @@ struct ActivityNarrativeFailure: Equatable {
     }
 
     private func cancelRequest() {
+        if let activeSession, let activeGroupID {
+            sessions[activeSession]?.attempts.removeValue(forKey: activeGroupID)
+        }
         generation += 1
         worker?.cancel()
         worker = nil
         activeSession = nil
+        activeGroupID = nil
+        pending = nil
     }
 
     private func trimSessions() {
