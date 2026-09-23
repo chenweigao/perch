@@ -3,7 +3,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
-app_dir="$PWD/build/Tool Visibility Preview.app"
+fixture=Tests/ToolVisibilityPreview/App.swift
+app_name="Tool Visibility Preview"
+bundle_id=dev.agentworkbench.toolvisibilitypreview
+if [[ "${1:-}" == "--summary-duplicate" ]]; then
+    fixture=Tests/SummaryDuplicatePreview/App.swift
+    app_name="Summary Duplicate Preview"
+    bundle_id=dev.agentworkbench.summaryduplicatepreview
+fi
+app_dir="$PWD/build/$app_name.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 objects=()
@@ -16,14 +24,14 @@ swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
-    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ConversationActivityBar.swift Tests/ToolVisibilityPreview/App.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ConversationActivityBar.swift "$fixture" \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ToolVisibilityPreview"
-cat > "$app_dir/Contents/Info.plist" <<'PLIST'
+cat > "$app_dir/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleIdentifier</key><string>dev.agentworkbench.toolvisibilitypreview</string>
-<key>CFBundleName</key><string>Tool Visibility Preview</string>
+<key>CFBundleIdentifier</key><string>$bundle_id</string>
+<key>CFBundleName</key><string>$app_name</string>
 <key>CFBundleExecutable</key><string>ToolVisibilityPreview</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>NSHighResolutionCapable</key><true/>

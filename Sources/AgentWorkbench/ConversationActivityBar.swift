@@ -51,7 +51,7 @@ struct ConversationActivityBar: View {
     var onOpenTranscript: (KimiTask) -> Void = { _ in }
     @State private var expanded = false
     @State private var pointerAnchor: CGRect?
-    @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
+    @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 

@@ -131,7 +131,7 @@ struct ConversationTranscript: View {
     @State private var toolProjection = ToolVisibilityProjection()
     @State private var projection = ConversationProjection()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
-    @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
+    @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.self) private var environment
     @State private var measured: (session: String, height: CGFloat)?
     @State private var contentOriginY: CGFloat = 0

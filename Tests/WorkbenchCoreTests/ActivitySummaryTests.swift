@@ -242,6 +242,13 @@ func checkActivitySummaries() throws {
     precondition(ActivitySummaryBatch.latest(in: currentStageEntries, tools: currentTools,
                                              isRunning: true, enabled: false) == nil)
 
+    let toolOnlyEnded = try timeline([user(), call("read0"), call("edit1", name: "Edit")], running: false)
+    let endedNarrative = ActivityNarrativeProjection.make(entries: toolOnlyEnded,
+        tools: currentTools, isRunning: false)
+    precondition(endedNarrative.stages.count == 2 && endedNarrative.current?.phase == .editing,
+        "The empty-output placeholder must not replay the first tool as another stage")
+    precondition(Set(endedNarrative.stages.map { $0.narrative.stageID }).count == endedNarrative.stages.count)
+
     let initial = ActivitySummaryBatch(groupID: "stage", phase: .exploring,
                                        tools: [read0, read1], closed: false)
     precondition(initial.shouldRequest(after: nil), "The first meaningful stage can be summarized immediately")
@@ -364,6 +371,15 @@ func checkActivitySummaries() throws {
         output: .string("Updated result"), status: .returned)
     precondition(ActivitySummaryBatch(groupID: "long-stage", tools: revisedOutput, closed: false, includeToolOutput: true)
         .shouldRequest(after: longStage), "Recent result text corrections remain visible")
+
+    var retainedCorrection = manyResults
+    retainedCorrection[1_996] = VisibleTool(id: "edit-1996", name: "Edit", input: manyResults[1_996].input,
+        output: .string("Corrected fourth-last result"), status: .returned)
+    precondition(ActivitySummaryBatch(groupID: "long-stage", tools: retainedCorrection, closed: false, includeToolOutput: true)
+        .shouldRequest(after: longStage), "Payload corrections inside the prompt but outside the last three results must refresh")
+    let evictedKeys = ActivitySummaryBatch(groupID: "long-stage", tools: manyResults + (0..<30).map { tool("read-\($0)") },
+        closed: false, includeToolOutput: true)
+    precondition(!evictedKeys.shouldRequest(after: longStage), "Read-window eviction of older key results is not a correction")
 
     let legacyConfig = try JSONDecoder().decode(ActivitySummaryConfiguration.self, from: Data(#"{"enabled":true}"#.utf8))
     precondition(!legacyConfig.includeToolOutput, "Upgrades must not enable output sharing")

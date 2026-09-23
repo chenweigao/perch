@@ -172,12 +172,10 @@ struct ActivityNarrativeFailure: Equatable {
                         && $0.narrative.source == .local }) {
                         if result.shouldUpdate {
                             current.results[next.batch.groupID] = result
-                        } else if current.results[next.batch.groupID] == nil, let prior {
-                            // Keep the prior wording when the model reports no
-                            // material change, without carrying stale evidence IDs.
-                            current.results[next.batch.groupID] = ActivitySummaryResult(
-                                subject: prior.subject, phase: prior.phase, summary: prior.summary)
                         }
+                        // A no-change response can keep only this stage's existing
+                        // refinement. Earlier stages already own their headlines
+                        // in history; copying one here would display it twice.
                         current.failure = nil
                         current.retryBatch = nil
                         let rendered = current.base.applying(current.results)
