@@ -18,6 +18,39 @@ enum NavigationRenderMetrics {
 
 private let kimiPaper = Color.primary.opacity(0.035)
 
+/// Compaction marks a context boundary, not a message: a slim divider row with
+/// the agent's handoff notes folded behind it.
+private struct CompactionSummaryRow: View {
+    let text: String
+    @RememberedExpansion("compaction") private var expanded
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { expanded.toggle() } label: {
+                HStack(spacing: 10) {
+                    divider
+                    HStack(spacing: 6) {
+                        Image(systemName: "rectangle.compress.vertical")
+                            .font(.system(size: 10, weight: .medium))
+                        Text("上下文已压缩").font(.system(size: 11))
+                        Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 9, weight: .medium))
+                    }.foregroundStyle(.secondary).fixedSize()
+                    divider
+                }.contentShape(Rectangle())
+            }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
+            if expanded {
+                KimiMarkdown(text: CompactionSummaryDisplay.humanText(text))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
+            }
+        }
+    }
+    private var divider: some View {
+        Color.primary.opacity(0.12).frame(height: 1)
+    }
+}
+
 struct KimiMessageView: View {
     let message: KimiMessage
     let tools: [String: VisibleTool]
@@ -28,7 +61,7 @@ struct KimiMessageView: View {
         DisclosureGroup("运行上下文") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
     }
     private func compactionSummary(_ text: String) -> some View {
-        DisclosureGroup("上下文压缩摘要") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
+        CompactionSummaryRow(text: text)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

@@ -197,3 +197,28 @@ func checkConversationPresentation() throws {
     precondition(ModelCatalog.groups(catalog, matching: "missing").isEmpty)
     print("PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups")
 }
+
+func checkCompactionSummaryDisplay() {
+    let wrapped = """
+    The conversation so far has been compacted to free up context. What follows is your own working summary of this task.
+
+    ## 交接摘要（2026-09-23，渲染打磨）
+
+    ### 当前状态
+    全部请求已闭环。
+
+    ## Context Recovery
+    Everything before this note is still on disk in this agent's event log:
+      /tmp/example/wire.jsonl
+    """
+    expectEqual(CompactionSummaryDisplay.humanText(wrapped),
+                "## 交接摘要（2026-09-23，渲染打磨）\n\n### 当前状态\n全部请求已闭环。")
+    expectEqual(CompactionSummaryDisplay.humanText("## 交接摘要\n正文"), "## 交接摘要\n正文")
+    let orphanPreamble = "The conversation so far has been compacted to free up context. 只有一段正文。"
+    expectEqual(CompactionSummaryDisplay.humanText(orphanPreamble), orphanPreamble)
+    expectEqual(CompactionSummaryDisplay.humanText("## 摘要\nA\n\n## Context Recovery\n仅 agent 使用"),
+                "## 摘要\nA")
+    let scaffoldOnly = "The conversation so far has been compacted.\n\n## Context Recovery\n仅脚手架"
+    expectEqual(CompactionSummaryDisplay.humanText(scaffoldOnly), scaffoldOnly)
+    print("PASS: compaction summary display strips harness scaffolding")
+}
