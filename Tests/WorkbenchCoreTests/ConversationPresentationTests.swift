@@ -99,9 +99,9 @@ func checkConversationPresentation() throws {
     // kimi-code prefixes skill activations with one summary line. The line stays as
     // the user bubble (folding the whole part would merge the reply into the prior
     // turn); only the loaded body collapses.
-    let activation = try messages("""
-    [{"id":"skill","role":"user","created_at":"3","content":[{"type":"text","text":"User activated the skill \"config\". Follow the loaded skill instructions.\\n\\n<skill-loaded name=\"config\" trigger=\"user-slash\">private instructions</skill-loaded>"}]}]
-    """)
+    let activation = try messages(#"""
+    [{"id":"skill","role":"user","created_at":"3","content":[{"type":"text","text":"User activated the skill \"config\". Follow the loaded skill instructions.\n\n<skill-loaded name=\"config\" trigger=\"user-slash\">private instructions</skill-loaded>"}]}]
+    """#)
     let activationPart = activation[0].content[0]
     precondition(!activationPart.isRuntimeContext)
     precondition(activationPart.skillContextSplit?.prefix == "User activated the skill \"config\". Follow the loaded skill instructions.")
@@ -113,14 +113,14 @@ func checkConversationPresentation() throws {
     precondition(activationSummary[0].prompt == "User activated the skill \"config\". Follow the loaded skill instructions."
                  && activationSummary[0].reply == "已经修复",
                  "Navigation excerpts show the invocation line, never the folded skill body")
-    let bundled = try messages("""
-    [{"id":"bundle","role":"user","created_at":"4","content":[{"type":"text","text":"User activated the skill \"a\". Follow the loaded skill instructions.\\n\\n<skill-loaded name=\"a\">body-a</skill-loaded>"},{"type":"text","text":"真正的问题"}]}]
-    """)
+    let bundled = try messages(#"""
+    [{"id":"bundle","role":"user","created_at":"4","content":[{"type":"text","text":"User activated the skill \"a\". Follow the loaded skill instructions.\n\n<skill-loaded name=\"a\">body-a</skill-loaded>"},{"type":"text","text":"真正的问题"}]}]
+    """#)
     precondition(ConversationTimelineEntry.make(bundled).map(\.presentation) == [.message])
     precondition(bundled[0].content.map { $0.visibleText ?? "" } == ["User activated the skill \"a\". Follow the loaded skill instructions.", "真正的问题"])
-    let prose = try messages("""
-    [{"id":"prose","role":"user","created_at":"5","content":[{"type":"text","text":"第一行说明\\n第二行说明\\n<skill-loaded name=\"x\">body</skill-loaded>"}]}]
-    """)
+    let prose = try messages(#"""
+    [{"id":"prose","role":"user","created_at":"5","content":[{"type":"text","text":"第一行说明\n第二行说明\n<skill-loaded name=\"x\">body</skill-loaded>"}]}]
+    """#)
     precondition(prose[0].content[0].skillContextSplit == nil, "Only a single summary line may fold; multi-line prose stays literal")
     // Cached presentation is exactly the uncached policy across live edits, completion,
     // pagination and a switch to a different conversation (no ID/count-only invalidation).

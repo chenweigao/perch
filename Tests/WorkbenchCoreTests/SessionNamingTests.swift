@@ -24,10 +24,12 @@ func checkSessionNaming() throws {
     let prompt = "  Fix the login redirect loop in the mobile app  "
     let conversation = try messages([contextOnly, user("first", prompt), assistant])
     precondition(SessionNaming.excerpt(from: conversation) == prompt.trimmingCharacters(in: .whitespacesAndNewlines))
-    precondition(SessionNaming.excerpt(from: try messages([contextOnly, assistant])) == nil,
+    let contextConversation = try messages([contextOnly, assistant])
+    precondition(SessionNaming.excerpt(from: contextConversation) == nil,
                  "Assistant text and runtime context never become a naming candidate")
     let longPrompt = String(repeating: "长", count: 500)
-    precondition(SessionNaming.excerpt(from: try messages([user("long", longPrompt)]))?.count == 400)
+    let longConversation = try messages([user("long", longPrompt)])
+    precondition(SessionNaming.excerpt(from: longConversation)?.count == 400)
 
     precondition(SessionNaming.isPlaceholder("", kind: .kimi, firstUserText: prompt))
     precondition(SessionNaming.isPlaceholder("  ", kind: .kimi, firstUserText: prompt))
@@ -82,7 +84,8 @@ func checkSessionNaming() throws {
     precondition(plain["chat_template_kwargs"] == nil)
 
     let response = Data(#"{"choices":[{"message":{"content":" 《修复登录跳转》\n"},"finish_reason":"stop"}]}"#.utf8)
-    precondition(SessionNaming.sanitize(try ActivitySummaryClient.responseText(response)) == "修复登录跳转")
+    let responseText = try ActivitySummaryClient.responseText(response)
+    precondition(SessionNaming.sanitize(responseText) == "修复登录跳转")
     let truncated = Data(#"{"choices":[{"message":{"content":"Fix log"},"finish_reason":"length"}]}"#.utf8)
     do {
         _ = SessionNaming.sanitize(try ActivitySummaryClient.responseText(truncated))

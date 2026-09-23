@@ -129,14 +129,14 @@ func checkRemoteGitDiff() async throws {
     guard case .clean(_, let mainWorktrees) = try await status()
     else { fatalError("The main checkout must remain clean") }
     expectEqual(mainWorktrees.count, 2)
-    expectTrue(mainWorktrees.first { $0.path == repo.path }?.current == true)
-    expectEqual(mainWorktrees.first { $0.path == linked.path }?.branchName, "feature/linked")
+    expectTrue(mainWorktrees.first { URL(fileURLWithPath: $0.path).resolvingSymlinksInPath().path == repo.resolvingSymlinksInPath().path }?.current == true)
+    expectEqual(mainWorktrees.first { URL(fileURLWithPath: $0.path).resolvingSymlinksInPath().path == linked.resolvingSymlinksInPath().path }?.branchName, "feature/linked")
 
     guard case .changes(let linkedRoot, let linkedWorktrees, let linkedEntries) = try await status(at: [linked.path])
     else { fatalError("Expected changes in the linked worktree") }
     expectEqual(URL(fileURLWithPath: linkedRoot).resolvingSymlinksInPath().path,
                 linked.resolvingSymlinksInPath().path)
-    expectTrue(linkedWorktrees.first { $0.path == linked.path }?.current == true)
+    expectTrue(linkedWorktrees.first { URL(fileURLWithPath: $0.path).resolvingSymlinksInPath().path == linked.resolvingSymlinksInPath().path }?.current == true)
     expectTrue(linkedEntries.contains { $0.path == "stable.txt" && $0.hasUnstaged })
     guard case .text(let linkedDiff, false) = try await diff(at: linked.path, path: "stable.txt", staged: false)
     else { fatalError("Expected linked worktree diff") }
