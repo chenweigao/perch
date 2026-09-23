@@ -187,6 +187,9 @@ private final class ConversationDocumentView: NSView {
     private var navigation: [ConversationTurnSummary] = []
     private var turnRows: [Int] = []
     private var heights: [CGFloat] = []
+    // Keep measured sizes after their hosting graphs leave the retained window.
+    // A row may reuse one only while its content, appearance and width match.
+    private var measuredSizes: [String: (content: ConversationEntryView, width: CGFloat, height: CGFloat)] = [:]
     private var geometry = ConversationRowGeometry(heights: [])
     private var offsets: [CGFloat] { geometry.offsets }
     private var controllers: [String: ConversationEntryController] = [:]
@@ -309,6 +312,12 @@ private final class ConversationDocumentView: NSView {
             self.viewport = viewport
             viewport?.add(self)
         }
+        let nextIndices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
+        if self.sessionId != sessionId || rowAppearance != appearance {
+            measuredSizes.removeAll(keepingCapacity: true)
+        } else {
+            measuredSizes = measuredSizes.filter { nextIndices[$0.key] != nil }
+        }
         if self.sessionId != sessionId {
             cancelHeightAnimation()
             saveReadingPosition()
@@ -327,7 +336,7 @@ private final class ConversationDocumentView: NSView {
         self.contentOriginY = contentOriginY
         let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
         contents = next
-        indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
+        indices = nextIndices
         self.navigation = navigation
         turnRows = navigation.compactMap { indices[$0.id] }
         heights = next.map { previous[$0.entry.id] ?? ConversationReadingMemory.shared.measuredHeights[sessionId]?[$0.entry.id] ?? 160 }
@@ -445,7 +454,10 @@ private final class ConversationDocumentView: NSView {
             if let existing = controllers[id] {
                 controller = existing
             } else {
-                controller = ConversationEntryController(content: content, appearance: appearance, disclosureChanged: { [weak self] animated in self?.beginDisclosureChange(id, animated: animated) }) { [weak self] height in
+                let measuredSize: (width: CGFloat, height: CGFloat)? = measuredSizes[id].flatMap {
+                    $0.width == columnWidth && $0.content == content ? ($0.width, $0.height) : nil
+                }
+                controller = ConversationEntryController(content: content, appearance: appearance, measuredSize: measuredSize, disclosureChanged: { [weak self] animated in self?.beginDisclosureChange(id, animated: animated) }) { [weak self] height in
                     self?.rowHeightChanged(id, height: height)
                 }
                 controllers[id] = controller
@@ -458,6 +470,7 @@ private final class ConversationDocumentView: NSView {
                 addSubview(controller.view)
             }
             let height = controller.measure(width: columnWidth).height
+            measuredSizes[id] = (content, columnWidth, height)
             updateHeight(id, height: height)
             controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: height)
             nextMounted.insert(id)
@@ -476,6 +489,7 @@ private final class ConversationDocumentView: NSView {
         publishHeight()
     }
     private func beginDisclosureChange(_ id: String, animated: Bool) {
+        measuredSizes.removeValue(forKey: id)
         laidOutRange = nil
         viewport?.pauseFollowing?()
         if let previous = heightAnimation, previous.id != id, let index = indices[previous.id] {
@@ -518,6 +532,9 @@ private final class ConversationDocumentView: NSView {
         publishHeight()
     }
     private func rowHeightChanged(_ id: String, height: CGFloat) {
+        if let controller = controllers[id], let index = indices[id] {
+            measuredSizes[id] = (contents[index], controller.view.bounds.width, height)
+        }
         updateHeight(id, height: height)
         publishHeight()
         restoreReadingPosition()
@@ -687,6 +704,7 @@ private final class ConversationEntryController: NSViewController {
     private let disclosureChanged: (Bool) -> Void
 
     init(content: ConversationEntryView, appearance: ConversationEntryAppearance,
+         measuredSize: (width: CGFloat, height: CGFloat)? = nil,
          disclosureChanged: @escaping (Bool) -> Void, heightChanged: @escaping (CGFloat) -> Void) {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
@@ -699,6 +717,7 @@ private final class ConversationEntryController: NSViewController {
         host = NSHostingController(rootView: HostedConversationEntry(
             content: content, appearance: appearance))
         super.init(nibName: nil, bundle: nil)
+        if let measuredSize { sizes.append(measuredSize) }
         host.sizingOptions = []
         host.safeAreaRegions = []
         setRoot()
