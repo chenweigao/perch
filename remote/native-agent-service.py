@@ -242,12 +242,19 @@ def codex_selection(model, thinking=None, catalog=None):
     if thinking and thinking not in entry.get('thinking',[]): raise ValueError('当前 Codex 模型不支持该思考强度')
     return entry, thinking or entry.get('defaultThinking')
 
+def catalog_entries(value, agent):
+    # OMP emits {"models": [...]}; dsh and Codex provide normalized lists.
+    if isinstance(value, dict):
+        value = next((value[name] for name in ('models', 'items') if isinstance(value.get(name), list)), [])
+    if not isinstance(value, list): return []
+    return [dict(entry, agent=agent) for entry in value if isinstance(entry, dict)]
+
 def combined_catalog():
-    entries = list(dsh_catalog()); errors = []
-    for discover in (model_catalog, codex_catalog):
+    entries = catalog_entries(dsh_catalog(), 'dsh'); errors = []
+    for agent, discover in (('omp', model_catalog), ('codex', codex_catalog)):
         try:
             values = discover()
-            if isinstance(values,list): entries.extend(values)
+            entries.extend(catalog_entries(values, agent))
         except Exception as e: errors.append(e)
     if entries: return entries
     if errors: raise errors[0]

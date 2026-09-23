@@ -21,6 +21,10 @@ final class NativeAgentConnection: ObservableObject {
     /// `model/list`, and dsh contributes its ACP config options after each handshake.
     /// Qoder keeps an empty list rather than being offered models it cannot switch to.
     @Published private(set) var models: [AgentModel] = []
+    /// Reading the catalog is asked for by the conversation header and by the
+    /// new-task sheet, so its failure belongs to whichever control is showing a
+    /// model list rather than to the whole session.
+    @Published private(set) var modelsError: String?
     var onSessionsChanged: (() -> Void)?
     private var api: KimiAPI?
     private var tunnel: Process?
@@ -207,19 +211,25 @@ final class NativeAgentConnection: ObservableObject {
         let session: NativeAgentSession = try await request("/sessions", body: .object(body))
         sessions.insert(session, at: 0); onSessionsChanged?(); select(session.id); return session
     }
-    /// The catalog is re-read on every session switch because it is no longer
-    /// static: a dsh session contributes its runtime's options only after the ACP
-    /// handshake lands. Failures keep the last good list; an empty list is the only
-    /// state worth an error message.
+    /// The catalog is re-read on every session switch and whenever the new-task
+    /// sheet offers a native runtime, because it is not static: a dsh session
+    /// contributes its options only after the ACP handshake lands. Failures keep the
+    /// last good list and report through `modelsError`.
     func loadModels() async {
         do {
             let value: JSONValue = try await request("/models")
             let parsed = ModelSelectionCatalog.parseOMP(value["models"])
             if parsed != models { models = parsed }
-        } catch { if models.isEmpty { actionError = error.localizedDescription } }
+            modelsError = nil
+        } catch { modelsError = error.localizedDescription }
+    }
+    /// The catalog is combined, so a runtime is only offered the models that claim it.
+    /// Qoder's SDK reports no catalog at all and stays with a typed model id.
+    func models(for kind: SessionKind) -> [AgentModel] {
+        ModelSelectionCatalog.forAgent(kind, in: models)
     }
     func model(for snapshot: NativeAgentSnapshot) -> AgentModel? {
-        ModelSelectionCatalog.model(snapshot.model, in: models)
+        ModelSelectionCatalog.model(snapshot.model, in: models(for: snapshot.provider))
     }
     /// Switching models can leave the current effort unsupported, so the level is
     /// resolved against the target model and re-sent rather than carried over.

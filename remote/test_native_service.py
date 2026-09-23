@@ -538,6 +538,19 @@ class DshHandlerContractTests(unittest.TestCase):
             code,payload=self.request('/models')
         self.assertEqual(code,200)
         self.assertEqual(payload['models'][0]['provider'],'deepseek-official')
+        # Survivors still say which runtime owns them, so the picker can go on filtering.
+        self.assertEqual({e['agent'] for e in payload['models']},{'dsh'})
+    def test_combined_catalog_tags_each_runtime(self):
+        broker.MODELS=[{'provider':'openai-codex','id':'gpt-5.4-mini','name':'GPT-5.4 mini','selector':'openai-codex/gpt-5.4-mini'}]
+        codex=[{'provider':'codex','id':'gpt-codex','thinking':['medium'],'defaultThinking':'medium'}]
+        with patch.object(broker,'codex_catalog',return_value=codex):
+            code,payload=self.request('/models')
+        self.assertEqual(code,200)
+        self.assertCountEqual([(e['agent'],e['id']) for e in payload['models']],
+                              [('omp','gpt-5.4-mini'),('dsh','deepseek-v4-flash'),('dsh','deepseek-v4-pro'),('codex','gpt-codex')])
+        self.assertNotIn('agent',codex[0])
+        # Tagging builds new dicts; the cached CLI output stays as omp emitted it.
+        self.assertNotIn('agent',broker.MODELS[0])
 
 class HandlerContractTests(unittest.TestCase):
     def setUp(self):
@@ -558,6 +571,17 @@ class HandlerContractTests(unittest.TestCase):
         return result[0]
     def prompt(self,key='one'):
         return self.request('/sessions/contract/prompt',{'text':'中文指令','requestId':key})
+    def test_models_unwraps_omp_json_and_tags_the_runtime(self):
+        # 18.1.16 answers ModelsJson, not a bare list, and one malformed entry must
+        # not take the whole catalog down with it.
+        broker.DSH_MODELS=[]
+        broker.MODELS={'models':[{'provider':'aone','id':'deepseek-v4-pro','selector':'aone/deepseek-v4-pro',
+                                 'name':'DeepSeek V4 Pro · Aone','contextWindow':1000000,'thinking':['low','high','max']},'not-a-model']}
+        code,payload=self.request('/models')
+        self.assertEqual(code,200)
+        self.assertEqual([(e['agent'],e['id']) for e in payload['models']],[('omp','deepseek-v4-pro')])
+        self.assertEqual(payload['models'][0]['thinking'],['low','high','max'])
+        self.assertEqual(payload['models'][0]['selector'],'aone/deepseek-v4-pro')
     def test_unchanged_snapshot_skips_history_copy_but_expires_approvals(self):
         self.s.state['messages']=[{'id':'history','role':'assistant','content':[{'type':'text','text':'历史'}]}]
         with patch.object(broker.copy,'deepcopy',side_effect=AssertionError('unchanged history must not be copied')):
