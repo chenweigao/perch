@@ -744,6 +744,21 @@ class HandlerContractTests(unittest.TestCase):
         self.assertEqual([(e['agent'],e['id']) for e in payload['models']],[('omp','deepseek-v4-pro')])
         self.assertEqual(payload['models'][0]['thinking'],['low','high','max'])
         self.assertEqual(payload['models'][0]['selector'],'aone/deepseek-v4-pro')
+    def test_http_window_and_delta_parameters(self):
+        for i in range(60):
+            self.s.upsert({'role':'user','content':'question'},'u'+str(i))
+            self.s.upsert({'role':'assistant','content':'answer'},'a'+str(i))
+        self.s.touch()
+        code,first=self.request('/sessions/contract?turns=50')
+        self.assertEqual(code,200);self.assertEqual(len(first['messages']),100)
+        h=first['history']
+        code,page=self.request('/sessions/contract?before=%d&epoch=%s&turns=50' % (h['start'],h['epoch']))
+        self.assertEqual(code,200);self.assertEqual(len(page['messages']),20)
+        self.s.upsert({'role':'assistant','content':'changed'},'a59');self.s.touch()
+        code,delta=self.request('/sessions/contract?start=%d&epoch=%s&revision=%d' % (h['start'],h['epoch'],first['revision']))
+        self.assertEqual(code,200);self.assertEqual(delta['history']['indices'],[119])
+        self.assertEqual(len(delta['messages']),1)
+
     def test_unchanged_snapshot_skips_history_copy_but_expires_approvals(self):
         self.s.state['messages']=[{'id':'history','role':'assistant','content':[{'type':'text','text':'历史'}]}]
         with patch.object(broker.copy,'deepcopy',side_effect=AssertionError('unchanged history must not be copied')):
@@ -1094,5 +1109,87 @@ class SetupTests(unittest.TestCase):
             handler.headers = {}; handler.handle_request(False)
             self.assertEqual(responses[-1][0], 401)
             self.assertEqual(check.call_count, 1)
+
+class IncrementalHistoryTests(unittest.TestCase):
+    def session(self, turns=120):
+        s = broker.Session(dict(id='paged', provider='omp', title='Paged', cwd='/tmp', model='m',
+            busy=False, archived=False, updated=0, revision=0, completed=0, messages=[], interactions=[], error=None))
+        s.persist = lambda: None
+        for i in range(turns):
+            s.upsert({'role':'user','content':'question '+str(i)}, 'u'+str(i))
+            s.upsert({'role':'assistant','content':'answer '+str(i)}, 'a'+str(i))
+        s.touch()
+        return s
+    def test_pages_are_whole_turns_and_legacy_is_complete(self):
+        s=self.session(); page=s.snapshot(turns='50')
+        self.assertEqual(page['history']['start'],140)
+        self.assertEqual(page['messages'][0]['id'],'u70')
+        all_messages=page['messages']
+        while page['history']['start']:
+            page=s.snapshot(before=str(page['history']['start']),epoch=page['history']['epoch'],turns='50')
+            all_messages=page['messages']+all_messages
+        self.assertEqual(all_messages,s.snapshot()['messages'])
+        self.assertEqual(len({m['id'] for m in all_messages}),240)
+    def test_delta_updates_same_id_and_appends_without_history_copy(self):
+        s=self.session(); page=s.snapshot(turns='50'); h=page['history']
+        s.upsert({'role':'assistant','content':'changed'},'a119'); s.touch()
+        s.upsert({'role':'user','content':'next'},'u120'); s.touch()
+        delta=s.snapshot(revision=str(page['revision']),start=str(h['start']),epoch=h['epoch'])
+        self.assertEqual(delta['history']['indices'],[239,240])
+        self.assertEqual([m['id'] for m in delta['messages']],['a119','u120'])
+        self.assertEqual(delta['messages'][0]['content'][0]['text'],'changed')
+        delta['messages'][0]['content'][0]['text']='mutated'
+        self.assertEqual(s.state['messages'][239]['content'][0]['text'],'changed')
+        with patch.object(broker.copy,'deepcopy',side_effect=AssertionError('unchanged must not copy')):
+            self.assertEqual(s.snapshot(revision=str(s.state['revision']),start=str(h['start']),epoch=h['epoch']),{'unchanged':True})
+    def test_edit_to_older_page_is_reconciled_from_previous_revision(self):
+        s=self.session(); first=s.snapshot(turns='50'); h=first['history']
+        s.upsert({'role':'assistant','content':'edited old reply'},'a30'); s.touch()
+        page=s.snapshot(before=str(h['start']),epoch=h['epoch'],turns='50')
+        delta=s.snapshot(revision=str(first['revision']),start=str(page['history']['start']),epoch=h['epoch'])
+        self.assertEqual(delta['history']['indices'],[61])
+    def test_partial_is_replaced_and_truncated(self):
+        s=self.session(); first=s.snapshot(turns='50'); h=first['history']
+        s.state['partial']={'role':'assistant','content':[{'type':'text','text':'stream'}]};s.touch()
+        delta=s.snapshot(revision=str(first['revision']),start=str(h['start']),epoch=h['epoch'])
+        self.assertEqual(delta['history']['indices'],[240]);self.assertEqual(delta['messages'][0]['id'],'live')
+        revision=s.state['revision'];s.state.pop('partial');s.touch()
+        delta=s.snapshot(revision=str(revision),start=str(h['start']),epoch=h['epoch'])
+        self.assertEqual(delta['history']['total'],240);self.assertEqual(delta['messages'],[])
+    def test_restart_and_history_reset_cannot_reuse_old_positions(self):
+        s=self.session(); page=s.snapshot(turns='50');h=page['history']
+        s.state['messages']=[];s.reset_history_index();s.touch()
+        reset=s.snapshot(revision=str(page['revision']),start=str(h['start']),epoch=h['epoch'])
+        self.assertNotIn('indices',reset['history']);self.assertEqual(reset['messages'],[])
+        with self.assertRaises(ValueError):s.snapshot(before='140',epoch=h['epoch'])
+    def test_runtime_context_does_not_split_turn_pages(self):
+        s=self.session(51)
+        for i in range(60):
+            s.upsert({'role':'user','content':'<notification id="job">done</notification>'},'note'+str(i))
+        s.touch()
+        page=s.snapshot(turns='50')
+        self.assertEqual(page['messages'][0]['id'],'u1')
+        self.assertEqual(page['history']['start'],2)
+        s.upsert({'role':'user','content':'actual new prompt'},'note0');s.touch()
+        self.assertEqual(len(s.prompt_indices),52)
+
+    def test_nested_runtime_arguments_do_not_alias_stored_messages(self):
+        s=self.session(1)
+        arguments={'text':'first'}
+        event={'role':'assistant','content':[{'type':'toolCall','id':'tool','name':'edit','arguments':arguments}]}
+        s.upsert(event,'tool-message');s.touch()
+        first=s.snapshot(turns='50');h=first['history']
+        arguments['text']='second'
+        s.upsert(event,'tool-message');s.touch()
+        delta=s.snapshot(revision=str(first['revision']),start=str(h['start']),epoch=h['epoch'])
+        self.assertEqual(delta['history']['indices'],[2])
+        self.assertEqual(delta['messages'][0]['content'][0]['input']['text'],'second')
+
+    def test_message_versions_are_bounded_by_history_not_token_count(self):
+        s=self.session(2)
+        for i in range(1000):s.upsert({'role':'assistant','content':str(i)},'a1');s.touch()
+        self.assertEqual(len(s.message_versions),4)
+        with self.assertRaises(ValueError):s.snapshot(turns='0')
+        with self.assertRaises(ValueError):s.snapshot(turns='101')
 
 if __name__=='__main__': unittest.main()

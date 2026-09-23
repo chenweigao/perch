@@ -135,6 +135,7 @@ struct ConnectionChecks {
     }
     @MainActor
     static func main() async throws {
+        try await checkNativeLoading()
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
         try await checkKimiPendingSettle()

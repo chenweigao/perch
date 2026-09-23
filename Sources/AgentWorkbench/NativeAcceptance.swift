@@ -30,6 +30,8 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     private var snapshots: [String: Data]
     private var streamingSnapshot: [String: Any]?
     private(set) var requests: [String] = []
+    private(set) var responseMessages: [Int] = []
+    private(set) var responseBytes: [Int] = []
     init() throws {
         sessions = (0..<500).map { index in
             WorkspaceSession(reference: SessionReference(hostID: Self.host.id, terminalID: "session-\(index)", kind: .omp),
@@ -97,7 +99,24 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         guard path.hasPrefix("/sessions/"), let data = snapshots[id] else {
             throw WorkbenchError("隔离验收仅预置会话 0000–0007：\(path)")
         }
-        return data
+        guard ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "paging"
+            || ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_PAGED_FIXTURE"] == "1" else { return data }
+        let query = Dictionary(uniqueKeysWithValues: (URLComponents(string: "http://fixture" + path)?.queryItems ?? []).map { ($0.name, $0.value!) })
+        var value = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let messages = value["messages"] as! [[String: Any]]
+        let revision = value["revision"] as! Int
+        if query["revision"] == String(revision) { return Data(#"{"unchanged":true}"#.utf8) }
+        let end = Int(query["before"] ?? "") ?? messages.count
+        let start = Int(query["start"] ?? "") ?? max(0, end - 100)
+        var history: [String: Any] = ["epoch": "fixture", "start": start, "total": messages.count, "end": end]
+        if let since = query["revision"].flatMap(Int.init) {
+            history["baseRevision"] = since; history["indices"] = [messages.count - 1]
+            value["messages"] = [messages.last!]
+        } else { value["messages"] = Array(messages[start..<end]) }
+        value["history"] = history
+        let response = try JSONSerialization.data(withJSONObject: value)
+        responseMessages.append((value["messages"] as! [[String: Any]]).count); responseBytes.append(response.count)
+        return response
     }
 }
 
@@ -146,6 +165,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             }
             try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             report["rss_before_mb"] = residentMB()
+            if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
             }
@@ -169,7 +189,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if mode != "frames" && mode != "joint" && mode != "switching" { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "paging"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -272,6 +292,51 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         }
         return ["query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
+    }
+    private func paging(_ window: NSWindow) async throws -> [String: Any] {
+        guard model.native.snapshot?.messages.count == 100, model.native.snapshot?.history?.start == 300,
+              let scroll = transcript(in: window), let navigator = ConversationTranscript.navigator(in: scroll) else {
+            throw WorkbenchError("Initial history page was not bounded to 50 turns")
+        }
+        navigator.select(10)
+        try await settle(window, "paged navigation") { navigator.current == 10 }
+        guard let before = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing page anchor") }
+        func sameAnchor() -> Bool {
+            guard let scroll = self.transcript(in: window), let after = ConversationTranscript.readingAnchor(in: scroll) else { return false }
+            return before.entry == after.entry && abs(before.offset - after.offset) <= 1
+        }
+        model.native.loadOlder()
+        try await settle(window, "prepend reading position") { self.model.native.snapshot?.messages.count == 200 && !self.model.native.loadingOlder && sameAnchor() }
+        try fixture.advanceStream(0)
+        try await model.native.acceptanceRefreshSelected()
+        try await settle(window, "delta while reading history") { self.model.native.snapshot?.revision == 2 && sameAnchor() }
+        guard model.native.snapshot?.messages.count == 200, fixture.responseMessages.last == 1 else { throw WorkbenchError("Stream resent or lost history") }
+        model.open(fixture.sessions[1])
+        try await settle(window) { self.hasMountedMessage(window, session: "session-1") }
+        model.open(fixture.sessions[0])
+        try await settle(window, "paged session return") { self.model.native.snapshot?.messages.count == 200 && self.hasMountedMessage(window, session: "session-0") && sameAnchor() }
+        model.native.loadAllHistoryForSearch()
+        try await settle(window, "full history and navigation") {
+            guard let scroll = self.transcript(in: window) else { return false }
+            return self.model.native.snapshot?.messages.count == 400 && !self.model.native.loadingOlder && sameAnchor()
+                && ConversationTranscript.navigator(in: scroll)?.snapshot.turns.count == 200
+        }
+        guard let currentScroll = transcript(in: window), let all = ConversationTranscript.navigator(in: currentScroll),
+              all.snapshot.turns.count == 200 else { throw WorkbenchError("Full turn navigation was not restored") }
+        all.select(0); try await settle(window, "first turn") { all.current == 0 }
+        all.select(199); try await settle(window, "last turn") { all.current == 199 }
+        let search = ConversationSearch()
+        guard let hit = search.hits(in: model.native.snapshot!.messages, query: "第 1 轮", running: true).first else {
+            throw WorkbenchError("Full-history search lost the first turn")
+        }
+        let key = "\(NativeAcceptanceFixture.host.id):native:session-0"
+        ConversationReadingMemory.shared.following[key] = false
+        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: key, hit: hit, query: "第 1 轮"))
+        try await settle(window, "full-history search reveal") { all.current == 0 }
+        try checkTextContrast(in: window.contentView)
+        return ["paging_initial_turns": 50, "paging_final_turns": 200, "paging_anchor_preserved": true,
+                "paging_delta_messages": 1, "paging_response_messages": fixture.responseMessages,
+                "paging_response_bytes": fixture.responseBytes, "paging_search_and_navigation": "passed"]
     }
     private func joint(_ window: NSWindow) async throws -> [String: Any] {
         guard let scroll = transcript(in: window), let navigator = ConversationTranscript.navigator(in: scroll) else {

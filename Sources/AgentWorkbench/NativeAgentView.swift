@@ -23,9 +23,18 @@ struct NativeAgentView: View {
             if let s = connection.snapshot {
                 let readingKey = "\(connection.host.id):native:\(s.id)"
                 ScrollViewReader { proxy in
-                    ConversationScrollView(showsScrollIndicator: !follow, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
+                    ConversationScrollView(showsScrollIndicator: !follow, hasOlderHistory: s.hasOlder, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
                         if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }, onNearTop: {
+                        if s.hasOlder { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
                     }) {
+                        if s.hasOlder {
+                            HStack {
+                                Button(connection.loadingOlder ? "加载中…" : "加载更早消息") {
+                                    follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
+                                }
+                            }.disabled(connection.loadingOlder || !connection.online).frame(maxWidth: .infinity)
+                        }
                         ConversationTranscript(messages: s.messages, sessionId: s.id,
                                                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                                isRunning: s.busy, online: connection.online, memoryKey: readingKey,
@@ -35,6 +44,14 @@ struct NativeAgentView: View {
                         ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }
                         Color.clear.frame(height: 1).id("bottom")
                     }
+                        .overlay(alignment: .topTrailing) {
+                            if s.hasOlder {
+                                Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
+                                    follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
+                                }.font(.caption).buttonStyle(.bordered)
+                                    .disabled(connection.loadingOlder || !connection.online).padding(8)
+                            }
+                        }
                         .overlay(alignment: .bottom) {
                             ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
                         }

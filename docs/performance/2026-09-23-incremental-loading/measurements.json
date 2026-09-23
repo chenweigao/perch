@@ -1,0 +1,397 @@
+{
+  "implementation_commit": "2af8dd9a1280fd64fb56e90d4ca30ca3cd6c3c81",
+  "integration_base": "7a702ff",
+  "bridge": {
+    "boundary": "In-process synthetic bridge snapshot copy plus JSON encoding, not SSH latency or UI FPS",
+    "service_sha256": "5c04d6e802430eed8526c2d29429eb6565aae4e6af289730b6ab3eb94553d844",
+    "results": [
+      {
+        "turns": 200,
+        "full": {
+          "bytes": 185190,
+          "copy_and_json_ms": [
+            2.0732919999999972,
+            1.9467090000000047,
+            1.9434579999999952,
+            2.0346660000000045,
+            1.9942079999999973,
+            2.1585419999999993,
+            1.9357919999999986
+          ],
+          "median_ms": 1.9942079999999973
+        },
+        "initial_50_turns": {
+          "bytes": 46458,
+          "copy_and_json_ms": [
+            0.5190830000000035,
+            0.5049579999999998,
+            0.5037909999999965,
+            0.5020829999999934,
+            0.5023749999999993,
+            0.5023340000000001,
+            0.5042499999999978
+          ],
+          "median_ms": 0.5037909999999965
+        },
+        "delta": {
+          "bytes": 611,
+          "copy_and_json_ms": [
+            0.027499999999999747,
+            0.019749999999998935,
+            0.01912500000000178,
+            0.018250000000004374,
+            0.018249999999997435,
+            0.01858299999999563,
+            0.01837500000000103
+          ],
+          "median_ms": 0.01858299999999563
+        }
+      },
+      {
+        "turns": 2000,
+        "full": {
+          "bytes": 1855790,
+          "copy_and_json_ms": [
+            21.536958999999996,
+            20.602499999999996,
+            20.061333999999988,
+            22.991042000000018,
+            19.930208000000004,
+            19.679166,
+            20.279292000000005
+          ],
+          "median_ms": 20.279292000000005
+        },
+        "initial_50_turns": {
+          "bytes": 46561,
+          "copy_and_json_ms": [
+            0.5457500000000115,
+            0.5073329999999987,
+            0.5023329999999937,
+            0.4948330000000001,
+            0.4959169999999846,
+            0.5031250000000209,
+            0.49733300000001646
+          ],
+          "median_ms": 0.5023329999999937
+        },
+        "delta": {
+          "bytes": 616,
+          "copy_and_json_ms": [
+            0.025374999999994152,
+            0.020541999999984517,
+            0.02116699999998861,
+            0.02012500000000972,
+            0.01862499999999434,
+            0.01837499999998715,
+            0.0184169999999928
+          ],
+          "median_ms": 0.02012500000000972
+        }
+      },
+      {
+        "turns": 10000,
+        "full": {
+          "bytes": 9287790,
+          "copy_and_json_ms": [
+            106.32562499999997,
+            120.75012500000004,
+            103.60916700000006,
+            104.926458,
+            104.09004199999994,
+            98.59958400000002,
+            102.23445900000006
+          ],
+          "median_ms": 104.09004199999994
+        },
+        "initial_50_turns": {
+          "bytes": 46564,
+          "copy_and_json_ms": [
+            0.5430410000000219,
+            0.4970000000000807,
+            0.4976660000000077,
+            0.49279199999996415,
+            0.4925420000000402,
+            0.4931659999999338,
+            0.4892909999999473
+          ],
+          "median_ms": 0.4931659999999338
+        },
+        "delta": {
+          "bytes": 620,
+          "copy_and_json_ms": [
+            0.024875000000035286,
+            0.019832999999969125,
+            0.018791999999989706,
+            0.018249999999997435,
+            0.018040999999913154,
+            0.018165999999930627,
+            0.017790999999989232
+          ],
+          "median_ms": 0.018249999999997435
+        }
+      }
+    ]
+  },
+  "search": [
+    {
+      "cached_new_query_ms": [
+        1.0219812393188477,
+        0.9899139404296875,
+        0.9779930114746094,
+        0.9599924087524414,
+        0.9549856185913086,
+        0.9549856185913086,
+        0.9340047836303711,
+        0.9309053421020508,
+        0.9300708770751953
+      ],
+      "cached_same_query_ms": [
+        0,
+        0,
+        0,
+        0.00095367431640625,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "old_one_pass_ms": [
+        1.4579296112060547,
+        1.381993293762207,
+        1.3680458068847656,
+        1.3660192489624023,
+        1.3380050659179688,
+        1.3350248336791992,
+        1.3159513473510742,
+        1.3099908828735352,
+        1.2760162353515625
+      ],
+      "sessions": 500
+    },
+    {
+      "cached_new_query_ms": [
+        3.672003746032715,
+        3.68499755859375,
+        3.7889480590820312,
+        3.921985626220703,
+        3.7859678268432617,
+        3.7800073623657227,
+        3.7779808044433594,
+        3.77500057220459,
+        3.769993782043457
+      ],
+      "cached_same_query_ms": [
+        0,
+        0,
+        0,
+        0.0010728836059570312,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "old_one_pass_ms": [
+        5.236983299255371,
+        4.943966865539551,
+        5.115032196044922,
+        5.190014839172363,
+        5.1659345626831055,
+        5.169987678527832,
+        5.166053771972656,
+        5.144953727722168,
+        5.159974098205566
+      ],
+      "sessions": 2000
+    },
+    {
+      "cached_new_query_ms": [
+        19.065022468566895,
+        18.53001117706299,
+        19.54495906829834,
+        19.60599422454834,
+        19.402027130126953,
+        19.26589012145996,
+        19.461989402770996,
+        19.16205883026123,
+        19.306063652038574
+      ],
+      "cached_same_query_ms": [
+        0,
+        0.0010728836059570312,
+        0.00095367431640625,
+        0.0010728836059570312,
+        0,
+        0,
+        0.0010728836059570312,
+        0.0010728836059570312,
+        0
+      ],
+      "old_one_pass_ms": [
+        25.729060173034668,
+        26.06499195098877,
+        26.211023330688477,
+        26.412010192871094,
+        26.359081268310547,
+        25.989055633544922,
+        26.068925857543945,
+        26.56698226928711,
+        26.702046394348145
+      ],
+      "sessions": 10000
+    }
+  ],
+  "catalog_20_seconds": {
+    "previous_tick_count": 50,
+    "idle_requests": 4,
+    "busy_requests": 10
+  },
+  "checks": {
+    "python": 92,
+    "core": "passed including actual Python packets",
+    "connection": "passed including page/delta overlap and stale selection",
+    "production_build": "passed",
+    "strict_signature": "passed"
+  },
+  "ui": {
+    "paging-integrated": {
+      "paging_anchor_preserved": true,
+      "paging_delta_messages": 1,
+      "paging_final_turns": 200,
+      "paging_initial_turns": 50,
+      "paging_response_bytes": [
+        41033,
+        41033,
+        488,
+        41033,
+        81282,
+        40640,
+        40558
+      ],
+      "paging_response_messages": [
+        100,
+        100,
+        1,
+        100,
+        200,
+        100,
+        100
+      ],
+      "paging_search_and_navigation": "passed",
+      "rss_settled_mb": 182.0625,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 30.127750000247033,
+        "median": 2.8007083346892614,
+        "p95": 19.041999999899417
+      },
+      "status": "passed",
+      "binary_sha256": "7ce0edbd6d04cd1afd1dd1c7de4a6e1f5776ea1778fc0b4b033469240defda16",
+      "source_sha256": "4349f0480e89c5585ed8a5a3a32d54f72753e1d78eaea8aaa9db9ed05313f93a"
+    },
+    "switching-integrated": {
+      "rss_settled_mb": 213.09375,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 44.4448750004085,
+        "median": 4.023249999590917,
+        "p95": 23.981750000530155
+      },
+      "status": "passed",
+      "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+      "binary_sha256": "7ce0edbd6d04cd1afd1dd1c7de4a6e1f5776ea1778fc0b4b033469240defda16",
+      "source_sha256": "4349f0480e89c5585ed8a5a3a32d54f72753e1d78eaea8aaa9db9ed05313f93a"
+    },
+    "all-integrated": {
+      "rss_settled_mb": 211.40625,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 26.969916667439975,
+        "median": 4.729958332973183,
+        "p95": 23.146958332290524
+      },
+      "search_sheet": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 35.7973749996745,
+          "median": 27.385416668039397,
+          "p95": 34.35820833328762
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_directory": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 98.77141666765965,
+          "median": 49.53666666733625,
+          "p95": 52.323124999020365
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_switch_ms": {
+        "count": 16,
+        "max": 91.05720833213127,
+        "median": 80.23375000084343,
+        "p95": 84.06208333326504
+      },
+      "status": "passed",
+      "binary_sha256": "7ce0edbd6d04cd1afd1dd1c7de4a6e1f5776ea1778fc0b4b033469240defda16",
+      "source_sha256": "4349f0480e89c5585ed8a5a3a32d54f72753e1d78eaea8aaa9db9ed05313f93a"
+    }
+  },
+  "manual_ui": "CUA: upward scroll expanded 50 to 100 loaded turns; Load all turns expanded to 200, retaining turn 150 in view. Text/table/code/link colors visible. No physical touchpad FPS claim."
+}

@@ -15,7 +15,7 @@ parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
 parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
 parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
-parser.add_argument("--mode", choices=["all", "joint", "switching"], default="all")
+parser.add_argument("--mode", choices=["all", "joint", "switching", "paging"], default="all")
 parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
 args = parser.parse_args()
 if args.seconds <= 0:

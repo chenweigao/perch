@@ -11,6 +11,9 @@ struct ConversationFindBar: View {
     @State private var search = ConversationSearch()
     @FocusState private var focused: Bool
     private var messages: [KimiMessage] { model.showKimi ? kimi.conversation?.displayMessages ?? [] : native.snapshot?.messages ?? [] }
+    private var hasOlder: Bool { model.showKimi ? kimi.conversation?.hasOlder == true : native.snapshot?.hasOlder == true }
+    private var loadingOlder: Bool { model.showKimi ? kimi.loadingOlder : native.loadingOlder }
+    private var canLoadHistory: Bool { model.showKimi ? kimi.online && kimi.snapshotReady : native.online }
     private var running: Bool { model.showKimi ? kimi.conversation?.snapshot.session.busy == true : native.snapshot?.busy == true }
     private var readingKey: String {
         model.showKimi ? "\(kimi.host.id):kimi:\(kimi.selectedId ?? "")" : "\(native.host.id):native:\(native.selectedID ?? "")"
@@ -24,13 +27,15 @@ struct ConversationFindBar: View {
                 Text(hits.isEmpty ? "0 matches" : "\(min(index + 1, hits.count))/\(hits.count)").monospacedDigit()
                 Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").accessibilityLabel("Previous match").disabled(hits.isEmpty)
                 Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").accessibilityLabel("Next match").disabled(hits.isEmpty)
-                if model.showKimi && kimi.conversation?.hasOlder == true {
-                    Button(kimi.loadingOlder ? "Loading…" : "Search full history") { kimi.loadAllHistoryForSearch() }.disabled(kimi.loadingOlder || !kimi.online || !kimi.snapshotReady)
+                if hasOlder {
+                    Button(loadingOlder ? "Loading…" : "Search full history") {
+                        if model.showKimi { kimi.loadAllHistoryForSearch() } else { native.loadAllHistoryForSearch() }
+                    }.disabled(loadingOlder || !canLoadHistory)
                 }
                 Button(action: close) { Image(systemName: "xmark") }.help("Close find").accessibilityLabel("Close find")
             }
             if hits.indices.contains(index) { Text(hits[index].excerpt).lineLimit(2).textSelection(.enabled).foregroundStyle(.secondary) }
-            if model.showKimi && kimi.conversation?.hasOlder == true { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
+            if hasOlder { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
         }.font(.system(size: 12)).padding(10).background(.regularMaterial)
             .onAppear { focused = true; updateSearch() }
             .onChange(of: model.selectedReference) { _, _ in index = 0; updateSearch(preservingSelection: false) }
