@@ -6,7 +6,17 @@ public enum SessionKind: String, Codable, Sendable {
         [Self.terminal: "terminal", .kimi: "sparkles", .omp: "bolt", .qoder: "curlybraces",
          .dsh: "brain.head.profile", .codex: "chevron.left.forwardslash.chevron.right", .claude: "sparkle"][self]!
     }
-    public var label: String { [Self.terminal: L("终端"), .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN", .dsh: "DeepSeek", .codex: "Codex", .claude: "Claude Code"][self]! }
+    public var label: String {
+        switch self {
+        case .terminal: return L("终端")
+        case .kimi: return "Kimi"
+        case .omp: return "OMP"
+        case .qoder: return "Qoder CN"
+        case .dsh: return "DeepSeek"
+        case .codex: return "Codex"
+        case .claude: return "Claude Code"
+        }
+    }
 }
 
 public struct SessionReference: Codable, Hashable, Identifiable, Sendable {
