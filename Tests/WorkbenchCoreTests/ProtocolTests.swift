@@ -18,6 +18,7 @@ struct ProtocolTests {
         checkReplyDocument()
         try checkNativeAgents()
         try checkKimiProtocol()
+        try checkKimiTasks()
         try await checkKimiAPILifecycle()
         try checkKimiPrompts()
         try checkUnifiedWorkspace()

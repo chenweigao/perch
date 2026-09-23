@@ -46,6 +46,11 @@ final class KimiConnection: ObservableObject {
     @Published private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     @Published var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
     @Published private(set) var aborting: Set<String> = []
+    @Published private(set) var loadingTaskOutput: Set<String> = []
+    @Published private(set) var stoppingTasks: Set<String> = []
+    /// The task list is auxiliary information. A failed read stays in its own
+    /// panel instead of presenting itself as a session error.
+    @Published private(set) var taskListError: String?
     @Published private var sendingSessions: Set<String> = []
     var sending: Bool { selectedId.map { sendingSessions.contains($0) } ?? false }
     @Published var loading = false
@@ -61,6 +66,7 @@ final class KimiConnection: ObservableObject {
     private var selectionTask: Task<Void, Never>?
     private var historyTask: Task<Void, Never>?
     private var listRefresh: Task<Void, Never>?
+    private var taskRefresh: Task<Void, Never>?
     private var archivingBatch = false
     func beginArchiveBatch() { archivingBatch = true; listRefresh?.cancel() }
     func endArchiveBatch() { archivingBatch = false }
@@ -132,6 +138,7 @@ final class KimiConnection: ObservableObject {
                             try await refreshConversation(selectionToken: selectionGeneration)
                             try await subscribe(id)
                         } catch is CancellationError { if Task.isCancelled { throw CancellationError() } }
+                        await refreshTasks()
                     }
                     onSessionsChanged?()
                     let heartbeat = Task {
@@ -171,7 +178,7 @@ final class KimiConnection: ObservableObject {
 
     func disconnect() {
         generation = UUID(); selectionGeneration = UUID()
-        task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel()
+        task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel(); taskRefresh?.cancel()
         historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
         snapshotReady = false
         closeTransport(); online = false; connecting = false; stateMessage = "未连接"
@@ -246,12 +253,13 @@ final class KimiConnection: ObservableObject {
     private func loadSelected(_ id: String) {
         selectionGeneration = UUID(); let token = selectionGeneration
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
-        snapshotReady = false; loading = true; actionError = nil
+        snapshotReady = false; loading = true; actionError = nil; taskListError = nil
         selectionTask?.cancel()
         selectionTask = Task { [weak self] in
             guard let self else { return }
             do { try await refreshConversation(selectionToken: token); try await subscribe(id) }
             catch is CancellationError {} catch { if token == selectionGeneration { actionError = error.localizedDescription } }
+            await refreshTasks(selectionToken: token)
             if token == selectionGeneration { loading = false }
         }
     }
@@ -319,6 +327,7 @@ final class KimiConnection: ObservableObject {
             return
         }
         guard event.sessionId == selectedId, conversation != nil else { return }
+        if KimiTaskBoard.changesTaskList(event.type) { scheduleTaskRefresh() }
         let needsSnapshot = conversation!.apply(event)
         if needsSnapshot {
             try await refreshConversation(selectionToken: selectionGeneration)
@@ -353,6 +362,62 @@ final class KimiConnection: ObservableObject {
                 }
             } catch is CancellationError {} catch {
                 if token == selectionGeneration { actionError = error.localizedDescription }
+            }
+        }
+    }
+    /// Reads the persisted task list of the selected session. Subagent lifecycle
+    /// events keep the roster current locally; this list is the only source for
+    /// background processes and detached children.
+    func refreshTasks(selectionToken: UUID? = nil) async {
+        let token = selectionToken ?? selectionGeneration
+        guard token == selectionGeneration, online, let api, let id = selectedId, conversation != nil else { return }
+        do {
+            let list = try await api.get(KimiTaskList.self, "/api/v1/sessions/\(id)/tasks")
+            guard token == selectionGeneration, id == selectedId else { return }
+            conversation?.tasks.reconcile(background: list.items)
+            taskListError = nil
+        } catch is CancellationError {
+        } catch {
+            if token == selectionGeneration, id == selectedId { taskListError = error.localizedDescription }
+        }
+    }
+    private func scheduleTaskRefresh() {
+        taskRefresh?.cancel()
+        taskRefresh = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(300)); await self?.refreshTasks() } catch {}
+        }
+    }
+    /// Reads a tail on demand. An empty result is stored too, so expanding the
+    /// row again does not re-read a task that has produced nothing yet.
+    func loadTaskOutput(_ task: KimiTask) {
+        guard online, let api, let id = selectedId, !loadingTaskOutput.contains(task.id) else { return }
+        loadingTaskOutput.insert(task.id)
+        Task { [weak self] in
+            guard let self else { return }
+            defer { loadingTaskOutput.remove(task.id) }
+            do {
+                let value = try await api.get(KimiTask.self, "/api/v1/sessions/\(id)/tasks/\(task.id)?with_output=true&output_bytes=16384")
+                guard id == selectedId else { return }
+                conversation?.tasks.store(output: value.outputPreview ?? "", for: task.id)
+            } catch {
+                if id == selectedId { taskListError = error.localizedDescription }
+            }
+        }
+    }
+    /// Stops one background task. The task list, not this acknowledgement, decides
+    /// when the row leaves its running state.
+    func cancelTask(_ task: KimiTask) {
+        guard online, let api, let id = selectedId, !stoppingTasks.contains(task.id) else { return }
+        stoppingTasks.insert(task.id); taskListError = nil
+        Task { [weak self] in
+            guard let self else { return }
+            defer { stoppingTasks.remove(task.id) }
+            do {
+                let result = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/tasks/\(task.id):cancel")
+                guard result["cancelled"] == .bool(true) else { throw WorkbenchError("服务端未确认停止") }
+                await refreshTasks()
+            } catch {
+                if id == selectedId { taskListError = "停止未确认：" + error.localizedDescription }
             }
         }
     }

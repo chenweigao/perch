@@ -39,6 +39,15 @@ struct ConversationActivityBar: View {
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
     var onRetryExternal: (() -> Void)? = nil
+    /// Kimi's subagent roster and background task list. Other runtimes report
+    /// neither yet, so the sections stay hidden for them.
+    var board: KimiTaskBoard = KimiTaskBoard()
+    var loadingTaskOutput: Set<String> = []
+    var stoppingTasks: Set<String> = []
+    var taskListError: String? = nil
+    var onTaskOutput: (KimiTask) -> Void = { _ in }
+    var onTaskStop: (KimiTask) -> Void = { _ in }
+    var onTasksRefresh: () -> Void = {}
     @State private var expanded = false
     @State private var pointerAnchor: CGRect?
     @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
@@ -62,7 +71,7 @@ struct ConversationActivityBar: View {
 
     var body: some View {
         ZStack {
-            if activity.isVisible || timing != nil || narrative != nil {
+            if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil {
                 HStack(spacing: 10) {
                     Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
@@ -126,6 +135,7 @@ struct ConversationActivityBar: View {
         HStack(spacing: 10) {
             if !activity.todos.isEmpty { Text("\(activity.completedSteps)/\(activity.todos.count) steps") }
             if !activity.activeTools.isEmpty { Text("\(activity.activeTools.count) \(activity.activeTools.count == 1 ? "tool" : "tools")") }
+            if board.runningCount > 0 { Text("\(board.runningCount) 运行中") }
         }.fixedSize().monospacedDigit()
     }
     @ViewBuilder private var clock: some View {
@@ -193,6 +203,9 @@ struct ConversationActivityBar: View {
                                 .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
                         }
                     }
+                    KimiTaskSections(board: board, loadingOutput: loadingTaskOutput, stopping: stoppingTasks,
+                                     listError: taskListError, onLoadOutput: onTaskOutput,
+                                     onStop: onTaskStop, onRefresh: onTasksRefresh)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
             if let externalFailure {
@@ -276,5 +289,185 @@ private struct ActivityToolDetails: View {
                 if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(.secondary) }
             }
         }.disclosureGroupStyle(WorkbenchDisclosureStyle())
+    }
+}
+
+/// Subagent roster and background tasks of the selected session, inside the
+/// activity popover. Presentation plus the two actions the task API offers:
+/// reading an output tail and stopping one task.
+struct KimiTaskSections: View {
+    let board: KimiTaskBoard
+    var loadingOutput: Set<String> = []
+    var stopping: Set<String> = []
+    var listError: String? = nil
+    var onLoadOutput: (KimiTask) -> Void = { _ in }
+    var onStop: (KimiTask) -> Void = { _ in }
+    var onRefresh: () -> Void = {}
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !board.subagents.isEmpty {
+                section("子 Agent", tasks: board.subagents, readsOutput: false)
+            }
+            if !board.backgroundTasks.isEmpty {
+                section("后台任务", tasks: board.backgroundTasks, readsOutput: true)
+            }
+            if let listError {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(listError).foregroundStyle(.orange).textSelection(.enabled)
+                    Button("重试读取任务") { onRefresh() }.buttonStyle(.borderless)
+                }
+            }
+        }
+    }
+
+    private func section(_ title: LocalizedStringKey, tasks: [KimiTask], readsOutput: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title).fontWeight(.semibold)
+                Spacer()
+                let running = tasks.filter(\.isRunning).count
+                if running > 0 { Text("\(running) 运行中").monospacedDigit().foregroundStyle(.secondary) }
+                if readsOutput {
+                    Button { onRefresh() } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.plain).accessibilityLabel(Text("刷新后台任务"))
+                        .help("重新读取后台任务列表")
+                }
+            }
+            ForEach(tasks) { task in
+                KimiTaskRow(task: task, output: board.output(of: task),
+                            isLoadingOutput: loadingOutput.contains(task.id),
+                            isStopping: stopping.contains(task.id), readsOutput: readsOutput,
+                            onLoadOutput: { onLoadOutput(task) }, onStop: { onStop(task) })
+            }
+        }
+    }
+}
+
+private struct KimiTaskRow: View {
+    let task: KimiTask
+    let output: String?
+    let isLoadingOutput: Bool
+    let isStopping: Bool
+    /// Only the persisted list has an output tail to read and a task to stop. A
+    /// foreground child belongs to the running turn, which Stop already covers.
+    let readsOutput: Bool
+    var onLoadOutput: () -> Void = {}
+    var onStop: () -> Void = {}
+    @State private var expanded = false
+
+    private var symbol: String {
+        switch task.subagentPhase {
+        case "queued": return "clock"
+        case "suspended": return "pause.circle"
+        default: break
+        }
+        switch task.status {
+        case "running": return "circle.dotted"
+        case "completed": return "checkmark"
+        case "failed": return "exclamationmark.circle"
+        case "cancelled": return "xmark.circle"
+        default: return "questionmark.circle"
+        }
+    }
+    private var attention: Bool { task.isFailed || task.subagentPhase == "suspended" }
+    private var tint: Color { attention ? .orange : .secondary }
+    /// The background list mixes processes, detached children and question
+    /// tasks. The roster section holds subagents only, so its rows name the
+    /// subagent type instead of the kind.
+    private var chip: String? {
+        guard readsOutput else { return task.subagentType }
+        return task.subagentType ?? task.kindLabel
+    }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            if expanded { details }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(tint).accessibilityHidden(true)
+                Text(task.description).lineLimit(1).truncationMode(.middle)
+                if let chip, chip != task.description {
+                    Text(LocalizedStringKey(chip)).font(.system(size: 11)).foregroundStyle(.tertiary).fixedSize()
+                }
+                Spacer(minLength: 4)
+                KimiTaskClock(task: task)
+                Text(task.phaseLabel).foregroundStyle(tint).fixedSize()
+            }.font(.system(size: 12)).foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text(verbatim: "\(task.kindLabel) \(task.description) \(task.phaseLabel)"))
+                .help(Text(verbatim: [task.command, task.model, task.id].compactMap { $0 }.joined(separator: "\n")))
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle())
+            .onChange(of: expanded) { _, value in
+                if value && readsOutput && output == nil { onLoadOutput() }
+            }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                meta("状态", task.statusLabel)
+                if let model = task.model {
+                    meta("模型", task.thinkingEffort.map { "\(model) · \($0)" } ?? model)
+                }
+                if let type = task.subagentType { meta("子 Agent 类型", type) }
+                if let command = task.command { meta("命令", command) }
+                if let index = task.swarmIndex { meta("并行序号", String(index)) }
+                if let reason = task.suspendedReason { meta("暂停原因", reason) }
+                meta("任务 ID", task.id)
+            }.font(.system(size: 11))
+            if readsOutput || output != nil {
+                Text("输出").fontWeight(.medium).foregroundStyle(.secondary)
+                if isLoadingOutput {
+                    ProgressView().controlSize(.small)
+                } else if let output, !output.isEmpty {
+                    ScrollView {
+                        Text(output).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                    }.frame(maxHeight: 220)
+                } else {
+                    Text("暂无输出").foregroundStyle(.tertiary)
+                }
+                if readsOutput && task.isRunning {
+                    HStack(spacing: 14) {
+                        Button("刷新输出") { onLoadOutput() }.buttonStyle(.borderless).disabled(isLoadingOutput)
+                        Button { onStop() } label: {
+                            if isStopping { Text("正在停止…") } else { Text("停止任务") }
+                        }.buttonStyle(.borderless).disabled(isStopping)
+                    }
+                }
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
+            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 6))
+            .padding(.leading, 10).padding(.top, 5)
+    }
+
+    private func meta(_ label: LocalizedStringKey, _ value: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(label).foregroundStyle(.tertiary).frame(width: 84, alignment: .leading)
+            Text(value).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// Only a running task needs a clock that redraws; a finished one is fixed.
+private struct KimiTaskClock: View {
+    let task: KimiTask
+    @Environment(\.locale) private var locale
+    var body: some View {
+        Group {
+            if let started = task.startedDate {
+                if let ended = task.completedDate {
+                    Text(duration(ended.timeIntervalSince(started)))
+                } else {
+                    TimelineView(.periodic(from: started, by: 1)) { context in
+                        Text(duration(context.date.timeIntervalSince(started)))
+                    }
+                }
+            }
+        }.font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).fixedSize()
+    }
+    private func duration(_ interval: TimeInterval) -> String {
+        ConversationTiming.duration(max(0, interval), chinese: locale.language.languageCode?.identifier == "zh")
     }
 }

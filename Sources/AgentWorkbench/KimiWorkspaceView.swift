@@ -32,7 +32,14 @@ struct KimiWorkspaceView: View {
                     timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, pendingCount: pending,
                     narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
-                    onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
+                    onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
+                    board: conversation.tasks,
+                    loadingTaskOutput: connection.loadingTaskOutput,
+                    stoppingTasks: connection.stoppingTasks,
+                    taskListError: connection.taskListError,
+                    onTaskOutput: { connection.loadTaskOutput($0) },
+                    onTaskStop: { connection.cancelTask($0) },
+                    onTasksRefresh: { Task { await connection.refreshTasks() } })
                     .id(conversation.snapshot.session.id)
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
                 composer(sessionID: conversation.snapshot.session.id).id(conversation.snapshot.session.id)
