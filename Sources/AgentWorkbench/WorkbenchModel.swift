@@ -786,7 +786,9 @@ final class WorkbenchModel: ObservableObject {
         namingLog.info("attempt \(reference.id, privacy: .public)")
         Task {
             do {
-                let key = try settings.apiKey()
+                let key = try await settings.apiKey()
+                try Task.checkCancellation()
+                guard settings.revision == revision else { return }
                 let name = try await SessionNamingClient().name(configuration: configuration, apiKey: key,
                                                                 excerpt: excerpt, language: AppLanguage.current.localization)
                 guard settings.revision == revision, workspace.sessionTitles[reference.id] == nil,

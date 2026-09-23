@@ -6,7 +6,7 @@ The reported symptoms are continuous stutter and content moving unexpectedly
 while scrolling. The change below addresses the observed anchor defect;
 smooth frame delivery is not established.
 
-## Runtime identity
+## First anchor-only round: runtime identity
 
 All observed bundles advertise `0.1.0 (1)`, so that version alone is insufficient.
 
@@ -17,7 +17,7 @@ All observed bundles advertise `0.1.0 (1)`, so that version alone is insufficien
 | Repeated installed baseline | 33630 | `4384261721b1` | Same installed executable, restarted for matched history loading. |
 | Final local release | 52203 | `b793210a18e6` | `2b5c2bf` plus the anchor-only source patch; no diagnostic probes. |
 
-Final source is based on `2b5c2bf`. The installed application was not overwritten
+The first anchor-only source was based on `2b5c2bf`. The installed application was not overwritten
 by this task. Candidates and the final release were launched from this worktree.
 No remote service was changed, and no conversation prompt was submitted.
 
@@ -82,3 +82,86 @@ the matched main-thread sample, numeric before/after geometry logs, and check
 outputs. Additional raw captures remain in `/tmp/perch-real-scroll-20260923/`.
 Raw Instruments captures can include process environment metadata and are not
 included in the repository.
+
+
+## Follow-up: shared scrolling paths and an actual whole-app stall
+
+The user authorized repairing the other audited paths. Work was rebased onto
+`e7a10d3` (current `origin/main` at the final fetch). No installation, push,
+remote deployment, prompt submission, or remote-task cancellation was performed.
+
+### New decisive main-thread evidence
+
+The original anchor-only process (PID 52203) stopped responding to accessibility
+queries. A five-second sample at 23:04:45 contained 4,131 main-thread observations,
+all in `ActivityNarrativeStore.enqueue` → `ActivitySummarySettings.apiKey` →
+`SecItemCopyMatching` → securityd Mach-message wait. This is a directly observed
+whole-app stall, distinct from cold row layout. The client was force-quit through
+Activity Monitor after capture; remote tasks continued running.
+
+Keychain reads and writes now run in detached utility tasks. Summary, automatic
+naming, rename suggestions, and settings callers await them. Background reads
+request noninteractive access; only an explicitly opened settings sheet allows
+credential interaction. Cancellation/settings revision are checked before a
+background summary or automatic naming request proceeds after the suspension.
+
+In the intermediate repaired process PID 74816, the same Security call occupied
+all 11,977 observations of a **utility queue**, while the main thread continued
+handling real scrolling and expansion. Moving the call off the main thread is
+therefore verified even when the OS-side wait persists. No credential value was
+logged or copied into evidence.
+
+### Remaining scoped changes
+
+- New wheel/scrollbar intent and explicit navigation invalidate pending reading
+  restoration. Resize and search callbacks check the captured intent; session
+  changes invalidate it too. Return to latest discards pending restoration.
+- Subagent transcript turns/steps are flattened into stable, individual frame
+  rows in the lazy stack. The scroll-position binding tracks those identities
+  through updates; one long turn no longer owns one eager subtree. Per-frame
+  disclosure keys and the original compact frame spacing are preserved.
+- Markdown list measurement uses SwiftUI's layout cache for repeated width
+  proposals, including placement. Subview changes invalidate the cache; up to
+  four width measurements are retained. This removes a repeated measurement
+  path present in the main-thread sample, without changing Markdown semantics.
+
+### Final runtime and real-application checks
+
+Final local release: PID **78979**, version **0.1.0 (1)**, executable SHA-256
+`e2e5cc90fba7110aed971b1b13fd315c294b644bbd441044c48dc83b1e386b8c`.
+It was launched from this worktree's `build/Perch.app`; the installed app was
+not replaced. Final source contains no temporary diagnostic probes.
+
+Actual UI checks used the original `agent-env` conversation and the completed
+`Build infra/deep_agent package` child in another existing Kimi conversation:
+
+- Original conversation: older history, window zoom followed by scrolling,
+  turn navigation, up/down reversals, ongoing remote activity, Return to latest.
+  A downward half-page changed the scrollbar from 0.1965 to 0.2115; reversing
+  moved it to 0.1980. Return to latest selected turn 4/4 and hid its button.
+- Final binary: another 80 quarter-page up/down inputs in the original
+  conversation completed, followed by Return to latest.
+- Real child: 80 quarter-page up/down inputs on the final binary, stop midway,
+  and re-read. Its scrollbar stayed around 0.137 while lazy size estimates settled
+  (0.13790 before re-read, 0.13727 after). Thought expansion and later tool rows
+  were also visually checked in the preceding repaired build.
+- The final 15-second sample contains 11,765 main-thread observations, including
+  9,118 in the event-loop Mach wait. No main-thread Keychain wait was present.
+
+Build, WorkbenchChecks, ConnectionChecks, ScrollFollowingChecks, strict deep
+signature verification, and `git diff --check` passed. `origin/main` remains an
+ancestor of this task branch. Isolated checks supplement these actual UI checks.
+
+### Evidence limits
+
+These runs establish functional scrolling/position behavior and removal of the
+observed main-thread credential stall. They do **not** establish a frame-rate
+percentage or zero dropped frames; CUA event-loop wall time is not a frame-rate
+benchmark. The available real child had one long turn and no older-page button,
+so its prepend UI path has not received a real multi-page acceptance run. The
+main transcript/Markdown fixes are shared with Native providers, but those
+providers were not individually exercised in a real remote conversation here.
+
+Numeric/main-thread samples and check logs are retained under
+`.local/real-scroll/` (ignored), including `current-timeout.sample.txt`,
+`subagent-after.sample.txt`, and `final-all-fixes.sample.txt`.

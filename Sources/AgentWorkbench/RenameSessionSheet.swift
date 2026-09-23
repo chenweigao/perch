@@ -51,7 +51,8 @@ struct RenameSessionSheet: View {
         suggestionTask = Task {
             defer { suggesting = false }
             do {
-                let key = try settings.apiKey()
+                let key = try await settings.apiKey()
+                try Task.checkCancellation()
                 let name = try await SessionNamingClient().name(configuration: configuration, apiKey: key,
                                                                 excerpt: excerpt, language: AppLanguage.current.localization)
                 if !Task.isCancelled { suggestion = name }

@@ -214,6 +214,7 @@ private final class ConversationDocumentView: NSView {
     private static let retiredControllers = NSMutableArray()
     private static var drainingRetiredControllers = false
     private var sessionId = ""
+    private var readingIntent = 0
     private var restoreTarget: ConversationReadingMemory.Position?
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
@@ -249,8 +250,9 @@ private final class ConversationDocumentView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
         revealEntry(target.hit.entryID)
+        let intent = readingIntent
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.sessionId == target.session,
+            guard let self, self.readingIntent == intent, self.sessionId == target.session,
                   let view = self.controllers[target.hit.entryID]?.view else { return }
             // A newly mounted host may not have created its native text views yet.
             // Complete that host's layout before looking for the selected range.
@@ -275,6 +277,7 @@ private final class ConversationDocumentView: NSView {
     }
     private func revealEntry(_ id: String, highlight: Bool = false) {
         guard let index = indices[id], let clip = observedClip else { return }
+        cancelPendingRestoration()
         ConversationReadingMemory.shared.following[sessionId] = false
         viewport?.pauseFollowing?()
         clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
@@ -335,6 +338,7 @@ private final class ConversationDocumentView: NSView {
             measuredSizes = measuredSizes.filter { nextIndices[$0.key] != nil }
         }
         if self.sessionId != sessionId {
+            readingIntent += 1
             cancelHeightAnimation()
             saveReadingPosition()
             saveReadingHeights()
@@ -419,10 +423,11 @@ private final class ConversationDocumentView: NSView {
                 saveReadingPosition()
                 let target = ConversationReadingMemory.shared.positions[sessionId]
                 let session = sessionId
+                let intent = readingIntent
                 // Finish AppKit's resize transaction before restoring; restoring
                 // during measurement is overwritten by the clip-view adjustment.
                 DispatchQueue.main.async { [weak self] in
-                    guard let self, self.sessionId == session, self.columnWidth == nextWidth,
+                    guard let self, self.readingIntent == intent, self.sessionId == session, self.columnWidth == nextWidth,
                           ConversationReadingMemory.shared.following[session] == false else { return }
                     self.restoreTarget = target
                     self.restoreReadingPosition()
@@ -614,7 +619,16 @@ private final class ConversationDocumentView: NSView {
         guard !sessionId.isEmpty else { return }
         ConversationReadingMemory.shared.measuredHeights[sessionId] = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
     }
+    fileprivate func cancelPendingRestoration() {
+        readingIntent += 1
+        restoreTarget = nil
+    }
     private func restoreReadingPosition() {
+        // Return to latest can run before the queued height publication.
+        if ConversationReadingMemory.shared.following[sessionId] == true {
+            restoreTarget = nil
+            return
+        }
         guard let target = restoreTarget, let clip = observedClip, bounds.height >= totalHeight - 1, !contents.isEmpty else { return }
         let index = indices[target.entry] ?? min(target.index, contents.count - 1)
         let y = max(0, offsets[index] + target.offset + contentOriginY)
@@ -875,6 +889,11 @@ final class ConversationViewport {
     private var scheduled = false
     fileprivate func add(_ row: NSView) { rows.add(row); refresh() }
     fileprivate func remove(_ row: NSView) { rows.remove(row); refresh() }
+    func userScrolled() {
+        for row in rows.allObjects {
+            (row as? ConversationDocumentView)?.cancelPendingRestoration()
+        }
+    }
     func refresh() {
         guard !scheduled else { return }
         scheduled = true
