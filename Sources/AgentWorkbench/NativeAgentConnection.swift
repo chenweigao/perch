@@ -194,6 +194,9 @@ final class NativeAgentConnection: ObservableObject {
             catch { if selectionGeneration == token { actionError = error.localizedDescription } }
         }
     }
+    #if PERCH_ACCEPTANCE
+    func acceptanceRefreshSelected() async throws { try await refreshSelected() }
+    #endif
     private func refreshSelected() async throws {
         try Task.checkCancellation()
         guard let id = selectedID else { return }

@@ -475,7 +475,13 @@ private final class ConversationDocumentView: NSView {
             // immediately invalidates and lays out again.
             if controller.view.superview !== self {
                 controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: heights[index])
+                #if TRANSCRIPT_CHECKS
+                let attachStart = CACurrentMediaTime()
+                #endif
                 addSubview(controller.view)
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.record("host_attach", since: attachStart)
+                #endif
             }
             let height = controller.measure(width: columnWidth).height
             measuredSizes[id] = (content, columnWidth, height)
@@ -732,6 +738,10 @@ private final class ConversationEntryController: NSViewController {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func loadView() {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("host_view", since: start) }
+        #endif
         let container = ConversationEntryContainer()
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
         addChild(host)
