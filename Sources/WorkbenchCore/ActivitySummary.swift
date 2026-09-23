@@ -72,9 +72,9 @@ public struct ActivitySummaryBatch: Hashable {
         completedCount = completed.count
         self.userRequest = String(userRequest.prefix(400))
         records = completed.suffix(12).map { tool in
-            let target = summaryTarget(tool)
+            let target = Self.summaryTarget(tool)
             return Record(id: tool.id, tool: String(tool.name.prefix(48)), target: target,
-                          context: summaryContext(tool, excluding: target),
+                          context: Self.summaryContext(tool, excluding: target),
                           status: tool.status == .succeeded ? "succeeded" : tool.status == .failed ? "failed" : "returned")
         }
         self.closed = closed
