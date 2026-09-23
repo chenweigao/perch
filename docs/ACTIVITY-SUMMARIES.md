@@ -73,8 +73,12 @@ Only the current user turn's recent process activity is eligible. Perch sends
 up to 12 completed calls, with short tool names, filenames or search terms, IDs and their
 reported outcome. For non-search tools only the tool name and optional filename
 are included; shell arguments, edit contents, tool descriptions, runtime context,
-user messages and reasoning are not sent. The service is asked to describe observed activity, not infer that
-reading a file verified its correctness. `returned` is distinct from `succeeded`.
+user messages and reasoning are not sent. The service is asked for one sentence
+of at most 100 characters, preferring the shared subject supported by related
+actions over listing tools or filenames one by one. Individual targets are used
+only when no common subject is evident. It must describe observed activity, not
+infer that reading a file verified its correctness. `returned` is distinct from
+`succeeded`.
 
 The first request requires six completed calls in a process region. Thoughts and
 runtime context do not split the count or count as calls; two sets of three reads
@@ -86,10 +90,14 @@ selected transcript, with only one in flight. Pending changes coalesce to the
 most recent eligible batch. Inputs have per-field and event-count bounds; output
 uses `max_tokens: 120`. These bounds are not a tokenizer-accurate input-token cap.
 
-Generated text is labelled as a summary and stored only in the transcript's
-presentation state. It is not injected into the agent's context, used for tool
-status, or substituted for the final response. While the reader is scrolled up,
-new summary text is held until they return to the latest activity.
+Generated text appears above the disclosure under a compact tertiary `sparkles`
+label, without a card or background. Its outer edge aligns with body text and the
+disclosure arrow; the process title retains the arrow slot as its internal hierarchy.
+The summary-to-process gap is intentionally tight. Summary text remains selectable
+and is limited to two lines. It is stored only in the transcript's presentation
+state, not injected into the agent's context, used for tool status, or substituted
+for the final response. While the reader is scrolled up, new summary text is held
+until they return to the latest activity.
 
 Disabling the feature, switching configuration or leaving the transcript cancels
 local pending work. It cannot undo tokens already processed by the server. No

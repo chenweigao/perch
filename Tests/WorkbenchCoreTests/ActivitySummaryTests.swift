@@ -115,6 +115,10 @@ func checkActivitySummaries() throws {
     config.enabled = true; config.disableThinking = true
     let request = try client.request(configuration: config, apiKey: "test-token", batch: batch, language: "zh-Hans")
     let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+    let requestMessages = body["messages"] as! [[String: Any]]
+    let systemMessage = requestMessages[0]["content"] as! String
+    precondition(systemMessage.contains("at most 100 characters"))
+    precondition(systemMessage.contains("shared subject") && systemMessage.contains("over listing tools or filenames one by one"))
     let content = String(decoding: request.httpBody!, as: UTF8.self)
     precondition(!content.contains("PRIVATE_SOURCE_CONTENT") && !content.contains("private-project") && !content.contains("test-token"))
     precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 120)

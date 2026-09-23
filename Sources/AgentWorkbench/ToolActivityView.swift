@@ -14,13 +14,16 @@ struct KimiActivityView: View {
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
         let grouped = entry.messages.count > 1 || items.isEmpty
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             if grouped {
                 if let summary {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("自动摘要").font(.system(size: 11)).foregroundStyle(.secondary)
-                        Text(summary).font(.system(size: 13)).lineLimit(2).textSelection(.enabled)
-                    }.padding(.leading, 20).padding(.bottom, 3)
+                        Label("自动摘要", systemImage: "sparkles")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                        Text(summary).font(.system(size: 13)).foregroundStyle(.secondary)
+                            .lineLimit(2).textSelection(.enabled)
+                    }
                 }
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 8) {
