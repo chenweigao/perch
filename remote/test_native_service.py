@@ -140,6 +140,9 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(len(s.snapshot()['messages']),1)
         tool=broker.normalize({'role':'user','content':[{'type':'tool_result','tool_use_id':'x','content':'ok'}]},'tool')
         self.assertEqual(tool['content'][0]['tool_call_id'],'x')
+        source={'kind':'activity_summary','provider':'codex','summaryParts':['Inspecting']}
+        thought=broker.normalize({'role':'assistant','content':[{'type':'thinking','thinking':'raw','source':source}]},'thought')
+        self.assertEqual(thought['content'][0]['source'],source)
     def test_claude_launch_uses_claude_worker_and_binary(self):
         s=self.session('claude'); s.state['permissionMode']='default'
         process=type('Process',(),{})()
@@ -268,6 +271,38 @@ class CodexProtocolTests(unittest.TestCase):
         pages=[params for method,params in fake.calls if method=='thread/items/list']
         self.assertEqual(pages[0],{'threadId':'native-thread','sortDirection':'asc','limit':100})
         self.assertEqual(pages[1]['cursor'],'next')
+
+    def test_reasoning_summary_metadata_streams_and_reconciles(self):
+        s,fake=self.session(); s.state['turnId']='turn-native'
+        s.codex_frame(fake,{'method':'item/reasoning/summaryPartAdded','params':{
+            'threadId':'native-thread','turnId':'turn-native','itemId':'r1','summaryIndex':0}})
+        s.codex_frame(fake,{'method':'item/reasoning/summaryTextDelta','params':{
+            'threadId':'native-thread','turnId':'turn-native','itemId':'r1','summaryIndex':0,'delta':'Inspecting'}})
+        s.codex_frame(fake,{'method':'item/reasoning/summaryPartAdded','params':{
+            'threadId':'native-thread','turnId':'turn-native','itemId':'r1','summaryIndex':1}})
+        s.codex_frame(fake,{'method':'item/reasoning/summaryTextDelta','params':{
+            'threadId':'native-thread','turnId':'turn-native','itemId':'r1','summaryIndex':1,'delta':'Editing'}})
+        s.codex_frame(fake,{'method':'item/reasoning/textDelta','params':{
+            'threadId':'native-thread','turnId':'turn-native','itemId':'r1','contentIndex':0,'delta':'private chain'}})
+        part=next(m for m in s.state['messages'] if m['id']=='codex:r1')['content'][0]
+        self.assertEqual(part['thinking'],'Inspecting\nEditing\nprivate chain')
+        self.assertEqual(part['source'],{'kind':'activity_summary','provider':'codex','itemId':'r1',
+            'summaryParts':['Inspecting','Editing'],'state':'streaming','turnId':'turn-native'})
+        self.assertNotIn('private chain',json.dumps(part['source']))
+        s.codex_frame(fake,{'method':'item/completed','params':{'threadId':'native-thread','item':{
+            'type':'reasoning','id':'r1','summary':['Final summary'],'content':['final private chain']}}})
+        final=next(m for m in s.state['messages'] if m['id']=='codex:r1')['content'][0]
+        self.assertEqual(final['thinking'],'Final summary\nfinal private chain')
+        self.assertEqual(final['source']['summaryParts'],['Final summary'])
+        self.assertEqual(final['source']['state'],'final')
+
+        hydrated,_=self.session('hydrated')
+        hydrated.codex_item({'type':'reasoning','id':'history','summary':['Hydrated summary'],
+                              'content':['private history']},completed=True)
+        restored=next(m for m in hydrated.state['messages'] if m['id']=='codex:history')['content'][0]
+        self.assertEqual(restored['source']['summaryParts'],['Hydrated summary'])
+        self.assertEqual(restored['source']['state'],'final')
+
     def test_turn_start_steer_and_stream_completion(self):
         s,fake=self.session()
         receipt=s.prompt({'text':'开始','requestId':'request-1'})

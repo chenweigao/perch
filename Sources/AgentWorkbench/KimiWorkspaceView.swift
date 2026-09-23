@@ -31,6 +31,7 @@ struct KimiWorkspaceView: View {
                     isRunning: conversation.snapshot.session.busy,
                     timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, pendingCount: pending,
+                    narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(conversation.snapshot.session.id)
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)

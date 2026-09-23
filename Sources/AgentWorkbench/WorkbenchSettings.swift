@@ -56,7 +56,7 @@ struct WorkbenchSettings: View {
             }
             Section("界面") {
                 HStack {
-                    Button("配置活动摘要…") { showSummary = true }
+                    Button("配置活动叙事…") { showSummary = true }
                     Spacer()
                     Text(summarySettings.configuration.enabled ? "已开启" : "默认关闭").foregroundStyle(.secondary)
                     if summarySettings.configuration.enabled { Button("关闭") { summarySettings.disable() } }

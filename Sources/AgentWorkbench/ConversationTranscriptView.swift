@@ -110,16 +110,22 @@ struct ConversationTranscript: View {
     @State private var toolProjection = ToolVisibilityProjection()
     @State private var projection = ConversationProjection()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
-    @StateObject private var summaryController = ActivitySummaryController()
+    @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.self) private var environment
     @State private var measured: (session: String, height: CGFloat)?
     @State private var contentOriginY: CGFloat = 0
     var body: some View {
+        let key = memoryKey ?? sessionId
         let visible = toolProjection.update(messages, sessionID: sessionId, live: liveTools, running: running, online: online)
         let snapshot = projection.update(visible.messages, isRunning: isRunning)
+        let narrative = ActivityNarrativeProjection.make(entries: snapshot.entries, tools: visible.tools,
+                                                           isRunning: isRunning)
         let batch = ActivitySummaryBatch.latest(in: snapshot.entries, tools: visible.tools,
             isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online)
-        let observation = SummaryObservation(session: memoryKey ?? sessionId, batch: batch,
+        let narrativeKey = [narrative.current?.stageID, narrative.current?.headline,
+                            narrative.current?.source.rawValue, narrative.current?.lifecycle.rawValue,
+                            String(narrative.entryStageIDs.count)].compactMap { $0 }.joined(separator: "|")
+        let observation = SummaryObservation(session: key, batch: batch, narrativeKey: narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
             settingsRevision: summarySettings.revision)
         let contents = snapshot.entries.map { entry in
@@ -127,11 +133,12 @@ struct ConversationTranscript: View {
             let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
                 if let value = visible.tools[id] { result[id] = value }
             }
-            let summary = summarySettings.configuration.enabled ? summaryController.summaries[entry.id] : nil
+            let rowNarrative = narrativeStore.narrative(session: key, entryID: entry.id)
+                ?? narrative.narrative(for: entry.id)
             return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId,
-                memoryKey: (memoryKey ?? sessionId) + ":" + entry.id, activitySummary: summary)
+                memoryKey: key + ":" + entry.id, activityNarrative: rowNarrative)
         }
-        ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: memoryKey ?? sessionId,
+        ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
                                  contentOriginY: contentOriginY) { height in
@@ -141,14 +148,15 @@ struct ConversationTranscript: View {
                 $0.frame(in: .named("conversation-content")).minY
             } action: { contentOriginY = $0 }
             .task(id: observation) {
-                summaryController.observe(session: observation.session, batch: batch, running: isRunning,
-                                          online: observation.online, following: followsLatest, settings: summarySettings)
+                narrativeStore.observe(session: observation.session, snapshot: narrative, batch: batch,
+                    running: isRunning, online: observation.online, following: followsLatest,
+                    settings: summarySettings)
             }
-            .onDisappear { summaryController.cancel() }
     }
     private struct SummaryObservation: Hashable {
         let session: String
         let batch: ActivitySummaryBatch?
+        let narrativeKey: String
         let running: Bool
         let online: Bool
         let following: Bool
@@ -909,18 +917,19 @@ private struct ConversationEntryView: View, Equatable {
     let api: KimiAPI?
     let sessionId: String
     let memoryKey: String
-    var activitySummary: String? = nil
+    var activityNarrative: ActivityNarrative? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
-            && lhs.activitySummary == rhs.activitySummary
+            && lhs.activityNarrative == rhs.activityNarrative
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
                 switch entry.presentation {
                 case .activity:
-                    KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId, summary: activitySummary)
+                    KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId,
+                                     narrative: activityNarrative)
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: 12) {

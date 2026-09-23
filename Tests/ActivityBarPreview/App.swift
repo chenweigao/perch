@@ -6,17 +6,19 @@ import WorkbenchCore
     @NSApplicationDelegateAdaptor(ActivityDelegate.self) private var delegate
     var body: some Scene {
         WindowGroup("Task activity preview") { ActivityPreview().preferredColorScheme(.light) }
-            .defaultSize(width: 900, height: 410)
+            .defaultSize(width: 900, height: 470)
     }
 }
 private struct ActivityPreview: View {
     @State private var phase = "Tools"
+    @State private var narrativeMode = "Provider"
     @State private var narrow = false
     @State private var includeHistory = true
     @State private var includePlan = true
     @State private var includeDescription = true
     @State private var reviewCount = 0
     @State private var reconnectCount = 0
+    @State private var retryCount = 0
     @State private var turn = 1
     @State private var clocks = ConversationTimings()
     @State private var observedOnly = false
@@ -53,8 +55,24 @@ private struct ActivityPreview: View {
         return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
     }
     private let live = try! KimiWire.decoder().decode([KimiLiveTool].self, from: Data(#"[{"tool_call_id":"read","name":"Read","args":{"path":"/fixture/Sample.swift"},"last_progress":"Read 20 lines; checking imports"}]"#.utf8))
+    private var narrative: ActivityNarrative? {
+        let source: ActivityNarrativeSource
+        let headline: String
+        switch narrativeMode {
+        case "Provider": source = .provider; headline = "Inspecting the unified activity narrative"
+        case "External": source = .external; headline = "Refining the activity narrative presentation"
+        case "External failure": source = .local; headline = "Validating the activity narrative locally"
+        case "Local": source = .local; headline = "Reviewing Sample.swift"
+        default: return nil
+        }
+        return ActivityNarrative(turnID: "preview-\(turn)", stageID: "preview-\(turn)-stage",
+            phase: phase == "Failed" ? .blocked : phase == "Done" ? .validating : .exploring,
+            subject: "Activity narrative", headline: headline,
+            detail: source == .provider ? "Codex reasoning summary metadata is shown without exposing private reasoning." : nil,
+            source: source, evidenceIDs: ["read"], lifecycle: busy ? .streaming : .final)
+    }
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 20) {
             HStack { Text("Local fixture · No agent connections").font(.headline); Spacer(); Toggle("Narrow", isOn: $narrow) }
             Toggle("Include 20 historical tool calls (hidden from the popover)", isOn: $includeHistory)
             Toggle("Include task plan", isOn: $includePlan)
@@ -63,7 +81,10 @@ private struct ActivityPreview: View {
             Picker("Scenario", selection: $phase) {
                 ForEach(["Thinking", "Tools", "Approval", "Offline", "Stopping", "Responding", "Done", "Failed"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
-            Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · Turn: \(turn)")
+            Picker("Narrative", selection: $narrativeMode) {
+                ForEach(["Provider", "Local", "External", "External failure", "None"], id: \.self) { Text($0) }
+            }.pickerStyle(.segmented)
+            Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · External retries: \(retryCount) · Turn: \(turn)")
             Button("Next turn") { turn += 1; phase = "Thinking" }
             Spacer()
             ConversationActivityBar(activity: ConversationActivity(
@@ -71,8 +92,12 @@ private struct ActivityPreview: View {
                 liveTools: ["Tools", "Approval", "Offline", "Stopping"].contains(phase) ? live : [],
                 online: phase != "Offline", isThinking: phase == "Thinking", isResponding: phase == "Responding",
                 pendingCount: phase == "Approval" ? 2 : 0, isStopping: phase == "Stopping"),
-                isRunning: busy, timing: clocks.turns["preview"], online: phase != "Offline", pendingCount: phase == "Approval" ? 2 : 0,
-                onReview: { reviewCount += 1 }, onReconnect: { reconnectCount += 1 })
+                isRunning: busy, timing: clocks.turns["preview"], online: phase != "Offline",
+                pendingCount: phase == "Approval" ? 2 : 0,
+                narrativeOverride: narrative,
+                externalFailureOverride: narrativeMode == "External failure" ? "Fixture timeout; the local title remains available." : nil,
+                onReview: { reviewCount += 1 }, onReconnect: { reconnectCount += 1 },
+                onRetryExternal: narrativeMode == "External failure" ? { retryCount += 1 } : nil)
                 .frame(width: narrow ? 340 : 840)
             Text("Continue this task, or share a new idea…").foregroundStyle(.secondary)
                 .frame(width: narrow ? 308 : 808, height: 64, alignment: .topLeading).padding(16).workbenchControlSurface()
