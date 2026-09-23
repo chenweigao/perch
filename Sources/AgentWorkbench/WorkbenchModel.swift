@@ -31,6 +31,10 @@ final class WorkbenchModel: ObservableObject {
     @Published var renamingSession: WorkspaceSession?
     @Published var managementError: String?
     @Published var managing = Set<String>()
+    /// Optimistic archive state applied before the server confirms, so the row
+    /// leaves or returns in the same animation as the click. Cleared once the
+    /// refreshed remote list agrees, or reverted on failure.
+    private var archiveOverrides: [String: Bool] = [:]
     @Published var isArchiving = false
     @Published var archiveResult: BatchArchiveRun?
     @Published var showLocalSetup = false
@@ -276,7 +280,7 @@ final class WorkbenchModel: ObservableObject {
             return WorkspaceSession(reference: reference,
                 title: workspace.displayTitle(session.displayTitle, for: reference), directory: session.cwd, hostName: kimi.host.name,
                 detail: section == .review ? L("Kimi · 结果待查看") : "Kimi · \(session.status)", online: kimi.online,
-                section: section, canMarkReviewed: section == .review, archived: session.archived == true, updatedAt: sessionDateParser.date(from: session.updatedAt)?.timeIntervalSince1970 ?? 0)
+                section: section, canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? (session.archived == true), updatedAt: sessionDateParser.date(from: session.updatedAt)?.timeIntervalSince1970 ?? 0)
         }
         }
         let agents = nativeEnvironments.values.flatMap { native in native.sessions.map { session in
@@ -285,11 +289,17 @@ final class WorkbenchModel: ObservableObject {
             let section: WorkQueueSection = session.pending > 0 ? .attention : session.busy ? .running : session.error != nil ? .attention : review ? .review : .other
             return WorkspaceSession(reference: reference, title: workspace.displayTitle(session.title, for: reference), directory: session.cwd, hostName: native.host.name,
                 detail: "\(session.provider.label) · \(section == .review ? L("结果待查看") : session.status)", online: native.online, section: section,
-                canMarkReviewed: section == .review, archived: session.archived, updatedAt: session.updated)
+                canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? session.archived, updatedAt: session.updated)
         }
         }
         let next = ((conversations + agents) + terminalSessions).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
         if next != allSessions { allSessions = next }
+    }
+    /// User-triggered list mutations (pin, archive) animate the row move;
+    /// streamed catalog updates stay instant. Honors system Reduce Motion.
+    private func animateCatalogChange(_ changes: () -> Void) {
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { changes() }
+        else { withAnimation(.easeInOut(duration: 0.24), changes) }
     }
     var sessionScope: SessionScope {
         SessionCatalog.scope(allSessions, starred: workspace.starred, group: selectedGroup,
@@ -468,7 +478,8 @@ final class WorkbenchModel: ObservableObject {
         tabs.showOverview(); updateVisibility(); saveWorkspace()
     }
     func toggleStar(_ reference: SessionReference) {
-        workspace.toggleStar(reference); saveWorkspace()
+        animateCatalogChange { workspace.toggleStar(reference) }
+        saveWorkspace()
     }
     func setGroups(_ groupIDs: Set<UUID>, for reference: SessionReference) {
         for index in workspace.groups.indices {
@@ -703,20 +714,36 @@ final class WorkbenchModel: ObservableObject {
     func setArchived(_ item: WorkspaceSession, archived: Bool) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard canArchive(item), !managing.contains(item.id) else { return }
-        managing.insert(item.id); managementError = nil
+        managementError = nil
+        if item.reference.kind == .terminal {
+            animateCatalogChange {
+                if archived { workspace.archivedTerminals.insert(item.reference) }
+                else { workspace.archivedTerminals.remove(item.reference) }
+                if archived { workspace.starred.removeAll { $0 == item.reference } }
+                rebuildCatalog()
+            }
+            if archived, tabs.ids.contains(item.id) { close(item.id) }
+            saveWorkspace()
+            return
+        }
+        managing.insert(item.id)
+        // Optimistic: the row moves with the click; a failure animates it back.
+        archiveOverrides[item.id] = archived
+        animateCatalogChange { rebuildCatalog() }
+        if archived, tabs.ids.contains(item.id) { close(item.id) }
         Task {
             defer { managing.remove(item.id) }
             do {
                 if item.reference.kind == .kimi { try await kimi.setArchived(item.reference.terminalID, archived: archived) }
-                else if [.omp, .qoder, .dsh, .codex].contains(item.reference.kind) { try await native.action(item.reference.terminalID, "archive", ["archived": .bool(archived)]) }
-                else if archived { workspace.archivedTerminals.insert(item.reference) }
-                else { workspace.archivedTerminals.remove(item.reference) }
-                if archived {
-                    workspace.starred.removeAll { $0 == item.reference }
-                    if tabs.ids.contains(item.id) { close(item.id) }
-                }
+                else { try await native.action(item.reference.terminalID, "archive", ["archived": .bool(archived)]) }
+                archiveOverrides.removeValue(forKey: item.id)
+                if archived { workspace.starred.removeAll { $0 == item.reference } }
                 rebuildCatalog(); saveWorkspace()
-            } catch { managementError = error.localizedDescription }
+            } catch {
+                archiveOverrides.removeValue(forKey: item.id)
+                animateCatalogChange { rebuildCatalog() }
+                managementError = error.localizedDescription
+            }
         }
     }
     func deleteConfirmed(_ item: WorkspaceSession) {
