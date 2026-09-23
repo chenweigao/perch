@@ -70,6 +70,46 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     }
 }
 
+struct SidebarSection<Content: View, Actions: View>: View {
+    let title: LocalizedStringKey
+    let id: String
+    let content: Content
+    let actions: Actions
+    @AppStorage private var isExpanded: Bool
+
+    init(_ title: LocalizedStringKey, id: String, @ViewBuilder content: () -> Content,
+         @ViewBuilder actions: () -> Actions) {
+        self.title = title; self.id = id
+        self.content = content(); self.actions = actions()
+        _isExpanded = AppStorage(wrappedValue: true, "sidebar.\(id).expanded")
+    }
+
+    init(_ title: LocalizedStringKey, id: String, @ViewBuilder content: () -> Content) where Actions == EmptyView {
+        self.init(title, id: id, content: content, actions: { EmptyView() })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 0) {
+                Button { isExpanded.toggle() } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 9, weight: .medium)).frame(width: 10).accessibilityHidden(true)
+                        Text(title)
+                        Spacer(minLength: 0)
+                    }.frame(height: 24).contentShape(Rectangle())
+                }.buttonStyle(SidebarNavigationStyle())
+                    .accessibilityLabel(Text(title))
+                    .accessibilityValue(isExpanded ? Text("已展开") : Text("已收起"))
+                    .accessibilityIdentifier("sidebar.section.\(id)")
+                actions
+            }.font(.system(size: 11)).foregroundStyle(.secondary)
+                .padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
+            if isExpanded { content }
+        }
+    }
+}
+
 /// Animate the navigation background alone; labels and page changes stay immediate.
 struct SidebarNavigationStyle: ButtonStyle {
     var selected = false
