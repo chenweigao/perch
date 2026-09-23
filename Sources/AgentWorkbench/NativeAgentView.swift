@@ -171,7 +171,7 @@ struct NativeModelControls: View {
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
     private var availableModels: [AgentModel] {
-        snapshot.provider == .codex ? connection.models.filter { $0.provider == "codex" } : connection.models
+        connection.models(for: snapshot.provider)
     }
 
     var body: some View {
@@ -192,7 +192,7 @@ struct NativeModelControls: View {
                             }
                         }
                     }
-                    if availableModels.isEmpty { Text("Loading models…") }
+                    if availableModels.isEmpty { Text(connection.modelsError ?? "Loading models…") }
                     if current?.supportsThinking == false {
                         Divider()
                         Text("此模型未提供思考档位设置。")
@@ -368,7 +368,10 @@ struct NewConversationSheet: View {
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
-    private var codexModels: [AgentModel] { native.models.filter { $0.provider == "codex" } }
+    private var codexModels: [AgentModel] { native.models(for: .codex) }
+    private var nativeModelOptions: [ModelOption] { ModelCatalog.options(native.models(for: provider)) }
+    private var showsNativePicker: Bool { (provider == .omp || provider == .dsh) && !nativeModelOptions.isEmpty }
+    private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
     private var selectedCodexModel: AgentModel? { codexModels.first { $0.id == agentModel } }
     /// Attachments ride the Kimi session channel; native adapters have none, so an
     /// attachment-only draft can start a Kimi task but never a native one.
@@ -437,6 +440,8 @@ struct NewConversationSheet: View {
                 Spacer()
                 if provider == .kimi {
                     ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel, emphasizesSelection: true)
+                } else if showsNativePicker {
+                    ModelPicker(models: nativeModelOptions, selection: $agentModel, emphasizesSelection: true)
                 } else if provider == .codex {
                     ModelControlWidth {
                         Menu {
@@ -480,6 +485,9 @@ struct NewConversationSheet: View {
             if provider != .kimi && provider != .codex {
                 TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
+            if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
+                Text(modelsError).font(.caption).foregroundStyle(.orange)
+            }
             if !availableProviders.contains(provider) || !(provider == .kimi ? kimi.online : native.online) {
                 VStack(alignment: .leading, spacing: 8) {
                     if let connectionError {
@@ -520,6 +528,14 @@ struct NewConversationSheet: View {
                 if !availableProviders.contains(provider) { provider = availableProviders.first ?? .kimi }
             }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
+            .task(id: catalogID) {
+                // A native catalog is now needed before any session exists. Qoder
+                // reports none and Kimi reads its own connection.
+                guard native.online && (provider == .omp || provider == .dsh || provider == .codex) else { return }
+                await native.loadModels()
+                guard !Task.isCancelled else { return }
+                if provider == .codex { selectCodexModel() }
+            }
             .onAppear {
                 if let launch = model.launchAfterSetup {
                     model.launchAfterSetup = nil
@@ -538,12 +554,6 @@ struct NewConversationSheet: View {
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
                 }
                 if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
-            }
-            .task(id: provider) {
-                guard provider == .codex else { return }
-                await native.loadModels()
-                guard !Task.isCancelled, provider == .codex else { return }
-                selectCodexModel()
             }
     }
     private func selectProvider(_ value: SessionKind) {
