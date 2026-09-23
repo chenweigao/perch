@@ -556,3 +556,27 @@
 "选择 Codex 模型" = "Choose Codex model";
 "正在读取模型…" = "Loading models…";
 "模型（默认使用 dsh 目录的当前路由）" = "Model (default: the dsh catalog's current route)";
+
+"Codex 权限" = "Codex permissions";
+
+"新任务默认权限" = "Default for new tasks";
+
+"需要时询问" = "Ask for approval";
+
+"自动审核" = "Auto-review";
+
+"完全访问" = "Full access";
+
+"在工作区内执行；额外权限由你批准。" = "Work inside the workspace; you approve additional permissions.";
+
+"保留工作区沙箱，由 Codex 自动审核额外权限；请求仍可能被拒绝。" = "Keep the workspace sandbox. Codex reviews additional permissions automatically and may deny requests.";
+
+"可访问运行机器上的工作区外文件和网络，执行命令时不再请求批准。" = "Access files outside the workspace and the network on the host machine without command approval prompts.";
+
+"仅影响新建 Codex 任务；已有任务可在输入框旁调整。" = "Applies to new Codex tasks. Change existing tasks beside the composer.";
+
+"从下一轮开始生效" = "Applies from the next turn";
+
+"无法更改权限" = "Could not change permissions";
+
+"权限" = "Permissions";

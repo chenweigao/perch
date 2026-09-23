@@ -73,3 +73,17 @@ Qoder SDK 没有独立登录检查接口，首条消息验证鉴权；dsh 只检
 
 旧服务返回“未知路径”时先更新组件并重新检查；检查会在服务空闲时自动完成重启，
 有活动任务时明确提示等待，安装器本身不会终止旧服务。新建任务中的空模型沿用运行时默认值，不再注入固定的 Qoder 模型。
+
+## Codex 权限模式
+
+设置 → Codex 权限选择新任务默认值；新建任务时可覆盖。已有 Codex 会话在输入框旁的权限菜单调整，空闲时保存，从下一轮生效；重连沿用该会话保存的选择。修改默认值不会改变已有任务。
+
+| 模式 | 审批策略 | 审核方 | 沙箱 |
+|---|---|---|---|
+| 需要时询问（默认） | on-request | user | workspace-write |
+| 自动审核 | on-request | auto_review | workspace-write |
+| 完全访问 | never | user | danger-full-access |
+
+自动审核交给 Codex 原生 reviewer，仍可能拒绝请求，并非客户端代点全部批准。完全访问允许操作运行机器上工作区外的文件和网络。Perch 不默认开启完全访问，也不修改远端 config.toml；创建、恢复和每轮开始通过 app-server 显式传递该会话的权限。旧会话缺少此字段时保持原有用户审批模式。管理策略或运行时不接受所选权限时，错误按原有任务错误通道展示，不自动放宽权限。
+
+协议字段已对照 codex-cli 0.155.1 的 app-server JSON Schema。需要更新远端 native service 后使用；服务升级应等待活跃任务结束。官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。

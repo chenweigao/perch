@@ -205,8 +205,10 @@ final class NativeAgentConnection: ObservableObject {
               let value = response.snapshot else { return }
         snapshot = value
     }
-    func create(provider: SessionKind, cwd: String, model: String) async throws -> NativeAgentSession {
-        let session: NativeAgentSession = try await request("/sessions", body: .object(["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]))
+    func create(provider: SessionKind, cwd: String, model: String, permissionMode: CodexPermissionMode = .ask) async throws -> NativeAgentSession {
+        var body: [String: JSONValue] = ["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]
+        if provider == .codex { body["permissionMode"] = .string(permissionMode.rawValue) }
+        let session: NativeAgentSession = try await request("/sessions", body: .object(body))
         sessions.insert(session, at: 0); onSessionsChanged?(); select(session.id); return session
     }
     /// The catalog is re-read on every session switch and whenever the new-task

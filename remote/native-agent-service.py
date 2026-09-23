@@ -295,8 +295,21 @@ def normalize(message, identity):
         elif kind == 'tool_result': parts.append({'type':kind,'tool_call_id':p.get('tool_use_id'),'output':p.get('content'),'is_error':p.get('is_error',False)})
     return {'id':identity,'role':role,'content':parts,'created_at':str(message.get('timestamp',''))}
 
+def codex_permission_params(mode, turn=False):
+    if mode not in ('ask', 'auto-review', 'full-access'):
+        raise ValueError('未知的 Codex 权限模式')
+    full = mode == 'full-access'
+    params = {'approvalPolicy': 'never' if full else 'on-request',
+              'approvalsReviewer': 'auto_review' if mode == 'auto-review' else 'user'}
+    if turn:
+        params['sandboxPolicy'] = {'type': 'dangerFullAccess' if full else 'workspaceWrite'}
+    else:
+        params['sandbox'] = 'danger-full-access' if full else 'workspace-write'
+    return params
+
 class Session:
     def __init__(self, state):
+        if state.get('provider') == 'codex': state.setdefault('permissionMode', 'ask')
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
@@ -318,6 +331,7 @@ class Session:
         return {k:self.state[k] for k in ('id','provider','title','cwd','busy','archived','updated','revision','completed','model','error')} | {
             'pending':len(self.state['interactions']), 'cancelled':self.state.get('cancelled',False),
             'thinking':self.state.get('thinking'), 'context':self.state.get('context'),
+            'permissionMode':self.state.get('permissionMode'),
             'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState'),
             'steer':self.state['provider'] in ('omp','codex')}
     def active_receipt(self):
@@ -362,7 +376,7 @@ class Session:
         try:
             if s['provider']=='codex':
                 params={'threadId':s['resume'],'input':[{'type':'text','text':text}],
-                        'clientUserMessageId':request_id}
+                        'clientUserMessageId':request_id} | codex_permission_params(s['permissionMode'], turn=True)
                 if s.get('model'): params['model']=s['model']
                 if s.get('thinking'): params['effort']=s['thinking']
                 turn=(self.codex.request('turn/start',params).get('turn') or {})
@@ -404,7 +418,7 @@ class Session:
         with self.write_lock:
             self.process.stdin.write(json.dumps(value,ensure_ascii=False)+'\n'); self.process.stdin.flush()
     def codex_open_params(self):
-        params={'cwd':self.state['cwd'],'approvalPolicy':'on-request','approvalsReviewer':'user','sandbox':'workspace-write'}
+        params={'cwd':self.state['cwd']} | codex_permission_params(self.state['permissionMode'])
         if self.state.get('model'): params['model']=self.state['model']
         return params
     def codex_ensure(self, attach=True):
@@ -1117,8 +1131,11 @@ class Handler(BaseHTTPRequestHandler):
                 elif self.path=='/sessions' and post:
                     if body['provider'] not in ('omp','qoder','dsh','codex') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
                     model=body.get('model',''); thinking=body.get('thinking')
-                    if body['provider']=='codex': _,thinking=codex_selection(model,thinking,codex_models)
+                    if body['provider']=='codex':
+                        codex_permission_params(body.get('permissionMode', 'ask'))
+                        _,thinking=codex_selection(model,thinking,codex_models)
                     sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':body['provider'],'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
+                    if body['provider']=='codex': s.state['permissionMode']=body.get('permissionMode', 'ask')
                     SESSIONS[sid]=s
                     if body['provider']=='codex':
                         try: s.codex_start_thread()
@@ -1184,6 +1201,14 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'id':str(uuid.uuid4()),'type':'set_model','provider':provider,'modelId':model})
                                     s.send({'id':'state','type':'get_state'})
                                 s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
+                        elif action=='permissions':
+                            if s.state['provider'] != 'codex': raise ValueError('当前 Agent 不支持设置 Codex 权限')
+                            if s.state['busy'] or s.state['interactions']: raise ValueError('请先停止或完成当前任务')
+                            mode = body.get('mode')
+                            codex_permission_params(mode)
+                            s.state['permissionMode'] = mode
+                            s.touch(True)
+                            result = {'ok': True}
                         elif action=='thinking':
                             if s.state['provider'] not in ('omp','dsh','codex'): raise ValueError('当前 Agent 不支持设置思考强度')
                             level=body.get('level','')

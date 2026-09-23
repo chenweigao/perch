@@ -101,6 +101,9 @@ struct NativeAgentView: View {
                         HStack(spacing: 10) {
                             ComposerAddButton(supportsFiles: false)
                             NativeModelControls(connection: connection, snapshot: s)
+                            if s.provider == .codex {
+                                CodexPermissionControl(connection: connection, snapshot: s)
+                            }
                             Spacer(minLength: 8)
                             ContextMeter(budget: connection.sessions.first { $0.id == s.id }?.budget)
                             ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
@@ -166,6 +169,45 @@ struct NativeAgentView: View {
 /// Model, reasoning effort and remaining context for runtimes that accept route
 /// changes. OMP and dsh expose their native controls, while Codex choices come from
 /// app-server's model catalog. A Qoder session keeps the plain label.
+struct CodexPermissionControl: View {
+    @ObservedObject var connection: NativeAgentConnection
+    let snapshot: NativeAgentSnapshot
+    @State private var saving = false
+    @State private var error: String?
+    private var mode: CodexPermissionMode {
+        connection.sessions.first { $0.id == snapshot.id }?.permissionMode ?? snapshot.permissionMode ?? .ask
+    }
+    var body: some View {
+        Menu {
+            ForEach(CodexPermissionMode.allCases) { option in
+                Button {
+                    saving = true; error = nil
+                    Task {
+                        defer { saving = false }
+                        do { try await connection.action(snapshot.id, "permissions", ["mode": .string(option.rawValue)]) }
+                        catch { self.error = error.localizedDescription }
+                    }
+                } label: {
+                    if option == mode { Label(option.label, systemImage: "checkmark") }
+                    else { Text(option.label) }
+                }
+            }
+            Divider()
+            Text(mode.detail)
+            Text("从下一轮开始生效")
+        } label: {
+            Label(mode.label, systemImage: mode == .fullAccess ? "lock.open" : "lock.shield")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .menuStyle(.borderlessButton).fixedSize()
+        .disabled(snapshot.busy || !snapshot.interactions.isEmpty || saving)
+        .help(mode.detail)
+        .alert("无法更改权限", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("确定", role: .cancel) { error = nil }
+        } message: { Text(error ?? "") }
+    }
+}
+
 struct NativeModelControls: View {
     @ObservedObject var connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
@@ -363,6 +405,7 @@ struct NewConversationSheet: View {
     @State private var attachments: [URL] = []
     @State private var chooseFiles = false
     @State private var showSetup = false
+    @State private var codexPermissionMode = CodexPermissionMode(rawValue: UserDefaults.standard.string(forKey: CodexPermissionMode.defaultsKey) ?? "") ?? .ask
     @FocusState private var cwdFocused: Bool
     private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
@@ -485,6 +528,12 @@ struct NewConversationSheet: View {
             if provider != .kimi && provider != .codex {
                 TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
+            if provider == .codex {
+                Picker("权限", selection: $codexPermissionMode) {
+                    ForEach(CodexPermissionMode.allCases) { mode in Text(mode.label).tag(mode) }
+                }.disabled(creating)
+                Text(codexPermissionMode.detail).font(.caption).foregroundStyle(.secondary)
+            }
             if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
                 Text(modelsError).font(.caption).foregroundStyle(.orange)
             }
@@ -580,7 +629,7 @@ struct NewConversationSheet: View {
                     model.newKimiCreated(session)
                     await kimi.sendPrompt(for: session.id)
                 } else {
-                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel)
+                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel, permissionMode: codexPermissionMode)
                     native.drafts[session.id] = text
                     model.newNativeCreated(session)
                     native.send()
