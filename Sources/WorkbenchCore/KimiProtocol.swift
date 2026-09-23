@@ -104,12 +104,16 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
     }
 }
 public struct KimiPart: Decodable, Equatable, Sendable {
+    /// kimi-code delivers attachment metadata (for example the image compression
+    /// note with the original's path) as its own `<system>…</system>` text part
+    /// next to the typed prompt. It is harness metadata, not user prose.
     public var isRuntimeContext: Bool {
         guard type == "text", let text else { return false }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.hasPrefix("<system-reminder>")
             || (value.hasPrefix("<notification ") && value.hasSuffix("</notification>"))
             || (value.hasPrefix("<skill-loaded ") && value.hasSuffix("</skill-loaded>"))
+            || (value.hasPrefix("<system>") && value.hasSuffix("</system>"))
     }
     /// kimi-code prepends a one-line summary (for example "User activated the
     /// skill …") to the `<skill-loaded>` block. The line stays visible as the user

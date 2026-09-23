@@ -122,6 +122,34 @@ func checkConversationPresentation() throws {
     [{"id":"prose","role":"user","created_at":"5","content":[{"type":"text","text":"第一行说明\n第二行说明\n<skill-loaded name=\"x\">body</skill-loaded>"}]}]
     """#)
     precondition(prose[0].content[0].skillContextSplit == nil, "Only a single summary line may fold; multi-line prose stays literal")
+    // Attachment metadata arrives as a standalone `<system>…</system>` text part
+    // next to the typed prompt and the image. It folds as runtime context while
+    // the prompt, turn boundary, excerpts and naming stay anchored on the typed text.
+    let imageNote = try messages(#"""
+    [{"id":"attach","role":"user","created_at":"6","content":[{"type":"text","text":"配置的 codex，一直没响应，是什么情况"},{"type":"text","text":"<system>Image compressed to fit model limits: original 2062x1640 image/png (996 KB) -> sent 2000x1591 image/png (1.0 MB). The uncompressed original is saved at \"/tmp/original.png\".</system>"},{"type":"image","name":"pasted-image.png","source":{"file_id":"f_123"}}]}]
+    """#)
+    precondition(imageNote[0].isUserPrompt)
+    precondition(!imageNote[0].content[0].isRuntimeContext && imageNote[0].content[1].isRuntimeContext)
+    precondition(imageNote[0].content[0].visibleText == "配置的 codex，一直没响应，是什么情况"
+                 && imageNote[0].content[1].visibleText == nil)
+    precondition(ConversationTimelineEntry.make(imageNote).map(\.presentation) == [.message],
+                 "An attachment note must not split its prompt into process rows")
+    let noteNavigation = ConversationProjection().update(imageNote + final, isRunning: false).navigation
+    precondition(noteNavigation[0].prompt == "配置的 codex，一直没响应，是什么情况",
+                 "Navigation excerpts show the typed prompt, never the attachment metadata")
+    precondition(SessionNaming.excerpt(from: imageNote) == "配置的 codex，一直没响应，是什么情况",
+                 "Session naming reads the typed prompt, never the attachment metadata")
+    let noteOnly = try messages("""
+    [{"id":"note","role":"user","created_at":"8","content":[{"type":"text","text":"<system>harness note</system>"}]}]
+    """)
+    precondition(!noteOnly[0].isUserPrompt)
+    precondition(ConversationTimelineEntry.make(noteOnly).allSatisfy(\.activity),
+                 "A message carrying only a system note is process output, not a user prompt")
+    let inlineNote = try messages("""
+    [{"id":"inline","role":"user","created_at":"9","content":[{"type":"text","text":"看下 <system>这段</system> 是什么"}]}]
+    """)
+    precondition(!inlineNote[0].content[0].isRuntimeContext,
+                 "Only a whole-part system block folds; inline mentions stay literal")
     // Compaction summaries arrive as user-role messages but are harness artifacts:
     // they keep their own collapsed row and never anchor turns, navigation or tools.
     let compaction = try messages("""
