@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 import WorkbenchCore
 
-/// Real WorkbenchModel checks in an isolated app domain. Never call start():
-/// saving setup before start must not launch SSH or contact a running agent.
+/// Real WorkbenchModel checks in an isolated app domain. All phases stay on
+/// the main actor without yielding; queued connection tasks never launch SSH.
 @main struct HostLifecycleChecks {
     @MainActor static func main() throws {
         _ = NSApplication.shared
@@ -81,6 +81,67 @@ import WorkbenchCore
             precondition(persisted.isEmpty)
             model.shutdown()
             print("PASS: removing another/current/last host preserves the correct target and saved list")
+
+        case "connection-controls":
+            let a = SSHHost(name: "A", destination: "fixture-a.invalid")
+            let b = SSHHost(name: "B", destination: "fixture-b.invalid", autoConnectSSH: false, autoConnectHerdr: false)
+            UserDefaults.standard.set(try JSONEncoder().encode([a, b]), forKey: "hosts")
+            let model = WorkbenchModel()
+            model.start()
+            let aa = model.agentConnections(for: a.id)!
+            let ba = model.agentConnections(for: b.id)!
+            precondition(aa.kimi.connecting && aa.native.wantsConnection && model.connections[0].wantsConnection)
+            precondition(!ba.kimi.connecting && !ba.native.wantsConnection && !model.connections[1].wantsConnection)
+            model.activateAgentEnvironment(b.id)
+            model.resumeConnectionsAfterWake()
+            precondition(!ba.kimi.connecting && !ba.native.wantsConnection && !model.connections[1].wantsConnection)
+
+            model.disconnectSSH(a.id)
+            precondition(model.connections[0].wantsConnection, "SSH Agent disconnect must leave Herdr connected")
+            model.disconnectHerdr(a.id)
+            model.activateAgentEnvironment(a.id)
+            model.resumeConnectionsAfterWake()
+            precondition(!aa.kimi.connecting && !aa.native.wantsConnection && !model.connections[0].wantsConnection)
+            precondition(model.connections[0].host.autoConnectSSH && model.connections[0].host.autoConnectHerdr,
+                         "temporary disconnect must preserve launch preferences")
+
+            model.setAutoConnect(true, for: b.id, herdr: true)
+            precondition(model.connections[1].wantsConnection && !ba.kimi.connecting && !ba.native.wantsConnection)
+            model.setAutoConnect(true, for: b.id, herdr: false)
+            precondition(ba.kimi.connecting && ba.native.wantsConnection)
+            model.setAutoConnect(false, for: b.id, herdr: true)
+            precondition(!model.connections[1].wantsConnection && ba.kimi.connecting && ba.native.wantsConnection)
+            model.setAutoConnect(false, for: b.id, herdr: false)
+            precondition(!ba.kimi.connecting && !ba.native.wantsConnection)
+            model.setAutoConnect(false, for: a.id, herdr: true)
+            model.setAutoConnect(false, for: a.id, herdr: false)
+            let setup = RemoteSetupController(host: model.connections[0].host)
+            precondition(!setup.host.autoConnectSSH && !setup.host.autoConnectHerdr,
+                         "editing the host must retain connection preferences")
+            try model.finishSetup(setup.host, launch: nil, startTask: false)
+            precondition(!aa.kimi.connecting && !aa.native.wantsConnection && !model.connections[0].wantsConnection)
+            model.shutdown()
+            UserDefaults.standard.synchronize()
+            print("PASS: independent SSH/Herdr controls, immediate toggles, temporary disconnect, activation/wake and setup")
+
+        case "connection-restart":
+            let model = WorkbenchModel()
+            precondition(model.connections.count == 2)
+            model.start()
+            for connection in model.connections {
+                precondition(!connection.host.autoConnectSSH && !connection.host.autoConnectHerdr)
+                let agents = model.agentConnections(for: connection.id)!
+                precondition(!agents.kimi.connecting && !agents.native.wantsConnection && !connection.wantsConnection)
+            }
+            // Manual connection is available even when launch connection is off.
+            let connection = model.connections[0]
+            model.connectSSH(connection.id)
+            connection.connect()
+            let agents = model.agentConnections(for: connection.id)!
+            precondition(agents.kimi.connecting && agents.native.wantsConnection && connection.wantsConnection)
+            precondition(!connection.host.autoConnectSSH && !connection.host.autoConnectHerdr)
+            model.shutdown()
+            print("PASS: disabled launch preferences survive restart; manual reconnect remains available")
 
         default: fatalError("Unknown check phase")
         }

@@ -10,6 +10,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var selectedID: String?
     @Published private(set) var timings = ConversationTimings()
     @Published private(set) var online = false
+    @Published private(set) var wantsConnection = false
     @Published var error: String?
     @Published var actionError: String?
     @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
@@ -77,7 +78,7 @@ final class NativeAgentConnection: ObservableObject {
     }
     func connect() {
         guard !host.destination.isEmpty else { return }
-        disconnect(); let token = UUID(); generation = token
+        disconnect(); let token = UUID(); generation = token; wantsConnection = true
         task = Task {
             while !Task.isCancelled && generation == token {
                 do {
@@ -101,7 +102,7 @@ final class NativeAgentConnection: ObservableObject {
         task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
         nextCatalogRefresh = .distantPast
-        online = false; closeTunnel()
+        online = false; wantsConnection = false; error = nil; closeTunnel()
     }
     private func closeTunnel() {
         api?.invalidate(); api = nil

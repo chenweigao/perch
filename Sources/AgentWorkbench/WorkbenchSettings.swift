@@ -30,9 +30,15 @@ struct WorkbenchSettings: View {
                     }
                 }
                 ForEach(model.connections) { connection in
-                    HostSettingsRow(connection: connection) {
-                        editingHost = connection.host
-                        showSSH = true
+                    VStack(alignment: .leading, spacing: 10) {
+                        HostSettingsRow(connection: connection) {
+                            editingHost = connection.host
+                            showSSH = true
+                        }
+                        if let agents = model.agentConnections(for: connection.id) {
+                            HostConnectionControls(model: model, connection: connection,
+                                                   kimi: agents.kimi, native: agents.native)
+                        }
                     }
                 }
                 Button { editingHost = nil; showSSH = true } label: {
@@ -45,7 +51,7 @@ struct WorkbenchSettings: View {
             } header: {
                 SettingsSectionHeader("Agent 与执行环境", systemImage: "server.rack", tint: .teal)
             } footer: {
-                Text("远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。")
+                Text("开启自动连接后立即连接，并在 Perch 启动时连接。关闭会断开当前连接；也可用按钮临时连接或断开，不改变启动偏好。远端任务继续运行。")
             }
             Section {
                 ForEach(permissionProviders, id: \.rawValue) { provider in
@@ -166,15 +172,62 @@ private struct HostSettingsRow: View {
                 Text(connection.host.name).foregroundStyle(.primary)
                 Text(connection.host.destination).font(.caption).foregroundStyle(.secondary)
             }
-        } trailing: {
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(connection.online ? Color.green : Color.secondary.opacity(0.35))
-                    .frame(width: 6, height: 6)
-                (connection.online ? Text("已连接") : Text("未连接"))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
         }
+    }
+}
+
+private struct HostConnectionControls: View {
+    @ObservedObject var model: WorkbenchModel
+    @ObservedObject var connection: HostConnection
+    @ObservedObject var kimi: KimiConnection
+    @ObservedObject var native: NativeAgentConnection
+
+    private var sshRequested: Bool { kimi.connecting || native.wantsConnection }
+    private var sshOnline: Bool {
+        (!connection.host.enabledAgents.contains(.kimi) || kimi.online) &&
+        (!connection.host.hasNativeAgents || native.online)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if connection.host.enabledAgents.contains(.kimi) || connection.host.hasNativeAgents {
+                connectionRow("SSH Agent", online: sshOnline, requested: sshRequested,
+                              autoConnect: Binding(get: { connection.host.autoConnectSSH },
+                                  set: { model.setAutoConnect($0, for: connection.id, herdr: false) })) {
+                    if sshRequested { model.disconnectSSH(connection.id) }
+                    else { model.connectSSH(connection.id) }
+                }
+            }
+            if connection.host.enabledAgents.contains(.terminal) {
+                connectionRow("Herdr", online: connection.online, requested: connection.wantsConnection,
+                              autoConnect: Binding(get: { connection.host.autoConnectHerdr },
+                                  set: { model.setAutoConnect($0, for: connection.id, herdr: true) })) {
+                    if connection.wantsConnection { model.disconnectHerdr(connection.id) }
+                    else { connection.connect() }
+                }
+            }
+        }.padding(.leading, 36)
+    }
+
+    private func connectionRow(_ title: String, online: Bool, requested: Bool,
+                               autoConnect: Binding<Bool>, action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(verbatim: title).fontWeight(.medium)
+                Circle().fill(online ? Color.green : requested ? Color.orange : Color.secondary.opacity(0.35))
+                    .frame(width: 6, height: 6)
+                if online { Text("已连接").foregroundStyle(.secondary) }
+                else if requested { Text("连接中").foregroundStyle(.secondary) }
+                else { Text("未连接").foregroundStyle(.secondary) }
+                Spacer()
+                Button(action: action) {
+                    if requested { Text("断开") } else { Text("连接") }
+                }.buttonStyle(.bordered)
+            }
+            Toggle("启动时自动连接", isOn: autoConnect)
+                .toggleStyle(.switch).controlSize(.mini)
+                .accessibilityLabel(Text("\(title) 启动时自动连接"))
+        }.font(.caption)
     }
 }
 

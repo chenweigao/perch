@@ -143,8 +143,7 @@ final class WorkbenchModel: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                self.connections.filter { $0.wantsConnection }.forEach { $0.connect() }
-                self.connectEnabledAgents()
+                self.resumeConnectionsAfterWake()
             }
         })
     }
@@ -194,11 +193,53 @@ final class WorkbenchModel: ObservableObject {
     func activateAgentEnvironment(_ hostID: UUID) {
         guard let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }
         kimi = nextKimi; native = nextNative; selectedHostID = hostID
-        if started { connectEnabledAgents() }
     }
-    private func connectEnabledAgents() {
-        if kimi.host.enabledAgents.contains(.kimi), !kimi.online, !kimi.connecting { kimi.connect() }
-        if native.host.hasNativeAgents, !native.online { native.connect() }
+    func resumeConnectionsAfterWake() {
+        connections.filter { $0.wantsConnection }.forEach { $0.connect() }
+        kimiEnvironments.values.filter { $0.connecting }.forEach { $0.connect() }
+        nativeEnvironments.values.filter { $0.wantsConnection }.forEach { $0.connect() }
+    }
+    func agentConnections(for hostID: UUID) -> (kimi: KimiConnection, native: NativeAgentConnection)? {
+        guard let kimi = kimiEnvironments[hostID], let native = nativeEnvironments[hostID] else { return nil }
+        return (kimi, native)
+    }
+    func connectSSH(_ hostID: UUID) {
+        guard let agents = agentConnections(for: hostID) else { return }
+        if agents.kimi.host.enabledAgents.contains(.kimi), !agents.kimi.connecting { agents.kimi.connect() }
+        if agents.native.host.hasNativeAgents, !agents.native.wantsConnection { agents.native.connect() }
+    }
+    func disconnectSSH(_ hostID: UUID) {
+        kimiEnvironments[hostID]?.disconnect()
+        nativeEnvironments[hostID]?.disconnect()
+    }
+    func disconnectHerdr(_ hostID: UUID) {
+        connections.first { $0.id == hostID }?.disconnect()
+        terminals.removeAll { $0.hostID == hostID }
+    }
+    func setAutoConnect(_ enabled: Bool, for hostID: UUID, herdr: Bool) {
+        guard let index = connections.firstIndex(where: { $0.id == hostID }) else { return }
+        let connection = connections[index]
+        var host = connection.host
+        if herdr { host.autoConnectHerdr = enabled } else { host.autoConnectSSH = enabled }
+        var saved = connections.map(\.host)
+        saved[index] = host
+        do {
+            UserDefaults.standard.set(try JSONEncoder().encode(saved), forKey: "hosts")
+            connection.updateHost(host)
+            kimiEnvironments[hostID]?.updateHost(host)
+            nativeEnvironments[hostID]?.updateHost(host)
+            if herdr {
+                if enabled {
+                    if started, host.enabledAgents.contains(.terminal) { connection.connect() }
+                }
+                else { disconnectHerdr(hostID) }
+            } else {
+                if enabled {
+                    if started { connectSSH(hostID) }
+                }
+                else { disconnectSSH(hostID) }
+            }
+        } catch { workspaceError = error.localizedDescription }
     }
     func startNewTask() { if connections.isEmpty { configureHost() } else { showNewKimi = true } }
     func configureHost(_ host: SSHHost? = nil) { setupHost = host; showAddHost = true }
@@ -214,7 +255,7 @@ final class WorkbenchModel: ObservableObject {
         if let connection = connections.first(where: { $0.id == host.id }) {
             connection.updateHost(host)
             kimiEnvironments[host.id]?.updateHost(host); nativeEnvironments[host.id]?.updateHost(host)
-            if !host.enabledAgents.contains(.terminal) { connection.disconnect() }
+            if !host.enabledAgents.contains(.terminal) { disconnectHerdr(host.id) }
             if !host.enabledAgents.contains(.kimi) { kimiEnvironments[host.id]?.disconnect() }
             if !host.hasNativeAgents { nativeEnvironments[host.id]?.disconnect() }
         } else {
@@ -225,7 +266,10 @@ final class WorkbenchModel: ObservableObject {
         configuredEnvironment = true
         activateAgentEnvironment(host.id)
         showHome(groupID: selectedGroupID)
-        if started, host.enabledAgents.contains(.terminal) { selectedConnection?.connect() }
+        if started {
+            if host.autoConnectSSH { connectSSH(host.id) }
+            if host.autoConnectHerdr, host.enabledAgents.contains(.terminal) { selectedConnection?.connect() }
+        }
         if let launch {
             let key = "new.task.defaults." + (selectedGroupID?.uuidString ?? "global")
             UserDefaults.standard.set(try JSONEncoder().encode(launch), forKey: key)
@@ -439,7 +483,10 @@ final class WorkbenchModel: ObservableObject {
         guard !started else { return }
         if let reference = selectedReference, reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
         started = true
-        connections.filter { $0.host.enabledAgents.contains(.terminal) }.forEach { $0.connect() }; connectEnabledAgents()
+        for connection in connections {
+            if connection.host.autoConnectSSH { connectSSH(connection.id) }
+            if connection.host.autoConnectHerdr, connection.host.enabledAgents.contains(.terminal) { connection.connect() }
+        }
     }
     func showHome(groupID: UUID? = nil) {
         onlyAttention = false; search = ""; showSessionDirectory = false

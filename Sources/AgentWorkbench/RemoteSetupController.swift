@@ -55,7 +55,9 @@ final class RemoteSetupController: ObservableObject {
     var host: SSHHost {
         SSHHost(id: hostID, name: name.isEmpty ? destination : name, destination: destination,
                 enabledAgents: RemoteSetup.agents.filter { enabledAgents.contains($0) || $0 == provider },
-                kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath)
+                kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath,
+                autoConnectSSH: original?.autoConnectSSH ?? true,
+                autoConnectHerdr: original?.autoConnectHerdr ?? true)
     }
     var needsBridge: Bool { [.omp, .qoder, .dsh, .codex, .claude].contains(provider) }
     var canContinue: Bool { ready && !busy }

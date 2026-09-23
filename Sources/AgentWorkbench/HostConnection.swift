@@ -67,6 +67,7 @@ final class HostConnection: ObservableObject, Identifiable {
         online = false
         wantsConnection = false
         stateMessage = "未连接"
+        error = nil
     }
 
     private func stopTunnel() {

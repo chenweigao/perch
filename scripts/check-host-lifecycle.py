@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     shutil.copy2(compiled, executable)
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
     try:
-        for phase in ["seed", "restart", "removal"]:
+        for phase in ["seed", "restart", "removal", "connection-controls", "connection-restart"]:
             subprocess.run([str(executable), phase], check=True, timeout=30)
     finally:
         subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)

@@ -5,16 +5,20 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
     public var name: String
     public var destination: String
     public var enabledAgents: [SessionKind]
+    public var autoConnectSSH: Bool
+    public var autoConnectHerdr: Bool
     public var kimiPort: Int
     public var kimiTokenPath: String
 
     public init(id: UUID = UUID(), name: String, destination: String,
                 enabledAgents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal],
-                kimiPort: Int = 58627, kimiTokenPath: String = "~/.kimi-code/server.token") {
+                kimiPort: Int = 58627, kimiTokenPath: String = "~/.kimi-code/server.token",
+                autoConnectSSH: Bool = true, autoConnectHerdr: Bool = true) {
         self.id = id; self.name = name; self.destination = destination
+        self.autoConnectSSH = autoConnectSSH; self.autoConnectHerdr = autoConnectHerdr
         self.enabledAgents = enabledAgents; self.kimiPort = kimiPort; self.kimiTokenPath = kimiTokenPath
     }
-    enum CodingKeys: String, CodingKey { case id, name, destination, enabledAgents, kimiPort, kimiTokenPath }
+    enum CodingKeys: String, CodingKey { case id, name, destination, enabledAgents, kimiPort, kimiTokenPath, autoConnectSSH, autoConnectHerdr }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -22,6 +26,8 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         destination = try c.decode(String.self, forKey: .destination)
         // Existing saved hosts retain their previous connections until reconfigured.
         enabledAgents = try c.decodeIfPresent([SessionKind].self, forKey: .enabledAgents) ?? [.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal]
+        autoConnectSSH = try c.decodeIfPresent(Bool.self, forKey: .autoConnectSSH) ?? true
+        autoConnectHerdr = try c.decodeIfPresent(Bool.self, forKey: .autoConnectHerdr) ?? true
         kimiPort = try c.decodeIfPresent(Int.self, forKey: .kimiPort) ?? 58627
         kimiTokenPath = try c.decodeIfPresent(String.self, forKey: .kimiTokenPath) ?? "~/.kimi-code/server.token"
     }

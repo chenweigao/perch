@@ -714,3 +714,13 @@
 "清除筛选" = "Clear Filters";
 "当前范围内没有待处理或运行中的事项" = "Nothing pending or running in the current scope";
 "当前筛选下没有会话" = "No sessions match the current filters";
+
+"开启自动连接后立即连接，并在 Perch 启动时连接。关闭会断开当前连接；也可用按钮临时连接或断开，不改变启动偏好。远端任务继续运行。" = "Enable automatic connection to connect now and whenever Perch starts. Turning it off disconnects now. The buttons connect or disconnect temporarily without changing your startup preference. Remote tasks keep running.";
+
+"启动时自动连接" = "Connect automatically at launch";
+
+"%@ 启动时自动连接" = "Connect %@ automatically at launch";
+
+"断开" = "Disconnect";
+
+"连接" = "Connect";
