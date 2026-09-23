@@ -149,6 +149,9 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
             }
+            if mode == "switching" {
+                report.merge(try await switching(window)) { _, new in new }
+            }
             if mode == "all" {
                 var switches: [Double] = []
                 for index in 1...16 {
@@ -166,7 +169,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if mode != "frames" && mode != "joint" { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if mode != "frames" && mode != "joint" && mode != "switching" { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -209,6 +212,40 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             if report["status"] as? String != "passed" { exit(1) }
             NSApp.terminate(nil)
         }
+    }
+    private func switching(_ window: NSWindow) async throws -> [String: Any] {
+        var durations: [Double] = []
+        for step in 0..<80 {
+            // Switch while catalog refreshes change row heights, order and the
+            // presence of the favorites section in the real sidebar.
+            let sessions = fixture.sessions.enumerated().map { index, item in
+                WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                    hostName: item.hostName, detail: "状态更新 \(step)", online: item.online,
+                    section: (index + step) % 3 == 0 ? .attention : .review,
+                    canMarkReviewed: true, archived: item.archived, updatedAt: item.updatedAt)
+            }
+            let item = sessions[step % 8]
+            model.workspace.starred = step % 2 == 0 ? Array(sessions.prefix(4).map(\.reference)) : []
+            let offset = step % 20
+            model.acceptanceUpdateCatalog(Array(sessions[offset...] + sessions[..<offset]))
+            let draft = "切换草稿 \(step)"
+            model.native.drafts[item.reference.terminalID] = draft
+            let start = CACurrentMediaTime()
+            model.open(item)
+            try await settle(window, "session switch \(step)") {
+                self.model.tabs.selectedID == item.id &&
+                self.hasMountedMessage(window, session: item.reference.terminalID) &&
+                self.containsText(draft, in: window.contentView)
+            }
+            durations.append((CACurrentMediaTime() - start) * 1000)
+        }
+        let cpu = processCPU()
+        try await Task.sleep(for: .seconds(2))
+        let idleCPU = processCPU() - cpu
+        guard idleCPU < 1 else { throw WorkbenchError("UI kept consuming CPU after session switches: \(idleCPU)s / 2s") }
+        return ["catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
+                "idle_cpu_seconds_over_2s": idleCPU,
+                "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }
     private func search(_ window: NSWindow, sheet: Bool) async throws -> [String: Any] {
         probe.query = nil; probe.renderedQuery = nil

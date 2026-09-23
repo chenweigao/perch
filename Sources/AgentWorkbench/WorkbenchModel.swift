@@ -155,6 +155,7 @@ final class WorkbenchModel: ObservableObject {
         workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
                                           sessions: Array(sessions.prefix(12).map(\.reference)))]
     }
+    func acceptanceUpdateCatalog(_ sessions: [WorkspaceSession]) { allSessions = sessions }
     #endif
 
     private func registerEnvironment(kimi: KimiConnection, native: NativeAgentConnection) {

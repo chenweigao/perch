@@ -239,8 +239,10 @@ private struct KimiTimeline: View {
             .overlay(alignment: .bottom) {
                 ReturnToLatestButton(isVisible: !follow, hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) }
             }
-            .onChange(of: displayedResult, initial: true) { _, session in
-                if let session { onResultDisplayed(session) }
+            .task(id: displayedResult.map { "\($0.id):\($0.updatedAt)" }) {
+                // Reviewing changes the shared catalog and sidebar. Publish
+                // after this view update, not recursively from onChange.
+                if let session = displayedResult { onResultDisplayed(session) }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
