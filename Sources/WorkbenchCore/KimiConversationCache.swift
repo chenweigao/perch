@@ -13,6 +13,8 @@ public struct KimiConversationCache {
         order.removeAll { $0 == id }; order.append(id)
         while order.count > capacity { values.removeValue(forKey: order.removeFirst()) }
     }
+    /// Read-only lookup that leaves the eviction order untouched.
+    public func value(_ id: String) -> KimiConversation? { values[id] }
     public mutating func take(_ id: String) -> KimiConversation? {
         guard let value = values[id] else { return nil }
         order.removeAll { $0 == id }; order.append(id)
