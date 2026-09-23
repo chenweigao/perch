@@ -54,9 +54,11 @@ public struct ActivitySummaryBatch: Hashable {
     public let recentProgress: [String]
     public let records: [Record]
     public let closed: Bool
-    // Kept independently of the 12-record prompt window so reads and polling
-    // cannot evict a key result and accidentally schedule another request.
-    private let keyResults: [Record]
+    // Scheduling retains only a fingerprint and three recent results, independent
+    // of read-window eviction. Older results contribute identity/status metadata;
+    // their potentially large output is never copied into retained batch state.
+    private let keyResultFingerprint: Int
+    private let recentKeyResults: [Record]
 
     public static func latest(in entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
                               isRunning: Bool, enabled: Bool, includeToolOutput: Bool = false) -> Self? {
@@ -94,8 +96,18 @@ public struct ActivitySummaryBatch: Hashable {
                           status: String(describing: tool.status), exitCode: Self.exitCode(tool),
                           outputExcerpt: includeToolOutput && Self.isCompleted(tool) ? Self.outputExcerpt(tool.output) : nil)
         }
-        keyResults = meaningful.filter { Self.isKeyResult($0) }.map(record)
-        let resultIDs = Set(keyResults.suffix(3).map(\.id))
+        var fingerprint = Hasher()
+        var recentResults: [VisibleTool] = []
+        for tool in meaningful where Self.isKeyResult(tool) {
+            fingerprint.combine(tool.id)
+            fingerprint.combine(String(describing: tool.status))
+            fingerprint.combine(Self.exitCode(tool))
+            if recentResults.count == 3 { recentResults.removeFirst() }
+            recentResults.append(tool)
+        }
+        keyResultFingerprint = fingerprint.finalize()
+        recentKeyResults = recentResults.map(record)
+        let resultIDs = Set(recentKeyResults.map(\.id))
         let recentIDs = Set(meaningful.filter { !resultIDs.contains($0.id) }
             .suffix(12 - resultIDs.count).map(\.id))
         records = meaningful.filter { resultIDs.contains($0.id) || recentIDs.contains($0.id) }.map(record)
@@ -105,7 +117,8 @@ public struct ActivitySummaryBatch: Hashable {
     public func shouldRequest(after previous: Self?) -> Bool {
         guard !records.isEmpty else { return false }
         guard let previous, previous.groupID == groupID else { return true }
-        return phase != previous.phase || keyResults != previous.keyResults
+        return phase != previous.phase || keyResultFingerprint != previous.keyResultFingerprint
+            || recentKeyResults != previous.recentKeyResults
             || (closed && !previous.closed) || recentProgress != previous.recentProgress
             || userRequest != previous.userRequest
     }

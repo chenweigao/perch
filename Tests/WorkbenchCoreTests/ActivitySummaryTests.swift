@@ -343,6 +343,28 @@ func checkActivitySummaries() throws {
     let retained = ActivitySummaryBatch(groupID: "test", tools: [explicitResult] + (0..<30).map { tool("r\($0)") }, closed: true)
     precondition(retained.records.count == 12 && retained.records.first?.id == "final-poll",
         "Key results must remain available even after many reads")
+    let manyResults = (0..<2_000).map { index in
+        VisibleTool(id: "edit-\(index)", name: "Edit", input: .object(["path": .string("/project/File.swift")]),
+            output: .string(String(repeating: "result", count: 200)), status: .returned)
+    }
+    let longStage = ActivitySummaryBatch(groupID: "long-stage", tools: manyResults, closed: false, includeToolOutput: true)
+    let repeatedLongStage = ActivitySummaryBatch(groupID: "long-stage", tools: manyResults + [read0, idleWait, poll],
+        closed: false, includeToolOutput: true)
+    precondition(longStage.records.count == 12 && repeatedLongStage.records.count == 12)
+    precondition(!repeatedLongStage.shouldRequest(after: longStage),
+        "Fingerprinting a long history must remain stable across reads and polling")
+    var correctedResults = manyResults
+    correctedResults[0] = VisibleTool(id: "edit-0", name: "Edit", input: manyResults[0].input, status: .failed)
+    let correctedLongStage = ActivitySummaryBatch(groupID: "long-stage", tools: correctedResults,
+        closed: false, includeToolOutput: true)
+    precondition(correctedLongStage.shouldRequest(after: longStage),
+        "An authoritative correction outside the recent window still invalidates the fingerprint")
+    var revisedOutput = manyResults
+    revisedOutput[1_999] = VisibleTool(id: "edit-1999", name: "Edit", input: manyResults.last!.input,
+        output: .string("Updated result"), status: .returned)
+    precondition(ActivitySummaryBatch(groupID: "long-stage", tools: revisedOutput, closed: false, includeToolOutput: true)
+        .shouldRequest(after: longStage), "Recent result text corrections remain visible")
+
     let legacyConfig = try JSONDecoder().decode(ActivitySummaryConfiguration.self, from: Data(#"{"enabled":true}"#.utf8))
     precondition(!legacyConfig.includeToolOutput, "Upgrades must not enable output sharing")
 
