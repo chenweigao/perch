@@ -72,7 +72,7 @@ struct ActivitySummarySettingsSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("活动摘要").font(.title2)
-            Text("可选功能，默认关闭。开启后，当前会话的工具名称、文件名或搜索词及执行状态会发送到你配置的服务；开启自动命名时，还会发送首条用户消息的开头片段。都可能产生额外费用。")
+            Text("可选功能，默认关闭。开启后，当前轮请求摘录、相关路径、搜索或命令摘要及执行状态会发送到你配置的服务；开启自动命名时，还会发送首条用户消息的开头片段。都可能产生额外费用。")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
                 Toggle("启用活动摘要", isOn: $configuration.enabled)
@@ -85,7 +85,7 @@ struct ActivitySummarySettingsSheet: View {
                 Toggle("关闭 Qwen 思考", isOn: $configuration.disableThinking)
                     .help("仅用于支持 chat_template_kwargs.enable_thinking 的服务，可减少摘要的延迟与开销。")
             }
-            Text("使用 OpenAI 兼容的 Chat Completions 接口。活动摘要不发送源码、工具输出、思考内容或用户消息；自动命名只发送首条用户消息的开头（不超过 400 字符）。都不会写回 Agent 的上下文。")
+            Text("使用 OpenAI 兼容的 Chat Completions 接口。活动摘要发送当前轮用户请求的开头（不超过 400 字符）和定长工具上下文，不发送源码、编辑内容、工具输出或思考；自动命名仍只发送首条用户消息的开头。都不会写回 Agent 的上下文。")
                 .font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             if let testResult { Text(testResult).font(.callout).textSelection(.enabled) }
@@ -120,7 +120,7 @@ struct ActivitySummarySettingsSheet: View {
             do {
                 let result = try await ActivitySummaryClient().summarize(configuration: config, apiKey: key,
                     batch: .init(groupID: "example", tools: tools, closed: true), language: AppLanguage.current.localization)
-                if !Task.isCancelled { testResult = result }
+                if !Task.isCancelled { testResult = result.summary }
             } catch {
                 if !Task.isCancelled { self.error = error.localizedDescription }
             }

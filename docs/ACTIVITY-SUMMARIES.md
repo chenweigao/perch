@@ -69,26 +69,33 @@ and [IP/CIDR exception syntax](https://developer.apple.com/documentation/bundler
 
 ## What is sent and when
 
-Only the current user turn's recent process activity is eligible. Perch sends
-up to 12 completed calls, with short tool names, filenames or search terms, IDs and their
-reported outcome. For non-search tools only the tool name and optional filename
-are included; shell arguments, edit contents, tool descriptions, runtime context,
-user messages and reasoning are not sent. The service is asked for one sentence
-of at most 100 characters, preferring the shared subject supported by related
-actions over listing tools or filenames one by one. Individual targets are used
-only when no common subject is evident. It must describe observed activity, not
-infer that reading a file verified its correctness. `returned` is distinct from
-`succeeded`.
+Only the current user turn's recent process activity is eligible. Perch sends the
+opening of that turn's user request (at most 400 characters) and up to 12 completed
+calls in source order. Each call includes its ID, short tool name, reported outcome,
+and bounded semantic context: up to the last four path components or a URL/search
+term, plus up to 240 characters of a description, query, pattern or command. Source
+code, edit contents, tool output, runtime context and reasoning are not sent.
+
+The model, rather than local filename or phase rules, infers the shared subject,
+current phase and meaningful progress. One Chat Completions request returns a
+compact JSON object containing `subject`, `phase`, a one-sentence `summary` of at
+most 100 characters, up to three supporting `evidence_ids`, and `should_update`.
+The previous structured result is included on later requests so the model can keep
+wording stable and suppress an update when the visible summary remains accurate.
+A plain-text response remains accepted for compatibility. The prompt treats
+activity as evidence: `returned` is distinct from `succeeded`, and only an explicit
+successful activity can support a claim that work was verified or completed.
 
 The first request requires six completed calls in a process region. Thoughts and
 runtime context do not split the count or count as calls; two sets of three reads
 separated by these records can trigger one summary. Other completed tool kinds
-also count. The 24-record rendering limit starts another region. Later requests require
-six new completed calls, a correction to an included event, or changed records
-when that group closes. Requests start at least 15 seconds apart within the
-selected transcript, with only one in flight. Pending changes coalesce to the
-most recent eligible batch. Inputs have per-field and event-count bounds; output
-uses `max_tokens: 120`. These bounds are not a tokenizer-accurate input-token cap.
+also count. The 24-record rendering limit starts another region. Later requests
+require six new completed calls, a correction to an included event, or changed
+records when that group closes. Requests start at least 15 seconds apart within
+the selected transcript, with only one in flight. Pending changes coalesce to the
+most recent eligible batch. There is no second model pass or automatic retry.
+Inputs have per-field and event-count bounds; output uses `max_tokens: 180`. These
+bounds are not a tokenizer-accurate input-token cap.
 
 Generated text appears above the disclosure under a compact tertiary `sparkles`
 label, without a card or background. Its outer edge aligns with body text and the
@@ -127,7 +134,7 @@ the record.
 Disabling the feature, switching configuration or leaving the transcript cancels
 local pending work. It cannot undo tokens already processed by the server. No
 automatic retries, redirects or alternate provider calls occur. A failed or
-truncated response leaves the rule-based group available. Historical sessions
+truncated response leaves the compact activity group available. Historical sessions
 opened after completion are not automatically summarized. Native preview and
 benchmark fixtures cannot invoke the configured service.
 
@@ -135,12 +142,12 @@ benchmark fixtures cannot invoke the configured service.
 
 Disabled summaries, preview fixtures and disconnected transcripts skip summary
 candidate lookup and label construction. When enabled, lookup walks backward from
-the transcript tail and stops at the first eligible group or the user boundary;
-it does not first scan the entire current turn to locate that boundary.
+the transcript tail, records the first eligible group and continues only to the
+nearest user boundary to capture the current request; it never scans earlier turns.
 Activity row IDs use the first record's anchor without allocating arrays for the
 whole group. Identical summary text does not publish another transcript update.
-Displayed summaries retain text only; request deduplication retains the attempted
-batches separately. Both caches last for the selected transcript and grow with
+Displayed text, the latest structured result and request-deduplication batches are
+cached separately. These caches last for the selected transcript and grow with
 summarized groups; this is not a constant-memory cache.
 
 These changes remove specific CPU/allocation work, but are not measured frame-time
@@ -152,7 +159,8 @@ event stream and viewport on macOS before changing cache or rendering architectu
 ## Validation
 
 - `swift run WorkbenchChecks` includes interleaved process grouping/order/identity, live/error
-  preservation, summary opt-in, bounded inputs, update thresholds, request shape,
+  preservation, summary opt-in, bounded semantic inputs, update thresholds, request
+  and structured-response shapes, evidence filtering, plain-text compatibility,
   credential exclusion and truncated-response checks.
 - `scripts/build.sh` validates the complete macOS app. The existing reading,
   tool-visibility and navigation previews include the summary UI dependencies.

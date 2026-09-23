@@ -70,12 +70,21 @@ func checkActivitySummaries() throws {
     let shell = VisibleTool(id: "shell", name: "Bash", input: .object([
         "command": .string("git worktree add /private-project/worktree && echo PRIVATE_SCRIPT")]), status: .failed)
     precondition(ToolPresentation.compactTarget(shell) == "git worktree")
-    precondition(ToolPresentation.summaryTarget(shell) == "Bash", "Shell arguments must not enter summary requests")
+    precondition(ToolPresentation.summaryTarget(shell) == "Bash", "Collapsed targets remain concise")
     precondition(ToolPresentation.recentTargets([tool(0), tool(0), tool(0)]) == "File0.swift")
     precondition(ToolPresentation.recentTargets([tool(0), shell, tool(1)]) == "File0.swift · File1.swift")
-    let privateBatch = ActivitySummaryBatch(groupID: "private", tools: [shell], closed: true)
+    let pathComponent = String(repeating: "p", count: 100)
+    let longPath = "/private-project/\(pathComponent)/\(pathComponent)/\(pathComponent)/Summary.swift"
+    let longCommand = "python3 -c " + String(repeating: "PRIVATE_SCRIPT", count: 30)
+    let bounded = VisibleTool(id: "bounded", name: "Edit", input: .object([
+        "path": .string(longPath), "command": .string(longCommand), "content": .string("PRIVATE_EDIT_CONTENT")]),
+        output: .string("PRIVATE_SOURCE_CONTENT"), status: .returned)
+    let privateBatch = ActivitySummaryBatch(groupID: "private", tools: [bounded], closed: true)
     let privateInput = String(decoding: try JSONEncoder().encode(privateBatch.records), as: UTF8.self)
-    precondition(!privateInput.contains("PRIVATE_SCRIPT") && !privateInput.contains("private-project"))
+    precondition(privateBatch.records[0].target.count == 240 && privateBatch.records[0].context?.count == 240)
+    precondition(privateInput.contains("PRIVATE_SCRIPT"), "Bounded command context should inform the semantic model")
+    precondition(!privateInput.contains("PRIVATE_SOURCE_CONTENT") && !privateInput.contains("PRIVATE_EDIT_CONTENT"),
+                 "Tool output and edit bodies must stay out of summary requests")
     precondition(ActivitySummaryBatch.latest(in: long, tools: available, isRunning: true, enabled: false) == nil)
     let latest = ActivitySummaryBatch.latest(in: long, tools: available, isRunning: true, enabled: true)
     precondition(latest?.groupID == long[1].id && latest?.completedCount == 24 && latest?.closed == true,
@@ -87,8 +96,22 @@ func checkActivitySummaries() throws {
     let nextTurn = ConversationTimelineEntry.make(sources + (try messages([boundary, read(12)])), isRunning: true)
     precondition(ActivitySummaryBatch.latest(in: nextTurn, tools: available, isRunning: true, enabled: true) == nil,
                  "Reverse lookup must not summarize the preceding user turn")
+    let earlierBoundary: [String: Any] = ["id": "earlier", "role": "user", "created_at": "", "content": [
+        ["type": "text", "text": "Earlier request"]]]
+    let twoTurns = ConversationTimelineEntry.make(try messages(
+        [earlierBoundary] + (0..<6).map { read($0) } + [boundary] + (6..<12).map { read($0) }), isRunning: true)
+    let currentTurn = ActivitySummaryBatch.latest(in: twoTurns, tools: available, isRunning: true, enabled: true)
+    precondition(currentTurn?.userRequest == "Check the UI too", "Only the current turn request should be sent")
+    let longBoundary: [String: Any] = ["id": "long-request", "role": "user", "created_at": "", "content": [
+        ["type": "text", "text": String(repeating: "word \n", count: 120)]]]
+    let longRequestTurn = ConversationTimelineEntry.make(try messages(
+        [longBoundary] + (12..<18).map { read($0) }), isRunning: true)
+    let requestExcerpt = ActivitySummaryBatch.latest(in: longRequestTurn, tools: available, isRunning: true, enabled: true)?.userRequest
+    precondition(requestExcerpt?.count == 400 && requestExcerpt?.contains("\n") == false,
+                 "The request excerpt must normalize whitespace and stay bounded")
 
-    let batch = ActivitySummaryBatch(groupID: "group", tools: (0..<6).map { tool($0) }, closed: false)
+    let batch = ActivitySummaryBatch(groupID: "group", tools: (0..<6).map { tool($0) }, closed: false,
+                                     userRequest: "Improve summary intelligence")
     precondition(batch.shouldRequest(after: nil))
     precondition(!batch.shouldRequest(after: batch), "Repeated polling cannot incur additional cost")
     let short = ActivitySummaryBatch(groupID: "group", tools: (0..<5).map { tool($0) }, closed: true)
@@ -113,15 +136,28 @@ func checkActivitySummaries() throws {
         preconditionFailure("Disabled summaries must not produce a request")
     } catch ActivitySummaryError.configuration {}
     config.enabled = true; config.disableThinking = true
-    let request = try client.request(configuration: config, apiKey: "test-token", batch: batch, language: "zh-Hans")
+    let previous = ActivitySummaryResult(subject: "Activity summaries", phase: "exploring",
+        summary: "Inspecting the existing summary flow.", evidenceIDs: ["call0"], shouldUpdate: true)
+    let request = try client.request(configuration: config, apiKey: "test-token", batch: batch,
+                                     language: "zh-Hans", previous: previous)
     let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
     let requestMessages = body["messages"] as! [[String: Any]]
     let systemMessage = requestMessages[0]["content"] as! String
-    precondition(systemMessage.contains("at most 100 characters"))
-    precondition(systemMessage.contains("shared subject") && systemMessage.contains("over listing tools or filenames one by one"))
+    precondition(systemMessage.contains("semantic observer") && systemMessage.contains("at most 100 characters"))
+    precondition(systemMessage.contains("should_update") && systemMessage.contains("compact JSON object"))
+    let promptText = requestMessages[1]["content"] as! String
+    let prompt = try JSONSerialization.jsonObject(with: Data(promptText.utf8)) as! [String: Any]
+    let previousPrompt = prompt["previous"] as! [String: Any]
+    let activities = prompt["activities"] as! [[String: Any]]
+    precondition(prompt["current_request"] as? String == "Improve summary intelligence")
+    precondition(prompt["group_closed"] as? Bool == false && activities.count == 6)
+    precondition(previousPrompt["subject"] as? String == "Activity summaries"
+                 && previousPrompt["phase"] as? String == "exploring"
+                 && previousPrompt["evidence_ids"] as? [String] == ["call0"])
     let content = String(decoding: request.httpBody!, as: UTF8.self)
-    precondition(!content.contains("PRIVATE_SOURCE_CONTENT") && !content.contains("private-project") && !content.contains("test-token"))
-    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 120)
+    precondition(content.contains("private-project/File0.swift"), "Bounded paths should give the model semantic context")
+    precondition(!content.contains("PRIVATE_SOURCE_CONTENT") && !content.contains("test-token"))
+    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 180)
     precondition((body["chat_template_kwargs"] as? [String: Bool])?["enable_thinking"] == false)
     precondition(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
     config.disableThinking = false
@@ -130,13 +166,38 @@ func checkActivitySummaries() throws {
     precondition(standardBody["chat_template_kwargs"] == nil && standard.value(forHTTPHeaderField: "Authorization") == nil)
     config.baseURL = "http://user:password@localhost:8000/v1"
     precondition(!config.isValid, "Credentials must not be persisted inside the endpoint URL")
-    let response = Data(#"{"choices":[{"message":{"content":" Read two files. ","reasoning_content":"private thought"},"finish_reason":"stop"}]}"#.utf8)
+
+    func completion(_ text: String, finishReason: String = "stop") throws -> Data {
+        let message: [String: Any] = ["content": text, "reasoning_content": "PRIVATE_REASONING"]
+        let choice: [String: Any] = ["message": message, "finish_reason": finishReason]
+        return try JSONSerialization.data(withJSONObject: ["choices": [choice]])
+    }
+    let response = try completion(" Read two files. ")
     let responseText = try ActivitySummaryClient.responseText(response)
-    precondition(responseText == "Read two files.")
-    let truncated = Data(#"{"choices":[{"message":{"content":"Read"},"finish_reason":"length"}]}"#.utf8)
+    precondition(responseText == "Read two files.", "Session naming must retain plain-text response parsing")
+    let semantic = try ActivitySummaryClient.responseResult(try completion(#"{"subject":"Activity summaries","phase":"editing","summary":"Reworked the summary protocol.","evidence_ids":["call0","call0","missing","call1","call2","call3"],"should_update":false}"#),
+        evidenceIDs: Set(batch.records.map(\.id)))
+    precondition(semantic.subject == "Activity summaries" && semantic.phase == "editing")
+    precondition(semantic.summary == "Reworked the summary protocol." && semantic.shouldUpdate == false)
+    precondition(semantic.evidenceIDs == ["call0", "call1", "call2"],
+                 "Evidence must reference known records and remain bounded")
+    let fenced = try ActivitySummaryClient.responseResult(try completion("""
+        ```json
+        {"subject":"Tests","phase":"validating","summary":"Validated the response parser.","evidence_ids":["call0"],"should_update":true}
+        ```
+        """), evidenceIDs: Set(["call0"]))
+    precondition(fenced.phase == "validating" && fenced.evidenceIDs == ["call0"])
+    let plain = try ActivitySummaryClient.responseResult(try completion(" Kept a compatible plain-text summary. "),
+        evidenceIDs: [])
+    precondition(plain.subject.isEmpty && plain.phase.isEmpty
+                 && plain.summary == "Kept a compatible plain-text summary." && plain.shouldUpdate)
     do {
-        _ = try ActivitySummaryClient.responseText(truncated)
+        _ = try ActivitySummaryClient.responseResult(try completion(#"{"summary": }"#), evidenceIDs: [])
+        preconditionFailure("Malformed structured output must not replace a valid summary")
+    } catch ActivitySummaryError.invalidResponse {}
+    do {
+        _ = try ActivitySummaryClient.responseText(try completion("Read", finishReason: "length"))
         preconditionFailure("Do not publish a sentence truncated by the token limit")
     } catch ActivitySummaryError.truncated {}
-    print("PASS: activity grouping, source ordering, visible errors, summary opt-in, request bounds and Qwen non-thinking option")
+    print("PASS: activity grouping, bounded semantic context, structured summaries and Qwen non-thinking option")
 }

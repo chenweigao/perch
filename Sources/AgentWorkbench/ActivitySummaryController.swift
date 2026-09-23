@@ -7,6 +7,7 @@ import WorkbenchCore
 @MainActor final class ActivitySummaryController: ObservableObject {
     @Published private(set) var summaries: [String: String] = [:]
     private var attempts: [String: ActivitySummaryBatch] = [:]
+    private var results: [String: ActivitySummaryResult] = [:]
     private var pending: ActivitySummaryBatch?
     private var worker: Task<Void, Never>?
     private var lastRequest = Date.distantPast
@@ -22,7 +23,7 @@ import WorkbenchCore
         if self.session != session || configurationRevision != settings.revision {
             cancel()
             if !summaries.isEmpty { summaries = [:] }
-            deferred = [:]; attempts = [:]; observedRunning = false
+            deferred = [:]; attempts = [:]; results = [:]; observedRunning = false
             self.session = session; configurationRevision = settings.revision
         }
         guard settings.configuration.enabled, online else { cancel(); return }
@@ -53,19 +54,22 @@ import WorkbenchCore
                 lastRequest = Date()
                 do {
                     let key = try settings.apiKey()
-                    let text = try await ActivitySummaryClient().summarize(configuration: config, apiKey: key,
-                        batch: next, language: AppLanguage.current.localization)
+                    let previous = results[next.groupID]
+                    let result = try await ActivitySummaryClient().summarize(configuration: config, apiKey: key,
+                        batch: next, language: AppLanguage.current.localization, previous: previous)
                     guard !Task.isCancelled, generation == version else { return }
                     // A newer completed batch can supersede this response while it runs.
                     if pending?.groupID != next.groupID || pending?.records == next.records {
+                        guard previous == nil || result.shouldUpdate else { continue }
+                        results[next.groupID] = result
                         if self.following {
                             // Publishing identical text would rerun transcript projection
                             // and layout even though no row's presentation changed.
-                            if summaries[next.groupID] != text { summaries[next.groupID] = text }
-                        } else { deferred[next.groupID] = text }
+                            if summaries[next.groupID] != result.summary { summaries[next.groupID] = result.summary }
+                        } else { deferred[next.groupID] = result.summary }
                     }
                 } catch {
-                    // Rules remain visible. A failure is not retried without new events.
+                    // Activity stays visible. A failure is not retried without new events.
                     if Task.isCancelled { return }
                 }
             }
