@@ -1,7 +1,7 @@
 # 回复表格列宽不协调：问题分析与方案对比
 
 状态：B 方案已实现并通过仓内检查；**目视与性能验收未做**（本会话无法查看图像，也未做滚动/流式性能测量）。
-基线：`main` @ `11dbe6f`（worktree 分支 `codex/reply-table-width`）。实现记录见 §9。
+基线：`origin/main` @ `c2a92db`（worktree 分支 `codex/reply-table-width`，已 rebase）。实现记录见 §9。
 
 ## 1. 问题
 
@@ -91,7 +91,8 @@ A 可以作为并行的临时缓解（我这边的回复约定已经在压列数
 
 ## 9. 实现记录（B 方案）
 
-全部改动在 worktree 分支 `codex/reply-table-width`，未提交、未推送。
+分支 `codex/reply-table-width`（已 rebase 到 `origin/main` @ `c2a92db`），两个提交：
+`feat: size reply table columns by content`、`fix: point preview scripts at the native release bin path`。
 
 | 文件 | 改动 |
 |---|---|
@@ -123,22 +124,24 @@ A 可以作为并行的临时缓解（我这边的回复约定已经在压列数
 
 ### 构建环境备注
 
-已修（本分支内，与表格改动同一 worktree）：
+已修（本分支内）：
 
-- `scripts/build-reading-preview.sh`、`scripts/build-reply-typography-preview.sh` 的 `bin_dir` 改用
-  `swift build --build-system native -c release --show-bin-path`，与 `scripts/build.sh:15` 和
-  `scripts/build-navigation-preview.sh:10`、`scripts/build-native-acceptance.sh:14` 已有的写法一致。
-  原来的 `swift build -c release --show-bin-path` 在本机工具链上返回 `.build/out/Products/Release`（不存在），
-  release 产物实际在 `.build/arm64-apple-macosx/release`。两个脚本删掉旧 app 后重跑通过，产出并签名新的
-  `ReplyReadingPreview` / `ReplyTypographyPreview`。
-- `scripts/build-reply-typography-preview.sh` 补上可执行位（git 模式 100644 → 100755），此前只能 `bash` 调用。
+- `scripts/build-reply-typography-preview.sh`：`bin_dir` 改用 `swift build --build-system native -c release
+  --show-bin-path`，与 `scripts/build.sh:15`、`scripts/build-navigation-preview.sh:10`、
+  `scripts/build-native-acceptance.sh:14` 已有写法一致；并补可执行位（git 模式 100644 → 100755），此前只能
+  `bash` 调用。原写法在本机工具链上返回 `.build/out/Products/Release`（不存在），release 产物实际在
+  `.build/arm64-apple-macosx/release`。删掉旧 app 后重跑通过，产出并签名新的 `ReplyTypographyPreview`。
+- `scripts/build-reading-preview.sh`：`bin_dir` 的同一处问题，rebase 到 `origin/main`（`c2a92db`）时发现上游
+  已用完全相同的写法修好，本分支不再重复携带。但该脚本的源文件清单缺
+  `Sources/AgentWorkbench/ThinkingPicker.swift`，而 `ModelPicker.swift:50` 引用它，预览在 `origin/main` 上就
+  编译不过（`git show origin/main:scripts/build-reading-preview.sh` 里 0 处 `ThinkingPicker`，同版本
+  `ModelPicker.swift` 里 1 处）。本分支补上这一行，`Reply Reading Preview.app` 重新构建并签名通过。
 
-未修（同一 stale 写法，但与本任务无关，未在本分支动）：
+未修（同样 stale，但与本任务无关，未在本分支动）：
 
-- `build-activity-bar-preview.sh:5`、`build-composer-toolbar-preview.sh:5`、`build-localization-preview.sh:4`、
-  `build-performance-preview.sh:28`、`build-tool-visibility-preview.sh:5`、`build-workflow-preview.sh:5`
+- `build-localization-preview.sh:4`、`build-performance-preview.sh:28`、`build-workflow-preview.sh:5`
   仍用不带 `--build-system native` 的 `--show-bin-path`。
 - `build-public-demo.sh:6`、`build-task-group-preview.sh:6`、`build-workbench-preview.sh:6` 走
   `--package-path "$build_root"`，本次未验证。
-- `scripts/build-sidebar-preview.sh` 在 git 里同样是 644。
+- `scripts/build-sidebar-preview.sh` 在 git 里仍是 644。
 - 两个预览脚本依赖 `rg`；本机原先没有，已在 `~/.local/bin/rg` 安装 ripgrep 15.2.0（机器级改动，不在仓库内）。
