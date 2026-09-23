@@ -6,6 +6,7 @@ struct ProtocolTests {
     static func main() async throws {
         setbuf(stdout, nil)
         try checkConversationPresentation()
+        checkCompactionSummaryDisplay()
         try checkActivitySummaries()
         try checkSessionNaming()
         try checkToolVisibility()
