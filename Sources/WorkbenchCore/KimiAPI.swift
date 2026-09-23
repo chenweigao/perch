@@ -5,6 +5,9 @@ public final class KimiAPI: @unchecked Sendable {
     public let baseURL: URL
     private let token: String
     private let session: URLSession
+    private let lifecycleLock = NSLock()
+    private var closed = false
+    private var activeRequests = 0
     public init(baseURL: URL, token: String, configuration: URLSessionConfiguration = .ephemeral) {
         self.baseURL = baseURL; self.token = token
         configuration.timeoutIntervalForRequest = 30
@@ -17,6 +20,8 @@ public final class KimiAPI: @unchecked Sendable {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
         }
+        try beginRequest()
+        defer { endRequest() }
         let (data, response) = try await session.data(for: request)
         if let response = response as? HTTPURLResponse, response.statusCode == 401 { throw WorkbenchError("Kimi 访问凭证失效，请重新连接。") }
         if let response = response as? HTTPURLResponse, !(200..<300).contains(response.statusCode) {
@@ -39,17 +44,47 @@ public final class KimiAPI: @unchecked Sendable {
         let filename = url.lastPathComponent.replacingOccurrences(of: "\"", with: "_").replacingOccurrences(of: "\r", with: "_").replacingOccurrences(of: "\n", with: "_")
         var body = Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\nContent-Type: \(mediaType)\r\n\r\n".utf8)
         body.append(try Data(contentsOf: url)); body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        try beginRequest()
+        defer { endRequest() }
         let (data, _) = try await session.upload(for: request, from: body)
         return try KimiWire.decode(JSONValue.self, from: data)
     }
-    public func webSocket() -> URLSessionWebSocketTask {
+    public func webSocket() throws -> URLSessionWebSocketTask {
         var request = authorizedRequest("/api/v1/ws")
         var components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
         components.scheme = "ws"; request.url = components.url
+        try beginRequest()
+        defer { endRequest() }
         let socket = session.webSocketTask(with: request); socket.maximumMessageSize = 16 * 1024 * 1024
         return socket
     }
-    public func invalidate() { session.invalidateAndCancel() }
+    public func invalidate() {
+        // data(for:) may create its task after suspension; keep the session valid
+        // until every caller that started before closure has returned.
+        lifecycleLock.lock()
+        guard !closed else { lifecycleLock.unlock(); return }
+        closed = true
+        let hasActiveRequests = activeRequests > 0
+        lifecycleLock.unlock()
+        if hasActiveRequests {
+            session.getAllTasks { tasks in tasks.forEach { $0.cancel() } }
+        } else {
+            session.invalidateAndCancel()
+        }
+    }
+    private func beginRequest() throws {
+        lifecycleLock.lock()
+        defer { lifecycleLock.unlock() }
+        guard !closed else { throw CancellationError() }
+        activeRequests += 1
+    }
+    private func endRequest() {
+        lifecycleLock.lock()
+        activeRequests -= 1
+        let shouldInvalidate = closed && activeRequests == 0
+        lifecycleLock.unlock()
+        if shouldInvalidate { session.invalidateAndCancel() }
+    }
     private func authorizedRequest(_ path: String) -> URLRequest {
         var request = URLRequest(url: URL(string: path, relativeTo: baseURL)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

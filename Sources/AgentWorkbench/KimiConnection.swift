@@ -105,7 +105,7 @@ final class KimiConnection: ObservableObject {
                     let catalog = try await api.get(JSONValue.self, "/api/v1/models")
                     models = catalog["items"].array
                     try await refreshSessions()
-                    let ws = api.webSocket(); socket = ws; ws.resume()
+                    let ws = try api.webSocket(); socket = ws; ws.resume()
                     let hello = try await receive(ws)
                     guard hello.type == "server_hello", hello.payload["protocol_version"].int == 2 else {
                         throw WorkbenchError("此 Kimi Web 的事件协议尚未支持")
