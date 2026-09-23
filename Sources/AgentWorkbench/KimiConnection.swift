@@ -191,7 +191,7 @@ final class KimiConnection: ObservableObject {
         historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
         snapshotReady = false
         subagentTranscript = nil; subagentTranscriptError = nil
-        closeTransport(); online = false; connecting = false; stateMessage = "未连接"
+        closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
     }
     private func closeTransport() {
         socket?.cancel(with: .goingAway, reason: nil); socket = nil; subscribedId = nil

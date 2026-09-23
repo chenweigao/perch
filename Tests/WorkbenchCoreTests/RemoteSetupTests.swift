@@ -17,8 +17,10 @@ func checkRemoteSetup() async throws {
     let old = Data("{\"id\":\"\(id)\",\"name\":\"Existing\",\"destination\":\"fixture\"}".utf8)
     let legacy = try JSONDecoder().decode(SSHHost.self, from: old)
     precondition(legacy.id == id && legacy.enabledAgents == RemoteSetup.agents && legacy.kimiPort == 58627)
+    precondition(legacy.autoConnectSSH && legacy.autoConnectHerdr)
     let host = SSHHost(id: id, name: "Kimi only", destination: "fixture", enabledAgents: [.kimi],
-                       kimiPort: 60123, kimiTokenPath: "~/custom token/credential")
+                       kimiPort: 60123, kimiTokenPath: "~/custom token/credential",
+                       autoConnectSSH: false, autoConnectHerdr: false)
     let restored = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(host))
     precondition(restored == host && !restored.hasNativeAgents)
     let codexHost = SSHHost(id: id, name: "Codex", destination: "fixture", enabledAgents: [.codex])
