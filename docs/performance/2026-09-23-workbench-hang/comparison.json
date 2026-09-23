@@ -1,0 +1,76 @@
+{
+  "baseline": {
+    "commit": "5b3b9102bac79b6bbfaf4760aeaea1d3a23a7568",
+    "source_sha256": "49e61a83a3c346150d61f800aac25c62f4f35f73d053d1a4804140af34d2be21",
+    "configuration": "release -O",
+    "defines": [
+      "PERCH_ACCEPTANCE",
+      "TRANSCRIPT_CHECKS"
+    ],
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "window_points": [
+      1280,
+      820
+    ],
+    "history_turns": 200,
+    "catalog_sessions": 500,
+    "resident_snapshot_count": 8,
+    "binary_sha256": "89779a9122837c49a30fcc629bd17b8e16f6e7f46c0572411092acbacbcc7637",
+    "capture": "none",
+    "mode": "dashboard",
+    "positive_control": false,
+    "joint_seconds": null,
+    "failure": "recording or fixture timed out; incomplete trace is not acceptance",
+    "elapsed_s": 84.0455955,
+    "behavior_passed": false
+  },
+  "baseline_completed_updates": 33,
+  "baseline_main_thread_samples": 2059,
+  "baseline_observer_samples": 2059,
+  "fixed": {
+    "commit": "5b3b9102bac79b6bbfaf4760aeaea1d3a23a7568",
+    "source_sha256": "179676899da41182465958c95f7ce730323e17caba3e85bc8a74e0e38fba35d2",
+    "configuration": "release -O",
+    "defines": [
+      "PERCH_ACCEPTANCE",
+      "TRANSCRIPT_CHECKS"
+    ],
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "window_points": [
+      1280,
+      820
+    ],
+    "history_turns": 200,
+    "catalog_sessions": 500,
+    "resident_snapshot_count": 8,
+    "binary_sha256": "49943908b0bce226adde8b92634e2c79190363bf723afe65194964cbfb114671",
+    "capture": "none",
+    "mode": "dashboard",
+    "positive_control": false,
+    "joint_seconds": null,
+    "exit_code": 0,
+    "elapsed_s": 25.04250425,
+    "behavior_passed": true
+  },
+  "fixed_result": {
+    "dashboard_contract": "rendered projection and inbox state; scrolling during section/height/order changes; return to transcript; offline fixture",
+    "dashboard_idle_cpu_seconds_over_2s": 0.09907300000000063,
+    "dashboard_update_ms": {
+      "count": 60,
+      "max": 461.079916683957,
+      "median": 176.19445826858282,
+      "p95": 454.120708280243
+    },
+    "dashboard_updates": 60,
+    "rss_after_mb": 207.15625,
+    "rss_before_mb": 162.171875,
+    "rss_settled_mb": 183.921875,
+    "scroll_step_ms": {
+      "count": 120,
+      "max": 46.139416634105146,
+      "median": 2.512749982997775,
+      "p95": 28.467666707001626
+    },
+    "status": "passed"
+  }
+}
