@@ -5,6 +5,11 @@ import WorkbenchCore
 @main
 struct ReadingPreviewApp: App {
     @NSApplicationDelegateAdaptor(PreviewDelegate.self) private var delegate
+    init() {
+        if CommandLine.arguments.contains("--check-user-bubbles") {
+            NSApplication.shared.appearance = NSAppearance(named: CommandLine.arguments.contains("--dark") ? .darkAqua : .aqua)
+        }
+    }
     var body: some Scene {
         WindowGroup("回复阅读验收") { ReadingPreview().preferredColorScheme(.light) }
             .defaultSize(width: 920, height: 850)
@@ -51,6 +56,7 @@ private struct ReadingPreview: View {
         return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: records))
     }
     private var scenarioMessages: [KimiMessage] {
+        if scenario == 10 { return UserBubbleFixture.messages }
         if scenario == 6 {
             let json = """
             [{"id":"earlier","role":"assistant","created_at":"1","content":[{"type":"thinking","thinking":"先检查工作目录"},{"type":"text","text":"开始检查目录。"}]},
@@ -110,7 +116,7 @@ private struct ReadingPreview: View {
             Picker("场景", selection: $scenario) {
                 Text("正文排版").tag(0); Text("运行中").tag(1); Text("没有概要").tag(2)
                 Text("只有思考").tag(3); Text("思考结束").tag(4); Text("只有工具").tag(5); Text("概要与思考").tag(6)
-                Text("历史分页").tag(7); Text("富文本历史").tag(8)
+                Text("历史分页").tag(7); Text("富文本历史").tag(8); Text("用户气泡").tag(10)
                 if replay != nil { Text("本地快照").tag(9) }
             }.pickerStyle(.segmented).padding(.horizontal, 20).padding(.bottom, 12)
             if scenario == 6 { Button("追加下一阶段") { phaseSteps += 1 }.padding(.bottom, 8) }
@@ -189,10 +195,20 @@ private struct ReadingPreview: View {
 private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         checkNativeTextLayout()
+        if CommandLine.arguments.contains("--check-user-bubbles") {
+            NSApp.setActivationPolicy(.accessory)
+            Task { @MainActor in
+                await checkUserMessageLayout()
+                NSApp.terminate(nil)
+            }
+            return
+        }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
     }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        !CommandLine.arguments.contains("--check-user-bubbles")
+    }
 }
 
 /// Regression checks for the sizing boundary used by Grid and scrolling text.
@@ -214,4 +230,176 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     precondition(view.measure(width: nil) == ideal && ideal.width < 100, "Grid probes must preserve natural column width")
     view.update(NSAttributedString(string: text + "\n追加的一行", attributes: attributes))
     precondition(view.measure(width: 220).height > narrow.height, "Streaming text must invalidate cached height")
+}
+
+private enum UserBubbleFixture {
+    static let shortText = "Superpowers 太重了，再调研一下"
+    static let longText = String(repeating: "请检查用户消息在窄窗口中的布局，保留中文与 English 自然换行、原生文字选择和完整内容，不要横向撑开阅读区。", count: 5)
+        + "\n\n只调整宽度、圆角与间距，不增加头像、时间戳或常驻按钮。"
+    static let image: String = {
+        let image = NSImage(size: NSSize(width: 480, height: 240))
+        image.lockFocus()
+        NSColor.systemBlue.setFill()
+        NSRect(x: 0, y: 0, width: 480, height: 240).fill()
+        image.unlockFocus()
+        return image.tiffRepresentation!.base64EncodedString()
+    }()
+    static func message(_ id: String, role: String = "user", content: [[String: Any]]) -> KimiMessage {
+        try! KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
+            "id": id, "role": role, "created_at": id, "content": content
+        ]))
+    }
+    static let users: [KimiMessage] = [
+        message("bubble-short", content: [["type": "text", "text": shortText]]),
+        message("bubble-long", content: [["type": "text", "text": longText]]),
+        message("bubble-markdown", content: [["type": "text", "text": "请检查这条路径：\n\n/workspace/fixtures/" + String(repeating: "long-directory-name/", count: 12) + "ConversationTranscriptView.swift\n\n- 保留 **原生选择**\n- 不裁切多行文本\n\n```swift\nlet message = \"" + String(repeating: "long source line ", count: 10) + "\"\n```"]]),
+        message("bubble-attachments", content: [
+            ["type": "text", "text": "请参考附件调整布局。"],
+            ["type": "image", "name": "layout-reference.tiff", "source": ["kind": "base64", "data": image]],
+            ["type": "file", "name": "layout-requirements.txt"]
+        ])
+    ]
+    static let firstTurn: [KimiMessage] = [users[0],
+        message("bubble-tools", role: "assistant", content: [
+            ["type": "tool_use", "tool_call_id": "bubble-which", "tool_name": "Bash", "input": ["command": "which superpowers"]],
+            ["type": "tool_use", "tool_call_id": "bubble-fetch", "tool_name": "FetchURL", "input": ["url": "https://example.com/skills"]]
+        ]),
+        message("bubble-results", role: "tool", content: [
+            ["type": "tool_result", "tool_call_id": "bubble-which", "output": "Not installed.", "is_error": false],
+            ["type": "tool_result", "tool_call_id": "bubble-fetch", "output": "Offline preview fixture.", "is_error": false]
+        ]),
+        message("bubble-answer", role: "assistant", content: [["type": "text", "text": "我会继续调研更轻量的方案。"]])
+    ]
+    static var messages: [KimiMessage] { firstTurn + users.dropFirst() }
+}
+
+@MainActor private func checkUserMessageLayout() async {
+    setbuf(stdout, nil)
+    func require(_ condition: Bool, _ message: String, line: UInt = #line) {
+        if !condition { fputs("FAIL: \(message) (line \(line))\n", stderr); exit(1) }
+    }
+    func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+    func render<Content: View>(_ content: Content, width: CGFloat, scheme: ColorScheme) async -> (host: NSHostingController<AnyView>, window: NSWindow) {
+        let host = NSHostingController(rootView: AnyView(content
+            .environment(\.colorScheme, scheme).fixedSize(horizontal: false, vertical: true)
+            .background(Color(nsColor: .textBackgroundColor))))
+        host.sizingOptions = []
+        host.safeAreaRegions = []
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 1_200), styleMask: [], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: scheme == .light ? .aqua : .darkAqua)
+        window.contentViewController = host
+        window.orderFront(nil)
+        for _ in 0..<4 {
+            try? await Task.sleep(for: .milliseconds(50))
+            let size = host.sizeThatFits(in: CGSize(width: width, height: 1_000_000))
+            window.setContentSize(NSSize(width: width, height: ceil(size.height)))
+            host.view.layoutSubtreeIfNeeded()
+        }
+        return (host, window)
+    }
+    func snapshot(_ view: NSView, name: String) -> NSBitmapImageRep {
+        for text in descendants(view).compactMap({ $0 as? ReplyTextView }) {
+            text.layoutManager!.ensureLayout(for: text.textContainer!)
+            text.needsDisplay = true
+        }
+        view.window!.displayIfNeeded()
+        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width * 2), pixelsHigh: Int(view.bounds.height * 2),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        let context = NSGraphicsContext(bitmapImageRep: bitmap)!.cgContext
+        context.translateBy(x: 0, y: CGFloat(bitmap.pixelsHigh))
+        context.scaleBy(x: 2, y: -2)
+        view.effectiveAppearance.performAsCurrentDrawingAppearance { view.layer!.render(in: context) }
+        try! bitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: "build/\(name).png"))
+        return bitmap
+    }
+    func rect(_ view: NSView, in root: NSView) -> CGRect {
+        let frame = view.convert(view.bounds, to: root)
+        return root.isFlipped ? frame : CGRect(x: frame.minX, y: root.bounds.height - frame.maxY, width: frame.width, height: frame.height)
+    }
+    for scheme in [CommandLine.arguments.contains("--dark") ? ColorScheme.dark : .light] {
+        var longHeights: [CGFloat: CGFloat] = [:]
+        for width: CGFloat in [700, 420] {
+            for (index, message) in UserBubbleFixture.users.enumerated() {
+                let rendered = await render(KimiMessageView(message: message, tools: [:], api: nil, sessionId: "bubble-check"), width: width, scheme: scheme)
+                let root = rendered.host.view
+                let textViews = descendants(root).compactMap { $0 as? ReplyTextView }
+                require(!textViews.isEmpty, "User message must render native text")
+                for text in textViews {
+                    let frame = rect(text, in: root)
+                    require(text.isSelectable && !text.isEditable, "Native selection must remain available")
+                    require(frame.height >= text.measure(width: frame.width).height - 1, "\(message.id) text must not be clipped: frame \(frame), measured \(text.measure(width: frame.width))")
+                    if text.enclosingScrollView == nil {
+                        require(frame.minX >= width * 0.15 + 14 - 1 && frame.maxX <= width - 14 + 1, "\(message.id) text must stay inside the 85% bubble and padding: \(frame)")
+                    }
+                }
+                if index == 0 {
+                    let text = textViews[0], frame = rect(textViews[0], in: root)
+                    let ideal = text.measure(width: nil)
+                    require(abs(frame.width - ideal.width) <= 1, "Short messages must use their natural width")
+                    require(abs(frame.maxX - (width - 14)) <= 1, "Bubble must be right aligned")
+                    require(abs(frame.minY - 20) <= 1 && abs(root.bounds.height - frame.maxY - 10) <= 1, "Bubble must have 10 pt vertical padding without extra bottom margin")
+                    text.setSelectedRange(NSRange(location: 0, length: (text.string as NSString).length))
+                    require((text.string as NSString).substring(with: text.selectedRange()) == UserBubbleFixture.shortText, "Native selection must preserve the complete message")
+                    text.setSelectedRange(NSRange(location: 0, length: 0))
+                }
+                if index == 1 { longHeights[width] = root.bounds.height }
+                let bitmap = snapshot(root, name: "\(message.id)-\(Int(width))-\(scheme)")
+                let scale = CGFloat(bitmap.pixelsWide) / width
+                let textFrame = rect(textViews[0], in: root).intersection(root.bounds)
+                var darkest: CGFloat = 1, lightest: CGFloat = 0
+                for y in stride(from: Int(textFrame.minY * scale), to: Int(textFrame.maxY * scale), by: 2) {
+                    for x in stride(from: Int(textFrame.minX * scale), to: Int(textFrame.maxX * scale), by: 2) {
+                        let shade = bitmap.colorAt(x: x, y: y)!.usingColorSpace(.deviceRGB)!.redComponent
+                        darkest = min(darkest, shade); lightest = max(lightest, shade)
+                    }
+                }
+                require(lightest - darkest > 0.45, "Native text must be visible in the rendered \(scheme) snapshot")
+                let scanY = Int(24 * scale)
+                let paper = bitmap.colorAt(x: bitmap.pixelsWide - Int(7 * scale), y: scanY)!.usingColorSpace(.deviceRGB)!
+                let background = bitmap.colorAt(x: 0, y: scanY)!.usingColorSpace(.deviceRGB)!
+                require(abs(paper.redComponent - background.redComponent) > 0.015, "Bubble background must remain visible")
+                let paperPixels = (0..<bitmap.pixelsWide).filter { x in
+                    let color = bitmap.colorAt(x: x, y: scanY)!.usingColorSpace(.deviceRGB)!
+                    return abs(color.redComponent - paper.redComponent) < 0.003
+                        && abs(color.greenComponent - paper.greenComponent) < 0.003
+                        && abs(color.blueComponent - paper.blueComponent) < 0.003
+                }
+                let bubbleWidth = CGFloat(paperPixels.last! - paperPixels.first! + 1) / scale
+                require(bubbleWidth <= width * 0.85 + 1, "Rendered bubble must not exceed 85%: \(bubbleWidth)")
+                require(abs(CGFloat(paperPixels.last! + 1) / scale - width) <= 1, "Rendered bubble must be right aligned")
+                if index == 0 {
+                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - 28) <= 1, "Short bubble must hug its text and padding")
+                }
+                if index == 3 {
+                    var left = bitmap.pixelsWide, right = 0, pixels = 0
+                    for y in stride(from: 0, to: bitmap.pixelsHigh, by: 4) {
+                        for x in stride(from: 0, to: bitmap.pixelsWide, by: 4) {
+                            let color = bitmap.colorAt(x: x, y: y)!.usingColorSpace(.deviceRGB)!
+                            if color.blueComponent > 0.8 && color.redComponent < 0.2 && color.greenComponent > 0.3 && color.greenComponent < 0.7 {
+                                left = min(left, x); right = max(right, x); pixels += 1
+                            }
+                        }
+                    }
+                    require(pixels > 1_000, "Image attachment must finish decoding and render")
+                    require(CGFloat(left) / scale >= width * 0.15 + 14 - 1 && CGFloat(right) / scale <= width - 14 + 1, "Image must fit inside the bubble")
+                }
+                print("PASS: \(message.id), \(Int(width)) pt, \(scheme), height \(root.bounds.height)")
+                rendered.window.close()
+            }
+            let rendered = await render(ConversationTranscript(messages: UserBubbleFixture.firstTurn, sessionId: "bubble-spacing-\(width)-\(scheme)"), width: width, scheme: scheme)
+            let root = rendered.host.view
+            let entries = ConversationTimelineEntry.make(UserBubbleFixture.firstTurn)
+            let rows = descendants(root)
+            let user = rows.first { $0.identifier?.rawValue == entries[0].id }!
+            let process = rows.first { $0.identifier?.rawValue == entries[1].id }!
+            require(abs(rect(process, in: root).minY - rect(user, in: root).maxY - 18) <= 1, "Process records must be 18 pt below the user bubble")
+            let answer = rows.compactMap { $0 as? ReplyTextView }.first { $0.string == "我会继续调研更轻量的方案。" }!
+            require(abs(rect(answer, in: root).minX) <= 1, "Assistant replies must keep their existing left alignment")
+            _ = snapshot(root, name: "bubble-transcript-\(Int(width))-\(scheme)")
+            rendered.window.close()
+        }
+        require(longHeights[420]! > longHeights[700]!, "Narrow columns must reflow long prompts")
+    }
+    print("PASS: user bubble layout, native selection, attachments, process spacing and light/dark snapshots")
 }
