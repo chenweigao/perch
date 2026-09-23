@@ -14,6 +14,7 @@ struct WorkbenchHeader: View {
         HStack(spacing: WorkbenchChrome.labelSpacing) {
             Image(systemName: item?.reference.kind.symbol ?? (model.showArchived ? "archivebox" : model.onlyAttention ? "tray" : model.showSessionDirectory ? "list.bullet" : model.selectedGroup == nil ? "square.grid.2x2" : "folder"))
                 .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
+                .frame(width: WorkbenchChrome.sidebarSymbolWidth)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
                 if let item {
