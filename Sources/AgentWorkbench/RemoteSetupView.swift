@@ -118,7 +118,7 @@ struct AddHostSheet: View {
                 VStack(alignment: .leading, spacing: 14) { ForEach(setup.checks) { checkRow($0) } }
             }
             HStack {
-                Button(LocalizedStringKey(setup.ready ? "重新检查" : "检查 Agent")) { setup.checkAgent() }.disabled(setup.busy)
+                Button(setup.checkAgentTitle) { setup.checkAgent() }.disabled(setup.busy)
                 Spacer()
                 Link("安装说明", destination: setup.installURL)
             }
@@ -150,7 +150,7 @@ struct AddHostSheet: View {
                         Text("使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 与 Codex 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。")
                             .font(.caption).foregroundStyle(.secondary)
                         Text(command).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-                        Button("在终端安装") { setup.openTerminal(command: command) }
+                        Button("在终端安装") { setup.openInstallTerminal() }
                     }.padding(.top, 8)
                 }
             }
@@ -161,7 +161,7 @@ struct AddHostSheet: View {
             }
             HStack {
                 if setup.provider == .kimi && setup.failedCheck == "service" {
-                    Button("启动 Kimi Web") { setup.startKimi() }
+                    Button("启动并检查 Kimi Web") { setup.startKimi() }
                 }
                 Button("打开远端终端") { setup.openTerminal() }
                 if !setup.loginCommand.isEmpty && setup.failedCheck == "models" {

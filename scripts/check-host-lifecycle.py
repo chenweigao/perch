@@ -10,7 +10,7 @@ import uuid
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
-    ["swift", "build", "-c", "release", "--show-bin-path"], cwd=ROOT, text=True).strip())
+    ["swift", "build", "--build-system", "native", "-c", "release", "--show-bin-path"], cwd=ROOT, text=True).strip())
 DOMAIN = "dev.agentworkbench.hostqa." + uuid.uuid4().hex
 includes = ["-I", str(BIN / "Modules")]
 for path in ["swift-markdown/Sources/CAtomic/include", "swift-cmark/src/include", "swift-cmark/extensions/include"]:
@@ -24,7 +24,7 @@ for target in ["WorkbenchCore", "Markdown", "CAtomic", "cmark_gfm", "cmark_gfm_e
 sources = sorted(path for path in (ROOT / "Sources/AgentWorkbench").glob("*.swift")
                  if path.name != "WorkbenchApp.swift")
 
-with tempfile.TemporaryDirectory(prefix="perch-host-check-") as folder:
+with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build") as folder:
     work = pathlib.Path(folder)
     app = work / "HostLifecycleChecks.app"
     executable = app / "Contents/MacOS/HostLifecycleChecks"

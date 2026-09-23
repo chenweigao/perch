@@ -1,5 +1,23 @@
 import Foundation
 
+public struct KimiRuntime: Equatable, Sendable {
+    public enum Source: Equatable, Sendable { case path, npmPrefix }
+    public let path: String
+    public let version: String
+    public let source: Source
+}
+
+public enum KimiRuntimeProbeResult: Equatable, Sendable {
+    case ready(KimiRuntime)
+    case missing(npmPrefix: String?)
+    case npmMissing
+    case nodeMissing
+    case nodeTooOld(version: String)
+    case npmFailed
+    case unusable(path: String, reason: String)
+    case invalid(output: String)
+}
+
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
     public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal]
@@ -60,6 +78,62 @@ public enum RemoteSetup {
         return L("检查网络、VPN 与 SSH 配置。在终端连接成功后，返回这里重新检查。")
     }
 
+    public static let kimiRuntimeProbeCommand = #"""
+    if command -v kimi >/dev/null 2>&1; then
+        perch_kimi="$(command -v kimi)"
+        perch_source=path
+    else
+        if ! command -v npm >/dev/null 2>&1; then
+            printf 'npm_missing\0'
+            exit 0
+        fi
+        if ! command -v node >/dev/null 2>&1; then
+            printf 'node_missing\0'
+            exit 0
+        fi
+        perch_node_version="$(node --version 2>/dev/null)"
+        if ! node -e 'const v=process.versions.node.split(".").map(Number); process.exit(v[0] > 22 || (v[0] === 22 && v[1] >= 19) ? 0 : 1)' >/dev/null 2>&1; then
+            printf 'node_old\0%s\0' "$perch_node_version"
+            exit 0
+        fi
+        perch_prefix="$(npm prefix -g 2>/dev/null)" || {
+            printf 'npm_failed\0'
+            exit 0
+        }
+        perch_kimi="${perch_prefix%/}/bin/kimi"
+        if [ ! -x "$perch_kimi" ]; then
+            printf 'missing\0%s\0' "$perch_prefix"
+            exit 0
+        fi
+        perch_source=npm
+    fi
+    perch_version="$("$perch_kimi" --version 2>&1)"
+    perch_status=$?
+    if [ "$perch_status" -ne 0 ]; then
+        printf 'unusable\0%s\0%s\0' "$perch_kimi" "$perch_version"
+        exit 0
+    fi
+    printf 'ready\0%s\0%s\0%s\0' "$perch_kimi" "$perch_version" "$perch_source"
+    """#
+
+    public static func parseKimiRuntimeProbe(_ data: Data) -> KimiRuntimeProbeResult {
+        let fields = data.split(separator: 0, omittingEmptySubsequences: false)
+            .map { String(decoding: $0, as: UTF8.self) }
+        guard let status = fields.first else { return .invalid(output: "") }
+        switch status {
+        case "ready" where fields.count >= 4:
+            let source: KimiRuntime.Source = fields[3] == "npm" ? .npmPrefix : .path
+            return .ready(KimiRuntime(path: fields[1], version: fields[2], source: source))
+        case "missing": return .missing(npmPrefix: fields.count > 1 && !fields[1].isEmpty ? fields[1] : nil)
+        case "npm_missing": return .npmMissing
+        case "node_missing": return .nodeMissing
+        case "node_old": return .nodeTooOld(version: fields.count > 1 ? fields[1] : "")
+        case "npm_failed": return .npmFailed
+        case "unusable" where fields.count >= 3: return .unusable(path: fields[1], reason: fields[2])
+        default: return .invalid(output: String(decoding: data, as: UTF8.self))
+        }
+    }
+
     public static func directoryListCommand(_ directory: String) -> String {
         // NUL-separated names preserve whitespace and shell metacharacters.
         let root = SSHCommand.quote(directory)
@@ -68,8 +142,8 @@ public enum RemoteSetup {
             + " test -d " + root + " && test -r " + root + " && test -x " + root
     }
 
-    public static func kimiStartCommand(port: Int) -> String {
+    public static func kimiStartCommand(binaryPath: String, port: Int) -> String {
         // Never replaces a running service or changes its permission mode.
-        "umask 077; mkdir -p ~/.local/state/perch; nohup kimi web --host 127.0.0.1 --port \(port) --no-open >> ~/.local/state/perch/kimi-web.log 2>&1 < /dev/null &"
+        "umask 077; mkdir -p ~/.local/state/perch; nohup \(SSHCommand.quote(binaryPath)) web --host 127.0.0.1 --port \(port) --no-open >> ~/.local/state/perch/kimi-web.log 2>&1 < /dev/null &"
     }
 }
