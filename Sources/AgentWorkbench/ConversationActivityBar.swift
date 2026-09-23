@@ -115,9 +115,9 @@ struct ConversationActivityBar: View {
     private var statusTitle: Text {
         if !online { return Text(LocalizedStringKey(activity.title)) }
         if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
+        if !isRunning && (timing?.endedAt != nil || narrative != nil) { return Text("本轮结束") }
         if activity.needsAttention || activity.title == L("Stopping…") { return Text(LocalizedStringKey(activity.title)) }
-        if let narrative { return Text(verbatim: narrative.headline) }
-        if !isRunning && timing?.endedAt != nil { return Text("本轮结束") }
+        if isRunning, let narrative { return Text(verbatim: narrative.headline) }
         if let description = activity.operationDescription { return Text(verbatim: description) }
         return Text(LocalizedStringKey(activity.title))
     }

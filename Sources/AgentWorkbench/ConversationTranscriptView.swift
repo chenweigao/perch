@@ -123,20 +123,28 @@ struct ConversationTranscript: View {
         let batch = ActivitySummaryBatch.latest(in: snapshot.entries, tools: visible.tools,
             isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online)
         let narrativeKey = [narrative.current?.stageID, narrative.current?.headline,
-                            narrative.current?.source.rawValue, narrative.current?.lifecycle.rawValue,
+                            narrative.current?.detail, narrative.current?.source.rawValue,
+                            narrative.current?.lifecycle.rawValue,
+                            narrative.current.map { String($0.revision) },
+                            narrative.current?.evidenceIDs.joined(separator: ","),
                             String(narrative.entryStageIDs.count)].compactMap { $0 }.joined(separator: "|")
         let observation = SummaryObservation(session: key, batch: batch, narrativeKey: narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
             settingsRevision: summarySettings.revision)
-        let contents = snapshot.entries.map { entry in
+        let projectedRows = narrative.rows
+        let contents = snapshot.entries.compactMap { entry -> ConversationEntryView? in
             let ids = Set(entry.messages.flatMap(\.content).compactMap(\.toolCallId))
             let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
                 if let value = visible.tools[id] { result[id] = value }
             }
-            let rowNarrative = narrativeStore.narrative(session: key, entryID: entry.id)
-                ?? narrative.narrative(for: entry.id)
+            let narrativeRow = narrativeStore.row(session: key, entryID: entry.id)
+                ?? projectedRows[entry.id]
+            if let narrativeRow, narrativeRow.isAnchor, !narrativeRow.stageClosed,
+               entry.isNarrativeSource(for: narrativeRow.narrative) {
+                return nil
+            }
             return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId,
-                memoryKey: key + ":" + entry.id, activityNarrative: rowNarrative)
+                memoryKey: key + ":" + entry.id, activityNarrative: narrativeRow)
         }
         ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
@@ -927,7 +935,7 @@ private struct ConversationEntryView: View, Equatable {
     let api: KimiAPI?
     let sessionId: String
     let memoryKey: String
-    var activityNarrative: ActivityNarrative? = nil
+    var activityNarrative: ActivityNarrativeRow? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -936,10 +944,16 @@ private struct ConversationEntryView: View, Equatable {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let activityNarrative, activityNarrative.isAnchor, activityNarrative.stageClosed,
+               entry.isNarrativeSource(for: activityNarrative.narrative) {
+                ActivityNarrativeHistoryView(narrative: activityNarrative.narrative)
+            } else {
                 switch entry.presentation {
                 case .activity:
                     KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId,
-                                     narrative: activityNarrative)
+                                     narrative: activityNarrative.flatMap {
+                                         $0.isAnchor && $0.stageClosed ? $0.narrative : nil
+                                     })
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: 12) {
@@ -969,6 +983,7 @@ private struct ConversationEntryView: View, Equatable {
                     }
                 }
             }
+        }
     }
 }
 

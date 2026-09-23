@@ -13,7 +13,7 @@ struct ActivityNarrativeFailure: Equatable {
     private struct SessionState {
         var base = ActivityNarrativeSnapshot(turnID: nil, stages: [], entryStageIDs: [:])
         var current: ActivityNarrative?
-        var rows: [String: ActivityNarrative] = [:]
+        var rows: [String: ActivityNarrativeRow] = [:]
         var deferred: ActivityNarrativeSnapshot?
         var attempts: [String: ActivitySummaryBatch] = [:]
         var results: [String: ActivitySummaryResult] = [:]
@@ -39,7 +39,7 @@ struct ActivityNarrativeFailure: Equatable {
     private var generation = 0
 
     func narrative(session: String) -> ActivityNarrative? { sessions[session]?.current }
-    func narrative(session: String, entryID: String) -> ActivityNarrative? { sessions[session]?.rows[entryID] }
+    func row(session: String, entryID: String) -> ActivityNarrativeRow? { sessions[session]?.rows[entryID] }
     func failure(session: String) -> ActivityNarrativeFailure? { sessions[session]?.failure }
     func canRetry(session: String) -> Bool { sessions[session]?.retryBatch != nil }
 
@@ -90,12 +90,8 @@ struct ActivityNarrativeFailure: Equatable {
                         settingsRevision: settings.revision, force: true), settings: settings)
     }
 
-    private static func rows(in snapshot: ActivityNarrativeSnapshot) -> [String: ActivityNarrative] {
-        snapshot.entryStageIDs.reduce(into: [:]) { result, pair in
-            if let narrative = snapshot.stages.first(where: { $0.narrative.stageID == pair.value })?.narrative {
-                result[pair.key] = narrative
-            }
-        }
+    private static func rows(in snapshot: ActivityNarrativeSnapshot) -> [String: ActivityNarrativeRow] {
+        snapshot.rows
     }
 
     private func enqueue(_ request: Pending, settings: ActivitySummarySettings) {

@@ -68,6 +68,18 @@ public struct ActivityNarrativeStage: Equatable, Sendable {
     public let closed: Bool
 }
 
+public struct ActivityNarrativeRow: Equatable, Sendable {
+    public let narrative: ActivityNarrative
+    public let isAnchor: Bool
+    public let stageClosed: Bool
+
+    public init(narrative: ActivityNarrative, isAnchor: Bool, stageClosed: Bool) {
+        self.narrative = narrative
+        self.isAnchor = isAnchor
+        self.stageClosed = stageClosed
+    }
+}
+
 public struct ActivityNarrativeSnapshot: Equatable, Sendable {
     public let turnID: String?
     public let stages: [ActivityNarrativeStage]
@@ -80,10 +92,16 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
     }
 
     public var current: ActivityNarrative? { stages.last?.narrative }
-    public func narrative(for entryID: String) -> ActivityNarrative? {
-        guard let stageID = entryStageIDs[entryID] else { return nil }
-        return stages.first { $0.narrative.stageID == stageID }?.narrative
+    public var rows: [String: ActivityNarrativeRow] {
+        stages.reduce(into: [:]) { result, stage in
+            for (index, entryID) in stage.entryIDs.enumerated() {
+                result[entryID] = ActivityNarrativeRow(
+                    narrative: stage.narrative, isAnchor: index == 0, stageClosed: stage.closed)
+            }
+        }
     }
+    public func row(for entryID: String) -> ActivityNarrativeRow? { rows[entryID] }
+    public func narrative(for entryID: String) -> ActivityNarrative? { row(for: entryID)?.narrative }
 
     public func applying(_ external: [String: ActivitySummaryResult]) -> Self {
         let updated = stages.map { stage -> ActivityNarrativeStage in
@@ -112,7 +130,22 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
             break
         }
         text = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        text = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
+            .union(CharacterSet(charactersIn: ":：")))
         return String(text.prefix(limit))
+    }
+
+    fileprivate static func narrativeText(_ value: String) -> (headline: String, detail: String?) {
+        let text = clean(value, limit: 240)
+        for separator in ["：", ": "] {
+            guard let range = text.range(of: separator) else { continue }
+            let headline = clean(String(text[..<range.lowerBound]), limit: 80)
+            let detail = clean(String(text[range.upperBound...]), limit: 240)
+            if !headline.isEmpty, headline.count <= 48, !detail.isEmpty {
+                return (headline, detail)
+            }
+        }
+        return (clean(text, limit: 120), nil)
     }
 }
 
@@ -147,7 +180,7 @@ public enum ActivityNarrativeProjection {
             if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
                 || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing }
             if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
-                || value.contains("提交") || value.contains("合并") || value.contains("整合") { return .integrating }
+                || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating }
             if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
                 || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring }
             return .mixed
@@ -197,23 +230,26 @@ public enum ActivityNarrativeProjection {
             if entry.presentation == .progress,
                let text = entry.messages.flatMap(\.content).compactMap(\.visibleText)
                 .map({ ActivityNarrativeSnapshot.clean($0, limit: 240) }).first(where: { !$0.isEmpty }) {
+                let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
                 appendStage(id: "commentary:\(entry.messages[0].id)", phase: phase(from: text),
-                            subject: "", headline: text, detail: nil, source: .commentary)
+                            subject: narrativeText.headline, headline: narrativeText.headline,
+                            detail: narrativeText.detail, source: .commentary)
             }
 
             for message in entry.messages {
                 for part in message.content {
                     if part.type == "thinking", part.source?["kind"].string == "activity_summary" {
                         let parts = part.source?["summaryParts"].array.compactMap(\.string) ?? []
-                        let headline = parts.reversed().map { ActivityNarrativeSnapshot.clean($0, limit: 120) }
+                        let text = parts.reversed().map { ActivityNarrativeSnapshot.clean($0, limit: 240) }
                             .first(where: { !$0.isEmpty }) ?? ""
-                        guard !headline.isEmpty else { continue }
+                        guard !text.isEmpty else { continue }
+                        let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
                         let itemID = part.source?["itemId"].string ?? message.id
                         let state = part.source?["state"].string == "final"
                             ? ActivityNarrativeLifecycle.final : .streaming
-                        appendStage(id: "provider:\(itemID)", phase: phase(from: headline),
-                                    subject: "", headline: headline, detail: nil,
-                                    source: .provider, lifecycle: state)
+                        appendStage(id: "provider:\(itemID)", phase: phase(from: text),
+                                    subject: narrativeText.headline, headline: narrativeText.headline,
+                                    detail: narrativeText.detail, source: .provider, lifecycle: state)
                         continue
                     }
                     if part.type == "thinking", stages.isEmpty {
@@ -264,5 +300,22 @@ public enum ActivityNarrativeProjection {
         }
         return ActivityNarrativeSnapshot(turnID: turnID, stages: output,
                                          entryStageIDs: entryStageIDs).applying(external)
+    }
+}
+
+public extension ConversationTimelineEntry {
+    func isNarrativeSource(for narrative: ActivityNarrative) -> Bool {
+        switch narrative.source {
+        case .commentary:
+            return presentation == .progress
+        case .provider:
+            return messages.contains { message in
+                message.content.contains {
+                    $0.type == "thinking" && $0.source?["kind"].string == "activity_summary"
+                }
+            }
+        case .external, .local:
+            return false
+        }
     }
 }

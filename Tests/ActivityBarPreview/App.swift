@@ -6,12 +6,12 @@ import WorkbenchCore
     @NSApplicationDelegateAdaptor(ActivityDelegate.self) private var delegate
     var body: some Scene {
         WindowGroup("Task activity preview") { ActivityPreview().preferredColorScheme(.light) }
-            .defaultSize(width: 900, height: 470)
+            .defaultSize(width: 900, height: 650)
     }
 }
 private struct ActivityPreview: View {
     @State private var phase = "Tools"
-    @State private var narrativeMode = "Provider"
+    @State private var narrativeMode = "Commentary"
     @State private var narrow = false
     @State private var includeHistory = true
     @State private var includePlan = true
@@ -42,6 +42,11 @@ private struct ActivityPreview: View {
                 ["title": "Inspect the existing layout", "status": "done"],
                 ["title": "Check the activity presentation", "status": phase == "Done" ? "done" : "in_progress"],
                 ["title": "Verify keyboard and narrow layouts", "status": phase == "Done" ? "done" : "pending"]]
+            if narrativeMode == "Commentary" {
+                rows.append(["id": "progress", "role": "assistant", "created_at": "", "content": [
+                    ["type": "text", "text": "解冲突：保留我的结构，吸收 main 的新文案："]
+                ]])
+            }
             rows += [
                 ["id": "plan", "role": "assistant", "created_at": "", "content": [["type": "tool_use", "tool_call_id": "plan", "tool_name": "TodoList", "input": ["todos": todos]]]],
                 ["id": "plan-result", "role": "tool", "created_at": "", "content": [["type": "tool_result", "tool_call_id": "plan", "is_error": false, "output": "Plan updated"]]],
@@ -49,6 +54,11 @@ private struct ActivityPreview: View {
             ]
             if ["Done", "Failed", "Responding"].contains(phase) {
                 rows.append(["id": "result", "role": "tool", "created_at": "", "content": [["type": "tool_result", "tool_call_id": "read", "is_error": phase == "Failed", "output": phase == "Failed" ? "Permission denied (fixture)" : "Read complete"]]])
+            }
+            if !busy {
+                rows.append(["id": "answer", "role": "assistant", "created_at": "", "content": [
+                    ["type": "text", "text": "Fixture response complete."]
+                ]])
             }
         }
         if !includePlan { rows.removeAll { ["plan", "plan-result"].contains($0["id"] as? String ?? "") } }
@@ -58,21 +68,40 @@ private struct ActivityPreview: View {
     private var narrative: ActivityNarrative? {
         let source: ActivityNarrativeSource
         let headline: String
+        let detail: String?
         switch narrativeMode {
-        case "Provider": source = .provider; headline = "Inspecting the unified activity narrative"
-        case "External": source = .external; headline = "Refining the activity narrative presentation"
-        case "External failure": source = .local; headline = "Validating the activity narrative locally"
-        case "Local": source = .local; headline = "Reviewing Sample.swift"
-        default: return nil
+        case "Commentary":
+            source = .commentary
+            headline = "解冲突"
+            detail = "保留我的结构，吸收 main 的新文案"
+        case "Provider":
+            source = .provider
+            headline = "Inspecting the unified activity narrative"
+            detail = "Codex reasoning summary metadata is shown without exposing private reasoning."
+        case "External":
+            source = .external
+            headline = "Refining the activity narrative presentation"
+            detail = nil
+        case "External failure":
+            source = .local
+            headline = "Validating the activity narrative locally"
+            detail = nil
+        case "Local":
+            source = .local
+            headline = "Reviewing Sample.swift"
+            detail = nil
+        default:
+            return nil
         }
+        let narrativePhase: ActivityNarrativePhase = phase == "Failed" ? .blocked
+            : narrativeMode == "Commentary" ? .integrating
+            : phase == "Done" ? .validating : .exploring
         return ActivityNarrative(turnID: "preview-\(turn)", stageID: "preview-\(turn)-stage",
-            phase: phase == "Failed" ? .blocked : phase == "Done" ? .validating : .exploring,
-            subject: "Activity narrative", headline: headline,
-            detail: source == .provider ? "Codex reasoning summary metadata is shown without exposing private reasoning." : nil,
+            phase: narrativePhase, subject: headline, headline: headline, detail: detail,
             source: source, evidenceIDs: ["read"], lifecycle: busy ? .streaming : .final)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack { Text("Local fixture · No agent connections").font(.headline); Spacer(); Toggle("Narrow", isOn: $narrow) }
             Toggle("Include 20 historical tool calls (hidden from the popover)", isOn: $includeHistory)
             Toggle("Include task plan", isOn: $includePlan)
@@ -82,11 +111,33 @@ private struct ActivityPreview: View {
                 ForEach(["Thinking", "Tools", "Approval", "Offline", "Stopping", "Responding", "Done", "Failed"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
             Picker("Narrative", selection: $narrativeMode) {
-                ForEach(["Provider", "Local", "External", "External failure", "None"], id: \.self) { Text($0) }
+                ForEach(["Commentary", "Provider", "Local", "External", "External failure", "None"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
             Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · External retries: \(retryCount) · Turn: \(turn)")
             Button("Next turn") { turn += 1; phase = "Thinking" }
             Spacer()
+            VStack(alignment: .leading, spacing: 9) {
+                Text(busy ? "Live stage · the activity bar owns the headline"
+                          : "Closed stage · the transcript owns one historical headline")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                if !busy, let narrative {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: narrative.phase == .blocked ? "exclamationmark.circle" : "checkmark.circle")
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(narrative.headline).font(.system(size: 12, weight: .medium))
+                            if let detail = narrative.detail { Text(detail).font(.system(size: 11)) }
+                        }
+                    }.foregroundStyle(narrative.phase == .blocked ? Color.orange : Color.secondary)
+                }
+                HStack(spacing: 8) {
+                    Image(systemName: busy ? "circle.dotted" : "checkmark")
+                    Text("读取 Sample.swift")
+                    Spacer()
+                    Text(busy ? "Running" : "Completed")
+                }.font(.system(size: 12)).foregroundStyle(.secondary)
+            }
+            .padding(12).frame(width: narrow ? 316 : 816, alignment: .leading)
+            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
             ConversationActivityBar(activity: ConversationActivity(
                 messages: messages, isRunning: busy,
                 liveTools: ["Tools", "Approval", "Offline", "Stopping"].contains(phase) ? live : [],

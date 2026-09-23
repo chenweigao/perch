@@ -1,6 +1,29 @@
 import SwiftUI
 import WorkbenchCore
 
+struct ActivityNarrativeHistoryView: View {
+    let narrative: ActivityNarrative
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: narrative.phase == .blocked ? "exclamationmark.circle" : "checkmark.circle")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(narrative.phase == .blocked ? Color.orange : Color.secondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(narrative.headline).font(.system(size: 12, weight: .medium))
+                if let detail = narrative.detail, !detail.isEmpty {
+                    Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: [narrative.headline, narrative.detail]
+            .compactMap { $0 }.joined(separator: ". ")))
+    }
+}
+
 /// Process records keep source order inside one compact disclosure. Active,
 /// failed and uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {

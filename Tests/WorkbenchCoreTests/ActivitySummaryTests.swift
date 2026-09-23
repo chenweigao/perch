@@ -80,9 +80,57 @@ func checkActivitySummaries() throws {
         entries: commentaryEntries, tools: [read0.id: read0, read1.id: read1], isRunning: true)
     precondition(commentaryProjection.current?.source == .commentary)
     precondition(commentaryProjection.current?.headline == "Inspecting the activity summary flow")
+    let commentarySourceEntry = commentaryEntries.first { $0.presentation == .progress }!
+    let commentaryEvidenceEntry = commentaryEntries.first { $0.presentation == .activity }!
+    precondition(commentarySourceEntry.isNarrativeSource(for: commentaryProjection.current!))
+    precondition(!commentaryEvidenceEntry.isNarrativeSource(for: commentaryProjection.current!))
+    precondition(commentaryProjection.row(for: commentarySourceEntry.id)?.isAnchor == true)
+    precondition(commentaryProjection.row(for: commentarySourceEntry.id)?.stageClosed == false)
+    precondition(commentaryProjection.row(for: commentaryEvidenceEntry.id)?.isAnchor == false,
+                 "Only the source entry owns the live stage anchor")
     precondition(ActivitySummaryBatch.latest(in: commentaryEntries,
         tools: [read0.id: read0, read1.id: read1], isRunning: true, enabled: true) == nil,
         "Explicit agent progress must suppress external summarization")
+
+    let handoffRead = tool("handoff-read")
+    let handoffRunningEntries = try timeline([
+        user("handoff-request"),
+        progress("handoff-progress", "解冲突：保留我的结构，吸收 main 的新文案："),
+        call("handoff-read")
+    ])
+    let handoffRunning = ActivityNarrativeProjection.make(
+        entries: handoffRunningEntries, tools: [handoffRead.id: handoffRead], isRunning: true)
+    precondition(handoffRunning.current?.subject == "解冲突")
+    precondition(handoffRunning.current?.headline == "解冲突")
+    precondition(handoffRunning.current?.detail == "保留我的结构，吸收 main 的新文案")
+    precondition(handoffRunning.current?.phase == .integrating)
+    precondition(handoffRunning.rows.values.filter { $0.isAnchor && $0.stageClosed }.isEmpty,
+                 "An open stage leaves its full headline to the activity bar")
+    let handoffCheck = tool("handoff-check")
+    let switchedEntries = try timeline([
+        user("handoff-request"),
+        progress("handoff-progress", "解冲突：保留我的结构，吸收 main 的新文案："),
+        call("handoff-read"),
+        progress("handoff-check-progress", "验证：运行回归测试"),
+        call("handoff-check")
+    ])
+    let switchedProjection = ActivityNarrativeProjection.make(entries: switchedEntries,
+        tools: [handoffRead.id: handoffRead, handoffCheck.id: handoffCheck], isRunning: true)
+    precondition(switchedProjection.rows.values.filter { $0.isAnchor && $0.stageClosed }.count == 1)
+    precondition(switchedProjection.rows.values.filter { $0.isAnchor && !$0.stageClosed }.count == 1,
+                 "A new stage closes the prior anchor and owns one new live anchor")
+    let handoffClosedEntries = try timeline([
+        user("handoff-request"),
+        progress("handoff-progress", "解冲突：保留我的结构，吸收 main 的新文案："),
+        call("handoff-read"),
+        ["id": "handoff-answer", "role": "assistant", "created_at": "",
+         "content": [["type": "text", "text": "Resolved."]]]
+    ], running: false)
+    let handoffClosed = ActivityNarrativeProjection.make(
+        entries: handoffClosedEntries, tools: [handoffRead.id: handoffRead], isRunning: false)
+    let closedOwners = handoffClosed.rows.values.filter { $0.isAnchor && $0.stageClosed }
+    precondition(closedOwners.count == 1 && closedOwners[0].narrative.stageID == handoffClosed.current?.stageID,
+                 "A closed stage hands its headline to exactly one transcript anchor")
     let commentaryExternal = commentaryProjection.applying([
         commentaryProjection.current!.stageID: ActivitySummaryResult(
             subject: "Ignored", phase: .editing, summary: "External replacement")
@@ -92,18 +140,35 @@ func checkActivitySummaries() throws {
 
     let providerSource: [String: Any] = [
         "kind": "activity_summary", "provider": "codex", "itemId": "reasoning-1",
-        "turnId": "provider-turn", "summaryParts": ["Inspecting the narrative pipeline"], "state": "final"
+        "turnId": "provider-turn",
+        "summaryParts": ["Inspecting the narrative pipeline: mapping provider ownership:"], "state": "final"
     ]
     let providerMessages = try messages([user(), thought("provider-thought", source: providerSource), call("read0"), call("read1")])
     let providerPart = providerMessages[1].content[0]
     precondition(providerPart.source?["kind"].string == "activity_summary")
-    precondition(providerPart.source?["summaryParts"].array.compactMap(\.string) == ["Inspecting the narrative pipeline"])
+    precondition(providerPart.source?["summaryParts"].array.compactMap(\.string)
+        == ["Inspecting the narrative pipeline: mapping provider ownership:"])
     let providerEntries = ConversationTimelineEntry.make(providerMessages, isRunning: true)
     let providerProjection = ActivityNarrativeProjection.make(
         entries: providerEntries, tools: [read0.id: read0, read1.id: read1], isRunning: true)
     precondition(providerProjection.current?.source == .provider)
+    precondition(providerProjection.current?.subject == "Inspecting the narrative pipeline")
     precondition(providerProjection.current?.headline == "Inspecting the narrative pipeline")
+    precondition(providerProjection.current?.detail == "mapping provider ownership")
     precondition(providerProjection.current?.lifecycle == .final)
+    let providerSourceEntry = providerEntries.first { entry in
+        entry.messages.contains { $0.id == "provider-thought" }
+    }!
+    precondition(providerSourceEntry.isNarrativeSource(for: providerProjection.current!))
+    precondition(providerProjection.row(for: providerSourceEntry.id)?.isAnchor == true)
+    let providerEvidenceEntry = providerEntries.first { entry in
+        entry.presentation == .activity && !entry.isNarrativeSource(for: providerProjection.current!)
+    }!
+    precondition(providerProjection.row(for: providerEvidenceEntry.id)?.isAnchor == false,
+                 "Provider source removal must leave its tool evidence in a separate row")
+    let privateThinkingEntry = thinkingEntries.first { $0.isProcess }!
+    precondition(!privateThinkingEntry.isNarrativeSource(for: thinkingNarrative!),
+                 "Private thinking must remain visible and cannot become a narrative source row")
     precondition(ActivitySummaryBatch.latest(in: providerEntries,
         tools: [read0.id: read0, read1.id: read1], isRunning: true, enabled: true) == nil,
         "Provider-native summaries must suppress external summarization")

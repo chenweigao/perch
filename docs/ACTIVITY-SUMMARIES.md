@@ -26,9 +26,15 @@ provider summaries and explicit progress can supply a more precise title.
 The transcript still limits each process disclosure to 24 records so expanding a long
 turn does not mount an unbounded view tree. That rendering split does not create a
 new semantic stage or change its ID. A tool phase transition, provider summary, or
-explicit progress can open a new stage. The activity bar and process row read from
-the same projection, so they use the same headline instead of showing an unrelated
-operation label and generated summary.
+explicit progress can open a new stage.
+
+While a stage is open, the bottom activity bar is the only owner of its full headline.
+The transcript removes the matching provider-summary or progress source row and keeps
+tool rows as evidence (action, target, and status) without repeating the headline.
+When the stage closes or another stage opens, its full headline is handed to exactly
+one stable transcript anchor; supporting tool rows remain evidence-only. Ownership is
+determined by stage and entry IDs, never by comparing rendered strings. After the turn
+ends, the bar says that the turn ended instead of repeating the final historical stage.
 
 Running, failed, missing-result, disconnected, and approval tools remain visible
 under the process disclosure. Expanding preserves source order across thoughts,
@@ -36,8 +42,11 @@ tools, and runtime context. The narrative is presentation state only: it does no
 change tool status, enter the agent context, or replace the final response.
 
 Codex reasoning summaries arrive as structured `activity_summary` source metadata.
-Perch displays only the provider-supplied summary parts; raw reasoning remains in the
-existing thinking view and is never treated as the activity headline.
+Perch uses only the provider-supplied summary parts for narrative text. Untagged private
+thinking remains in the existing thinking view and is never treated as a narrative
+source. Provider and progress text may be split deterministically at a short leading
+clause: that clause becomes the headline, the remainder becomes detail, and trailing
+colons are removed.
 
 ## Configure external refinement
 
@@ -118,9 +127,10 @@ stage. The shared store retains at most 64 session states and 256 external stage
 results.
 
 While the reader is away from the latest transcript position, already-published row
-headlines stay frozen and new rows may initialize. Updated row text is published when
-the reader returns to the latest position. The bottom activity bar continues to show
-the current narrative, including the final stage after the turn ends.
+text and ownership state (anchor, open, or closed) stay frozen; new rows may initialize.
+The deferred projection is published in one update when the reader returns to the
+latest position. The bottom activity bar continues to show the live narrative while
+the turn runs.
 
 ## Session naming
 
@@ -145,8 +155,9 @@ retry.
 - `python3 -m unittest discover -s remote -p 'test_*.py'` covers bridge event
   normalization, Codex streaming summaries, authoritative completion, and hydration.
 - `scripts/build.sh` validates the complete macOS app.
-- `scripts/build-activity-bar-preview.sh` provides provider, local, external, failed
-  external/retry, narrow-width, and ended-turn fixtures without an agent connection.
+- `scripts/build-activity-bar-preview.sh` provides commentary ownership/handoff,
+  provider, local, external, failed external/retry, narrow-width, and ended-turn
+  fixtures without an agent connection.
 - `scripts/build-tool-visibility-preview.sh` exercises transcript process grouping;
   its isolated defaults keep external refinement disabled.
 - `python3 scripts/check-scroll-following.py` checks the production scroll path after

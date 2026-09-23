@@ -39,6 +39,9 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 || ["image", "file", "video"].contains(part.type)
         }
         func thinking(_ part: KimiPart) -> Bool { part.type == "thinking" && !(part.thinking ?? "").isEmpty }
+        func narrativeSource(_ part: KimiPart) -> Bool {
+            part.type == "thinking" && part.source?["kind"].string == "activity_summary"
+        }
         func flush(running: Bool) {
             guard !turn.isEmpty else { return }
             let answer = turn.lastIndex { $0.role == "assistant" && $0.content.contains(where: visible) && !$0.content.contains { $0.type == "tool_use" } }
@@ -67,10 +70,12 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                     presentation = !running && final == nil && index == lastText ? .record : .progress
                 }
                 // Process records share one bounded host between visible messages.
-                // Live thinking stays visible; completed thoughts join tools/context
-                // in source order. Never merge across a turn boundary.
+                // Keep provider narrative sources on their own row so presentation
+                // can hand that stable anchor between the live bar and history.
                 if process.contains(presentation), let previous = entries.last,
                    process.contains(previous.presentation), previous.messages.count < 24,
+                   !narrativeSource(part),
+                   !previous.messages.contains(where: { $0.content.contains(where: narrativeSource) }),
                    index > 0 {
                     entries[entries.count - 1].messages.append(phase.message)
                     if presentation == .activity { entries[entries.count - 1].presentation = .activity }
