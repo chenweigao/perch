@@ -60,8 +60,8 @@ struct NativeAgentView: View {
                             if !Task.isCancelled && follow { proxy.scrollTo("bottom", anchor: .bottom) }
                         }
                 }
-                .onChange(of: displayedResultKey, initial: true) { _, key in
-                    if key != nil { onResultDisplayed(s) }
+                .task(id: displayedResultKey) {
+                    if displayedResultKey != nil { onResultDisplayed(s) }
                 }
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: s.messages, isRunning: s.busy,

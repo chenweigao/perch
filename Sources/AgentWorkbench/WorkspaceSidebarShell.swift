@@ -26,7 +26,10 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
             }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 8)
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 3) { rows }
+                // Recents are capped at 20. Lay this short navigation list out
+                // eagerly: switching sessions can change row heights and order
+                // together, which can trap LazyVStack in placement updates.
+                VStack(alignment: .leading, spacing: 3) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
             }.scrollIndicators(.hidden)
             VStack(spacing: 2) {
