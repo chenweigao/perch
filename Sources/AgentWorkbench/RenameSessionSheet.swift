@@ -57,6 +57,7 @@ struct RenameSessionSheet: View {
                 if !Task.isCancelled { suggestion = name }
             } catch {
                 // Suggestions stay silent like automatic naming.
+                namingLog.error("suggestion failed \(self.item.reference.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
     }
