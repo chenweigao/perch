@@ -31,8 +31,17 @@ struct KimiMessageView: View {
         DisclosureGroup("上下文压缩摘要") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
     }
     var body: some View {
+        if isUserMessage {
+            UserMessageLayout {
+                content.padding(.horizontal, 14).padding(.vertical, 10)
+                    .background(kimiPaper, in: RoundedRectangle(cornerRadius: 12))
+            }.padding(.top, 10)
+        } else {
+            content.frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-
             ForEach(Array(message.content.enumerated()), id: \.offset) { _, part in
                 switch part.type {
                 case "text":
@@ -52,11 +61,23 @@ struct KimiMessageView: View {
                 default: EmptyView()
                 }
             }
-        }.padding(isUserMessage ? 15 : 0)
-            .background(isUserMessage ? kimiPaper : .clear, in: RoundedRectangle(cornerRadius: 16))
-            .frame(maxWidth: .infinity, alignment: isUserMessage ? .trailing : .leading)
-            .padding(.leading, isUserMessage ? 65 : 0)
-            .padding(.vertical, isUserMessage ? 10 : 0)
+        }
+    }
+}
+
+private struct UserMessageLayout: Layout {
+    private func measure(width: CGFloat, subview: LayoutSubview) -> CGSize {
+        let idealWidth = subview.sizeThatFits(.unspecified).width
+        return subview.sizeThatFits(ProposedViewSize(width: min(idealWidth, width * 0.85), height: nil))
+    }
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = max(1, proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? ReplyStyle.readingWidth)
+        return CGSize(width: width, height: measure(width: width, subview: subviews[0]).height)
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let size = measure(width: bounds.width, subview: subviews[0])
+        subviews[0].place(at: CGPoint(x: bounds.maxX, y: bounds.minY), anchor: .topTrailing,
+                          proposal: ProposedViewSize(size))
     }
 }
 
