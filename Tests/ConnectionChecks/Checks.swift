@@ -42,7 +42,11 @@ private final class TransportFixture {
             sessions[id] = ["id": id, "provider": provider.rawValue, "title": "created", "cwd": body["cwd"].string ?? "/fixture",
                             "busy": false, "archived": false, "updated": 2.0, "completed": 0,
                             "pending": 0, "model": body["model"].string ?? "", "cancelled": false, "steer": provider == .codex]
+            if provider == .codex { sessions[id]?["permissionMode"] = body["permissionMode"].string ?? "ask" }
             result = sessions[id]!
+        } else if parts.count == 3 && parts[2] == "permissions", let body {
+            sessions[parts[1]]?["permissionMode"] = body["mode"].string
+            result = ["ok": true]
         } else if path == "/sessions" {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
@@ -229,7 +233,10 @@ struct ConnectionChecks {
             preconditionFailure("Codex model catalog was not decoded")
         }
         precondition(model.defaultThinking == .medium && model.thinking.last == .ultra)
-        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id)
+        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id, permissionMode: .autoReview)
+        precondition(session.permissionMode == .autoReview)
+        try await client.action(session.id, "permissions", ["mode": .string(CodexPermissionMode.fullAccess.rawValue)])
+        precondition(client.sessions.first { $0.id == session.id }?.permissionMode == .fullAccess)
         precondition(session.id == "native-codex-thread" && session.provider == .codex)
         precondition(fixture.creates.count == 1 && fixture.creates[0].0 == .codex && fixture.creates[0].1 == model.id)
         await settle { client.snapshot?.id == session.id }

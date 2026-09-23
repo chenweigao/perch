@@ -155,6 +155,22 @@ class CodexProtocolTests(unittest.TestCase):
         self.assertEqual(params['approvalPolicy'],'on-request')
         self.assertEqual(params['approvalsReviewer'],'user')
         self.assertEqual(params['sandbox'],'workspace-write')
+    def test_permission_modes_survive_restart_and_reach_resume_and_turn(self):
+        expected = {'ask': ('on-request', 'user', 'workspace-write', 'workspaceWrite'),
+                    'auto-review': ('on-request', 'auto_review', 'workspace-write', 'workspaceWrite'),
+                    'full-access': ('never', 'user', 'danger-full-access', 'dangerFullAccess')}
+        for mode, (policy, reviewer, sandbox, turn_sandbox) in expected.items():
+            with self.subTest(mode=mode):
+                s,fake=self.session(); s.state['permissionMode']=mode; s.persist()
+                restored=broker.Session(json.loads(s.path.read_text()))
+                restored.codex=fake; restored.codex_attached=False
+                restored.codex_ensure(True)
+                params=next(params for method,params in fake.calls if method=='thread/resume')
+                self.assertEqual((params['approvalPolicy'],params['approvalsReviewer'],params['sandbox']), (policy,reviewer,sandbox))
+                restored.prompt({'text':'test','requestId':'permission-'+mode})
+                turn=next(params for method,params in fake.calls if method=='turn/start')
+                self.assertEqual((turn['approvalPolicy'],turn['approvalsReviewer'],turn['sandboxPolicy']), (policy,reviewer,{'type':turn_sandbox}))
+
     def test_resume_hydrates_native_items_with_pagination(self):
         s,fake=self.session(); s.codex_attached=False
         fake.results['thread/resume']={'thread':{'id':'native-thread','model':'gpt-codex'}}
@@ -175,7 +191,8 @@ class CodexProtocolTests(unittest.TestCase):
         self.assertEqual(receipt['status'],'accepted')
         method,params=next(call for call in fake.calls if call[0]=='turn/start')
         self.assertEqual(params,{'threadId':'native-thread','input':[{'type':'text','text':'开始'}],
-                                 'clientUserMessageId':'request-1','model':'gpt-codex','effort':'medium'})
+                                 'clientUserMessageId':'request-1','model':'gpt-codex','effort':'medium',
+                                 'approvalPolicy':'on-request','approvalsReviewer':'user','sandboxPolicy':{'type':'workspaceWrite'}})
         steer=s.steer({'text':'只读分析','requestId':'steer-1'})
         self.assertEqual(steer['status'],'accepted')
         steer_params=next(params for method,params in fake.calls if method=='turn/steer')
@@ -254,6 +271,34 @@ class CodexHandlerContractTests(unittest.TestCase):
         self.assertEqual(code,200); self.assertEqual(payload['id'],'native-thread')
         self.assertEqual(payload['provider'],'codex'); self.assertEqual(payload['thinking'],'medium')
         self.assertIn('native-thread',broker.SESSIONS)
+    def test_create_passes_selected_permission_mode(self):
+        catalog=[{'id':'gpt-codex','provider':'codex','thinking':[]}]
+        for mode, reviewer, policy in [('ask','user','on-request'), ('auto-review','auto_review','on-request'), ('full-access','user','never')]:
+            with self.subTest(mode=mode):
+                broker.SESSIONS.clear(); fake=FakeCodex()
+                with patch.object(broker,'codex_catalog',return_value=catalog), patch.object(broker,'CodexAppServer',return_value=fake):
+                    code,payload=self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex','permissionMode':mode})
+                self.assertEqual(code,200)
+                self.assertEqual(payload['permissionMode'],mode)
+                params=next(params for method,params in fake.calls if method=='thread/start')
+                self.assertEqual((params['approvalsReviewer'],params['approvalPolicy']), (reviewer,policy))
+
+    def test_permissions_change_is_persisted_but_not_while_busy(self):
+        code,_=self.request('/sessions/native-thread/permissions',{'mode':'auto-review'})
+        self.assertEqual(code,200)
+        self.assertEqual(json.loads(self.s.path.read_text())['permissionMode'],'auto-review')
+        self.assertEqual(self.s.summary()['permissionMode'],'auto-review')
+        self.s.state['busy']=True
+        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'full-access'})[0],400)
+        self.s.state['busy']=False
+        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'unknown'})[0],400)
+        self.assertEqual(self.s.state['permissionMode'],'auto-review')
+        self.s.state['interactions']=[{'id':'pending'}]
+        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'full-access'})[0],400)
+        self.s.state['interactions']=[]
+        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'ask'})[0],200)
+        self.assertEqual(self.s.state['permissionMode'],'ask')
+
     def test_create_rejects_model_and_effort_outside_catalog(self):
         catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
         with patch.object(broker,'codex_catalog',return_value=catalog):

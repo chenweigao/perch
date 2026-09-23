@@ -41,6 +41,7 @@ public struct NativeAgentSession: Decodable, Identifiable, Equatable {
     public let model: String
     public let error: String?
     public let cancelled: Bool?
+    public let permissionMode: CodexPermissionMode?
     public let thinking: String?
     public let context: ContextUsage?
     public let turnId: String?
@@ -68,6 +69,7 @@ public struct NativeAgentSnapshot: Decodable {
     public let messages: [KimiMessage]
     public let interactions: [JSONValue]
     public let error: String?
+    public let permissionMode: CodexPermissionMode?
     public let thinking: String?
     public let context: ContextUsage?
     /// Absent for runtimes that never announce commands, which is different from a
@@ -87,4 +89,27 @@ public struct NativeRequestReceipt: Decodable {
     public let id: String
     public let status: String
     public let error: String?
+}
+
+/// Stored per Codex session; changing app defaults never changes an existing task.
+public enum CodexPermissionMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    case ask
+    case autoReview = "auto-review"
+    case fullAccess = "full-access"
+    public static let defaultsKey = "codex.defaultPermissionMode"
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .ask: return L("需要时询问")
+        case .autoReview: return L("自动审核")
+        case .fullAccess: return L("完全访问")
+        }
+    }
+    public var detail: String {
+        switch self {
+        case .ask: return L("在工作区内执行；额外权限由你批准。")
+        case .autoReview: return L("保留工作区沙箱，由 Codex 自动审核额外权限；请求仍可能被拒绝。")
+        case .fullAccess: return L("可访问运行机器上的工作区外文件和网络，执行命令时不再请求批准。")
+        }
+    }
 }
