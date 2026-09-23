@@ -9,6 +9,13 @@ enum ReplyStyle {
     static let lineHeightRatio: CGFloat = 1.625
     static let ink = Color.primary.opacity(0.88)
     static let paper = Color.primary.opacity(0.035)
+    // Preserve a dynamic color in cached attributed text. Applying alpha to
+    // labelColor once can freeze the system appearance before the light window exists.
+    static let nativeInk = NSColor(name: nil) { appearance in
+        var ink = NSColor.labelColor
+        appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.88) }
+        return ink
+    }
 }
 
 struct KimiMarkdown: View {
@@ -123,7 +130,7 @@ private struct ReplyListLayout: Layout {
 }
 
 private struct ReplyInkKey: EnvironmentKey {
-    static let defaultValue = NSColor.labelColor.withAlphaComponent(0.88)
+    static let defaultValue = ReplyStyle.nativeInk
 }
 private extension EnvironmentValues {
     var replyInk: NSColor {
@@ -198,7 +205,7 @@ struct SelectableReplyText: NSViewRepresentable {
     init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4) {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = lineSpacing
         attributed = NSAttributedString(string: text, attributes: [
-            .font: font, .foregroundColor: NSColor.labelColor.withAlphaComponent(0.88), .paragraphStyle: paragraph
+            .font: font, .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
         ])
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
@@ -208,11 +215,38 @@ struct SelectableReplyText: NSViewRepresentable {
             return true
         }
     }
+    // Dismantled paragraphs hold no message content or delegate. Reuse only after
+    // SwiftUI has detached them; cap the pool independently of history length.
+    private static var recycled: [ReplyTextView] = []
+    #if TRANSCRIPT_CHECKS
+    static var recycledCount: Int { recycled.count }
+    #endif
+    static func dismantleNSView(_ view: ReplyTextView, coordinator: Coordinator) {
+        view.delegate = nil
+        view.setSelectedRange(NSRange(location: 0, length: 0))
+        view.update(NSAttributedString(string: ""))
+        view.isConversationBodyText = false
+        if recycled.count < 64 { recycled.append(view) }
+    }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> ReplyTextView {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("text_create", since: start) }
+        #endif
         // The enclosing conversation owns viewport layout; each short paragraph
         // needs selection and drawing, not another TextKit 2 viewport controller.
-        let view = ReplyTextView(usingTextLayoutManager: false)
+        let view: ReplyTextView
+        if let index = Self.recycled.firstIndex(where: { $0.superview == nil && $0.window == nil }) {
+            view = Self.recycled.remove(at: index)
+            #if TRANSCRIPT_CHECKS
+            precondition(view.string.isEmpty && view.delegate == nil && view.selectedRange().length == 0,
+                         "Recycled text view retained outgoing row state")
+            NavigationRenderMetrics.record("text_reuse", since: CACurrentMediaTime())
+            #endif
+        } else {
+            view = ReplyTextView(usingTextLayoutManager: false)
+        }
         view.isEditable = false
         view.delegate = context.coordinator
         view.enabledTextCheckingTypes = 0

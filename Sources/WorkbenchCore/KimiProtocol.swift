@@ -114,11 +114,24 @@ public struct KimiPart: Decodable, Equatable, Sendable {
             || (value.hasPrefix("<notification ") && value.hasSuffix("</notification>"))
             || (value.hasPrefix("<skill-loaded ") && value.hasSuffix("</skill-loaded>"))
             || (value.hasPrefix("<system>") && value.hasSuffix("</system>"))
+            || isToolSkillLoad(value)
+    }
+    /// A Skill tool result arrives as a one-line note ("Skill tool loaded
+    /// instructions …") ahead of a `<skill-loaded trigger="model-tool">` block.
+    /// The Skill call already shows in the activity record, so the whole
+    /// injection folds as harness metadata — unlike a `trigger="user-slash"`
+    /// activation, whose summary line anchors the user's turn.
+    private func isToolSkillLoad(_ value: String) -> Bool {
+        guard value.hasSuffix("</skill-loaded>"), let cut = value.firstIndex(of: "\n") else { return false }
+        let block = value[cut...].drop(while: \.isWhitespace)
+        guard block.hasPrefix("<skill-loaded ") else { return false }
+        return block.prefix(while: { $0 != ">" }).contains(#"trigger="model-tool""#)
     }
     /// kimi-code prepends a one-line summary (for example "User activated the
     /// skill …") to the `<skill-loaded>` block. The line stays visible as the user
     /// bubble — folding the whole part would drop the turn boundary — while the
     /// skill body collapses instead of dumping the full SKILL.md into the chat.
+    /// Tool-triggered loads never reach here; they fold as runtime context.
     public var skillContextSplit: (prefix: String, context: String)? {
         guard type == "text", let text, !isRuntimeContext else { return nil }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)

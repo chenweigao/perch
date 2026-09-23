@@ -33,15 +33,36 @@ struct ConversationActivityBar: View {
     var timing: ConversationTiming? = nil
     var online = true
     var pendingCount = 0
+    var narrativeSession: String? = nil
+    var narrativeOverride: ActivityNarrative? = nil
+    var externalFailureOverride: String? = nil
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
+    var onRetryExternal: (() -> Void)? = nil
     @State private var expanded = false
     @State private var pointerAnchor: CGRect?
+    @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
+    @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var narrative: ActivityNarrative? {
+        narrativeOverride ?? narrativeSession.flatMap { narrativeStore.narrative(session: $0) }
+    }
+    private var externalFailure: String? {
+        externalFailureOverride ?? narrativeSession.flatMap { narrativeStore.failure(session: $0)?.message }
+    }
+    private var canRetryExternal: Bool {
+        if externalFailureOverride != nil { return onRetryExternal != nil }
+        return narrativeSession.map { narrativeStore.canRetry(session: $0) } ?? false
+    }
+    private func retryExternal() {
+        if let onRetryExternal { onRetryExternal() }
+        else if let narrativeSession { narrativeStore.retry(session: narrativeSession, settings: summarySettings) }
+    }
 
     var body: some View {
         ZStack {
-            if activity.isVisible || timing != nil {
+            if activity.isVisible || timing != nil || narrative != nil {
                 HStack(spacing: 10) {
                     Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
@@ -94,7 +115,9 @@ struct ConversationActivityBar: View {
     private var statusTitle: Text {
         if !online { return Text(LocalizedStringKey(activity.title)) }
         if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
-        if !isRunning && !activity.needsAttention && timing?.endedAt != nil { return Text("本轮结束") }
+        if activity.needsAttention || activity.title == L("Stopping…") { return Text(LocalizedStringKey(activity.title)) }
+        if let narrative { return Text(verbatim: narrative.headline) }
+        if !isRunning && timing?.endedAt != nil { return Text("本轮结束") }
         if let description = activity.operationDescription { return Text(verbatim: description) }
         return Text(LocalizedStringKey(activity.title))
     }
@@ -126,6 +149,24 @@ struct ConversationActivityBar: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if let narrative {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(narrative.headline).font(.system(size: 13, weight: .semibold)).textSelection(.enabled)
+                            if let detail = narrative.detail, !detail.isEmpty {
+                                Text(detail).foregroundStyle(.secondary).textSelection(.enabled)
+                            }
+                            Text("\(narrative.phase.label) · \(narrative.source.label) · \(narrative.lifecycle == .streaming ? L("正在更新") : L("阶段已完成"))")
+                                .font(.system(size: 11)).foregroundStyle(.tertiary)
+                            let evidence = narrative.evidenceIDs.compactMap { id in activity.tools.first { $0.id == id } }
+                            if !evidence.isEmpty {
+                                Text("依据").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                                ForEach(evidence) { tool in
+                                    Text("• \(ToolPresentation.action(tool.name)) \(ToolPresentation.compactTarget(tool))")
+                                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                                }
+                            }
+                        }
+                    }
                     if !activity.attentionTools.isEmpty {
                         Text("需要处理").fontWeight(.semibold).foregroundStyle(.orange)
                         ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
@@ -133,7 +174,7 @@ struct ConversationActivityBar: View {
                     if !activity.activeTools.isEmpty {
                         Text("当前操作").fontWeight(.semibold)
                         ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
-                    } else if online && pendingCount == 0 && activity.attentionTools.isEmpty {
+                    } else if narrative == nil && online && pendingCount == 0 && activity.attentionTools.isEmpty {
                         statusTitle.foregroundStyle(.secondary)
                     }
                     if !activity.todos.isEmpty {
@@ -154,6 +195,15 @@ struct ConversationActivityBar: View {
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
+            if let externalFailure {
+                Divider()
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("外部摘要更新失败：\(externalFailure)").foregroundStyle(.orange).textSelection(.enabled)
+                    if canRetryExternal {
+                        Button("重试外部摘要", action: retryExternal).buttonStyle(.borderless)
+                    }
+                }
+            }
             if let timing {
                 Divider()
                 ActivityTurnClock(timing: timing, showsDetails: true)

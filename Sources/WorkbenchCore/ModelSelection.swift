@@ -127,7 +127,7 @@ public struct ContextBudget: Equatable, Sendable {
 
     public var remaining: Int { limit - used }
     public var usedFraction: Double { Double(used) / Double(limit) }
-    public var remainingPercent: Int { Int((1 - usedFraction) * 100) }
+    public var remainingPercent: Int { Int((Double(remaining) * 100 / Double(limit)).rounded(.down)) }
 
     public enum Pressure: Sendable, Equatable { case comfortable, tight, critical }
     public var pressure: Pressure {

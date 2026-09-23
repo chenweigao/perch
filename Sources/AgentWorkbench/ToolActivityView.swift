@@ -10,24 +10,17 @@ struct KimiActivityView: View {
     let tools: [String: VisibleTool]
     let api: KimiAPI?
     let sessionId: String
-    var summary: String? = nil
+    var narrative: ActivityNarrative? = nil
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let grouped = entry.messages.count > 1 || items.isEmpty
+        let grouped = entry.messages.count > 1 || items.isEmpty || narrative != nil
         VStack(alignment: .leading, spacing: 2) {
             if grouped {
-                if let summary {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Label("自动摘要", systemImage: "sparkles")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                        Text(summary).font(.system(size: 13)).foregroundStyle(.secondary)
-                            .lineLimit(2).textSelection(.enabled)
-                    }
-                }
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 8) {
-                        if entry.isExploration { Text("读取与搜索 · \(items.count) 次调用").fixedSize() }
+                        if let narrative {
+                            Text("\(narrative.headline) · \(items.count) 次调用").lineLimit(1).truncationMode(.tail)
+                        } else if entry.isExploration { Text("读取与搜索 · \(items.count) 次调用").fixedSize() }
                         else if !items.isEmpty { Text("过程记录 · \(items.count) 次调用").fixedSize() }
                         else { Text("运行上下文").fixedSize() }
                         if !expanded {

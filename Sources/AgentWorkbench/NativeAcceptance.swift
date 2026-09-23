@@ -27,7 +27,8 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     static let host = SSHHost(id: UUID(uuidString: "00000000-0000-0000-0000-000000000023")!,
                               name: "离线验收", destination: "")
     let sessions: [WorkspaceSession]
-    private let snapshots: [String: Data]
+    private var snapshots: [String: Data]
+    private var streamingSnapshot: [String: Any]?
     private(set) var requests: [String] = []
     init() throws {
         sessions = (0..<500).map { index in
@@ -71,6 +72,22 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             ], options: [.sortedKeys])
         }
         snapshots = values
+    }
+    func advanceStream(_ step: Int) throws {
+        if streamingSnapshot == nil {
+            streamingSnapshot = try JSONSerialization.jsonObject(with: snapshots["session-0"]!) as? [String: Any]
+        }
+        var value = streamingSnapshot!
+        var messages = value["messages"] as! [[String: Any]]
+        // Bound the synthetic tail so long-run growth reflects the UI, not a
+        // deliberately ever-growing response. Keep IDs and full history intact.
+        messages[messages.count - 1]["content"] = [["type": "text", "text":
+            "第 200 轮结果\n\n流式更新 \(step) · 中文 English\n\n" + String(repeating: "新增内容 ", count: 1 + step % 40)]]
+        value["messages"] = messages
+        value["busy"] = true
+        value["revision"] = step + 2
+        streamingSnapshot = value
+        snapshots["session-0"] = try JSONSerialization.data(withJSONObject: value)
     }
     func request(_ path: String, body: JSONValue?) throws -> Data {
         requests.append(path)
@@ -129,6 +146,9 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             }
             try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             report["rss_before_mb"] = residentMB()
+            if mode == "joint" {
+                report.merge(try await joint(window)) { _, new in new }
+            }
             if mode == "all" {
                 var switches: [Double] = []
                 for index in 1...16 {
@@ -146,7 +166,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if mode != "frames" { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if mode != "frames" && mode != "joint" { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -216,14 +236,124 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         return ["query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
     }
-    private func settle(_ window: NSWindow, until ready: () -> Bool) async throws {
+    private func joint(_ window: NSWindow) async throws -> [String: Any] {
+        guard let scroll = transcript(in: window), let navigator = ConversationTranscript.navigator(in: scroll) else {
+            throw WorkbenchError("Missing joint transcript")
+        }
+        navigator.select(80)
+        try await settle(window) { navigator.current == 80 }
+        let seconds = Double(ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_JOINT_SECONDS"] ?? "24") ?? 24
+        let start = CACurrentMediaTime()
+        var step = 0, switches = 0
+        var input: [Double] = [], update: [Double] = [], samples: [[String: Double]] = []
+        var nextSample = start
+        let initialCPU = processCPU()
+        while CACurrentMediaTime() - start < seconds {
+            let tick = CACurrentMediaTime()
+            if step % 5 == 0, let currentScroll = transcript(in: window) {
+                let delta = step % 40 < 20 ? 120.0 : -120.0
+                let extent = max(0, (currentScroll.documentView?.bounds.height ?? 0) - currentScroll.contentView.bounds.height)
+                let y = min(extent, max(0, currentScroll.contentView.bounds.minY + delta))
+                currentScroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+                currentScroll.reflectScrolledClipView(currentScroll.contentView)
+                await Task.yield(); flush(window)
+            }
+            guard let activeScroll = transcript(in: window), let before = ConversationTranscript.readingAnchor(in: activeScroll) else {
+                throw WorkbenchError("Missing reading anchor during streaming")
+            }
+            try fixture.advanceStream(step)
+            let refreshStart = CACurrentMediaTime()
+            let refresh = Task { try await model.native.acceptanceRefreshSelected() }
+            let draft = "联合输入 \(step) · 中文 English"
+            let inputStart = CACurrentMediaTime()
+            model.native.drafts["session-0"] = draft
+            try await settle(window, "draft step \(step)") { self.containsText(draft, in: window.contentView) }
+            input.append((CACurrentMediaTime() - inputStart) * 1000)
+            try checkTextContrast(in: window.contentView)
+            try await refresh.value
+            try await settle(window, "snapshot step \(step)") { self.model.native.snapshot?.revision == step + 2 }
+            update.append((CACurrentMediaTime() - refreshStart) * 1000)
+            guard model.native.drafts["session-0"] == draft,
+                  let after = ConversationTranscript.readingAnchor(in: activeScroll),
+                  after.entry == before.entry, abs(after.offset - before.offset) <= 1 else {
+                throw WorkbenchError("Streaming lost draft or moved reading anchor")
+            }
+            if step % 30 == 29 {
+                model.open(fixture.sessions[1])
+                try await settle(window) { self.hasMountedMessage(window, session: "session-1") }
+                model.open(fixture.sessions[0])
+                try await settle(window, "return step \(step), expected \(before)") {
+                    guard self.hasMountedMessage(window, session: "session-0"), self.containsText(draft, in: window.contentView),
+                          let returned = self.transcript(in: window), let anchor = ConversationTranscript.readingAnchor(in: returned) else { return false }
+                    return anchor.entry == before.entry && abs(anchor.offset - before.offset) <= 1
+                }
+                switches += 2
+            }
+            if let currentScroll = transcript(in: window), let counts = ConversationTranscript.retainedHosts(in: currentScroll) {
+                guard counts.retained <= counts.mounted + 24, SelectableReplyText.recycledCount <= 64 else {
+                    throw WorkbenchError("Joint fixture accumulated retained views")
+                }
+                if CACurrentMediaTime() >= nextSample {
+                    samples.append(["elapsed_s": CACurrentMediaTime() - start, "rss_mb": residentMB(),
+                        "cpu_seconds": processCPU() - initialCPU, "retained": Double(counts.retained),
+                        "mounted": Double(counts.mounted), "retired": Double(counts.retired),
+                        "recycled_text_views": Double(SelectableReplyText.recycledCount), "updates": Double(step + 1)])
+                    nextSample = CACurrentMediaTime() + 30
+                    try writeReport(["status": "running", "joint_samples": samples], name: "joint-progress.json")
+                }
+            }
+            step += 1
+            // Match the native provider's 400ms polling cadence, allowing idle
+            // time rather than spinning at maximum fixture throughput.
+            let delay = 0.4 - (CACurrentMediaTime() - tick)
+            if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
+        }
+        return ["joint_duration_s": CACurrentMediaTime() - start, "joint_updates": step,
+                "joint_switches": switches, "joint_input_to_layout_ms": stats(input),
+                "joint_update_to_layout_ms": stats(update), "joint_samples": samples,
+                "joint_cpu_seconds": processCPU() - initialCPU,
+                "joint_note": "Real workbench; fixed full-history JSON updates, local draft binding, anchor and return checks at 2.5Hz. Excludes hardware keyboard/IME and network; CPU includes fixture serialization."]
+    }
+    private func checkTextContrast(in root: NSView?) throws {
+        guard let root else { return }
+        if let view = root as? ReplyTextView, view.isConversationBodyText, !view.string.isEmpty {
+            var colors: [Double] = []
+            view.effectiveAppearance.performAsCurrentDrawingAppearance {
+                view.textStorage?.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: view.string.utf16.count)) { value, _, _ in
+                    if let color = (value as? NSColor)?.usingColorSpace(.deviceRGB) {
+                        colors.append(Double(max(color.redComponent, color.greenComponent, color.blueComponent)))
+                    }
+                }
+            }
+            guard colors.allSatisfy({ $0 < 0.8 }) else {
+                throw WorkbenchError("Light fixture contains unreadable body text: \(view.effectiveAppearance.name.rawValue) \(colors)")
+            }
+        }
+        for child in root.subviews { try checkTextContrast(in: child) }
+    }
+    private func containsText(_ text: String, in root: NSView?) -> Bool {
+        guard let root else { return false }
+        if let view = root as? NSTextView, view.string == text { return true }
+        return root.subviews.contains { containsText(text, in: $0) }
+    }
+    private func processCPU() -> Double {
+        var value = rusage(); getrusage(RUSAGE_SELF, &value)
+        return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
+            + Double(value.ru_utime.tv_usec + value.ru_stime.tv_usec) / 1_000_000
+    }
+    private func writeReport(_ report: [String: Any], name: String) throws {
+        guard let folder = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESULTS"] else { return }
+        let url = URL(fileURLWithPath: folder).appendingPathComponent(name)
+        try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: url, options: .atomic)
+    }
+    private func settle(_ window: NSWindow, _ context: String = "UI", until ready: () -> Bool) async throws {
         let start = CACurrentMediaTime()
         repeat {
             try await Task.sleep(for: .milliseconds(1))
             flush(window)
             if ready() { return }
         } while CACurrentMediaTime() - start < 5
-        throw WorkbenchError("UI readiness timeout")
+        throw WorkbenchError("UI readiness timeout: \(context), anchor=\(String(describing: transcript(in: window).flatMap { ConversationTranscript.readingAnchor(in: $0) }))")
     }
     private func flush(_ window: NSWindow) {
         for target in [window] + window.sheets {

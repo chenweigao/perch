@@ -73,6 +73,7 @@ struct NativeAgentView: View {
                     isRunning: s.busy,
                     timing: connection.timings.turns[s.id],
                     online: connection.online, pendingCount: s.interactions.count,
+                    narrativeSession: readingKey,
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                     .frame(maxWidth: .infinity).padding(.vertical, 6)
@@ -93,7 +94,7 @@ struct NativeAgentView: View {
                     VStack(spacing: 8) {
                         MessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                                       set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
-                                        placeholder: L("Continue this task, or type / for commands…"),
+                                        placeholder: L("继续此任务…"),
                                         accessibilityLabel: "Message \(s.provider.label)",
                                         canSend: canSend(s),
                                         onSend: { connection.send(mode: defaultMode(s)) },
@@ -112,7 +113,8 @@ struct NativeAgentView: View {
                                 connection.setPermission(mode, for: s.id)
                             }
                             Spacer(minLength: 8)
-                            ContextMeter(budget: connection.sessions.first { $0.id == s.id }?.budget)
+                            ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
+                                         reportedAt: s.context?.reportedAt, isStale: !connection.online)
                             ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                                  canSend: canSend(s), canStop: connection.canStop,
                                                  queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
@@ -120,7 +122,7 @@ struct NativeAgentView: View {
                                                  onStop: { connection.stop() },
                                                  onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
                         }
-                    }.padding(12).workbenchControlSurface()
+                    }.padding(12).composerSurface()
                     ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
@@ -203,6 +205,13 @@ struct NativeModelControls: View {
                         }
                     }
                     if availableModels.isEmpty { Text(connection.modelsError ?? "Loading models…") }
+                    if let current, current.supportsThinking {
+                        Divider()
+                        ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking),
+                                       disabled: !connection.online || snapshot.busy) { level in
+                            connection.setThinking(level, for: snapshot.id)
+                        }
+                    }
                     if current?.supportsThinking == false {
                         Divider()
                         Text("此模型未提供思考档位设置。")
@@ -215,10 +224,6 @@ struct NativeModelControls: View {
                     // wrong model, so the runtime rejects it and so does the UI.
                     .disabled(!connection.online || snapshot.busy)
                     .help(snapshot.busy ? "Models cannot be changed while running" : "Change the model for the next turn")
-                }
-                ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking),
-                               disabled: !connection.online || snapshot.busy) { level in
-                    connection.setThinking(level, for: snapshot.id)
                 }
             }.task(id: snapshot.id) { await connection.loadModels() }
         } else {

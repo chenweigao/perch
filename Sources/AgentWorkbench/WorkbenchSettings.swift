@@ -13,22 +13,41 @@ struct WorkbenchSettings: View {
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex, .claude]
     var body: some View {
         Form {
-            Section("语言 / Language") {
+            Section {
                 Picker("界面语言", selection: $appLanguage) {
                     ForEach(AppLanguage.allCases) { language in Text(language.displayName).tag(language) }
                 }
                 .onChange(of: appLanguage) { _, newValue in AppLanguage.applyToSystem(newValue) }
+            } header: {
+                SettingsSectionHeader("语言 / Language", systemImage: "globe", tint: .blue)
             }
-            Section("Agent 与执行环境") {
-                Button("管理本机 Agent…") { showLocal = true }
-                Button("添加 SSH 环境…") { editingHost = nil; showSSH = true }
-                ForEach(model.connections) { connection in
-                    Button(connection.host.name) { editingHost = connection.host; showSSH = true }
+            Section {
+                SettingsRow(action: { showLocal = true }) {
+                    Image(systemName: "laptopcomputer").frame(width: 20).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("本机 Agent").foregroundStyle(.primary)
+                        localAgentStatus
+                    }
                 }
+                ForEach(model.connections) { connection in
+                    HostSettingsRow(connection: connection) {
+                        editingHost = connection.host
+                        showSSH = true
+                    }
+                }
+                Button { editingHost = nil; showSSH = true } label: {
+                    Label("添加 SSH 环境…", systemImage: "plus")
+                        .padding(.horizontal, 6).padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+            } header: {
+                SettingsSectionHeader("Agent 与执行环境", systemImage: "server.rack", tint: .teal)
+            } footer: {
                 Text("远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。")
-                    .font(.caption).foregroundStyle(.secondary)
             }
-            Section("新会话默认权限") {
+            Section {
                 ForEach(permissionProviders, id: \.rawValue) { provider in
                     PermissionPicker(provider: provider,
                                      capability: PermissionCatalog.capability(for: provider, selected: permissionMode(for: provider)),
@@ -40,37 +59,164 @@ struct WorkbenchSettings: View {
                 PermissionPicker(provider: .dsh,
                                  capability: PermissionCatalog.capability(for: .dsh),
                                  layout: .form, allowsSelection: false) { _ in }
-                Button("恢复安全默认") {
-                    for provider in permissionProviders {
-                        PermissionDefaults.restoreSafeDefault(for: provider)
-                        permissionModes[provider] = PermissionDefaults.mode(for: provider)
+                HStack {
+                    Spacer()
+                    Button("恢复安全默认") {
+                        for provider in permissionProviders {
+                            PermissionDefaults.restoreSafeDefault(for: provider)
+                            permissionModes[provider] = PermissionDefaults.mode(for: provider)
+                        }
                     }
                 }
+            } header: {
+                SettingsSectionHeader("新会话默认权限", systemImage: "lock.shield", tint: .orange)
+            } footer: {
                 Text("只影响新建会话。Kimi、Qoder 与 Claude Code 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
-                    .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Task notifications") {
+            Section {
                 Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
-                Text("Completed responses, requests for input, and failures. Click a notification to open the task.").font(.caption).foregroundStyle(.secondary)
                 if let error = model.notificationError { Text(error).font(.caption).foregroundStyle(.orange) }
+            } header: {
+                SettingsSectionHeader("Task notifications", systemImage: "bell.badge", tint: .red)
+            } footer: {
+                Text("Completed responses, requests for input, and failures. Click a notification to open the task.")
             }
-            Section("界面") {
-                HStack {
-                    Button("配置活动摘要…") { showSummary = true }
-                    Spacer()
-                    Text(summarySettings.configuration.enabled ? "已开启" : "默认关闭").foregroundStyle(.secondary)
-                    if summarySettings.configuration.enabled { Button("关闭") { summarySettings.disable() } }
+            Section {
+                SettingsRow(action: { showSummary = true }) {
+                    Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
+                    Text("活动叙事").foregroundStyle(.primary)
+                } trailing: {
+                    (summarySettings.configuration.enabled ? Text("已开启") : Text("默认关闭"))
+                        .font(.caption)
+                        .foregroundStyle(summarySettings.configuration.enabled ? Color.green : Color.secondary)
                 }
-                Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
-                    .font(.caption).foregroundStyle(.secondary)
+                if summarySettings.configuration.enabled {
+                    Button("关闭活动叙事") { summarySettings.disable() }
+                }
+            } header: {
+                SettingsSectionHeader("界面", systemImage: "paintbrush", tint: .purple)
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+                    Text(verbatim: "Perch \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
+                }
             }
-        }.formStyle(.grouped).frame(width: 480, height: 760)
+        }.formStyle(.grouped).frame(width: 560, height: 740)
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
             .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
             .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
     }
 
+    @ViewBuilder private var localAgentStatus: some View {
+        switch model.localOMP {
+        case .found(_, let version):
+            Label("已找到 omp \(version)", systemImage: "checkmark.circle.fill")
+                .font(.caption).foregroundStyle(.green)
+        case .unusable:
+            Label("找到了可执行文件，但无法使用", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption).foregroundStyle(.orange)
+        case .missing:
+            Text("未找到本机 omp").font(.caption).foregroundStyle(.secondary)
+        case nil:
+            Text("尚未检测。").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
     private func permissionMode(for provider: SessionKind) -> String? {
         permissionModes[provider] ?? PermissionDefaults.mode(for: provider)
+    }
+}
+
+/// Section title with a small colored symbol tile, in the spirit of System Settings.
+private struct SettingsSectionHeader: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+    let tint: Color
+
+    init(_ title: LocalizedStringKey, systemImage: String, tint: Color) {
+        self.title = title
+        self.systemImage = systemImage
+        self.tint = tint
+    }
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(tint.gradient, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+        }
+    }
+}
+
+private struct HostSettingsRow: View {
+    @ObservedObject var connection: HostConnection
+    let action: () -> Void
+
+    var body: some View {
+        SettingsRow(action: action) {
+            Image(systemName: "network").frame(width: 20).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(connection.host.name).foregroundStyle(.primary)
+                Text(connection.host.destination).font(.caption).foregroundStyle(.secondary)
+            }
+        } trailing: {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(connection.online ? Color.green : Color.secondary.opacity(0.35))
+                    .frame(width: 6, height: 6)
+                (connection.online ? Text("已连接") : Text("未连接"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// Full-width row that stays visually quiet until hovered, then opens a sheet on click.
+private struct SettingsRow<Content: View, Trailing: View>: View {
+    let action: () -> Void
+    let content: Content
+    let trailing: Trailing
+    @State private var hovered = false
+
+    init(action: @escaping () -> Void,
+         @ViewBuilder content: () -> Content,
+         @ViewBuilder trailing: () -> Trailing) {
+        self.action = action
+        self.content = content()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                content
+                Spacer(minLength: 8)
+                trailing
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(Color.primary.opacity(hovered ? 0.05 : 0),
+                    in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .onHover { hovered = $0 }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private extension SettingsRow where Trailing == EmptyView {
+    init(action: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.init(action: action, content: content) { EmptyView() }
     }
 }

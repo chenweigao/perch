@@ -239,6 +239,11 @@ final class KimiConnection: ObservableObject {
         conversation = cachedConversations.take(id)
         loadSelected(id)
     }
+    /// Messages of a session opened this launch, for local name suggestions.
+    func loadedMessages(for id: String) -> [KimiMessage]? {
+        if conversation?.snapshot.session.id == id { return conversation?.messages }
+        return cachedConversations.value(id)?.messages
+    }
     func reloadSelected() {
         guard online, !loading, let id = selectedId else { return }
         loadSelected(id)

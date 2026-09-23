@@ -110,16 +110,22 @@ struct ConversationTranscript: View {
     @State private var toolProjection = ToolVisibilityProjection()
     @State private var projection = ConversationProjection()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
-    @StateObject private var summaryController = ActivitySummaryController()
+    @ObservedObject private var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.self) private var environment
     @State private var measured: (session: String, height: CGFloat)?
     @State private var contentOriginY: CGFloat = 0
     var body: some View {
+        let key = memoryKey ?? sessionId
         let visible = toolProjection.update(messages, sessionID: sessionId, live: liveTools, running: running, online: online)
         let snapshot = projection.update(visible.messages, isRunning: isRunning)
+        let narrative = ActivityNarrativeProjection.make(entries: snapshot.entries, tools: visible.tools,
+                                                           isRunning: isRunning)
         let batch = ActivitySummaryBatch.latest(in: snapshot.entries, tools: visible.tools,
             isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online)
-        let observation = SummaryObservation(session: memoryKey ?? sessionId, batch: batch,
+        let narrativeKey = [narrative.current?.stageID, narrative.current?.headline,
+                            narrative.current?.source.rawValue, narrative.current?.lifecycle.rawValue,
+                            String(narrative.entryStageIDs.count)].compactMap { $0 }.joined(separator: "|")
+        let observation = SummaryObservation(session: key, batch: batch, narrativeKey: narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
             settingsRevision: summarySettings.revision)
         let contents = snapshot.entries.map { entry in
@@ -127,11 +133,12 @@ struct ConversationTranscript: View {
             let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
                 if let value = visible.tools[id] { result[id] = value }
             }
-            let summary = summarySettings.configuration.enabled ? summaryController.summaries[entry.id] : nil
+            let rowNarrative = narrativeStore.narrative(session: key, entryID: entry.id)
+                ?? narrative.narrative(for: entry.id)
             return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId,
-                memoryKey: (memoryKey ?? sessionId) + ":" + entry.id, activitySummary: summary)
+                memoryKey: key + ":" + entry.id, activityNarrative: rowNarrative)
         }
-        ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: memoryKey ?? sessionId,
+        ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
                                  contentOriginY: contentOriginY) { height in
@@ -141,14 +148,15 @@ struct ConversationTranscript: View {
                 $0.frame(in: .named("conversation-content")).minY
             } action: { contentOriginY = $0 }
             .task(id: observation) {
-                summaryController.observe(session: observation.session, batch: batch, running: isRunning,
-                                          online: observation.online, following: followsLatest, settings: summarySettings)
+                narrativeStore.observe(session: observation.session, snapshot: narrative, batch: batch,
+                    running: isRunning, online: observation.online, following: followsLatest,
+                    settings: summarySettings)
             }
-            .onDisappear { summaryController.cancel() }
     }
     private struct SummaryObservation: Hashable {
         let session: String
         let batch: ActivitySummaryBatch?
+        let narrativeKey: String
         let running: Bool
         let online: Bool
         let following: Bool
@@ -187,6 +195,9 @@ private final class ConversationDocumentView: NSView {
     private var navigation: [ConversationTurnSummary] = []
     private var turnRows: [Int] = []
     private var heights: [CGFloat] = []
+    // Keep measured sizes after their hosting graphs leave the retained window.
+    // A row may reuse one only while its content, appearance and width match.
+    private var measuredSizes: [String: (content: ConversationEntryView, width: CGFloat, height: CGFloat)] = [:]
     private var geometry = ConversationRowGeometry(heights: [])
     private var offsets: [CGFloat] { geometry.offsets }
     private var controllers: [String: ConversationEntryController] = [:]
@@ -309,6 +320,12 @@ private final class ConversationDocumentView: NSView {
             self.viewport = viewport
             viewport?.add(self)
         }
+        let nextIndices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
+        if self.sessionId != sessionId || rowAppearance != appearance {
+            measuredSizes.removeAll(keepingCapacity: true)
+        } else {
+            measuredSizes = measuredSizes.filter { nextIndices[$0.key] != nil }
+        }
         if self.sessionId != sessionId {
             cancelHeightAnimation()
             saveReadingPosition()
@@ -327,7 +344,7 @@ private final class ConversationDocumentView: NSView {
         self.contentOriginY = contentOriginY
         let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
         contents = next
-        indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
+        indices = nextIndices
         self.navigation = navigation
         turnRows = navigation.compactMap { indices[$0.id] }
         heights = next.map { previous[$0.entry.id] ?? ConversationReadingMemory.shared.measuredHeights[sessionId]?[$0.entry.id] ?? 160 }
@@ -445,7 +462,10 @@ private final class ConversationDocumentView: NSView {
             if let existing = controllers[id] {
                 controller = existing
             } else {
-                controller = ConversationEntryController(content: content, appearance: appearance, disclosureChanged: { [weak self] animated in self?.beginDisclosureChange(id, animated: animated) }) { [weak self] height in
+                let measuredSize: (width: CGFloat, height: CGFloat)? = measuredSizes[id].flatMap {
+                    $0.width == columnWidth && $0.content == content ? ($0.width, $0.height) : nil
+                }
+                controller = ConversationEntryController(content: content, appearance: appearance, measuredSize: measuredSize, disclosureChanged: { [weak self] animated in self?.beginDisclosureChange(id, animated: animated) }) { [weak self] height in
                     self?.rowHeightChanged(id, height: height)
                 }
                 controllers[id] = controller
@@ -455,9 +475,16 @@ private final class ConversationDocumentView: NSView {
             // immediately invalidates and lays out again.
             if controller.view.superview !== self {
                 controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: heights[index])
+                #if TRANSCRIPT_CHECKS
+                let attachStart = CACurrentMediaTime()
+                #endif
                 addSubview(controller.view)
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.record("host_attach", since: attachStart)
+                #endif
             }
             let height = controller.measure(width: columnWidth).height
+            measuredSizes[id] = (content, columnWidth, height)
             updateHeight(id, height: height)
             controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: height)
             nextMounted.insert(id)
@@ -476,6 +503,7 @@ private final class ConversationDocumentView: NSView {
         publishHeight()
     }
     private func beginDisclosureChange(_ id: String, animated: Bool) {
+        measuredSizes.removeValue(forKey: id)
         laidOutRange = nil
         viewport?.pauseFollowing?()
         if let previous = heightAnimation, previous.id != id, let index = indices[previous.id] {
@@ -518,6 +546,9 @@ private final class ConversationDocumentView: NSView {
         publishHeight()
     }
     private func rowHeightChanged(_ id: String, height: CGFloat) {
+        if let controller = controllers[id], let index = indices[id] {
+            measuredSizes[id] = (contents[index], controller.view.bounds.width, height)
+        }
         updateHeight(id, height: height)
         publishHeight()
         restoreReadingPosition()
@@ -687,6 +718,7 @@ private final class ConversationEntryController: NSViewController {
     private let disclosureChanged: (Bool) -> Void
 
     init(content: ConversationEntryView, appearance: ConversationEntryAppearance,
+         measuredSize: (width: CGFloat, height: CGFloat)? = nil,
          disclosureChanged: @escaping (Bool) -> Void, heightChanged: @escaping (CGFloat) -> Void) {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
@@ -699,12 +731,17 @@ private final class ConversationEntryController: NSViewController {
         host = NSHostingController(rootView: HostedConversationEntry(
             content: content, appearance: appearance))
         super.init(nibName: nil, bundle: nil)
+        if let measuredSize { sizes.append(measuredSize) }
         host.sizingOptions = []
         host.safeAreaRegions = []
         setRoot()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func loadView() {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("host_view", since: start) }
+        #endif
         let container = ConversationEntryContainer()
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
         addChild(host)
@@ -890,18 +927,19 @@ private struct ConversationEntryView: View, Equatable {
     let api: KimiAPI?
     let sessionId: String
     let memoryKey: String
-    var activitySummary: String? = nil
+    var activityNarrative: ActivityNarrative? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
-            && lhs.activitySummary == rhs.activitySummary
+            && lhs.activityNarrative == rhs.activityNarrative
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
                 switch entry.presentation {
                 case .activity:
-                    KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId, summary: activitySummary)
+                    KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId,
+                                     narrative: activityNarrative)
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: 12) {

@@ -6,6 +6,11 @@ extension View {
         modifier(WorkbenchGlassSurface(cornerRadius: 16))
     }
 
+    func composerSurface() -> some View {
+        background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.primary.opacity(0.06)))
+    }
+
     func workbenchControlSurface() -> some View {
         modifier(WorkbenchGlassSurface(cornerRadius: 20))
     }

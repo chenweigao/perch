@@ -132,12 +132,12 @@
 "未找到本机 omp。请在设置中指定可执行文件路径，或参考 oh-my-pi 安装说明后重试。Perch 不会自动安装或修改你的 shell 配置。" = "Could not find a local omp. Set the executable path in Settings, or see the oh-my-pi install instructions and try again. Perch does not install anything or modify your shell configuration.";
 "未能读取 omp 版本，能力未知" = "Could not read the omp version; capabilities unknown";
 "无法解析版本输出" = "Could not parse the version output";
+"未找到本机 omp" = "Local omp not found";
 
 /* Settings */
 "语言 / Language" = "Language";
 "界面语言" = "Language";
 "Agent 与执行环境" = "Agent & Environments";
-"管理本机 Agent…" = "Manage Local Agent…";
 "添加 SSH 环境…" = "Add SSH Environment…";
 "远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。" = "Remote connections reuse this Mac's SSH configuration. Connect, reconnect and remove machines from the environment menu in the sidebar.";
 "界面" = "Appearance";
@@ -431,9 +431,20 @@
 "保存，稍后开始" = "Save for later";
 "其他自动连接的 Agent" = "Other agents to connect automatically";
 "准备 Agent" = "Prepare agent";
-"启动 Kimi Web" = "Start Kimi Web";
-"启动 Kimi Web 后重新检查；已有服务请核对高级设置中的端口与令牌路径。" = "Start Kimi Web, then check again. For an existing service, verify its port and token path in Advanced settings.";
-"启动命令已提交。请重新检查连接；启动日志位于远端 ~/.local/state/perch/kimi-web.log。" = "Start command submitted. Check again. The remote startup log is ~/.local/state/perch/kimi-web.log.";
+"已安装，重新检查" = "Installed — Check Again";
+"正在检查远端 Kimi 与运行环境。" = "Checking remote Kimi and its runtime.";
+"npm 全局目录" = "npm global directory";
+"未找到 Kimi。已检查非交互 SSH PATH 和 %@，请安装后重新检查。" = "Kimi was not found. Perch checked the non-interactive SSH PATH and %@. Install Kimi, then check again.";
+"未找到 Kimi 或 npm。请先安装 Node.js 22.19+ 与 npm，再安装 Kimi。" = "Kimi and npm were not found. Install Node.js 22.19+ with npm, then install Kimi.";
+"已找到 npm，但未找到 Node.js。请安装 Node.js 22.19 或更高版本。" = "npm was found, but Node.js was not. Install Node.js 22.19 or later.";
+"远端 Node.js %@ 版本过低；Kimi 2.0.2 需要 Node.js 22.19 或更高版本。" = "Remote Node.js %@ is too old. Kimi 2.0.2 requires Node.js 22.19 or later.";
+"无法读取远端 npm 全局安装目录。请运行 npm prefix -g 检查 npm 配置。" = "Could not read the remote npm global directory. Run npm prefix -g to check the npm configuration.";
+"Kimi 可执行文件 %@ 无法运行：%@" = "The Kimi executable at %@ could not run: %@";
+"无法识别远端 Kimi 检查结果。请在终端运行 kimi --version。" = "The remote Kimi check returned an unrecognized result. Run kimi --version in Terminal.";
+"正在连接 Kimi Web；已有服务请核对高级设置中的端口与令牌路径。" = "Connecting to Kimi Web. For an existing service, verify its port and token path in Advanced settings.";
+"正在启动并连接 Kimi Web。" = "Starting and connecting to Kimi Web.";
+"启动并检查 Kimi Web" = "Start and Check Kimi Web";
+"终端安装完成后，返回此处选择“已安装，重新检查”。" = "When installation finishes in Terminal, return here and choose “Installed — Check Again”.";
 "在终端处理 SSH 登录" = "Complete SSH login in Terminal";
 "在终端安装" = "Install in Terminal";
 "在终端完成操作后，返回 Perch 重新检查。" = "Complete the operation in Terminal, then return to Perch and check again.";
@@ -544,7 +555,7 @@
 "请填写有效的 Base URL 和模型名称。" = "Enter a valid base URL and model name.";
 "读取" = "Read";
 "读取与搜索 · %lld 次调用" = "Read and search · %lld calls";
-"配置活动摘要…" = "Configure activity summaries…";
+"关闭活动叙事" = "Turn Off Activity Narrative";
 "默认关闭" = "Off by default";
 "摘要被输出上限截断，请关闭思考或更换模型。" = "The summary hit its output limit. Disable thinking or choose another model.";
 "过程记录 · %lld 次调用" = "Activity · %lld calls";
@@ -611,4 +622,44 @@
 "权限级别：%@" = "Permission level: %@";
 "当前 Agent 不支持动态切换权限" = "This agent does not support changing permissions during a session.";
 
+// Unified activity narrative.
+"%@ · %lld 次调用" = "%@ · %lld calls";
+"Agent 进度" = "Agent progress";
+"Perch 会优先使用 Agent 原生摘要或明确进度，并在本机即时生成阶段标题。可选的外部润色默认关闭；开启后才会发送受限活动信息，并可能产生额外费用。" = "Perch prioritizes native agent summaries or explicit progress, and instantly generates stage titles on this Mac. Optional external refinement is off by default; only enabling it sends limited activity data and may incur additional costs.";
+"使用 OpenAI 兼容的 Chat Completions 接口。外部润色仅发送当前轮用户请求开头（不超过 400 字符）、相关路径、搜索条件、工具类别与状态；不发送完整命令、源码、编辑内容、工具输出、思考或运行上下文。自动命名仍只发送首条用户消息开头。内容不会写回 Agent 上下文。" = "Uses an OpenAI-compatible Chat Completions endpoint. External refinement sends only the opening of the current request (at most 400 characters), relevant paths, search terms, tool categories, and statuses. It does not send full commands, source code, edit contents, tool output, reasoning, or runtime context. Automatic naming still sends only the opening of the first user message. Nothing is written back into the agent context.";
+"分析任务" = "Analyzing the task";
+"处理失败的操作" = "Handling a failed operation";
+"推进任务" = "Advancing the task";
+"外部摘要" = "External summary";
+"外部摘要更新失败：%@" = "External summary update failed: %@";
+"修改" = "Editing";
+"修改实现" = "Editing the implementation";
+"启用外部摘要润色" = "Enable external summary refinement";
+"正在更新" = "Updating";
+"整合" = "Integrating";
+"整合改动" = "Integrating changes";
+"本地推断" = "Local inference";
+"模型原生摘要" = "Provider-native summary";
+"活动叙事" = "Activity narrative";
+"探索" = "Exploring";
+"依据" = "Evidence";
+"受阻" = "Blocked";
+"推进" = "Progressing";
+"阶段已完成" = "Stage complete";
+"配置活动叙事…" = "Configure activity narrative…";
+"重试外部摘要" = "Retry external summary";
+"验证" = "Validating";
+"验证改动" = "Validating changes";
 "上下文已压缩" = "Context compacted";
+
+"继续此任务…" = "Continue this task…";
+"上下文用量未同步" = "Context usage not synced";
+"上下文用量未知" = "Context usage unknown";
+"上下文剩余约 %@" = "About %@ context remaining";
+"已用 %@ / %@ tokens" = "%@ / %@ tokens used";
+"未同步" = "Not synced";
+"上下文将满" = "Context nearly full";
+"最近一次 Agent 上报的用量，不含未发送草稿；运行中可能继续增长。" = "Latest usage reported by the agent. Excludes unsent drafts and may grow while running.";
+"Agent 尚未提供可用的上下文用量。" = "The agent has not reported usable context usage yet.";
+"上报时间" = "Reported";
+"上报时间未提供" = "Report time unavailable";

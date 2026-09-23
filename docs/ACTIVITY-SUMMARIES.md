@@ -1,178 +1,157 @@
-# Compact activity and optional summaries
+# Activity narrative and optional external refinement
 
-Perch folds consecutive tools, completed thoughts and runtime context into one
-process region between user messages and visible agent commentary/replies. Expanding
-preserves source order, including Bash, TodoList and edits. Live thinking stays
-visible as a separate preview until that thought finishes. A pure thinking-only
-response retains its existing presentation. Each region contains at most 24 process
-records so expansion does not mount an unbounded view tree.
+Perch presents each turn as one activity narrative shared by the bottom activity
+bar and the historical process rows. The narrative answers three questions without
+requiring a second model call: what phase the agent is in, what it is working on,
+and whether that stage is still updating or final.
 
-Collapsed regions show one line with the call count and up to two distinct recent
-targets. Running calls, failed calls, missing results, disconnections and approvals
-remain visible underneath. Completed calls stay in the disclosure. All process
-headers use the same 12 pt arrow slot, 8 pt title gap and zero outer inset; only
-expanded child records are indented. Adjacent process rows have a 6 pt gap while
-body-message boundaries retain 18 pt spacing.
+The source priority is fixed:
 
-Filenames lead tool labels. Shell headers use the supplied description, or the
-executable (`git` plus its subcommand); full commands remain in the tooltip and
-input details. Status icons follow the label so Bash and Thoughts titles align.
-Opening a single tool before more records arrive keeps its group expanded. The
-composer owns the stop button; unavailable thinking-effort settings are explained
-inside the model selector rather than occupying the composer toolbar.
+1. provider-native summary metadata;
+2. explicit agent commentary or progress;
+3. optional external summary refinement;
+4. deterministic local inference.
 
-## Configure a summary service
+Native and local narratives are always available. External refinement is optional,
+off by default, and can replace only a local narrative. It never overwrites provider
+metadata or explicit agent progress.
 
-Activity summaries are **off by default**. No model is bundled or downloaded and
-Perch does not choose a paid service. Basic grouping works without a summary model.
+## Stages and presentation
 
-In **Settings → Interface → Configure activity summaries**:
+A stage has a stable ID derived from the turn and the event that opened it. Local
+stages transition between exploring, editing, validating, integrating, blocked, and
+mixed work. A first thought or first tool immediately gets a deterministic title;
+provider summaries and explicit progress can supply a more precise title.
 
-1. Enter a Chat Completions-compatible **Base URL including `/v1`**, for example
-   `http://localhost:8000/v1`, and the exact model name served by your endpoint.
-2. Enter an API key if the service requires one. Perch stores it in the Mac's
-   Keychain, separately from endpoint preferences and conversation records.
-3. For a Qwen service that supports `chat_template_kwargs.enable_thinking`, select
-   **Disable Qwen thinking**. The request then explicitly sets this value to false.
-   Other services receive no Qwen-specific option unless selected.
-4. **Test connection (send example)** sends a small synthetic sample. This can
-   consume tokens even while background summaries are disabled; it does not enable
-   the feature or send your conversation.
-5. Enable activity summaries and save. The endpoint must be reachable from the Mac;
-   remote agent connectivity through SSH does not make an arbitrary LAN endpoint
-   automatically reachable.
+The transcript still limits each process disclosure to 24 records so expanding a long
+turn does not mount an unbounded view tree. That rendering split does not create a
+new semantic stage or change its ID. A tool phase transition, provider summary, or
+explicit progress can open a new stage. The activity bar and process row read from
+the same projection, so they use the same headline instead of showing an unrelated
+operation label and generated summary.
 
-Endpoint and model fields have no built-in LAN address or credential. A self-hosted
-LAN deployment uses the same configuration path as any other compatible service.
+Running, failed, missing-result, disconnected, and approval tools remain visible
+under the process disclosure. Expanding preserves source order across thoughts,
+tools, and runtime context. The narrative is presentation state only: it does not
+change tool status, enter the agent context, or replace the final response.
+
+Codex reasoning summaries arrive as structured `activity_summary` source metadata.
+Perch displays only the provider-supplied summary parts; raw reasoning remains in the
+existing thinking view and is never treated as the activity headline.
+
+## Configure external refinement
+
+External refinement uses one user-configured OpenAI-compatible Chat Completions
+endpoint. No model is bundled, downloaded, selected, or paid for by Perch.
+
+In **Settings → Interface → Configure activity narrative**:
+
+1. Enter a **Base URL including `/v1`**, for example
+   `http://localhost:8000/v1`, and the exact model name served by the endpoint.
+2. Enter an API key if required. Perch stores it in the Mac Keychain, separately
+   from endpoint preferences and conversation records.
+3. For a Qwen service supporting `chat_template_kwargs.enable_thinking`, select
+   **Disable Qwen thinking** to reduce latency and output overhead. Other services
+   receive no Qwen-specific option unless selected.
+4. **Test connection (send example)** sends a small synthetic sample. It can consume
+   tokens but does not enable background requests or send conversation data.
+5. Enable **external summary refinement** and save.
+
 Settings provides a direct **Disable** action without deleting the saved endpoint.
+The endpoint must be reachable from the Mac; remote agent connectivity through SSH
+does not make an arbitrary LAN endpoint reachable.
 
 ### HTTP IP endpoints on macOS
 
 On macOS 14 and later, `NSAllowsLocalNetworking` alone does not cover HTTP
-connections to IP literals. Perch's packaged `Info.plist` also declares IPv4 and
-IPv6 CIDR exceptions (`0.0.0.0/0`, `::/0`) with
+connections to IP literals. Perch's packaged `Info.plist` declares IPv4 and IPv6
+CIDR exceptions (`0.0.0.0/0`, `::/0`) with
 `NSExceptionAllowsInsecureHTTPLoads` for user-configured IP endpoints. These are
-app-wide IP exceptions, not a per-request setting; they permit HTTP IP endpoints
-outside private address ranges as well. DNS domains retain the existing ATS
-policy, including the local-name exception. No global `NSAllowsArbitraryLoads`,
-certificate-validation override, or built-in deployment address is added.
+app-wide IP exceptions. DNS domains retain the existing ATS policy, including the
+local-name exception. Perch does not add a global `NSAllowsArbitraryLoads`, disable
+certificate validation, or ship a deployment address.
 
-If **Test connection** reports that App Transport Security requires a secure
-connection, rebuild and replace the installed app, then fully quit and relaunch
-it. Changing the saved URL or API key cannot update a running app's transport
-policy. `scripts/build.sh` copies `Resources/Info.plist` into
-`build/Perch.app/Contents/Info.plist` before signing. Retest from that app's settings;
-a successful command-line request does not validate the app's ATS policy.
+If the app reports that App Transport Security requires a secure connection, rebuild
+and replace the installed app, then fully quit and relaunch it. `scripts/build.sh`
+copies `Resources/Info.plist` into the app before signing. A command-line request does
+not validate the packaged app's ATS policy.
 
-References: Apple's [local networking rules](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking)
-and [IP/CIDR exception syntax](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsexceptiondomains).
+## What external refinement receives
 
-## What is sent and when
+Only the current semantic stage of the current user turn is eligible. A request may
+contain:
 
-Only the current user turn's recent process activity is eligible. Perch sends the
-opening of that turn's user request (at most 400 characters) and up to 12 completed
-calls in source order. Each call includes its ID, short tool name, reported outcome,
-and bounded semantic context: up to the last four path components or a URL/search
-term, plus up to 240 characters of a description, query, pattern or command. Source
-code, edit contents, tool output, runtime context and reasoning are not sent.
+- the opening of the user request, normalized and limited to 400 characters;
+- at most 12 completed activity records in source order;
+- a short tool name, record ID, and reported status;
+- up to four trailing path components, or a bounded description, query, or pattern;
+- a derived shell category limited to `test`, `lint`, `build`, or `git`;
+- the current deterministic phase and the previous structured result.
 
-The model, rather than local filename or phase rules, infers the shared subject,
-current phase and meaningful progress. One Chat Completions request returns a
-compact JSON object containing `subject`, `phase`, a one-sentence `summary` of at
-most 100 characters, up to three supporting `evidence_ids`, and `should_update`.
-The previous structured result is included on later requests so the model can keep
-wording stable and suppress an update when the visible summary remains accurate.
-A plain-text response remains accepted for compatibility. The prompt treats
-activity as evidence: `returned` is distinct from `succeeded`, and only an explicit
-successful activity can support a claim that work was verified or completed.
+It does **not** send a full command, source code, edit body or diff, tool output,
+private reasoning, runtime context, arbitrary tool input, credentials, or API key in
+the JSON body. Paths and allowed text fields are length-bounded. The response may
+reference at most three known evidence IDs; unknown and duplicate IDs are discarded.
 
-The first request requires six completed calls in a process region. Thoughts and
-runtime context do not split the count or count as calls; two sets of three reads
-separated by these records can trigger one summary. Other completed tool kinds
-also count. The 24-record rendering limit starts another region. Later requests
-require six new completed calls, a correction to an included event, or changed
-records when that group closes. Requests start at least 15 seconds apart within
-the selected transcript, with only one in flight. Pending changes coalesce to the
-most recent eligible batch. There is no second model pass or automatic retry.
-Inputs have per-field and event-count bounds; output uses `max_tokens: 180`. These
-bounds are not a tokenizer-accurate input-token cap.
+The service returns `subject`, one of the six valid phases, a compact `summary`,
+`evidence_ids`, and `should_update`. Unknown structured phases are rejected. Plain
+text remains accepted for compatibility and is assigned the mixed phase. A
+`returned` status is not treated as verified success.
 
-Generated text appears above the disclosure under a compact tertiary `sparkles`
-label, without a card or background. Its outer edge aligns with body text and the
-disclosure arrow; the process title retains the arrow slot as its internal hierarchy.
-The summary-to-process gap is intentionally tight. Summary text remains selectable
-and is limited to two lines. It is stored only in the transcript's presentation
-state, not injected into the agent's context, used for tool status, or substituted
-for the final response. While the reader is scrolled up, new summary text is held
-until they return to the latest activity.
+## Scheduling and failure behavior
+
+A local stage becomes eligible after two completed tools. The same stage is eligible
+again after four more completions, an authoritative status correction, or closure.
+A phase transition starts a new stage and threshold. Provider-native and commentary
+stages do not create an external request.
+
+All sessions share one worker. Requests are at least eight seconds apart globally;
+pending observations coalesce to the newest eligible batch. There is no automatic
+retry, redirect, second model pass, or alternate-provider fallback. A failed request
+leaves the local headline in place and exposes an explicit retry in the activity
+details. Configuration or active-session changes cancel local pending work but cannot
+undo tokens already processed by a server.
+
+Opening an already-completed historical session does not trigger refinement: the
+store must first observe that session running. Results are scoped by session and
+stage. The shared store retains at most 64 session states and 256 external stage
+results.
+
+While the reader is away from the latest transcript position, already-published row
+headlines stay frozen and new rows may initialize. Updated row text is published when
+the reader returns to the latest position. The bottom activity bar continues to show
+the current narrative, including the final stage after the turn ends.
 
 ## Session naming
 
-The same endpoint can also give a session a short title. **Name sessions
-automatically** in the activity summary settings is off by default and has no
-effect while the master switch is off; **Disable** stops naming requests too.
+The same endpoint can optionally generate a short local session title. **Name
+sessions automatically** remains off by default and has no effect while external
+refinement is disabled.
 
-Only sessions you open are eligible, and only while their remote title is still
-a placeholder: an untitled Kimi session, the native bridge default `新对话`, or
-the bridge's first-60-characters copy of the prompt. A real title from the
-agent or the user is never replaced. Kimi sessions are named only after the
-first turn completes, so a server-side title wins the race; native bridge
-titles never improve and can be named while the first turn runs.
-
-The request carries the opening of the session's first user-typed message, at
-most 400 characters. Source code, tool output, reasoning, later messages and
-runtime context are not sent, and the generated title never enters the agent's
-context. Each session gets one attempt per saved configuration revision; a
-failure is not retried until the configuration changes or Perch relaunches.
-
-A generated title is stored as the local display name — the same record a
-manual rename writes — and never modifies the remote session. Perch remembers
-that a session was named: a later manual rename takes precedence, and clearing
-a title does not re-arm automation for that session. Removing a session drops
-the record.
-
-Disabling the feature, switching configuration or leaving the transcript cancels
-local pending work. It cannot undo tokens already processed by the server. No
-automatic retries, redirects or alternate provider calls occur. A failed or
-truncated response leaves the compact activity group available. Historical sessions
-opened after completion are not automatically summarized. Native preview and
-benchmark fixtures cannot invoke the configured service.
-
-## Performance
-
-Disabled summaries, preview fixtures and disconnected transcripts skip summary
-candidate lookup and label construction. When enabled, lookup walks backward from
-the transcript tail, records the first eligible group and continues only to the
-nearest user boundary to capture the current request; it never scans earlier turns.
-Activity row IDs use the first record's anchor without allocating arrays for the
-whole group. Identical summary text does not publish another transcript update.
-Displayed text, the latest structured result and request-deduplication batches are
-cached separately. These caches last for the selected transcript and grow with
-summarized groups; this is not a constant-memory cache.
-
-These changes remove specific CPU/allocation work, but are not measured frame-time
-improvements. The remaining native profiling priorities are transcript projection
-and row reconciliation during streaming in long histories, and height changes when
-a new summary arrives. Validate with summaries off/on using the same history,
-event stream and viewport on macOS before changing cache or rendering architecture.
+Only opened sessions with placeholder titles are eligible. A title supplied by the
+agent or user is never replaced. Kimi sessions wait for the first turn to complete;
+native bridge sessions may be named while that first turn runs. The request contains
+only the opening of the first user message, at most 400 characters. Generated titles
+never modify the remote session or enter agent context, and a later manual rename
+wins. Naming gets one attempt per saved configuration revision and has no automatic
+retry.
 
 ## Validation
 
-- `swift run WorkbenchChecks` includes interleaved process grouping/order/identity, live/error
-  preservation, summary opt-in, bounded semantic inputs, update thresholds, request
-  and structured-response shapes, evidence filtering, plain-text compatibility,
-  credential exclusion and truncated-response checks.
-- `scripts/build.sh` validates the complete macOS app. The existing reading,
-  tool-visibility and navigation previews include the summary UI dependencies.
-- `python3 scripts/check-scroll-following.py` checks the production scroll path
-  after the macOS build. Check single-tool → group expansion, reading while new
-  events arrive, and deferred summary publication in the native preview/app.
-- `scripts/build-tool-visibility-preview.sh` includes a **交错过程记录** toggle
-  mirroring the reported Thoughts → Bash → Thoughts → TodoList → three reads →
-  Bash → runtime context → three searches → failed Bash sequence, plus a running
-  read. With summaries disabled, verify the single-line header, deduplicated
-  target, visible failure/live tool, aligned headers, and source order on expansion.
-- Localization and public-source checks run on Linux as well as macOS.
+- `swift run WorkbenchChecks` covers stage identity across 24-row rendering splits,
+  phase transitions, source priority, Codex source decoding, external thresholds,
+  privacy bounds, request shape, strict phase parsing, evidence filtering, and
+  plain-text compatibility.
+- `python3 -m unittest discover -s remote -p 'test_*.py'` covers bridge event
+  normalization, Codex streaming summaries, authoritative completion, and hydration.
+- `scripts/build.sh` validates the complete macOS app.
+- `scripts/build-activity-bar-preview.sh` provides provider, local, external, failed
+  external/retry, narrow-width, and ended-turn fixtures without an agent connection.
+- `scripts/build-tool-visibility-preview.sh` exercises transcript process grouping;
+  its isolated defaults keep external refinement disabled.
+- `python3 scripts/check-scroll-following.py` checks the production scroll path after
+  a macOS build.
 
-Development verification on Linux does not establish SwiftUI rendering, Keychain
-interaction, local-network permission prompts or Mac-to-LAN connectivity.
+Build, protocol, UI, remote compatibility, and performance evidence remain separate.
+Linux or headless checks do not establish SwiftUI rendering, Keychain behavior,
+local-network prompts, or Mac-to-LAN connectivity.
