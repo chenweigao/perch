@@ -1,0 +1,736 @@
+{
+  "baseline_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2",
+    "a3",
+    "b3"
+  ],
+  "fixture": {
+    "history_turns": 200,
+    "history_source": "Navigation Preview mixed content",
+    "note": "Layout/display/CA flush timings, not FPS"
+  },
+  "runs": [
+    {
+      "name": "a1",
+      "status": "passed",
+      "binary_sha256": "2d1e67ef432d72b1134e3d34df18c3643c14032353fd97ea0995b78bb641925d",
+      "build": {
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "source_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+        "source_sha256": "8d808fc0ae6055b04a6994b705a95589bbd4d1a825aa53269aae7a47d71a4cb8"
+      },
+      "down": {
+        "count": 349,
+        "max_ms": 22.4294583331357,
+        "median_ms": 9.250624999367574,
+        "over_16_7ms": 37,
+        "over_100ms": 0,
+        "p95_ms": 18.275583332979295
+      },
+      "up": {
+        "count": 348,
+        "max_ms": 27.59037499981787,
+        "median_ms": 7.12908333298401,
+        "over_16_7ms": 43,
+        "over_100ms": 0,
+        "p95_ms": 23.75970833327301
+      },
+      "up_host_measure_count": 466,
+      "max_mounted": 8,
+      "max_retained": 20,
+      "rss_after_upward_mib": 222.421875
+    },
+    {
+      "name": "b1",
+      "status": "passed",
+      "binary_sha256": "35ed700d4c8fdf52796d6b77a273491076ba0ff026291d4f5c7c28f74e61d66d",
+      "build": {
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "source_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+        "source_sha256": "cc7c71de2b9de5903b27b7d7209a347ef7757c30a697ef38e3e070705595ab1a"
+      },
+      "down": {
+        "count": 349,
+        "max_ms": 110.56837500018446,
+        "median_ms": 10.031833333414397,
+        "over_16_7ms": 44,
+        "over_100ms": 2,
+        "p95_ms": 19.05537499987986
+      },
+      "up": {
+        "count": 348,
+        "max_ms": 20.660250000219094,
+        "median_ms": 5.933416666266567,
+        "over_16_7ms": 6,
+        "over_100ms": 0,
+        "p95_ms": 15.027625000584521
+      },
+      "up_host_measure_count": 0,
+      "max_mounted": 8,
+      "max_retained": 20,
+      "rss_after_upward_mib": 213.859375
+    },
+    {
+      "name": "b2",
+      "status": "passed",
+      "binary_sha256": "35ed700d4c8fdf52796d6b77a273491076ba0ff026291d4f5c7c28f74e61d66d",
+      "build": {
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "source_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+        "source_sha256": "cc7c71de2b9de5903b27b7d7209a347ef7757c30a697ef38e3e070705595ab1a"
+      },
+      "down": {
+        "count": 349,
+        "max_ms": 110.7029999993756,
+        "median_ms": 9.937499999978172,
+        "over_16_7ms": 39,
+        "over_100ms": 2,
+        "p95_ms": 19.064833333686693
+      },
+      "up": {
+        "count": 348,
+        "max_ms": 19.800500000201282,
+        "median_ms": 5.923958333369228,
+        "over_16_7ms": 12,
+        "over_100ms": 0,
+        "p95_ms": 15.587666666760924
+      },
+      "up_host_measure_count": 0,
+      "max_mounted": 8,
+      "max_retained": 20,
+      "rss_after_upward_mib": 213.265625
+    },
+    {
+      "name": "a2",
+      "status": "passed",
+      "binary_sha256": "2d1e67ef432d72b1134e3d34df18c3643c14032353fd97ea0995b78bb641925d",
+      "build": {
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "source_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+        "source_sha256": "8d808fc0ae6055b04a6994b705a95589bbd4d1a825aa53269aae7a47d71a4cb8"
+      },
+      "down": {
+        "count": 349,
+        "max_ms": 108.16287499983446,
+        "median_ms": 9.7058333331006,
+        "over_16_7ms": 42,
+        "over_100ms": 2,
+        "p95_ms": 19.392208333556482
+      },
+      "up": {
+        "count": 348,
+        "max_ms": 27.416291666668258,
+        "median_ms": 7.25420833350654,
+        "over_16_7ms": 43,
+        "over_100ms": 0,
+        "p95_ms": 22.983333333286282
+      },
+      "up_host_measure_count": 466,
+      "max_mounted": 8,
+      "max_retained": 20,
+      "rss_after_upward_mib": 223.796875
+    },
+    {
+      "name": "a3",
+      "status": "passed",
+      "binary_sha256": "2d1e67ef432d72b1134e3d34df18c3643c14032353fd97ea0995b78bb641925d",
+      "build": {
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "source_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+        "source_sha256": "8d808fc0ae6055b04a6994b705a95589bbd4d1a825aa53269aae7a47d71a4cb8"
+      },
+      "down": {
+        "count": 349,
+        "max_ms": 25.065875000109372,
+        "median_ms": 9.730041666443867,
+        "over_16_7ms": 42,
+        "over_100ms": 0,
+        "p95_ms": 19.00116666638496
+      },
+      "up": {
+        "count": 348,
+        "max_ms": 32.62404166707711,
+        "median_ms": 7.356000000072527,
+        "over_16_7ms": 47,
+        "over_100ms": 0,
+        "p95_ms": 22.894124999766063
+      },
+      "up_host_measure_count": 466,
+      "max_mounted": 8,
+      "max_retained": 20,
+      "rss_after_upward_mib": 224.515625
+    },
+    {
+      "name": "b3",
+      "status": "passed",
+      "binary_sha256": "35ed700d4c8fdf52796d6b77a273491076ba0ff026291d4f5c7c28f74e61d66d",
+      "build": {
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "fixture_sha256": "70442c1d01642333a7acedd17589d270caf269874b8c4a1143307e4d0480ac6a",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "source_commit": "fadda37d63a78f68ef21b233a277c581e5c16828",
+        "source_sha256": "cc7c71de2b9de5903b27b7d7209a347ef7757c30a697ef38e3e070705595ab1a"
+      },
+      "down": {
+        "count": 349,
+        "max_ms": 23.230541666634963,
+        "median_ms": 9.561500000017986,
+        "over_16_7ms": 38,
+        "over_100ms": 0,
+        "p95_ms": 18.9535416666331
+      },
+      "up": {
+        "count": 348,
+        "max_ms": 20.00766666697018,
+        "median_ms": 5.514125000445347,
+        "over_16_7ms": 11,
+        "over_100ms": 0,
+        "p95_ms": 15.58795833352633
+      },
+      "up_host_measure_count": 0,
+      "max_mounted": 8,
+      "max_retained": 20,
+      "rss_after_upward_mib": 213.984375
+    }
+  ],
+  "checks": {
+    "anchor": {
+      "status": "passed",
+      "error": null
+    },
+    "interactions": {
+      "status": "passed",
+      "error": null
+    },
+    "turns": {
+      "status": "passed",
+      "error": null
+    },
+    "roundtrip": {
+      "status": "passed",
+      "error": null
+    },
+    "image": {
+      "status": "passed",
+      "error": null
+    },
+    "image-reading": {
+      "status": "passed",
+      "error": null
+    }
+  },
+  "frame_calibration": {
+    "status": "unverified",
+    "error": "no app-owned updates joined to displayed frame lifetimes"
+  },
+  "cpu": {
+    "baseline": {
+      "pid": "19129",
+      "HistoryScroll_spans_ns": [
+        [
+          6295118125,
+          9319813583
+        ]
+      ],
+      "main_samples": 1295,
+      "main_cpu_ms": 1295.0,
+      "body_frames": [
+        [
+          "NSHostingView.layout()",
+          454.0
+        ],
+        [
+          "@objc NSHostingView.layout()",
+          454.0
+        ],
+        [
+          "closure #1 in NSHostingView.layout()",
+          453.0
+        ],
+        [
+          "LayoutEngineBox.sizeThatFits(_:)",
+          398.0
+        ],
+        [
+          "UnaryLayoutEngine.sizeThatFits(_:)",
+          393.0
+        ],
+        [
+          "ViewLayoutEngine.sizeThatFits(_:)",
+          392.0
+        ],
+        [
+          "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+          391.0
+        ],
+        [
+          "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+          390.0
+        ],
+        [
+          "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+          390.0
+        ],
+        [
+          "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+          388.0
+        ],
+        [
+          "_PaddingLayout.sizeThatFits(in:context:child:)",
+          388.0
+        ],
+        [
+          "LayoutComputer.sizeThatFits(_:)",
+          296.0
+        ],
+        [
+          "_FrameLayout.sizeThatFits(in:context:child:)",
+          295.0
+        ],
+        [
+          "specialized static ScrollViewUtilities.sizeThatFits(in:contentComputer:axes:)",
+          293.0
+        ],
+        [
+          "closure #1 in ScrollViewLayoutComputer.Engine.sizeThatFits(_:)",
+          293.0
+        ],
+        [
+          "protocol witness for LayoutEngine.sizeThatFits(_:) in conformance ScrollViewLayoutComputer.Engine",
+          293.0
+        ],
+        [
+          "_FixedSizeLayout.sizeThatFits(in:context:child:)",
+          281.0
+        ],
+        [
+          "PlatformViewLayoutEngine.sizeThatFits(_:)",
+          278.0
+        ],
+        [
+          "ConversationDocumentView.refreshVisibleRows()",
+          271.0
+        ],
+        [
+          "ViewLeafView.sizeThatFits(in:environment:context:)",
+          271.0
+        ],
+        [
+          "closure #1 in ViewLeafView.sizeThatFits(in:environment:context:)",
+          271.0
+        ],
+        [
+          "PlatformViewRepresentableAdaptor.sizeThatFits(_:provider:context:)",
+          269.0
+        ],
+        [
+          "closure #2 in closure #1 in ViewLeafView.sizeThatFits(in:environment:context:)",
+          269.0
+        ],
+        [
+          "ConversationDocumentView.measure(width:)",
+          260.0
+        ],
+        [
+          "protocol witness for NSViewRepresentable.sizeThatFits(_:nsView:context:) in conformance ConversationDocumentHost",
+          260.0
+        ],
+        [
+          "ConversationDocumentHost.sizeThatFits(_:nsView:context:)",
+          260.0
+        ],
+        [
+          "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+          257.0
+        ],
+        [
+          "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+          256.0
+        ],
+        [
+          "ViewGraphRootValueUpdater._sizeThatFits(_:)",
+          176.0
+        ],
+        [
+          "ConversationEntryController.measure(width:)",
+          175.0
+        ],
+        [
+          "NSHostingController.sizeThatFits(in:)",
+          175.0
+        ],
+        [
+          "closure #1 in ViewGraphRootValueUpdater._sizeThatFits(_:)",
+          173.0
+        ],
+        [
+          "specialized static ViewGraph.sizeThatFits(_:layoutComputer:insets:)",
+          165.0
+        ],
+        [
+          "closure #1 in HostedConversationEntry.body.getter",
+          112.0
+        ],
+        [
+          "specialized SelectableReplyText.makeNSView(context:)",
+          93.0
+        ],
+        [
+          "NativeAcceptanceRunner.run(_:)",
+          90.0
+        ],
+        [
+          "NSTextView.__allocating_init(usingTextLayoutManager:)",
+          84.0
+        ],
+        [
+          "-[NSTextView _initWithFrame:usingTextLayoutManager:]",
+          83.0
+        ],
+        [
+          "@nonobjc NSTextView.init(usingTextLayoutManager:)",
+          83.0
+        ],
+        [
+          "@objc ReplyTextView.init(frame:textContainer:)",
+          74.0
+        ],
+        [
+          "-[NSTextView initWithFrame:textContainer:]",
+          74.0
+        ],
+        [
+          "ReplyTextView.init(frame:textContainer:)",
+          74.0
+        ],
+        [
+          "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance ContainerRelativeFrameLayout",
+          65.0
+        ],
+        [
+          "-[NSTextView _installSelectionManager]",
+          61.0
+        ],
+        [
+          "NSHostingView._regionForOpaqueDescendants(clippedRect:forMove:forUnderTitlebar:)",
+          60.0
+        ],
+        [
+          "@objc NSHostingView._regionForOpaqueDescendants(clippedRect:forMove:forUnderTitlebar:)",
+          60.0
+        ],
+        [
+          "-[NSTextView release]",
+          58.0
+        ],
+        [
+          "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance GridLayout",
+          57.0
+        ],
+        [
+          "LayoutSubview.sizeThatFits(_:)",
+          48.0
+        ],
+        [
+          "-[NSTextView dealloc]",
+          48.0
+        ]
+      ],
+      "note": "Main thread samples within HistoryScroll only. Inclusive weights overlap; not FPS."
+    },
+    "candidate": {
+      "pid": "31605",
+      "HistoryScroll_spans_ns": [
+        [
+          5442127041,
+          8466002791
+        ]
+      ],
+      "main_samples": 1160,
+      "main_cpu_ms": 1160.0,
+      "body_frames": [
+        [
+          "NSHostingView.layout()",
+          456.0
+        ],
+        [
+          "@objc NSHostingView.layout()",
+          456.0
+        ],
+        [
+          "closure #1 in NSHostingView.layout()",
+          454.0
+        ],
+        [
+          "LayoutEngineBox.sizeThatFits(_:)",
+          336.0
+        ],
+        [
+          "UnaryLayoutEngine.sizeThatFits(_:)",
+          335.0
+        ],
+        [
+          "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+          327.0
+        ],
+        [
+          "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+          327.0
+        ],
+        [
+          "ViewLayoutEngine.sizeThatFits(_:)",
+          326.0
+        ],
+        [
+          "closure #1 in ViewLayoutEngine.sizeThatFits(_:)",
+          326.0
+        ],
+        [
+          "_PaddingLayout.sizeThatFits(in:context:child:)",
+          319.0
+        ],
+        [
+          "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _PaddingLayout",
+          319.0
+        ],
+        [
+          "_FixedSizeLayout.sizeThatFits(in:context:child:)",
+          216.0
+        ],
+        [
+          "LayoutComputer.sizeThatFits(_:)",
+          214.0
+        ],
+        [
+          "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+          212.0
+        ],
+        [
+          "closure #1 in ScrollViewLayoutComputer.Engine.sizeThatFits(_:)",
+          210.0
+        ],
+        [
+          "protocol witness for LayoutEngine.sizeThatFits(_:) in conformance ScrollViewLayoutComputer.Engine",
+          210.0
+        ],
+        [
+          "specialized static ScrollViewUtilities.sizeThatFits(in:contentComputer:axes:)",
+          210.0
+        ],
+        [
+          "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+          210.0
+        ],
+        [
+          "_FrameLayout.sizeThatFits(in:context:child:)",
+          207.0
+        ],
+        [
+          "PlatformViewLayoutEngine.sizeThatFits(_:)",
+          184.0
+        ],
+        [
+          "ViewLeafView.sizeThatFits(in:environment:context:)",
+          181.0
+        ],
+        [
+          "closure #1 in ViewLeafView.sizeThatFits(in:environment:context:)",
+          181.0
+        ],
+        [
+          "closure #2 in closure #1 in ViewLeafView.sizeThatFits(in:environment:context:)",
+          181.0
+        ],
+        [
+          "PlatformViewRepresentableAdaptor.sizeThatFits(_:provider:context:)",
+          180.0
+        ],
+        [
+          "ConversationDocumentView.refreshVisibleRows()",
+          174.0
+        ],
+        [
+          "protocol witness for NSViewRepresentable.sizeThatFits(_:nsView:context:) in conformance ConversationDocumentHost",
+          164.0
+        ],
+        [
+          "ConversationDocumentView.measure(width:)",
+          164.0
+        ],
+        [
+          "ConversationDocumentHost.sizeThatFits(_:nsView:context:)",
+          164.0
+        ],
+        [
+          "closure #1 in HostedConversationEntry.body.getter",
+          149.0
+        ],
+        [
+          "NativeAcceptanceRunner.run(_:)",
+          127.0
+        ],
+        [
+          "NativeAcceptanceRunner.flush(_:)",
+          75.0
+        ],
+        [
+          "specialized NativeAcceptanceRunner.flush(_:)",
+          74.0
+        ],
+        [
+          "specialized SelectableReplyText.makeNSView(context:)",
+          73.0
+        ],
+        [
+          "ViewGraphRootValueUpdater._sizeThatFits(_:)",
+          70.0
+        ],
+        [
+          "@nonobjc NSTextView.init(usingTextLayoutManager:)",
+          68.0
+        ],
+        [
+          "NSTextView.__allocating_init(usingTextLayoutManager:)",
+          68.0
+        ],
+        [
+          "-[NSTextView _initWithFrame:usingTextLayoutManager:]",
+          68.0
+        ],
+        [
+          "NSHostingController.sizeThatFits(in:)",
+          67.0
+        ],
+        [
+          "ConversationEntryController.measure(width:)",
+          67.0
+        ],
+        [
+          "closure #1 in ViewGraphRootValueUpdater._sizeThatFits(_:)",
+          65.0
+        ],
+        [
+          "-[NSTextView initWithFrame:textContainer:]",
+          64.0
+        ],
+        [
+          "ReplyTextView.init(frame:textContainer:)",
+          64.0
+        ],
+        [
+          "@objc ReplyTextView.init(frame:textContainer:)",
+          64.0
+        ],
+        [
+          "NSHostingView._regionForOpaqueDescendants(clippedRect:forMove:forUnderTitlebar:)",
+          63.0
+        ],
+        [
+          "@objc NSHostingView._regionForOpaqueDescendants(clippedRect:forMove:forUnderTitlebar:)",
+          63.0
+        ],
+        [
+          "specialized static ViewGraph.sizeThatFits(_:layoutComputer:insets:)",
+          62.0
+        ],
+        [
+          "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance ContainerRelativeFrameLayout",
+          52.0
+        ],
+        [
+          "-[NSTextView _installSelectionManager]",
+          49.0
+        ],
+        [
+          "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance GridLayout",
+          47.0
+        ],
+        [
+          "@objc HostingClipView._regionForOpaqueDescendants(clippedRect:forMove:forUnderTitlebar:)",
+          42.0
+        ]
+      ],
+      "note": "Main thread samples within HistoryScroll only. Inclusive weights overlap; not FPS."
+    }
+  },
+  "build_checks": [
+    {
+      "name": "final-a1",
+      "exit_code": 0
+    },
+    {
+      "name": "final-b1",
+      "exit_code": 0
+    },
+    {
+      "name": "final-b2",
+      "exit_code": 0
+    },
+    {
+      "name": "final-a2",
+      "exit_code": 0
+    },
+    {
+      "name": "final-a3",
+      "exit_code": 0
+    },
+    {
+      "name": "final-b3",
+      "exit_code": 0
+    },
+    {
+      "name": "final-anchor",
+      "exit_code": 0
+    },
+    {
+      "name": "final-interactions",
+      "exit_code": 0
+    },
+    {
+      "name": "final-turns",
+      "exit_code": 0
+    },
+    {
+      "name": "final-roundtrip",
+      "exit_code": 0
+    },
+    {
+      "name": "final-image",
+      "exit_code": 0
+    },
+    {
+      "name": "final-image-reading",
+      "exit_code": 0
+    },
+    {
+      "name": "build-final-native",
+      "exit_code": 0
+    },
+    {
+      "name": "final-cpu",
+      "exit_code": 0
+    },
+    {
+      "name": "build-production",
+      "exit_code": 0
+    },
+    {
+      "name": "checks-final",
+      "exit_code": 0
+    }
+  ]
+}

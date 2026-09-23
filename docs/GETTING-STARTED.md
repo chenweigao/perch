@@ -32,7 +32,7 @@ Fresh installations have no preset host.
    If a fingerprint or login needs attention, the error explains the next step
    and opens Terminal on that host. Ports, jump hosts and keys remain in your
    system SSH configuration. Perch does not store SSH passwords or bypass host-key checks.
-2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, DeepSeek or Herdr terminals, then
+2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, DeepSeek, Codex, Claude Code or Herdr terminals, then
    click **Check agent**. Each check displays its result and repair actions.
    CLI installation and login open in Terminal; the displayed install commands
    use the documented tested versions. Agent credentials stay on the server.
@@ -57,6 +57,7 @@ Host my-server
 | Kimi | Install CLI, sign in/configure models, start Kimi Web | CLI version, service authentication and protocol, configured models |
 | OMP | Install CLI, configure models, install bridge | CLI version, bridge health, fresh model catalog |
 | Qoder CN | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
+| Claude Code | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
 | DeepSeek | Install bridge with bundled dsh runtime; configure remote `DEEPSEEK_API_KEY` | Runtime version and credential presence in the bridge environment; models are read during the first ACP session handshake |
 | Herdr terminal | Install and start Herdr | Runtime and Unix socket forwarding; CLI agents inside terminals manage their own models |
 
@@ -66,7 +67,7 @@ these boundaries directly, including login checks deferred to the first message.
 
 The packaged app includes the first-party bridge installer. **Install / update
 bridge** installs only the selected adapter's dependencies: OMP needs Python 3,
-Qoder also needs Node.js/npm and its SDK, and DeepSeek uses a pinned Python wheel.
+Qoder and Claude Code also need Node.js/npm and their SDKs, and DeepSeek uses a pinned Python wheel.
 The operation does not stop a running service. An older bridge without `/setup`
 needs an update and a manual restart after its active tasks finish. Cancelling
 setup closes local checks; it does not undo remote installation or stop agents.
@@ -102,7 +103,7 @@ deletion. Active work cannot be quick-archived. `⌘T` opens a remote terminal.
 
 Kimi and remote OMP send running-task messages as steering by default. Choose
 “Send next turn” from the adjacent menu to queue instead. Pending text and its
-delivery state remain visible in the conversation. Qoder CN / dsh queue for the
+delivery state remain visible in the conversation. Qoder CN / dsh / Claude Code queue for the
 next turn. Update the remote native bridge to enable OMP steering.
 Local Agent setup currently discovers OMP and checks its version; local native
 execution is not available yet. Remote file viewing and read-only Git diff are

@@ -10,7 +10,7 @@ struct WorkbenchSettings: View {
     @State private var editingHost: SSHHost?
     @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
-    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex]
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex, .claude]
     var body: some View {
         Form {
             Section("语言 / Language") {
@@ -46,7 +46,7 @@ struct WorkbenchSettings: View {
                         permissionModes[provider] = PermissionDefaults.mode(for: provider)
                     }
                 }
-                Text("只影响新建会话。Kimi 与 Qoder 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
+                Text("只影响新建会话。Kimi、Qoder 与 Claude Code 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Task notifications") {

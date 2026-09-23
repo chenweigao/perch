@@ -418,6 +418,7 @@
 "OMP 未返回模型。请在远端配置模型后重试。" = "OMP returned no models. Configure a model on the remote machine and retry.";
 "Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。" = "Perch installs the selected agent's bridge components: Qoder downloads its SDK and DeepSeek installs its runtime; Codex uses the existing remote CLI. Existing tasks keep running.";
 "Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Qoder uses the remote CLI login and default model. The SDK verifies authentication with the first message.";
+"Claude Code 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Claude Code uses the remote CLI login and default model. The SDK verifies authentication with the first message.";
 "SSH 别名或 user@host" = "SSH alias or user@host";
 "SSH 已连接，但未能读取远端主目录。请检查远端 shell 的启动输出。" = "SSH connected, but the home directory could not be read. Check the remote shell startup output.";
 "上一步" = "Back";
@@ -481,6 +482,7 @@
 "继续" = "Continue";
 "继续后即可填写首个任务；机器、Agent、目录与模型会自动带入。" = "Continue to write your first task. The machine, agent, directory and model are carried over.";
 "缺少 Qoder SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。" = "Qoder SDK or Node.js is missing. Install the bridge and Node.js, then retry.";
+"缺少 Claude Code SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。" = "Claude Code SDK or Node.js is missing. Install the bridge and Node.js, then retry.";
 "要连接另一台机器，请添加新环境。" = "Add another environment to connect a different machine.";
 "请在远端安装并启动 Herdr，然后重新检查。" = "Install and start Herdr on the remote machine, then check again.";
 "请输入远端已存在且当前用户可访问的目录。" = "Enter an existing remote directory accessible to the current user.";
@@ -489,7 +491,7 @@
 "远端令牌文件" = "Remote token file";
 "远端命令执行失败。请在终端检查后重试。" = "The remote command failed. Check it in Terminal and retry.";
 "远端端口" = "Remote port";
-"远端需要 Python 3；Qoder 还需要 Node.js 与 npm。" = "The remote machine needs Python 3; Qoder also needs Node.js and npm.";
+"远端需要 Python 3；Qoder 与 Claude Code 还需要 Node.js 与 npm。" = "The remote machine needs Python 3; Qoder and Claude Code also need Node.js and npm.";
 "远端项目目录" = "Remote project directory";
 "连接代码所在的机器。Perch 使用你的 SSH 配置与密钥。" = "Connect the machine where your code lives. Perch uses your SSH configuration and keys.";
 "连接机器" = "Connect machine";
@@ -560,7 +562,7 @@
 /* Permission control */
 "新会话默认权限" = "Default Permissions for New Sessions";
 "恢复安全默认" = "Restore Safe Defaults";
-"只影响新建会话。Kimi 与 Qoder 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。" = "Only affects new sessions. Kimi and Qoder can be adjusted beside the composer; OMP and Codex permissions are fixed when the session is created.";
+"只影响新建会话。Kimi、Qoder 与 Claude Code 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。" = "Only affects new sessions. Kimi, Qoder, and Claude Code can be adjusted beside the composer; OMP and Codex permissions are fixed when the session is created.";
 "下一条消息生效" = "Applies to the next message";
 "下一轮生效" = "Applies to the next turn";
 "创建会话时固定" = "Fixed when the session is created";
@@ -587,11 +589,14 @@
 "允许工作区写入；其他敏感操作仍可能请求批准。" = "Allow writes in the workspace; other sensitive operations may still require approval.";
 "OMP 不再请求工具执行批准。" = "OMP no longer requests approval before running tools.";
 "使用 Qoder 的默认权限策略。" = "Use Qoder's default permission policy.";
+"使用 Claude Code 的默认权限策略。" = "Use Claude Code's default permission policy.";
 "自动接受文件编辑，其他操作仍按 Qoder 策略确认。" = "Accept file edits automatically; other operations still follow Qoder's approval policy.";
+"自动接受文件编辑，其他操作仍按 Claude Code 策略确认。" = "Accept file edits automatically; other operations still follow Claude Code's approval policy.";
 "只规划任务，不直接执行修改。" = "Plan the task without directly making changes.";
 "尽量继续执行而不向你提问。" = "Try to continue without asking you questions.";
 "由 Qoder 自动决定工具权限。" = "Let Qoder decide tool permissions automatically.";
 "跳过 Qoder 权限检查，允许危险操作。" = "Skip Qoder permission checks and allow dangerous operations.";
+"跳过 Claude Code 权限检查，允许危险操作。" = "Skip Claude Code permission checks and allow dangerous operations.";
 "DeepSeek 在每次需要权限时通过运行时审批卡片询问。" = "DeepSeek requests approval through a runtime card whenever permission is needed.";
 "仅允许读取；写入和其他额外权限需要批准。" = "Only allow reads; writes and other permissions require approval.";
 "允许在工作区内写入，额外权限由你批准。" = "Allow writes in the workspace; you approve additional permissions.";

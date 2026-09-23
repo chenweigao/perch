@@ -36,7 +36,7 @@ func checkSessionNaming() throws {
     precondition(!SessionNaming.isPlaceholder("登录问题排查", kind: .kimi, firstUserText: prompt))
     precondition(!SessionNaming.isPlaceholder("", kind: .terminal, firstUserText: prompt),
                  "Terminal titles come from the shell and are never named")
-    for kind in [SessionKind.omp, .qoder, .dsh, .codex] {
+    for kind in [SessionKind.omp, .qoder, .dsh, .codex, .claude] {
         precondition(SessionNaming.isPlaceholder("", kind: kind, firstUserText: prompt))
         precondition(SessionNaming.isPlaceholder("新对话", kind: kind, firstUserText: prompt))
         let bridgeTitle = String(prompt.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))

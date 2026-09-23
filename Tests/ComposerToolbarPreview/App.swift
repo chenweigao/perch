@@ -23,7 +23,7 @@ private struct ToolbarPreview: View {
     @State private var emptyModels = false
     @State private var stopCount = 0
     @State private var sendCount = 0
-    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex]
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude]
     private var selectedProvider: SessionKind { SessionKind(rawValue: permissionProvider) ?? .kimi }
     private var permissionCapability: PermissionCapability {
         PermissionCatalog.capability(for: selectedProvider, selected: permissionMode)

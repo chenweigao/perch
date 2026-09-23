@@ -90,6 +90,13 @@ public enum PermissionCatalog {
                 PermissionOption(id: "workspace-auto", titleKey: "工作区 · 自动执行", detailKey: "允许在工作区内写入且不再请求批准。", risk: .elevated),
                 PermissionOption(id: "full-access", titleKey: "完全访问", detailKey: "可访问工作区外文件和网络，执行命令时不再请求批准。", risk: .dangerous)
             ]
+        case .claude:
+            return [
+                PermissionOption(id: "default", titleKey: "默认确认", detailKey: "使用 Claude Code 的默认权限策略。"),
+                PermissionOption(id: "acceptEdits", titleKey: "自动接受编辑", detailKey: "自动接受文件编辑，其他操作仍按 Claude Code 策略确认。", risk: .elevated),
+                PermissionOption(id: "plan", titleKey: "仅规划", detailKey: "只规划任务，不直接执行修改。"),
+                PermissionOption(id: "bypassPermissions", titleKey: "绕过权限检查", detailKey: "跳过 Claude Code 权限检查，允许危险操作。", risk: .dangerous)
+            ]
         case .terminal:
             return []
         }
@@ -99,7 +106,7 @@ public enum PermissionCatalog {
         switch provider {
         case .kimi: return "manual"
         case .omp: return "always-ask"
-        case .qoder: return "default"
+        case .qoder, .claude: return "default"
         case .dsh: return runtimeManaged
         case .codex: return "workspace-ask"
         case .terminal: return nil
@@ -109,7 +116,7 @@ public enum PermissionCatalog {
     public static func scope(for provider: SessionKind) -> PermissionChangeScope {
         switch provider {
         case .kimi: return .nextMessage
-        case .qoder: return .nextTurn
+        case .qoder, .claude: return .nextTurn
         case .omp, .codex: return .newSession
         case .dsh, .terminal: return .runtimeManaged
         }

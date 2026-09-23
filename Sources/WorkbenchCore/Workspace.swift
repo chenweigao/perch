@@ -1,12 +1,12 @@
 import Foundation
 
 public enum SessionKind: String, Codable, Sendable {
-    case terminal, kimi, omp, qoder, dsh, codex
+    case terminal, kimi, omp, qoder, dsh, codex, claude
     public var symbol: String {
         [Self.terminal: "terminal", .kimi: "sparkles", .omp: "bolt", .qoder: "curlybraces",
-         .dsh: "brain.head.profile", .codex: "chevron.left.forwardslash.chevron.right"][self]!
+         .dsh: "brain.head.profile", .codex: "chevron.left.forwardslash.chevron.right", .claude: "sparkle"][self]!
     }
-    public var label: String { [Self.terminal: L("终端"), .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN", .dsh: "DeepSeek", .codex: "Codex"][self]! }
+    public var label: String { [Self.terminal: L("终端"), .kimi: "Kimi", .omp: "OMP", .qoder: "Qoder CN", .dsh: "DeepSeek", .codex: "Codex", .claude: "Claude Code"][self]! }
 }
 
 public struct SessionReference: Codable, Hashable, Identifiable, Sendable {

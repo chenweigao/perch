@@ -143,6 +143,46 @@ class ProtocolTests(unittest.TestCase):
         source={'kind':'activity_summary','provider':'codex','summaryParts':['Inspecting']}
         thought=broker.normalize({'role':'assistant','content':[{'type':'thinking','thinking':'raw','source':source}]},'thought')
         self.assertEqual(thought['content'][0]['source'],source)
+    def test_claude_launch_uses_claude_worker_and_binary(self):
+        s=self.session('claude'); s.state['permissionMode']='default'
+        process=type('Process',(),{})()
+        with patch.object(broker.subprocess,'Popen',return_value=process) as popen, \
+             patch.object(broker.threading,'Thread'), \
+             patch.object(broker.shutil,'which',return_value='/usr/local/bin/claude'):
+            s.launch()
+        args=popen.call_args.args[0]
+        popen.call_args.kwargs['stderr'].close()
+        self.assertEqual(args[0],'node')
+        self.assertTrue(args[1].endswith('claude-worker.mjs'))
+        cfg=json.loads(args[2])
+        self.assertEqual(cfg['binary'],'/usr/local/bin/claude')
+        self.assertEqual(cfg['cwd'],'/tmp')
+    def test_claude_interrupt_is_not_an_error(self):
+        s=self.session('claude');s.state['cancelled']=True
+        s.event({'type':'result','is_error':True,'errors':['Operation aborted']})
+        s.event({'type':'worker_error','message':'Operation aborted'})
+        s.event({'type':'agent_end'});self.assertIsNone(s.state['error']);self.assertEqual(s.state['completed'],0)
+    def test_claude_prompt_carries_current_permission_mode(self):
+        s=self.session('claude'); s.state['permissionMode']='acceptEdits'
+        sent=[]; s.send=lambda value:sent.append(value)
+        s.process=type('Process',(),{'poll':lambda self:None})()
+        s.prompt({'text':'continue','requestId':'claude-permission'})
+        self.assertEqual(sent[-1],{'type':'prompt','id':'claude-permission','message':'continue','permissionMode':'acceptEdits'})
+        self.assertEqual(s.summary()['permission'],{'selected':'acceptEdits',
+            'options':['default','acceptEdits','plan','bypassPermissions'],'scope':'next-turn'})
+        self.assertEqual(s.snapshot()['permission'],s.summary()['permission'])
+    def test_claude_tool_link_and_stream(self):
+        s=self.session('claude')
+        s.event({'type':'stream_event','event':{'type':'message_start'}})
+        s.event({'type':'stream_event','event':{'type':'content_block_start','content_block':{'type':'text','text':''}}})
+        s.event({'type':'stream_event','event':{'type':'content_block_delta','index':0,'delta':{'type':'text_delta','text':'你好'}}})
+        self.assertEqual(s.snapshot()['messages'][-1]['content'][0]['text'],'你好')
+        s.event({'type':'assistant','uuid':'result','message':{'role':'assistant','content':[{'type':'text','text':'你好'}]}})
+        self.assertEqual(len(s.snapshot()['messages']),1)
+        s.event({'type':'interaction','id':'approval','name':'Bash','input':{'command':'ls'}})
+        self.assertEqual(s.snapshot()['interactions'][0]['id'],'approval')
+        s.event({'type':'interaction_cancel','id':'approval'})
+        self.assertEqual(s.snapshot()['interactions'],[])
 
 class FakeCodex:
     def __init__(self, *args, **kwargs):
@@ -380,6 +420,20 @@ class CodexHandlerContractTests(unittest.TestCase):
         self.assertEqual(self.request('/sessions/qoder-permission/permission',{'mode':'unknown'})[0],400)
         self.assertEqual(qoder.state['permissionMode'],'bypassPermissions')
         self.assertEqual(self.request('/sessions/native-thread/permission',{'mode':'full-access'})[0],400)
+
+    def test_claude_permission_changes_are_persisted_for_the_next_turn(self):
+        claude=broker.Session(dict(id='claude-permission',provider='claude',cwd=folder.name,title='Claude',model='',
+            busy=True,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[{'id':'pending'}],error=None))
+        broker.SESSIONS[claude.state['id']]=claude
+        code,payload=self.request('/sessions/claude-permission/permission',{'mode':'plan'})
+        self.assertEqual(code,200)
+        self.assertEqual(payload['permission']['selected'],'plan')
+        self.assertEqual(json.loads(claude.path.read_text())['permissionMode'],'plan')
+        self.assertEqual(claude.summary()['permission'],{'selected':'plan',
+            'options':['default','acceptEdits','plan','bypassPermissions'],'scope':'next-turn'})
+        # Qoder-only modes must not leak into the Claude catalog.
+        self.assertEqual(self.request('/sessions/claude-permission/permission',{'mode':'dontAsk'})[0],400)
+        self.assertEqual(claude.state['permissionMode'],'plan')
 
     def test_create_rejects_model_and_effort_outside_catalog(self):
         catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
