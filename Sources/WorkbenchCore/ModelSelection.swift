@@ -37,12 +37,18 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
     public let contextWindow: Int?
     public let thinking: [ThinkingLevel]
     public let defaultThinking: ThinkingLevel?
+    /// The runtime that can route this model. `provider` is the model's own vendor
+    /// and says nothing about that, so a combined catalog needs this to avoid
+    /// offering a dsh route to OMP. Nil means the catalog did not say.
+    public let agent: SessionKind?
 
     public init(id: String, provider: String, name: String, contextWindow: Int? = nil,
-                thinking: [ThinkingLevel] = [], defaultThinking: ThinkingLevel? = nil) {
+                thinking: [ThinkingLevel] = [], defaultThinking: ThinkingLevel? = nil,
+                agent: SessionKind? = nil) {
         self.id = id; self.provider = provider; self.name = name
         self.contextWindow = contextWindow; self.thinking = thinking
         self.defaultThinking = thinking.contains(where: { $0 == defaultThinking }) ? defaultThinking : nil
+        self.agent = agent
     }
 
     public var supportsThinking: Bool { !thinking.isEmpty }
@@ -73,8 +79,18 @@ public enum ModelSelectionCatalog {
                               name: item["name"].string ?? id,
                               contextWindow: item["contextWindow"].int,
                               thinking: levels,
-                              defaultThinking: ThinkingLevel.parse(item["defaultThinking"].string))
+                              defaultThinking: ThinkingLevel.parse(item["defaultThinking"].string),
+                              agent: SessionKind(rawValue: item["agent"].string ?? ""))
         }
+    }
+
+    /// The models one runtime can actually route. A bridge that predates tagging
+    /// reports no agent at all; hiding every model then would leave a working
+    /// session with an empty menu, so an untagged catalog is passed through as the
+    /// ambiguous list it always was.
+    public static func forAgent(_ kind: SessionKind, in models: [AgentModel]) -> [AgentModel] {
+        guard models.contains(where: { $0.agent != nil }) else { return models }
+        return models.filter { $0.agent == kind }
     }
 
     /// Parses Kimi `/api/v1/models`. Effort levels come from `support_efforts`, which

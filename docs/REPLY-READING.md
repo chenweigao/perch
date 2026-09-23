@@ -94,8 +94,11 @@ prefix (for example `demo-a-proxy` can contain `demo-a/claude-example`). The pop
 supports case-insensitive model/provider search and keeps provider identity in the
 composer label. A choice applies to the next prompt; opening or searching the
 picker does not change the remote session. New Kimi conversations share this
-picker. OMP/Qoder retain their existing model configuration; no unverified model
-catalog or runtime switching capability is inferred for those adapters.
+picker. OMP and DeepSeek read the same popover from the bridge catalog, where each
+entry names the runtime that can route it, so neither is offered the other's
+models; the new-task sheet uses it too and keeps a typed id for models the catalog
+does not list. Qoder's SDK reports no catalog, so it stays with a typed model id
+and no runtime switching capability is inferred for it.
 
 ## Reading hierarchy
 
