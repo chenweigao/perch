@@ -528,7 +528,7 @@ private final class ConversationDocumentView: NSView {
     private func updateHeight(_ id: String, height: CGFloat) {
         guard let index = indices[id], heightAnimation?.id != id, heights[index] != height else { return }
         if ConversationReadingMemory.shared.following[sessionId] == false,
-           let reading = geometry.readingRow(at: viewportRect.minY), index < reading {
+           let reading = readingRowForAnchor(), index < reading {
             saveReadingPosition()
             restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
         }
@@ -593,9 +593,19 @@ private final class ConversationDocumentView: NSView {
         super.layout()
         restoreReadingPosition()
     }
+    private func readingRowForAnchor() -> Int? {
+        // During upward scrolling, a cold estimated row can enter above rows
+        // already on screen. Anchor those displayed rows while its height is
+        // resolved, rather than anchoring the unmeasured placeholder itself.
+        let visible = viewportRect
+        return mounted.compactMap { id -> Int? in
+            guard let controller = controllers[id], controller.view.frame.intersects(visible) else { return nil }
+            return indices[id]
+        }.min() ?? geometry.readingRow(at: max(0, visible.minY))
+    }
     private func saveReadingPosition() {
         guard restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
-              let index = geometry.readingRow(at: max(0, clip.bounds.minY - contentOriginY)),
+              let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
         ConversationReadingMemory.shared.positions[sessionId] = .init(entry: contents[index].entry.id,
             index: index, offset: clip.bounds.minY - contentOriginY - offsets[index])
