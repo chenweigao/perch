@@ -663,3 +663,5 @@
 "Agent 尚未提供可用的上下文用量。" = "The agent has not reported usable context usage yet.";
 "上报时间" = "Reported";
 "上报时间未提供" = "Report time unavailable";
+"Load all turns" = "Load all turns";
+"Loaded conversation turns" = "Loaded conversation turns";

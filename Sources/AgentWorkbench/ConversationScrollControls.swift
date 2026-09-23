@@ -5,16 +5,18 @@ import WorkbenchCore
 /// Only user scrolling changes follow mode; growing streamed content must not disable it.
 struct ConversationScrollObserver: NSViewRepresentable {
     let onScroll: (Bool) -> Void
-    func makeNSView(context: Context) -> ObserverView { ObserverView(onScroll: onScroll) }
-    func updateNSView(_ view: ObserverView, context: Context) { view.onScroll = onScroll }
+    var onNearTop: () -> Void = {}
+    func makeNSView(context: Context) -> ObserverView { ObserverView(onScroll: onScroll, onNearTop: onNearTop) }
+    func updateNSView(_ view: ObserverView, context: Context) { view.onScroll = onScroll; view.onNearTop = onNearTop }
 
     final class ObserverView: NSView {
         var onScroll: (Bool) -> Void
+        var onNearTop: () -> Void
         private var observations: [NSObjectProtocol] = []
         private var wheelMonitor: Any?
         private var wheelGeneration = 0
-        init(onScroll: @escaping (Bool) -> Void) {
-            self.onScroll = onScroll
+        init(onScroll: @escaping (Bool) -> Void, onNearTop: @escaping () -> Void = {}) {
+            self.onScroll = onScroll; self.onNearTop = onNearTop
             super.init(frame: .zero)
             for name in [NSScrollView.willStartLiveScrollNotification, NSScrollView.didEndLiveScrollNotification] {
                 observations.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
@@ -24,6 +26,7 @@ struct ConversationScrollObserver: NSViewRepresentable {
                         self.onScroll(false)
                     } else {
                         self.resumeIfAtBottom()
+                        self.loadIfNearTop()
                     }
                 })
             }
@@ -50,12 +53,19 @@ struct ConversationScrollObserver: NSViewRepresentable {
             onScroll(false)
             // Wheel mice may have no live-scroll phase. Resume only after an explicit
             // downward event has been applied, never from a content-size change.
+            if deltaY > 0 {
+                DispatchQueue.main.async { [weak self] in self?.loadIfNearTop() }
+            }
             if deltaY < 0 {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.wheelGeneration == generation else { return }
                     self.resumeIfAtBottom()
                 }
             }
+        }
+        private func loadIfNearTop() {
+            guard let scroll = enclosingScrollView, scroll.documentVisibleRect.minY <= 300 else { return }
+            onNearTop()
         }
         private func resumeIfAtBottom() {
             guard let scroll = enclosingScrollView, let document = scroll.documentView,
@@ -96,8 +106,10 @@ struct ReturnToLatestButton: View {
 /// without SwiftUI lazy phase resolution or system-table accessibility traversal.
 struct ConversationScrollView<Content: View>: View {
     var showsScrollIndicator = false
+    var hasOlderHistory = false
     var onScroll: (Bool) -> Void = { _ in }
     var onContentSizeChange: () -> Void = {}
+    var onNearTop: () -> Void = {}
     @ViewBuilder let content: Content
     @State private var contentSize = CGSize.zero
     @State private var conversationViewport = ConversationViewport()
@@ -111,12 +123,12 @@ struct ConversationScrollView<Content: View>: View {
                     .padding(.horizontal, 36).frame(maxWidth: .infinity)
                     .coordinateSpace(name: "conversation-content")
                     .background {
-                        ConversationScrollObserver(onScroll: onScroll)
+                        ConversationScrollObserver(onScroll: onScroll, onNearTop: onNearTop)
                     }
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }))
                 .overlay(alignment: .leading) {
-                    ConversationTurnNavigator(model: conversationViewport.navigator)
+                    ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
                 }
         }
     }
@@ -225,9 +237,10 @@ final class ConversationTurnHover: ObservableObject {
 
 private struct ConversationTurnNavigator: View {
     @ObservedObject var model: ConversationTurnNavigation
+    var hasOlderHistory = false
     var body: some View {
         if model.snapshot.turns.count > 1 {
-            ConversationTurnRail(turns: model.snapshot.turns, current: model.current,
+            ConversationTurnRail(turns: model.snapshot.turns, current: model.current, hasOlderHistory: hasOlderHistory,
                                  selectedID: model.selectedID, hover: model.hover, select: model.select)
                 .id(model.snapshot.session)
         }
@@ -237,6 +250,7 @@ private struct ConversationTurnNavigator: View {
 private struct ConversationTurnRail: View {
     let turns: [ConversationTurnSummary]
     let current: Int
+    let hasOlderHistory: Bool
     let selectedID: String?
     @ObservedObject var hover: ConversationTurnHover
     let select: (Int) -> Void
@@ -272,7 +286,7 @@ private struct ConversationTurnRail: View {
                 .onKeyPress(.downArrow) { hover.reset(); select(min(count - 1, (selected ?? current) + 1)); return .handled }
                 .onKeyPress(.escape) { focused = false; hover.reset(); return .handled }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text("Conversation turns"))
+                .accessibilityLabel(Text(hasOlderHistory ? "Loaded conversation turns" : "Conversation turns"))
                 .accessibilityValue(Text("\(current + 1) / \(count): \(turns[current].prompt)"))
                 .accessibilityAdjustableAction { direction in
                     switch direction {

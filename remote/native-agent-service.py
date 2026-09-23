@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SSH-only loopback broker. Owns Agent stdin independently of any Mac client."""
-import argparse, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, urllib.request, uuid, warnings
+import argparse, bisect, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, urllib.request, uuid, warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-workbench/native')).expanduser()
@@ -328,6 +328,21 @@ def normalize(message, identity):
         elif kind == 'tool_result': parts.append({'type':kind,'tool_call_id':p.get('tool_use_id'),'output':p.get('content'),'is_error':p.get('is_error',False)})
     return {'id':identity,'role':role,'content':parts,'created_at':str(message.get('timestamp',''))}
 
+def is_user_prompt(message):
+    # Match KimiMessage.isUserPrompt: injected context must not split a page
+    # away from the actual user prompt and its tool/reply messages.
+    def context(part):
+        if part.get('type') != 'text': return False
+        value = part.get('text', '').strip()
+        if value.startswith('<system-reminder>'): return True
+        if any(value.startswith(a) and value.endswith(b) for a,b in (
+            ('<notification ', '</notification>'), ('<skill-loaded ', '</skill-loaded>'), ('<system>', '</system>'))): return True
+        if value.endswith('</skill-loaded>') and '\n' in value:
+            block = value.split('\n', 1)[1].lstrip()
+            return block.startswith('<skill-loaded ') and 'trigger="model-tool"' in block.split('>', 1)[0]
+        return False
+    return message['role'] == 'user' and message.get('metadata', {}).get('origin', {}).get('kind') != 'compaction_summary' and not all(context(p) for p in message['content'])
+
 def codex_permission_params(mode, turn=False):
     mode = permission_mode('codex', mode)
     policy, sandbox, turn_sandbox = {
@@ -354,11 +369,19 @@ class Session:
         self.acp_blocks = {}; self.permission_options = {}
         self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
         self.codex_interactions = {}
+        self.reset_history_index()
         # Version 1 stored command results as plain strings in existing histories.
         previous=state.get('commandResult')
         if isinstance(previous,str):
             state['commandResult']={'id':'restored-command','status':'completed' if previous=='已完成' else 'unknown',
                                     'error':None if previous=='已完成' else '此前命令结果：'+previous}
+    def reset_history_index(self):
+        # Epoch changes when history is replaced or the bridge restarts. Never
+        # apply positions from a different history, even if revisions coincide.
+        self.history_epoch = uuid.uuid4().hex
+        self.message_indices = {m['id']: i for i, m in enumerate(self.state['messages'])}
+        self.message_versions = {}
+        self.prompt_indices = [i for i, m in enumerate(self.state['messages']) if is_user_prompt(m)]
     def persist(self):
         self.path.parent.mkdir(exist_ok=True); save(self.path, self.state); self.last_save = time.monotonic()
     def touch(self, durable=False):
@@ -511,7 +534,7 @@ class Session:
             elif 'reasoningEffort' in thread: s['thinking']=thread.get('reasoningEffort')
         if thread.get('updatedAt'): s['updated']=thread['updatedAt']
     def codex_hydrate(self):
-        self.state['messages']=[]; self.codex_parts={}; self.codex_outputs={}
+        self.state['messages']=[]; self.reset_history_index(); self.codex_parts={}; self.codex_outputs={}
         cursor=None
         while True:
             params={'threadId':self.state['resume'],'sortDirection':'asc','limit':100}
@@ -915,10 +938,19 @@ class Session:
                 if self.state['busy']: self.finish('unknown')
                 self.state['busy'] = False; self.state['interactions'] = []; self.touch(True)
     def upsert(self, message, identity):
-        value = normalize(message,identity)
-        for i, existing in enumerate(self.state['messages']):
-            if existing['id'] == identity: self.state['messages'][i] = value; return
-        self.state['messages'].append(value)
+        value = copy.deepcopy(normalize(message,identity))
+        index = self.message_indices.get(identity)
+        if index is None:
+            index = len(self.state['messages']); self.message_indices[identity] = index
+            self.state['messages'].append(value)
+            if is_user_prompt(value): self.prompt_indices.append(index)
+        else:
+            old = self.state['messages'][index]
+            if old == value: return
+            if is_user_prompt(old) and not is_user_prompt(value): self.prompt_indices.remove(index)
+            if not is_user_prompt(old) and is_user_prompt(value): bisect.insort(self.prompt_indices, index)
+            self.state['messages'][index] = value
+        self.message_versions[index] = self.state['revision'] + 1
     def steer(self, body):
         s=self.state; request_id=body.get('requestId'); text=body.get('text','')
         if s['provider'] not in ('omp','codex'): raise ValueError('当前 Agent 不支持运行中引导')
@@ -1138,15 +1170,45 @@ class Session:
             return
         else: return
         self.touch(durable)
-    def snapshot(self, revision=None):
+    def snapshot(self, revision=None, turns=None, start=None, epoch=None, before=None):
         live=[x for x in self.state['interactions'] if not x.get('expires') or x['expires']>time.time()]
         if live != self.state['interactions']: self.state['interactions']=live; self.touch(True)
-        if revision == str(self.state['revision']): return {'unchanged':True}
-        # Idempotency receipts are queried individually; do not resend/copy the
-        # entire receipt ledger with each streaming transcript snapshot.
-        s=copy.deepcopy({k:v for k,v in self.state.items() if k!='requests'})
+        paged = turns is not None or start is not None or before is not None
+        if not paged:
+            if revision == str(self.state['revision']): return {'unchanged':True}
+            s=copy.deepcopy({k:v for k,v in self.state.items() if k!='requests'})
+            s['permission']=permission_capability(self.state)
+            if s.get('partial'): s['messages'].append(normalize(s.pop('partial'),'live'))
+            return s
+        count = len(self.state['messages'])
+        partial = normalize(self.state['partial'], 'live') if self.state.get('partial') else None
+        total = count + (1 if partial else 0)
+        limit = int(turns or 50)
+        if not 1 <= limit <= 100: raise ValueError('Invalid history page size')
+        if before is not None and epoch != self.history_epoch: raise ValueError('History changed; reopen the conversation')
+        end = int(before) if before is not None else total
+        if not 0 <= end <= total: raise ValueError('Invalid history cursor')
+        if start is not None and epoch == self.history_epoch:
+            first = int(start)
+            if not 0 <= first <= end: raise ValueError('Invalid history cursor')
+        else:
+            prompts = bisect.bisect_left(self.prompt_indices, end)
+            first = self.prompt_indices[prompts-limit] if prompts > limit else 0
+        history = {'epoch':self.history_epoch, 'start':first, 'total':total, 'end':end}
+        since = int(revision) if revision is not None else None
+        delta = before is None and start is not None and epoch == self.history_epoch and since is not None and 0 <= since <= self.state['revision']
+        if delta and since == self.state['revision']: return {'unchanged':True}
+        # Copy metadata and only the requested page/changed messages. Completed
+        # history is neither deep-copied nor serialized for every stream tick.
+        s=copy.deepcopy({k:v for k,v in self.state.items() if k not in ('requests','messages','partial')})
         s['permission']=permission_capability(self.state)
-        if s.get('partial'): s['messages'].append(normalize(s.pop('partial'),'live'))
+        if delta:
+            indices = sorted(i for i, version in self.message_versions.items() if first <= i < count and version > since)
+            if partial: indices.append(count)
+            history.update(indices=indices, baseRevision=since)
+        else: indices = range(first, end)
+        s['messages'] = [copy.deepcopy(self.state['messages'][i]) if i < count else partial for i in indices]
+        s['history'] = history
         return s
 
 def load():
@@ -1222,8 +1284,8 @@ class Handler(BaseHTTPRequestHandler):
                     if not post and len(path)==5 and path[3]=='requests':
                         result=copy.deepcopy(s.state.get('requests',{}).get(path[4],{'id':path[4],'status':'notFound'}))
                     elif not post:
-                        since=parse_qs(urlparse(self.path).query).get('revision',[None])[0]
-                        result=s.snapshot(since)
+                        query=parse_qs(urlparse(self.path).query)
+                        result=s.snapshot(**{k:query[k][0] for k in ('revision','turns','start','epoch','before') if k in query})
                     else:
                         action=path[3]
                         if action=='prompt':

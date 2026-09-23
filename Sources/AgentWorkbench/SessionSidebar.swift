@@ -92,8 +92,10 @@ struct SessionDirectoryView: View {
     @State private var selection: String?
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
-    private var sessions: [WorkspaceSession] { model.allSessions.filter { !$0.archived && $0.matchesSearch(query) } }
+    @State private var search = SessionDirectorySearch()
     var body: some View {
+        let result = search.update(model.allSessions, query: query, locale: L.locale)
+        let sessions = result.sessions
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L(key: isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
@@ -118,9 +120,9 @@ struct SessionDirectoryView: View {
             }
         }.padding(24).frame(maxWidth: 950, maxHeight: .infinity, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .onAppear { if isSearchSheet { focused = true }; selection = sessions.first(where: \.online)?.id }
-            .onChange(of: query) { _, _ in selection = sessions.first(where: \.online)?.id }
-            .onChange(of: sessions.filter(\.online).map(\.id)) { _, ids in
+            .onAppear { if isSearchSheet { focused = true }; selection = result.online.first?.id }
+            .onChange(of: query) { _, _ in selection = result.online.first?.id }
+            .onChange(of: result.online.map(\.id)) { _, ids in
                 if selection.map({ !ids.contains($0) }) ?? true { selection = ids.first }
             }
             #if PERCH_ACCEPTANCE
@@ -140,7 +142,7 @@ struct SessionDirectoryView: View {
     private func move(_ delta: Int, key: KeyPress) -> KeyPress.Result {
         guard key.modifiers.intersection([.command, .control, .option, .shift]).isEmpty,
               (NSApp.keyWindow?.firstResponder as? NSTextView)?.hasMarkedText() != true else { return .ignored }
-        let available = sessions.filter(\.online)
+        let available = search.result.online
         guard !available.isEmpty else { return .ignored }
         let index = available.firstIndex { $0.id == selection } ?? 0
         selection = available[min(max(index + delta, 0), available.count - 1)].id

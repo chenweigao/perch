@@ -31,6 +31,10 @@ final class NativeAgentConnection: ObservableObject {
     private var directory: URL?
     private var task: Task<Void, Never>?
     private var selectionTask: Task<Void, Never>?
+    private var historyTask: Task<Void, Never>?
+    @Published private(set) var loadingOlder = false
+    private var historyWindows: [String: (start: Int, epoch: String)] = [:]
+    private var nextCatalogRefresh = Date.distantPast
     private var selectionGeneration = UUID()
     private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
@@ -80,8 +84,7 @@ final class NativeAgentConnection: ObservableObject {
                     try await establish(token)
                     online = true; error = nil; onSessionsChanged?()
                     while !Task.isCancelled && generation == token {
-                        try await refresh()
-                        if selectionTask == nil { try await refreshSelected() }
+                        try await poll()
                         try await Task.sleep(for: .milliseconds(400))
                     }
                 } catch is CancellationError { return }
@@ -96,6 +99,8 @@ final class NativeAgentConnection: ObservableObject {
     func disconnect() {
         generation = UUID(); selectionGeneration = UUID()
         task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
+        historyTask?.cancel(); historyTask = nil; loadingOlder = false
+        nextCatalogRefresh = .distantPast
         online = false; closeTunnel()
     }
     private func closeTunnel() {
@@ -152,6 +157,15 @@ final class NativeAgentConnection: ObservableObject {
         try Task.checkCancellation()
         return try NativeAgentWire.decode(type, from: data)
     }
+    /// Catalogs change much less often than the selected streaming reply.
+    /// Receipts still advance at the regular tick so queued sends are not delayed.
+    func poll(now: Date = Date()) async throws {
+        if now >= nextCatalogRefresh {
+            try await refresh()
+            nextCatalogRefresh = now.addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
+        } else { try await refreshReceipts() }
+        if selectionTask == nil { try await refreshSelected() }
+    }
     func refresh() async throws {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
         let value: Catalog = try await request("/sessions")
@@ -168,9 +182,13 @@ final class NativeAgentConnection: ObservableObject {
             onSessionsChanged?()
         }
         reconcileStops()
+        nextCatalogRefresh = Date().addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
+        try await refreshReceipts()
+    }
+    private func refreshReceipts() async throws {
         // Receipts, not catalog changes, settle pending sends after a reconnect.
         for message in queue.allItems where !sendingSessions.contains(message.session.terminalID) {
-            guard next.contains(where: { $0.id == message.session.terminalID }) else { continue }
+            guard sessions.contains(where: { $0.id == message.session.terminalID }) else { continue }
             switch message.state {
             case .submitting, .accepted, .running, .unknown:
                 let receipt: NativeRequestReceipt = try await request("/sessions/\(message.session.terminalID)/requests/\(message.id)")
@@ -186,7 +204,9 @@ final class NativeAgentConnection: ObservableObject {
     }
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
+        if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }
         selectedID = id; snapshot = nil; actionError = nil
+        historyTask?.cancel(); historyTask = nil; loadingOlder = false
         selectionTask?.cancel()
         selectionGeneration = UUID(); let token = selectionGeneration
         guard online else { selectionTask = nil; return }
@@ -205,13 +225,52 @@ final class NativeAgentConnection: ObservableObject {
         try Task.checkCancellation()
         guard let id = selectedID else { return }
         let token = selectionGeneration, connectionToken = generation
-        let suffix = snapshot?.id == id ? "?revision=\(snapshot!.revision)" : ""
+        let suffix: String
+        if let current = snapshot, current.id == id {
+            if let window = current.history {
+                suffix = "?start=\(window.start)&epoch=\(window.epoch)&revision=\(current.revision)"
+            } else { suffix = "?revision=\(current.revision)" }
+        } else if let window = historyWindows[id] {
+            suffix = "?start=\(window.start)&epoch=\(window.epoch)&turns=50"
+        } else { suffix = "?turns=50" }
         let response: NativeSnapshotResponse = try await request("/sessions/\(id)\(suffix)")
         try Task.checkCancellation()
         guard token == selectionGeneration, connectionToken == generation, id == selectedID,
               let value = response.snapshot else { return }
-        snapshot = value
+        // A page may have expanded the window while this delta was in flight.
+        // It did not cover edits in that newly loaded prefix: leave the revision
+        // untouched and let the next normal tick request the expanded window.
+        if let window = value.history, window.indices != nil, window.start != snapshot?.history?.start { return }
+        let next = try value.applying(to: snapshot)
+        if let previous = snapshot, previous.busy != next.busy || previous.completed != next.completed || previous.interactions != next.interactions {
+            nextCatalogRefresh = .distantPast
+        }
+        snapshot = next
     }
+    func loadOlder() { loadHistory(all: false) }
+    func loadAllHistoryForSearch() { loadHistory(all: true) }
+    private func loadHistory(all: Bool) {
+        guard online, !loadingOlder, snapshot?.hasOlder == true, let id = selectedID else { return }
+        let token = selectionGeneration, connectionToken = generation
+        loadingOlder = true
+        historyTask = Task {
+            defer { if token == selectionGeneration { loadingOlder = false; historyTask = nil } }
+            do {
+                repeat {
+                    guard let current = snapshot, let window = current.history, current.hasOlder else { return }
+                    let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+                    try Task.checkCancellation()
+                    guard token == selectionGeneration, connectionToken == generation, id == selectedID,
+                          let latest = snapshot else { return }
+                    snapshot = try latest.prepending(page)
+                    if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
+                } while all
+            } catch is CancellationError {} catch {
+                if token == selectionGeneration { actionError = error.localizedDescription }
+            }
+        }
+    }
+
     func create(provider: SessionKind, cwd: String, model: String, permissionMode: String? = nil) async throws -> NativeAgentSession {
         guard let selectedPermission = permissionMode ?? PermissionDefaults.mode(for: provider),
               PermissionCatalog.isValid(selectedPermission, for: provider) else {
@@ -318,6 +377,8 @@ final class NativeAgentConnection: ObservableObject {
                 let receipt: NativeRequestReceipt = try await request("/sessions/\(id)/\(message.mode == .steer ? "steer" : "prompt")", body: .object([
                     "text": .string(message.text), "requestId": .string(message.id)]))
                 apply(receipt)
+                nextCatalogRefresh = .distantPast
+                do { try await refresh() } catch { actionError = "操作已受理，同步失败：\(error.localizedDescription)" }
             } catch {
                 queue.markUnknown(message.id, error.localizedDescription)
                 if selectedID == id { actionError = error.localizedDescription }

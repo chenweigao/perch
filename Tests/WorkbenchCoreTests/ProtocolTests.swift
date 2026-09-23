@@ -17,6 +17,7 @@ struct ProtocolTests {
         checkConversationRowGeometry()
         checkReplyDocument()
         try checkNativeAgents()
+        try checkIncrementalLoading()
         try checkKimiProtocol()
         try await checkKimiAPILifecycle()
         try checkKimiPrompts()

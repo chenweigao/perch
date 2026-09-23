@@ -67,7 +67,8 @@ public struct NativeAgentSnapshot: Decodable {
     public let revision: Int
     public let completed: Int
     public let model: String
-    public let messages: [KimiMessage]
+    public var messages: [KimiMessage]
+    public var history: NativeHistoryWindow?
     public let interactions: [JSONValue]
     public let error: String?
     public let permission: PermissionCapability?
@@ -90,4 +91,53 @@ public struct NativeRequestReceipt: Decodable {
     public let id: String
     public let status: String
     public let error: String?
+}
+
+/// Absolute message positions belong to one bridge history epoch. Legacy full
+/// responses have no window and remain readable by the same client.
+public struct NativeHistoryWindow: Decodable {
+    public let epoch: String
+    public var start: Int
+    public let total: Int
+    public let end: Int
+    public let indices: [Int]?
+    public let baseRevision: Int?
+}
+
+extension NativeAgentSnapshot {
+    public var hasOlder: Bool { (history?.start ?? 0) > 0 }
+
+    public func applying(to previous: NativeAgentSnapshot?) throws -> NativeAgentSnapshot {
+        guard let window = history, let indices = window.indices else { return self }
+        guard let previous, previous.id == id, let old = previous.history,
+              old.epoch == window.epoch, previous.revision == window.baseRevision,
+              old.start == window.start, window.total >= old.start,
+              indices.count == messages.count else { throw WorkbenchError("Invalid transcript delta base") }
+        var combined = Array(previous.messages.prefix(window.total - old.start))
+        var last = old.start - 1
+        for (index, message) in zip(indices, messages) {
+            guard index > last, index >= old.start, index < window.total,
+                  index - old.start <= combined.count else { throw WorkbenchError("Invalid transcript delta position") }
+            let offset = index - old.start
+            if offset == combined.count { combined.append(message) } else { combined[offset] = message }
+            last = index
+        }
+        guard combined.count == window.total - old.start else { throw WorkbenchError("Incomplete transcript delta") }
+        var result = self
+        result.messages = combined
+        result.history?.start = old.start
+        return result
+    }
+
+    public func prepending(_ page: NativeAgentSnapshot) throws -> NativeAgentSnapshot {
+        guard page.id == id, let old = history, let window = page.history,
+              window.indices == nil, window.epoch == old.epoch,
+              window.end == old.start, window.start < old.start,
+              page.messages.count == old.start - window.start else { throw WorkbenchError("Invalid history page") }
+        var result = self
+        result.messages = page.messages + messages
+        result.history?.start = window.start
+        // Keep our revision: the next delta reconciles edits that raced this page.
+        return result
+    }
 }
