@@ -56,24 +56,31 @@ import WorkbenchCore
         observe(store, first, firstBatch)
         try await until { store.narrative(session: "session")?.headline == "Summary 1" }
         unchanged = true
-        observe(store, second, secondBatch)
+        let firstEnded = try snapshot([read], running: false)
+        observe(store, firstEnded, batch(firstEnded, [read], closed: true), running: false)
         try await until { requests.count == 2 }
-        precondition(requests[1].1?.summary == "Summary 1", "Carry the preceding stage's summary")
-        precondition(store.narrative(session: "session")?.headline == "Summary 1", "No-change preserves wording across stages")
+        precondition(store.narrative(session: "session")?.headline == "Summary 1",
+            "No-change within the same stage preserves its existing refinement")
+        observe(store, second, secondBatch)
+        try await until { requests.count == 3 }
+        precondition(requests[2].1?.summary == "Summary 1", "Carry the preceding stage's summary as context")
+        precondition(store.narrative(session: "session")?.source == .local,
+            "No-change cannot copy a historical headline into a new stage")
+        precondition(store.narrative(session: "session")?.headline != "Summary 1")
         let ended = try snapshot([read, edit], running: false)
         observe(store, ended, batch(ended, [edit], closed: true), running: false)
-        try await until { requests.count == 3 }
-        precondition(store.narrative(session: "session")?.headline == "Summary 1")
+        try await until { requests.count == 4 }
+        precondition(store.narrative(session: "session")?.source == .local)
         precondition(store.narrative(session: "session")?.lifecycle == .final)
         observe(store, ended, batch(ended, [edit], closed: true), running: false)
         try await Task.sleep(for: .milliseconds(30))
-        precondition(requests.count == 3, "Task end is sent once")
+        precondition(requests.count == 4, "Task end is sent once")
         unchanged = false
         let newTurn = try snapshot([read], turn: "new-turn")
         observe(store, newTurn, batch(newTurn, [read]))
-        try await until { requests.count == 4 }
-        precondition(requests[3].1 == nil, "A different user request must not inherit the previous turn")
-        print("PASS: stage continuity, unchanged wording, one final event and turn isolation")
+        try await until { requests.count == 5 }
+        precondition(requests[4].1 == nil, "A different user request must not inherit the previous turn")
+        print("PASS: stage context without duplicate headlines, same-stage no-change, one final event and turn isolation")
 
         var queued: [ActivitySummaryBatch] = []
         let throttled = ActivityNarrativeStore(minimumInterval: 0.15) { _, batch, _ in

@@ -131,7 +131,9 @@ and do not create an external request.
 All sessions share one worker. Requests are at least eight seconds apart globally;
 pending observations coalesce to the newest eligible batch **after** throttling.
 An in-flight response is not displayed if a newer event for that stage is pending.
-When `should_update` is false, the prior wording is kept, including across stages.
+When `should_update` is false, an existing refinement for the same stage is kept.
+A new stage keeps its local headline instead of copying a prior stage already
+shown in history; the prior summary still goes to the model as context.
 Closure means observation ended, not that the task succeeded; the prompt distinguishes
 `returned`, `succeeded`, and explicit exit codes.
 There is no automatic retry, redirect, second model pass, or alternate-provider
@@ -183,6 +185,10 @@ retry.
   fixtures without an agent connection.
 - `scripts/build-tool-visibility-preview.sh` exercises transcript process grouping;
   its isolated defaults keep external refinement disabled.
+- `scripts/build-tool-visibility-preview.sh --summary-duplicate` builds a separate
+  native fixture using the production transcript and activity bar with an injected
+  no-change model response. It checks active progress, the next stage, and turn end
+  without SSH, Herdr, model network calls, or real credentials.
 - `python3 scripts/check-scroll-following.py` checks the production scroll path after
   a macOS build.
 
