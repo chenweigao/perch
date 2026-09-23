@@ -29,6 +29,7 @@ Liquid Glass controls on macOS 26. Designed for a focused, fluid reading experie
 - **Keep your CLI workflow.** Use native chat for supported agents and Ghostty terminals for CLI sessions through Herdr.
 - **Inspect the work.** Open remote files and read Git diffs alongside a conversation (experimental).
 - **Remote execution, local control.** Files and tools run on your server. Closing the Mac app leaves managed remote sessions running.
+- **Explicit permission modes.** Choose adapter-specific defaults and per-task overrides; high-risk modes require confirmation. Kimi and Qoder can change for a later message or turn, while OMP and Codex are fixed when a session is created.
 
 ## Agent connections
 

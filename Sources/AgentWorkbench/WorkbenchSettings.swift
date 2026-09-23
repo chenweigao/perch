@@ -8,8 +8,9 @@ struct WorkbenchSettings: View {
     @State private var showSummary = false
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @State private var editingHost: SSHHost?
+    @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
-    @AppStorage(CodexPermissionMode.defaultsKey) private var codexPermissionMode: CodexPermissionMode = .ask
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex]
     var body: some View {
         Form {
             Section("语言 / Language") {
@@ -27,12 +28,25 @@ struct WorkbenchSettings: View {
                 Text("远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Codex 权限") {
-                Picker("新任务默认权限", selection: $codexPermissionMode) {
-                    ForEach(CodexPermissionMode.allCases) { mode in Text(mode.label).tag(mode) }
+            Section("新会话默认权限") {
+                ForEach(permissionProviders, id: \.rawValue) { provider in
+                    PermissionPicker(provider: provider,
+                                     capability: PermissionCatalog.capability(for: provider, selected: permissionMode(for: provider)),
+                                     layout: .form, allowsSelection: true) { mode in
+                        permissionModes[provider] = mode
+                        PermissionDefaults.set(mode, for: provider)
+                    }
                 }
-                Text(codexPermissionMode.detail).font(.caption).foregroundStyle(.secondary)
-                Text("仅影响新建 Codex 任务；已有任务可在输入框旁调整。")
+                PermissionPicker(provider: .dsh,
+                                 capability: PermissionCatalog.capability(for: .dsh),
+                                 layout: .form, allowsSelection: false) { _ in }
+                Button("恢复安全默认") {
+                    for provider in permissionProviders {
+                        PermissionDefaults.restoreSafeDefault(for: provider)
+                        permissionModes[provider] = PermissionDefaults.mode(for: provider)
+                    }
+                }
+                Text("只影响新建会话。Kimi 与 Qoder 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Task notifications") {
@@ -50,9 +64,13 @@ struct WorkbenchSettings: View {
                 Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).frame(width: 460, height: 620)
+        }.formStyle(.grouped).frame(width: 480, height: 760)
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
             .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
             .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
+    }
+
+    private func permissionMode(for provider: SessionKind) -> String? {
+        permissionModes[provider] ?? PermissionDefaults.mode(for: provider)
     }
 }

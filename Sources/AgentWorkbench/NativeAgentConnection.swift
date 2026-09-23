@@ -130,7 +130,7 @@ final class NativeAgentConnection: ObservableObject {
             if FileManager.default.fileExists(atPath: control) {
                 api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(local)")!, token: secret)
                 let health: JSONValue = try await request("/health")
-                guard health["version"].int == 2 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+                guard health["version"].int == 3 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
@@ -205,9 +205,15 @@ final class NativeAgentConnection: ObservableObject {
               let value = response.snapshot else { return }
         snapshot = value
     }
-    func create(provider: SessionKind, cwd: String, model: String, permissionMode: CodexPermissionMode = .ask) async throws -> NativeAgentSession {
-        var body: [String: JSONValue] = ["provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model)]
-        if provider == .codex { body["permissionMode"] = .string(permissionMode.rawValue) }
+    func create(provider: SessionKind, cwd: String, model: String, permissionMode: String? = nil) async throws -> NativeAgentSession {
+        guard let selectedPermission = permissionMode ?? PermissionDefaults.mode(for: provider),
+              PermissionCatalog.isValid(selectedPermission, for: provider) else {
+            throw WorkbenchError("当前 Agent 的权限模式无效")
+        }
+        let body: [String: JSONValue] = [
+            "provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model),
+            "permissionMode": .string(selectedPermission)
+        ]
         let session: NativeAgentSession = try await request("/sessions", body: .object(body))
         sessions.insert(session, at: 0); onSessionsChanged?(); select(session.id); return session
     }
@@ -245,6 +251,17 @@ final class NativeAgentConnection: ObservableObject {
     func setThinking(_ level: ThinkingLevel, for id: String) {
         Task {
             do { try await action(id, "thinking", ["level": .string(level.rawValue)]) }
+            catch { actionError = error.localizedDescription }
+        }
+    }
+    func setPermission(_ mode: String, for id: String) {
+        guard sessions.first(where: { $0.id == id })?.provider == .qoder,
+              PermissionCatalog.isValid(mode, for: .qoder) else {
+            actionError = L("当前 Agent 不支持动态切换权限")
+            return
+        }
+        Task {
+            do { try await action(id, "permission", ["mode": .string(mode)]) }
             catch { actionError = error.localizedDescription }
         }
     }

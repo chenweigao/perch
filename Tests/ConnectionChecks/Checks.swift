@@ -7,7 +7,8 @@ private final class TransportFixture {
     var receipts: [String: String] = [:]
     var prompts: [String] = []
     var steers: [String] = []
-    var creates: [(SessionKind, String)] = []
+    var creates: [(SessionKind, String, String)] = []
+    var permissionChanges: [(String, String)] = []
     var modelChanges: [(String, String, String)] = []
     var thinkingChanges: [(String, String)] = []
     var losePromptResponse = false
@@ -26,11 +27,17 @@ private final class TransportFixture {
     var pendingSnapshots: [(CheckedContinuation<Data, Error>, Data)] = []
     var returnedSnapshots = 0
 
+    private static func permission(_ provider: SessionKind, _ mode: String) -> [String: Any] {
+        let capability = PermissionCatalog.capability(for: provider, selected: mode)
+        return ["selected": capability.selected ?? mode, "options": capability.options, "scope": capability.scope.rawValue]
+    }
+
     init() {
         for id in ["a", "b"] {
             sessions[id] = ["id": id, "provider": "omp", "title": id, "cwd": "/fixture",
                             "busy": false, "archived": false, "updated": 1.0, "completed": 0,
-                            "pending": 0, "model": "fixture", "cancelled": false, "steer": true]
+                            "pending": 0, "model": "fixture", "cancelled": false, "steer": true,
+                            "permission": Self.permission(.omp, "always-ask")]
         }
     }
     func request(_ path: String, _ body: JSONValue?) async throws -> Data {
@@ -43,15 +50,21 @@ private final class TransportFixture {
         } else if path == "/sessions", let body {
             let provider = SessionKind(rawValue: body["provider"].string ?? "")!
             let id = provider == .codex ? "native-codex-thread" : "created"
-            creates.append((provider, body["model"].string ?? ""))
+            let permissionMode = body["permissionMode"].string!
+            creates.append((provider, body["model"].string ?? "", permissionMode))
             sessions[id] = ["id": id, "provider": provider.rawValue, "title": "created", "cwd": body["cwd"].string ?? "/fixture",
                             "busy": false, "archived": false, "updated": 2.0, "completed": 0,
-                            "pending": 0, "model": body["model"].string ?? "", "cancelled": false, "steer": provider == .codex]
-            if provider == .codex { sessions[id]?["permissionMode"] = body["permissionMode"].string ?? "ask" }
+                            "pending": 0, "model": body["model"].string ?? "", "cancelled": false, "steer": provider == .codex,
+                            "permission": Self.permission(provider, permissionMode)]
             result = sessions[id]!
-        } else if parts.count == 3 && parts[2] == "permissions", let body {
-            sessions[parts[1]]?["permissionMode"] = body["mode"].string
-            result = ["ok": true]
+        } else if parts.count == 3 && parts[2] == "permission", let body {
+            let id = parts[1], mode = body["mode"].string!
+            guard sessions[id]?["provider"] as? String == SessionKind.qoder.rawValue else {
+                throw WorkbenchError("permission is fixed")
+            }
+            sessions[id]?["permission"] = Self.permission(.qoder, mode)
+            permissionChanges.append((id, mode))
+            result = ["ok": true, "permission": Self.permission(.qoder, mode)]
         } else if path == "/sessions" {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
@@ -227,6 +240,7 @@ struct ConnectionChecks {
         precondition(client.queue.allItems.isEmpty && lost.prompts.count == 1)
         precondition(connection.queue.items(for: b).count == 1)
         try await checkCodexConnection()
+        try await checkQoderPermission()
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
     }
 
@@ -270,12 +284,14 @@ struct ConnectionChecks {
             preconditionFailure("Codex model catalog was not decoded")
         }
         precondition(model.defaultThinking == .medium && model.thinking.last == .ultra)
-        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id, permissionMode: .autoReview)
-        precondition(session.permissionMode == .autoReview)
-        try await client.action(session.id, "permissions", ["mode": .string(CodexPermissionMode.fullAccess.rawValue)])
-        precondition(client.sessions.first { $0.id == session.id }?.permissionMode == .fullAccess)
+        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id, permissionMode: "workspace-auto")
+        precondition(session.permission?.selected == "workspace-auto" && session.permission?.scope == .newSession)
         precondition(session.id == "native-codex-thread" && session.provider == .codex)
-        precondition(fixture.creates.count == 1 && fixture.creates[0].0 == .codex && fixture.creates[0].1 == model.id)
+        precondition(fixture.creates.count == 1 && fixture.creates[0].0 == .codex
+                     && fixture.creates[0].1 == model.id && fixture.creates[0].2 == "workspace-auto")
+        client.setPermission("full-access", for: session.id)
+        precondition(client.actionError != nil && fixture.permissionChanges.isEmpty,
+                     "Codex permissions are fixed when the session is created")
         await settle { client.snapshot?.id == session.id }
 
         client.setModel(model, for: session.id)
@@ -290,7 +306,29 @@ struct ConnectionChecks {
         client.drafts[session.id] = "guide native turn"; client.send(mode: .steer)
         await settle { fixture.steers.count == 1 && !client.sending }
         client.disconnect()
-        print("PASS: Codex native thread identity, catalog effort, model actions and steering")
+        print("PASS: Codex native thread identity, fixed permission, catalog effort, model actions and steering")
+    }
+
+    @MainActor
+    static func checkQoderPermission() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Qoder", destination: "fixture"), transport: fixture.request)
+        let session = try await client.create(provider: .qoder, cwd: "/fixture", model: "", permissionMode: "acceptEdits")
+        precondition(session.permission?.selected == "acceptEdits" && session.permission?.scope == .nextTurn)
+        precondition(fixture.creates.first?.2 == "acceptEdits")
+        fixture.sessions[session.id]?["busy"] = true
+        try await client.refresh()
+        client.setPermission("bypassPermissions", for: session.id)
+        await settle {
+            fixture.permissionChanges.count == 1
+                && fixture.permissionChanges[0].0 == session.id
+                && fixture.permissionChanges[0].1 == "bypassPermissions"
+                && client.sessions.first { $0.id == session.id }?.permission?.selected == "bypassPermissions"
+        }
+        precondition(client.sessions.first { $0.id == session.id }?.permission?.selected == "bypassPermissions",
+                     "Qoder permission changes must be saved while the current turn is busy")
+        client.disconnect()
+        print("PASS: Qoder permission selection applies to the next turn while busy")
     }
 
     @MainActor

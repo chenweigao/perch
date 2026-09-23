@@ -4,8 +4,8 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek 或 Cod
 
 ## 已核对的运行时
 
-- OMP 18.1.16：先验证 `--mode rpc` 的消息流和审批，再使用同协议的 `--mode rpc-ui` 启用内置 `ask` 工具。启动时显式使用 `--approval-mode always-ask`，不启用 yolo。接收 message 事件、工具调用/结果及 extension UI 请求；协商 v2，按帧序号与字节数校验分块。
-- Qoder CN：官方 `@qodercn-ai/qodercn-agent-sdk` 1.0.45，发行包 runtime-manifest 明确匹配 CLI 1.1.58。通过 SDK `query`、`canUseTool`、`interrupt` 和 `resume` 接入已安装的 `qoderclicn`，未使用 ACP 推断兼容性。沿用远端 CLI 登录，权限模式为 default；需确认的调用由 Mac 界面返回本次 allow/deny。
+- OMP 18.1.16：先验证 `--mode rpc` 的消息流和审批，再使用同协议的 `--mode rpc-ui` 启用内置 `ask` 工具。创建会话时把所选 `always-ask`、`write` 或 `yolo` 显式传给 `--approval-mode`；会话内不动态切换。接收 message 事件、工具调用/结果及 extension UI 请求；协商 v2，按帧序号与字节数校验分块。
+- Qoder CN：官方 `@qodercn-ai/qodercn-agent-sdk` 1.0.45，发行包 runtime-manifest 明确匹配 CLI 1.1.58。通过 SDK `query`、`canUseTool`、`interrupt` 和 `resume` 接入已安装的 `qoderclicn`，未使用 ACP 推断兼容性。沿用远端 CLI 登录；每次 `query` 带当前权限模式，切换从下一轮生效。需确认的调用由 Mac 界面返回本次 allow/deny；`bypassPermissions` 还会显式设置 `allowDangerouslySkipPermissions`。
 - DeepSeek Harness（dsh）0.1.5-rc.1：走标准 ACP v1（`dsh --profile acp`，stdio JSON-RPC）。已实测 `initialize`、`session/new|list|resume`、`session/set_config_option`（model 与 reasoning_effort）以及无凭据时 `session/prompt` 的报错路径；`session/cancel` 与 `session/request_permission` 按官方 ACP 契约接入。每会话一个进程，握手完成后才放行 prompt；dsh 只发已提交的消息块（无增量流），审批以 select 卡片呈现，选项标签映射回不透明 optionId。dsh 是 developer preview，升级版本必须重跑协议核对。
 - Codex CLI 0.155.1：按本机 `app-server generate-json-schema --experimental` 生成的完整 schema 核对协议，并实机验证创建、无工具 turn、恢复、归档、恢复归档与删除。只使用 `codex app-server --listen stdio://` 的 JSON-RPC，不启动 PTY，也不抓取终端画面。创建与恢复分别调用 `thread/start`、`thread/resume`，Perch 会话 ID 就是原生 thread UUID；历史通过 `thread/items/list` 恢复。发送、运行中引导和停止分别使用 `turn/start`、`turn/steer`、`turn/interrupt`。流式正文、思考、计划、工具和 token usage 转入统一对话；完成 item 覆盖增量草稿。模型及 reasoning effort 来自 `model/list`，创建和切换时均拒绝目录之外的值，切换仅用于后续 turn。command、file change、permissions、tool input 与 MCP elicitation 等 app-server 反向请求全部显示在 Mac 上并等待明确回答，不自动批准或静默拒绝。
 
@@ -74,16 +74,29 @@ Qoder SDK 没有独立登录检查接口，首条消息验证鉴权；dsh 只检
 旧服务返回“未知路径”时先更新组件并重新检查；检查会在服务空闲时自动完成重启，
 有活动任务时明确提示等待，安装器本身不会终止旧服务。新建任务中的空模型沿用运行时默认值，不再注入固定的 Qoder 模型。
 
-## Codex 权限模式
+## 权限模式
 
-设置 → Codex 权限选择新任务默认值；新建任务时可覆盖。已有 Codex 会话在输入框旁的权限菜单调整，空闲时保存，从下一轮生效；重连沿用该会话保存的选择。修改默认值不会改变已有任务。
+设置 → 新会话默认权限可分别配置 Kimi、OMP、Qoder CN 与 Codex；新建任务时仍可覆盖，修改默认值不会改变已有会话。输入框旁会显示当前模式和生效范围：Kimi 可为下一条消息切换，Qoder 可为下一轮切换；OMP 与 Codex 在创建时固定，只读展示。dsh 不伪造全局权限模式，继续使用 ACP 运行时审批卡片逐次确认。
 
-| 模式 | 审批策略 | 审核方 | 沙箱 |
+| Agent | 模式（粗体为安全默认） | 传递方式 | 生效范围 |
 |---|---|---|---|
-| 需要时询问（默认） | on-request | user | workspace-write |
-| 自动审核 | on-request | auto_review | workspace-write |
-| 完全访问 | never | user | danger-full-access |
+| Kimi | **`manual`** / `yolo` / `auto` | prompt body 的 `permission_mode` | 下一条消息 |
+| OMP | **`always-ask`** / `write` / `yolo` | `omp --approval-mode` | 创建会话时固定 |
+| Qoder CN | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
+| dsh | runtime-managed | ACP `session/request_permission` | 每次请求 |
+| Codex | `read-only` / **`workspace-ask`** / `workspace-auto` / `full-access` | app-server 参数，见下表 | 创建会话时固定 |
 
-自动审核交给 Codex 原生 reviewer，仍可能拒绝请求，并非客户端代点全部批准。完全访问允许操作运行机器上工作区外的文件和网络。Perch 不默认开启完全访问，也不修改远端 config.toml；创建、恢复和每轮开始通过 app-server 显式传递该会话的权限。旧会话缺少此字段时保持原有用户审批模式。管理策略或运行时不接受所选权限时，错误按原有任务错误通道展示，不自动放宽权限。
+Kimi 的历史会话若没有可识别的权限字段，界面显示“沿用会话设置”，发送时不注入值；用户主动选择后才覆盖。Qoder 的 `bypassPermissions` 同时传 `allowDangerouslySkipPermissions: true`。Kimi `auto`、OMP `yolo`、Qoder `bypassPermissions` 和 Codex `full-access` 属于高风险模式，选择时需再次确认；其他较宽松模式以橙色提示，但不额外弹窗。
 
-协议字段已对照 codex-cli 0.155.1 的 app-server JSON Schema。需要更新远端 native service 后使用；服务升级应等待活跃任务结束。官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
+Codex 的 reviewer 始终为 `user`，四档映射如下：
+
+| 模式 | `approvalPolicy` | `approvalsReviewer` | thread `sandbox` | turn `sandboxPolicy.type` |
+|---|---|---|---|---|
+| `read-only` | `on-request` | `user` | `read-only` | `readOnly` |
+| `workspace-ask`（默认） | `on-request` | `user` | `workspace-write` | `workspaceWrite` |
+| `workspace-auto` | `never` | `user` | `workspace-write` | `workspaceWrite` |
+| `full-access` | `never` | `user` | `danger-full-access` | `dangerFullAccess` |
+
+Perch 不修改远端 `config.toml`，也不会在恢复时放宽会话权限。旧 Codex 默认值 `ask`、`auto-review` 安全迁移为 `workspace-ask`，`full-access` 保留。管理策略或运行时不接受所选权限时，错误仍通过任务错误通道展示，不自动降级或放宽。
+
+权限字段及 Codex 参数已对照当前运行时协议；需要更新到 native service v3 后使用，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。

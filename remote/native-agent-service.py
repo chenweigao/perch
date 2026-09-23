@@ -7,13 +7,37 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 2
+SERVICE_VERSION = 3
 LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
 CODEX_MODELS = None
 MODEL_LOCK = threading.Lock()
 DSH_MODELS = None
+PERMISSION_MODES = {
+    'omp': ('always-ask', 'write', 'yolo'),
+    'qoder': ('default', 'acceptEdits', 'plan', 'dontAsk', 'auto', 'bypassPermissions'),
+    'dsh': ('runtime-managed',),
+    'codex': ('read-only', 'workspace-ask', 'workspace-auto', 'full-access'),
+}
+PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask'}
+PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session'}
+
+def permission_mode(provider, value=None):
+    mode = value if value is not None else PERMISSION_DEFAULTS[provider]
+    if mode not in PERMISSION_MODES[provider]: raise ValueError('当前 Agent 不支持此权限模式')
+    return mode
+
+def restore_permission_mode(provider, value=None):
+    if provider == 'codex':
+        value = {'ask':'workspace-ask', 'auto-review':'workspace-ask'}.get(value, value)
+    return value if value in PERMISSION_MODES[provider] else PERMISSION_DEFAULTS[provider]
+
+def permission_capability(state):
+    provider = state['provider']
+    return {'selected':state['permissionMode'],
+            'options':[] if provider == 'dsh' else list(PERMISSION_MODES[provider]),
+            'scope':PERMISSION_SCOPES[provider]}
 
 def model_catalog():
     global MODELS
@@ -296,20 +320,23 @@ def normalize(message, identity):
     return {'id':identity,'role':role,'content':parts,'created_at':str(message.get('timestamp',''))}
 
 def codex_permission_params(mode, turn=False):
-    if mode not in ('ask', 'auto-review', 'full-access'):
-        raise ValueError('未知的 Codex 权限模式')
-    full = mode == 'full-access'
-    params = {'approvalPolicy': 'never' if full else 'on-request',
-              'approvalsReviewer': 'auto_review' if mode == 'auto-review' else 'user'}
-    if turn:
-        params['sandboxPolicy'] = {'type': 'dangerFullAccess' if full else 'workspaceWrite'}
-    else:
-        params['sandbox'] = 'danger-full-access' if full else 'workspace-write'
+    mode = permission_mode('codex', mode)
+    policy, sandbox, turn_sandbox = {
+        'read-only': ('on-request', 'read-only', 'readOnly'),
+        'workspace-ask': ('on-request', 'workspace-write', 'workspaceWrite'),
+        'workspace-auto': ('never', 'workspace-write', 'workspaceWrite'),
+        'full-access': ('never', 'danger-full-access', 'dangerFullAccess'),
+    }[mode]
+    params = {'approvalPolicy':policy, 'approvalsReviewer':'user'}
+    if turn: params['sandboxPolicy'] = {'type':turn_sandbox}
+    else: params['sandbox'] = sandbox
     return params
 
 class Session:
     def __init__(self, state):
-        if state.get('provider') == 'codex': state.setdefault('permissionMode', 'ask')
+        provider = state.get('provider')
+        if provider in PERMISSION_MODES:
+            state['permissionMode'] = restore_permission_mode(provider, state.get('permissionMode'))
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
@@ -331,7 +358,7 @@ class Session:
         return {k:self.state[k] for k in ('id','provider','title','cwd','busy','archived','updated','revision','completed','model','error')} | {
             'pending':len(self.state['interactions']), 'cancelled':self.state.get('cancelled',False),
             'thinking':self.state.get('thinking'), 'context':self.state.get('context'),
-            'permissionMode':self.state.get('permissionMode'),
+            'permission':permission_capability(self.state),
             'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState'),
             'steer':self.state['provider'] in ('omp','codex')}
     def active_receipt(self):
@@ -384,7 +411,9 @@ class Session:
                 s['turnId']=turn['id']; receipt['runtimeTurnId']=turn['id']
                 receipt['status']='accepted'; s['turnState']='running' if turn.get('status')=='inProgress' else 'accepted'
             else:
-                self.send({'type':'prompt','id':request_id,'message':text})
+                message={'type':'prompt','id':request_id,'message':text}
+                if s['provider']=='qoder': message['permissionMode']=s['permissionMode']
+                self.send(message)
                 receipt['status']='submitted'; s['turnState']='submitted'
         except Exception as e:
             s['busy']=False; s['error']=str(e); self.finish('unknown')
@@ -395,7 +424,7 @@ class Session:
         if s['provider']=='codex': self.codex_ensure(True); return
         env = None
         if s['provider'] == 'omp':
-            args = ['omp','--mode','rpc-ui','--cwd',s['cwd'],'--approval-mode','always-ask','--no-title','--session-dir',str(ROOT/'omp-sessions')]
+            args = ['omp','--mode','rpc-ui','--cwd',s['cwd'],'--approval-mode',s['permissionMode'],'--no-title','--session-dir',str(ROOT/'omp-sessions')]
             if s.get('resume'): args += ['--resume',s['resume']]
             if s['model']: args += ['--model',s['model']]
             if s.get('thinking'): args += ['--thinking',s['thinking']]
@@ -1087,6 +1116,7 @@ class Session:
         # Idempotency receipts are queried individually; do not resend/copy the
         # entire receipt ledger with each streaming transcript snapshot.
         s=copy.deepcopy({k:v for k,v in self.state.items() if k!='requests'})
+        s['permission']=permission_capability(self.state)
         if s.get('partial'): s['messages'].append(normalize(s.pop('partial'),'live'))
         return s
 
@@ -1129,13 +1159,14 @@ class Handler(BaseHTTPRequestHandler):
                 if self.path=='/health': result={'version':SERVICE_VERSION}
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
-                    if body['provider'] not in ('omp','qoder','dsh','codex') or not os.path.isabs(body['cwd']) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
+                    provider=body.get('provider')
+                    if provider not in PERMISSION_MODES or not os.path.isabs(body.get('cwd','')) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
+                    mode=permission_mode(provider,body.get('permissionMode'))
                     model=body.get('model',''); thinking=body.get('thinking')
-                    if body['provider']=='codex':
-                        codex_permission_params(body.get('permissionMode', 'ask'))
+                    if provider=='codex':
+                        codex_permission_params(mode)
                         _,thinking=codex_selection(model,thinking,codex_models)
-                    sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':body['provider'],'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
-                    if body['provider']=='codex': s.state['permissionMode']=body.get('permissionMode', 'ask')
+                    sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':provider,'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'permissionMode':mode,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
                     SESSIONS[sid]=s
                     if body['provider']=='codex':
                         try: s.codex_start_thread()
@@ -1201,14 +1232,11 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'id':str(uuid.uuid4()),'type':'set_model','provider':provider,'modelId':model})
                                     s.send({'id':'state','type':'get_state'})
                                 s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
-                        elif action=='permissions':
-                            if s.state['provider'] != 'codex': raise ValueError('当前 Agent 不支持设置 Codex 权限')
-                            if s.state['busy'] or s.state['interactions']: raise ValueError('请先停止或完成当前任务')
-                            mode = body.get('mode')
-                            codex_permission_params(mode)
-                            s.state['permissionMode'] = mode
-                            s.touch(True)
-                            result = {'ok': True}
+                        elif action=='permission':
+                            if s.state['provider'] != 'qoder': raise ValueError('当前 Agent 的权限在创建会话时固定')
+                            mode=permission_mode('qoder',body.get('mode'))
+                            s.state['permissionMode']=mode; s.touch(True)
+                            result={'ok':True,'permission':permission_capability(s.state)}
                         elif action=='thinking':
                             if s.state['provider'] not in ('omp','dsh','codex'): raise ValueError('当前 Agent 不支持设置思考强度')
                             level=body.get('level','')
@@ -1311,7 +1339,7 @@ class Handler(BaseHTTPRequestHandler):
                             if s.process and s.process.poll() is None: s.process.stdin.close()
                             s.path.unlink(missing_ok=True); del SESSIONS[s.state['id']]
                         else: raise ValueError('未知操作')
-                        if action not in ('prompt','steer'): result={'ok':True}
+                        if action not in ('prompt','steer','permission'): result={'ok':True}
                 else: raise ValueError('未知路径')
             self.respond(200,result)
         except Exception as e: self.respond(400,{'error':str(e)})

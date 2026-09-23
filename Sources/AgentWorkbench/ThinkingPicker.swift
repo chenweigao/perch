@@ -58,24 +58,3 @@ struct ContextMeter: View {
         }
     }
 }
-
-/// Low-frequency options stay next to the context status, outside model controls.
-struct ComposerOptionsButton: View {
-    @Binding var manualApproval: Bool
-    @State private var presented = false
-    var body: some View {
-        Button { presented.toggle() } label: {
-            Image(systemName: manualApproval ? "gearshape.fill" : "gearshape")
-                .font(.system(size: 13)).frame(width: 28, height: 32)
-        }.buttonStyle(.plain).foregroundStyle(.secondary)
-            .help("Conversation options").accessibilityLabel("Conversation options")
-            .popover(isPresented: $presented) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Tool execution").font(.system(size: 13, weight: .semibold))
-                    Toggle("Ask before running tools", isOn: $manualApproval).toggleStyle(.checkbox)
-                    Text("When enabled, your next message requests manual approval. When disabled, the current server setting is preserved.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }.padding(18).frame(width: 280)
-            }
-    }
-}
