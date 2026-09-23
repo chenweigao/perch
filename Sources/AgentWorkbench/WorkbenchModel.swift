@@ -1,8 +1,14 @@
 import AppKit
 import Combine
 import GhosttyTerminal
+import os
 import SwiftUI
 import WorkbenchCore
+
+/// Naming failures were invisible, which made "it did not fire" undiagnosable.
+/// Log attempt/success/failure only; the skip guards run per snapshot and are
+/// too hot to log. No excerpts or credentials go into the log.
+let namingLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac", category: "session-naming")
 
 @MainActor
 final class WorkbenchModel: ObservableObject {
@@ -730,6 +736,7 @@ final class WorkbenchModel: ObservableObject {
               SessionNaming.isPlaceholder(remoteTitle, kind: reference.kind, firstUserText: excerpt) else { return }
         let revision = settings.revision
         namingAttempts[reference.id] = revision
+        namingLog.info("attempt \(reference.id, privacy: .public)")
         Task {
             do {
                 let key = try settings.apiKey()
@@ -738,8 +745,10 @@ final class WorkbenchModel: ObservableObject {
                 guard settings.revision == revision, workspace.sessionTitles[reference.id] == nil,
                       !workspace.autoNamedSessions.contains(reference.id) else { return }
                 applyGeneratedName(name, for: reference)
+                namingLog.info("named \(reference.id, privacy: .public): \(name, privacy: .public)")
             } catch {
-                // Naming stays silent like summaries; the next launch may retry.
+                // Still silent in the UI; the next launch may retry.
+                namingLog.error("failed \(reference.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
     }
