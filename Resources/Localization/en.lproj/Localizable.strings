@@ -664,7 +664,6 @@
 "%@ · %lld 次调用" = "%@ · %lld calls";
 "Agent 进度" = "Agent progress";
 "Perch 会优先使用 Agent 原生摘要或明确进度，并在本机即时生成阶段标题。可选的外部润色默认关闭；开启后才会发送受限活动信息，并可能产生额外费用。" = "Perch prioritizes native agent summaries or explicit progress, and instantly generates stage titles on this Mac. Optional external refinement is off by default; only enabling it sends limited activity data and may incur additional costs.";
-"使用 OpenAI 兼容的 Chat Completions 接口。外部润色仅发送当前轮用户请求开头（不超过 400 字符）、相关路径、搜索条件、工具类别与状态；不发送完整命令、源码、编辑内容、工具输出、思考或运行上下文。自动命名仍只发送首条用户消息开头。内容不会写回 Agent 上下文。" = "Uses an OpenAI-compatible Chat Completions endpoint. External refinement sends only the opening of the current request (at most 400 characters), relevant paths, search terms, tool categories, and statuses. It does not send full commands, source code, edit contents, tool output, reasoning, or runtime context. Automatic naming still sends only the opening of the first user message. Nothing is written back into the agent context.";
 "分析任务" = "Analyzing the task";
 "处理失败的操作" = "Handling a failed operation";
 "推进任务" = "Advancing the task";
@@ -764,3 +763,6 @@
 "摘要与自动命名测试通过。示例名称：%@" = "Summary and naming tests passed. Example name: %@";
 
 "重试" = "Retry";
+"使用 OpenAI 兼容的 Chat Completions 接口。发送当前轮完整用户文本、最近三条 Agent 公开进展、上一条摘要，以及最多 12 条活动的路径、搜索条件、工具类别、状态和可用退出码；这些公开文本可能包含代码。工具输出摘录需单独开启；不额外发送完整命令参数、编辑内容、私有思考或运行上下文。阶段开始、关键结果、错误和结束时更新，重复读取与等待不触发更新。自动命名仍只发送首条用户消息开头。内容不会写回 Agent 上下文。" = "Uses an OpenAI-compatible Chat Completions endpoint. Sends the full current user text, the last three public Agent progress messages, the previous summary, and paths, search terms, tool categories, statuses and available exit codes for up to 12 activities. Public text may contain code. Tool output excerpts require a separate opt-in; full command arguments, edit payloads, private reasoning and runtime context are not additionally sent. Updates on stage starts, key results, errors and completion; repeated reads and waits do not trigger updates. Naming still sends only the beginning of the first user message. Nothing is written back to the Agent context.";
+"附带工具输出摘录" = "Include tool output excerpts";
+"默认关闭。开启后，每条工具结果最多发送 600 字符的文本摘录，可能包含源码、命令或其他敏感内容。" = "Off by default. When enabled, sends up to 600 characters of text per tool result, which may include source code, commands or other sensitive content.";

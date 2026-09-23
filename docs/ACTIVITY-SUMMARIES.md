@@ -90,16 +90,24 @@ not validate the packaged app's ATS policy.
 Only the current semantic stage of the current user turn is eligible. A request may
 contain:
 
-- the opening of the user request, normalized and limited to 400 characters;
-- at most 12 completed activity records in source order;
-- a short tool name, record ID, and reported status;
+- the full current user text, preserving line breaks and excluding runtime-context parts;
+- the last three public Agent progress/final text messages from that same turn;
+- at most 12 activity records in source order, including running tools at stage start;
+  up to three recent key results are retained even after many subsequent reads;
+- a short tool name, record ID, reported status, and an explicit exit code when available;
 - up to four trailing path components, or a bounded description, query, or pattern;
-- a derived shell category limited to `test`, `lint`, `build`, or `git`;
-- the current deterministic phase and the previous structured result.
+- a derived shell category such as `test`, `check`, `lint`, `build`, `read`, `wait`, or `git`;
+- the current phase, closure state, and the previous summary from this stage or
+  the preceding summarized stage in the same turn (including native summaries/progress).
 
-It does **not** send a full command, source code, edit body or diff, tool output,
-private reasoning, runtime context, arbitrary tool input, credentials, or API key in
-the JSON body. Paths and allowed text fields are length-bounded. The response may
+Full command arguments, edit bodies/diffs, arbitrary tool inputs, private reasoning,
+and runtime-context parts are not separately included. Public user/Agent text is
+sent as written and can contain code or other sensitive content. Tool output stays
+excluded by default. **Include tool output excerpts** opts into up to 600 characters
+of text per result, keeping the beginning and end with an ellipsis when shortened.
+Only string output or explicit `output`, `text`, `stderr`, or `stdout` text fields
+are eligible; arbitrary output objects and images are not serialized.
+The optional API key is sent only in the Authorization header. The response may
 reference at most three known evidence IDs; unknown and duplicate IDs are discarded.
 
 The service returns `subject`, one of the six valid phases, a compact `summary`,
@@ -109,17 +117,25 @@ text remains accepted for compatibility and is assigned the mixed phase. A
 
 ## Scheduling and failure behavior
 
-A local stage becomes eligible after two completed tools. The same stage is eligible
-again after four more completions, an authoritative status correction, or closure.
-A phase transition starts a new stage and threshold. Provider-native and commentary
-stages do not create an external request.
+A local stage becomes eligible at its first meaningful tool, even before completion.
+It refreshes on a phase change, key result (such as an edit, test/build, or Git write),
+failure/status correction, changed public progress, or closure. Repeated reads,
+read-window eviction, shell setup, sleep, and empty terminal polls do not trigger
+requests. A terminal poll with an explicit exit code is a result. Failures are never
+suppressed as idle waiting. Provider-native and commentary stages retain priority
+and do not create an external request.
 
 All sessions share one worker. Requests are at least eight seconds apart globally;
-pending observations coalesce to the newest eligible batch. There is no automatic
-retry, redirect, second model pass, or alternate-provider fallback. A failed request
-leaves the local headline in place and exposes an explicit retry in the activity
-details. Configuration or active-session changes cancel local pending work but cannot
-undo tokens already processed by a server.
+pending observations coalesce to the newest eligible batch **after** throttling.
+An in-flight response is not displayed if a newer event for that stage is pending.
+When `should_update` is false, the prior wording is kept, including across stages.
+Closure means observation ended, not that the task succeeded; the prompt distinguishes
+`returned`, `succeeded`, and explicit exit codes.
+There is no automatic retry, redirect, second model pass, or alternate-provider
+fallback. A failure leaves the displayed narrative in place and exposes an explicit
+retry. Configuration changes, disconnects and active-session changes cancel local
+pending work but cannot undo tokens already processed by a server. Reconnecting can
+retry an interrupted event; completed requests are not repeated solely by polling.
 
 Opening an already-completed historical session does not trigger refinement: the
 store must first observe that session running. Results are scoped by session and
@@ -149,12 +165,16 @@ retry.
 ## Validation
 
 - `swift run WorkbenchChecks` covers stage identity across 24-row rendering splits,
-  phase transitions, source priority, Codex source decoding, external thresholds,
-  privacy bounds, request shape, strict phase parsing, evidence filtering, and
+  phase transitions, source priority, Codex source decoding, event triggers,
+  complete request/progress context, output opt-in, request shape, strict phase parsing, evidence filtering, and
   plain-text compatibility.
 - `python3 -m unittest discover -s remote -p 'test_*.py'` covers bridge event
   normalization, Codex streaming summaries, authoritative completion, and hydration.
 - `scripts/build.sh` validates the complete macOS app.
+- `python3 scripts/check-summary-lifecycle.py` checks the production queue with
+  injected responses and isolated preferences: stage continuity, unchanged wording,
+  burst coalescing, stale responses, turn isolation, disconnect and disable. It
+  does not access the configured service, real credentials or remote agents.
 - `scripts/build-activity-bar-preview.sh` provides commentary ownership/handoff,
   provider, local, external, failed external/retry, narrow-width, and ended-turn
   fixtures without an agent connection.
