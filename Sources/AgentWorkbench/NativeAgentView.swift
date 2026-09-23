@@ -122,7 +122,7 @@ struct NativeAgentView: View {
                                                  onStop: { connection.stop() },
                                                  onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
                         }
-                    }.padding(12).composerSurface()
+                    }.padding(12).workbenchControlSurface()
                     ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
                 }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
             } else if connection.online && connection.selectedID == nil {
