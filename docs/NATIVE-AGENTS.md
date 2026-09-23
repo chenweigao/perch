@@ -7,7 +7,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek 或 Cod
 - OMP 18.1.16：先验证 `--mode rpc` 的消息流和审批，再使用同协议的 `--mode rpc-ui` 启用内置 `ask` 工具。启动时显式使用 `--approval-mode always-ask`，不启用 yolo。接收 message 事件、工具调用/结果及 extension UI 请求；协商 v2，按帧序号与字节数校验分块。
 - Qoder CN：官方 `@qodercn-ai/qodercn-agent-sdk` 1.0.45，发行包 runtime-manifest 明确匹配 CLI 1.1.58。通过 SDK `query`、`canUseTool`、`interrupt` 和 `resume` 接入已安装的 `qoderclicn`，未使用 ACP 推断兼容性。沿用远端 CLI 登录，权限模式为 default；需确认的调用由 Mac 界面返回本次 allow/deny。
 - DeepSeek Harness（dsh）0.1.5-rc.1：走标准 ACP v1（`dsh --profile acp`，stdio JSON-RPC）。已实测 `initialize`、`session/new|list|resume`、`session/set_config_option`（model 与 reasoning_effort）以及无凭据时 `session/prompt` 的报错路径；`session/cancel` 与 `session/request_permission` 按官方 ACP 契约接入。每会话一个进程，握手完成后才放行 prompt；dsh 只发已提交的消息块（无增量流），审批以 select 卡片呈现，选项标签映射回不透明 optionId。dsh 是 developer preview，升级版本必须重跑协议核对。
-- Codex CLI 0.155.1：按本机 `app-server generate-json-schema --experimental` 生成的完整 schema 核对协议，并实机验证创建、无工具 turn、恢复、归档、恢复归档与删除。只使用 `codex app-server --listen stdio://` 的 JSON-RPC，不启动 PTY，也不抓取终端画面。创建与恢复分别调用 `thread/start`、`thread/resume`，Perch 会话 ID 就是原生 thread UUID；历史通过 `thread/items/list` 恢复。发送、运行中引导和停止分别使用 `turn/start`、`turn/steer`、`turn/interrupt`。流式正文、思考、计划、工具和 token usage 转入统一对话；完成 item 覆盖增量草稿。模型及 reasoning effort 来自 `model/list`，创建和切换时均拒绝目录之外的值，切换仅用于后续 turn。command、file change、permissions、tool input 与 MCP elicitation 等 app-server 反向请求全部显示在 Mac 上并等待明确回答，不自动批准或静默拒绝。
+- Codex CLI 0.155.1：按本机 `app-server generate-json-schema --experimental` 生成的完整 schema 核对协议，并实机验证创建、无工具 turn、恢复、归档、恢复归档与删除。只使用 `codex app-server --listen stdio://` 的 JSON-RPC，不启动 PTY，也不抓取终端画面。创建与恢复分别调用 `thread/start`、`thread/resume`，Perch 会话 ID 就是原生 thread UUID；历史通过 `thread/items/list` 恢复。发送、运行中引导和停止分别使用 `turn/start`、`turn/steer`、`turn/interrupt`。流式正文、思考、计划、工具和 token usage 转入统一对话；`item/reasoning/summaryPartAdded` 与 `summaryTextDelta` 作为结构化 `activity_summary` 元数据传给活动叙事，不把原始 reasoning 当作摘要。`item/completed` 的权威 summary/content 覆盖增量草稿并标记 final，`thread/items/list` 恢复历史时也生成同样元数据。模型及 reasoning effort 来自 `model/list`，创建和切换时均拒绝目录之外的值，切换仅用于后续 turn。command、file change、permissions、tool input 与 MCP elicitation 等 app-server 反向请求全部显示在 Mac 上并等待明确回答，不自动批准或静默拒绝。
 
 参考：[OMP 18.1.16 RPC 文档](https://github.com/can1357/oh-my-pi/blob/v18.1.16/docs/rpc.md)、[Qoder CN 官方 SDK](https://docs.qoder.cn/cli/sdk/overview)、[dsh ACP 包说明](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/acp/acp)、[Codex app-server](https://github.com/openai/codex/tree/main/codex-rs/app-server)。
 
@@ -26,7 +26,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek 或 Cod
 # 保留旧的全套安装方式：<host> 或 <host> --with-dsh
 ```
 
-所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装且登录可用的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。Mac 连接时启动或复用托管服务。安装或更新文件本身不会终止托管服务；后续检查会验证协议版本，在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
+所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装且登录可用的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。活动叙事元数据使用 bridge 协议版本 3，Mac 客户端会拒绝缺少该协议的旧服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查只在所有会话空闲时替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
 
 Mac 当前每 400 ms 查询轻量目录和选中对话的 revision；未变化时不传输或重建整段历史。只在会话元数据变化时更新全局队列，流式内容局限于原生对话视图。正文、Markdown 和按发生顺序展示的工具摘要与 Kimi 共用；工具完成后仍保留摘要，仅参数和输出按需展开。
 

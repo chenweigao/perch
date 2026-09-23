@@ -36,38 +36,31 @@ public struct ActivitySummaryBatch: Hashable {
         public let status: String
     }
     public let groupID: String
+    public let phase: ActivityNarrativePhase
     public let completedCount: Int
     public let userRequest: String
     public let records: [Record]
     public let closed: Bool
 
-    /// Search from the live tail, then continue only as far as the current user
-    /// boundary so the model can relate activity to this turn's request.
     public static func latest(in entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
                               isRunning: Bool, enabled: Bool) -> Self? {
         guard enabled else { return nil }
-        var closed = !isRunning
-        var candidate: (groupID: String, tools: [VisibleTool], closed: Bool)?
-        for entry in entries.reversed() {
-            if entry.presentation == .message && entry.messages.first?.role == "user" {
-                guard let candidate else { return nil }
-                return Self(groupID: candidate.groupID, tools: candidate.tools, closed: candidate.closed,
-                            userRequest: requestExcerpt(entry))
-            }
-            if candidate == nil, entry.activity {
-                let completed = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-                    .filter { [.succeeded, .returned, .failed].contains($0.status) }
-                if completed.count >= 6 { candidate = (entry.id, completed, closed) }
-            }
-            // The current thought preview belongs to the still-growing stage.
-            if entry.presentation != .thinkingPreview { closed = true }
+        let projection = ActivityNarrativeProjection.make(entries: entries, tools: tools, isRunning: isRunning)
+        guard let stage = projection.stages.last, stage.narrative.source == .local else { return nil }
+        let stageTools = stage.toolIDs.compactMap { tools[$0] }
+        guard stageTools.filter({ [.succeeded, .returned, .failed].contains($0.status) }).count >= 2 else { return nil }
+        let requestEntry = entries.last { entry in
+            entry.presentation == .message && entry.messages.first?.id == projection.turnID
         }
-        guard let candidate else { return nil }
-        return Self(groupID: candidate.groupID, tools: candidate.tools, closed: candidate.closed)
+        return Self(groupID: stage.narrative.stageID, phase: stage.narrative.phase,
+                    tools: stageTools, closed: stage.closed,
+                    userRequest: requestEntry.map(requestExcerpt) ?? "")
     }
 
-    public init(groupID: String, tools: [VisibleTool], closed: Bool, userRequest: String = "") {
+    public init(groupID: String, phase: ActivityNarrativePhase = .mixed,
+                tools: [VisibleTool], closed: Bool, userRequest: String = "") {
         self.groupID = groupID
+        self.phase = phase
         let completed = tools.filter { [.succeeded, .returned, .failed].contains($0.status) }
         completedCount = completed.count
         self.userRequest = String(userRequest.prefix(400))
@@ -81,11 +74,11 @@ public struct ActivitySummaryBatch: Hashable {
     }
 
     public func shouldRequest(after previous: Self?) -> Bool {
-        guard completedCount >= 6 else { return false }
+        guard completedCount >= 2 else { return false }
         guard let previous, previous.groupID == groupID else { return true }
-        guard records != previous.records else { return false }
+        guard records != previous.records || closed != previous.closed else { return false }
         if records.contains(where: { record in previous.records.contains { $0.id == record.id && $0 != record } }) { return true }
-        return completedCount - previous.completedCount >= 6 || closed
+        return completedCount - previous.completedCount >= 4 || closed && !previous.closed
     }
 
     private static func requestExcerpt(_ entry: ConversationTimelineEntry) -> String {
@@ -108,7 +101,7 @@ public struct ActivitySummaryBatch: Hashable {
             let components = path.split(separator: "/", omittingEmptySubsequences: true)
             return String(components.suffix(4).joined(separator: "/").prefix(240))
         }
-        for key in ["url", "query", "pattern", "description"] {
+        for key in ["query", "pattern", "description"] {
             if let value = tool.input?[key].string?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
                 return String(value.prefix(240))
             }
@@ -118,24 +111,35 @@ public struct ActivitySummaryBatch: Hashable {
 
     private static func summaryContext(_ tool: VisibleTool, excluding target: String) -> String? {
         var values: [String] = []
-        for key in ["description", "query", "pattern", "command"] {
+        for key in ["description", "query", "pattern"] {
             guard let value = tool.input?[key].string?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !value.isEmpty, value != target, !values.contains(value) else { continue }
             values.append(value)
         }
+        if let category = commandCategory(tool), !values.contains(category) { values.append(category) }
         let context = values.joined(separator: " · ")
         return context.isEmpty ? nil : String(context.prefix(240))
+    }
+
+    private static func commandCategory(_ tool: VisibleTool) -> String? {
+        guard let command = tool.input?["command"].string?.lowercased() else { return nil }
+        let executable = command.split(whereSeparator: \.isWhitespace).first.map { ($0 as NSString).lastPathComponent } ?? ""
+        if command.contains(" test") || ["pytest", "xctest"].contains(executable) { return "test" }
+        if command.contains(" lint") || executable.contains("lint") { return "lint" }
+        if command.contains(" build") || ["xcodebuild", "swiftc"].contains(executable) { return "build" }
+        if executable == "git" { return "git" }
+        return nil
     }
 }
 
 public struct ActivitySummaryResult: Codable, Equatable, Sendable {
     public let subject: String
-    public let phase: String
+    public let phase: ActivityNarrativePhase
     public let summary: String
     public let evidenceIDs: [String]
     public let shouldUpdate: Bool
 
-    public init(subject: String, phase: String, summary: String,
+    public init(subject: String, phase: ActivityNarrativePhase, summary: String,
                 evidenceIDs: [String] = [], shouldUpdate: Bool = true) {
         self.subject = subject
         self.phase = phase
@@ -169,18 +173,20 @@ public enum ActivitySummaryError: LocalizedError {
 public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private struct Prompt: Encodable {
         let currentRequest: String
+        let currentPhase: ActivityNarrativePhase
         let previous: ActivitySummaryResult?
         let groupClosed: Bool
         let activities: [ActivitySummaryBatch.Record]
         enum CodingKeys: String, CodingKey {
             case activities, previous
             case currentRequest = "current_request"
+            case currentPhase = "current_phase"
             case groupClosed = "group_closed"
         }
     }
     private struct ModelResult: Decodable {
         let subject: String?
-        let phase: String?
+        let phase: ActivityNarrativePhase?
         let summary: String?
         let evidenceIDs: [String]?
         let shouldUpdate: Bool?
@@ -214,8 +220,8 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !apiKey.isEmpty { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
-        let prompt = Prompt(currentRequest: batch.userRequest, previous: previous,
-                            groupClosed: batch.closed, activities: batch.records)
+        let prompt = Prompt(currentRequest: batch.userRequest, currentPhase: batch.phase,
+                            previous: previous, groupClosed: batch.closed, activities: batch.records)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let input = String(decoding: try encoder.encode(prompt), as: UTF8.self)
@@ -259,9 +265,10 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
     public static func responseResult(_ data: Data, evidenceIDs: Set<String>) throws -> ActivitySummaryResult {
         let text = try completionText(data)
         guard let payload = jsonPayload(text) else {
-            return ActivitySummaryResult(subject: "", phase: "", summary: String(text.prefix(240)))
+            return ActivitySummaryResult(subject: "", phase: .mixed, summary: String(text.prefix(240)))
         }
         guard let result = try? JSONDecoder().decode(ModelResult.self, from: payload),
+              let phase = result.phase,
               let summary = result.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
               !summary.isEmpty else { throw ActivitySummaryError.invalidResponse }
         var seenEvidence: Set<String> = []
@@ -270,8 +277,7 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
         }.prefix(3)
         return ActivitySummaryResult(
             subject: String((result.subject ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)),
-            phase: String((result.phase ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(32)),
-            summary: String(summary.prefix(240)), evidenceIDs: Array(evidence),
+            phase: phase, summary: String(summary.prefix(240)), evidenceIDs: Array(evidence),
             shouldUpdate: result.shouldUpdate ?? true)
     }
 

@@ -73,6 +73,7 @@ struct NativeAgentView: View {
                     isRunning: s.busy,
                     timing: connection.timings.turns[s.id],
                     online: connection.online, pendingCount: s.interactions.count,
+                    narrativeSession: readingKey,
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                     .frame(maxWidth: .infinity).padding(.vertical, 6)

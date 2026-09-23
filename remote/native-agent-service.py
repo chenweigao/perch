@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 2
+SERVICE_VERSION = 3
 LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
@@ -290,7 +290,10 @@ def normalize(message, identity):
     parts = []
     for p in content:
         kind = p.get('type')
-        if kind in ('text','thinking'): parts.append({'type':kind, kind:p.get(kind,'')})
+        if kind in ('text','thinking'):
+            part={'type':kind, kind:p.get(kind,'')}
+            if isinstance(p.get('source'),dict): part['source']=p['source']
+            parts.append(part)
         elif kind in ('toolCall','tool_use'): parts.append({'type':'tool_use','tool_call_id':p.get('id'),'tool_name':p.get('name'),'input':p.get('arguments',p.get('input',{}))})
         elif kind == 'tool_result': parts.append({'type':kind,'tool_call_id':p.get('tool_use_id'),'output':p.get('content'),'is_error':p.get('is_error',False)})
     return {'id':identity,'role':role,'content':parts,'created_at':str(message.get('timestamp',''))}
@@ -499,6 +502,17 @@ class Session:
         for kind in ('summary','content'):
             values.extend(text for _,text in sorted((parts.get(kind) or {}).items()) if text)
         return '\n'.join(values)
+    def codex_reasoning_source(self, item_id, completed=False):
+        parts=self.codex_parts.get(item_id) or {}
+        source={'kind':'activity_summary','provider':'codex','itemId':str(item_id),
+                'summaryParts':[text for _,text in sorted((parts.get('summary') or {}).items()) if text],
+                'state':'final' if completed else 'streaming'}
+        if self.state.get('turnId'): source['turnId']=self.state['turnId']
+        return source
+    def codex_upsert_reasoning(self, item_id, completed=False, timestamp=None, native_summary=True):
+        part={'type':'thinking','thinking':self.codex_reasoning_text(item_id)}
+        if native_summary: part['source']=self.codex_reasoning_source(item_id,completed)
+        self.upsert({'role':'assistant','content':[part],'timestamp':timestamp or time.time()},'codex:'+str(item_id))
     def codex_item(self, item, completed=False, timestamp=None):
         kind=item.get('type'); item_id=item.get('id')
         if not kind or not item_id: return
@@ -526,8 +540,7 @@ class Session:
                     parts={'summary':{i:text for i,text in enumerate(item.get('summary') or [])},
                            'content':{i:text for i,text in enumerate(item.get('content') or [])}}
                 self.codex_parts[item_id]=parts
-            text=self.codex_reasoning_text(item_id)
-            self.upsert({'role':'assistant','content':[{'type':'thinking','thinking':text}],'timestamp':stamp},'codex:'+item_id)
+            self.codex_upsert_reasoning(item_id,completed,stamp,kind=='reasoning')
             return
         tool_name=None; tool_input={}; output=None; failed=False
         if kind=='commandExecution':
@@ -654,14 +667,17 @@ class Session:
             if method=='item/plan/delta':
                 item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
                 part.setdefault('content',{})[0]=part.setdefault('content',{}).get(0,'')+params.get('delta','')
-                self.upsert({'role':'assistant','content':[{'type':'thinking','thinking':self.codex_reasoning_text(item_id)}],'timestamp':time.time()},'codex:'+str(item_id)); self.touch(); return
+                self.codex_upsert_reasoning(item_id,native_summary=False); self.touch(); return
+            if method=='item/reasoning/summaryPartAdded':
+                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
+                part.setdefault('summary',{}).setdefault(params.get('summaryIndex',0),'')
+                self.codex_upsert_reasoning(item_id); self.touch(); return
             if method in ('item/reasoning/textDelta','item/reasoning/summaryTextDelta'):
                 item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
                 key='summary' if method.endswith('summaryTextDelta') else 'content'
-                index=params.get('summaryIndex') if key=='summary' else params.get('contentIndex')
+                index=params.get('summaryIndex',0) if key=='summary' else params.get('contentIndex',0)
                 part.setdefault(key,{})[index]=part.setdefault(key,{}).get(index,'')+params.get('delta','')
-                text=self.codex_reasoning_text(item_id)
-                self.upsert({'role':'assistant','content':[{'type':'thinking','thinking':text}],'timestamp':time.time()},'codex:'+str(item_id)); self.touch(); return
+                self.codex_upsert_reasoning(item_id); self.touch(); return
             if method=='item/commandExecution/outputDelta':
                 item_id=params.get('itemId'); self.codex_outputs[item_id]=self.codex_outputs.get(item_id,'')+params.get('delta','')
                 self.upsert({'role':'toolResult','toolCallId':item_id,'content':self.codex_outputs[item_id],'isError':False,'timestamp':time.time()},'codex-result:'+str(item_id)); self.touch(); return
