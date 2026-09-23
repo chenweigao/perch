@@ -80,19 +80,24 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var lastSessionByGroup: [String: String] = [:]
     public var starred: [SessionReference] = []
     public var sessionTitles: [String: String] = [:]
+    /// Sessions an automatic name was applied to. A manual rename or cleared
+    /// title keeps this record, so automation never retitles a session the
+    /// user has already touched.
+    public var autoNamedSessions: Set<String> = []
     public var archivedTerminals: Set<SessionReference> = []
     public var destination: WorkspaceDestination = .home
     public var reviewedKimiUpdates: [String: String] = [:]
     public var reviewedRevisions: [String: UInt64] = [:]
     public init() {}
     private enum CodingKeys: String, CodingKey {
-        case sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals
+        case sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         groups = try values.decode([WorkItemGroup].self, forKey: .groups)
         pinned = try values.decode([SavedTerminal].self, forKey: .pinned)
         sessionTitles = try values.decodeIfPresent([String: String].self, forKey: .sessionTitles) ?? [:]
+        autoNamedSessions = try values.decodeIfPresent(Set<String>.self, forKey: .autoNamedSessions) ?? []
         starred = try values.decodeIfPresent([SessionReference].self, forKey: .starred) ?? pinned.map(\.session)
         archivedTerminals = try values.decodeIfPresent(Set<SessionReference>.self, forKey: .archivedTerminals) ?? []
         selectedTerminalID = try values.decodeIfPresent(String.self, forKey: .selectedTerminalID)
@@ -116,6 +121,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     }
     public mutating func removeSession(_ reference: SessionReference) {
         sessionTitles.removeValue(forKey: reference.id)
+        autoNamedSessions.remove(reference.id)
         starred.removeAll { $0 == reference }; archivedTerminals.remove(reference)
         pinned.removeAll { $0.session == reference }
         for index in groups.indices { groups[index].sessions.removeAll { $0 == reference } }

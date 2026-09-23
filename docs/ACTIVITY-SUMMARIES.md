@@ -99,6 +99,31 @@ state, not injected into the agent's context, used for tool status, or substitut
 for the final response. While the reader is scrolled up, new summary text is held
 until they return to the latest activity.
 
+## Session naming
+
+The same endpoint can also give a session a short title. **Name sessions
+automatically** in the activity summary settings is off by default and has no
+effect while the master switch is off; **Disable** stops naming requests too.
+
+Only sessions you open are eligible, and only while their remote title is still
+a placeholder: an untitled Kimi session, the native bridge default `新对话`, or
+the bridge's first-60-characters copy of the prompt. A real title from the
+agent or the user is never replaced. Kimi sessions are named only after the
+first turn completes, so a server-side title wins the race; native bridge
+titles never improve and can be named while the first turn runs.
+
+The request carries the opening of the session's first user-typed message, at
+most 400 characters. Source code, tool output, reasoning, later messages and
+runtime context are not sent, and the generated title never enters the agent's
+context. Each session gets one attempt per saved configuration revision; a
+failure is not retried until the configuration changes or Perch relaunches.
+
+A generated title is stored as the local display name — the same record a
+manual rename writes — and never modifies the remote session. Perch remembers
+that a session was named: a later manual rename takes precedence, and clearing
+a title does not re-arm automation for that session. Removing a session drops
+the record.
+
 Disabling the feature, switching configuration or leaving the transcript cancels
 local pending work. It cannot undo tokens already processed by the server. No
 automatic retries, redirects or alternate provider calls occur. A failed or

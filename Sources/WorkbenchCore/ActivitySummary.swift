@@ -5,7 +5,17 @@ public struct ActivitySummaryConfiguration: Codable, Equatable {
     public var baseURL = ""
     public var model = ""
     public var disableThinking = false
+    /// Master `enabled` gates every outgoing request, naming included.
+    public var nameSessions = false
     public init() {}
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        baseURL = try values.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
+        model = try values.decodeIfPresent(String.self, forKey: .model) ?? ""
+        disableThinking = try values.decodeIfPresent(Bool.self, forKey: .disableThinking) ?? false
+        nameSessions = try values.decodeIfPresent(Bool.self, forKey: .nameSessions) ?? false
+    }
 
     public var endpoint: URL? {
         guard let url = URL(string: baseURL.trimmingCharacters(in: .whitespacesAndNewlines)),

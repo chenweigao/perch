@@ -76,6 +76,9 @@ final class WorkbenchModel: ObservableObject {
     private var started = false
     private var observers: [NSObjectProtocol] = []
     private var subscriptions = Set<AnyCancellable>()
+    /// Session id → settings revision of the one naming attempt. A saved
+    /// configuration change allows exactly one retry per session.
+    private var namingAttempts: [String: Int] = [:]
 
     init() {
         let hosts: [SSHHost]
@@ -139,6 +142,23 @@ final class WorkbenchModel: ObservableObject {
         kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
         native.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
         kimi.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
+        kimi.$conversation.sink { [weak self, weak kimi] conversation in
+            Task { @MainActor in
+                guard let self, let kimi, let conversation else { return }
+                let session = conversation.snapshot.session
+                self.considerNaming(reference: SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi),
+                                    remoteTitle: session.title, messages: conversation.messages,
+                                    busy: session.busy, turnCompleted: session.lastTurnReason == "completed")
+            }
+        }.store(in: &subscriptions)
+        native.$snapshot.sink { [weak self, weak native] snapshot in
+            Task { @MainActor in
+                guard let self, let native, let snapshot else { return }
+                self.considerNaming(reference: SessionReference(hostID: native.host.id, terminalID: snapshot.id, kind: snapshot.provider),
+                                    remoteTitle: snapshot.title, messages: snapshot.messages,
+                                    busy: snapshot.busy, turnCompleted: false)
+            }
+        }.store(in: &subscriptions)
     }
     func activateAgentEnvironment(_ hostID: UUID) {
         guard let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }
@@ -618,6 +638,42 @@ final class WorkbenchModel: ObservableObject {
         if let index = openedSessions.firstIndex(where: { $0.session == item.reference }) {
             openedSessions[index] = SavedTerminal(session: item.reference,
                 title: workspace.displayTitle(item.title, for: item.reference))
+        }
+        rebuildCatalog(); saveWorkspace()
+    }
+    /// One automatic naming attempt per session, only while its remote title
+    /// is still a placeholder. Kimi waits for the first completed turn so a
+    /// server-side title wins the race; native bridge titles never improve.
+    private func considerNaming(reference: SessionReference, remoteTitle: String, messages: [KimiMessage],
+                                busy: Bool, turnCompleted: Bool) {
+        let settings = ActivitySummarySettings.shared
+        let configuration = settings.configuration
+        guard configuration.enabled, configuration.nameSessions, configuration.isValid else { return }
+        guard workspace.sessionTitles[reference.id] == nil, !workspace.autoNamedSessions.contains(reference.id),
+              namingAttempts[reference.id] != settings.revision else { return }
+        if reference.kind == .kimi { guard !busy, turnCompleted else { return } }
+        guard let excerpt = SessionNaming.excerpt(from: messages),
+              SessionNaming.isPlaceholder(remoteTitle, kind: reference.kind, firstUserText: excerpt) else { return }
+        let revision = settings.revision
+        namingAttempts[reference.id] = revision
+        Task {
+            do {
+                let key = try settings.apiKey()
+                let name = try await SessionNamingClient().name(configuration: configuration, apiKey: key,
+                                                                excerpt: excerpt, language: AppLanguage.current.localization)
+                guard settings.revision == revision, workspace.sessionTitles[reference.id] == nil,
+                      !workspace.autoNamedSessions.contains(reference.id) else { return }
+                applyGeneratedName(name, for: reference)
+            } catch {
+                // Naming stays silent like summaries; the next launch may retry.
+            }
+        }
+    }
+    private func applyGeneratedName(_ name: String, for reference: SessionReference) {
+        workspace.rename(reference, title: name)
+        workspace.autoNamedSessions.insert(reference.id)
+        if let index = openedSessions.firstIndex(where: { $0.session == reference }) {
+            openedSessions[index] = SavedTerminal(session: reference, title: name)
         }
         rebuildCatalog(); saveWorkspace()
     }

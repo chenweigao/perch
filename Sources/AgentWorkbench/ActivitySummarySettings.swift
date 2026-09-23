@@ -72,17 +72,20 @@ struct ActivitySummarySettingsSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("活动摘要").font(.title2)
-            Text("可选功能，默认关闭。开启后，当前会话的工具名称、文件名或搜索词及执行状态会发送到你配置的服务；可能产生额外费用。")
+            Text("可选功能，默认关闭。开启后，当前会话的工具名称、文件名或搜索词及执行状态会发送到你配置的服务；开启自动命名时，还会发送首条用户消息的开头片段。都可能产生额外费用。")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
                 Toggle("启用活动摘要", isOn: $configuration.enabled)
+                Toggle("自动命名会话", isOn: $configuration.nameSessions)
+                    .disabled(!configuration.enabled)
+                    .help("会话标题仍是占位值（未命名、新对话或首条消息截断）时生成一次短标题，写入本机显示名；手动重命名优先。")
                 TextField("Base URL（含 /v1）", text: $configuration.baseURL, prompt: Text("http://localhost:8000/v1"))
                 TextField("模型名称", text: $configuration.model, prompt: Text("qwen3.8-flash-next"))
                 SecureField("API Key（可选，保存在钥匙串）", text: $apiKey)
                 Toggle("关闭 Qwen 思考", isOn: $configuration.disableThinking)
                     .help("仅用于支持 chat_template_kwargs.enable_thinking 的服务，可减少摘要的延迟与开销。")
             }
-            Text("使用 OpenAI 兼容的 Chat Completions 接口。不会发送源码、工具输出、思考内容或用户消息；不会写回 Agent 的上下文。")
+            Text("使用 OpenAI 兼容的 Chat Completions 接口。活动摘要不发送源码、工具输出、思考内容或用户消息；自动命名只发送首条用户消息的开头（不超过 400 字符）。都不会写回 Agent 的上下文。")
                 .font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             if let testResult { Text(testResult).font(.callout).textSelection(.enabled) }

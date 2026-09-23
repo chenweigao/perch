@@ -519,10 +519,12 @@
 "API Key（可选，保存在钥匙串）" = "API key (optional, stored in Keychain)";
 "Base URL（含 /v1）" = "Base URL (including /v1)";
 "仅用于支持 chat_template_kwargs.enable_thinking 的服务，可减少摘要的延迟与开销。" = "For services supporting chat_template_kwargs.enable_thinking; reduces summary latency and overhead.";
-"使用 OpenAI 兼容的 Chat Completions 接口。不会发送源码、工具输出、思考内容或用户消息；不会写回 Agent 的上下文。" = "Uses an OpenAI-compatible Chat Completions endpoint. Source code, tool output, reasoning, and user messages are not sent. Summaries do not enter the agent context.";
+"使用 OpenAI 兼容的 Chat Completions 接口。活动摘要不发送源码、工具输出、思考内容或用户消息；自动命名只发送首条用户消息的开头（不超过 400 字符）。都不会写回 Agent 的上下文。" = "Uses an OpenAI-compatible Chat Completions endpoint. Activity summaries never send source code, tool output, reasoning, or user messages. Automatic naming sends only the opening of the first user message (at most 400 characters). Neither enters the agent context.";
 "关闭 Qwen 思考" = "Disable Qwen thinking";
-"可选功能，默认关闭。开启后，当前会话的工具名称、文件名或搜索词及执行状态会发送到你配置的服务；可能产生额外费用。" = "Optional and off by default. When enabled, tool names, filenames or search terms, and execution states from the current conversation are sent to your configured service. Additional costs may apply.";
+"可选功能，默认关闭。开启后，当前会话的工具名称、文件名或搜索词及执行状态会发送到你配置的服务；开启自动命名时，还会发送首条用户消息的开头片段。都可能产生额外费用。" = "Optional and off by default. When enabled, tool names, filenames or search terms, and execution states from the current conversation are sent to your configured service. With automatic naming on, the opening of the first user message is also sent. Additional costs may apply.";
 "启用活动摘要" = "Enable activity summaries";
+"自动命名会话" = "Name sessions automatically";
+"会话标题仍是占位值（未命名、新对话或首条消息截断）时生成一次短标题，写入本机显示名；手动重命名优先。" = "Generated once while a session still has a placeholder title (unnamed, new conversation, or a truncated first message), and stored as the local display name. A manual rename always wins.";
 "已开启" = "Enabled";
 "搜索" = "Search";
 "摘要服务没有返回文字。" = "The summary service returned no text.";

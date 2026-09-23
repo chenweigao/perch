@@ -7,6 +7,7 @@ struct ProtocolTests {
         setbuf(stdout, nil)
         try checkConversationPresentation()
         try checkActivitySummaries()
+        try checkSessionNaming()
         try checkToolVisibility()
         try checkConversationTodos()
         try checkConversationActivity()
