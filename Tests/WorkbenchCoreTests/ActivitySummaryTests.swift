@@ -43,6 +43,44 @@ func checkActivitySummaries() throws {
         entries: firstToolEntries, tools: [read0.id: read0], isRunning: true).current
     precondition(firstToolNarrative?.source == .local && firstToolNarrative?.phase == .exploring)
     precondition(firstToolNarrative?.headline.isEmpty == false, "The first tool must immediately have a local title")
+    func shellNarrative(_ command: String, key: String = "command", description: String? = nil) throws -> ActivityNarrative {
+        var input: [String: Any] = [key: command]
+        if let description { input["description"] = description }
+        let entries = try timeline([user(), call("shell", name: "Bash", input: input)])
+        let parsed = try JSONDecoder().decode(JSONValue.self, from: JSONSerialization.data(withJSONObject: input))
+        return ActivityNarrativeProjection.make(entries: entries,
+            tools: ["shell": tool("shell", name: "Bash", input: parsed)], isRunning: true).current!
+    }
+    let cdTest = try shellNarrative("cd '/project/tests with spaces' && swift test")
+    precondition(cdTest.headline == L("运行测试") && cdTest.phase == .validating)
+    let waiting = try shellNarrative("sleep 30")
+    precondition(waiting.headline == L("等待任务继续") && waiting.phase == .mixed)
+    let wrapped = try shellNarrative("bash -lc 'cd /project && env MODE=ci python3 -m pytest'", key: "cmd")
+    precondition(wrapped.headline == L("运行测试"))
+    let echoed = try shellNarrative("echo 'please test and build; git commit'")
+    precondition(echoed.phase == .mixed && echoed.headline == L("执行命令"),
+                 "Quoted text is not an executed test or build")
+    let inspection = try shellNarrative("cd /project/test && git diff --check")
+    precondition(inspection.phase == .exploring && !inspection.headline.contains("cd"))
+    let described = try shellNarrative("cd /project && swift test", description: "检查会话恢复是否保留草稿")
+    precondition(described.headline == "检查会话恢复是否保留草稿", "Descriptions must not gain a mechanical phase prefix")
+    let setupOnly = try shellNarrative("cd /project")
+    precondition(setupOnly.headline == L("准备命令环境"))
+
+    let completeProgress = "Both foreign changes check out. " + String(repeating: "Keep the complete explanation visible. ", count: 12) + "END_OF_PROGRESS"
+    let fullEntries = try timeline([user(), progress("long-progress", completeProgress), call("read0")])
+    let fullNarrative = ActivityNarrativeProjection.make(entries: fullEntries, tools: [read0.id: read0], isRunning: true).current!
+    precondition(fullNarrative.headline == completeProgress && fullNarrative.headline.hasSuffix("END_OF_PROGRESS"),
+                 "The history anchor and expanded activity must keep the entire progress message")
+    let longDetailEntries = try timeline([user(), progress("long-detail", "检查结果：" + completeProgress), call("read0")])
+    let longDetail = ActivityNarrativeProjection.make(entries: longDetailEntries, tools: [read0.id: read0], isRunning: true).current!
+    precondition(longDetail.headline == "检查结果" && longDetail.detail == completeProgress)
+    let multiPartSource: [String: Any] = ["kind": "activity_summary", "itemId": "multi-summary",
+        "summaryParts": ["First summary part.", completeProgress], "state": "final"]
+    let multiPartEntries = try timeline([user(), thought("multi", source: multiPartSource), call("read0")])
+    let multiPart = ActivityNarrativeProjection.make(entries: multiPartEntries, tools: [read0.id: read0], isRunning: true).current!
+    precondition(multiPart.headline == "First summary part. " + completeProgress)
+
     let read1 = tool("read1")
     let secondToolEntries = try timeline([user(), call("read0"), call("read1")])
     let secondToolNarrative = ActivityNarrativeProjection.make(
@@ -298,7 +336,7 @@ func checkActivitySummaries() throws {
     let bodyText = String(decoding: request.httpBody!, as: UTF8.self)
     precondition(!bodyText.contains(sensitiveCommand) && !bodyText.contains("PRIVATE_TOOL_OUTPUT"))
     precondition(!bodyText.contains("test-token"))
-    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 180)
+    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 512)
     precondition((body["chat_template_kwargs"] as? [String: Bool])?["enable_thinking"] == false)
     precondition(request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
     config.disableThinking = false
@@ -333,6 +371,15 @@ func checkActivitySummaries() throws {
         try completion(" Kept a compatible plain-text summary. "), evidenceIDs: [])
     precondition(plain.subject.isEmpty && plain.phase == .mixed)
     precondition(plain.summary == "Kept a compatible plain-text summary." && plain.shouldUpdate)
+    let sleepAfterProgress = tool("wait", name: "Bash", status: .running, input: .object(["command": .string("sleep 30")]))
+    let progressThenWait = try timeline([user(), progress("wait-progress", "Checking the regression results"), call("read0"), call("wait", name: "Bash", input: ["command": "sleep 30"])])
+    let waitingStage = ActivityNarrativeProjection.make(entries: progressThenWait,
+        tools: [read0.id: read0, "wait": sleepAfterProgress], isRunning: true)
+    precondition(waitingStage.current?.source == .commentary && waitingStage.current?.headline == "Checking the regression results",
+                 "Polling and sleep must not displace meaningful agent progress")
+    let fullExternal = try ActivitySummaryClient.responseResult(try completion(completeProgress), evidenceIDs: [])
+    precondition(fullExternal.summary == completeProgress)
+    precondition(localProjection.applying([localProjection.current!.stageID: fullExternal]).current?.headline == completeProgress)
     do {
         _ = try ActivitySummaryClient.responseResult(try completion(
             #"{"subject":"Bad","phase":"planning","summary":"Invalid phase"}"#), evidenceIDs: [])

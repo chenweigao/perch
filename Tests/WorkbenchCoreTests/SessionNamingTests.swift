@@ -24,6 +24,8 @@ func checkSessionNaming() throws {
     let prompt = "  Fix the login redirect loop in the mobile app  "
     let conversation = try messages([contextOnly, user("first", prompt), assistant])
     precondition(SessionNaming.excerpt(from: conversation) == prompt.trimmingCharacters(in: .whitespacesAndNewlines))
+    precondition(SessionNaming.excerpt(from: conversation, hasOlder: true) == nil,
+                 "A partial history must never rename a session using a later user message")
     let contextConversation = try messages([contextOnly, assistant])
     precondition(SessionNaming.excerpt(from: contextConversation) == nil,
                  "Assistant text and runtime context never become a naming candidate")
@@ -73,7 +75,7 @@ func checkSessionNaming() throws {
     let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
     let content = String(decoding: request.httpBody!, as: UTF8.self)
     precondition(!content.contains("test-token") && request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
-    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 60)
+    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 160)
     precondition(body["temperature"] as? Double == 0)
     precondition((body["chat_template_kwargs"] as? [String: Bool])?["enable_thinking"] == false)
     let messagesBody = body["messages"] as? [[String: String]]

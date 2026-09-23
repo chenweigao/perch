@@ -2,11 +2,12 @@ import SwiftUI
 import WorkbenchCore
 
 struct RenameSessionSheet: View {
-    let model: WorkbenchModel
+    @ObservedObject var model: WorkbenchModel
     let item: WorkspaceSession
     @State private var title = ""
     @State private var suggestion: String?
     @State private var suggesting = false
+    @State private var suggestionError: String?
     @State private var suggestionTask: Task<Void, Never>?
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
@@ -27,6 +28,14 @@ struct RenameSessionSheet: View {
                         .lineLimit(1).truncationMode(.tail)
                 }
             }
+            if let suggestionError {
+                HStack(alignment: .top) {
+                    Text(suggestionError).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
+                    Button("重试") { loadSuggestion() }.disabled(suggesting)
+                }
+            }
+            Text(model.automaticNamingStatus(for: item.reference))
+                .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
             Text("仅修改 Perch 中的显示名称，不更改远端标题。")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
@@ -47,7 +56,7 @@ struct RenameSessionSheet: View {
         let configuration = settings.configuration
         guard configuration.enabled, configuration.nameSessions, configuration.isValid,
               let excerpt = model.namingExcerpt(for: item.reference) else { return }
-        suggesting = true
+        suggesting = true; suggestionError = nil
         suggestionTask = Task {
             defer { suggesting = false }
             do {
@@ -57,7 +66,7 @@ struct RenameSessionSheet: View {
                                                                 excerpt: excerpt, language: AppLanguage.current.localization)
                 if !Task.isCancelled { suggestion = name }
             } catch {
-                // Suggestions stay silent like automatic naming.
+                if !Task.isCancelled { suggestionError = error.localizedDescription }
                 namingLog.error("suggestion failed \(self.item.reference.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }

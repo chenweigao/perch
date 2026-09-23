@@ -107,7 +107,7 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
         let updated = stages.map { stage -> ActivityNarrativeStage in
             guard stage.narrative.source == .local,
                   let result = external[stage.narrative.stageID], result.shouldUpdate else { return stage }
-            let headline = Self.clean(result.summary, limit: 120)
+            let headline = Self.clean(result.summary)
             guard !headline.isEmpty else { return stage }
             let narrative = ActivityNarrative(
                 turnID: stage.narrative.turnID, stageID: stage.narrative.stageID,
@@ -122,7 +122,7 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
         return Self(turnID: turnID, stages: updated, entryStageIDs: entryStageIDs)
     }
 
-    fileprivate static func clean(_ value: String, limit: Int) -> String {
+    fileprivate static func clean(_ value: String, limit: Int? = nil) -> String {
         var text = value.trimmingCharacters(in: .whitespacesAndNewlines)
         for marker in ["### ", "## ", "# ", "**"] where text.hasPrefix(marker) {
             text.removeFirst(marker.count)
@@ -132,20 +132,21 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
         text = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         text = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
             .union(CharacterSet(charactersIn: ":：")))
-        return String(text.prefix(limit))
+        guard let limit, text.count > limit else { return text }
+        return String(text.prefix(limit - 1)) + "…"
     }
 
     fileprivate static func narrativeText(_ value: String) -> (headline: String, detail: String?) {
-        let text = clean(value, limit: 240)
+        let text = clean(value)
         for separator in ["：", ": "] {
             guard let range = text.range(of: separator) else { continue }
             let headline = clean(String(text[..<range.lowerBound]), limit: 80)
-            let detail = clean(String(text[range.upperBound...]), limit: 240)
+            let detail = clean(String(text[range.upperBound...]))
             if !headline.isEmpty, headline.count <= 48, !detail.isEmpty {
                 return (headline, detail)
             }
         }
-        return (clean(text, limit: 120), nil)
+        return (text, nil)
     }
 }
 
@@ -206,13 +207,7 @@ public enum ActivityNarrativeProjection {
             let name = tool.name.lowercased()
             if ToolPresentation.isExploration(name) || ["fetch", "web_search", "view_image"].contains(name) { return .exploring }
             if ["edit", "write", "edit_file", "write_file", "apply_patch", "filechange"].contains(name) { return .editing }
-            if name == "bash" || name == "shell" || name == "exec_command" {
-                let command = tool.input?["command"].string?.lowercased() ?? ""
-                let executable = command.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? ""
-                if command.contains(" test") || command.contains(" lint") || command.contains(" check")
-                    || command.contains(" build") || ["xcodebuild", "swift", "pytest", "unittest"].contains(executable) { return .validating }
-                if executable == "git" { return .integrating }
-            }
+            if let command = ShellActivity.command(tool) { return ShellActivity.parse(command)?.phase ?? .mixed }
             return .mixed
         }
 
@@ -220,28 +215,30 @@ public enum ActivityNarrativeProjection {
                          headline: String, detail: String?, source: ActivityNarrativeSource,
                          evidenceIDs: [String] = [], lifecycle: ActivityNarrativeLifecycle = .streaming) {
             let narrative = ActivityNarrative(turnID: turnID, stageID: id, phase: phase,
-                subject: subject, headline: ActivityNarrativeSnapshot.clean(headline, limit: 120),
-                detail: detail.map { ActivityNarrativeSnapshot.clean($0, limit: 240) },
+                subject: subject, headline: ActivityNarrativeSnapshot.clean(headline),
+                detail: detail.map { ActivityNarrativeSnapshot.clean($0) },
                 source: source, evidenceIDs: evidenceIDs, lifecycle: lifecycle)
             stages.append(Builder(narrative: narrative))
         }
 
         for entry in currentEntries {
-            if entry.presentation == .progress,
-               let text = entry.messages.flatMap(\.content).compactMap(\.visibleText)
-                .map({ ActivityNarrativeSnapshot.clean($0, limit: 240) }).first(where: { !$0.isEmpty }) {
-                let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
-                appendStage(id: "commentary:\(entry.messages[0].id)", phase: phase(from: text),
+            if entry.presentation == .progress {
+                let text = entry.messages.flatMap(\.content).compactMap(\.visibleText)
+                .map({ ActivityNarrativeSnapshot.clean($0) }).filter({ !$0.isEmpty }).joined(separator: " ")
+                if !text.isEmpty {
+                    let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
+                    appendStage(id: "commentary:\(entry.messages[0].id)", phase: phase(from: text),
                             subject: narrativeText.headline, headline: narrativeText.headline,
                             detail: narrativeText.detail, source: .commentary)
+                }
             }
 
             for message in entry.messages {
                 for part in message.content {
                     if part.type == "thinking", part.source?["kind"].string == "activity_summary" {
                         let parts = part.source?["summaryParts"].array.compactMap(\.string) ?? []
-                        let text = parts.reversed().map { ActivityNarrativeSnapshot.clean($0, limit: 240) }
-                            .first(where: { !$0.isEmpty }) ?? ""
+                        let text = parts.map { ActivityNarrativeSnapshot.clean($0) }
+                            .filter { !$0.isEmpty }.joined(separator: " ")
                         guard !text.isEmpty else { continue }
                         let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
                         let itemID = part.source?["itemId"].string ?? message.id
@@ -260,16 +257,27 @@ public enum ActivityNarrativeProjection {
                     guard part.type == "tool_use", let id = part.toolCallId, let tool = tools[id] else { continue }
                     let nextPhase = toolPhase(tool)
                     let target = ToolPresentation.compactTarget(tool)
-                    let needsStage = stages.isEmpty || (stages.last!.narrative.phase != nextPhase && !stages.last!.toolIDs.isEmpty)
+                    let shellCommand = ShellActivity.command(tool)
+                    let shell = shellCommand.flatMap(ShellActivity.parse)
+                    let headline: String
+                    if shellCommand != nil, nextPhase != .blocked {
+                        let description = tool.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
+                        headline = description.flatMap { $0.isEmpty ? nil : $0 }
+                            ?? shell?.headline ?? L("准备命令环境")
+                    } else { headline = localHeadline(nextPhase, target: target) }
+                    // Waiting/setup commands are evidence within the current task,
+                    // not a new semantic stage that displaces explicit progress.
+                    let incidental = shellCommand != nil && (shell?.category == nil || shell?.category == "wait") && nextPhase != .blocked
+                    let needsStage = stages.isEmpty || (!incidental && stages.last!.narrative.phase != nextPhase && !stages.last!.toolIDs.isEmpty)
                     if needsStage {
                         appendStage(id: "stage:\(turnID):tool:\(id)", phase: nextPhase, subject: target,
-                                    headline: localHeadline(nextPhase, target: target), detail: nil,
+                                    headline: headline, detail: nil,
                                     source: .local, evidenceIDs: [id])
                     } else {
                         var current = stages.removeLast()
                         if current.narrative.source == .local && current.toolIDs.isEmpty {
                             current.narrative = ActivityNarrative(turnID: turnID, stageID: current.narrative.stageID,
-                                phase: nextPhase, subject: target, headline: localHeadline(nextPhase, target: target),
+                                phase: nextPhase, subject: target, headline: headline,
                                 detail: nil, source: .local, evidenceIDs: [id], lifecycle: .streaming)
                         }
                         stages.append(current)

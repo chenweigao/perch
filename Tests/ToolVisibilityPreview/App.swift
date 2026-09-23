@@ -27,7 +27,22 @@ private struct ToolPreview: View {
         }
     })
     private let live = try! KimiWire.decoder().decode([KimiLiveTool].self, from: Data(#"[{"tool_call_id":"read-1","name":"Read","args":{"path":"/fixture/Sample.swift"},"last_progress":"已读取 20 行，正在继续"}]"#.utf8))
+    private var qualityPreview: Bool { ProcessInfo.processInfo.environment["TOOL_VISIBILITY_SUMMARY_QUALITY"] == "1" }
     private var messages: [KimiMessage] {
+        if qualityPreview {
+            let explanation = "Both changes check out. The repository cleanup is already on main, and the analyzer update belongs to the other task. The full CI run uses the same inputs as the previous run, so the result can be compared directly. This final sentence must remain readable without being cut off halfway."
+            let rows: [[String: Any]] = [
+                ["id": "quality-user", "role": "user", "content": [["type": "text", "text": "检查摘要描述和完整进度说明"]]],
+                ["id": "quality-check", "role": "assistant", "content": [["type": "tool_use", "tool_call_id": "quality-check", "tool_name": "Bash", "input": ["command": "cd /fixture && swift test"]]]],
+                ["id": "quality-check-result", "role": "tool", "content": [["type": "tool_result", "tool_call_id": "quality-check", "is_error": false, "output": "Tests passed"]]],
+                ["id": "quality-progress", "role": "assistant", "content": [["type": "text", "text": explanation]]],
+                ["id": "quality-read", "role": "assistant", "content": [["type": "tool_use", "tool_call_id": "quality-read", "tool_name": "Read", "input": ["path": "/fixture/result.txt"]]]],
+                ["id": "quality-read-result", "role": "tool", "content": [["type": "tool_result", "tool_call_id": "quality-read", "is_error": false, "output": "Result inspected"]]],
+                ["id": "quality-current", "role": "assistant", "content": [["type": "text", "text": "回归检查已启动，等待完整结果后确认改动。"]]],
+                ["id": "quality-wait", "role": "assistant", "content": [["type": "tool_use", "tool_call_id": "quality-wait", "tool_name": "Bash", "input": ["command": "sleep 30"]]]]
+            ].map { $0.merging(["created_at": ""]) { value, _ in value } }
+            return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
+        }
         if ProcessInfo.processInfo.environment["TOOL_VISIBILITY_COMPACTION"] == "1" {
             let text = "The conversation so far has been compacted to free up context. What follows is your own working summary of this task.\n\n标题之前的摘要正文必须保留。\n\n## Context Recovery Plan\n正常恢复计划必须保留。\n\n## Context Recovery\n仅供 agent 使用的内部说明。"
             let rows: [[String: Any]] = (1...2).map { index in
@@ -122,9 +137,9 @@ private struct ToolPreview: View {
             }
             Divider()
             ConversationScrollView(showsScrollIndicator: true, onScroll: { _ in }, onContentSizeChange: {}) {
-                ConversationTranscript(messages: messages, sessionId: processPreview ? "process-fixture" : thoughtPreview ? "thought-preview-fixture" : "tool-visibility-fixture",
-                                       running: processPreview ? ["process-live"] : !thoughtPreview && native && phase < 2 ? ["read-1"] : [], isRunning: processPreview || thoughtPreview || phase < 3,
-                                       liveTools: !processPreview && !thoughtPreview && !native && phase < 2 ? live : [], online: phase != 5)
+                ConversationTranscript(messages: messages, sessionId: qualityPreview ? "summary-quality-fixture" : processPreview ? "process-fixture" : thoughtPreview ? "thought-preview-fixture" : "tool-visibility-fixture",
+                                       running: qualityPreview ? ["quality-wait"] : processPreview ? ["process-live"] : !thoughtPreview && native && phase < 2 ? ["read-1"] : [], isRunning: processPreview || thoughtPreview || phase < 3,
+                                       liveTools: !qualityPreview && !processPreview && !thoughtPreview && !native && phase < 2 ? live : [], online: phase != 5)
                 if phase == 7 && !thoughtPreview && !processPreview {
                     Label("需要你的确认（无真实操作）", systemImage: "hand.raised").foregroundStyle(.orange)
                     KimiToolCard(tool: VisibleTool(id: "approval-fixture", name: "Shell", input: .object(["command": .string("printf fixture")]), status: .awaitingApproval))
@@ -133,11 +148,12 @@ private struct ToolPreview: View {
                 ReturnToLatestButton(isVisible: showReturn) { showReturn = false }
             }
             ConversationActivityBar(activity: ConversationActivity(messages: messages, isRunning: processPreview || thoughtPreview || phase < 3,
-                                                                   liveTools: !processPreview && !thoughtPreview && !native && phase < 2 ? live : [],
-                                                                   running: processPreview ? ["process-live"] : !thoughtPreview && native && phase < 2 ? ["read-1"] : [],
+                                                                   liveTools: !qualityPreview && !processPreview && !thoughtPreview && !native && phase < 2 ? live : [],
+                                                                   running: qualityPreview ? ["quality-wait"] : processPreview ? ["process-live"] : !thoughtPreview && native && phase < 2 ? ["read-1"] : [],
                                                                    online: phase != 5, isThinking: !processPreview && phase == 0, pendingCount: !processPreview && phase == 7 ? 1 : 0),
                                     isRunning: processPreview || thoughtPreview || phase < 3, timing: processPreview ? nil : timing, online: phase != 5,
-                                    pendingCount: !processPreview && phase == 7 ? 1 : 0, onReview: { showApproval = true })
+                                    pendingCount: !processPreview && phase == 7 ? 1 : 0,
+                                    narrativeSession: qualityPreview ? "summary-quality-fixture" : nil, onReview: { showApproval = true })
             Text("无远端连接、无真实消息、无审批按钮；独立 bundle ID 与状态目录。").font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(minWidth: 750, minHeight: 500)
             .alert("确认请求（预览）", isPresented: $showApproval) {

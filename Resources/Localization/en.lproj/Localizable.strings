@@ -724,3 +724,43 @@
 "断开" = "Disconnect";
 
 "连接" = "Connect";
+
+"等待任务继续" = "Waiting for work to continue";
+
+"运行测试" = "Running tests";
+
+"检查代码" = "Checking code";
+
+"构建项目" = "Building the project";
+
+"查看 Git 状态与改动" = "Inspecting Git status and changes";
+
+"执行 Git 操作" = "Running a Git operation";
+
+"查看文件与代码" = "Inspecting files and code";
+
+"执行命令" = "Running a command";
+
+"准备命令环境" = "Preparing the command environment";
+
+"已自动命名，名称保存在本机。" = "An automatic name has been generated and saved locally.";
+
+"已设置本机名称，自动命名不会覆盖。" = "A local name is set. Automatic naming will not replace it.";
+
+"自动命名未开启。" = "Automatic naming is off.";
+
+"请先配置有效的摘要服务。" = "Configure a valid summary service first.";
+
+"正在自动命名…" = "Naming this session…";
+
+"自动命名失败：%@" = "Automatic naming failed: %@";
+
+"首条消息尚未加载；打开会话并加载到开头后可生成名称。" = "The first message is not loaded. Open the session and load its beginning to generate a name.";
+
+"仅为占位标题自动命名；已有标题保持不变，Kimi 会等待本轮完成。" = "Only placeholder titles are named automatically. Existing titles stay unchanged; Kimi waits for the turn to finish.";
+
+"摘要测试通过：%@" = "Summary test passed: %@";
+
+"摘要与自动命名测试通过。示例名称：%@" = "Summary and naming tests passed. Example name: %@";
+
+"重试" = "Retry";
