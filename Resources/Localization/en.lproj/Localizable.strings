@@ -557,26 +557,51 @@
 "正在读取模型…" = "Loading models…";
 "模型（默认使用 dsh 目录的当前路由）" = "Model (default: the dsh catalog's current route)";
 
-"Codex 权限" = "Codex permissions";
-
-"新任务默认权限" = "Default for new tasks";
-
-"需要时询问" = "Ask for approval";
-
-"自动审核" = "Auto-review";
-
-"完全访问" = "Full access";
-
-"在工作区内执行；额外权限由你批准。" = "Work inside the workspace; you approve additional permissions.";
-
-"保留工作区沙箱，由 Codex 自动审核额外权限；请求仍可能被拒绝。" = "Keep the workspace sandbox. Codex reviews additional permissions automatically and may deny requests.";
-
-"可访问运行机器上的工作区外文件和网络，执行命令时不再请求批准。" = "Access files outside the workspace and the network on the host machine without command approval prompts.";
-
-"仅影响新建 Codex 任务；已有任务可在输入框旁调整。" = "Applies to new Codex tasks. Change existing tasks beside the composer.";
-
-"从下一轮开始生效" = "Applies from the next turn";
-
-"无法更改权限" = "Could not change permissions";
-
-"权限" = "Permissions";
+/* Permission control */
+"新会话默认权限" = "Default Permissions for New Sessions";
+"恢复安全默认" = "Restore Safe Defaults";
+"只影响新建会话。Kimi 与 Qoder 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。" = "Only affects new sessions. Kimi and Qoder can be adjusted beside the composer; OMP and Codex permissions are fixed when the session is created.";
+"下一条消息生效" = "Applies to the next message";
+"下一轮生效" = "Applies to the next turn";
+"创建会话时固定" = "Fixed when the session is created";
+"运行时逐次确认" = "Approved per request at runtime";
+"始终询问" = "Always Ask";
+"需要时询问" = "Ask When Needed";
+"从不询问" = "Never Ask";
+"允许写入" = "Allow Writes";
+"自动执行" = "Run Automatically";
+"默认确认" = "Default Approvals";
+"自动接受编辑" = "Accept Edits Automatically";
+"仅规划" = "Plan Only";
+"不主动询问" = "Do Not Ask Proactively";
+"自动判断" = "Decide Automatically";
+"绕过权限检查" = "Bypass Permission Checks";
+"只读" = "Read Only";
+"工作区 · 需要时询问" = "Workspace · Ask When Needed";
+"工作区 · 自动执行" = "Workspace · Run Automatically";
+"完全访问" = "Full Access";
+"每次工具执行前都请求你的批准。" = "Ask for your approval before every tool execution.";
+"由 Kimi 判断何时需要请求批准。" = "Kimi decides when to request your approval.";
+"Kimi 可直接执行工具，不再请求批准。" = "Kimi can run tools directly without requesting approval.";
+"执行工具前始终请求你的批准。" = "Always request your approval before running tools.";
+"允许工作区写入；其他敏感操作仍可能请求批准。" = "Allow writes in the workspace; other sensitive operations may still require approval.";
+"OMP 不再请求工具执行批准。" = "OMP no longer requests approval before running tools.";
+"使用 Qoder 的默认权限策略。" = "Use Qoder's default permission policy.";
+"自动接受文件编辑，其他操作仍按 Qoder 策略确认。" = "Accept file edits automatically; other operations still follow Qoder's approval policy.";
+"只规划任务，不直接执行修改。" = "Plan the task without directly making changes.";
+"尽量继续执行而不向你提问。" = "Try to continue without asking you questions.";
+"由 Qoder 自动决定工具权限。" = "Let Qoder decide tool permissions automatically.";
+"跳过 Qoder 权限检查，允许危险操作。" = "Skip Qoder permission checks and allow dangerous operations.";
+"DeepSeek 在每次需要权限时通过运行时审批卡片询问。" = "DeepSeek requests approval through a runtime card whenever permission is needed.";
+"仅允许读取；写入和其他额外权限需要批准。" = "Only allow reads; writes and other permissions require approval.";
+"允许在工作区内写入，额外权限由你批准。" = "Allow writes in the workspace; you approve additional permissions.";
+"允许在工作区内写入且不再请求批准。" = "Allow writes in the workspace without requesting approval.";
+"可访问工作区外文件和网络，执行命令时不再请求批准。" = "Access files outside the workspace and the network without requesting command approval.";
+"沿用会话设置" = "Keep Session Setting";
+"Perch 不会覆盖此会话已有的权限设置。" = "Perch will not override this session's existing permission settings.";
+"确认高风险权限" = "Confirm High-Risk Permission";
+"启用“%@”" = "Enable “%@”";
+"此模式可能允许 Agent 在不询问你的情况下执行危险操作。" = "This mode may allow the agent to perform dangerous operations without asking you.";
+"选择权限级别" = "Choose permission level";
+"权限级别：%@" = "Permission level: %@";
+"当前 Agent 不支持动态切换权限" = "This agent does not support changing permissions during a session.";

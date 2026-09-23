@@ -18,9 +18,11 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
     if (cmd.type === 'answer') { pending.get(cmd.id)?.(cmd); pending.delete(cmd.id); return; }
     if (cmd.type !== 'prompt' || active) throw new Error('会话正在运行');
     activeTurn = cmd.id;
+    const permissionMode = cmd.permissionMode ?? 'default';
     active = query({prompt: cmd.message, options: {
       auth: qodercliAuth(), pathToQoderCLIExecutable: cfg.binary, cwd: cfg.cwd,
-      permissionMode: 'default', includePartialMessages: true, resume,
+      permissionMode, includePartialMessages: true, resume,
+      ...(permissionMode === 'bypassPermissions' ? {allowDangerouslySkipPermissions: true} : {}),
       ...(cfg.model ? {model: cfg.model} : {}),
       canUseTool: async (name, input, context) => {
         const id = context.toolUseID;

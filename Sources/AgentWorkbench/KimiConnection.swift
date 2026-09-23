@@ -26,7 +26,22 @@ final class KimiConnection: ObservableObject {
     /// Effort levels come from each model's own support_efforts, so a model with
     /// none genuinely has no effort control rather than a hidden default.
     var catalog: [AgentModel] { ModelSelectionCatalog.parseKimi(models) }
-    @Published var manualPermissions: [String: Bool] = [:]
+    @Published var permissionChoices: [String: String] = [:]
+    func permissionCapability(for id: String) -> PermissionCapability {
+        PermissionCatalog.capability(for: .kimi, selected: permissionMode(for: id))
+    }
+    func setPermission(_ mode: String, for id: String) {
+        guard PermissionCatalog.isValid(mode, for: .kimi) else { return }
+        permissionChoices[id] = mode
+    }
+    private func permissionMode(for id: String) -> String? {
+        if let selected = permissionChoices[id] { return selected }
+        let reported = conversation?.snapshot.session.id == id
+            ? conversation?.snapshot.session.agentConfig["permission_mode"].string
+            : sessions.first { $0.id == id }?.agentConfig["permission_mode"].string
+        guard let reported, PermissionCatalog.isValid(reported, for: .kimi) else { return nil }
+        return reported
+    }
     @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
     @Published private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     @Published var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
@@ -367,6 +382,7 @@ final class KimiConnection: ObservableObject {
         guard result["deleted"] == .bool(true) else { throw WorkbenchError("服务端未确认删除") }
         cachedConversations.remove(id)
         drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
+        permissionChoices.removeValue(forKey: id)
         if selectedId == id {
             selectionGeneration = UUID(); selectionTask?.cancel(); historyTask?.cancel(); historyTask = nil
             selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false
@@ -375,13 +391,19 @@ final class KimiConnection: ObservableObject {
     }
 
     @discardableResult
-    func createSession(title: String, cwd: String, initialPrompt: String? = nil, model: String? = nil) async throws -> KimiSession {
+    func createSession(title: String, cwd: String, initialPrompt: String? = nil, model: String? = nil,
+                       permissionMode: String? = nil) async throws -> KimiSession {
         guard let api else { throw WorkbenchError("请先连接 Kimi Web") }
+        if let permissionMode, !PermissionCatalog.isValid(permissionMode, for: .kimi) {
+            throw WorkbenchError("Kimi 权限模式无效")
+        }
+        let initialPermission = permissionMode ?? PermissionDefaults.mode(for: .kimi)
         var body: [String: JSONValue] = ["metadata": .object(["cwd": .string(cwd)])]
         if !title.isEmpty { body["title"] = .string(title) }
         let session = try await api.post(KimiSession.self, "/api/v1/sessions", body: .object(body))
         if let initialPrompt { drafts[session.id] = initialPrompt }
         if let model { modelChoices[session.id] = model }
+        if let initialPermission { permissionChoices[session.id] = initialPermission }
         sessions.insert(session, at: 0); onSessionsChanged?()
         select(session.id)
         return session
@@ -441,7 +463,7 @@ final class KimiConnection: ObservableObject {
             + files.map { .object(["type": .string("file"), "name": .string($0.lastPathComponent)]) }
         pendingPrompts[id, default: []].append(KimiPrompt(id: promptID, content: preview))
         let chosenModel = modelChoices[id]
-        let manual = manualPermissions[id] == true
+        let permissionMode = permissionMode(for: id)
         // The server accepts an unrecognised thinking value without failing, so the
         // level is resolved against the target model before it is sent.
         let effort = activeModel(for: id)?.resolve(thinkingChoices[id])
@@ -467,7 +489,7 @@ final class KimiConnection: ObservableObject {
             ]
             if let model = chosenModel, !model.isEmpty { body["model"] = .string(model) }
             if let effort { body["thinking"] = .string(effort.rawValue) }
-            if manual { body["permission_mode"] = .string("manual") }
+            if let permissionMode { body["permission_mode"] = .string(permissionMode) }
             timings.submitted(promptID)
             let accepted = try await api.post(KimiPrompt.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
             if startingGoal { commandFeedback[id] = L("Goal created. First message accepted.") }

@@ -101,8 +101,15 @@ struct NativeAgentView: View {
                         HStack(spacing: 10) {
                             ComposerAddButton(supportsFiles: false)
                             NativeModelControls(connection: connection, snapshot: s)
-                            if s.provider == .codex {
-                                CodexPermissionControl(connection: connection, snapshot: s)
+                            PermissionPicker(
+                                provider: s.provider,
+                                capability: connection.sessions.first { $0.id == s.id }?.permission
+                                    ?? s.permission
+                                    ?? PermissionCatalog.capability(for: s.provider),
+                                disabled: !connection.online,
+                                allowsSelection: s.provider == .qoder
+                            ) { mode in
+                                connection.setPermission(mode, for: s.id)
                             }
                             Spacer(minLength: 8)
                             ContextMeter(budget: connection.sessions.first { $0.id == s.id }?.budget)
@@ -169,45 +176,6 @@ struct NativeAgentView: View {
 /// Model, reasoning effort and remaining context for runtimes that accept route
 /// changes. OMP and dsh expose their native controls, while Codex choices come from
 /// app-server's model catalog. A Qoder session keeps the plain label.
-struct CodexPermissionControl: View {
-    @ObservedObject var connection: NativeAgentConnection
-    let snapshot: NativeAgentSnapshot
-    @State private var saving = false
-    @State private var error: String?
-    private var mode: CodexPermissionMode {
-        connection.sessions.first { $0.id == snapshot.id }?.permissionMode ?? snapshot.permissionMode ?? .ask
-    }
-    var body: some View {
-        Menu {
-            ForEach(CodexPermissionMode.allCases) { option in
-                Button {
-                    saving = true; error = nil
-                    Task {
-                        defer { saving = false }
-                        do { try await connection.action(snapshot.id, "permissions", ["mode": .string(option.rawValue)]) }
-                        catch { self.error = error.localizedDescription }
-                    }
-                } label: {
-                    if option == mode { Label(option.label, systemImage: "checkmark") }
-                    else { Text(option.label) }
-                }
-            }
-            Divider()
-            Text(mode.detail)
-            Text("从下一轮开始生效")
-        } label: {
-            Label(mode.label, systemImage: mode == .fullAccess ? "lock.open" : "lock.shield")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-        .menuStyle(.borderlessButton).fixedSize()
-        .disabled(snapshot.busy || !snapshot.interactions.isEmpty || saving)
-        .help(mode.detail)
-        .alert("无法更改权限", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("确定", role: .cancel) { error = nil }
-        } message: { Text(error ?? "") }
-    }
-}
-
 struct NativeModelControls: View {
     @ObservedObject var connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
@@ -405,9 +373,12 @@ struct NewConversationSheet: View {
     @State private var attachments: [URL] = []
     @State private var chooseFiles = false
     @State private var showSetup = false
-    @State private var codexPermissionMode = CodexPermissionMode(rawValue: UserDefaults.standard.string(forKey: CodexPermissionMode.defaultsKey) ?? "") ?? .ask
+    @State private var permissionMode = PermissionDefaults.mode(for: .kimi) ?? "manual"
     @FocusState private var cwdFocused: Bool
     private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
+    private var permissionCapability: PermissionCapability {
+        PermissionCatalog.capability(for: provider, selected: permissionMode)
+    }
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { Array(Set(model.allSessions.filter { $0.reference.hostID == kimi.host.id }.map(\.directory).filter { $0.hasPrefix("/") })).sorted() }
@@ -528,11 +499,9 @@ struct NewConversationSheet: View {
             if provider != .kimi && provider != .codex {
                 TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
             }
-            if provider == .codex {
-                Picker("权限", selection: $codexPermissionMode) {
-                    ForEach(CodexPermissionMode.allCases) { mode in Text(mode.label).tag(mode) }
-                }.disabled(creating)
-                Text(codexPermissionMode.detail).font(.caption).foregroundStyle(.secondary)
+            PermissionPicker(provider: provider, capability: permissionCapability, layout: .form,
+                             disabled: creating, allowsSelection: provider != .dsh) { mode in
+                permissionMode = mode
             }
             if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
                 Text(modelsError).font(.caption).foregroundStyle(.orange)
@@ -570,11 +539,13 @@ struct NewConversationSheet: View {
             }
             .sheet(isPresented: $showSetup) {
                 AddHostSheet(model: model, host: kimi.host) { launch in
-                    provider = launch.provider; cwd = launch.directory; agentModel = launch.model
+                    selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
                 }
             }
             .onChange(of: kimi.host.id) { _, _ in
-                if !availableProviders.contains(provider) { provider = availableProviders.first ?? .kimi }
+                if !availableProviders.contains(provider) {
+                    selectProvider(availableProviders.first ?? .kimi)
+                }
             }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
             .task(id: catalogID) {
@@ -603,11 +574,13 @@ struct NewConversationSheet: View {
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
                 }
                 if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
+                permissionMode = PermissionDefaults.mode(for: provider) ?? PermissionCatalog.runtimeManaged
             }
     }
     private func selectProvider(_ value: SessionKind) {
         provider = value
         agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? ""
+        permissionMode = PermissionDefaults.mode(for: value) ?? PermissionCatalog.runtimeManaged
     }
     private func selectCodexModel() {
         if selectedCodexModel != nil { return }
@@ -620,16 +593,19 @@ struct NewConversationSheet: View {
     private func start() {
         guard canStart else { return }; creating = true
         let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd, files = attachments
+        let selectedPermission = permissionMode
         let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
         Task {
             do {
                 if selectedProvider == .kimi {
-                    let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text, model: selectedModel)
+                    let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text,
+                                                               model: selectedModel, permissionMode: selectedPermission)
                     if !files.isEmpty { kimi.attachments[session.id] = files }
                     model.newKimiCreated(session)
                     await kimi.sendPrompt(for: session.id)
                 } else {
-                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel, permissionMode: codexPermissionMode)
+                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel,
+                                                          permissionMode: selectedPermission)
                     native.drafts[session.id] = text
                     model.newNativeCreated(session)
                     native.send()

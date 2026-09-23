@@ -86,12 +86,26 @@ class ProtocolTests(unittest.TestCase):
         provider,model=body.get('provider',''),body.get('model','')
         if not provider or not model: raise ValueError('请同时指定 provider 和模型')
         s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
-    def test_relaunch_carries_model_and_thinking(self):
-        s=self.session(); s.state['model']='gpt-5.4-mini'; s.state['thinking']='xhigh'
-        args=['omp','--mode','rpc-ui','--cwd',s.state['cwd']]
-        if s.state['model']: args += ['--model',s.state['model']]
-        if s.state.get('thinking'): args += ['--thinking',s.state['thinking']]
-        self.assertIn('--thinking',args); self.assertEqual(args[args.index('--thinking')+1],'xhigh')
+    def test_omp_launch_carries_permission_model_and_thinking(self):
+        s=self.session(); s.state.update(model='gpt-5.4-mini',thinking='xhigh',permissionMode='write')
+        process=type('Process',(),{})()
+        with patch.object(broker.subprocess,'Popen',return_value=process) as popen, \
+             patch.object(broker.threading,'Thread'):
+            s.launch()
+        args=popen.call_args.args[0]
+        popen.call_args.kwargs['stderr'].close()
+        self.assertEqual(args[args.index('--approval-mode')+1],'write')
+        self.assertEqual(args[args.index('--model')+1],'gpt-5.4-mini')
+        self.assertEqual(args[args.index('--thinking')+1],'xhigh')
+    def test_qoder_prompt_carries_current_permission_mode(self):
+        s=self.session('qoder'); s.state['permissionMode']='dontAsk'
+        sent=[]; s.send=lambda value:sent.append(value)
+        s.process=type('Process',(),{'poll':lambda self:None})()
+        s.prompt({'text':'continue','requestId':'qoder-permission'})
+        self.assertEqual(sent[-1],{'type':'prompt','id':'qoder-permission','message':'continue','permissionMode':'dontAsk'})
+        self.assertEqual(s.summary()['permission'],{'selected':'dontAsk',
+            'options':['default','acceptEdits','plan','dontAsk','auto','bypassPermissions'],'scope':'next-turn'})
+        self.assertEqual(s.snapshot()['permission'],s.summary()['permission'])
     def test_available_commands_reach_snapshot_without_churning_revision(self):
         s=self.session()
         commands=[{'name':'compact','description':'Compact the conversation',
@@ -173,20 +187,32 @@ class CodexProtocolTests(unittest.TestCase):
         self.assertEqual(params['approvalsReviewer'],'user')
         self.assertEqual(params['sandbox'],'workspace-write')
     def test_permission_modes_survive_restart_and_reach_resume_and_turn(self):
-        expected = {'ask': ('on-request', 'user', 'workspace-write', 'workspaceWrite'),
-                    'auto-review': ('on-request', 'auto_review', 'workspace-write', 'workspaceWrite'),
-                    'full-access': ('never', 'user', 'danger-full-access', 'dangerFullAccess')}
-        for mode, (policy, reviewer, sandbox, turn_sandbox) in expected.items():
+        expected = {'read-only': ('on-request', 'read-only', 'readOnly'),
+                    'workspace-ask': ('on-request', 'workspace-write', 'workspaceWrite'),
+                    'workspace-auto': ('never', 'workspace-write', 'workspaceWrite'),
+                    'full-access': ('never', 'danger-full-access', 'dangerFullAccess')}
+        for mode, (policy, sandbox, turn_sandbox) in expected.items():
             with self.subTest(mode=mode):
                 s,fake=self.session(); s.state['permissionMode']=mode; s.persist()
                 restored=broker.Session(json.loads(s.path.read_text()))
                 restored.codex=fake; restored.codex_attached=False
                 restored.codex_ensure(True)
                 params=next(params for method,params in fake.calls if method=='thread/resume')
-                self.assertEqual((params['approvalPolicy'],params['approvalsReviewer'],params['sandbox']), (policy,reviewer,sandbox))
+                self.assertEqual((params['approvalPolicy'],params['approvalsReviewer'],params['sandbox']), (policy,'user',sandbox))
                 restored.prompt({'text':'test','requestId':'permission-'+mode})
                 turn=next(params for method,params in fake.calls if method=='turn/start')
-                self.assertEqual((turn['approvalPolicy'],turn['approvalsReviewer'],turn['sandboxPolicy']), (policy,reviewer,{'type':turn_sandbox}))
+                self.assertEqual((turn['approvalPolicy'],turn['approvalsReviewer'],turn['sandboxPolicy']), (policy,'user',{'type':turn_sandbox}))
+
+    def test_legacy_permission_modes_restore_safely(self):
+        for stored, expected in [(None,'workspace-ask'), ('ask','workspace-ask'),
+                                 ('auto-review','workspace-ask'), ('full-access','full-access'),
+                                 ('unknown','workspace-ask')]:
+            with self.subTest(stored=stored):
+                state=dict(id='legacy',provider='codex',cwd=folder.name,title='Legacy',model='',
+                           busy=False,archived=False,updated=0,revision=0,completed=0,
+                           messages=[],interactions=[],error=None)
+                if stored is not None: state['permissionMode']=stored
+                self.assertEqual(broker.Session(state).state['permissionMode'],expected)
 
     def test_resume_hydrates_native_items_with_pagination(self):
         s,fake=self.session(); s.codex_attached=False
@@ -287,34 +313,38 @@ class CodexHandlerContractTests(unittest.TestCase):
             code,payload=self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex'})
         self.assertEqual(code,200); self.assertEqual(payload['id'],'native-thread')
         self.assertEqual(payload['provider'],'codex'); self.assertEqual(payload['thinking'],'medium')
+        self.assertEqual(payload['permission'],{'selected':'workspace-ask',
+            'options':['read-only','workspace-ask','workspace-auto','full-access'],'scope':'new-session'})
         self.assertIn('native-thread',broker.SESSIONS)
     def test_create_passes_selected_permission_mode(self):
         catalog=[{'id':'gpt-codex','provider':'codex','thinking':[]}]
-        for mode, reviewer, policy in [('ask','user','on-request'), ('auto-review','auto_review','on-request'), ('full-access','user','never')]:
+        expected=[('read-only','on-request','read-only'), ('workspace-ask','on-request','workspace-write'),
+                  ('workspace-auto','never','workspace-write'), ('full-access','never','danger-full-access')]
+        for mode, policy, sandbox in expected:
             with self.subTest(mode=mode):
                 broker.SESSIONS.clear(); fake=FakeCodex()
                 with patch.object(broker,'codex_catalog',return_value=catalog), patch.object(broker,'CodexAppServer',return_value=fake):
                     code,payload=self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex','permissionMode':mode})
                 self.assertEqual(code,200)
-                self.assertEqual(payload['permissionMode'],mode)
+                self.assertEqual(payload['permission']['selected'],mode)
                 params=next(params for method,params in fake.calls if method=='thread/start')
-                self.assertEqual((params['approvalsReviewer'],params['approvalPolicy']), (reviewer,policy))
+                self.assertEqual((params['approvalsReviewer'],params['approvalPolicy'],params['sandbox']), ('user',policy,sandbox))
+        with patch.object(broker,'codex_catalog',return_value=catalog):
+            self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex','permissionMode':'ask'})[0],400)
 
-    def test_permissions_change_is_persisted_but_not_while_busy(self):
-        code,_=self.request('/sessions/native-thread/permissions',{'mode':'auto-review'})
+    def test_only_qoder_permission_changes_are_persisted_for_the_next_turn(self):
+        qoder=broker.Session(dict(id='qoder-permission',provider='qoder',cwd=folder.name,title='Qoder',model='',
+            busy=True,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[{'id':'pending'}],error=None))
+        broker.SESSIONS[qoder.state['id']]=qoder
+        code,payload=self.request('/sessions/qoder-permission/permission',{'mode':'bypassPermissions'})
         self.assertEqual(code,200)
-        self.assertEqual(json.loads(self.s.path.read_text())['permissionMode'],'auto-review')
-        self.assertEqual(self.s.summary()['permissionMode'],'auto-review')
-        self.s.state['busy']=True
-        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'full-access'})[0],400)
-        self.s.state['busy']=False
-        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'unknown'})[0],400)
-        self.assertEqual(self.s.state['permissionMode'],'auto-review')
-        self.s.state['interactions']=[{'id':'pending'}]
-        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'full-access'})[0],400)
-        self.s.state['interactions']=[]
-        self.assertEqual(self.request('/sessions/native-thread/permissions',{'mode':'ask'})[0],200)
-        self.assertEqual(self.s.state['permissionMode'],'ask')
+        self.assertEqual(payload['permission']['selected'],'bypassPermissions')
+        self.assertEqual(json.loads(qoder.path.read_text())['permissionMode'],'bypassPermissions')
+        self.assertEqual(qoder.summary()['permission'],{'selected':'bypassPermissions',
+            'options':['default','acceptEdits','plan','dontAsk','auto','bypassPermissions'],'scope':'next-turn'})
+        self.assertEqual(self.request('/sessions/qoder-permission/permission',{'mode':'unknown'})[0],400)
+        self.assertEqual(qoder.state['permissionMode'],'bypassPermissions')
+        self.assertEqual(self.request('/sessions/native-thread/permission',{'mode':'full-access'})[0],400)
 
     def test_create_rejects_model_and_effort_outside_catalog(self):
         catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
@@ -383,6 +413,7 @@ class DshProtocolTests(unittest.TestCase):
         self.assertEqual(s.state['model'],'deepseek-v4-flash')
         self.assertEqual(s.state['provider_id'],'deepseek-official')
         self.assertEqual(s.state['thinking'],'high')
+        self.assertEqual(s.summary()['permission'],{'selected':'runtime-managed','options':[],'scope':'runtime-managed'})
         self.assertEqual(broker.dsh_catalog()[0]['id'],'deepseek-v4-flash')
     def test_pending_prompt_flushes_after_handshake(self):
         s = self.session()
