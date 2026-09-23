@@ -6,6 +6,8 @@ struct SessionRowChrome<Indicator: View>: View {
     @UILocalization private var L
     let title: String
     let subtitle: String?
+    var hostName: String? = nil
+    var hostID: UUID? = nil
     let selected: Bool
     let starred: Bool
     let archived: Bool
@@ -38,6 +40,7 @@ struct SessionRowChrome<Indicator: View>: View {
                     .frame(height: subtitle == nil ? 34 : 48).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
                 .accessibilityLabel(title)
+                .accessibilityValue(hostName ?? "")
             HStack(spacing: 0) {
                 if !archived {
                     Button(action: onPin) {
@@ -59,6 +62,12 @@ struct SessionRowChrome<Indicator: View>: View {
                 .frame(width: actionWidth, alignment: .trailing).clipped()
                 .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: showActions)
+            if let hostName {
+                HostIdentityIcon(hostID: hostID)
+                    .font(.system(size: 12))
+                    .frame(width: 18).padding(.leading, 7).padding(.trailing, 3)
+                    .help(hostName).accessibilityHidden(true)
+            }
         }.padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
             .background {
                 RoundedRectangle(cornerRadius: 8).fill(.black.opacity(selected ? 0.065 : hovered ? 0.03 : 0))
@@ -67,4 +76,5 @@ struct SessionRowChrome<Indicator: View>: View {
             }
             .contentShape(Rectangle()).onHover { hovered = $0 }
     }
+
 }

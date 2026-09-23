@@ -163,7 +163,8 @@ private struct SessionSidebarRow: View {
         return item.section == .attention ? item.detail : nil
     }
     var body: some View {
-        SessionRowChrome(title: item.title, subtitle: subtitle, selected: selected,
+        SessionRowChrome(title: item.title, subtitle: subtitle,
+                         hostName: item.hostName, hostID: item.reference.hostID, selected: selected,
                          starred: model.workspace.starred.contains(item.reference), archived: item.archived,
                          canOpen: item.online && !item.archived,
                          canQuickArchive: model.canArchive(item) && (item.archived || item.section != .running),
@@ -258,7 +259,9 @@ private struct ConnectionControls: View {
                 Button { dismiss(); model.configureHost() } label: { Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle()) }
                     .buttonStyle(.plain).help("添加 SSH 机器")
             }
-            Button { dismiss(); model.showLocalSetup = true } label: { Label("本机 Agent…", systemImage: "laptopcomputer") }
+            Button { dismiss(); model.showLocalSetup = true } label: {
+                Label { Text("本机 Agent…") } icon: { HostIdentityIcon(hostID: ExecutionEnvironment.localHostID) }
+            }
                 .buttonStyle(.plain).padding(.vertical, 4)
             if model.connections.isEmpty { Text("添加机器后，选择要连接的 Agent。").foregroundStyle(.secondary) }
             ForEach(model.connections) { connection in
@@ -268,7 +271,12 @@ private struct ConnectionControls: View {
                             model.activateAgentEnvironment(connection.id)
                             model.showHome(groupID: model.selectedGroupID); model.hostFilter = connection.id
                         } label: {
-                            Label(connection.host.name, systemImage: model.selectedHostID == connection.id ? "checkmark.circle" : "server.rack")
+                            HStack(spacing: 6) {
+                                HostIdentityLabel(hostID: connection.id, name: connection.host.name)
+                                if model.selectedHostID == connection.id {
+                                    Image(systemName: "checkmark").foregroundStyle(.secondary)
+                                }
+                            }
                         }.buttonStyle(.plain)
                         Spacer()
                         Button { dismiss(); model.configureHost(connection.host) } label: { Image(systemName: "gearshape") }

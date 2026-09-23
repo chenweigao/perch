@@ -438,10 +438,15 @@ struct NewConversationSheet: View {
                 ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                 Menu {
                     ForEach(model.connections) { connection in
-                        Button(connection.host.name) { agentModel = ""; model.activateAgentEnvironment(connection.id) }
+                        Button { agentModel = ""; model.activateAgentEnvironment(connection.id) } label: {
+                            Label { Text(connection.host.name) } icon: { HostIdentityIcon.menuImage(for: connection.id) }
+                                .labelStyle(.titleAndIcon)
+                        }
                     }
                 } label: {
-                    SheetMenuLabel { Label(kimi.host.name, systemImage: "server.rack") }
+                    SheetMenuLabel {
+                        Label { Text(kimi.host.name) } icon: { HostIdentityIcon.menuImage(for: kimi.host.id) }
+                    }
                 }.menuStyle(.borderlessButton).fixedSize()
                     .accessibilityLabel("运行环境")
                 Menu {

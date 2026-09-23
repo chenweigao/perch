@@ -23,7 +23,7 @@ struct WorkbenchSettings: View {
             }
             Section {
                 SettingsRow(action: { showLocal = true }) {
-                    Image(systemName: "laptopcomputer").frame(width: 20).foregroundStyle(.secondary)
+                    HostIdentityIcon(hostID: ExecutionEnvironment.localHostID).frame(width: 20)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("本机 Agent").foregroundStyle(.primary)
                         localAgentStatus
@@ -161,7 +161,7 @@ private struct HostSettingsRow: View {
 
     var body: some View {
         SettingsRow(action: action) {
-            Image(systemName: "network").frame(width: 20).foregroundStyle(.secondary)
+            HostIdentityIcon(hostID: connection.id).frame(width: 20)
             VStack(alignment: .leading, spacing: 1) {
                 Text(connection.host.name).foregroundStyle(.primary)
                 Text(connection.host.destination).font(.caption).foregroundStyle(.secondary)
