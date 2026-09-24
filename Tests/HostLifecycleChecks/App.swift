@@ -51,6 +51,20 @@ import WorkbenchCore
             precondition(model.workspace.starred == saved.starred)
             precondition(model.native.drafts["fixture-native"] == "未发送的草稿")
             precondition(model.kimi.drafts["fixture-kimi"] == "Kimi draft")
+            model.startNewTask()
+            precondition(model.draftingNewTask && model.selectedReference == saved.pinned[0].session,
+                         "inline draft must preserve the selected session")
+            model.select(saved.pinned[0].session.id)
+            precondition(!model.draftingNewTask && model.selectedReference == saved.pinned[0].session,
+                         "selecting a session must leave the draft")
+            model.hostFilter = saved.pinned[0].session.hostID
+            model.startNewTask()
+            model.showHome()
+            precondition(!model.draftingNewTask && model.showDashboard,
+                         "returning home must leave the inline draft")
+            precondition(model.hostFilter == saved.pinned[0].session.hostID,
+                         "inline draft integration must preserve the workbench host scope")
+            print("PASS: inline draft preserves selection, leaves on navigation and retains queue scope")
             print("PASS: restart restores endpoint settings, session, pins and drafts")
 
         case "removal":

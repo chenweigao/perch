@@ -199,7 +199,7 @@ struct NewTaskView: View {
                         .buttonStyle(.borderedProminent).disabled(!canStart)
                         .controlSize(.large)
                 }
-            }.padding(24).frame(width: 650)
+            }.padding(24).frame(maxWidth: 650)
             Spacer(minLength: 32)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.white)

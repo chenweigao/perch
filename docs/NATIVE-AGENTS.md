@@ -40,7 +40,7 @@ Mac 当前每 400 ms 查询轻量目录和选中对话的 revision；未变化�
 
 旧版桥不打标；客户端此时不过滤、沿用合并列表，所以升级 Mac 客户端不要求同时升级桥。要拿到按 Agent 过滤的目录需重装桥，并按文末约束等自己的运行中会话结束后再重启托管服务。
 
-组合控件的隔离回归：先运行 `scripts/build.sh`，再运行 `scripts/check-composer-toolbar.sh`。测试在预览 App 内向真实控件发送鼠标和文本编辑事件，覆盖五种 Agent、模型与档位联动、选模型后保持弹层、无档位、九档换行、540 pt 输入区、中英文、离线/运行中/空目录及发送配置；结果保存在 `.local/composer-toolbar-checks/`。不连接真实远端，也不替代真实模型调用或人工视觉验收。预览可独立打开 `build/Composer Toolbar Preview.app`。
+组合控件的隔离回归：先运行 `scripts/build.sh`，再运行 `scripts/check-composer-toolbar.sh`。测试在预览 App 内向真实控件发送鼠标和文本编辑事件，覆盖六种 Agent、模型与档位联动、选模型后保持弹层、无档位、九档换行、540 pt 输入区、中英文、离线/运行中/空目录及发送配置；结果保存在 `.local/composer-toolbar-checks/`。不连接真实远端，也不替代真实模型调用或人工视觉验收。预览可独立打开 `build/Composer Toolbar Preview.app`。
 
 ## 恢复能力分别处理
 

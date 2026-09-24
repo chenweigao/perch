@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 scripts/build-composer-toolbar-preview.sh
 output="$PWD/.local/composer-toolbar-checks"
 mkdir -p "$output"
-for agent in kimi omp dsh codex qoder; do
+for agent in kimi omp dsh codex qoder claude; do
     result="$output/$agent.json"
     rm -f "$result" "$output/$agent.log" "$output/$agent-error.log"
     open -n -W --env COMPOSER_TOOLBAR_CHECKS=1 --env "COMPOSER_PREVIEW_AGENT=$agent" \

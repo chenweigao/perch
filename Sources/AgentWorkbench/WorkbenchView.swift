@@ -104,11 +104,13 @@ private struct WorkbenchDetail: View {
                     Button { model.taskNotice = nil } label: { Image(systemName: "xmark") }
                 }.font(.system(size: 12)).padding(10).background(.orange.opacity(0.06))
             }
-            if model.showConversationFind && (model.showKimi || model.showNative) {
+            if !model.draftingNewTask && model.showConversationFind && (model.showKimi || model.showNative) {
                 ConversationFindBar(model: model, kimi: model.kimi, native: model.native)
             }
             ZStack {
-                if model.showDashboard {
+                if model.draftingNewTask {
+                    NewTaskView(model: model, native: model.native, kimi: model.kimi)
+                } else if model.showDashboard {
                     if model.showArchived { ArchivedSessionsView(model: model) }
                     else if model.showSessionDirectory { SessionDirectoryView(model: model) }
                     else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
@@ -148,9 +150,6 @@ private struct WorkbenchDetail: View {
                         .opacity(!model.showDashboard && !model.draftingNewTask && model.selectedTerminalID == terminal.id ? 1 : 0)
                         .allowsHitTesting(!model.showDashboard && !model.draftingNewTask && model.selectedTerminalID == terminal.id)
                         .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
-                }
-                if model.draftingNewTask {
-                    NewTaskView(model: model, native: model.native, kimi: model.kimi)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.frame(minWidth: 600, maxWidth: .infinity, maxHeight: .infinity)

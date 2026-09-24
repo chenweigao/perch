@@ -107,8 +107,8 @@ func runToolbarChecks() async {
         try await pause()
         try checkLayout("wide Chinese")
         let panel = try await openPanel(main)
-        if agent == "qoder" {
-            try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Qoder must remain read-only")
+        if ["qoder", "claude"].contains(agent) {
+            try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Agents without model capabilities must remain read-only")
             try await closePanel(panel)
         } else {
             let initialHeight = panel.frame.height
@@ -143,7 +143,7 @@ func runToolbarChecks() async {
         let englishPanel = try await openPanel(main)
         try await closePanel(englishPanel)
         try await press("english")
-        if agent != "qoder" {
+        if !["qoder", "claude"].contains(agent) {
             let reset = try await openPanel(main)
             try await chooseModel("Reasoner", in: reset)
             try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Switching models must preserve a supported effort")

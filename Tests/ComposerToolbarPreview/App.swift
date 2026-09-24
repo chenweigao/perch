@@ -90,7 +90,7 @@ private struct ToolbarPreview: View {
                     ComposerAddButton(supportsFiles: true) {}
                     ComposerModelPicker(models: emptyModels ? [] : models, modelID: model, thinking: effort,
                                         disabledReason: disabledReason,
-                                        unavailableReason: selectedProvider == .qoder ? L("此 Agent 暂不支持模型与思考设置。") : nil,
+                                        unavailableReason: [.qoder, .claude].contains(selectedProvider) ? L("此 Agent 暂不支持模型与思考设置。") : nil,
                                         sessionModel: "fixture/reasoner", onUseSessionModel: {
                                             model = "fixture/reasoner"; effort = models[0].resolve(effort)
                                         }, scope: L(selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
@@ -101,7 +101,7 @@ private struct ToolbarPreview: View {
                             ToolbarProbe.selection = value
                         }
                     PermissionPicker(provider: selectedProvider, capability: permissionCapability,
-                                     disabled: offline, allowsSelection: selectedProvider == .kimi || selectedProvider == .qoder) {
+                                     disabled: offline, allowsSelection: [.kimi, .qoder, .claude].contains(selectedProvider)) {
                         permissionMode = $0
                     }.background(ToolbarButtonProbe(id: "permission"))
                     ContextMeter(budget: ContextBudget(used: low ? 95 : 29, limit: 100), isStale: offline)
