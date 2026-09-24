@@ -139,3 +139,6 @@ check(editor.string == "undo this draft", "Redo restores the last edit")
 editor.syncDraft("")
 check(editor.undoManager?.canUndo == false, "A sent draft must not remain in this composer's undo history")
 print("Composer undo checks passed: isolated typing, redo and send boundary")
+if let path = ProcessInfo.processInfo.environment["COMPOSER_CHECK_RESULT"] {
+    try Data("{\"status\":\"passed\"}\n".utf8).write(to: URL(fileURLWithPath: path), options: .atomic)
+}

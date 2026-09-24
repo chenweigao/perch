@@ -1,0 +1,219 @@
+{
+  "product_baseline": "5639c0479687eefbc06f6567acf12f08c91a13ad",
+  "product_source_sha256": "f147673bb5863ee05cc4f28251c8a2958b4445d404efa909dbf560b46d1f81ec",
+  "scope": "Local offline synthetic acceptance. No real SSH/model/two-Mac/physical-input or FPS certification.",
+  "test_source_sha256": {
+    ".github/workflows/functional-checks.yml": "eb21944458ede6fbf31960c2564bec9a278295f8e39dffd58192af20fee8bd81",
+    ".github/actionlint.yaml": "99368d29feae77f3d83550cd4b757fed99d4bf9eec6fc7f2938b7942f3e14a56",
+    "scripts/check-functional.py": "cf52a19bfdeaa1235ea4935ceb0eb19e3424d8163f915822a95c3a151da8d699",
+    "scripts/run-native-acceptance.py": "6244a60fc463e0d372ac5697a85e79a43fc654258750e9016d3df6a1f4340077",
+    "scripts/check-composer.sh": "413c6fd2d9341b0baab8eee21a8be4354abc079b7f15425f83ae063764510483",
+    "remote/test_client_recovery.py": "53497cffb71eb25afb3c630f3ced503ecba622f6795dbf8fd9a031e371428a5c",
+    "remote/fixtures/recovery-omp.py": "b42346ff5674ed76bd82670240cc47efc1bf34c92db852019b36626ff2c807f2",
+    "Tests/Performance/test_native_acceptance.py": "c5af12d950d23abe0b83a871317c8b3941fa2af0ba02770166e7292e2b9ad4b9",
+    "Tests/ComposerChecks/main.swift": "ff2abf5bff274c61e05dd96829d060fe6409702ab79e47c017a13158401487aa",
+    "Tests/HostLifecycleChecks/App.swift": "5aa241092587bf024b5034647283797fd20fc789f1f7680dae942c16d392f6ab"
+  },
+  "portable": {
+    "status": "passed",
+    "checks": [
+      {
+        "name": "bridge",
+        "passed": true,
+        "seconds": 1.02
+      },
+      {
+        "name": "installer",
+        "passed": true,
+        "seconds": 1.58
+      },
+      {
+        "name": "localization",
+        "passed": true,
+        "seconds": 0.09
+      },
+      {
+        "name": "localization-tests",
+        "passed": true,
+        "seconds": 0.09
+      },
+      {
+        "name": "acceptance-supervisor",
+        "passed": true,
+        "seconds": 0.14
+      }
+    ]
+  },
+  "macos": {
+    "status": "passed",
+    "checks": [
+      {
+        "name": "build",
+        "passed": true,
+        "seconds": 3.94
+      },
+      {
+        "name": "signature",
+        "passed": true,
+        "seconds": 0.02
+      },
+      {
+        "name": "workbench",
+        "passed": true,
+        "seconds": 6.23
+      },
+      {
+        "name": "connections",
+        "passed": true,
+        "seconds": 1.24
+      },
+      {
+        "name": "composer",
+        "passed": true,
+        "seconds": 2.34
+      },
+      {
+        "name": "host-lifecycle",
+        "passed": true,
+        "seconds": 24.87
+      },
+      {
+        "name": "scroll-following",
+        "passed": true,
+        "seconds": 7.3
+      },
+      {
+        "name": "native-build",
+        "passed": true,
+        "seconds": 43.11
+      },
+      {
+        "name": "native-all",
+        "passed": true,
+        "seconds": 10.44
+      },
+      {
+        "name": "native-switching",
+        "passed": true,
+        "seconds": 16.42
+      },
+      {
+        "name": "native-dashboard",
+        "passed": true,
+        "seconds": 18.27
+      },
+      {
+        "name": "native-joint",
+        "passed": true,
+        "seconds": 67.46
+      },
+      {
+        "name": "navigation-build",
+        "passed": true,
+        "seconds": 39.17
+      },
+      {
+        "name": "navigation-reading",
+        "passed": true,
+        "seconds": 16.98
+      },
+      {
+        "name": "navigation-interactions",
+        "passed": true,
+        "seconds": 6.64
+      },
+      {
+        "name": "navigation-roundtrip",
+        "passed": true,
+        "seconds": 7.11
+      }
+    ],
+    "native_all": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "rss_settled_mb": 218.28125,
+      "status": "passed"
+    },
+    "native_switching": {
+      "catalog_session_switches": 80,
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "rss_settled_mb": 219.109375,
+      "status": "passed"
+    },
+    "native_dashboard": {
+      "catalog_sessions": 500,
+      "dashboard_updates": 60,
+      "history_turns": 200,
+      "rss_settled_mb": 216.34375,
+      "status": "passed"
+    },
+    "native_joint": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "joint_duration_s": 60.2632313333379,
+      "joint_input_to_layout_ms": {
+        "count": 148,
+        "max": 16.26645833312068,
+        "median": 11.255291668931022,
+        "p95": 12.670458338106982
+      },
+      "joint_switches": 8,
+      "joint_update_to_layout_ms": {
+        "count": 148,
+        "max": 35.16200000012759,
+        "median": 29.377250000834465,
+        "p95": 32.2435416674125
+      },
+      "joint_updates": 148,
+      "rss_settled_mb": 190.90625,
+      "status": "passed"
+    },
+    "navigation_reading": {
+      "status": "passed",
+      "history_turns": 200,
+      "sessions": 500,
+      "tail_found": true,
+      "observed_turn_count": 200,
+      "all_turns_covered": true
+    },
+    "navigation_interactions": {
+      "status": "passed",
+      "history_turns": 200,
+      "sessions": 500,
+      "resize": {
+        "same_entry": true,
+        "before_offset": 27,
+        "after_offset": 27
+      },
+      "session_return": {
+        "same_entry": true,
+        "before_offset": 27,
+        "after_offset": 27
+      }
+    },
+    "navigation_roundtrip": {
+      "status": "passed",
+      "history_turns": 200,
+      "sessions": 500,
+      "cycles": 20,
+      "dropped_keystrokes": 0
+    }
+  },
+  "frames": {
+    "status": "unverified",
+    "positive_control": true,
+    "behavior_passed": true,
+    "trace_exported": true,
+    "reason": "All four exported frame/display tables contained zero rows; no app-owned frame lifetimes.",
+    "supervisor_exit_code": 1
+  },
+  "two_macs": {
+    "status": "unverified",
+    "reason": "Second Mac was offline."
+  },
+  "hosted_ci": {
+    "status": "not_run",
+    "reason": "Changes remain local; not pushed."
+  }
+}

@@ -92,6 +92,8 @@ try:
             summary.check_returncode()
             frames = json.loads(summary.stdout)
             manifest["app_frame_events_verified"] = frames["status"] == "usable_frame_events"
+            if not manifest["app_frame_events_verified"]:
+                manifest["failure"] = "no usable app-owned frame events; this capture is unverified"
             if args.positive_control and not frames["positive_control_detected"]:
                 manifest["failure"] = "known main-thread stall was not reported as an app hitch; zero-hitch results cannot certify smoothness"
 except (subprocess.SubprocessError, OSError, ET.ParseError) as error:
@@ -103,4 +105,6 @@ if args.capture == "none":
     passed = passed and manifest.get("exit_code") == 0
 if args.capture != "none":
     passed = passed and manifest.get("trace_exported", False)
+if args.capture == "frames":
+    passed = passed and manifest.get("app_frame_events_verified", False)
 raise SystemExit(0 if passed else 1)

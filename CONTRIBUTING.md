@@ -13,6 +13,12 @@ Run `scripts/build.sh`, `.build/release/WorkbenchChecks` and
 `git diff --check`; add tests for the behavior you change. Remote bridge tests run
 with `python3 -m unittest discover -s remote -p 'test_*.py'`.
 
+For the repeatable CI suites, run `python3 scripts/check-functional.py portable
+--output .local/functional-portable` and, on a Mac with an active GUI session,
+`python3 scripts/check-functional.py macos --output .local/functional-macos`.
+See [reliability acceptance](docs/RELIABILITY-ACCEPTANCE.md) for coverage, retained
+failure logs, and the separate two-Mac and calibrated-frame acceptance gates.
+
 Use the independent fixtures under `Tests/ReadingPreview`, `Tests/ComposerPreview`
 `Tests/SidebarPreview`, `Tests/ReplyTypographyPreview` and `Tests/PerformancePreview` for UI work. A successful build is not a visual or
 performance check. Report the workload and measurement scope with performance claims.
