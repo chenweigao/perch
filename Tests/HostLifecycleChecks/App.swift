@@ -57,12 +57,12 @@ import WorkbenchCore
             model.select(saved.pinned[0].session.id)
             precondition(!model.draftingNewTask && model.selectedReference == saved.pinned[0].session,
                          "selecting a session must leave the draft")
-            model.hostFilter = saved.pinned[0].session.hostID
+            model.setScope(hostID: saved.pinned[0].session.hostID)
             model.startNewTask()
             model.showHome()
             precondition(!model.draftingNewTask && model.showDashboard,
                          "returning home must leave the inline draft")
-            precondition(model.hostFilter == saved.pinned[0].session.hostID,
+            precondition(model.scope.hostID == saved.pinned[0].session.hostID,
                          "inline draft integration must preserve the workbench host scope")
             print("PASS: inline draft preserves selection, leaves on navigation and retains queue scope")
             print("PASS: restart restores endpoint settings, session, pins and drafts")
