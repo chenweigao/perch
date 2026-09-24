@@ -754,7 +754,7 @@
 
 "自动命名失败：%@" = "Automatic naming failed: %@";
 
-"首条消息尚未加载；打开会话并加载到开头后可生成名称。" = "The first message is not loaded. Open the session and load its beginning to generate a name.";
+"首条消息尚未加载；打开会话后会自动加载历史并命名。" = "The first message is not loaded yet. Opening the session loads its history and names it automatically.";
 
 "仅为占位标题自动命名；已有标题保持不变，Kimi 会等待本轮完成。" = "Only placeholder titles are named automatically. Existing titles stay unchanged; Kimi waits for the turn to finish.";
 

@@ -793,7 +793,7 @@ final class WorkbenchModel: ObservableObject {
         guard configuration.isValid else { return L("请先配置有效的摘要服务。") }
         if namingInProgress.contains(reference.id) { return L("正在自动命名…") }
         if let error = namingErrors[reference.id] { return L("自动命名失败：\(error)") }
-        guard namingExcerpt(for: reference) != nil else { return L("首条消息尚未加载；打开会话并加载到开头后可生成名称。") }
+        guard namingExcerpt(for: reference) != nil else { return L("首条消息尚未加载；打开会话后会自动加载历史并命名。") }
         return L("仅为占位标题自动命名；已有标题保持不变，Kimi 会等待本轮完成。")
     }
     private func reconsiderNaming() {
@@ -822,6 +822,7 @@ final class WorkbenchModel: ObservableObject {
         guard workspace.sessionTitles[reference.id] == nil, !workspace.autoNamedSessions.contains(reference.id),
               namingAttempts[reference.id] != settings.revision else { return }
         if reference.kind == .kimi { guard !busy, turnCompleted else { return } }
+        if hasOlder { loadHistoryForNaming(reference, remoteTitle: remoteTitle); return }
         guard let excerpt = SessionNaming.excerpt(from: messages, hasOlder: hasOlder),
               SessionNaming.isPlaceholder(remoteTitle, kind: reference.kind, firstUserText: excerpt) else { return }
         let revision = settings.revision
@@ -845,6 +846,24 @@ final class WorkbenchModel: ObservableObject {
                 namingLog.error("failed \(reference.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
+    }
+    /// Naming needs the first user message, which a partially loaded history
+    /// does not contain. Pull the remaining pages in the background instead of
+    /// waiting for the user to scroll to the top; each page re-enters
+    /// `considerNaming` through the conversation publishers. Only titles that
+    /// could still be placeholders fetch, so named sessions never pay for it.
+    private func loadHistoryForNaming(_ reference: SessionReference, remoteTitle: String) {
+        let trimmed = remoteTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch reference.kind {
+        case .terminal: return
+        case .kimi: guard trimmed.isEmpty else { return }
+        case .omp, .qoder, .dsh, .codex, .claude:
+            // The bridge's default title is the first message's first 60
+            // characters; a longer remote title is deliberate.
+            guard trimmed.count <= 60 else { return }
+        }
+        if reference.kind == .kimi { kimiEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
+        else { nativeEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
     }
     private func namingRemoteTitle(for reference: SessionReference) -> String? {
         if reference.kind == .kimi {

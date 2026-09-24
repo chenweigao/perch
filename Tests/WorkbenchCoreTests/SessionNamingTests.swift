@@ -81,6 +81,9 @@ func checkSessionNaming() throws {
     let messagesBody = body["messages"] as? [[String: String]]
     precondition(messagesBody?.count == 2 && messagesBody?.last?["content"] == excerpt,
                  "Only the bounded first-message excerpt is sent")
+    let instructions = messagesBody?.first?["content"] ?? ""
+    precondition(instructions.contains("concrete subject") && instructions.contains("Never return a generic category"),
+                 "The prompt must steer small models away from generic titles")
     config.disableThinking = false
     let plain = try JSONSerialization.jsonObject(with: client.request(configuration: config, apiKey: "", excerpt: excerpt, language: "en").httpBody!) as! [String: Any]
     precondition(plain["chat_template_kwargs"] == nil)
