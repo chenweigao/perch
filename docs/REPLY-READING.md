@@ -25,9 +25,15 @@ and task markers are read-only. Quotes use a fine left rule. Code uses the syste
 monospace font, a quiet header and horizontal scrolling. Body text, inline paths
 and links use native word wrapping, including oversized unbroken tokens, without
 inserting characters into selectable text. Text and link colors are unchanged.
-Tables render as native grids sized to their viewport, with a 100 pt minimum
-text width and 12 pt horizontal padding per cell. Cells wrap within that width;
+Tables render as native grids sized to their viewport. Column widths follow
+content: an ordinary column keeps a 124 pt total, a column whose every cell is
+narrow shrinks toward 44 pt, and the leftover width goes to the columns whose
+content still needs room, capped at 420 pt of content so one long cell cannot
+eat the table. Cells wrap within their column and keep 12 pt horizontal padding;
 only tables whose minimum column widths exceed the viewport scroll horizontally.
+Widths are arithmetic over estimated content widths, so cells are measured for
+row height only, no width probe reaches TextKit, and no geometry feedback enters
+the transcript.
 
 Copy controls preserve the original reply Markdown or the fenced code content.
 Only http, https and mailto Markdown links become clickable. Static text uses

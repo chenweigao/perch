@@ -16,6 +16,10 @@ enum ReplyStyle {
         appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.88) }
         return ink
     }
+    static let tableCellSize: CGFloat = 13
+    /// Column totals are arithmetic over estimated content widths, so a table
+    /// never probes TextKit for widths and cannot feed the transcript layout.
+    static let tableGeometry = ReplyTableGeometry(fontSize: tableCellSize)
 }
 
 struct KimiMarkdown: View {
@@ -356,35 +360,121 @@ private struct ReplyTable: View {
     let headers: [[ReplyInline]]
     let rows: [[[ReplyInline]]]
     let alignments: [ReplyAlignment]
-    private let minimumCellWidth: CGFloat = 100
-    private let cellPadding: CGFloat = 12
+    private let contents: [CGFloat]
+    private let minimumTotal: CGFloat
+
+    init(headers: [[ReplyInline]], rows: [[[ReplyInline]]], alignments: [ReplyAlignment]) {
+        self.headers = headers
+        self.rows = rows
+        self.alignments = alignments
+        let geometry = ReplyStyle.tableGeometry
+        let contents = ReplyTableGeometry.contentWidths(headers: headers, rows: rows, fontSize: geometry.fontSize)
+        self.contents = contents
+        self.minimumTotal = geometry.minimumWidths(contentWidths: contents).reduce(0, +)
+    }
+
     var body: some View {
         // Fit the viewport first; only the minimum column widths can cause overflow.
         ScrollView(.horizontal) {
-            grid.containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
-                max(width, CGFloat(headers.count) * (minimumCellWidth + cellPadding * 2))
+            ReplyTableLayout(contents: contents, geometry: ReplyStyle.tableGeometry, columnCount: headers.count) {
+                cells
+            }
+            .containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
+                max(width, minimumTotal)
             }
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
-    private var grid: some View {
-        Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-            row(headers, header: true)
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, cells in
-                Rectangle().fill(.primary.opacity(0.06)).frame(height: 1).gridCellUnsizedAxes(.horizontal)
-                row(cells, header: false)
+
+    /// Header cells first, then one separator and one row of cells per data row:
+    /// the order `ReplyTableLayout` walks.
+    @ViewBuilder private var cells: some View {
+        ForEach(Array(headers.indices), id: \.self) { column in
+            cell(headers[column], column: column, header: true)
+        }
+        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            Rectangle().fill(.primary.opacity(0.06)).frame(height: 1)
+            ForEach(Array(headers.indices), id: \.self) { column in
+                cell(column < row.count ? row[column] : [], column: column, header: false)
             }
         }
     }
-    private func row(_ cells: [[ReplyInline]], header: Bool) -> some View {
-        GridRow(alignment: .top) {
-            ForEach(Array(headers.indices), id: \.self) { column in
-                let alignment: Alignment = alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading
-                ReplyText(runs: column < cells.count ? cells[column] : [], size: 13, weight: header ? .medium : .regular,
-                          alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading)
-                    .frame(minWidth: minimumCellWidth, maxWidth: .infinity, alignment: alignment)
-                    .padding(.horizontal, cellPadding).padding(.vertical, 10)
-            }
+
+    private func cell(_ runs: [ReplyInline], column: Int, header: Bool) -> some View {
+        ReplyText(runs: runs, size: ReplyStyle.tableCellSize, weight: header ? .medium : .regular,
+                  alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading)
+            .padding(.horizontal, ReplyStyle.tableGeometry.cellPadding).padding(.vertical, 10)
+    }
+}
+
+/// Places cells row-major at the column totals from `ReplyTableGeometry`. Cells are
+/// measured only for row height, at their final width, so a table makes fewer text
+/// probes than the equal-split grid it replaces. Widths are arithmetic over content,
+/// which keeps GeometryReader and state — and with them any layout feedback loop —
+/// out of the transcript, matching `ReplyListLayout`.
+private struct ReplyTableLayout: Layout {
+    let contents: [CGFloat]
+    let geometry: ReplyTableGeometry
+    let columnCount: Int
+    private let separatorHeight: CGFloat = 1
+
+    struct Measurement {
+        let width: CGFloat?
+        let size: CGSize
+        let placements: [(point: CGPoint, size: CGSize)]
+    }
+    func makeCache(subviews: Subviews) -> [Measurement] { [] }
+    func updateCache(_ cache: inout [Measurement], subviews: Subviews) { cache.removeAll(keepingCapacity: true) }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout [Measurement]) -> CGSize {
+        measure(width: proposal.width.flatMap { $0.isFinite ? $0 : nil }, subviews: subviews, cache: &cache).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout [Measurement]) {
+        let placed = measure(width: bounds.width.isFinite ? bounds.width : nil, subviews: subviews, cache: &cache).placements
+        for index in subviews.indices {
+            subviews[index].place(at: CGPoint(x: bounds.minX + placed[index].point.x, y: bounds.minY + placed[index].point.y),
+                                  anchor: .topLeading, proposal: ProposedViewSize(placed[index].size))
         }
+    }
+
+    /// Both passes share one bounded measurement per width, as `ReplyListLayout` does.
+    private func measure(width: CGFloat?, subviews: Subviews, cache: inout [Measurement]) -> Measurement {
+        if let measured = cache.first(where: { $0.width == width }) { return measured }
+        let widths = geometry.columnWidths(contentWidths: contents, available: width)
+        var placements: [(point: CGPoint, size: CGSize)] = Array(repeating: (.zero, .zero), count: subviews.count)
+        guard columnCount > 0, widths.count == columnCount else {
+            return Measurement(width: width, size: CGSize(width: width ?? 0, height: 0), placements: placements)
+        }
+        let total = widths.reduce(0, +)
+        var height: CGFloat = 0
+        var index = 0
+        while index < subviews.count {
+            if isSeparator(index) {
+                placements[index] = (.zero, CGSize(width: total, height: separatorHeight))
+                height += separatorHeight
+                index += 1
+                continue
+            }
+            var x: CGFloat = 0
+            var rowHeight: CGFloat = 0
+            for column in 0..<columnCount {
+                guard index < subviews.count else { break }
+                let size = subviews[index].sizeThatFits(ProposedViewSize(width: widths[column], height: nil))
+                placements[index] = (CGPoint(x: x, y: height), CGSize(width: widths[column], height: size.height))
+                rowHeight = max(rowHeight, size.height)
+                x += widths[column]
+                index += 1
+            }
+            height += rowHeight
+        }
+        let measured = Measurement(width: width, size: CGSize(width: width ?? widths.reduce(0, +), height: height), placements: placements)
+        if cache.count == 4 { cache.removeFirst() }
+        cache.append(measured)
+        return measured
+    }
+
+    private func isSeparator(_ index: Int) -> Bool {
+        index >= columnCount && (index - columnCount) % (columnCount + 1) == 0
     }
 }
