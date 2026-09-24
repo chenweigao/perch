@@ -36,6 +36,11 @@ struct ConversationActivityBar: View {
     var narrativeSession: String? = nil
     var narrativeOverride: ActivityNarrative? = nil
     var externalFailureOverride: String? = nil
+    var recapKey: String? = nil
+    var recapMessages: (@MainActor () async throws -> [KimiMessage])? = nil
+    var recapStateOverride: TaskRecapState? = nil
+    var recapConfiguredOverride: Bool? = nil
+    var onRecapGenerateOverride: ((Bool) -> Void)? = nil
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
     var onRetryExternal: (() -> Void)? = nil
@@ -50,8 +55,10 @@ struct ConversationActivityBar: View {
     var onTasksRefresh: () -> Void = {}
     var onOpenTranscript: (KimiTask) -> Void = { _ in }
     @State private var expanded = false
+    @State private var recapPresented = false
     @State private var pointerAnchor: CGRect?
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
+    @ObservedObject private var recapStore = TaskRecapStore.shared
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -72,7 +79,7 @@ struct ConversationActivityBar: View {
 
     var body: some View {
         ZStack {
-            if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil {
+            if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil || recapKey != nil {
                 HStack(spacing: 10) {
                     Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
@@ -103,6 +110,18 @@ struct ConversationActivityBar: View {
                         .popover(isPresented: $expanded,
                                  attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
                                  arrowEdge: .top) { details }
+                    if let recapKey, !isRunning, pendingCount == 0 {
+                        Button { recapPresented = true } label: {
+                            Label("Recap", systemImage: "sparkles")
+                        }.buttonStyle(.borderless).controlSize(.small)
+                            .help("总结本次任务，不会向 Agent 发送消息")
+                            .popover(isPresented: $recapPresented, arrowEdge: .top) {
+                                TaskRecapPopover(key: recapKey, messages: recapMessages,
+                                                 stateOverride: recapStateOverride,
+                                                 configuredOverride: recapConfiguredOverride,
+                                                 onGenerateOverride: onRecapGenerateOverride)
+                            }
+                    }
                     if !online {
                         Button("重新连接", action: onReconnect).buttonStyle(.borderless)
                     } else if pendingCount > 0 {
@@ -125,7 +144,7 @@ struct ConversationActivityBar: View {
     private var statusTitle: Text {
         if !online { return Text(LocalizedStringKey(activity.title)) }
         if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
-        if !isRunning && (timing?.endedAt != nil || narrative != nil) { return Text("本轮结束") }
+        if !isRunning && (timing?.endedAt != nil || narrative != nil || recapKey != nil) { return Text("本轮结束") }
         if activity.needsAttention || activity.title == L("Stopping…") { return Text(LocalizedStringKey(activity.title)) }
         if isRunning, let narrative { return Text(verbatim: narrative.headline) }
         if let description = activity.operationDescription { return Text(verbatim: description) }
@@ -224,6 +243,134 @@ struct ConversationActivityBar: View {
                 ActivityTurnClock(timing: timing, showsDetails: true)
             }
         }.font(.system(size: 12)).padding(16).frame(width: 390)
+    }
+}
+
+private struct TaskRecapPopover: View {
+    let key: String
+    let messages: (@MainActor () async throws -> [KimiMessage])?
+    let stateOverride: TaskRecapState?
+    let configuredOverride: Bool?
+    let onGenerateOverride: ((Bool) -> Void)?
+    @ObservedObject private var store = TaskRecapStore.shared
+    @ObservedObject private var settings = ActivitySummarySettings.shared
+    @State private var showSettings = false
+    @State private var copied = false
+
+    private var state: TaskRecapState { stateOverride ?? store.state(for: key) }
+    private var configured: Bool {
+        configuredOverride ?? (settings.configuration.enabled && settings.configuration.isValid)
+    }
+    private var warning: String? { stateOverride == nil ? store.warning(for: key) : nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Task Recap", systemImage: "sparkles").font(.system(size: 13, weight: .semibold))
+                Spacer()
+                if configured {
+                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                        .buttonStyle(.plain).accessibilityLabel(Text("配置 Recap 服务"))
+                }
+            }
+            content
+            if let warning {
+                Text(warning).font(.system(size: 11)).foregroundStyle(.orange).textSelection(.enabled)
+            }
+        }.font(.system(size: 12)).padding(16).frame(width: 420)
+            .task(id: key) {
+                if configured, case .idle = state { generate(force: false) }
+            }
+            .onChange(of: settings.revision) { _, _ in
+                if configured, case .idle = state { generate(force: false) }
+            }
+            .sheet(isPresented: $showSettings) { ActivitySummarySettingsSheet() }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch state {
+        case .result(let result):
+            resultView(result)
+        case .loading:
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text("正在读取任务记录并生成 Recap…").foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
+        case .failed(let error):
+            if configured {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(error).foregroundStyle(.orange).textSelection(.enabled)
+                    Button("重试") { generate(force: true) }.buttonStyle(.bordered)
+                }
+            } else { configurationPrompt }
+        case .idle:
+            if configured {
+                Button("生成 Recap") { generate(force: false) }.buttonStyle(.borderedProminent)
+            } else { configurationPrompt }
+        }
+    }
+
+    private var configurationPrompt: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Recap 使用可选的外部摘要服务。配置前不会联网，也不会向原 Agent 发送消息。")
+                .foregroundStyle(.secondary)
+            Button("配置活动叙事与 Recap…") { showSettings = true }.buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func resultView(_ result: TaskRecapResult) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 13) {
+                Text(result.outcome).font(.system(size: 13, weight: .medium)).textSelection(.enabled)
+                recapSection("主要改动", items: result.changes)
+                recapSection("验证", items: result.validation)
+                recapSection("遗留", items: result.remaining)
+                recapSection("下一步", items: result.nextSteps)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
+        }.frame(maxHeight: 360)
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 14) {
+                    Button(copied ? "已复制" : "复制") { copy(result) }.buttonStyle(.borderless)
+                    Spacer()
+                    if configured {
+                        Button("重新生成") { generate(force: true) }.buttonStyle(.borderless)
+                    } else {
+                        Button("配置后重新生成") { showSettings = true }.buttonStyle(.borderless)
+                    }
+                }.padding(.top, 8).background(.background)
+            }
+    }
+
+    @ViewBuilder private func recapSection(_ title: LocalizedStringKey, items: [String]) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).fontWeight(.semibold)
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(alignment: .top, spacing: 7) {
+                        Text("•").foregroundStyle(.secondary)
+                        Text(item).textSelection(.enabled)
+                    }
+                }
+            }
+        }
+    }
+
+    private func generate(force: Bool) {
+        copied = false
+        if let onGenerateOverride { onGenerateOverride(force); return }
+        guard let messages else { return }
+        store.generate(key: key, force: force, messages: messages, settings: settings)
+    }
+
+    private func copy(_ result: TaskRecapResult) {
+        var blocks = [result.outcome]
+        for (title, items) in [("主要改动", result.changes), ("验证", result.validation),
+                               ("遗留", result.remaining), ("下一步", result.nextSteps)] where !items.isEmpty {
+            blocks.append(title + "\n" + items.map { "- " + $0 }.joined(separator: "\n"))
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        copied = pasteboard.setString(blocks.joined(separator: "\n\n"), forType: .string)
     }
 }
 

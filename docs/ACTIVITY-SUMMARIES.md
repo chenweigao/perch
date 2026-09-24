@@ -1,4 +1,4 @@
-# Activity narrative and optional external refinement
+# Activity narrative and completed-task Recap
 
 Perch presents each turn as one activity narrative shared by the bottom activity
 bar and the historical process rows. The narrative answers three questions without
@@ -53,7 +53,7 @@ colons are removed.
 External refinement uses one user-configured OpenAI-compatible Chat Completions
 endpoint. No model is bundled, downloaded, selected, or paid for by Perch.
 
-In **Settings → Interface → Configure activity narrative**:
+In **Settings → Interface → Activity narrative and Recap**:
 
 1. Enter a **Base URL including `/v1`**, for example
    `http://localhost:8000/v1`, and the exact model name served by the endpoint.
@@ -64,7 +64,7 @@ In **Settings → Interface → Configure activity narrative**:
    receive no Qwen-specific option unless selected.
 4. **Test connection (send example)** sends a small synthetic sample. It can consume
    tokens but does not enable background requests or send conversation data.
-5. Enable **external summary refinement** and save.
+5. Enable **external summary and Recap** and save.
 
 Settings provides a direct **Disable** action without deleting the saved endpoint.
 The endpoint must be reachable from the Mac; remote agent connectivity through SSH
@@ -153,6 +153,37 @@ The deferred projection is published in one update when the reader returns to th
 latest position. The bottom activity bar continues to show the live narrative while
 the turn runs.
 
+## Completed-task Recap
+
+A completed Kimi or native-bridge task with no pending interaction exposes a compact
+**Recap** action in the bottom activity bar. Generation starts only after the user opens
+that popover; it never runs for an active task or merely because historical sessions
+were loaded. The popover shows loading and retry states, a structured outcome, changes,
+validation, remaining work and next steps, plus copy and regenerate actions.
+
+Recap reuses the configured OpenAI-compatible endpoint but is independent from the
+original Agent conversation. If the locally retained transcript is incomplete, Perch
+reads older pages into a private copy without changing the visible transcript. It then
+builds one bounded request from the complete history:
+
+- the first turn and up to 11 most recent turns, using only public user and Agent text;
+- up to 20 current Todo steps;
+- up to 24 meaningful edit, write, shell, test, build, failure, or similar evidence
+  records, with tool name, bounded target, status, and an exit code when available.
+
+Runtime context, compaction summaries, private thinking, full shell arguments, and edit
+bodies are excluded. Paths retain at most four trailing components. Tool output is
+excluded by default; **Include tool output excerpts** opts into at most 600 characters
+per selected result. The service receives no tools and cannot act on the Agent session.
+There is no automatic retry, redirect, second pass, or provider fallback.
+
+Successful results are cached locally by host, session, and completed-content revision.
+The cache keeps 128 entries in
+`~/Library/Application Support/dev.agentworkbench.mac/task-recaps.json`, uses atomic
+writes and `0600` permissions, and is replaced when the user regenerates the same
+revision. A cached Recap remains readable without reconnecting or calling the service.
+Neither generation nor copying writes a message back to the Agent context.
+
 ## Session naming
 
 The same endpoint can optionally generate a short local session title. **Name
@@ -171,8 +202,9 @@ retry.
 
 - `swift run WorkbenchChecks` covers stage identity across 24-row rendering splits,
   phase transitions, source priority, Codex source decoding, event triggers,
-  complete request/progress context, output opt-in, request shape, strict phase parsing, evidence filtering, and
-  plain-text compatibility.
+  complete request/progress context, output opt-in, request shape, strict phase parsing,
+  evidence filtering, plain-text compatibility, and Recap input bounds, privacy,
+  request/response shape, cache capacity, revision identity, and file permissions.
 - `python3 -m unittest discover -s remote -p 'test_*.py'` covers bridge event
   normalization, Codex streaming summaries, authoritative completion, and hydration.
 - `scripts/build.sh` validates the complete macOS app.
@@ -181,8 +213,8 @@ retry.
   burst coalescing, stale responses, turn isolation, disconnect and disable. It
   does not access the configured service, real credentials or remote agents.
 - `scripts/build-activity-bar-preview.sh` provides commentary ownership/handoff,
-  provider, local, external, failed external/retry, narrow-width, and ended-turn
-  fixtures without an agent connection.
+  provider, local, external, failed external/retry, narrow-width, ended-turn, and
+  disabled/loading/result/failure Recap fixtures without an agent connection.
 - `scripts/build-tool-visibility-preview.sh` exercises transcript process grouping;
   its isolated defaults keep external refinement disabled.
 - `scripts/build-tool-visibility-preview.sh --summary-duplicate` builds a separate

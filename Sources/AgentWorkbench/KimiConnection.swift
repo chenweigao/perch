@@ -263,6 +263,34 @@ final class KimiConnection: ObservableObject {
         let loaded = conversation?.snapshot.session.id == id ? conversation : cachedConversations.value(id)
         return loaded?.hasOlder == false ? loaded?.messages : nil
     }
+    func recapMessages(for id: String) async throws -> [KimiMessage] {
+        guard id == selectedId, var full = conversation,
+              full.snapshot.session.id == id, !full.snapshot.session.busy,
+              full.snapshot.session.lastTurnReason == "completed",
+              full.snapshot.pendingApprovals.isEmpty, full.snapshot.pendingQuestions.isEmpty else {
+            throw WorkbenchError(L("任务尚未完成，暂时不能生成 Recap。"))
+        }
+        let selectionToken = selectionGeneration
+        let completion = full.snapshot.session.updatedAt
+        if !full.hasOlder { return full.messages }
+        guard online, let api else { throw WorkbenchError(L("需要连接 Agent 才能读取完整任务记录。")) }
+        while full.hasOlder {
+            guard let first = full.messages.first else { throw WorkbenchError(L("无法读取完整任务记录。")) }
+            let page = try await api.get(KimiPage<KimiMessage>.self,
+                "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
+            try Task.checkCancellation()
+            guard selectionToken == selectionGeneration, id == selectedId,
+                  let current = conversation, current.snapshot.session.id == id,
+                  !current.snapshot.session.busy, current.snapshot.session.lastTurnReason == "completed",
+                  current.snapshot.session.updatedAt == completion,
+                  current.snapshot.pendingApprovals.isEmpty, current.snapshot.pendingQuestions.isEmpty else {
+                throw CancellationError()
+            }
+            guard !page.items.isEmpty else { throw WorkbenchError(L("无法读取完整任务记录。")) }
+            full.prepend(page)
+        }
+        return full.messages
+    }
     func reloadSelected() {
         guard online, !loading, let id = selectedId else { return }
         loadSelected(id)

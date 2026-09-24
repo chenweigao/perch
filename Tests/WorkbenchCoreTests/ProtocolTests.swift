@@ -8,6 +8,7 @@ struct ProtocolTests {
         try checkConversationPresentation()
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
+        try checkTaskRecaps()
         try checkSessionNaming()
         try checkToolVisibility()
         try checkConversationTodos()

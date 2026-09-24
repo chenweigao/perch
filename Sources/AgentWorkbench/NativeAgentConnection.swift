@@ -203,6 +203,29 @@ final class NativeAgentConnection: ObservableObject {
     func loadedMessages(for id: String) -> [KimiMessage]? {
         snapshot?.id == id && snapshot?.hasOlder == false ? snapshot?.messages : nil
     }
+    func recapMessages(for id: String) async throws -> [KimiMessage] {
+        guard id == selectedID, var full = snapshot, full.id == id,
+              !full.busy, full.interactions.isEmpty, full.error == nil, full.completed > 0 else {
+            throw WorkbenchError(L("任务尚未完成，暂时不能生成 Recap。"))
+        }
+        let selectionToken = selectionGeneration
+        let connectionToken = generation
+        let completion = full.completed
+        if !full.hasOlder { return full.messages }
+        guard online else { throw WorkbenchError(L("需要连接 Agent 才能读取完整任务记录。")) }
+        while full.hasOlder {
+            guard let window = full.history else { throw WorkbenchError(L("无法读取完整任务记录。")) }
+            let page: NativeAgentSnapshot = try await request(
+                "/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+            try Task.checkCancellation()
+            guard selectionToken == selectionGeneration, connectionToken == generation, id == selectedID,
+                  let current = snapshot, current.id == id, !current.busy,
+                  current.interactions.isEmpty, current.error == nil, current.completed == completion,
+                  current.history?.epoch == window.epoch else { throw CancellationError() }
+            full = try full.prepending(page)
+        }
+        return full.messages
+    }
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
         if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }

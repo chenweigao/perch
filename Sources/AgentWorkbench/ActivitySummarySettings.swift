@@ -91,11 +91,11 @@ struct ActivitySummarySettingsSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("活动叙事").font(.title2)
-            Text("Perch 会优先使用 Agent 原生摘要或明确进度，并在本机即时生成阶段标题。可选的外部润色默认关闭；开启后才会发送受限活动信息，并可能产生额外费用。")
+            Text("活动叙事与 Recap").font(.title2)
+            Text("Perch 会优先使用 Agent 原生摘要或明确进度，并在本机即时生成阶段标题。可选的外部服务默认关闭；开启后才会发送受限信息，并可能产生额外费用。Recap 只在你点击时生成。")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
-                Toggle("启用外部摘要润色", isOn: $configuration.enabled)
+                Toggle("启用外部摘要与 Recap", isOn: $configuration.enabled)
                 Toggle("自动命名会话", isOn: $configuration.nameSessions)
                     .disabled(!configuration.enabled)
                     .help("会话标题仍是占位值（未命名、新对话或首条消息截断）时生成一次短标题，写入本机显示名；手动重命名优先。")
@@ -108,7 +108,7 @@ struct ActivitySummarySettingsSheet: View {
                 Toggle("关闭 Qwen 思考", isOn: $configuration.disableThinking)
                     .help("仅用于支持 chat_template_kwargs.enable_thinking 的服务，可减少摘要的延迟与开销。")
             }
-            Text("使用 OpenAI 兼容的 Chat Completions 接口。发送当前轮完整用户文本、最近三条 Agent 公开进展、上一条摘要，以及最多 12 条活动的路径、搜索条件、工具类别、状态和可用退出码；这些公开文本可能包含代码。工具输出摘录需单独开启；不额外发送完整命令参数、编辑内容、私有思考或运行上下文。阶段开始、关键结果、错误和结束时更新，重复读取与等待不触发更新。自动命名仍只发送首条用户消息开头。内容不会写回 Agent 上下文。")
+            Text("使用 OpenAI 兼容的 Chat Completions 接口。活动叙事发送当前轮公开文本和受限工具元数据；手动 Recap 会按需读取完整分页历史，再发送最多 12 轮公开用户/Agent 文本、Todo，以及最多 24 条工具类型、截短目标、状态和可用退出码。工具输出摘录需单独开启；不发送完整命令参数、编辑内容、私有思考或运行上下文。自动命名仍只发送首条用户消息开头。所有内容都不会写回 Agent 上下文。")
                 .font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             if let testResult { Text(testResult).font(.callout).textSelection(.enabled) }

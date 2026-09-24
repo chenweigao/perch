@@ -28,7 +28,23 @@ private struct ActivityPreview: View {
     @State private var stops = 0
     @State private var listRefreshes = 0
     @State private var transcriptOpens = 0
+    @State private var recapMode = "Result"
+    @State private var recapGenerations = 0
     private var busy: Bool { phase != "Done" && phase != "Failed" }
+    private var recapState: TaskRecapState {
+        switch recapMode {
+        case "Loading": return .loading
+        case "Failure": return .failed("Fixture summary service timed out. No Agent message was sent.")
+        case "Result": return .result(TaskRecapResult(
+            outcome: "Recap is ready for this completed fixture task.",
+            changes: ["Added a compact Recap action to the completed activity bar.",
+                      "Kept generation separate from the original Agent conversation."],
+            validation: ["Fixture UI rendered the result, copy, and regenerate actions."],
+            remaining: ["No live model request is made by this preview."],
+            nextSteps: ["Review the full app build before shipping."]))
+        default: return .idle
+        }
+    }
     private var messages: [KimiMessage] {
         var rows: [[String: Any]] = [
             ["id": "u\(turn)", "role": "user", "created_at": "", "content": [["type": "text", "text": "Inspect a fixture project"]]]
@@ -145,7 +161,10 @@ private struct ActivityPreview: View {
             Picker("Narrative", selection: $narrativeMode) {
                 ForEach(["Commentary", "Provider", "Local", "External", "External failure", "None"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
-            Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · External retries: \(retryCount) · Turn: \(turn)")
+            Picker("Recap", selection: $recapMode) {
+                ForEach(["Disabled", "Loading", "Result", "Failure"], id: \.self) { Text($0) }
+            }.pickerStyle(.segmented)
+            Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · External retries: \(retryCount) · Recap generations: \(recapGenerations) · Turn: \(turn)")
             Text("Output reads: \(readOutputs.sorted().joined(separator: ", ")) · Stops: \(stops) · List refreshes: \(listRefreshes) · Transcripts: \(transcriptOpens)")
             Button("Next turn") { turn += 1; phase = "Thinking" }
             Spacer()
@@ -180,6 +199,17 @@ private struct ActivityPreview: View {
                 pendingCount: phase == "Approval" ? 2 : 0,
                 narrativeOverride: narrative,
                 externalFailureOverride: narrativeMode == "External failure" ? "Fixture timeout; the local title remains available." : nil,
+                recapKey: phase == "Done" ? "preview-\(turn)" : nil,
+                recapMessages: { messages }, recapStateOverride: recapState,
+                recapConfiguredOverride: recapMode != "Disabled",
+                onRecapGenerateOverride: { _ in
+                    recapGenerations += 1
+                    recapMode = "Loading"
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(600))
+                        if !Task.isCancelled { recapMode = "Result" }
+                    }
+                },
                 onReview: { reviewCount += 1 }, onReconnect: { reconnectCount += 1 },
                 onRetryExternal: narrativeMode == "External failure" ? { retryCount += 1 } : nil,
                 board: board,

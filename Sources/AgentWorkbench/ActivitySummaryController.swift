@@ -228,3 +228,88 @@ struct ActivityNarrativeFailure: Equatable {
         }
     }
 }
+
+enum TaskRecapState: Equatable {
+    case idle
+    case loading
+    case result(TaskRecapResult)
+    case failed(String)
+}
+
+@MainActor final class TaskRecapStore: ObservableObject {
+    static let shared = TaskRecapStore()
+
+    @Published private var states: [String: TaskRecapState] = [:]
+    @Published private var warnings: [String: String] = [:]
+    private var cache: TaskRecapCache
+    private let file: TaskRecapFile
+    private var tasks: [String: Task<Void, Never>] = [:]
+    typealias Summarizer = (ActivitySummaryConfiguration, String, TaskRecapInput, String) async throws -> TaskRecapResult
+    private let summarize: Summarizer
+
+    init(file: TaskRecapFile = .applicationFile(), summarize: Summarizer? = nil) {
+        self.file = file
+        cache = (try? file.load()) ?? TaskRecapCache()
+        self.summarize = summarize ?? { configuration, apiKey, input, language in
+            try await TaskRecapClient().summarize(configuration: configuration, apiKey: apiKey,
+                                                   input: input, language: language)
+        }
+    }
+
+    func state(for key: String) -> TaskRecapState {
+        states[key] ?? cache.result(for: key).map(TaskRecapState.result) ?? .idle
+    }
+
+    func warning(for key: String) -> String? { warnings[key] }
+
+    func generate(key: String, force: Bool = false,
+                  messages: @escaping @MainActor () async throws -> [KimiMessage],
+                  settings: ActivitySummarySettings) {
+        guard tasks[key] == nil else { return }
+        if !force, let result = cache.result(for: key) {
+            states[key] = .result(result)
+            return
+        }
+        let configuration = settings.configuration
+        let settingsRevision = settings.revision
+        guard configuration.enabled, configuration.isValid else {
+            states[key] = .failed(ActivitySummaryError.configuration.localizedDescription)
+            return
+        }
+        states[key] = .loading
+        warnings[key] = nil
+        tasks[key] = Task { [weak self, weak settings] in
+            guard let self, let settings else { return }
+            defer { self.tasks[key] = nil }
+            do {
+                let history = try await messages()
+                try Task.checkCancellation()
+                guard settings.revision == settingsRevision,
+                      let input = TaskRecapInput.make(messages: history,
+                                                      includeToolOutput: configuration.includeToolOutput) else {
+                    throw CancellationError()
+                }
+                let apiKey = try await settings.apiKey()
+                try Task.checkCancellation()
+                guard settings.revision == settingsRevision else { throw CancellationError() }
+                let result = try await summarize(configuration, apiKey, input, AppLanguage.current.localization)
+                try Task.checkCancellation()
+                guard settings.revision == settingsRevision else { throw CancellationError() }
+                cache.store(result, for: key)
+                states[key] = .result(result)
+                let snapshot = cache
+                file.save(snapshot) { [weak self] error in
+                    guard let error else { return }
+                    Task { @MainActor in
+                        guard let self, case .result(let current) = self.state(for: key), current == result else { return }
+                        self.warnings[key] = L("Recap 已生成，但无法保存到本机：\(error)")
+                    }
+                }
+            } catch is CancellationError {
+                if case .loading = state(for: key) { states[key] = .idle }
+            } catch {
+                states[key] = .failed(error.localizedDescription)
+            }
+        }
+    }
+}
