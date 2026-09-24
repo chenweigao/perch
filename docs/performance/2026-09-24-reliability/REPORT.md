@@ -69,6 +69,11 @@ The full portable suite passed locally on both Python 3.9 and 3.12 after this fi
 Hosted results on the latest PR revision are the authoritative CI outcome; the
 original failed run is retained rather than counted as a pass.
 
+The next hosted run passed portable checks and the first 12 Mac stages, then
+failed building Navigation Preview because the runner did not have ripgrep.
+The build script now enumerates object files with system `find`, removing the
+undeclared tool dependency. Full-history checks remain enabled.
+
 ## Frame calibration remains unverified
 
 The isolated Xcode 27 / Swift 6.4 acceptance app ran a known 120 ms main-thread
