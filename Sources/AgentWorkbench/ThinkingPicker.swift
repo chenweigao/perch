@@ -11,33 +11,23 @@ struct ThinkingPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("思考强度").font(.system(size: 12, weight: .medium))
-                Spacer()
-                if let model, model.supportsThinking, unavailableReason == nil {
-                    Text(model.resolve(current).map { L(key: $0.label) } ?? L("默认"))
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-            }
+            Text("思考强度").font(.system(size: 12, weight: .medium))
+                .padding(.horizontal, 10)
             if let unavailableReason {
                 explanation(unavailableReason)
             } else if let model, model.supportsThinking {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 6)], spacing: 6) {
+                VStack(spacing: 2) {
                     ForEach(model.thinking, id: \.self) { level in
-                        let selected = level == model.resolve(current)
-                        Button { onSelect(level) } label: {
-                            Text(L(key: level.label)).font(.system(size: 12, weight: selected ? .semibold : .regular))
-                                .frame(maxWidth: .infinity).padding(.vertical, 7)
-                                .background(Color.primary.opacity(selected ? 0.09 : 0.025), in: RoundedRectangle(cornerRadius: 6))
-                                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(selected ? 0.3 : 0.08), lineWidth: 1))
-                                .contentShape(RoundedRectangle(cornerRadius: 6))
-                        }
-                        .buttonStyle(.plain).disabled(disabled)
-                        .accessibilityLabel(L("思考：\(L(key: level.label))"))
-                        .accessibilityAddTraits(selected ? .isSelected : [])
-                        .accessibilityIdentifier("thinking-level:\(level.rawValue)")
+                        ModelPickerRow(title: Text(L(key: level.label)), detail: nil,
+                                       selected: level == model.resolve(current)) { onSelect(level) }
+                            .disabled(disabled)
+                            .accessibilityLabel(L("思考：\(L(key: level.label))"))
+                            .accessibilityIdentifier("thinking-level:\(level.rawValue)")
                     }
                 }
+                Text("较高强度会花更多时间思考。")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 explanation(model == nil ? L("尚未读取到当前模型的思考档位。") : L("此模型未提供思考档位设置。"))
             }

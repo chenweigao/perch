@@ -13,6 +13,7 @@ private struct ToolbarPreview: View {
     @State private var text = "Preview message"
     @State private var model = "fixture/reasoner"
     @State private var effort: ThinkingLevel? = .xhigh
+    @State private var usesSessionModel = true
     @State private var permissionProvider = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_AGENT"] ?? SessionKind.kimi.rawValue
     @State private var permissionMode = "manual"
     @State private var narrow = false
@@ -91,10 +92,10 @@ private struct ToolbarPreview: View {
                     ComposerModelPicker(models: emptyModels ? [] : models, modelID: model, thinking: effort,
                                         disabledReason: disabledReason,
                                         unavailableReason: [.qoder, .claude].contains(selectedProvider) ? L("此 Agent 暂不支持模型与思考设置。") : nil,
-                                        sessionModel: "fixture/reasoner", onUseSessionModel: {
-                                            model = "fixture/reasoner"; effort = models[0].resolve(effort)
+                                        sessionModel: "fixture/reasoner", usesSessionModel: usesSessionModel, onUseSessionModel: {
+                                            usesSessionModel = true; model = "fixture/reasoner"; effort = models[0].resolve(effort)
                                         }, scope: L(selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
-                                        onSelectModel: { model = $0.id; effort = $0.resolve(effort) },
+                                        onSelectModel: { usesSessionModel = false; model = $0.id; effort = $0.resolve(effort) },
                                         onSelectThinking: { effort = $0 })
                         .background(ToolbarButtonProbe())
                         .onChange(of: model + "|" + (effort?.rawValue ?? "nil"), initial: true) { _, value in
