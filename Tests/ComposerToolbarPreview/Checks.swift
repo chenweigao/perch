@@ -49,8 +49,11 @@ private func press(_ id: String) async throws {
 }
 
 @MainActor
-private func openPanel(_ main: NSWindow) async throws -> NSWindow {
-    try await press("model")
+private func openPanel(_ main: NSWindow, thinking: Bool = false) async throws -> NSWindow {
+    let view = ToolbarProbe.controls["model"]!
+    let point = NSPoint(x: thinking ? view.bounds.maxX - 25 : 25, y: view.bounds.midY)
+    click(view.convert(point, to: nil), in: main)
+    try await pause()
     guard let panel = NSApp.windows.first(where: { $0.isVisible && $0 !== main }) else {
         throw NSError(domain: "Model panel did not open", code: 1)
     }
@@ -59,9 +62,15 @@ private func openPanel(_ main: NSWindow) async throws -> NSWindow {
 
 @MainActor
 private func closePanel(_ panel: NSWindow) async throws {
-    click(NSPoint(x: panel.frame.width - 50, y: panel.frame.height - 39), in: panel)
+    panel.makeKeyAndOrderFront(nil)
+    let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                                timestamp: ProcessInfo.processInfo.systemUptime,
+                                windowNumber: panel.windowNumber, context: nil,
+                                characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}",
+                                isARepeat: false, keyCode: 53)!
+    panel.sendEvent(event)
     try await pause()
-    try expect(!panel.isVisible, "Done must dismiss the panel")
+    try expect(!panel.isVisible, "Escape must dismiss the panel")
 }
 
 @MainActor
@@ -74,7 +83,7 @@ private func chooseModel(_ query: String, in panel: NSWindow) async throws {
     let frame = list.convert(list.bounds, to: nil)
     click(NSPoint(x: frame.midX, y: frame.maxY - 30), in: panel)
     try await pause()
-    try expect(panel.isVisible, "Choosing a model must leave thinking controls open")
+    try expect(!panel.isVisible, "Choosing a model must dismiss its panel")
 }
 
 @MainActor
@@ -87,9 +96,9 @@ private func checkLayout(_ label: String) throws {
     }
     try expect(frames.allSatisfy { bounds.contains($0) }, "Controls overflow the composer: " + label)
     try expect(!frames[0].intersects(frames[1]) && !frames[1].intersects(frames[2]), "Controls overlap: " + label)
-    try expect(frames[0].width >= 140, "Model and thinking summary is squeezed out: " + label)
+    try expect(frames[0].width >= 50, "Model selector is squeezed out: " + label)
     if ToolbarProbe.selection.hasPrefix("fixture/long") {
-        try expect(frames[0].width >= 300, "Long model names must remain readable beside the longest effort label")
+        try expect(frames[0].width >= 260, "Long model names must remain readable beside the longest effort label")
     }
     print("PASS layout", label, frames)
 }
@@ -111,30 +120,27 @@ func runToolbarChecks() async {
             try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Agents without model capabilities must remain read-only")
             try await closePanel(panel)
         } else {
-            let initialHeight = panel.frame.height
-            click(NSPoint(x: 65, y: panel.frame.height - 130), in: panel)
-            try await pause()
-            try expect(ToolbarProbe.selection == "fixture/reasoner|low", "Low thinking button did not update selection")
-            click(NSPoint(x: 335, y: panel.frame.height - 130), in: panel)
-            try await pause()
-            try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Extra high thinking button did not update selection")
-            try await chooseModel("Deep", in: panel)
-            try expect(ToolbarProbe.selection == "fixture/deep|max", "Model switch must resolve unsupported effort to its own default")
-            try await chooseModel("Plain", in: panel)
-            try expect(ToolbarProbe.selection == "fixture/plain|nil", "A non-reasoning model must clear the selected effort")
-            try await chooseModel("long", in: panel)
-            try expect(ToolbarProbe.selection == "fixture/long|auto", "The extended model must select its reported default")
-            try expect(panel.frame.height > initialHeight + 50, "Nine effort levels must wrap instead of clipping")
-            let levelFrames = views(panel.contentView!).map { $0.convert($0.bounds, to: nil) }
-                .filter { $0.width >= 72 && $0.width < 100 && abs($0.height - 29) < 1 }
-                .reduce(into: [CGRect]()) { if !$0.contains($1) { $0.append($1) } }
-                .sorted { $0.minY == $1.minY ? $0.minX < $1.minX : $0.minY > $1.minY }
-            try expect(levelFrames.count == 9, "All nine effort buttons must be laid out")
-            click(NSPoint(x: levelFrames[5].midX, y: levelFrames[5].midY), in: panel)
-            try await pause()
-            try expect(ToolbarProbe.selection == "fixture/long|xhigh", "The second row must allow selecting Extra high")
             try await closePanel(panel)
-            print("PASS: native mouse/field-editor selection, panel stays open, fallback, unavailable and nine levels")
+            let lowPanel = try await openPanel(main, thinking: true)
+            click(NSPoint(x: 80, y: lowPanel.frame.height - 60), in: lowPanel)
+            try await pause()
+            try expect(ToolbarProbe.selection == "fixture/reasoner|low", "Low thinking row did not update selection")
+            try expect(!lowPanel.isVisible, "Selecting effort must close its popover")
+            let highPanel = try await openPanel(main, thinking: true)
+            click(NSPoint(x: 80, y: highPanel.frame.height - 60 - 3 * 33), in: highPanel)
+            try await pause()
+            try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Extra high thinking row did not update selection")
+            try await chooseModel("Deep", in: openPanel(main))
+            try expect(ToolbarProbe.selection == "fixture/deep|max", "Model switch must resolve unsupported effort to its own default")
+            try await chooseModel("Plain", in: openPanel(main))
+            try expect(ToolbarProbe.selection == "fixture/plain|nil", "A non-reasoning model must clear the selected effort")
+            try await chooseModel("long", in: openPanel(main))
+            try expect(ToolbarProbe.selection == "fixture/long|auto", "The extended model must select its reported default")
+            let extended = try await openPanel(main, thinking: true)
+            click(NSPoint(x: 80, y: extended.frame.height - 60 - 5 * 33), in: extended)
+            try await pause()
+            try expect(ToolbarProbe.selection == "fixture/long|xhigh", "All nine effort rows must be reachable")
+            print("PASS: separate model/effort pickers, dismiss on selection, fallback and nine levels")
         }
         try await press("narrow")
         try checkLayout("narrow Chinese long model")
@@ -147,21 +153,20 @@ func runToolbarChecks() async {
             let reset = try await openPanel(main)
             try await chooseModel("Reasoner", in: reset)
             try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Switching models must preserve a supported effort")
-            try await closePanel(reset)
             try await press("offline")
-            let offline = try await openPanel(main)
+            let offline = try await openPanel(main, thinking: true)
             let selection = ToolbarProbe.selection
-            click(NSPoint(x: 65, y: offline.frame.height - 130), in: offline)
+            click(NSPoint(x: 65, y: offline.frame.height - 60), in: offline)
             try await pause()
             try expect(ToolbarProbe.selection == selection, "Offline controls must not modify selection")
             try await closePanel(offline)
             try await press("offline")
             try await press("running")
-            let running = try await openPanel(main)
-            click(NSPoint(x: 65, y: running.frame.height - 130), in: running)
+            let running = try await openPanel(main, thinking: true)
+            click(NSPoint(x: 65, y: running.frame.height - 60), in: running)
             try await pause()
             if agent != "kimi" { try expect(ToolbarProbe.selection == selection, "Native running sessions must not change thinking") }
-            try await closePanel(running)
+            if running.isVisible { try await closePanel(running) }
             try await press("running")
             try await press("empty")
             let empty = try await openPanel(main)

@@ -121,7 +121,7 @@ struct KimiWorkspaceView: View {
                                         disabledReason: !connection.online ? L("连接恢复后可修改设置。")
                                             : !connection.snapshotReady ? L("正在同步会话，请稍候。")
                                             : connection.sending ? L("消息发送中，请稍候。") : nil,
-                                        sessionModel: sessionModel,
+                                        sessionModel: sessionModel, usesSessionModel: choice.isEmpty,
                                         onUseSessionModel: {
                                             connection.modelChoices[sessionID] = ""
                                             connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
