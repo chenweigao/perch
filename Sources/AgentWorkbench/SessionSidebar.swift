@@ -22,36 +22,44 @@ struct WorkbenchSidebar: View {
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
                               onArchive: { model.showArchive() }) {
             if !projection.favorites.isEmpty {
-                heading("置顶")
-                ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
+                SidebarSection("置顶", id: "favorites") {
+                    ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
+                }
             }
-            HStack {
-                Text("任务组").font(.system(size: 11)).foregroundStyle(.secondary)
-                Spacer()
+            SidebarSection("任务组", id: "groups") {
+                ForEach(model.workspace.groups) { group in
+                    let items = TaskGroupProjection(group: group, allSessions: model.allSessions, lastSessionID: nil, search: "")
+                    Button { model.showHome(groupID: group.id) } label: {
+                        HStack(spacing: WorkbenchChrome.labelSpacing) {
+                            Image(systemName: "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                                .frame(width: WorkbenchChrome.sidebarSymbolWidth)
+                            Text(group.name).lineLimit(1); Spacer(minLength: 4)
+                            Text("\(items.totalCount)").font(.system(size: 11)).foregroundStyle(.secondary)
+                        }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                    }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
+                        .help("\(items.totalCount) 个未归档 · \(items.archivedCount) 个已归档 · \(items.missingCount) 个尚未同步")
+                        .contextMenu { Button("编辑任务组") { model.editGroup(group) } }
+                }
+                if model.workspace.groups.isEmpty {
+                    Button("创建任务组…") { model.editGroup() }.buttonStyle(.plain)
+                        .foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 6)
+                }
+            } actions: {
                 Button { model.editGroup() } label: {
                     Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(.plain).help("新建任务组")
-            }.padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
-            ForEach(model.workspace.groups) { group in
-                let items = TaskGroupProjection(group: group, allSessions: model.allSessions, lastSessionID: nil, search: "")
-                Button { model.showHome(groupID: group.id) } label: {
-                    HStack(spacing: WorkbenchChrome.labelSpacing) {
-                        Image(systemName: "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
-                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
-                        Text(group.name).lineLimit(1); Spacer(minLength: 4)
-                        Text("\(items.totalCount)").font(.system(size: 11)).foregroundStyle(.secondary)
-                    }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
-                }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
-                    .help("\(items.totalCount) 个未归档 · \(items.archivedCount) 个已归档 · \(items.missingCount) 个尚未同步")
-                    .contextMenu { Button("编辑任务组") { model.editGroup(group) } }
             }
-            if model.workspace.groups.isEmpty {
-                Button("创建任务组…") { model.editGroup() }.buttonStyle(.plain)
-                    .foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 6)
-            }
-            HStack {
-                Text("最近会话")
-                Spacer()
+            SidebarSection("最近会话", id: "recent") {
+                ForEach(projection.recent) { item in sessionRow(item, groups: index[item.id]) }
+                if projection.recent.isEmpty {
+                    Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
+                }
+                Button { model.showAllSessions() } label: {
+                    HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
+                        .padding(.leading, 26).padding(10).contentShape(Rectangle())
+                }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
+            } actions: {
                 Menu {
                     Picker("筛选最近会话", selection: $filter) {
                         ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
@@ -61,23 +69,10 @@ struct WorkbenchSidebar: View {
                         .frame(width: 24, height: 24).contentShape(Rectangle())
                 }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
-            }.font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
-            ForEach(projection.recent) { item in sessionRow(item, groups: index[item.id]) }
-            if projection.recent.isEmpty {
-                Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
-                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
             }
-            Button { model.showAllSessions() } label: {
-                HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
-                    .padding(.leading, 26).padding(10).contentShape(Rectangle())
-            }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }
-    }
-    private func heading(_ title: LocalizedStringKey) -> some View {
-        Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
-            .frame(height: 24).padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
     }
     private func sessionRow(_ item: WorkspaceSession, groups: [String]) -> some View {
         SessionSidebarRow(model: model, item: item, groups: groups,
