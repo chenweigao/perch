@@ -605,3 +605,27 @@
 "选择权限级别" = "Choose permission level";
 "权限级别：%@" = "Permission level: %@";
 "当前 Agent 不支持动态切换权限" = "This agent does not support changing permissions during a session.";
+
+"模型与思考" = "Model & Thinking";
+"思考强度" = "Thinking effort";
+"思考：%@" = "Thinking: %@";
+"不可用" = "Unavailable";
+"未知" = "Unknown";
+"默认" = "Default";
+"尚未读取到模型目录，可继续使用会话模型。" = "The model catalog is not available yet. You can keep using the session model.";
+"尚未读取到当前模型的思考档位。" = "Thinking levels for the current model are not available yet.";
+"连接恢复后可修改设置。" = "Settings can be changed after reconnecting.";
+"正在同步会话，请稍候。" = "Syncing the conversation. Please wait.";
+"消息发送中，请稍候。" = "Sending the message. Please wait.";
+"正在更新模型设置…" = "Updating model settings…";
+"任务运行中，完成或停止后可修改。" = "Settings can be changed after the running task finishes or stops.";
+"此 Agent 暂不支持模型与思考设置。" = "This agent does not currently expose model or thinking settings.";
+"Off" = "Off";
+"Minimal" = "Minimal";
+"Low" = "Low";
+"Medium" = "Medium";
+"High" = "High";
+"Extra high" = "Extra high";
+"Max" = "Max";
+"Ultra" = "Ultra";
+"Auto" = "Auto";
