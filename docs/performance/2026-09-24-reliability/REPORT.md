@@ -3,7 +3,7 @@
 This change adds repeatable offline recovery/interaction checks and CI. It does
 not change production UI or agent behavior, establish real two-Mac recovery, or
 claim smoother rendering. Product source is the `5639c04` baseline; test and
-workflow changes are fingerprinted in `measurements.json`.
+workflow changes are fingerprinted in `measurements.json` (the original local run).
 
 ## Recovery coverage
 
@@ -23,9 +23,10 @@ remains **unverified**; see [the runbook](../../RELIABILITY-ACCEPTANCE.md).
 
 The new workflow runs portable tests and the native Mac suite separately, retains
 logs on failure, and uses bounded subprocesses without automatic retries. Local
-commands are the same as CI. The hosted workflow has not run because this change
-has not been pushed. GitHub's Xcode 27 preview image and GUI behavior remain a
-hosted acceptance boundary. Actionlint 1.7.12 validates the workflow with the
+commands are the same as CI. The original local record predates pushing this change;
+hosted execution is tracked separately in [PR #46](https://github.com/chenweigao/perch/pull/46).
+GitHub's Xcode 27 preview image and GUI behavior remain a separate hosted acceptance
+boundary. Actionlint 1.7.12 validates the workflow with the
 documented official runner label added to its local label list.
 
 The first Mac suite stopped at ComposerChecks with exit 137. Bare and directly
@@ -57,6 +58,16 @@ and full-history reading/interactions/roundtrip. The switching scenario verified
 80 switches; the 60.26-second joint scenario verified 148 updates and 8 switches.
 Publication tests passed 17 checks. All 16 selected offline stages ran; the optional
 live SSH check remained disabled by design.
+
+The first hosted Linux attempt exposed an existing test-module lifecycle error:
+`test_native_service.py` registered its temporary-directory cleanup during import.
+Python 3.12 runs module cleanups after the preceding recovery-test module, deleting
+the runtime before the native-service tests start. Python 3.9's teardown behavior
+had masked this locally. The runtime is now created in `setUpModule` and removed
+in `tearDownModule`, with its environment override scoped to the service import.
+The full portable suite passed locally on both Python 3.9 and 3.12 after this fix.
+Hosted results on the latest PR revision are the authoritative CI outcome; the
+original failed run is retained rather than counted as a pass.
 
 ## Frame calibration remains unverified
 
