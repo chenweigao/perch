@@ -80,6 +80,9 @@ struct NativeAgentView: View {
                 .task(id: displayedResultKey) {
                     if displayedResultKey != nil { onResultDisplayed(s) }
                 }
+                let recapRevision = !s.busy && s.interactions.isEmpty && s.error == nil && s.completed > 0
+                    ? TaskRecapInput.revision(in: s.messages) : nil
+                let recapKey = recapRevision.map { "\(readingKey):\(s.completed):\($0)" }
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: s.messages, isRunning: s.busy,
                     running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
@@ -91,6 +94,8 @@ struct NativeAgentView: View {
                     timing: connection.timings.turns[s.id],
                     online: connection.online, pendingCount: s.interactions.count,
                     narrativeSession: readingKey,
+                    recapKey: recapKey,
+                    recapMessages: { try await connection.recapMessages(for: s.id) },
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                     .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                     .frame(maxWidth: .infinity).padding(.vertical, 6)

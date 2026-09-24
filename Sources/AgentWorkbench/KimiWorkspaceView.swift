@@ -23,6 +23,13 @@ struct KimiWorkspaceView: View {
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
                 if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
+                let recapRevision = !conversation.snapshot.session.busy
+                    && conversation.snapshot.session.lastTurnReason == "completed"
+                    && pending == 0 && conversation.error == nil
+                    ? TaskRecapInput.revision(in: conversation.displayMessages) : nil
+                let recapKey = recapRevision.map {
+                    "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
+                }
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: conversation.displayMessages, isRunning: conversation.snapshot.session.busy,
                     liveTools: conversation.live?.runningTools ?? [], online: connection.online,
@@ -33,6 +40,8 @@ struct KimiWorkspaceView: View {
                     timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, pendingCount: pending,
                     narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
+                    recapKey: recapKey,
+                    recapMessages: { try await connection.recapMessages(for: conversation.snapshot.session.id) },
                     onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
                     board: conversation.tasks,
                     loadingTaskOutput: connection.loadingTaskOutput,

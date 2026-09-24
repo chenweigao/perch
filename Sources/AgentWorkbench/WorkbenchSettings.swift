@@ -90,7 +90,7 @@ struct WorkbenchSettings: View {
             Section {
                 SettingsRow(action: { showSummary = true }) {
                     Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
-                    Text("活动叙事").foregroundStyle(.primary)
+                    Text("活动叙事与 Recap").foregroundStyle(.primary)
                 } trailing: {
                     (summarySettings.configuration.enabled ? Text("已开启") : Text("默认关闭"))
                         .font(.caption)
