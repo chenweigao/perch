@@ -36,9 +36,11 @@ Mac 当前每 400 ms 查询轻量目录和选中对话的 revision；未变化�
 
 桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤，因此 OMP 不会被提供 dsh 的路由，反之亦然。
 
-新建任务面板里 Kimi、OMP、dsh 共用同一个可搜索下拉；模型输入框保留，既显示将要发送的 id，也接受目录里没有的 id（`omp models --no-extensions` 不含扩展提供的模型）。Qoder CN 与 Claude Code 的 SDK 不提供模型清单，因此只有输入框：Qoder 留空即 `Qwen3.8-Flash`，Claude Code 留空使用远端 CLI 默认模型。会话内的模型菜单与思考强度同样按 Agent 过滤，运行中不可切换；Qoder 只显示标签。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。
+新建任务面板里 Kimi、OMP、dsh 共用同一个可搜索下拉；模型输入框保留，既显示将要发送的 id，也接受目录里没有的 id（`omp models --no-extensions` 不含扩展提供的模型）。Qoder CN 与 Claude Code 的 SDK 不提供模型清单，因此只有输入框：Qoder 留空即 `Qwen3.8-Flash`，Claude Code 留空使用远端 CLI 默认模型。会话内使用「模型名 · 思考：档位」组合入口，弹层顶部固定展示思考档位，下方搜索和模型列表按 Agent 过滤。选择模型后保持打开，可以接着调整思考；修改请求依次完成，生效于后续轮次。运行中、离线或正在更新设置时仍可打开查看，修改控件禁用并说明原因。Qoder 与 Claude Code 只读展示，并明确说明 Agent 尚未提供设置。未读取到模型能力与模型未提供档位分别提示。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。窄窗口下工具栏自动分为两行：主行保留附件、模型/思考与发送，次行放置权限和上下文余量。
 
 旧版桥不打标；客户端此时不过滤、沿用合并列表，所以升级 Mac 客户端不要求同时升级桥。要拿到按 Agent 过滤的目录需重装桥，并按文末约束等自己的运行中会话结束后再重启托管服务。
+
+组合控件的隔离回归：先运行 `scripts/build.sh`，再运行 `scripts/check-composer-toolbar.sh`。测试在预览 App 内向真实控件发送鼠标和文本编辑事件，覆盖五种 Agent、模型与档位联动、选模型后保持弹层、无档位、九档换行、540 pt 输入区、中英文、离线/运行中/空目录及发送配置；结果保存在 `.local/composer-toolbar-checks/`。不连接真实远端，也不替代真实模型调用或人工视觉验收。预览可独立打开 `build/Composer Toolbar Preview.app`。
 
 ## 恢复能力分别处理
 

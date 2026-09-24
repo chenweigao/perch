@@ -116,7 +116,7 @@ struct NativeAgentView: View {
                                         canSend: canSend(s),
                                         onSend: { connection.send(mode: defaultMode(s)) },
                                         onKey: { key in handle(key, for: s) }).id(s.id)
-                        HStack(spacing: 10) {
+                        ComposerToolbarLayout {
                             ComposerAddButton(supportsFiles: false)
                             NativeModelControls(connection: connection, snapshot: s)
                             PermissionPicker(
@@ -129,7 +129,6 @@ struct NativeAgentView: View {
                             ) { mode in
                                 connection.setPermission(mode, for: s.id)
                             }
-                            Spacer(minLength: 8)
                             ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
                                          reportedAt: s.context?.reportedAt, isStale: !connection.online)
                             ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
@@ -192,67 +191,30 @@ struct NativeAgentView: View {
     }
 }
 
-/// Model, reasoning effort and remaining context for runtimes that accept route
-/// changes. OMP and dsh expose their native controls, while Codex choices come from
-/// app-server's model catalog. A Qoder session keeps the plain label.
 struct NativeModelControls: View {
+    @UILocalization private var L
     @ObservedObject var connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
-    private var availableModels: [AgentModel] {
-        connection.models(for: snapshot.provider)
+    private var editable: Bool { [.omp, .dsh, .codex].contains(snapshot.provider) }
+    private var disabledReason: String? {
+        if !connection.online { return L("连接恢复后可修改设置。") }
+        if connection.configuringSessions.contains(snapshot.id) { return L("正在更新模型设置…") }
+        if snapshot.busy { return L("任务运行中，完成或停止后可修改。") }
+        return nil
     }
 
     var body: some View {
-        if snapshot.provider == .omp || snapshot.provider == .dsh || snapshot.provider == .codex {
-            let current = availableModels.first { $0.id == snapshot.model }
-            HStack(spacing: 10) {
-                ModelControlWidth {
-                Menu {
-                    ForEach(Dictionary(grouping: availableModels, by: \.provider).sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }, id: \.key) { group in
-                        Menu(group.key) {
-                            ForEach(group.value) { model in
-                                Button {
-                                    connection.setModel(model, for: snapshot.id)
-                                } label: {
-                                    if model.id == snapshot.model { Label(model.name, systemImage: "checkmark") }
-                                    else { Text(model.name) }
-                                }
-                            }
-                        }
-                    }
-                    if availableModels.isEmpty { Text(connection.modelsError ?? "Loading models…") }
-                    if let current, current.supportsThinking {
-                        Divider()
-                        ThinkingPicker(model: current, current: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
-                                       disabled: !connection.online || snapshot.busy) { level in
-                            connection.setThinking(level, for: snapshot.id)
-                        }
-                    }
-                    if current?.supportsThinking == false {
-                        Divider()
-                        Text("此模型未提供思考档位设置。")
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Text(current?.name ?? (snapshot.model.isEmpty ? "Choose model" : snapshot.model))
-                            .foregroundStyle(.primary).lineLimit(1).truncationMode(.middle)
-                        if let current, current.supportsThinking {
-                            Text(current.resolve(ThinkingLevel.parse(session?.thinking ?? snapshot.thinking))?.label ?? "Default")
-                                .foregroundStyle(.secondary).fixedSize()
-                        }
-                    }.font(.system(size: 12))
-                }.menuStyle(.borderlessButton)
-                    // Switching mid-turn would attribute the running transcript to the
-                    // wrong model, so the runtime rejects it and so does the UI.
-                    .disabled(!connection.online || snapshot.busy)
-                    .help(snapshot.busy ? "Models cannot be changed while running" : "Change the model for the next turn")
-                }
-            }.task(id: snapshot.id) { await connection.loadModels() }
-        } else {
-            Text(snapshot.model.isEmpty ? "Agent model" : snapshot.model)
-                .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).frame(maxWidth: 240, alignment: .leading)
-        }
+        ComposerModelPicker(models: connection.models(for: snapshot.provider),
+                            modelID: session?.model ?? snapshot.model,
+                            thinking: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
+                            disabledReason: disabledReason,
+                            unavailableReason: editable ? nil : L("此 Agent 暂不支持模型与思考设置。"),
+                            catalogError: connection.modelsError,
+                            scope: L("下一轮生效"),
+                            onSelectModel: { connection.setModel($0, for: snapshot.id) },
+                            onSelectThinking: { connection.setThinking($0, for: snapshot.id) })
+            .task(id: snapshot.id) { if editable { await connection.loadModels() } }
     }
 }
 

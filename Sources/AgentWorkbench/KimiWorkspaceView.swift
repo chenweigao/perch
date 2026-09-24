@@ -111,21 +111,28 @@ struct KimiWorkspaceView: View {
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 },
                                 onKey: { handle($0, for: sessionID) })
-                HStack(spacing: 10) {
+                ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
-                    ModelPicker(models: ModelCatalog.options(connection.models),
-                                selection: Binding(get: { connection.modelChoices[sessionID] ?? "" },
-                                                   set: { connection.modelChoices[sessionID] = $0 }),
-                                current: connection.conversation?.snapshot.session.model ?? "",
-                                effortUnavailable: connection.activeModel(for: sessionID)?.supportsThinking == false,
-                                compact: true, thinkingModel: connection.activeModel(for: sessionID),
-                                thinking: connection.thinkingChoices[sessionID], thinkingDisabled: connection.sending,
-                                onThinking: { connection.thinkingChoices[sessionID] = $0 })
+                    let sessionModel = connection.conversation?.snapshot.session.model ?? ""
+                    let choice = connection.modelChoices[sessionID] ?? ""
+                    ComposerModelPicker(models: connection.catalog,
+                                        modelID: choice.isEmpty ? sessionModel : choice,
+                                        thinking: connection.thinkingChoices[sessionID],
+                                        disabledReason: !connection.online ? L("连接恢复后可修改设置。")
+                                            : !connection.snapshotReady ? L("正在同步会话，请稍候。")
+                                            : connection.sending ? L("消息发送中，请稍候。") : nil,
+                                        sessionModel: sessionModel,
+                                        onUseSessionModel: {
+                                            connection.modelChoices[sessionID] = ""
+                                            connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
+                                        }, scope: L("下一条消息生效"), onSelectModel: { model in
+                                            connection.modelChoices[sessionID] = model.id
+                                            connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
+                                        }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
                     PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
                                      disabled: connection.sending) { mode in
                         connection.setPermission(mode, for: sessionID)
                     }
-                    Spacer(minLength: 8)
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget,
                                  isStale: !connection.online || !connection.snapshotReady)
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,

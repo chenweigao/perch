@@ -11,6 +11,8 @@ private final class TransportFixture {
     var permissionChanges: [(String, String)] = []
     var modelChanges: [(String, String, String)] = []
     var thinkingChanges: [(String, String)] = []
+    var holdModelResponse = false
+    var pendingModel: CheckedContinuation<Void, Error>?
     var losePromptResponse = false
     var holdPromptResponse = false
     var pendingPrompt: CheckedContinuation<Void, Error>?
@@ -103,6 +105,7 @@ private final class TransportFixture {
                 steers.append(key); receipts[key] = "accepted"
                 result = ["id": key, "status": "accepted"]
             case "model":
+                if holdModelResponse { try await withCheckedThrowingContinuation { pendingModel = $0 } }
                 let provider = body?["provider"].string ?? "", model = body?["model"].string ?? ""
                 modelChanges.append((id, provider, model)); sessions[id]?["model"] = model
                 result = ["ok": true]
@@ -144,6 +147,7 @@ struct ConnectionChecks {
         try await checkImmediateSelection()
         try await checkSelectionRetry()
         try await checkNativeModelCatalog()
+        try await checkModelSettingsSerialization()
         let unsupportedFixture = TransportFixture()
         let unsupportedClient = NativeAgentConnection(host: SSHHost(name: "Commands", destination: "fixture"), transport: unsupportedFixture.request)
         try await unsupportedClient.refresh(); unsupportedClient.select("a")
@@ -312,6 +316,44 @@ struct ConnectionChecks {
         await settle { fixture.steers.count == 1 && !client.sending }
         client.disconnect()
         print("PASS: Codex native thread identity, fixed permission, catalog effort, model actions and steering")
+    }
+
+    @MainActor
+    static func checkModelSettingsSerialization() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Model settings", destination: "fixture"), transport: fixture.request)
+        try await client.refresh()
+        let target = AgentModel(id: "new-model", provider: "fixture", name: "New model",
+                                thinking: [.low, .high], defaultThinking: .high)
+        fixture.holdModelResponse = true
+        client.setModel(target, for: "a")
+        await settle { fixture.pendingModel != nil }
+        precondition(client.configuringSessions.contains("a"))
+        client.setThinking(.low, for: "a")
+        client.setModel(target, for: "a")
+        precondition(fixture.thinkingChanges.isEmpty && fixture.modelChanges.isEmpty)
+        fixture.holdModelResponse = false
+        fixture.pendingModel?.resume(); fixture.pendingModel = nil
+        await settle { !client.configuringSessions.contains("a") }
+        precondition(fixture.modelChanges.count == 1 && fixture.modelChanges[0].1 == "fixture")
+        precondition(fixture.thinkingChanges.count == 1 && fixture.thinkingChanges[0].1 == "high")
+        precondition(client.sessions.first { $0.id == "a" }?.model == "new-model")
+        client.setThinking(.low, for: "a")
+        await settle { !client.configuringSessions.contains("a") }
+        precondition(client.sessions.first { $0.id == "a" }?.thinking == "low")
+
+        fixture.holdModelResponse = true
+        client.setModel(target, for: "a")
+        await settle { fixture.pendingModel != nil }
+        fixture.pendingModel?.resume(throwing: WorkbenchError("setting failed")); fixture.pendingModel = nil
+        await settle { !client.configuringSessions.contains("a") }
+        precondition(client.actionError == "setting failed" && fixture.modelChanges.count == 1)
+        precondition(fixture.thinkingChanges.count == 2)
+        fixture.holdModelResponse = false
+        client.setThinking(.high, for: "a")
+        await settle { !client.configuringSessions.contains("a") }
+        precondition(client.sessions.first { $0.id == "a" }?.thinking == "high")
+        print("PASS: model and thinking changes are serialized, refreshed and unlocked after errors")
     }
 
     @MainActor

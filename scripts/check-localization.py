@@ -32,6 +32,8 @@ SCOPED_FILES = [
     "Sources/AgentWorkbench/WorkItemGroupEditor.swift",
     "Sources/AgentWorkbench/TaskGroupPage.swift",
     "Sources/AgentWorkbench/ModelPicker.swift",
+    "Sources/AgentWorkbench/ComposerModelPicker.swift",
+    "Sources/AgentWorkbench/ThinkingPicker.swift",
     "Sources/AgentWorkbench/ConversationActivityBar.swift",
     "Sources/AgentWorkbench/KimiSubagentSheet.swift",
     "Sources/AgentWorkbench/SessionRowChrome.swift",

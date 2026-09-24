@@ -304,19 +304,27 @@ final class NativeAgentConnection: ObservableObject {
     func model(for snapshot: NativeAgentSnapshot) -> AgentModel? {
         ModelSelectionCatalog.model(snapshot.model, in: models(for: snapshot.provider))
     }
+    @Published private(set) var configuringSessions: Set<String> = []
+
     /// Switching models can leave the current effort unsupported, so the level is
     /// resolved against the target model and re-sent rather than carried over.
     func setModel(_ target: AgentModel, for id: String) {
+        guard configuringSessions.insert(id).inserted else { return }
         let current = ThinkingLevel.parse(sessions.first { $0.id == id }?.thinking)
         Task {
+            defer { configuringSessions.remove(id) }
             do {
                 try await action(id, "model", ["provider": .string(target.provider), "model": .string(target.id)])
-                if let resolved = target.resolve(current), resolved != current { setThinking(resolved, for: id) }
+                if let resolved = target.resolve(current), resolved != current {
+                    try await action(id, "thinking", ["level": .string(resolved.rawValue)])
+                }
             } catch { actionError = error.localizedDescription }
         }
     }
     func setThinking(_ level: ThinkingLevel, for id: String) {
+        guard configuringSessions.insert(id).inserted else { return }
         Task {
+            defer { configuringSessions.remove(id) }
             do { try await action(id, "thinking", ["level": .string(level.rawValue)]) }
             catch { actionError = error.localizedDescription }
         }
