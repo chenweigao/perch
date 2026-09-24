@@ -91,6 +91,11 @@ public struct NativeRequestReceipt: Decodable {
     public let id: String
     public let status: String
     public let error: String?
+    /// The server marks real steering receipts; a promoted prompt has no steer mode.
+    public let mode: String?
+    public let runtimeTurnId: String?
+    public let turnId: String?
+    public var activeTurnId: String { runtimeTurnId ?? turnId ?? id }
 }
 
 /// Absolute message positions belong to one bridge history epoch. Legacy full

@@ -419,6 +419,7 @@ final class NativeAgentConnection: ObservableObject {
     }
     private func apply(_ receipt: NativeRequestReceipt) {
         guard let message = queue.message(receipt.id) else { return }
+        let sessionID = message.session.terminalID
         let next: OutboundState
         switch receipt.status {
         case "submitting", "submitted": next = .submitting
@@ -426,16 +427,23 @@ final class NativeAgentConnection: ObservableObject {
         case "running": next = .running
         case "consumed":
             // Keep the local bubble until the corresponding history is on screen.
-            if snapshot?.id != message.session.terminalID || snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
+            if snapshot?.id != sessionID || snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
                 queue.markDelivered(receipt.id)
             } else { queue.markAccepted(receipt.id) }
             return
         case "completed", "stopped":
-            timings.finished(sessionID: message.session.terminalID, requestID: receipt.id)
+            if receipt.mode != "steer" {
+                timings.finished(sessionID: sessionID, requestID: receipt.id, turnID: receipt.activeTurnId)
+            }
             queue.markDelivered(receipt.id); return
         case "failed": next = .failed(receipt.error ?? "运行时拒绝消息")
         case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
         default: next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")
+        }
+        if receipt.mode != "steer", ["submitting", "submitted", "accepted", "running"].contains(receipt.status) {
+            timings.observe(sessionID: sessionID, turnID: receipt.activeTurnId, requestID: receipt.id,
+                            running: true, waiting: timings.turns[sessionID]?.turnID == receipt.activeTurnId
+                                && timings.turns[sessionID]?.waitingSince != nil)
         }
         guard next != message.state else { return }
         switch next {
