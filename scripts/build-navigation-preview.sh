@@ -23,7 +23,7 @@ includes=( -I "$bin_dir/Modules" -I .build/checkouts/swift-markdown/Sources/CAto
            -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include )
 objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
-    while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$' | sort)
+    while IFS= read -r file; do objects+=("$file"); done < <(find "$bin_dir/$target.build" -type f -name '*.o' | sort)
 done
 swiftc -O -swift-version 5 -D TRANSCRIPT_CHECKS -parse-as-library "${includes[@]}" \
     "${app_files[@]}" Tests/PerformancePreview/Workload.swift \

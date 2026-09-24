@@ -1,0 +1,58 @@
+name: Functional checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: functional-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable:
+    name: Bridge and acceptance contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-functional.py portable --output .local/functional-portable
+      - name: Retain check results and failure logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: portable-results
+          path: .local/functional-portable/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  macos:
+    name: Native build and interaction regression
+    # Match the Xcode 27 / Swift 6.4 toolchain used for local acceptance.
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Record toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - run: python3 scripts/check-functional.py macos --output .local/functional-macos
+      - name: Retain check results and failure logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results
+          path: .local/functional-macos/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error

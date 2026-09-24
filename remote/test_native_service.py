@@ -1,9 +1,18 @@
 import importlib.util, io, json, os, pathlib, subprocess, sys, tempfile, threading, time, unittest
 from unittest.mock import patch
 
-folder=tempfile.TemporaryDirectory(); unittest.addModuleCleanup(folder.cleanup); os.environ['AWB_NATIVE_ROOT']=folder.name
-spec=importlib.util.spec_from_file_location('broker',pathlib.Path(__file__).with_name('native-agent-service.py'))
-broker=importlib.util.module_from_spec(spec); spec.loader.exec_module(broker)
+def setUpModule():
+    # Discovery imports all modules before running them. Create this module's
+    # runtime only when its tests start, not in another module's cleanup scope.
+    global folder, broker
+    folder=tempfile.TemporaryDirectory()
+    spec=importlib.util.spec_from_file_location('broker',pathlib.Path(__file__).with_name('native-agent-service.py'))
+    broker=importlib.util.module_from_spec(spec)
+    with patch.dict(os.environ, {'AWB_NATIVE_ROOT':folder.name}):
+        spec.loader.exec_module(broker)
+
+def tearDownModule():
+    folder.cleanup()
 
 class ProxySpawnEnvironmentTests(unittest.TestCase):
     def test_preserves_existing_proxy_variants_without_probing(self):

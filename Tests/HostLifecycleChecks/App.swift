@@ -30,6 +30,10 @@ import WorkbenchCore
             workspace.pinned = [SavedTerminal(session: reference, title: "Fixture terminal")]
             workspace.starred = [reference]
             workspace.selectedTerminalID = reference.id; workspace.destination = .session
+            // finishSetup/showHome enqueue a workspace save on a background queue.
+            // Drain it before installing the restart fixture, or it can overwrite
+            // the pinned session after this direct file write.
+            empty.shutdown()
             try WorkspaceFile.save(workspace, to: workspaceURL)
             empty.native.drafts["fixture-native"] = "未发送的草稿"
             empty.kimi.drafts["fixture-kimi"] = "Kimi draft"
@@ -43,6 +47,7 @@ import WorkbenchCore
 
         case "restart":
             let saved = try WorkspaceFile.load(from: workspaceURL)
+            precondition(saved.pinned.count == 1, "seed must persist exactly one pinned session")
             let model = WorkbenchModel()
             precondition(model.configuredEnvironment && model.connections.count == 1)
             precondition(model.kimi.host.kimiPort == 60001 && model.kimi.host.enabledAgents == [.kimi])
