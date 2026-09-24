@@ -9,8 +9,9 @@ func checkNativeAgents() throws {
     precondition(snapshot.snapshot?.permission == PermissionCapability(selected: "write", options: ["always-ask", "write", "yolo"], scope: .newSession))
     let receipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"request","status":"failed","error":"rejected","runtimeTurnId":"runtime-turn"}"#.utf8))
     precondition(receipt.status == "failed" && receipt.error == "rejected" && receipt.activeTurnId == "runtime-turn", "Receipt errors and runtime turn IDs are payloads")
-    let steerReceipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"steer","status":"consumed","turnId":"steered-turn"}"#.utf8))
-    precondition(steerReceipt.activeTurnId == "steered-turn", "Steer receipts expose their active runtime turn")
+    let steerReceipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"steer","status":"consumed","mode":"steer","turnId":"steered-turn"}"#.utf8))
+    precondition(steerReceipt.activeTurnId == "steered-turn" && steerReceipt.mode == "steer", "Steer receipts expose their actual mode and runtime turn")
+    precondition(receipt.mode == nil, "A promoted prompt receipt has no steer mode")
     do {
         _ = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"error":"request failed"}"#.utf8))
         preconditionFailure("expected request error")

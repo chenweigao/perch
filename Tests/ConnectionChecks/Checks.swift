@@ -6,6 +6,10 @@ private final class TransportFixture {
     var sessions: [String: [String: Any]] = [:]
     var receipts: [String: String] = [:]
     var requestTurns: [String: String] = [:]
+    var requestModes: [String: String] = [:]
+    var promptReceivedAt: [String: Date] = [:]
+    var promoteSteer = false
+    var promptReceiptStatus = "accepted"
     var prompts: [String] = []
     var steers: [String] = []
     var creates: [(SessionKind, String, String)] = []
@@ -29,6 +33,16 @@ private final class TransportFixture {
     var snapshotRequests: [String] = []
     var pendingSnapshots: [(CheckedContinuation<Data, Error>, Data)] = []
     var returnedSnapshots = 0
+
+    private func receipt(_ key: String) -> [String: Any] {
+        var result: [String: Any] = ["id": key, "status": receipts[key] ?? "notFound"]
+        if let mode = requestModes[key] { result["mode"] = mode }
+        if let turn = requestTurns[key] {
+            if requestModes[key] == "steer" { result["turnId"] = turn }
+            else if turn != key { result["runtimeTurnId"] = turn }
+        }
+        return result
+    }
 
     private static func permission(_ provider: SessionKind, _ mode: String) -> [String: Any] {
         let capability = PermissionCatalog.capability(for: provider, selected: mode)
@@ -75,8 +89,7 @@ private final class TransportFixture {
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
         } else if parts.count == 4 && parts[2] == "requests" {
             let key = parts[3]
-            result = ["id": key, "status": receipts[key] ?? "notFound"]
-            if let turn = requestTurns[key], turn != key { result["runtimeTurnId"] = turn }
+            result = receipt(key)
         } else if parts.count == 2 {
             let id = parts[1]
             snapshotRequests.append(id)
@@ -97,18 +110,28 @@ private final class TransportFixture {
                 let key = body!["requestId"].string!
                 if receipts[key] == nil {
                     let turn = sessions[id]?["provider"] as? String == SessionKind.codex.rawValue ? "runtime-\(key)" : key
-                    prompts.append(id); receipts[key] = "accepted"; requestTurns[key] = turn
-                    sessions[id]?["busy"] = true; sessions[id]?["turnId"] = turn
-                    sessions[id]?["turnState"] = "accepted"
+                    promptReceivedAt[key] = Date()
+                    prompts.append(id); receipts[key] = promptReceiptStatus; requestTurns[key] = turn
+                    sessions[id]?["busy"] = !["completed", "stopped"].contains(promptReceiptStatus)
+                    sessions[id]?["turnId"] = turn
+                    sessions[id]?["turnState"] = promptReceiptStatus
                 }
                 if holdPromptResponse { try await withCheckedThrowingContinuation { pendingPrompt = $0 } }
                 if losePromptResponse { losePromptResponse = false; throw WorkbenchError("response lost") }
-                result = ["id": key, "status": receipts[key]!]
-                if let turn = requestTurns[key], turn != key { result["runtimeTurnId"] = turn }
+                result = receipt(key)
             case "steer":
                 let key = body!["requestId"].string!
-                steers.append(key); receipts[key] = "accepted"
-                result = ["id": key, "status": "accepted"]
+                steers.append(key)
+                if promoteSteer {
+                    for (previous, turn) in requestTurns where turn == sessions[id]?["turnId"] as? String {
+                        receipts[previous] = requestModes[previous] == "steer" ? "consumed" : "completed"
+                    }
+                    sessions[id]?["busy"] = false; sessions[id]?["pending"] = 0
+                    return try await request("/sessions/\(id)/prompt", body)
+                }
+                receipts[key] = "accepted"; requestModes[key] = "steer"
+                requestTurns[key] = sessions[id]?["turnId"] as? String
+                result = receipt(key)
             case "model":
                 if holdModelResponse { try await withCheckedThrowingContinuation { pendingModel = $0 } }
                 let provider = body?["provider"].string ?? "", model = body?["model"].string ?? ""
@@ -153,6 +176,7 @@ struct ConnectionChecks {
         try await checkSelectionRetry()
         try await checkNativeModelCatalog()
         try await checkModelSettingsSerialization()
+        try await checkPromotedSteerTiming()
         let unsupportedFixture = TransportFixture()
         let unsupportedClient = NativeAgentConnection(host: SSHHost(name: "Commands", destination: "fixture"), transport: unsupportedFixture.request)
         try await unsupportedClient.refresh(); unsupportedClient.select("a")
@@ -337,6 +361,44 @@ struct ConnectionChecks {
                      "A completion receipt must freeze the runtime turn clock")
         client.disconnect()
         print("PASS: Codex native identity, settings, steering and request/runtime turn timing")
+    }
+
+    @MainActor
+    static func checkPromotedSteerTiming() async throws {
+        for provider in [SessionKind.codex, .omp] {
+            for status in ["accepted", "completed", "stopped"] {
+                let fixture = TransportFixture()
+                fixture.sessions["a"]?["provider"] = provider.rawValue
+                let client = NativeAgentConnection(host: SSHHost(name: "Promoted steer", destination: "fixture"), transport: fixture.request)
+                try await client.refresh(); client.select("a")
+                await settle { client.snapshot?.id == "a" }
+                client.drafts["a"] = "previous turn"; client.send()
+                await settle { fixture.prompts.count == 1 && !client.sending }
+                fixture.sessions["a"]?["pending"] = 1
+                try await client.refresh()
+                let previous = client.timings.turns["a"]!
+                precondition(previous.waitingSince != nil)
+
+                fixture.promoteSteer = true; fixture.promptReceiptStatus = status
+                // Inspect the receipt's effect without a later catalog correcting it.
+                fixture.failCatalog = true
+                client.drafts["a"] = "racing guidance"; client.send(mode: .steer)
+                await settle { fixture.steers.count == 1 && !client.sending }
+                let key = fixture.steers[0]
+                guard let timing = client.timings.turns["a"], let received = fixture.promptReceivedAt[key] else {
+                    preconditionFailure("Promoted steer did not establish a clock")
+                }
+                precondition(timing.turnID == fixture.requestTurns[key] && timing.turnID != previous.turnID)
+                precondition(!timing.observedOnly && timing.startedAt <= received && timing.startedAt > previous.startedAt,
+                             "A promoted prompt must retain its local submission timestamp")
+                precondition(timing.waitingSince == nil && timing.waitingSeconds == 0,
+                             "The prior turn's approval wait must not carry into a new prompt")
+                precondition((timing.endedAt != nil) == (status != "accepted"),
+                             "Immediate completion or stop must freeze the promoted turn without a catalog")
+                client.disconnect()
+            }
+        }
+        print("PASS: server-promoted Codex/OMP steer receipts bind submission time, including immediate completion/stop")
     }
 
     @MainActor

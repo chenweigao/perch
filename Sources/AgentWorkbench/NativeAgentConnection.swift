@@ -409,7 +409,7 @@ final class NativeAgentConnection: ObservableObject {
             } else { queue.markAccepted(receipt.id) }
             return
         case "completed", "stopped":
-            if message.mode != .steer {
+            if receipt.mode != "steer" {
                 timings.finished(sessionID: sessionID, requestID: receipt.id, turnID: receipt.activeTurnId)
             }
             queue.markDelivered(receipt.id); return
@@ -417,9 +417,10 @@ final class NativeAgentConnection: ObservableObject {
         case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
         default: next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")
         }
-        if message.mode != .steer, ["submitting", "submitted", "accepted", "running"].contains(receipt.status) {
+        if receipt.mode != "steer", ["submitting", "submitted", "accepted", "running"].contains(receipt.status) {
             timings.observe(sessionID: sessionID, turnID: receipt.activeTurnId, requestID: receipt.id,
-                            running: true, waiting: timings.turns[sessionID]?.waitingSince != nil)
+                            running: true, waiting: timings.turns[sessionID]?.turnID == receipt.activeTurnId
+                                && timings.turns[sessionID]?.waitingSince != nil)
         }
         guard next != message.state else { return }
         switch next {

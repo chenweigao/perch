@@ -50,6 +50,15 @@ func checkConversationTiming() {
     clocks.observe(sessionID: "fast-session", turnID: "next-fast", requestID: "next-fast", running: false, waiting: false, at: date(541))
     precondition(clocks.turns["fast-session"]?.elapsed(at: date(999)) == 1, "A completed new turn must replace the old clock")
 
+    clocks.submitted("promoted", at: date(550))
+    clocks.finished(sessionID: "fast-session", requestID: "promoted", turnID: "promoted-runtime", at: date(551))
+    precondition(clocks.turns["fast-session"]?.turnID == "promoted-runtime"
+                 && clocks.turns["fast-session"]?.elapsed(at: date(999)) == 1,
+                 "A completion-only new prompt must replace the previous ended turn")
+    clocks.finished(sessionID: "fast-session", requestID: "next-fast", at: date(552))
+    precondition(clocks.turns["fast-session"]?.turnID == "promoted-runtime",
+                 "A delayed old receipt must not rewind a newer clock")
+
     precondition(ConversationTiming.duration(79, chinese: true) == "1分19秒")
     precondition(ConversationTiming.duration(128, chinese: true) == "2分08秒")
     precondition(ConversationTiming.duration(3661, chinese: false) == "1h 1m 1s")
