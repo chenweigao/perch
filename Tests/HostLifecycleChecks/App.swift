@@ -24,7 +24,7 @@ import WorkbenchCore
             precondition(empty.selectedHostID == host.id && empty.kimi.host == host && empty.pendingSetupLaunch)
             precondition(empty.selectedConnection?.wantsConnection == false, "Kimi setup must not connect Herdr")
             empty.setupDismissed()
-            precondition(empty.showNewKimi && empty.launchAfterSetup == launch)
+            precondition(empty.draftingNewTask && empty.launchAfterSetup == launch)
             let reference = SessionReference(hostID: host.id, terminalID: "fixture-terminal")
             var workspace = LocalWorkspace()
             workspace.pinned = [SavedTerminal(session: reference, title: "Fixture terminal")]
