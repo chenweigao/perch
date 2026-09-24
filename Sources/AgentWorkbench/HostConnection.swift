@@ -26,6 +26,7 @@ final class HostConnection: ObservableObject, Identifiable {
     func updateHost(_ host: SSHHost) { self.host = host }
 
     func connect() {
+        guard !host.isLocal else { return }
         disconnect()
         let token = UUID()
         generation = token

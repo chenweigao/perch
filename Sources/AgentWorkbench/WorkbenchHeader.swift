@@ -79,7 +79,7 @@ struct WorkbenchHeaderActions: View {
             if !model.showDashboard, model.selectedHost != nil {
                 Button { model.toggleFileViewer() } label: {
                     WorkbenchToolbarSymbol(name: "doc.text.magnifyingglass").workbenchControlSurface()
-                }.buttonStyle(.plain).help("查看远端文件（只读）").accessibilityLabel("查看远端文件")
+                }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")
             }
             if !model.showDashboard {
                 Menu {

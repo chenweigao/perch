@@ -9,6 +9,7 @@ struct ComposerModelPicker: View {
     var disabledReason: String?
     var unavailableReason: String?
     var catalogError: String?
+    var onRefreshCatalog: (() async -> Void)?
     var sessionModel: String?
     var usesSessionModel = false
     var onUseSessionModel: (() -> Void)?
@@ -40,7 +41,9 @@ struct ComposerModelPicker: View {
                 .accessibilityLabel(L("选择模型"))
                 .accessibilityValue(title)
                 .accessibilityIdentifier("composer-model-thinking")
-                .popover(isPresented: $presented, arrowEdge: .top) { panel }
+                .popover(isPresented: $presented, arrowEdge: .top) {
+                    panel.task { await onRefreshCatalog?() }
+                }
             }
             if let model, model.supportsThinking, unavailableReason == nil {
                 Button { thinkingPresented.toggle() } label: {
@@ -177,7 +180,11 @@ private struct ComposerModelPanel: View {
                 if let disabledReason {
                     Label(disabledReason, systemImage: "lock")
                 } else if let model, !model.supportsThinking, unavailableReason == nil {
-                    Text("此模型未提供思考档位设置。")
+                    if model.hasThinkingCapability == true {
+                        Text("支持思考，但尚未声明可选档位。请补充 Agent 的模型配置。")
+                    } else {
+                        Text("此模型未提供思考档位设置。")
+                    }
                 }
                 Text(scope)
             }.font(.system(size: 11)).foregroundStyle(.secondary)

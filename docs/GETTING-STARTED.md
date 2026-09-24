@@ -105,8 +105,10 @@ Kimi and remote OMP send running-task messages as steering by default. Choose
 “Send next turn” from the adjacent menu to queue instead. Pending text and its
 delivery state remain visible in the conversation. Qoder CN / dsh / Claude Code queue for the
 next turn. Update the remote native bridge to enable OMP steering.
-Local Agent setup currently discovers OMP and checks its version; local native
-execution is not available yet. Remote file viewing and read-only Git diff are
+Local Agent setup discovers installed Kimi and Codex, connects their authenticated
+loopback services, and adds this Mac as a separate task environment. Other detected
+agents are shown as installed without offering local execution. See [Local agents](LOCAL-AGENTS.md)
+for setup and acceptance scope. File viewing and read-only Git diff are
 experimental. Configure models and credentials in each agent's CLI.
 
 Closing a local view disconnects the client. Ending a remote terminal or deleting

@@ -47,7 +47,8 @@ final class WorkbenchModel: ObservableObject {
     @Published var isArchiving = false
     @Published var archiveResult: BatchArchiveRun?
     @Published var showLocalSetup = false
-    @Published var localOMP: DiscoveryState?
+    @Published var localAgents: [SessionKind: DiscoveryState] = [:]
+    @Published var localAgentPaths: [String: String] = [:]
     @Published var probingLocal = false
     @Published var groupingSession: WorkspaceSession?
     @Published var search = ""
@@ -259,7 +260,10 @@ final class WorkbenchModel: ObservableObject {
         } catch { workspaceError = error.localizedDescription }
     }
     func startNewTask() { if connections.isEmpty { configureHost() } else { draftingNewTask = true } }
-    func configureHost(_ host: SSHHost? = nil) { setupHost = host; showAddHost = true }
+    func configureHost(_ host: SSHHost? = nil) {
+        if host?.isLocal == true { showLocalSetup = true; return }
+        setupHost = host; showAddHost = true
+    }
     func finishSetup(_ host: SSHHost, launch: TaskLaunchDefaults?, startTask: Bool) throws {
         try RemoteSetup.validate(host)
         guard !connections.contains(where: { $0.id != host.id && $0.host.destination == host.destination }) else {
@@ -741,29 +745,44 @@ final class WorkbenchModel: ObservableObject {
         }
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
     }
-    /// Looks for a local OMP by running each candidate path directly. A GUI process
-    /// does not inherit the shell PATH, and no shell is involved in the lookup, so a
-    /// hostile directory name cannot become a command.
-    func discoverLocalOMP() {
+    func discoverLocalAgents() {
         guard !probingLocal else { return }
         probingLocal = true
+        if let host = connections.first(where: { $0.host.isLocal })?.host {
+            localAgentPaths.merge(host.localAgentPaths) { current, _ in current }
+        }
         Task {
             defer { probingLocal = false }
-            let home = FileManager.default.homeDirectoryForCurrentUser.path
-            let path = ProcessInfo.processInfo.environment["PATH"]
-            for candidate in LocalAgentDiscovery.candidates(named: "omp", defaults: LocalAgentDiscovery.ompSearchPaths,
-                                                            path: path, home: home) {
-                guard FileManager.default.isExecutableFile(atPath: candidate) else { continue }
-                do {
-                    let output = try await ProcessRunner.run(candidate, ["--version"])
-                    guard let version = LocalAgentDiscovery.parseOMPVersion(String(decoding: output, as: UTF8.self)) else {
-                        localOMP = .unusable(path: candidate, reason: L("无法解析版本输出")); return
-                    }
-                    localOMP = .found(path: candidate, version: version); return
-                } catch { localOMP = .unusable(path: candidate, reason: error.localizedDescription); return }
+            for kind in LocalAgentDiscovery.agents {
+                localAgents[kind] = await LocalAgentDiscovery.discover(kind, override: localAgentPaths[kind.rawValue])
             }
-            localOMP = .missing(hint: LocalAgentDiscovery.missingOMPHint)
         }
+    }
+    func connectLocalAgents(_ kinds: [SessionKind]) throws {
+        let enabled = kinds.filter { LocalAgentDiscovery.supported.contains($0) && localAgents[$0]?.executablePath != nil }
+        guard !enabled.isEmpty else { throw WorkbenchError(L("请选择已检测到的本机 Agent")) }
+        var host = SSHHost(id: ExecutionEnvironment.localHostID, name: L("本机"), destination: "",
+                           enabledAgents: enabled, autoConnectHerdr: false)
+        host.localAgentPaths = Dictionary(uniqueKeysWithValues: enabled.compactMap { kind in
+            localAgents[kind]?.executablePath.map { (kind.rawValue, $0) }
+        })
+        var saved = connections.map(\.host)
+        if let index = saved.firstIndex(where: { $0.isLocal }) { saved[index] = host }
+        else { saved.append(host) }
+        let data = try JSONEncoder().encode(saved)
+        if let connection = connections.first(where: { $0.id == host.id }) {
+            disconnectSSH(host.id)
+            connection.updateHost(host)
+            kimiEnvironments[host.id]?.updateHost(host); nativeEnvironments[host.id]?.updateHost(host)
+        } else {
+            let connection = HostConnection(host: host); observe(connection); connections.append(connection)
+            registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
+        }
+        UserDefaults.standard.set(data, forKey: "hosts")
+        configuredEnvironment = true
+        activateAgentEnvironment(host.id)
+        connectSSH(host.id)
+        draftingNewTask = true
     }
     /// Local display names survive provider catalog refreshes.
     func rename(_ item: WorkspaceSession, title: String) {

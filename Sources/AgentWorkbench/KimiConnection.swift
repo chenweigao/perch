@@ -21,10 +21,11 @@ final class KimiConnection: ObservableObject {
     @Published private(set) var commandFeedback: [String: String] = [:]
     @Published private(set) var commandErrors: [String: String] = [:]
     @Published var models: [JSONValue] = []
+    @Published private(set) var modelsError: String?
     @Published var modelChoices: [String: String] = [:]
     @Published var thinkingChoices: [String: ThinkingLevel] = [:]
     /// Effort levels come from each model's own support_efforts, so a model with
-    /// none genuinely has no effort control rather than a hidden default.
+    /// no declared levels does not imply that it cannot reason.
     var catalog: [AgentModel] { ModelSelectionCatalog.parseKimi(models) }
     @Published var permissionChoices: [String: String] = [:]
     func permissionCapability(for id: String) -> PermissionCapability {
@@ -112,13 +113,25 @@ final class KimiConnection: ObservableObject {
     /// Isolated connection checks use a local HTTP fixture without SSH.
     init(host: SSHHost, api: KimiAPI) { self.host = host; self.api = api; online = true }
 
+    func refreshModels() async {
+        guard online, let api else { return }
+        do {
+            let catalog = try await api.get(JSONValue.self, "/api/v1/models")
+            guard self.api === api else { return }
+            models = catalog["items"].array; modelsError = nil
+        } catch {
+            guard self.api === api else { return }
+            modelsError = error.localizedDescription
+        }
+    }
+
     func updateHost(_ value: SSHHost) {
         if value.kimiPort != host.kimiPort || value.kimiTokenPath != host.kimiTokenPath || value.destination != host.destination { disconnect() }
         host = value
     }
 
     func connect() {
-        guard !host.destination.isEmpty else { return }
+        guard host.isLocal || !host.destination.isEmpty else { return }
         disconnect()
         let token = UUID(); generation = token; connecting = true; error = nil
         task = Task { [weak self] in
@@ -200,6 +213,16 @@ final class KimiConnection: ObservableObject {
         if let folder { try? FileManager.default.removeItem(at: folder) }; folder = nil
     }
     private func establish(token: UUID) async throws {
+        if host.isLocal {
+            let data = try await LocalAgentRuntime.endpoint(for: .kimi, host: host)
+            try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
+            let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
+            guard let port = endpoint["port"].int, let secret = endpoint["token"].string else {
+                throw WorkbenchError(L("本机服务未返回连接信息"))
+            }
+            api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
+            return
+        }
         try SSHCommand.validateDestination(host.destination)
         // Read this server's existing credential through SSH; keep it only in process memory.
         let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
