@@ -207,8 +207,11 @@ struct NewTaskView: View {
                 do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
             }
             .sheet(isPresented: $showSetup) {
-                AddHostSheet(model: model, host: kimi.host) { launch in
-                    selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
+                if kimi.host.isLocal { LocalAgentSetupSheet(model: model) }
+                else {
+                    AddHostSheet(model: model, host: kimi.host) { launch in
+                        selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
+                    }
                 }
             }
             .onChange(of: kimi.host.id) { _, _ in
@@ -266,6 +269,12 @@ struct NewTaskView: View {
         let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
         Task {
             do {
+                if kimi.host.isLocal {
+                    var isDirectory: ObjCBool = false
+                    guard FileManager.default.fileExists(atPath: directory, isDirectory: &isDirectory), isDirectory.boolValue else {
+                        throw WorkbenchError(L("本机项目目录不存在"))
+                    }
+                }
                 if selectedProvider == .kimi {
                     let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text,
                                                                model: selectedModel, permissionMode: selectedPermission)

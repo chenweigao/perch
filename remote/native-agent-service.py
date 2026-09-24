@@ -98,6 +98,7 @@ def setup_status(provider):
         raise ValueError('Unknown setup provider')
     try:
         if provider == 'dsh': binary = dsh_binary()
+        elif provider == 'codex' and os.environ.get('PERCH_LOCAL_CODEX'): binary = os.environ['PERCH_LOCAL_CODEX']
         else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'codex':'codex', 'claude':'claude'}[provider])
     except ValueError:
         binary = None
@@ -172,14 +173,20 @@ def proxy_aware_spawn_env():
 
 class CodexAppServer:
     def __init__(self, cwd, on_frame=None, on_exit=None, stderr_path=None):
-        binary = shutil.which('codex')
+        binary = os.environ.get('PERCH_LOCAL_CODEX') or shutil.which('codex')
         if not binary: raise ValueError('未找到 codex CLI，请先安装并登录 Codex')
         self.on_frame = on_frame; self.on_exit = on_exit; self.closing = False
         self.write_lock = threading.Lock(); self.pending_lock = threading.Lock()
         self.pending = {}; self.next_id = 0; self.frames = queue.Queue()
         self.stderr = open(stderr_path, 'a') if stderr_path else subprocess.DEVNULL
+        env = proxy_aware_spawn_env()
+        if os.environ.get('PERCH_LOCAL_CODEX'):
+            # App-bundled CLIs are often symlinked into ~/.local/bin. Their tool
+            # helpers live beside the actual executable, not beside the link.
+            binary = str(pathlib.Path(binary).resolve())
+            env['PATH'] = str(pathlib.Path(binary).parent) + os.pathsep + env.get('PATH', '')
         self.process = subprocess.Popen([binary,'app-server','--listen','stdio://'],cwd=cwd,
-            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True,env=proxy_aware_spawn_env())
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.stderr,text=True,bufsize=1,start_new_session=True,env=env)
         threading.Thread(target=self.dispatch,daemon=True).start()
         threading.Thread(target=self.read,daemon=True).start()
 
@@ -1250,7 +1257,10 @@ class Handler(BaseHTTPRequestHandler):
                     needs_codex_catalog=target is not None and target.state.get('provider')=='codex'
                 if needs_codex_catalog: codex_models=codex_catalog()
             with LOCK:
-                if self.path=='/health': result={'version':SERVICE_VERSION}
+                if self.path=='/health':
+                    result={'version':SERVICE_VERSION}
+                    if os.environ.get('PERCH_LOCAL_CODEX'):
+                        result['localCodexBinary']=str(pathlib.Path(os.environ['PERCH_LOCAL_CODEX']).resolve())
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
                     provider=body.get('provider')
@@ -1461,7 +1471,9 @@ def active_session(session):
 def reusable_endpoint(path):
     endpoint,health=running_endpoint(path)
     if endpoint is None: return None
-    if health.get('version')==SERVICE_VERSION: return endpoint
+    local_binary=os.environ.get('PERCH_LOCAL_CODEX')
+    matches_binary=not local_binary or health.get('localCodexBinary')==str(pathlib.Path(local_binary).resolve())
+    if health.get('version')==SERVICE_VERSION and matches_binary: return endpoint
     try:
         catalog=endpoint_request(endpoint,'/sessions')
         sessions=catalog.get('sessions')

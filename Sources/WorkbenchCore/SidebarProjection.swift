@@ -1,8 +1,6 @@
 import Foundation
 
-/// Filters for the recents list. There is no local filter while local execution is not
-/// wired: no session carries `ExecutionEnvironment.localHostID`, so the option could
-/// only ever report an empty list.
+/// Filters shared by local and remote conversations. Environment scope is selected separately.
 public enum SidebarRecentFilter: String, CaseIterable {
     case all = "全部会话", running = "运行中"
 }

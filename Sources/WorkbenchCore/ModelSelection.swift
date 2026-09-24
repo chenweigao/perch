@@ -4,10 +4,11 @@ import Foundation
 /// model's own catalog entry, because unsupported values are not rejected
 /// consistently by every runtime.
 public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
-    case off, minimal, low, medium, high, xhigh, max, ultra, auto
+    case off, minimal, low, medium, high, xhigh, max, ultra, auto, none
 
     public var label: String {
         switch self {
+        case .none: return "None"
         case .off: return "Off"
         case .minimal: return "Minimal"
         case .low: return "Low"
@@ -26,8 +27,8 @@ public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
 }
 
 /// A model the user can pick, with the effort levels that model actually accepts.
-/// An empty `thinking` list means the model has no reasoning control, which must be
-/// shown as unavailable rather than as a default level.
+/// An empty `thinking` list means no adjustable levels have been declared. It does
+/// not establish whether the model itself can reason.
 public struct AgentModel: Identifiable, Equatable, Sendable {
     /// What the runtime expects back when selecting: provider and id stay separate
     /// because some native adapters reject a combined "provider/id".
@@ -37,6 +38,8 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
     public let contextWindow: Int?
     public let thinking: [ThinkingLevel]
     public let defaultThinking: ThinkingLevel?
+    /// Reasoning ability is separate from whether the catalog declares adjustable effort levels.
+    public let hasThinkingCapability: Bool?
     /// The runtime that can route this model. `provider` is the model's own vendor
     /// and says nothing about that, so a combined catalog needs this to avoid
     /// offering a dsh route to OMP. Nil means the catalog did not say.
@@ -44,11 +47,12 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
 
     public init(id: String, provider: String, name: String, contextWindow: Int? = nil,
                 thinking: [ThinkingLevel] = [], defaultThinking: ThinkingLevel? = nil,
-                agent: SessionKind? = nil) {
+                agent: SessionKind? = nil, hasThinkingCapability: Bool? = nil) {
         self.id = id; self.provider = provider; self.name = name
         self.contextWindow = contextWindow; self.thinking = thinking
         self.defaultThinking = thinking.contains(where: { $0 == defaultThinking }) ? defaultThinking : nil
         self.agent = agent
+        self.hasThinkingCapability = thinking.isEmpty ? hasThinkingCapability : true
     }
 
     public var supportsThinking: Bool { !thinking.isEmpty }
@@ -80,7 +84,8 @@ public enum ModelSelectionCatalog {
                               contextWindow: item["contextWindow"].int,
                               thinking: levels,
                               defaultThinking: ThinkingLevel.parse(item["defaultThinking"].string),
-                              agent: SessionKind(rawValue: item["agent"].string ?? ""))
+                              agent: SessionKind(rawValue: item["agent"].string ?? ""),
+                              hasThinkingCapability: item["reasoning"] == .null ? nil : item["reasoning"] == .bool(true))
         }
     }
 
@@ -94,7 +99,7 @@ public enum ModelSelectionCatalog {
     }
 
     /// Parses Kimi `/api/v1/models`. Effort levels come from `support_efforts`, which
-    /// only some models carry; the rest genuinely have no effort control.
+    /// only some models carry. Missing levels do not prove an inability to reason.
     public static func parseKimi(_ items: [JSONValue]) -> [AgentModel] {
         items.compactMap { item in
             guard let id = item["model"].string, !id.isEmpty,
@@ -105,7 +110,9 @@ public enum ModelSelectionCatalog {
                                   ?? String(id.split(separator: "/").last ?? Substring(id)),
                               contextWindow: item["max_context_size"].int,
                               thinking: levels,
-                              defaultThinking: ThinkingLevel.parse(item["default_effort"].string))
+                              defaultThinking: ThinkingLevel.parse(item["default_effort"].string),
+                              hasThinkingCapability: item["capabilities"].array.isEmpty ? nil
+                                : item["capabilities"].array.contains { ["thinking", "always_thinking"].contains($0.string ?? "") })
         }
     }
 

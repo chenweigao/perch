@@ -32,8 +32,8 @@ struct WorkbenchSettings: View {
                 ForEach(model.connections) { connection in
                     VStack(alignment: .leading, spacing: 10) {
                         HostSettingsRow(connection: connection) {
-                            editingHost = connection.host
-                            showSSH = true
+                            if connection.host.isLocal { showLocal = true }
+                            else { editingHost = connection.host; showSSH = true }
                         }
                         if let agents = model.agentConnections(for: connection.id) {
                             HostConnectionControls(model: model, connection: connection,
@@ -117,17 +117,11 @@ struct WorkbenchSettings: View {
     }
 
     @ViewBuilder private var localAgentStatus: some View {
-        switch model.localOMP {
-        case .found(_, let version):
-            Label("已找到 omp \(version)", systemImage: "checkmark.circle.fill")
-                .font(.caption).foregroundStyle(.green)
-        case .unusable:
-            Label("找到了可执行文件，但无法使用", systemImage: "exclamationmark.triangle.fill")
-                .font(.caption).foregroundStyle(.orange)
-        case .missing:
-            Text("未找到本机 omp").font(.caption).foregroundStyle(.secondary)
-        case nil:
-            Text("尚未检测。").font(.caption).foregroundStyle(.secondary)
+        let count = model.localAgents.values.filter { $0.executablePath != nil }.count
+        if count > 0 {
+            Text("已发现 \(count) 个本机 Agent").font(.caption).foregroundStyle(.secondary)
+        } else {
+            Text("检测 Kimi、Codex 等本机 Agent").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -191,7 +185,7 @@ private struct HostConnectionControls: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if connection.host.enabledAgents.contains(.kimi) || connection.host.hasNativeAgents {
-                connectionRow("SSH Agent", online: sshOnline, requested: sshRequested,
+                connectionRow(connection.host.isLocal ? L("本机 Agent") : "SSH Agent", online: sshOnline, requested: sshRequested,
                               autoConnect: Binding(get: { connection.host.autoConnectSSH },
                                   set: { model.setAutoConnect($0, for: connection.id, herdr: false) })) {
                     if sshRequested { model.disconnectSSH(connection.id) }

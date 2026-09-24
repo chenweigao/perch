@@ -139,8 +139,8 @@ func runToolbarChecks() async {
             let extended = try await openPanel(main, thinking: true)
             click(NSPoint(x: 80, y: extended.frame.height - 60 - 5 * 33), in: extended)
             try await pause()
-            try expect(ToolbarProbe.selection == "fixture/long|xhigh", "All nine effort rows must be reachable")
-            print("PASS: separate model/effort pickers, dismiss on selection, fallback and nine levels")
+            try expect(ToolbarProbe.selection == "fixture/long|xhigh", "Extended effort rows must be reachable")
+            print("PASS: separate model/effort pickers, dismiss on selection, fallback and extended levels")
         }
         try await press("narrow")
         try checkLayout("narrow Chinese long model")

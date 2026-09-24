@@ -80,6 +80,15 @@ func checkModelSelection() throws {
     let inconsistent = AgentModel(id: "x", provider: "p", name: "X", thinking: [.low], defaultThinking: .max)
     precondition(inconsistent.defaultThinking == nil && inconsistent.resolve(.max) == nil)
 
+    let undeclared = ModelSelectionCatalog.parseKimi(try json("""
+    [{"provider":"custom","model":"custom/reasoner","capabilities":["thinking","tool_use"]},
+     {"provider":"custom","model":"custom/adjustable","support_efforts":["none","low","high"],"default_effort":"none"}]
+    """).array)
+    precondition(undeclared[0].hasThinkingCapability == true && !undeclared[0].supportsThinking)
+    precondition(undeclared[1].thinking == [.none, .low, .high])
+    precondition(undeclared[1].defaultThinking == ThinkingLevel.none)
+    precondition(undeclared[1].resolve(ThinkingLevel.none)?.rawValue == "none")
+
     // Context budget: a runtime that has not reported a window is unknown, never 0%.
     precondition(ContextBudget(used: 0, limit: 0) == nil)
     precondition(ContextBudget(used: 100, limit: nil) == nil)

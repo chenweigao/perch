@@ -42,6 +42,35 @@ public enum DiscoveryState: Equatable, Sendable {
 /// absolute paths plus whatever PATH does contain — never a shell command built by
 /// string concatenation.
 public enum LocalAgentDiscovery {
+    public static let agents: [SessionKind] = [.kimi, .codex, .omp, .claude, .qoder, .dsh]
+    public static let supported: [SessionKind] = [.kimi, .codex]
+    public static func executableName(_ kind: SessionKind) -> String {
+        kind == .qoder ? "qoderclicn" : kind.rawValue
+    }
+    public static var environment: [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let paths = [home + "/.local/bin", home + "/.bun/bin", "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
+        env["PATH"] = (paths + (env["PATH"] ?? "").split(separator: ":").map(String.init)).joined(separator: ":")
+        return env
+    }
+    public static func discover(_ kind: SessionKind, override: String? = nil) async -> DiscoveryState {
+        let name = executableName(kind)
+        let defaults = ["/opt/homebrew/bin/", "/usr/local/bin/", "/opt/local/bin/", "/run/current-system/sw/bin/"].map { $0 + name }
+        let paths = override.map { [$0] } ?? candidates(named: name, defaults: defaults,
+            path: environment["PATH"], home: FileManager.default.homeDirectoryForCurrentUser.path)
+        var failure: DiscoveryState?
+        for path in paths where FileManager.default.isExecutableFile(atPath: path) {
+            do {
+                let data = try await SetupCommandRunner.run(path, ["--version"], timeout: 5, environment: environment)
+                guard let version = parseVersion(String(decoding: data, as: UTF8.self)) else {
+                    failure = .unusable(path: path, reason: L("无法解析版本输出")); continue
+                }
+                return .found(path: path, version: version)
+            } catch { failure = .unusable(path: path, reason: error.localizedDescription) }
+        }
+        return failure ?? .missing(hint: L("未找到可执行文件"))
+    }
     public static let ompSearchPaths = [
         "/opt/homebrew/bin/omp", "/usr/local/bin/omp", "/opt/local/bin/omp",
         "/run/current-system/sw/bin/omp",
@@ -66,9 +95,9 @@ public enum LocalAgentDiscovery {
 
     /// Parses `omp/17.1.4` or `omp v17.1.4`. Anything unrecognised stays unknown so
     /// capabilities are not inferred from a version we cannot read.
-    public static func parseOMPVersion(_ output: String) -> String? {
+    public static func parseVersion(_ output: String) -> String? {
         let text = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let match = text.range(of: "[0-9]+\\.[0-9]+\\.[0-9]+", options: .regularExpression) else { return nil }
+        guard let match = text.range(of: "[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?", options: .regularExpression) else { return nil }
         return String(text[match])
     }
 

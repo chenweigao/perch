@@ -3,11 +3,11 @@ import Foundation
 /// Bounded, cancellable commands used by the setup sheet. Cancellation ends only
 /// the local check/SSH client, never an already running remote agent.
 public enum SetupCommandRunner {
-    public static func run(_ executable: String, _ arguments: [String], timeout: TimeInterval = 30) async throws -> Data {
+    public static func run(_ executable: String, _ arguments: [String], timeout: TimeInterval = 30, environment: [String: String]? = nil) async throws -> Data {
         let execution = Execution()
         return try await withTaskCancellationHandler {
             try await Task.detached {
-                try execution.run(executable, arguments, timeout: timeout)
+                try execution.run(executable, arguments, timeout: timeout, environment: environment)
             }.value
         } onCancel: { execution.stop(cancelled: true) }
     }
@@ -25,12 +25,13 @@ public enum SetupCommandRunner {
             if cancelled { self.cancelled = true } else { timedOut = true }
             if process.isRunning { process.terminate() }
         }
-        func run(_ executable: String, _ arguments: [String], timeout: TimeInterval) throws -> Data {
+        func run(_ executable: String, _ arguments: [String], timeout: TimeInterval, environment: [String: String]?) throws -> Data {
             let output = Pipe(), errors = Pipe()
             lock.lock()
             if cancelled { lock.unlock(); throw CancellationError() }
             process.executableURL = URL(fileURLWithPath: executable)
             process.arguments = arguments
+            if let environment { process.environment = environment }
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = output; process.standardError = errors
             do { try process.run() } catch { finished = true; lock.unlock(); throw error }
