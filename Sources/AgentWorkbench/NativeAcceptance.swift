@@ -48,12 +48,13 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     private(set) var responseMessages: [Int] = []
     private(set) var responseBytes: [Int] = []
     init() throws {
-        sessions = (0..<500).map { index in
-            WorkspaceSession(reference: SessionReference(hostID: Self.host.id, terminalID: "session-\(index)", kind: .omp),
-                             title: String(format: "验收会话 %04d · 中文 English", index),
-                             directory: "/fixture/project-\(index % 20)", hostName: "离线验收", detail: "OMP · 就绪",
-                             online: index % 17 != 16, section: .other, canMarkReviewed: false,
-                             archived: index % 19 == 18, updatedAt: Double(500 - index))
+        sessions = (0..<500).map { index -> WorkspaceSession in
+            let reference = SessionReference(hostID: Self.host.id, terminalID: "session-\(index)", kind: .omp)
+            let title = String(format: "验收会话 %04d · 中文 English", index)
+            return WorkspaceSession(reference: reference, title: title,
+                                    directory: "/fixture/project-\(index % 20)", hostName: "离线验收", detail: "OMP · 就绪",
+                                    online: index % 17 != 16, section: .other, canMarkReviewed: false,
+                                    archived: index % 19 == 18, updatedAt: Double(500 - index))
         }
         // Only eight fixed local responses are resident, matching the tested
         // working set. No hundreds-of-conversations preload or remote fallback.

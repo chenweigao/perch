@@ -1,0 +1,585 @@
+{
+  "baseline_main_sha": "9c1e632596281cc83814ca3683f5ac9bb0427f36",
+  "compatibility_commit": "33de79b027c16b97e3e9d7841fb0a26b5f79e842",
+  "fixture": {
+    "window_points": [
+      1280,
+      820
+    ],
+    "catalog_sessions": 500,
+    "resident_json_snapshots": 8,
+    "history_turns_per_snapshot": 200,
+    "build": "release -O",
+    "capture": "none"
+  },
+  "aa_baseline": [
+    {
+      "name": "baseline-1",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "3cdbb74df9902cc4986afd88212ea44f86201a14a810fa5ba6850a7368a24f5b",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 84.2585833324847,
+        "median": 54.1250416663388,
+        "p95": 64.61666666655219
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 70.04858333311859,
+        "median": 58.25862500023504,
+        "p95": 59.701999998651445
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 96.37312499944528,
+        "median": 64.87666666726,
+        "p95": 72.58495833411871
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 28.810124998926767,
+        "median": 4.014208334410796,
+        "p95": 19.85479166614823
+      },
+      "rss_mib": {
+        "before": 156.296875,
+        "after": 190.59375,
+        "settled": 194.953125
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "baseline-2",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "3cdbb74df9902cc4986afd88212ea44f86201a14a810fa5ba6850a7368a24f5b",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 84.38325000133773,
+        "median": 53.70862500058138,
+        "p95": 62.58858333421813
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 68.33100000039849,
+        "median": 59.36149999979534,
+        "p95": 64.67270833309158
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 90.58291666588048,
+        "median": 63.82054166715534,
+        "p95": 71.04525000067952
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 29.327499998544226,
+        "median": 4.238458333929884,
+        "p95": 20.295666667152545
+      },
+      "rss_mib": {
+        "before": 147.125,
+        "after": 185.75,
+        "settled": 185.765625
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 6
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "baseline-3",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "3cdbb74df9902cc4986afd88212ea44f86201a14a810fa5ba6850a7368a24f5b",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 83.98370833310764,
+        "median": 54.694458332960494,
+        "p95": 63.266125000154716
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 123.84258333440812,
+        "median": 63.614000000598026,
+        "p95": 73.68583333300194
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 96.17083333432674,
+        "median": 67.45500000033644,
+        "p95": 71.39283333344792
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 35.84212499845307,
+        "median": 3.7104999992152443,
+        "p95": 22.726583334588213
+      },
+      "rss_mib": {
+        "before": 147.734375,
+        "after": 185.671875,
+        "settled": 185.640625
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 13
+      },
+      "local_request_count": 35
+    }
+  ],
+  "alternating_order": [
+    "a1",
+    "b1",
+    "a2",
+    "b2",
+    "a3",
+    "b3",
+    "b4",
+    "a4",
+    "b5",
+    "a5"
+  ],
+  "ab": [
+    {
+      "name": "ab-a1",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "aafff90251b1d51d31f1f265bccc740ee33083a1d742e34f21b34c1127fcc803",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 85.56387499993434,
+        "median": 54.90066666789062,
+        "p95": 64.86174999918148
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 71.20995833247434,
+        "median": 62.32329166596173,
+        "p95": 67.52725000114879
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 93.6347916667728,
+        "median": 66.80950000009034,
+        "p95": 69.17799999973795
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 28.42725000118662,
+        "median": 4.078750000189757,
+        "p95": 20.000083331979113
+      },
+      "rss_mib": {
+        "before": 144.234375,
+        "after": 183.625,
+        "settled": 183.625
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-b1",
+      "status": "passed",
+      "source_sha256": "060a5b7e11b113b0da38a954fb2098236e097eed16e04dbf5023526553619c0c",
+      "binary_sha256": "9735009657d6d01e5df321ea4514dc17a06b4f4c83639f91abb950b1b94d1920",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 48.817916665939265,
+        "median": 21.87712500017369,
+        "p95": 25.70608333371638
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 39.26429166676826,
+        "median": 22.393958332031616,
+        "p95": 31.235291666234843
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 91.89920833341603,
+        "median": 66.47924999924726,
+        "p95": 78.81170833388751
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 30.183083334122784,
+        "median": 4.044041666929843,
+        "p95": 19.92649999920104
+      },
+      "rss_mib": {
+        "before": 147.359375,
+        "after": 185.484375,
+        "settled": 185.453125
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-a2",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "aafff90251b1d51d31f1f265bccc740ee33083a1d742e34f21b34c1127fcc803",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 384.50158333398576,
+        "median": 61.687791667282,
+        "p95": 91.93870833405526
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 71.70233333454235,
+        "median": 61.107833333153394,
+        "p95": 64.49754166715138
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 101.15120833324909,
+        "median": 64.00520833267365,
+        "p95": 70.22666666671284
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 29.848000000129105,
+        "median": 4.0626666668686084,
+        "p95": 19.95254166649829
+      },
+      "rss_mib": {
+        "before": 144.578125,
+        "after": 183.71875,
+        "settled": 183.71875
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 7
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-b2",
+      "status": "passed",
+      "source_sha256": "060a5b7e11b113b0da38a954fb2098236e097eed16e04dbf5023526553619c0c",
+      "binary_sha256": "9735009657d6d01e5df321ea4514dc17a06b4f4c83639f91abb950b1b94d1920",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 30.133666667097714,
+        "median": 24.416916665359167,
+        "p95": 24.815916665829718
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 40.953625000838656,
+        "median": 23.319416666709003,
+        "p95": 32.15129166528641
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 86.57220833265455,
+        "median": 67.00066666599014,
+        "p95": 77.63370833345107
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 27.83320833259495,
+        "median": 4.205916666251142,
+        "p95": 19.810875000985106
+      },
+      "rss_mib": {
+        "before": 142.671875,
+        "after": 182.03125,
+        "settled": 182
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-a3",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "aafff90251b1d51d31f1f265bccc740ee33083a1d742e34f21b34c1127fcc803",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 81.82616666636022,
+        "median": 64.24212500132853,
+        "p95": 74.97966666596767
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 116.67958333418937,
+        "median": 62.47212499874877,
+        "p95": 71.9212083331513
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 90.48554166656686,
+        "median": 66.61616666497139,
+        "p95": 71.07725000059872
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 30.549666666047415,
+        "median": 4.47600000006787,
+        "p95": 19.039999999222346
+      },
+      "rss_mib": {
+        "before": 144.46875,
+        "after": 184.09375,
+        "settled": 184.0625
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-b3",
+      "status": "passed",
+      "source_sha256": "060a5b7e11b113b0da38a954fb2098236e097eed16e04dbf5023526553619c0c",
+      "binary_sha256": "9735009657d6d01e5df321ea4514dc17a06b4f4c83639f91abb950b1b94d1920",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 46.96449999937613,
+        "median": 21.11654166583321,
+        "p95": 24.60754166713741
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 37.379500001406996,
+        "median": 21.848041666089557,
+        "p95": 31.304166666814126
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 81.80691666711937,
+        "median": 66.87400000009802,
+        "p95": 77.38216666621156
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 31.713666667201323,
+        "median": 4.283624999516178,
+        "p95": 19.182708334483323
+      },
+      "rss_mib": {
+        "before": 143.09375,
+        "after": 183.59375,
+        "settled": 187.921875
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-b4",
+      "status": "passed",
+      "source_sha256": "060a5b7e11b113b0da38a954fb2098236e097eed16e04dbf5023526553619c0c",
+      "binary_sha256": "9735009657d6d01e5df321ea4514dc17a06b4f4c83639f91abb950b1b94d1920",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 31.37133333257225,
+        "median": 24.871625000741915,
+        "p95": 29.239458333904622
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 31.621833333701943,
+        "median": 18.38004166711471,
+        "p95": 23.45279166729597
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 96.77754166659724,
+        "median": 59.45012499978475,
+        "p95": 65.8365416675224
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 27.753000000302563,
+        "median": 3.9009583324514097,
+        "p95": 21.022083334173658
+      },
+      "rss_mib": {
+        "before": 144.140625,
+        "after": 177.328125,
+        "settled": 177.3125
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-a4",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "aafff90251b1d51d31f1f265bccc740ee33083a1d742e34f21b34c1127fcc803",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 89.18579166675045,
+        "median": 56.4070416658069,
+        "p95": 64.10395833154325
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 113.07137500079989,
+        "median": 68.9105000001291,
+        "p95": 106.68587500003923
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 99.25400000065565,
+        "median": 61.17233333316108,
+        "p95": 65.81166666728677
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 27.14824999929988,
+        "median": 3.567750000001979,
+        "p95": 21.01724999920407
+      },
+      "rss_mib": {
+        "before": 143.96875,
+        "after": 180.984375,
+        "settled": 180.96875
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-b5",
+      "status": "passed",
+      "source_sha256": "060a5b7e11b113b0da38a954fb2098236e097eed16e04dbf5023526553619c0c",
+      "binary_sha256": "9735009657d6d01e5df321ea4514dc17a06b4f4c83639f91abb950b1b94d1920",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 47.74570833251346,
+        "median": 22.366166665960918,
+        "p95": 24.876958334061783
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 39.10150000046997,
+        "median": 22.043333332476323,
+        "p95": 32.24600000066857
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 88.52866666711634,
+        "median": 61.99716666742461,
+        "p95": 75.28604166691366
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 29.0108750014042,
+        "median": 4.244375000780565,
+        "p95": 19.840708333504153
+      },
+      "rss_mib": {
+        "before": 147.140625,
+        "after": 184.640625,
+        "settled": 184.640625
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 7
+      },
+      "local_request_count": 35
+    },
+    {
+      "name": "ab-a5",
+      "status": "passed",
+      "source_sha256": "077b11be24cef73fb1e277149556d22b81f68a6b3e5a1d8c8641d24e9a81f209",
+      "binary_sha256": "aafff90251b1d51d31f1f265bccc740ee33083a1d742e34f21b34c1127fcc803",
+      "exit_code": 0,
+      "search_sheet_query_to_layout_ms": {
+        "count": 6,
+        "max": 90.09391666586453,
+        "median": 55.48395833284303,
+        "p95": 63.80529166744964
+      },
+      "session_directory_query_to_layout_ms": {
+        "count": 6,
+        "max": 69.4637500000681,
+        "median": 59.80712500058871,
+        "p95": 65.48733333329437
+      },
+      "session_switch_to_layout_ms": {
+        "count": 16,
+        "max": 79.05958333321905,
+        "median": 64.7137500000099,
+        "p95": 75.27437499993539
+      },
+      "history_scroll_step_to_layout_ms": {
+        "count": 120,
+        "max": 29.59158333396772,
+        "median": 3.8817916665720986,
+        "p95": 20.059750000655185
+      },
+      "rss_mib": {
+        "before": 145.484375,
+        "after": 183.4375,
+        "settled": 183.421875
+      },
+      "host_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      },
+      "local_request_count": 35
+    }
+  ],
+  "navigation": {
+    "reading": true,
+    "anchor": true,
+    "search": true,
+    "roundtrip": true,
+    "turns": true,
+    "interactions": true
+  }
+}
