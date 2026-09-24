@@ -37,7 +37,6 @@ struct WorkbenchView: View {
             .sheet(isPresented: $model.showNewTerminal) {
                 if let connection = model.selectedConnection { NewTerminalSheet(connection: connection, model: model) }
             }
-            .sheet(isPresented: $model.showNewKimi) { NewConversationSheet(model: model, native: model.native, kimi: model.kimi) }
             .sheet(item: $model.renamingSession) { item in RenameSessionSheet(model: model, item: item) }
             .sheet(item: $model.groupingSession) { item in SessionGroupsSheet(model: model, item: item) }
             .alert(model.pendingDeletion?.reference.kind == .terminal ? L("结束远端终端？") : L("删除会话？"), isPresented: Binding(get: { model.pendingDeletion != nil }, set: { if !$0 { model.pendingDeletion = nil } }), presenting: model.pendingDeletion) { item in
@@ -86,7 +85,7 @@ private struct WorkbenchDetail: View {
     var body: some View {
         HStack(spacing: 0) {
             conversation
-            if model.showFileViewer && !model.showDashboard {
+            if model.showFileViewer && !model.showDashboard && !model.draftingNewTask {
                 Divider()
                 RemoteFilePanel(browser: model.fileBrowser) { model.toggleFileViewer() }
             }
@@ -105,11 +104,13 @@ private struct WorkbenchDetail: View {
                     Button { model.taskNotice = nil } label: { Image(systemName: "xmark") }
                 }.font(.system(size: 12)).padding(10).background(.orange.opacity(0.06))
             }
-            if model.showConversationFind && (model.showKimi || model.showNative) {
+            if !model.draftingNewTask && model.showConversationFind && (model.showKimi || model.showNative) {
                 ConversationFindBar(model: model, kimi: model.kimi, native: model.native)
             }
             ZStack {
-                if model.showDashboard {
+                if model.draftingNewTask {
+                    NewTaskView(model: model, native: model.native, kimi: model.kimi)
+                } else if model.showDashboard {
                     if model.showArchived { ArchivedSessionsView(model: model) }
                     else if model.showSessionDirectory { SessionDirectoryView(model: model) }
                     else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
@@ -146,9 +147,9 @@ private struct WorkbenchDetail: View {
                         TerminalPane(terminal: terminal, model: model)
                         StatusBar(connection: model.connections.first { $0.id == terminal.hostID }!)
                     }.id(terminal.incarnation)
-                        .opacity(!model.showDashboard && model.selectedTerminalID == terminal.id ? 1 : 0)
-                        .allowsHitTesting(!model.showDashboard && model.selectedTerminalID == terminal.id)
-                        .accessibilityHidden(model.showDashboard || model.selectedTerminalID != terminal.id)
+                        .opacity(!model.showDashboard && !model.draftingNewTask && model.selectedTerminalID == terminal.id ? 1 : 0)
+                        .allowsHitTesting(!model.showDashboard && !model.draftingNewTask && model.selectedTerminalID == terminal.id)
+                        .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.frame(minWidth: 600, maxWidth: .infinity, maxHeight: .infinity)

@@ -57,7 +57,10 @@ final class WorkbenchModel: ObservableObject {
     @Published var launchAfterSetup: TaskLaunchDefaults?
     @Published var pendingSetupLaunch = false
     @Published var showNewTerminal = false
-    @Published var showNewKimi = false
+    /// Inline new-task draft covering the detail area; selection underneath is kept.
+    @Published var draftingNewTask = false {
+        didSet { updateVisibility() }
+    }
     @Published var showRenderReport = false
     @Published var renderReport = ""
     @Published var showGroupEditor = false
@@ -255,7 +258,7 @@ final class WorkbenchModel: ObservableObject {
             }
         } catch { workspaceError = error.localizedDescription }
     }
-    func startNewTask() { if connections.isEmpty { configureHost() } else { showNewKimi = true } }
+    func startNewTask() { if connections.isEmpty { configureHost() } else { draftingNewTask = true } }
     func configureHost(_ host: SSHHost? = nil) { setupHost = host; showAddHost = true }
     func finishSetup(_ host: SSHHost, launch: TaskLaunchDefaults?, startTask: Bool) throws {
         try RemoteSetup.validate(host)
@@ -296,7 +299,7 @@ final class WorkbenchModel: ObservableObject {
         guard pendingSetupLaunch else { return }
         pendingSetupLaunch = false
         if launchAfterSetup?.provider == .terminal { showNewTerminal = true }
-        else { showNewKimi = true }
+        else { draftingNewTask = true }
     }
     func reconnectSelectedEnvironment() {
         if showKimi { kimi.connect() }
@@ -448,7 +451,7 @@ final class WorkbenchModel: ObservableObject {
     }
     func select(_ identity: String) {
         if !navigatingHistory { navigation.visit(identity) }
-        tabs.select(identity); showDashboard = false
+        tabs.select(identity); showDashboard = false; draftingNewTask = false
         if let reference = selectedReference {
             if reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
             selectedHostID = reference.hostID
@@ -481,8 +484,8 @@ final class WorkbenchModel: ObservableObject {
         open(items[(index + 1) % items.count])
     }
     private func updateVisibility(focus: Bool = false) {
-        for terminal in terminals { terminal.context.isSurfaceVisible = !showDashboard && terminal.id == selectedTerminalID }
-        if focus && !showDashboard && !showKimi { selectedTerminal?.context.requestFocus() }
+        for terminal in terminals { terminal.context.isSurfaceVisible = !showDashboard && !draftingNewTask && terminal.id == selectedTerminalID }
+        if focus && !showDashboard && !showKimi && !draftingNewTask { selectedTerminal?.context.requestFocus() }
     }
     func close(_ identity: String) {
         tabs.close(identity); openedSessions.removeAll { $0.session.id == identity }; terminals.removeAll { $0.id == identity }
@@ -504,7 +507,7 @@ final class WorkbenchModel: ObservableObject {
     }
     func showHome(groupID: UUID? = nil) {
         onlyAttention = false; search = ""; showSessionDirectory = false
-        showArchived = false
+        showArchived = false; draftingNewTask = false
         selectedGroupID = groupID
         // The workbench and its inbox are the same queue, so a filter survives the move
         // between them. A group landing page does not read the queue's scope, and

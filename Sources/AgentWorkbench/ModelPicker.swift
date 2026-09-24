@@ -6,8 +6,6 @@ struct ModelPicker: View {
     @Binding var selection: String
     var current = ""
     var effortUnavailable = false
-    /// Sheets that pick a model for a new task show the choice as primary text;
-    /// the composer row keeps the quiet secondary look.
     var emphasizesSelection = false
     var compact = false
     var thinkingModel: AgentModel? = nil
@@ -132,7 +130,7 @@ private struct ModelPickerPanel: View {
     }
 }
 
-private struct ModelPickerRow: View {
+struct ModelPickerRow: View {
     let title: Text
     let detail: String?
     let selected: Bool
@@ -162,8 +160,10 @@ private struct ModelPickerRow: View {
 
 /// Cap long model labels without reserving empty space after short names.
 struct ModelControlWidth: Layout {
+    var maximum: CGFloat = 240
+
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        subviews[0].sizeThatFits(ProposedViewSize(width: min(proposal.width ?? 240, 240), height: proposal.height))
+        subviews[0].sizeThatFits(ProposedViewSize(width: min(proposal.width ?? maximum, maximum), height: proposal.height))
     }
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))

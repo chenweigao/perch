@@ -24,7 +24,7 @@ import WorkbenchCore
             precondition(empty.selectedHostID == host.id && empty.kimi.host == host && empty.pendingSetupLaunch)
             precondition(empty.selectedConnection?.wantsConnection == false, "Kimi setup must not connect Herdr")
             empty.setupDismissed()
-            precondition(empty.showNewKimi && empty.launchAfterSetup == launch)
+            precondition(empty.draftingNewTask && empty.launchAfterSetup == launch)
             let reference = SessionReference(hostID: host.id, terminalID: "fixture-terminal")
             var workspace = LocalWorkspace()
             workspace.pinned = [SavedTerminal(session: reference, title: "Fixture terminal")]
@@ -51,6 +51,20 @@ import WorkbenchCore
             precondition(model.workspace.starred == saved.starred)
             precondition(model.native.drafts["fixture-native"] == "未发送的草稿")
             precondition(model.kimi.drafts["fixture-kimi"] == "Kimi draft")
+            model.startNewTask()
+            precondition(model.draftingNewTask && model.selectedReference == saved.pinned[0].session,
+                         "inline draft must preserve the selected session")
+            model.select(saved.pinned[0].session.id)
+            precondition(!model.draftingNewTask && model.selectedReference == saved.pinned[0].session,
+                         "selecting a session must leave the draft")
+            model.setScope(hostID: saved.pinned[0].session.hostID)
+            model.startNewTask()
+            model.showHome()
+            precondition(!model.draftingNewTask && model.showDashboard,
+                         "returning home must leave the inline draft")
+            precondition(model.scope.hostID == saved.pinned[0].session.hostID,
+                         "inline draft integration must preserve the workbench host scope")
+            print("PASS: inline draft preserves selection, leaves on navigation and retains queue scope")
             print("PASS: restart restores endpoint settings, session, pins and drafts")
 
         case "removal":
