@@ -80,9 +80,7 @@ struct NativeAgentView: View {
                 .task(id: displayedResultKey) {
                     if displayedResultKey != nil { onResultDisplayed(s) }
                 }
-                let recapRevision = !s.busy && s.interactions.isEmpty && s.error == nil && s.completed > 0
-                    ? TaskRecapInput.revision(in: s.messages) : nil
-                let recapKey = recapRevision.map { "\(readingKey):\(s.completed):\($0)" }
+                let recapKey = s.taskRecapRevision.map { "\(readingKey):\($0)" }
                 ConversationActivityBar(activity: ConversationActivity(
                     messages: s.messages, isRunning: s.busy,
                     running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),

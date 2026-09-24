@@ -154,20 +154,58 @@ func checkTaskRecaps() throws {
     let attributes = try FileManager.default.attributesOfItem(atPath: file.url.path)
     precondition((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
 
-    let revision = TaskRecapInput.revision(in: sensitiveMessages)
-    precondition(revision != nil && revision == TaskRecapInput.revision(in: sensitiveMessages))
-    var changedRows = sensitiveRows
-    changedRows[changedRows.count - 1] = ["id": "answer", "role": "assistant", "created_at": "12",
-        "content": [["type": "text", "text": "A revised final answer."]]]
-    let changedAnswerMessages = try decode(changedRows)
-    precondition(TaskRecapInput.revision(in: changedAnswerMessages) != revision)
-    changedRows = sensitiveRows
-    changedRows[8] = ["id": "edit-result", "role": "tool", "created_at": "9", "content": [[
-        "type": "tool_result", "tool_call_id": "edit", "output": ["exit_code": 1, "output": "changed"],
-        "is_error": true
-    ]]]
-    let changedResultMessages = try decode(changedRows)
-    precondition(TaskRecapInput.revision(in: changedResultMessages) != revision)
+    func kimi(updated: String = "1", busy: Bool = false, reason: String = "completed",
+              pending: Bool = false) throws -> KimiConversation {
+        let value: [String: Any] = [
+            "as_of_seq": 20, "epoch": "one",
+            "session": ["id": "k", "title": "K", "updated_at": updated, "busy": busy,
+                        "last_turn_reason": reason, "metadata": [:], "agent_config": [:]],
+            "messages": ["items": [answer(1)], "has_more": true],
+            "pending_approvals": [],
+            "pending_questions": pending ? [["question_id": "q", "questions": []]] : []
+        ]
+        return KimiConversation(try KimiWire.decoder().decode(KimiSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: value)))
+    }
+    var conversation = try kimi()
+    let kimiRevision = conversation.taskRecapRevision
+    precondition(kimiRevision != nil && !conversation.messages.contains(where: \.isUserPrompt),
+                 "A completed paginated conversation must offer Recap without a loaded user prompt")
+    let older = try KimiWire.decoder().decode(KimiPage<KimiMessage>.self,
+        from: JSONSerialization.data(withJSONObject: ["items": [user(1)], "has_more": false]))
+    conversation.prepend(older)
+    precondition(conversation.taskRecapRevision == kimiRevision, "Loading history must reuse the same Recap")
+    let nextKimi = try kimi(updated: "2")
+    precondition(nextKimi.taskRecapRevision != kimiRevision)
+    for value in [try kimi(busy: true), try kimi(reason: "failed"), try kimi(reason: "stopped"), try kimi(pending: true)] {
+        precondition(value.taskRecapRevision == nil)
+    }
+    conversation.error = "failed"
+    precondition(conversation.taskRecapRevision == nil)
+
+    func native(revision: Int = 20, completed: Int = 1, epoch: String = "one", busy: Bool = false,
+                pending: Bool = false, error: String? = nil, older: Bool = false) throws -> NativeAgentSnapshot {
+        var value: [String: Any] = [
+            "id": "n", "provider": "omp", "title": "N", "cwd": "/fixture", "model": "m",
+            "revision": revision, "completed": completed, "busy": busy,
+            "interactions": pending ? [["id": "q"]] : [], "messages": [older ? user(1) : answer(1)],
+            "history": ["epoch": epoch, "start": older ? 0 : 1, "end": older ? 1 : 2, "total": 2]
+        ]
+        if let error { value["error"] = error }
+        return try NativeAgentWire.decode(NativeAgentSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: value))
+    }
+    let latest = try native()
+    let nativeRevision = latest.taskRecapRevision
+    precondition(nativeRevision != nil && !latest.messages.contains(where: \.isUserPrompt))
+    let full = try latest.prepending(native(older: true))
+    precondition(full.taskRecapRevision == nativeRevision, "Prepending history must not invalidate a cached Recap")
+    for changed in [try native(revision: 21), try native(completed: 2), try native(epoch: "two")] {
+        precondition(changed.taskRecapRevision != nativeRevision, "Server content changes must invalidate Recap")
+    }
+    for value in [try native(busy: true), try native(completed: 0), try native(pending: true), try native(error: "failed")] {
+        precondition(value.taskRecapRevision == nil)
+    }
 
     print("PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache")
 }

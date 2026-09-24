@@ -177,7 +177,9 @@ excluded by default; **Include tool output excerpts** opts into at most 600 char
 per selected result. The service receives no tools and cannot act on the Agent session.
 There is no automatic retry, redirect, second pass, or provider fallback.
 
-Successful results are cached locally by host, session, and completed-content revision.
+Successful results are cached locally by host, session, and server completion revision
+(Kimi update time; Native history epoch, completion count, and revision). Eligibility
+and cache identity do not depend on the currently loaded transcript page.
 The cache keeps 128 entries in
 `~/Library/Application Support/dev.agentworkbench.mac/task-recaps.json`, uses atomic
 writes and `0600` permissions, and is replaced when the user regenerates the same
