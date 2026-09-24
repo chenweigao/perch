@@ -21,7 +21,7 @@ struct ComposerModelPicker: View {
     private var model: AgentModel? { models.first { $0.id == modelID } }
     private var title: String { model?.name ?? (modelID.isEmpty ? L("选择模型") : modelID) }
     private var thinkingTitle: String {
-        model?.resolve(thinking).map { L(key: $0.label) } ?? L("默认")
+        model?.resolve(thinking)?.label ?? "Default"
     }
 
     var body: some View {
@@ -45,7 +45,7 @@ struct ComposerModelPicker: View {
             if let model, model.supportsThinking, unavailableReason == nil {
                 Button { thinkingPresented.toggle() } label: {
                     HStack(spacing: 5) {
-                        Text("思考：\(thinkingTitle)")
+                        Text(verbatim: thinkingTitle)
                         chevron
                     }
                     .font(.system(size: 12)).foregroundStyle(.secondary)

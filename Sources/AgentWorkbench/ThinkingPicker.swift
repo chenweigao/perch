@@ -18,10 +18,10 @@ struct ThinkingPicker: View {
             } else if let model, model.supportsThinking {
                 VStack(spacing: 2) {
                     ForEach(model.thinking, id: \.self) { level in
-                        ModelPickerRow(title: Text(L(key: level.label)), detail: nil,
+                        ModelPickerRow(title: Text(verbatim: level.label), detail: nil,
                                        selected: level == model.resolve(current)) { onSelect(level) }
                             .disabled(disabled)
-                            .accessibilityLabel(L("思考：\(L(key: level.label))"))
+                            .accessibilityLabel(L("思考：\(level.label)"))
                             .accessibilityIdentifier("thinking-level:\(level.rawValue)")
                     }
                 }
