@@ -41,11 +41,14 @@ public struct ConversationTimings: Equatable {
         if submissions[requestID] == nil { submissions[requestID] = now }
     }
 
-    public mutating func finished(sessionID: String, requestID: String, at now: Date = Date()) {
+    public mutating func finished(sessionID: String, requestID: String, turnID: String? = nil,
+                                  at now: Date = Date()) {
+        let resolvedTurnID = turnID ?? requestID
         if let current = turns[sessionID], let turn = current.turnID {
-            guard turn == requestID, current.endedAt == nil else { return }
+            guard turn == resolvedTurnID, current.endedAt == nil else { return }
         }
-        observe(sessionID: sessionID, turnID: requestID, requestID: requestID, running: true, waiting: false, at: now)
+        observe(sessionID: sessionID, turnID: resolvedTurnID, requestID: requestID,
+                running: true, waiting: false, at: now)
         observe(sessionID: sessionID, running: false, waiting: false, at: now)
     }
 

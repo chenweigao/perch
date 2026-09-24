@@ -7,8 +7,10 @@ func checkNativeAgents() throws {
     let snapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"a","provider":"omp","title":"A","cwd":"/tmp","busy":false,"revision":2,"completed":0,"model":"m","permission":{"selected":"write","options":["always-ask","write","yolo"],"scope":"new-session"},"messages":[{"id":"m","role":"assistant","created_at":"now","content":[{"type":"text","text":"中文"}]}],"interactions":[],"error":"runtime failed"}"#.utf8))
     precondition(snapshot.snapshot?.messages.first?.createdAt == "now" && snapshot.snapshot?.error == "runtime failed")
     precondition(snapshot.snapshot?.permission == PermissionCapability(selected: "write", options: ["always-ask", "write", "yolo"], scope: .newSession))
-    let receipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"request","status":"failed","error":"rejected"}"#.utf8))
-    precondition(receipt.status == "failed" && receipt.error == "rejected", "Receipt errors are payloads, not request errors")
+    let receipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"request","status":"failed","error":"rejected","runtimeTurnId":"runtime-turn"}"#.utf8))
+    precondition(receipt.status == "failed" && receipt.error == "rejected" && receipt.activeTurnId == "runtime-turn", "Receipt errors and runtime turn IDs are payloads")
+    let steerReceipt = try NativeAgentWire.decode(NativeRequestReceipt.self, from: Data(#"{"id":"steer","status":"consumed","turnId":"steered-turn"}"#.utf8))
+    precondition(steerReceipt.activeTurnId == "steered-turn", "Steer receipts expose their active runtime turn")
     do {
         _ = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"error":"request failed"}"#.utf8))
         preconditionFailure("expected request error")

@@ -5,6 +5,7 @@ import WorkbenchCore
 private final class TransportFixture {
     var sessions: [String: [String: Any]] = [:]
     var receipts: [String: String] = [:]
+    var requestTurns: [String: String] = [:]
     var prompts: [String] = []
     var steers: [String] = []
     var creates: [(SessionKind, String, String)] = []
@@ -73,7 +74,9 @@ private final class TransportFixture {
             if failCatalog { throw WorkbenchError("catalog unavailable") }
             result = ["sessions": sessions.keys.sorted().compactMap { sessions[$0] }]
         } else if parts.count == 4 && parts[2] == "requests" {
-            result = ["id": parts[3], "status": receipts[parts[3]] ?? "notFound"]
+            let key = parts[3]
+            result = ["id": key, "status": receipts[key] ?? "notFound"]
+            if let turn = requestTurns[key], turn != key { result["runtimeTurnId"] = turn }
         } else if parts.count == 2 {
             let id = parts[1]
             snapshotRequests.append(id)
@@ -93,13 +96,15 @@ private final class TransportFixture {
             case "prompt":
                 let key = body!["requestId"].string!
                 if receipts[key] == nil {
-                    prompts.append(id); receipts[key] = "accepted"
-                    sessions[id]?["busy"] = true; sessions[id]?["turnId"] = key
+                    let turn = sessions[id]?["provider"] as? String == SessionKind.codex.rawValue ? "runtime-\(key)" : key
+                    prompts.append(id); receipts[key] = "accepted"; requestTurns[key] = turn
+                    sessions[id]?["busy"] = true; sessions[id]?["turnId"] = turn
                     sessions[id]?["turnState"] = "accepted"
                 }
                 if holdPromptResponse { try await withCheckedThrowingContinuation { pendingPrompt = $0 } }
                 if losePromptResponse { losePromptResponse = false; throw WorkbenchError("response lost") }
                 result = ["id": key, "status": receipts[key]!]
+                if let turn = requestTurns[key], turn != key { result["runtimeTurnId"] = turn }
             case "steer":
                 let key = body!["requestId"].string!
                 steers.append(key); receipts[key] = "accepted"
@@ -311,11 +316,27 @@ struct ConnectionChecks {
         client.drafts[session.id] = "start native turn"; client.send()
         await settle { fixture.prompts.last == session.id && !client.sending }
         try await client.refresh()
+        guard let request = client.queue.allItems.first(where: { $0.session.terminalID == session.id }),
+              let runtimeTurn = fixture.requestTurns[request.id],
+              let startedAt = client.timings.turns[session.id]?.startedAt else {
+            preconditionFailure("Codex prompt timing was not started")
+        }
+        precondition(runtimeTurn != request.id && client.timings.turns[session.id]?.turnID == runtimeTurn)
+        precondition(client.timings.turns[session.id]?.observedOnly == false)
         precondition(client.modes(for: session.id) == [.steer, .nextTurn])
         client.drafts[session.id] = "guide native turn"; client.send(mode: .steer)
         await settle { fixture.steers.count == 1 && !client.sending }
+        precondition(client.timings.turns[session.id]?.turnID == runtimeTurn
+                     && client.timings.turns[session.id]?.startedAt == startedAt,
+                     "Steering must not reset the active turn clock")
+        fixture.receipts[request.id] = "completed"
+        fixture.sessions[session.id]?["busy"] = false
+        fixture.sessions[session.id]?["turnState"] = "completed"
+        try await client.poll()
+        precondition(client.timings.turns[session.id]?.endedAt != nil,
+                     "A completion receipt must freeze the runtime turn clock")
         client.disconnect()
-        print("PASS: Codex native thread identity, fixed permission, catalog effort, model actions and steering")
+        print("PASS: Codex native identity, settings, steering and request/runtime turn timing")
     }
 
     @MainActor

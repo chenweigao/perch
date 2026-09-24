@@ -91,6 +91,9 @@ public struct NativeRequestReceipt: Decodable {
     public let id: String
     public let status: String
     public let error: String?
+    public let runtimeTurnId: String?
+    public let turnId: String?
+    public var activeTurnId: String { runtimeTurnId ?? turnId ?? id }
 }
 
 /// Absolute message positions belong to one bridge history epoch. Legacy full

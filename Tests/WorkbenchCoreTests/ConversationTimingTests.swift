@@ -30,6 +30,14 @@ func checkConversationTiming() {
     clocks.observe(sessionID: "late", turnID: "late-turn", requestID: "late-prompt", running: true, waiting: false, at: date(410))
     precondition(clocks.turns["late"]?.elapsed(at: date(420)) == 20 && clocks.turns["late"]?.observedOnly == false)
 
+    // Codex assigns a runtime turn ID that differs from the client request ID.
+    clocks.submitted("client-request", at: date(450))
+    clocks.observe(sessionID: "mapped", turnID: "runtime-turn", requestID: "client-request",
+                   running: true, waiting: false, at: date(452))
+    clocks.finished(sessionID: "mapped", requestID: "client-request", turnID: "runtime-turn", at: date(460))
+    precondition(clocks.turns["mapped"]?.elapsed(at: date(999)) == 10,
+                 "A mapped runtime turn must freeze from the original submission")
+
     // A fast native turn may finish before the first busy catalog arrives.
     clocks.submitted("fast", at: date(500))
     clocks.finished(sessionID: "fast-session", requestID: "fast", at: date(501))
