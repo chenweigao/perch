@@ -18,13 +18,20 @@ public enum SessionNaming {
     }
 
     /// A real title set by the user or the remote agent is never replaced.
-    /// Native bridges fill the title with the first 60 characters of the
-    /// prompt, which reads as raw input rather than a name.
+    /// Runtimes that backfill the title with the prompt itself read as raw
+    /// input rather than a name: native bridges use its first 60 characters,
+    /// the Kimi server the verbatim message.
     public static func isPlaceholder(_ title: String, kind: SessionKind, firstUserText: String?) -> Bool {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         switch kind {
         case .terminal: return false
-        case .kimi: return trimmed.isEmpty
+        case .kimi:
+            if trimmed.isEmpty { return true }
+            guard let first = firstUserText else { return false }
+            // A generated title is never a prefix of the prompt. The reverse
+            // check covers prompts longer than the excerpt bound, where the
+            // echoed title outgrows the excerpt instead.
+            return first.hasPrefix(trimmed) || trimmed.hasPrefix(first)
         case .omp, .qoder, .dsh, .codex, .claude:
             // The bridge's default title is a literal, not a localized string.
             if trimmed.isEmpty || trimmed == "新对话" { return true }
