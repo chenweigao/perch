@@ -36,6 +36,15 @@ func checkSessionNaming() throws {
     precondition(SessionNaming.isPlaceholder("", kind: .kimi, firstUserText: prompt))
     precondition(SessionNaming.isPlaceholder("  ", kind: .kimi, firstUserText: prompt))
     precondition(!SessionNaming.isPlaceholder("登录问题排查", kind: .kimi, firstUserText: prompt))
+    let echoed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    precondition(SessionNaming.isPlaceholder(echoed, kind: .kimi, firstUserText: echoed),
+                 "The Kimi server backfills the title with the first prompt; an echo is not a name")
+    precondition(SessionNaming.isPlaceholder(String(echoed.prefix(20)), kind: .kimi, firstUserText: echoed))
+    precondition(!SessionNaming.isPlaceholder("Login redirect loop", kind: .kimi, firstUserText: echoed),
+                 "A generated title is not a prefix of the prompt")
+    let longEcho = String(repeating: "长", count: 500)
+    precondition(SessionNaming.isPlaceholder(longEcho, kind: .kimi, firstUserText: String(longEcho.prefix(400))),
+                 "A prompt longer than the excerpt bound still matches its echoed title")
     precondition(!SessionNaming.isPlaceholder("", kind: .terminal, firstUserText: prompt),
                  "Terminal titles come from the shell and are never named")
     for kind in [SessionKind.omp, .qoder, .dsh, .codex, .claude] {
