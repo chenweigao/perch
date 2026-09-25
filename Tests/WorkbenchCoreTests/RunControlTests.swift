@@ -134,7 +134,8 @@ func checkRunControl() throws {
     precondition(risky.id == "m-a")
     queue.markAccepted("m-a")
     queue.markUnknown("m-a", "断线，未确认是否已执行")
-    precondition(queue.message("m-a")?.state.label.contains("Send unconfirmed") == true)
+    precondition(queue.message("m-a")?.state == .unknown("断线，未确认是否已执行"))
+    precondition(queue.message("m-a")?.state.label == L("接收状态待确认：\("断线，未确认是否已执行")"))
     // Retry reuses the id so the runtime can reject a duplicate.
     guard let retried = queue.retry("m-a") else { fatalError("retry") }
     precondition(retried.id == "m-a" && retried.state == .draftQueued)

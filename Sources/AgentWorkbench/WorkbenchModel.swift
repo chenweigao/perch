@@ -72,8 +72,21 @@ final class WorkbenchModel: ObservableObject {
     @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "task.notifications") {
         didSet {
             UserDefaults.standard.set(notificationsEnabled, forKey: "task.notifications")
+            notifications.cancelPendingCompletions()
             if notificationsEnabled { notifications.requestPermission { [weak self] error in self?.notificationError = error } }
         }
+    }
+    @Published var notifyAttentionOnly = UserDefaults.standard.bool(forKey: "task.notifications.attentionOnly") {
+        didSet {
+            UserDefaults.standard.set(notifyAttentionOnly, forKey: "task.notifications.attentionOnly")
+            notifications.cancelPendingCompletions()
+        }
+    }
+    @Published private(set) var mutedTasks = Set(UserDefaults.standard.stringArray(forKey: "task.notifications.muted") ?? [])
+    func toggleTaskNotifications(_ id: String) {
+        if mutedTasks.contains(id) { mutedTasks.remove(id) } else { mutedTasks.insert(id) }
+        UserDefaults.standard.set(Array(mutedTasks), forKey: "task.notifications.muted")
+        notifications.cancelPendingCompletions(for: id)
     }
     private let notifications = TaskNotifications()
     private var taskEvents = TaskEventTracker()
@@ -140,6 +153,7 @@ final class WorkbenchModel: ObservableObject {
         if let reference = selectedReference { navigation.visit(reference.id) }
         notifications.start()
         notifications.onOpen = { [weak self] id in self?.openNotifiedTask(id) }
+        notifications.onOpenDashboard = { [weak self] in self?.showHome() }
         for connection in connections { observe(connection) }
         if !hosts.isEmpty { registerEnvironment(kimi: kimi, native: native) }
         for host in hosts where host.id != kimi.host.id {
@@ -955,6 +969,8 @@ final class WorkbenchModel: ObservableObject {
                 else if let connection = connections.first(where: { $0.id == item.reference.hostID }) { try await connection.closeTerminal(item.reference.terminalID) }
                 if tabs.ids.contains(item.id) { close(item.id) }
                 workspace.removeSession(item.reference)
+                let kind = item.reference.kind == .kimi ? "kimi" : "native"
+                ConversationReadingMemory.shared.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 rebuildCatalog(); saveWorkspace()
             } catch { managementError = error.localizedDescription }
         }
@@ -1029,6 +1045,7 @@ final class WorkbenchModel: ObservableObject {
             }
             let state = TaskEventState(running: subject.busy, pending: subject.pendingInteraction, failed: subject.failed, completion: completion)
             guard let event = taskEvents.observe(state, id: item.id, online: item.online) else { continue }
+            guard !mutedTasks.contains(item.id), !notifyAttentionOnly || event != .completed else { continue }
             if NSApp.isActive && !showDashboard && selectedReference?.id == item.id { continue }
             let notice = TaskNotice(sessionID: item.id, title: item.title, kind: event)
             taskNotice = notice

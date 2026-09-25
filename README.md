@@ -49,8 +49,8 @@ See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / dsh / Codex / Claude Code s
 for tested versions and recovery limits. Agent credentials and model configuration
 stay with the CLI; Perch does not connect directly to model providers.
 
-Local OMP discovery is available, but local native conversations are not connected
-yet. Kimi, remote OMP and Codex support steering during a running task, with an
+Local Kimi and Codex conversations are available; other local agents remain
+discovery-only. See [local agents](docs/LOCAL-AGENTS.md). Kimi, remote OMP and Codex support steering during a running task, with an
 explicit next-turn option. Codex keeps its native thread ID and history, takes model
 and reasoning-effort choices from `model/list`, and surfaces every app-server approval
 or question for an explicit response. Qoder CN / dsh / Claude Code support stopping and next-turn

@@ -9,7 +9,8 @@ import WorkbenchCore
     @StateObject private var model: WorkbenchModel
 
     init() {
-        let host = SSHHost(name: "dev-env", destination: "dev-env", enabledAgents: [.kimi, .omp, .codex])
+        let host = SSHHost(name: "dev-env", destination: "fixture.invalid", enabledAgents: [.kimi, .omp, .codex],
+                           autoConnectSSH: false, autoConnectHerdr: false)
         UserDefaults.standard.set(try? JSONEncoder().encode([host]), forKey: "hosts")
         UserDefaults.standard.set("/opt/demo/perch", forKey: "new.cwd.\(host.id.uuidString)")
         UserDefaults.standard.set("把登录页改成两栏布局，左侧放品牌插画", forKey: "new.task.prompt")
@@ -21,7 +22,7 @@ import WorkbenchCore
         WindowGroup("新建任务预览") {
             NewTaskView(model: model, native: model.native, kimi: model.kimi)
                 .preferredColorScheme(.light)
-        }.defaultSize(width: 1100, height: 760)
+        }.defaultSize(width: ProcessInfo.processInfo.environment["PERCH_PREVIEW_NARROW"] == "1" ? 620 : 1100, height: 760)
     }
 }
 

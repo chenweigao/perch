@@ -13,7 +13,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var wantsConnection = false
     @Published var error: String?
     @Published var actionError: String?
-    @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
+    @Published var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
     @Published private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     @Published var queue = OutboundQueue() { didSet { persistDrafts() } }
@@ -36,6 +36,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var loadingOlder = false
     private var historyWindows: [String: (start: Int, epoch: String)] = [:]
     private var nextCatalogRefresh = Date.distantPast
+    private var nextIdleSnapshotRefresh = Date.distantPast
     private var selectionGeneration = UUID()
     private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
@@ -50,11 +51,11 @@ final class NativeAgentConnection: ObservableObject {
             drafts = saved.text
             queue = saved.outbox
             draftFile = file
-        } catch { draftLoadError = error.localizedDescription; draftSaveError = "Draft recovery failed; the original file was preserved: \(error.localizedDescription)" }
+        } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
-    private func persistDrafts() {
-        draftFile?.save(savedDrafts) { [weak self] error in
-            Task { @MainActor in self?.draftSaveError = error.map { "Drafts could not be saved: " + $0 } }
+    private func persistDrafts(coalescing: Bool = false) {
+        draftFile?.save(savedDrafts, coalescing: coalescing) { [weak self] error in
+            Task { @MainActor in self?.draftSaveError = error.map { L("草稿保存失败：\($0)") } }
         }
     }
     func flushDrafts() throws {
@@ -102,6 +103,7 @@ final class NativeAgentConnection: ObservableObject {
         task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
         nextCatalogRefresh = .distantPast
+        nextIdleSnapshotRefresh = .distantPast
         online = false; wantsConnection = false; error = nil; closeTunnel()
     }
     private func closeTunnel() {
@@ -176,12 +178,22 @@ final class NativeAgentConnection: ObservableObject {
             try await refresh()
             nextCatalogRefresh = now.addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
         } else { try await refreshReceipts() }
-        if selectionTask == nil { try await refreshSelected() }
+        let selected = sessions.first { $0.id == selectedID }
+        let active = snapshot == nil || snapshot?.busy == true || selected?.busy == true
+            || (selected?.pending ?? 0) > 0 || snapshot?.interactions.isEmpty == false
+            || queue.allItems.contains { $0.session.terminalID == selectedID }
+        if selectionTask == nil && (active || now >= nextIdleSnapshotRefresh) {
+            nextIdleSnapshotRefresh = now.addingTimeInterval(2)
+            try await refreshSelected()
+        }
     }
     func refresh() async throws {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
         let value: Catalog = try await request("/sessions")
         let next = value.sessions.sorted { $0.updated > $1.updated }
+        if next.first(where: { $0.id == selectedID }) != sessions.first(where: { $0.id == selectedID }) {
+            nextIdleSnapshotRefresh = .distantPast
+        }
         var clocks = timings
         for session in next {
             clocks.observe(sessionID: session.id, turnID: session.turnId, requestID: session.turnId,
@@ -240,7 +252,7 @@ final class NativeAgentConnection: ObservableObject {
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
         if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }
-        selectedID = id; snapshot = nil; actionError = nil
+        selectedID = id; snapshot = nil; actionError = nil; nextIdleSnapshotRefresh = .distantPast
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
         selectionTask?.cancel()
         selectionGeneration = UUID(); let token = selectionGeneration
@@ -275,7 +287,10 @@ final class NativeAgentConnection: ObservableObject {
         // A page may have expanded the window while this delta was in flight.
         // It did not cover edits in that newly loaded prefix: leave the revision
         // untouched and let the next normal tick request the expanded window.
-        if let window = value.history, window.indices != nil, window.start != snapshot?.history?.start { return }
+        if let window = value.history, window.indices != nil, window.start != snapshot?.history?.start {
+            nextIdleSnapshotRefresh = .distantPast
+            return
+        }
         let next = try value.applying(to: snapshot)
         if let previous = snapshot, previous.busy != next.busy || previous.completed != next.completed || previous.interactions != next.interactions {
             nextCatalogRefresh = .distantPast

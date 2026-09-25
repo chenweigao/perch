@@ -9,7 +9,8 @@ if [ ! -d "$bin_dir/Modules" ]; then
 fi
 ghostty="$PWD/.build/artifacts/libghostty-spm/libghostty/GhosttyKit.xcframework/macos-arm64_x86_64"
 app_dir="$PWD/build/NewTask Preview.app"
-mkdir -p "$app_dir/Contents/MacOS"
+mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 swiftc -Onone -swift-version 5 -parse-as-library -target "$(uname -m)-apple-macosx14.0" \
     -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \

@@ -39,6 +39,31 @@ func checkWorkflow() throws {
     try file.flush(acknowledged)
     let cleared = try file.load()
     precondition(cleared.text[session.id] == "")
+    let coalesced = DraftFile(url: directory.appendingPathComponent("coalesced.json"))
+    let didSave = DispatchSemaphore(value: 0)
+    for index in 0..<1000 {
+        coalesced.save(SavedDrafts(text: [session.id: "编辑 \(index)"]), coalescing: true) { error in
+            precondition(error == nil)
+            didSave.signal()
+        }
+    }
+    precondition(didSave.wait(timeout: .now() + 5) == .success)
+    let burst = try coalesced.load()
+    precondition(burst.text[session.id] == "编辑 999")
+    precondition(didSave.wait(timeout: .now() + 0.3) == .timedOut, "A burst of text changes should share one disk write")
+    coalesced.save(SavedDrafts(text: [session.id: "older draft"]), coalescing: true) { _ in
+        preconditionFailure("An immediate queue save supersedes the pending text callback")
+    }
+    coalesced.save(saved) { error in precondition(error == nil); didSave.signal() }
+    precondition(didSave.wait(timeout: .now() + 5) == .success)
+    let durableQueue = try coalesced.load()
+    precondition(durableQueue.outbox.message(sent.id)?.text == sent.text)
+    coalesced.save(saved, coalescing: true) { _ in preconditionFailure("Flush supersedes a pending save") }
+    try coalesced.flush(acknowledged)
+    Thread.sleep(forTimeInterval: 0.3)
+    let flushed = try coalesced.load()
+    precondition(flushed.text[session.id] == "", "A delayed save must not overwrite shutdown's final state")
+    print("PASS: 1000 text edits coalesce; queue saves are immediate; flush cancels stale writes")
     let corrupt = Data("not json".utf8); try corrupt.write(to: file.url)
     do { _ = try file.load(); preconditionFailure("Corrupt drafts must be reported") } catch {}
     let preserved = try Data(contentsOf: file.url)

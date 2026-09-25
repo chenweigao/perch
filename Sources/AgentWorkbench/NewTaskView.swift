@@ -150,6 +150,11 @@ struct NewTaskView: View {
                                              onSend: start, onStop: {})
                     }
                 }.padding(12).workbenchControlSurface().disabled(creating)
+                if provider != .kimi {
+                    Text("附件当前仅支持 Kimi；可在消息中提供运行环境中的文件路径。")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 HStack(spacing: 12) {
                     HStack(spacing: 8) {
                         Image(systemName: "folder").foregroundStyle(.secondary)

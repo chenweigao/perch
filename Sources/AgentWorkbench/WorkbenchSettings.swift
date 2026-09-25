@@ -81,11 +81,13 @@ struct WorkbenchSettings: View {
             }
             Section {
                 Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
+                Toggle("仅通知需要我处理的任务", isOn: $model.notifyAttentionOnly)
+                    .disabled(!model.notificationsEnabled)
                 if let error = model.notificationError { Text(error).font(.caption).foregroundStyle(.orange) }
             } header: {
                 SettingsSectionHeader("Task notifications", systemImage: "bell.badge", tint: .red)
             } footer: {
-                Text("Completed responses, requests for input, and failures. Click a notification to open the task.")
+                Text("完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。")
             }
             Section {
                 SettingsRow(action: { showSummary = true }) {

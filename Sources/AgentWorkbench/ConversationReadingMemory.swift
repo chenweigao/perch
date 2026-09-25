@@ -10,11 +10,38 @@ final class ConversationReadingMemory {
         var index: Int
         var offset: CGFloat
     }
-    var measuredHeights: [String: [String: CGFloat]] = [:]
+    private(set) var measuredHeights: [String: [String: CGFloat]] = [:]
+    private var heightOrder: [String] = []
+    private var sessionOrder: [String] = []
     var positions: [String: Position] = [:]
     var following: [String: Bool] = [:]
     var expansions: [String: Bool] = [:]
     var seenRevision: [String: String] = [:]
+
+    func visit(_ session: String) {
+        if sessionOrder.last != session {
+            sessionOrder.removeAll { $0 == session }
+            sessionOrder.append(session)
+        }
+        if sessionOrder.count > 256 { remove(sessionOrder[0]) }
+    }
+
+    func saveHeights(_ heights: [String: CGFloat], for session: String) {
+        measuredHeights[session] = heights
+        heightOrder.removeAll { $0 == session }
+        heightOrder.append(session)
+        if heightOrder.count > 16 { measuredHeights.removeValue(forKey: heightOrder.removeFirst()) }
+    }
+
+    func remove(_ session: String) {
+        sessionOrder.removeAll { $0 == session }
+        heightOrder.removeAll { $0 == session }
+        measuredHeights.removeValue(forKey: session)
+        positions.removeValue(forKey: session)
+        following.removeValue(forKey: session)
+        seenRevision.removeValue(forKey: session)
+        expansions = expansions.filter { !$0.key.hasPrefix(session + ":") }
+    }
 }
 private struct ConversationReduceMotionKey: EnvironmentKey { static let defaultValue = false }
 private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: (Bool) -> Void = { _ in } }

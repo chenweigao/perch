@@ -164,14 +164,14 @@ public enum OutboundState: Codable, Equatable, Sendable {
     }
     public var label: String {
         switch self {
-        case .draftQueued: return "Queued"
-        case .submitting: return "Sending"
-        case .accepted: return "Accepted"
-        case .running: return "Running"
-        case .delivered: return "Completed"
-        case .stoppedBeforeDelivery: return "Paused"
-        case .failed(let message): return "Send failed: \(message)"
-        case .unknown(let message): return "Send unconfirmed: \(message)"
+        case .draftQueued: return L("本地排队，尚未发送")
+        case .submitting: return L("正在发送，等待接收确认")
+        case .accepted: return L("服务端已接收，等待执行")
+        case .running: return L("Agent 正在执行")
+        case .delivered: return L("已完成")
+        case .stoppedBeforeDelivery: return L("发送已暂停")
+        case .failed(let message): return L("发送失败：\(message)")
+        case .unknown(let message): return L("接收状态待确认：\(message)")
         }
     }
 }

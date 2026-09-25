@@ -203,6 +203,10 @@ struct SessionActionsMenu: View {
             }
         }
         Button { model.groupingSession = item } label: { Label("分组…", systemImage: "folder") }
+        Button { model.toggleTaskNotifications(item.id) } label: {
+            Label(model.mutedTasks.contains(item.id) ? L("恢复任务通知") : L("静音任务通知"),
+                  systemImage: model.mutedTasks.contains(item.id) ? "bell" : "bell.slash")
+        }
         // Membership is only useful if it leads somewhere, so any list offers the jump
         // to the group's own page, where its goal and next step live.
         ForEach(model.workspace.groups.filter { $0.sessions.contains(item.reference) }) { group in

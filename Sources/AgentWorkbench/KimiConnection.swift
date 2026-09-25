@@ -43,7 +43,7 @@ final class KimiConnection: ObservableObject {
         guard let reported, PermissionCatalog.isValid(reported, for: .kimi) else { return nil }
         return reported
     }
-    @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
+    @Published var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
     @Published private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     @Published var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
     @Published private(set) var aborting: Set<String> = []
@@ -93,11 +93,11 @@ final class KimiConnection: ObservableObject {
             drafts = saved.text
             attachments = saved.attachments
             draftFile = file
-        } catch { draftLoadError = error.localizedDescription; draftSaveError = "Draft recovery failed; the original file was preserved: \(error.localizedDescription)" }
+        } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
-    private func persistDrafts() {
-        draftFile?.save(savedDrafts) { [weak self] error in
-            Task { @MainActor in self?.draftSaveError = error.map { "Drafts could not be saved: " + $0 } }
+    private func persistDrafts(coalescing: Bool = false) {
+        draftFile?.save(savedDrafts, coalescing: coalescing) { [weak self] error in
+            Task { @MainActor in self?.draftSaveError = error.map { L("草稿保存失败：\($0)") } }
         }
     }
     func flushDrafts() throws {

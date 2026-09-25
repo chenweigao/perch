@@ -262,7 +262,10 @@ struct NativeRunControls: View {
                                 Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
                             }
                             switch message.state {
-                            case .unknown: Button("Sync and retry") { connection.retry(message.id) }.font(.caption2)
+                            case .unknown:
+                                Button("核对并重试") { connection.retry(message.id) }.font(.caption2)
+                                Text("先核对原请求的接收状态，避免重复执行。")
+                                    .font(.caption2).foregroundStyle(.secondary)
                             case .failed:
                                 Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
                             default: EmptyView()
