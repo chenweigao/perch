@@ -77,7 +77,7 @@ final class NativeAgentConnection: ObservableObject {
         try await request("/setup?provider=" + provider.rawValue)
     }
     func connect() {
-        guard !host.destination.isEmpty else { return }
+        guard host.isLocal || !host.destination.isEmpty else { return }
         disconnect(); let token = UUID(); generation = token; wantsConnection = true
         task = Task {
             while !Task.isCancelled && generation == token {
@@ -110,9 +110,14 @@ final class NativeAgentConnection: ObservableObject {
         if let directory { try? FileManager.default.removeItem(at: directory) }; directory = nil
     }
     private func establish(_ token: UUID) async throws {
-        try SSHCommand.validateDestination(host.destination)
-        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
-            command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
+        let data: Data
+        if host.isLocal {
+            data = try await LocalAgentRuntime.endpoint(for: .codex, host: host)
+        } else {
+            try SSHCommand.validateDestination(host.destination)
+            data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+                command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
+        }
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
         if let pending = endpoint["restartPending"].int {
@@ -122,6 +127,12 @@ final class NativeAgentConnection: ObservableObject {
             throw WorkbenchError(L("桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。"))
         }
         guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError("原生对话托管服务未安装或不可用") }
+        if host.isLocal {
+            api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
+            let health: JSONValue = try await request("/health")
+            guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+            return
+        }
         let local = try KimiAPI.availableLoopbackPort()
         let folder = URL(fileURLWithPath: "/tmp/awb-native-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]); directory = folder

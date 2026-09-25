@@ -15,6 +15,20 @@ def tearDownModule():
     folder.cleanup()
 
 class ProxySpawnEnvironmentTests(unittest.TestCase):
+    def test_local_symlinked_codex_can_find_bundled_tool_helpers(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = pathlib.Path(root)
+            bundle = root/'App Resources'; bundle.mkdir()
+            binary = bundle/'codex'; binary.touch()
+            link = root/'codex'; link.symlink_to(binary)
+            with patch.dict(os.environ, {'PERCH_LOCAL_CODEX':str(link)}), \
+                 patch.object(broker, 'proxy_aware_spawn_env', return_value={'PATH':'/usr/bin'}), \
+                 patch.object(broker.subprocess, 'Popen') as launch, \
+                 patch.object(broker.threading.Thread, 'start'):
+                broker.CodexAppServer(str(root))
+                self.assertEqual(launch.call_args.args[0][0], str(binary.resolve()))
+                self.assertEqual(launch.call_args.kwargs['env']['PATH'], str(bundle.resolve()) + os.pathsep + '/usr/bin')
+
     def test_preserves_existing_proxy_variants_without_probing(self):
         for key in ('http_proxy', 'https_proxy', 'all_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY'):
             with self.subTest(key=key), patch.dict(os.environ, {key:'http://existing-proxy:8080'}, clear=True), \
@@ -920,6 +934,24 @@ class HandlerContractTests(unittest.TestCase):
         self.assertIsNone(self.s.state['error'])
 
 class UpgradeLifecycleTests(unittest.TestCase):
+    def test_changed_local_binary_does_not_interrupt_active_task(self):
+        endpoint={'port':43210,'token':'fixture-token','pid':1234}
+        with patch.dict(os.environ, {'PERCH_LOCAL_CODEX':'/new/codex'}), \
+             patch.object(broker, 'running_endpoint', return_value=(endpoint, {'version':broker.SERVICE_VERSION,'localCodexBinary':'/old/codex'})), \
+             patch.object(broker, 'endpoint_request', return_value={'sessions':[{'id':'s','busy':True}]}), \
+             patch.object(broker.os, 'kill') as kill:
+            self.assertEqual(broker.reusable_endpoint(pathlib.Path('/fixture')),endpoint|{'restartPending':1})
+            kill.assert_not_called()
+
+    def test_unchanged_local_binary_reuses_bridge(self):
+        endpoint={'port':43210,'token':'fixture-token','pid':1234}
+        binary=str(pathlib.Path('/same/codex').resolve())
+        with patch.dict(os.environ, {'PERCH_LOCAL_CODEX':binary}), \
+             patch.object(broker, 'running_endpoint', return_value=(endpoint, {'version':broker.SERVICE_VERSION,'localCodexBinary':binary})), \
+             patch.object(broker, 'endpoint_request') as request:
+            self.assertEqual(broker.reusable_endpoint(pathlib.Path('/fixture')),endpoint)
+            request.assert_not_called()
+
     legacy_server = r'''
 import json, os, pathlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

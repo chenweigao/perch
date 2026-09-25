@@ -178,7 +178,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     Button("连接远程机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
                     Button("检测本机 Agent…", action: onStartLocal)
                 }
-                Text("远程 Agent 沿用你的 SSH 配置。本机环境目前仅支持安装检测。")
+                Text("远程 Agent 沿用你的 SSH 配置；本机可连接已安装的 Kimi 和 Codex。")
                     .font(.caption).foregroundStyle(.secondary)
             } else if state == .noMatches {
                 // Nothing is wrong with the workspace; the filter is hiding everything.

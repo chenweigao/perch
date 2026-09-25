@@ -26,6 +26,7 @@ def main():
         commands = [
             ("bridge", [python, "-m", "unittest", "discover", "-s", "remote", "-p", "test_*.py"], 180),
             ("installer", [python, "-m", "unittest", "discover", "-s", "Tests/RemoteSetup"], 60),
+            ("model-metadata", [python, "-m", "unittest", "discover", "-s", "Tests/ModelMetadata"], 60),
             ("localization", [python, "scripts/check-localization.py"], 60),
             ("localization-tests", [python, "-m", "unittest", "discover", "-s", "Tests/Localization"], 60),
             ("acceptance-supervisor", [python, "-m", "unittest", "discover", "-s", "Tests/Performance"], 60),

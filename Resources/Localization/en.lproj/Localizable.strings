@@ -791,3 +791,55 @@
 "Auto" = "Auto";
 
 "较高强度会花更多时间思考。" = "Higher effort spends more time reasoning.";
+
+"%lld 个环境" = "%lld environments";
+
+"已发现 %lld 个本机 Agent" = "Found %lld local agents";
+
+"已安装，尚未接入本机对话" = "Installed; local conversations not yet connected";
+
+"未找到可执行文件" = "Executable not found";
+
+"未找到可用的本机 Agent，请重新检测。" = "No usable local agent found. Scan again.";
+
+"本机服务未返回连接信息" = "The local service did not return connection details.";
+
+"本机服务组件缺失，请重新构建应用。" = "Local service resources are missing. Rebuild the app.";
+
+"本机项目目录不存在" = "The local project directory does not exist.";
+
+"检测 Kimi、Codex 等本机 Agent" = "Discover Kimi, Codex and other local agents";
+
+"正在检测…" = "Scanning…";
+
+"此 Agent 尚未接入本机对话" = "This agent is not yet connected for local conversations.";
+
+"请选择已检测到的本机 Agent" = "Select a discovered local agent.";
+
+"连接会复用或启动本机服务；关闭 Perch 不会停止正在执行的任务。" = "Connecting reuses or starts local services. Closing Perch leaves running tasks active.";
+
+"连接并新建任务" = "Connect and create task";
+
+"连接本机已安装的 Agent，在你选择的 Mac 项目目录执行。" = "Connect installed agents to work in a Mac project directory you choose.";
+
+"选择路径…" = "Choose path…";
+
+"支持思考，但尚未声明可选档位。请补充 Agent 的模型配置。" = "Reasoning is supported, but effort levels are not declared. Update the agent model configuration.";
+
+"远程 Agent 沿用你的 SSH 配置；本机可连接已安装的 Kimi 和 Codex。" = "Remote agents use your SSH configuration. Connect installed Kimi and Codex on this Mac.";
+
+"查看文件" = "View files";
+
+"查看文件（只读）" = "View files (read-only)";
+
+"当前会话没有可用的执行环境。" = "This conversation has no execution environment.";
+
+"当前会话没有工作目录。" = "This conversation has no working directory.";
+
+"文件路径，可用绝对路径或相对当前目录" = "File path, absolute or relative to the working directory";
+
+"读取当前项目 Git 工作树的改动。" = "Read Git working tree changes for this project.";
+
+"输入文件路径后打开。只读查看，不修改文件。" = "Enter a file path to view. Read-only; no files are changed.";
+
+"在当前执行环境中只读查看文件。" = "Browse files read-only in the current execution environment.";

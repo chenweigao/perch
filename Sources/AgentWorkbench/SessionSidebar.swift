@@ -16,7 +16,7 @@ struct WorkbenchSidebar: View {
         let projection = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
         let index = model.groupIndex
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
-                              environmentSummary: L("\(model.connections.count) 个 SSH"),
+                              environmentSummary: L("\(model.connections.count) 个环境"),
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
                               onHome: { model.showHome() }, onInbox: { model.showInbox() },
