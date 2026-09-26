@@ -889,3 +889,4 @@
 "配置活动叙事与 Recap…" = "Configure activity summaries and Recap…";
 "重新生成" = "Regenerate";
 "需要连接 Agent 才能读取完整任务记录。" = "Connect to the agent to read the complete task history.";
+"尚未连接所选 Agent。" = "The selected agent is not connected.";

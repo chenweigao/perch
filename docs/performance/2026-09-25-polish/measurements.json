@@ -1,0 +1,224 @@
+{
+  "scope": "offline synthetic app timings, not FPS or hardware input latency",
+  "baseline": {
+    "source_sha256": "3e4e46d79184f6cb8b05b6e1c26a151cc88fbde8863f03bde33db2bfa3bd0cff",
+    "binary_sha256": "a4a531933e7ca3528573089b11644946f365b5fdac17a173a4aba28d70facd14",
+    "build_commit": "788153f55f88b32ebb681a7a12b955e9f2cc20e5",
+    "switch_ms": {
+      "count": 16,
+      "max": 101.26141665386967,
+      "median": 77.85366664757021,
+      "p95": 84.32812499813735
+    },
+    "scroll_step_ms": {
+      "count": 120,
+      "max": 26.722708338638768,
+      "median": 4.217874986352399,
+      "p95": 23.428458342095837
+    },
+    "search_ms": {
+      "count": 6,
+      "max": 52.612708328524604,
+      "median": 33.526708342833444,
+      "p95": 38.491833314765245
+    },
+    "directory_ms": {
+      "count": 6,
+      "max": 102.73758333642036,
+      "median": 48.85320834000595,
+      "p95": 62.6733333338052
+    },
+    "rss_settled_mb": 222.96875,
+    "passed": true
+  },
+  "candidate": {
+    "source_sha256": "709c518dd93e2c4832ed9cac5bcd1d63354c237ed527e480e8bfb91b34590916",
+    "binary_sha256": "4e3f0afa5f82364f740c2fd8893c0a77556a0393510a10933e6a8f4ff5820237",
+    "build_commit": "788153f55f88b32ebb681a7a12b955e9f2cc20e5",
+    "switch_ms": {
+      "count": 16,
+      "max": 109.5866666873917,
+      "median": 73.1447083526291,
+      "p95": 78.1270416919142
+    },
+    "scroll_step_ms": {
+      "count": 120,
+      "max": 26.495041674934328,
+      "median": 4.504791664658114,
+      "p95": 22.762291657272726
+    },
+    "search_ms": {
+      "count": 6,
+      "max": 37.39700000733137,
+      "median": 25.61495831469074,
+      "p95": 30.548791663022712
+    },
+    "directory_ms": {
+      "count": 6,
+      "max": 101.5428333193995,
+      "median": 48.04875000263564,
+      "p95": 58.513374999165535
+    },
+    "rss_settled_mb": 221.234375,
+    "passed": true,
+    "note": "Initial candidate before the final stale-teardown cache guard and main naming fix; these timings do not certify final-build speedups."
+  },
+  "joint": {
+    "joint_cpu_seconds": 5.914228,
+    "joint_duration_s": 60.05817004168057,
+    "joint_input_to_layout_ms": {
+      "count": 146,
+      "max": 14.065833325730637,
+      "median": 11.405791650759056,
+      "p95": 12.52325001405552
+    },
+    "joint_switches": 8,
+    "joint_update_to_layout_ms": {
+      "count": 146,
+      "max": 34.619041660334915,
+      "median": 29.864999989513308,
+      "p95": 33.71445831726305
+    },
+    "joint_updates": 146,
+    "rss_settled_mb": 190.625,
+    "status": "passed"
+  },
+  "functional": {
+    "portable": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "bridge",
+          "passed": true,
+          "seconds": 1.28
+        },
+        {
+          "name": "installer",
+          "passed": true,
+          "seconds": 1.92
+        },
+        {
+          "name": "model-metadata",
+          "passed": true,
+          "seconds": 0.05
+        },
+        {
+          "name": "localization",
+          "passed": true,
+          "seconds": 0.05
+        },
+        {
+          "name": "localization-tests",
+          "passed": true,
+          "seconds": 0.05
+        },
+        {
+          "name": "acceptance-supervisor",
+          "passed": true,
+          "seconds": 0.09
+        }
+      ]
+    },
+    "macos-2": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "build",
+          "passed": true,
+          "seconds": 26.54
+        },
+        {
+          "name": "signature",
+          "passed": true,
+          "seconds": 0.05
+        },
+        {
+          "name": "workbench",
+          "passed": true,
+          "seconds": 8.31
+        },
+        {
+          "name": "connections",
+          "passed": true,
+          "seconds": 1.54
+        },
+        {
+          "name": "composer",
+          "passed": true,
+          "seconds": 2.64
+        },
+        {
+          "name": "host-lifecycle",
+          "passed": true,
+          "seconds": 26.72
+        },
+        {
+          "name": "scroll-following",
+          "passed": true,
+          "seconds": 7.73
+        },
+        {
+          "name": "native-build",
+          "passed": true,
+          "seconds": 47.03
+        },
+        {
+          "name": "native-all",
+          "passed": true,
+          "seconds": 10.8
+        },
+        {
+          "name": "native-switching",
+          "passed": true,
+          "seconds": 16.56
+        },
+        {
+          "name": "native-dashboard",
+          "passed": true,
+          "seconds": 18.71
+        },
+        {
+          "name": "native-joint",
+          "passed": true,
+          "seconds": 67.4
+        },
+        {
+          "name": "navigation-build",
+          "passed": true,
+          "seconds": 40.81
+        },
+        {
+          "name": "navigation-reading",
+          "passed": true,
+          "seconds": 17.33
+        },
+        {
+          "name": "navigation-interactions",
+          "passed": true,
+          "seconds": 6.44
+        },
+        {
+          "name": "navigation-roundtrip",
+          "passed": true,
+          "seconds": 7.3
+        }
+      ]
+    }
+  },
+  "frame_control": {
+    "status": "unverified",
+    "error": "no app-owned updates joined to displayed frame lifetimes"
+  },
+  "delivery-reading": {
+    "binary_sha256": "80ccc0b1129d736ba394f785f762fe6bbb24474f18ca28aa853d73ddd88b4458",
+    "exit_code": 0,
+    "elapsed_s": 17.449471209,
+    "passed": true
+  },
+  "delivery-roundtrip": {
+    "binary_sha256": "80ccc0b1129d736ba394f785f762fe6bbb24474f18ca28aa853d73ddd88b4458",
+    "exit_code": 0,
+    "elapsed_s": 7.790533541,
+    "passed": true
+  }
+}

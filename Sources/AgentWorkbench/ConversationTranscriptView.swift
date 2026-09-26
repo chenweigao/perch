@@ -635,8 +635,8 @@ private final class ConversationDocumentView: NSView {
         guard restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
               let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
-        ConversationReadingMemory.shared.positions[sessionId] = .init(entry: contents[index].entry.id,
-            index: index, offset: clip.bounds.minY - contentOriginY - offsets[index])
+        ConversationReadingMemory.shared.savePosition(.init(entry: contents[index].entry.id,
+            index: index, offset: clip.bounds.minY - contentOriginY - offsets[index]), for: sessionId)
     }
     private func saveReadingHeights() {
         guard !sessionId.isEmpty else { return }

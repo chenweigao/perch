@@ -188,7 +188,9 @@ struct NewTaskView: View {
                         if let connectionError {
                             Text(connectionError).font(.callout).foregroundStyle(.orange).textSelection(.enabled)
                         } else {
-                            Text(LocalizedStringKey(availableProviders.isEmpty ? "此机器尚未配置原生 Agent。" : "正在连接所选 Agent…"))
+                            Text(LocalizedStringKey(!availableProviders.contains(provider) ? "此机器尚未配置原生 Agent。"
+                                : (provider == .kimi ? kimi.connecting : native.wantsConnection)
+                                    ? "正在连接所选 Agent…" : "尚未连接所选 Agent。"))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         HStack {

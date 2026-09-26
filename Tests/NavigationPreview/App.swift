@@ -1111,7 +1111,7 @@ final class NavigationDelegate: NSObject, NSApplicationDelegate {
         for index in 0..<300 {
             let session = "fixture:\(index)"
             memory.visit(session)
-            memory.positions[session] = .init(entry: "row", index: 3, offset: 12)
+            memory.savePosition(.init(entry: "row", index: 3, offset: 12), for: session)
             memory.following[session] = false
             memory.expansions[session + ":tool:details"] = true
             memory.saveHeights(["row": 40], for: session)
@@ -1120,6 +1120,8 @@ final class NavigationDelegate: NSObject, NSApplicationDelegate {
         precondition(memory.positions["fixture:0"] == nil && memory.expansions["fixture:0:tool:details"] == nil)
         precondition(memory.positions["fixture:299"]?.offset == 12)
         memory.remove("fixture:299")
+        memory.savePosition(.init(entry: "late", index: 0, offset: 0), for: "fixture:299")
+        memory.saveHeights(["late": 20], for: "fixture:299")
         precondition(memory.positions["fixture:299"] == nil && memory.measuredHeights["fixture:299"] == nil)
         precondition(memory.expansions["fixture:299:tool:details"] == nil)
 

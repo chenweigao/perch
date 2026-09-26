@@ -13,7 +13,7 @@ final class ConversationReadingMemory {
     private(set) var measuredHeights: [String: [String: CGFloat]] = [:]
     private var heightOrder: [String] = []
     private var sessionOrder: [String] = []
-    var positions: [String: Position] = [:]
+    private(set) var positions: [String: Position] = [:]
     var following: [String: Bool] = [:]
     var expansions: [String: Bool] = [:]
     var seenRevision: [String: String] = [:]
@@ -27,10 +27,18 @@ final class ConversationReadingMemory {
     }
 
     func saveHeights(_ heights: [String: CGFloat], for session: String) {
+        // SwiftUI can dismantle a deleted/evicted transcript after its records
+        // were removed. That late teardown must not recreate the cache entry.
+        guard sessionOrder.contains(session) else { return }
         measuredHeights[session] = heights
         heightOrder.removeAll { $0 == session }
         heightOrder.append(session)
         if heightOrder.count > 16 { measuredHeights.removeValue(forKey: heightOrder.removeFirst()) }
+    }
+
+    func savePosition(_ position: Position, for session: String) {
+        guard sessionOrder.contains(session) else { return }
+        positions[session] = position
     }
 
     func remove(_ session: String) {
