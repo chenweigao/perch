@@ -310,12 +310,15 @@ private struct PendingMessageEditor: View {
 struct NativeInteractionView: View {
     @ObservedObject var connection: NativeAgentConnection
     let request: JSONValue
+    var sessionID: String? = nil
     @State private var text = ""
     @State private var answers: [String: String] = [:]
     @State private var submitting = false
     private var id: String { request["id"].string ?? "" }
     private func submit(_ fields: [String: JSONValue]) {
-        guard !submitting, let session = connection.selectedID else { return }
+        guard !submitting, let session = sessionID ?? connection.selectedID,
+              connection.selectedID == session, connection.snapshot?.id == session,
+              connection.snapshot?.interactions.contains(where: { $0 == request }) == true else { return }
         submitting = true
         Task {
             do { try await connection.action(session, "answer", fields.merging(["id": .string(id)]) { _, new in new }) }

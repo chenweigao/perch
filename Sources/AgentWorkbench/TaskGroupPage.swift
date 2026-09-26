@@ -25,6 +25,7 @@ struct TaskGroupPage: View {
                 }
                 header(items, activity)
                 notes(items.resume)
+                GroupProgressView(model: model, group: group)
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 16) {
                         Text("本组会话").font(.system(size: 13, weight: .medium)).accessibilityAddTraits(.isHeader)
@@ -90,6 +91,7 @@ struct TaskGroupPage: View {
                 Menu {
                     Button("关联已有会话") { model.editGroup(group, sessionsOnly: true) }
                     Button("编辑任务组") { model.editGroup(group) }
+                    Button("Agent 帮我归组") { model.showGroupSuggestions = true }
                     Divider()
                     Button("归档已完成 \(archive.archiveCount)") { model.runBatchArchive(archive.archivePlan) }
                         .disabled(archive.archiveCount == 0 || model.isArchiving)

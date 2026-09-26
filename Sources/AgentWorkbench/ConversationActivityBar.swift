@@ -246,7 +246,7 @@ struct ConversationActivityBar: View {
     }
 }
 
-private struct TaskRecapPopover: View {
+struct TaskRecapPopover: View {
     let key: String
     let messages: (@MainActor () async throws -> [KimiMessage])?
     let stateOverride: TaskRecapState?

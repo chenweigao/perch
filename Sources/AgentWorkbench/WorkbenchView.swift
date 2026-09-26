@@ -20,6 +20,10 @@ struct WorkbenchView: View {
                     Button("关闭") { model.showRenderReport = false }.keyboardShortcut(.cancelAction)
                 }.padding(26).frame(minWidth: 550)
             }
+            .sheet(item: $model.inspectingSession, onDismiss: model.endInspection) { item in
+                WorkspaceActionDetail(model: model, item: item).id(item.id)
+            }
+            .sheet(isPresented: $model.showGroupSuggestions) { GroupSuggestionsSheet(model: model) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: model.setupHost) }
             .sheet(isPresented: $model.showSessionSearch) {
@@ -116,11 +120,17 @@ private struct WorkbenchDetail: View {
                     else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
                     else {
                         WorkbenchDashboard(
-                            attentionOnly: model.onlyAttention, projection: model.dashboardProjection,
+                            attentionOnly: model.onlyAttention, changes: model.dashboardChanges,
+                            onAcknowledgeChanges: { model.acknowledgeDashboardChanges() },
+                            onSuggestGroups: { model.showGroupSuggestions = true },
+                            projection: model.dashboardProjection,
                             context: model.dashboardContext, isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
                             onNewTask: { model.startNewTask() },
-                            onOpen: { model.open($0) },
+                            onOpen: { item in
+                                if item.section == .attention || item.section == .review { model.inspect(item) }
+                                else { model.open(item) }
+                            },
                             onMarkReviewed: { model.markReviewed($0) },
                             rowActions: { SessionActionsMenu(model: model, item: $0) },
                             groupNames: { index[$0.id] },

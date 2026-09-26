@@ -17,6 +17,7 @@ public struct DashboardScope: Equatable, Sendable {
 public struct DashboardSection: Identifiable, Equatable, Sendable {
     public let section: WorkQueueSection
     public let items: [WorkspaceSession]
+    public init(section: WorkQueueSection, items: [WorkspaceSession]) { self.section = section; self.items = items }
     public var id: String { section.rawValue }
     public var isEmpty: Bool { items.isEmpty }
 }

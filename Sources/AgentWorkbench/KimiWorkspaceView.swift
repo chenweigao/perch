@@ -303,8 +303,9 @@ private struct KimiTimeline: View {
 
 }
 
-private struct KimiQuestionView: View {
+struct KimiQuestionView: View {
     let question: KimiQuestion
+    var sessionID: String? = nil
     @ObservedObject var connection: KimiConnection
     @State private var choices: [String: Set<String>] = [:]
     @State private var other: [String: String] = [:]
@@ -347,7 +348,10 @@ private struct KimiQuestionView: View {
                     }
                 }
             }
-            Button("提交回答") { connection.answer(question, answers: answers) }.buttonStyle(.borderedProminent)
+            Button("提交回答") {
+                guard sessionID == nil || sessionID == connection.selectedId else { return }
+                connection.answer(question, answers: answers)
+            }.buttonStyle(.borderedProminent)
                 .disabled(answers.count != question.questions.count || !connection.online || !connection.snapshotReady || connection.resolving.contains(question.id))
         }.padding(16).background(kimiAccent.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
