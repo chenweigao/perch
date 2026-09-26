@@ -86,8 +86,8 @@ func checkRemoteFileViewer() async throws {
     let filename = "WorkbenchHeaderActions.swift"
     let sourceFile = source.appendingPathComponent(filename)
     try Data("line 54\n".utf8).write(to: sourceFile)
-    func reference(_ path: String) async throws -> RemoteFileContent {
-        let command = try RemoteFileCommand.referenceCommand(path: path, cwd: root.path)
+    func reference(_ path: String, roots: [String] = []) async throws -> RemoteFileContent {
+        let command = try RemoteFileCommand.referenceCommand(path: path, cwd: root.path, roots: roots)
         return try RemoteFileCommand.parse(try await ProcessRunner.run("/bin/sh", ["-c", command]))
     }
     expectEqual(try await reference(filename), .matches([sourceFile.path]))
@@ -113,5 +113,44 @@ func checkRemoteFileViewer() async throws {
     try Data("wrong glob match".utf8).write(to: source.appendingPathComponent("file1 $(printf INJECTED).swift"))
     expectEqual(try await reference(literalName), .matches([literalFile.path]))
 
-    print("PASS: remote path resolution, conversation filename lookup and ambiguity, argument isolation, directory listing, truncation, binary/denied/missing states")
+    // Multi-root resolution: a reference citing a path below a worktree resolves
+    // there even though the session directory has no such path, and when both
+    // checkouts contain the relative path the earlier root wins — the agent's
+    // recent tool calls order the roots.
+    let main = root.appendingPathComponent("perch").path
+    let worktree = root.appendingPathComponent("_worktrees/perch").path
+    let relative = "Sources/AgentWorkbench/\(filename)"
+    expectEqual(try await reference(relative, roots: [worktree, main]),
+                .text("another worktree", truncated: false, size: 16))
+    expectEqual(try await reference(relative, roots: [main, worktree]),
+                .text("line 54\n", truncated: false, size: 8))
+    // The session directory stays appended as a fallback but never overrides a hint.
+    expectEqual(try await reference(relative, roots: [worktree]),
+                .text("another worktree", truncated: false, size: 16))
+
+    // The header echoes the path the remote actually read.
+    let echo = try RemoteFileCommand.referenceCommand(path: relative, cwd: root.path, roots: [worktree])
+    let echoedData = try await ProcessRunner.run("/bin/sh", ["-c", echo])
+    expectEqual(RemoteFileCommand.resolvedPath(in: echoedData), duplicateFile.path)
+
+    // A bare filename is searched across every root, including one outside the
+    // session directory; a root that vanished mid-session is skipped, and
+    // overlapping roots never list the same file twice.
+    let outside = FileManager.default.temporaryDirectory.appendingPathComponent("awb-remote-outside-\(UUID())")
+    defer { try? FileManager.default.removeItem(at: outside) }
+    let onlyOutside = "OnlyOutside-\(UUID().uuidString.prefix(8)).swift"
+    try FileManager.default.createDirectory(at: outside.appendingPathComponent("deep"), withIntermediateDirectories: true)
+    let outsideFile = outside.appendingPathComponent("deep/\(onlyOutside)")
+    try Data("outside\n".utf8).write(to: outsideFile)
+    expectEqual(try await reference(onlyOutside, roots: [outside.path]), .matches([outsideFile.path]))
+    expectEqual(try await reference(onlyOutside, roots: [root.appendingPathComponent("gone").path, outside.path]),
+                .matches([outsideFile.path]))
+    // Overlapping roots (a directory and its parent) list the same file once.
+    let dedupeName = "Dedupe-\(UUID().uuidString.prefix(8)).swift"
+    let dedupeFile = source.appendingPathComponent(dedupeName)
+    try Data("dedupe\n".utf8).write(to: dedupeFile)
+    expectEqual(try await reference(dedupeName, roots: [root.appendingPathComponent("perch/Sources").path, main]),
+                .matches([dedupeFile.path]))
+
+    print("PASS: remote path resolution, conversation filename lookup and ambiguity, multi-root ordering, argument isolation, directory listing, truncation, binary/denied/missing states")
 }

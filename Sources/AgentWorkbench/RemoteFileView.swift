@@ -30,7 +30,9 @@ final class RemoteFileBrowser: ObservableObject {
     @Published private(set) var gitWorktrees: [RemoteGitWorktree] = []
     @Published var gitInput = ""
     @Published var gitStaged = false
-    private var gitDirectoryHints: [String] = []
+    /// Directories the agent recently touched (worktrees included), most recent
+    /// first. Both conversation file resolution and the Git tab start from these.
+    private var directoryHints: [String] = []
     private var gitSelectionExplicit = false
     private var generation = 0
     private var reader: RemoteReader?
@@ -39,15 +41,15 @@ final class RemoteFileBrowser: ObservableObject {
     var hostName: String { host?.name ?? "未选择主机" }
 
     /// Switching sessions must never leave another host's path or content on screen.
-    func configure(host: SSHHost?, cwd: String, gitDirectoryHints: [String] = []) {
+    func configure(host: SSHHost?, cwd: String, directoryHints: [String] = []) {
         guard self.host?.id != host?.id || self.cwd != cwd else {
-            self.gitDirectoryHints = gitDirectoryHints
+            self.directoryHints = directoryHints
             return
         }
         cancel()
         self.host = host
         self.cwd = cwd
-        self.gitDirectoryHints = gitDirectoryHints
+        self.directoryHints = directoryHints
         input = ""
         path = ""
         content = nil
@@ -72,9 +74,14 @@ final class RemoteFileBrowser: ObservableObject {
         let command: String
         do {
             try SSHCommand.validateDestination(host.destination)
-            resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
-            command = fromConversation ? try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd)
-                                       : RemoteFileCommand.remoteCommand(path: resolved)
+            if fromConversation {
+                command = try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd,
+                                                                 roots: resolutionRoots(for: requested))
+                resolved = (try? RemoteFilePath.resolve(requested, cwd: cwd)) ?? requested
+            } else {
+                resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
+                command = RemoteFileCommand.remoteCommand(path: resolved)
+            }
         } catch {
             self.error = error.localizedDescription
             return
@@ -88,6 +95,12 @@ final class RemoteFileBrowser: ObservableObject {
         error = nil
         run(command, destination: host.destination, token: token) { browser, data in
             let content = try RemoteFileCommand.parse(data)
+            // A multi-root lookup can read outside the session directory; display
+            // the path the remote actually read, not the requested guess.
+            if let actual = RemoteFileCommand.resolvedPath(in: data) {
+                browser.path = actual
+                browser.input = actual
+            }
             if case .matches(let paths) = content, paths.count == 1 {
                 browser.open(paths[0], line: line)
             } else {
@@ -98,13 +111,25 @@ final class RemoteFileBrowser: ObservableObject {
         }
     }
 
+    /// Hints are most-recent-first. When a tool call's absolute path ends with the
+    /// referenced relative path, its root goes first: the agent touched that file,
+    /// so its checkout wins over a stale same-path copy at the session directory.
+    private func resolutionRoots(for reference: String) -> [String] {
+        let trimmed = reference.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~") else { return directoryHints }
+        let suffix = "/" + trimmed
+        guard let evidence = directoryHints.first(where: { $0.hasSuffix(suffix) }) else { return directoryHints }
+        let root = String(evidence.dropLast(suffix.count))
+        return [root.isEmpty ? "/" : root] + directoryHints
+    }
+
     func loadGitStatus() {
         guard host != nil else { error = "当前会话没有可用的远端主机。"; return }
         if !gitDirectory.isEmpty {
             loadGitStatus(directories: [gitDirectory], allowSuggestion: false)
             return
         }
-        var candidates = gitDirectoryHints
+        var candidates = directoryHints
         candidates.append(cwd)
         candidates = candidates.filter { !$0.isEmpty }.reduce(into: []) { values, value in
             if !values.contains(value) { values.append(value) }
@@ -162,7 +187,7 @@ final class RemoteFileBrowser: ObservableObject {
     }
 
     private func suggestedWorktree(in worktrees: [RemoteGitWorktree]) -> RemoteGitWorktree? {
-        for hint in gitDirectoryHints {
+        for hint in directoryHints {
             let path = (hint as NSString).standardizingPath
             let matches = worktrees.filter { worktree in
                 guard worktree.selectable else { return false }

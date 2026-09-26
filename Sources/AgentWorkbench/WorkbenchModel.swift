@@ -969,7 +969,7 @@ final class WorkbenchModel: ObservableObject {
         }
         let hints = RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
                                                        sessionDirectory: directory)
-        fileBrowser.configure(host: selectedHost, cwd: directory, gitDirectoryHints: hints)
+        fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: hints)
     }
     func forgetRestoration(_ saved: SavedTerminal) { close(saved.session.id) }
     private func saveWorkspace() {
