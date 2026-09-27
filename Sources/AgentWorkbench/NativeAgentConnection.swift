@@ -181,7 +181,14 @@ final class NativeAgentConnection: ObservableObject {
         let selected = sessions.first { $0.id == selectedID }
         let active = snapshot == nil || snapshot?.busy == true || selected?.busy == true
             || (selected?.pending ?? 0) > 0 || snapshot?.interactions.isEmpty == false
-            || queue.allItems.contains { $0.session.terminalID == selectedID }
+            || queue.allItems.contains { message in
+                guard message.session.terminalID == selectedID else { return false }
+                switch message.state {
+                case .submitting, .accepted, .running, .unknown: return true
+                case .draftQueued: return queue.nextPendingID(for: message.session, isStreaming: false) == message.id
+                case .failed, .stoppedBeforeDelivery, .delivered: return false
+                }
+            }
         if selectionTask == nil && (active || now >= nextIdleSnapshotRefresh) {
             nextIdleSnapshotRefresh = now.addingTimeInterval(2)
             try await refreshSelected()
