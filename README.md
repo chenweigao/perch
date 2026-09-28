@@ -1,29 +1,29 @@
-<p align="center"><img src="Resources/Brand/Perch-1024.png" width="112" alt="Perch icon"></p>
 <h1 align="center">Perch</h1>
-<p align="center"><strong>A native Mac workspace for your coding agents.</strong><br>Agents on your server. A home on your Mac.</p>
-<p align="center">English · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><strong>A home for your coding agents.</strong><br>A native Mac workspace for local and remote agent workflows.</p>
+<p align="center">English · <a href="README.zh-CN.md">简体中文</a> · <a href="docs/GETTING-STARTED.md">Get started</a> · <a href="#status">Project status</a></p>
 
-Perch brings coding agents into one macOS app: read conversations, review tools,
-respond to approvals, and keep track of what needs your attention. Your code and
-agents stay on the remote machine, connected over SSH.
+Run Kimi or Codex on your Mac, or connect to supported agents over SSH. Perch brings
+conversations, tasks, tool output and approvals into one native workspace, so you
+can read the result, inspect the work and decide what happens next.
 
-Built with SwiftUI, AppKit and Ghostty, with native text, keyboard shortcuts and
-Liquid Glass controls on macOS 26. Designed for a focused, fluid reading experience.
+Built with SwiftUI, AppKit and Ghostty, with native text editing, keyboard shortcuts
+and system Liquid Glass on macOS 26.
 
-![Perch native workspace showing a synthetic coding task](docs/images/perch-overview.jpg)
+![Perch: a native home for coding agents](docs/images/perch-showcase-overview.jpg)
 
-*Native macOS components with synthetic demo data; no live commands are shown.*
+| Start with context | Inspect the details |
+| --- | --- |
+| [![Choose a project, model and reasoning effort before starting](docs/images/perch-showcase-start.jpg)](docs/images/perch-new-session.jpg) | [![Expand tool parameters and output alongside the conversation](docs/images/perch-showcase-details.jpg)](docs/images/perch-tool-details.jpg) |
+| Pick a project, model and reasoning effort. Keep permissions close at hand. | Read the answer first; expand tool calls and output when you need them. |
 
-<details>
-<summary>Tool details (synthetic data)</summary>
-
-![Tool details (synthetic data)](docs/images/perch-tool-details.jpg)
-
-</details>
+*Real native UI with synthetic demo data. Showcase backgrounds and captions are
+presentation only; no private conversations or live command results are shown.
+[Full-size conversation screenshot](docs/images/perch-overview.jpg) · [Asset sources](docs/showcase/README.md)*
 
 ## Why Perch
 
 - **Native conversations.** Streaming replies, Markdown, thinking and tool results, with details that expand when you need them.
+- **Start with the right context.** Choose a local or remote environment, search recent projects, and select model, reasoning effort and permissions before sending.
 - **A workspace for your tasks.** Group sessions, pin important work, archive finished conversations and return to your previous workspace.
 - **Know what needs you.** See running tasks, pending questions and results waiting to be read, plus Kimi's subagents (including their own transcripts) and background tasks with their output tails.
 - **Keep your CLI workflow.** Use native chat for supported agents and Ghostty terminals for CLI sessions through Herdr.
@@ -68,7 +68,8 @@ corresponding agent runtime are required for remote sessions.
 open build/Perch.app
 ```
 
-Choose **Connect a remote machine** on the home screen, or **Environment → +**.
+For local work, start with [local Kimi or Codex setup](docs/LOCAL-AGENTS.md).
+For remote work, choose **Connect a remote machine** on the home screen, or **Environment → +**.
 The setup wizard verifies SSH, checks your chosen agent, offers installation and
 login actions, then lets you browse a remote directory and start your first task.
 Kimi's port and token-file path are editable in Advanced settings. Fresh installs

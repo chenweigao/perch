@@ -1,28 +1,27 @@
-<p align="center"><img src="Resources/Brand/Perch-1024.png" width="112" alt="Perch 图标"></p>
 <h1 align="center">Perch</h1>
-<p align="center"><strong>为 coding agent 打造的 Mac 原生工作台。</strong><br>Agent 在远端工作，你在 Mac 上掌握进展。</p>
-<p align="center"><a href="README.md">English</a> · 简体中文</p>
+<p align="center"><strong>给 coding agent 一个原生的 Mac 工作台。</strong><br>本机与远端任务，都有清楚的工作现场。</p>
+<p align="center"><a href="README.md">English</a> · 简体中文 · <a href="docs/GETTING-STARTED.md">快速开始</a> · <a href="#当前进展">当前进展</a></p>
 
-把对话、工具、审批与任务管理放进一个 macOS App。
-代码和 Agent 留在远端，通过 SSH 连接；在 Mac 上阅读回复、处理提问、继续工作。
+在 Mac 上使用 Kimi 或 Codex，也可以通过 SSH 连接远端 Agent。Perch 将对话、任务、
+工具输出与审批放进一个原生工作台：先看结果，需要时展开过程，再决定下一步。
 
-使用 SwiftUI、AppKit 和 Ghostty 构建，支持原生文本、快捷键，以及 macOS 26
-的 Liquid Glass 控件。围绕简洁、流畅的阅读与操作体验设计。
+使用 SwiftUI、AppKit 和 Ghostty 构建，保留原生文本编辑、键盘操作，以及 macOS 26
+的系统 Liquid Glass 效果。
 
-![Perch 原生工作台，展示虚构编码任务](docs/images/perch-overview.jpg)
+![Perch：为 coding agent 打造的原生工作台](docs/images/perch-showcase-overview.jpg)
 
-*使用真实 macOS 组件与演示数据；图中没有执行真实命令。*
+| 带着上下文开始 | 需要时查看细节 |
+| --- | --- |
+| [![新建任务时选择项目、模型与思考强度](docs/images/perch-showcase-start.jpg)](docs/images/perch-new-session.jpg) | [![在对话中展开工具参数和输出](docs/images/perch-showcase-details.jpg)](docs/images/perch-tool-details.jpg) |
+| 选好项目、模型与思考强度，权限设置也就在手边。 | 先读结果，再按需展开工具调用和输出。 |
 
-<details>
-<summary>工具详情（演示数据）</summary>
-
-![工具详情（演示数据）](docs/images/perch-tool-details.jpg)
-
-</details>
+*截图使用真实原生组件与虚构演示数据；背景与标题仅用于宣传排版，不包含私人会话或真实命令执行结果。
+[查看完整对话截图](docs/images/perch-overview.jpg) · [素材来源](docs/showcase/README.md)*
 
 ## 为什么用 Perch
 
 - **原生对话**：流式回复、Markdown、思考和工具结果，需要时再展开详情。
+- **清楚开始任务**：选择本机或远端环境，搜索最近项目，在发送前选好模型、思考强度和权限。
 - **任务工作台**：会话归组、置顶、归档，重新打开后回到工作现场。
 - **集中处理**：看到哪些任务在运行、哪些在等你、哪些结果还没读，以及 Kimi 的子 Agent（含其自身过程）与后台任务状态和输出尾部。
 - **保留 CLI 工作流**：已适配的 Agent 使用原生对话，其他 CLI 通过 Herdr 使用 Ghostty 终端。
@@ -61,7 +60,8 @@ Claude Code 支持停止与下一轮消息排队；Herdr 中的现有会话继�
 open build/Perch.app
 ```
 
-从首页「连接远程机器」或「环境 → ＋」进入向导：验证 SSH、检查所选 Agent、
+本机使用先看 [Kimi / Codex 接入说明](docs/LOCAL-AGENTS.md)。
+远端使用从首页「连接远程机器」或「环境 → ＋」进入向导：验证 SSH、检查所选 Agent、
 按提示安装或登录，再浏览远端目录并开始首个任务。Kimi 端口与令牌文件路径可在
 「高级设置」中修改。首次启动没有预设机器。详见[快速开始](docs/GETTING-STARTED.md)。
 

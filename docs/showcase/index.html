@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perch — Product showcase</title>
+<style>
+* { box-sizing: border-box; }
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; color: #242b2b; }
+body { margin: 0; }
+main { width: 100vw; height: 100vh; min-height: 620px; overflow: hidden; display: flex; flex-direction: column; padding: 4.5vh 6vw 2.5vh; background: radial-gradient(ellipse at 85% 80%, #d0ebd8 0, transparent 60%), linear-gradient(135deg, #f7f8f3, #e7efeb); }
+header { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: clamp(16px, 2.4vh, 25px); letter-spacing: -.5px; }
+header img { width: 4.5vh; height: 4.5vh; min-width: 28px; min-height: 28px; }
+header span { margin-left: auto; text-transform: uppercase; letter-spacing: 2px; font-size: clamp(9px, 1.25vh, 13px); color: #52685b; font-weight: 500; }
+h1 { font-size: clamp(30px, 5.4vh, 62px); line-height: 1.08; letter-spacing: -1.8px; margin: 2.3vh 0 1vh; font-weight: 650; }
+p { margin: 0; font-size: clamp(13px, 1.8vh, 20px); color: #516159; line-height: 1.5; }
+.screen { min-height: 0; flex: 1; display: flex; align-items: center; justify-content: center; padding: 2.6vh 0 1.8vh; }
+.screen img { display: block; max-height: 100%; max-width: 100%; width: auto; height: auto; border-radius: 10px; box-shadow: 0 16px 45px #173e2d20, 0 2px 5px #173e2d0d; }
+footer { display: flex; justify-content: space-between; gap: 20px; font-size: clamp(9px, 1.2vh, 13px); color: #617267; letter-spacing: .2px; }
+body[data-scene="start"] main { background: radial-gradient(ellipse at 75% 85%, #cfe6e3 0, transparent 60%), linear-gradient(135deg, #f9f9f5, #e7eeed); }
+body[data-scene="details"] main { background: radial-gradient(ellipse at 80% 85%, #e0deef 0, transparent 62%), linear-gradient(135deg, #f8f8f5, #edecf2); }
+</style>
+<main>
+  <header><img src="../../Resources/Brand/Perch-1024.png" alt=""><strong>Perch</strong><span>Built for macOS</span></header>
+  <h1 id="title"></h1><p id="subtitle"></p>
+  <div class="screen"><img id="screen" alt=""></div>
+  <footer><span>github.com/chenweigao/perch</span><span>Real native UI · Synthetic demo data · Source preview</span></footer>
+</main>
+<script>
+const scenes = {
+  overview: { title: 'A home for your coding agents.', subtitle: '把对话、任务与工具放在一起，让工作更专注。', image: 'perch-overview.jpg', alt: 'Native Perch conversation with a task sidebar and synthetic login-fix example' },
+  start: { title: 'Every task starts with a little clarity.', subtitle: '选好项目、模型与思考强度，然后开始。', image: 'perch-new-session.jpg', alt: 'Native new-task page with separate project, model, reasoning and permission controls' },
+  details: { title: 'The answer first. The details, a click away.', subtitle: '清楚阅读结果，需要时展开工具参数与输出。', image: 'perch-tool-details.jpg', alt: 'Expanded tool card with synthetic test output in the native conversation' }
+};
+const key = new URLSearchParams(location.search).get('scene') || 'overview';
+const scene = scenes[key] || scenes.overview;
+document.body.dataset.scene = key;
+document.getElementById('title').textContent = scene.title;
+document.getElementById('subtitle').textContent = scene.subtitle;
+const screen = document.getElementById('screen');
+screen.src = '../images/' + scene.image; screen.alt = scene.alt;
+</script>
+</html>

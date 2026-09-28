@@ -25,7 +25,9 @@ with identical `Sources/WorkbenchCore`, `Package.swift` and `Package.resolved`;
 verify these match before reusing its build products. Production view sources
 always come from the current checkout.
 
-Screenshots in `docs/images` are unaltered captures of this window on macOS 26.
+`docs/images/perch-overview.jpg` and `perch-tool-details.jpg` are unaltered
+captures of this window on macOS 26. Other fixtures and promotional compositions
+are documented in [the asset guide](../../docs/showcase/README.md).
 They illustrate the real components with demo data, not live agent acceptance.
 Before replacing an image, review its complete contents and metadata. Do not load
 real conversations into this fixture or hide private information with overlays.
