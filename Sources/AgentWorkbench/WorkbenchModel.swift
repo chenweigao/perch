@@ -988,15 +988,7 @@ final class WorkbenchModel: ObservableObject {
     /// `considerNaming` through the conversation publishers. Only titles that
     /// could still be placeholders fetch, so named sessions never pay for it.
     private func loadHistoryForNaming(_ reference: SessionReference, remoteTitle: String) {
-        let trimmed = remoteTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch reference.kind {
-        case .terminal: return
-        case .kimi: guard trimmed.isEmpty else { return }
-        case .omp, .qoder, .dsh, .codex, .claude:
-            // The bridge's default title is the first message's first 60
-            // characters; a longer remote title is deliberate.
-            guard trimmed.count <= 60 else { return }
-        }
+        guard SessionNaming.couldBePlaceholder(remoteTitle, kind: reference.kind) else { return }
         if reference.kind == .kimi { kimiEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
         else { nativeEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
     }
