@@ -139,6 +139,10 @@
 /* Settings */
 "语言 / Language" = "Language";
 "界面语言" = "Language";
+"外观" = "Appearance";
+"跟随系统" = "System";
+"浅色" = "Light";
+"深色" = "Dark";
 "Agent 与执行环境" = "Agent & Environments";
 "添加 SSH 环境…" = "Add SSH Environment…";
 "远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。" = "Remote connections reuse this Mac's SSH configuration. Connect, reconnect and remove machines from the environment menu in the sidebar.";

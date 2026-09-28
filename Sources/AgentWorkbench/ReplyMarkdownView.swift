@@ -274,7 +274,7 @@ struct SelectableReplyText: NSViewRepresentable {
         view.textContainer?.widthTracksTextView = true
         view.isHorizontallyResizable = false
         view.isVerticallyResizable = false
-        view.linkTextAttributes = [.foregroundColor: NSColor(red: 0.18, green: 0.36, blue: 0.55, alpha: 1)]
+        view.linkTextAttributes = [.foregroundColor: WorkbenchTheme.link]
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }

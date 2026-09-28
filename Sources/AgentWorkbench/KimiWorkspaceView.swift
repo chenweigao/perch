@@ -3,8 +3,7 @@ import SwiftUI
 import WorkbenchCore
 import UniformTypeIdentifiers
 
-private let kimiAccent = Color(red: 0.16, green: 0.16, blue: 0.17)
-private let kimiPaper = Color(red: 0.965, green: 0.965, blue: 0.96)
+private let kimiAccent = WorkbenchTheme.accent
 private let kimiReadingWidth: CGFloat = ReplyStyle.readingWidth
 
 struct KimiWorkspaceView: View {
@@ -69,7 +68,7 @@ struct KimiWorkspaceView: View {
             }
             if let problem = connection.error { errorBanner("连接中断，显示的是最近同步的内容。\n" + problem) }
             if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity).background(.white)
+        }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
             .onChange(of: connection.selectedId) { _, _ in palette = CommandPaletteState() }
             .tint(kimiAccent)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in

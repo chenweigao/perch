@@ -1139,7 +1139,20 @@ final class AttachedTerminal: ObservableObject, Identifiable {
             .palette(10, color: "308767").palette(11, color: "a97e23")
             .palette(12, color: "4b78cf").palette(13, color: "9267b1")
             .palette(14, color: "2d8a96").palette(15, color: "e1e4ed")
-        context = TerminalViewState(theme: TerminalTheme(light: palette, dark: palette),
+        // Same hues as the light palette, lifted for the dark content surface.
+        let darkPalette = TerminalConfiguration()
+            .background("1e1e1e").foreground("d0d4de")
+            .selectionBackground("35415c").selectionForeground("e8ebf2")
+            .cursorColor("7a7ce0").cursorText("1e1e1e")
+            .palette(0, color: "3f4550").palette(1, color: "d96372")
+            .palette(2, color: "4cae8c").palette(3, color: "cfa04a")
+            .palette(4, color: "6f97dd").palette(5, color: "a884c4")
+            .palette(6, color: "4aa8b5").palette(7, color: "c9cdd8")
+            .palette(8, color: "7d8493").palette(9, color: "e07a88")
+            .palette(10, color: "5cbd9c").palette(11, color: "dcb05e")
+            .palette(12, color: "82a5e4").palette(13, color: "b794d1")
+            .palette(14, color: "5cb5c1").palette(15, color: "eef0f5")
+        context = TerminalViewState(theme: TerminalTheme(light: palette, dark: darkPalette),
             terminalConfiguration: TerminalConfiguration().fontFamily("Menlo").fontSize(14)
                 .windowPaddingX(14).windowPaddingY(12)
                 .custom("clipboard-read", "deny").custom("clipboard-write", "allow")
