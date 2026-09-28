@@ -1070,7 +1070,8 @@ struct NavigationPreviewApp: App {
                 report["build"] = try JSONSerialization.jsonObject(with: Data(contentsOf: buildURL))
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
-            if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
+            if mode == "disclosure" { report.merge(try await runner.disclosures()) { a, _ in a } }
+            else if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
             else if mode == "image" { report.merge(try await runner.imageDecoding()) { a, _ in a } }
             else if mode == "turns" { report.merge(try await runner.turnNavigation()) { a, _ in a } }
             else if mode == "search" { report.merge(try await runner.readingInteractions(searchOnly: true)) { a, _ in a } }
@@ -1129,4 +1130,121 @@ final class NavigationDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+}
+
+
+extension NavigationRunner {
+    /// Exercise the production disclosure binding and measure layout/display submission.
+    /// Mouse delivery and GPU presentation are outside this fixture.
+    func disclosures() async throws -> [String: Any] {
+        ConversationDisclosureFixture.enabled = true
+        defer {
+            ConversationDisclosureFixture.enabled = false
+            ConversationDisclosureFixture.bindings.removeAll()
+        }
+        guard let host = model.host else { throw NavigationError("missing host") }
+        var targetRowID = ""
+        func binding(for kind: String) -> Binding<Bool>? {
+            ConversationDisclosureFixture.bindings.sorted { $0.key.count > $1.key.count }.first { key, _ in
+                key.hasPrefix("disclosure-" + kind + ":") &&
+                    (kind == "Bash" ? key.contains(":tool:bash:") : key.hasSuffix(":thought"))
+            }?.value
+        }
+        func rows() -> [NSView] {
+            var pending = [host], result: [NSView] = []
+            while let view = pending.popLast() {
+                if view.identifier?.rawValue == targetRowID { result.append(view) }
+                pending.append(contentsOf: view.subviews)
+            }
+            return result.sorted { $0.frame.minY < $1.frame.minY }
+        }
+        let withContext = ProcessInfo.processInfo.environment["NAVIGATION_DISCLOSURE_CONTEXT"] == "1"
+        var samples: [[String: Any]] = []
+        for kind in ["Bash", "Thoughts"] {
+            let session = "disclosure-" + kind
+            ConversationReadingMemory.shared.remove(session)
+            ConversationDisclosureFixture.bindings.removeAll()
+            let payload = (0..<2400).map { "Line \($0): 检查中文和 English 输出，保留完整内容用于选择复制。" }.joined(separator: "\n")
+            let content: [[String: Any]] = kind == "Bash"
+                ? [["type": "tool_use", "tool_call_id": "bash", "tool_name": "Bash", "input": ["command": "swift run"]]]
+                : [["type": "thinking", "thinking": payload]]
+            var messages: [[String: Any]] = [
+                ["id": "disclosure-body", "role": "assistant", "created_at": "", "content": content]
+            ]
+            if kind == "Bash" {
+                messages.append(["id": "disclosure-result", "role": "tool", "created_at": "", "content": [
+                    ["type": "tool_result", "tool_call_id": "bash", "is_error": true, "output": payload]
+                ]])
+            }
+            messages.append(["id": "disclosure-answer", "role": "assistant", "created_at": "",
+                             "content": [["type": "text", "text": "Following reply remains readable."]]])
+            if withContext {
+                messages.insert(["id": "disclosure-prefix", "role": "user", "created_at": "",
+                    "content": [["type": "text", "text": Array(repeating: "Earlier conversation remains above the clicked row.", count: 45).joined(separator: "\n")]]], at: 0)
+                messages.append(["id": "disclosure-tail", "role": "user", "created_at": "",
+                    "content": [["type": "text", "text": Array(repeating: "Later conversation keeps the viewport away from the document boundary.", count: 45).joined(separator: "\n")]]])
+            }
+            let snapshot: [String: Any] = ["as_of_seq": 1, "epoch": "fixture",
+                "session": ["id": session, "title": session, "updated_at": "", "busy": false,
+                            "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture"]],
+                "messages": ["items": messages, "has_more": false], "pending_approvals": [], "pending_questions": []]
+            model.selected = session
+            model.conversation = KimiConversation(try KimiWire.decoder().decode(KimiSnapshot.self,
+                from: JSONSerialization.data(withJSONObject: snapshot)))
+            targetRowID = ConversationProjection().update(model.conversation!.displayMessages, isRunning: false).entries.first {
+                $0.messages.flatMap(\.content).contains { $0.type == "tool_use" || $0.type == "thinking" }
+            }!.id
+            if withContext {
+                guard await flushAndWait(host, until: { self.model.marker.contentToken == NavigationModel.token(self.model.conversation) }) != nil else {
+                    throw NavigationError("context transcript did not mount")
+                }
+                ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
+            }
+            guard await flushAndWait(host, until: { binding(for: kind) != nil }) != nil,
+                  let scroll = findScrollView(host) else { throw NavigationError("missing \(kind) disclosure") }
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: withContext ? max(0, scroll.contentView.bounds.minY - 80) : 0))
+            try await Task.sleep(for: .milliseconds(350))
+            let collapsed = rows().first?.frame.height ?? 0
+            for iteration in 0..<6 {
+                guard let control = binding(for: kind) else { throw NavigationError("lost disclosure") }
+                NavigationRenderMetrics.stages = [:]
+                let headerY = rows().first?.convert(.zero, to: host).y ?? 0
+                let start = CACurrentMediaTime()
+                control.wrappedValue.toggle()
+                var heights: [CGFloat] = [], gaps: [Double] = [], contentHeights: [CGFloat] = [], scrollOffsets: [CGFloat] = [], headerOffsets: [CGFloat] = []
+                var previous = start, lastChange = start
+                repeat {
+                    try await Task.sleep(for: .milliseconds(8))
+                    host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+                    let now = CACurrentMediaTime()
+                    gaps.append((now - previous) * 1_000); previous = now
+                    let height = rows().first?.frame.height ?? 0
+                    if heights.last != height { lastChange = now }
+                    heights.append(height)
+                    contentHeights.append(rows().first?.subviews.first?.frame.height ?? 0)
+                    scrollOffsets.append(scroll.contentView.bounds.minY)
+                    headerOffsets.append((rows().first?.convert(.zero, to: host).y ?? 0) - headerY)
+                } while CACurrentMediaTime() - start < 0.5
+                let expanded = iteration % 2 == 0
+                let finalHeight = heights.last ?? 0
+                guard expanded ? finalHeight > collapsed + 500 : abs(finalHeight - collapsed) < 1 else {
+                    try writeNavigationArtifact("disclosure-failure.json", ["kind": kind, "iteration": iteration,
+                        "heights": heights, "keys": Array(ConversationDisclosureFixture.bindings.keys)])
+                    throw NavigationError("wrong final \(kind) height: \(finalHeight), collapsed \(collapsed)")
+                }
+                let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count
+                if ProcessInfo.processInfo.environment["NAVIGATION_ASSERT_ATOMIC_DISCLOSURE"] == "1" {
+                    guard mismatches == 0 else { throw NavigationError("\(kind) had \(mismatches) frames with mismatched content and row heights") }
+                }
+                if withContext && headerOffsets.contains(where: { abs($0) > 1 }) {
+                    throw NavigationError("\(kind) disclosure header moved during toggle: \(headerOffsets)")
+                }
+                samples.append(["kind": kind, "expanded": expanded, "header_offsets": headerOffsets,
+                    "mismatched_frames": mismatches, "content_heights": contentHeights, "scroll_offsets": scrollOffsets,
+                    "settled_ms": (lastChange - start) * 1_000, "main_loop_gaps": statistics(gaps),
+                    "heights": heights, "render_stages": NavigationRenderMetrics.report])
+            }
+        }
+        return ["disclosures": samples]
+    }
 }
