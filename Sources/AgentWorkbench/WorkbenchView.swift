@@ -19,6 +19,10 @@ struct WorkbenchView: View {
                     Button("关闭") { model.showRenderReport = false }.keyboardShortcut(.cancelAction)
                 }.padding(26).frame(minWidth: 550)
             }
+            .sheet(item: $model.inspectingSession, onDismiss: model.endInspection) { item in
+                WorkspaceActionDetail(model: model, item: item).id(item.id)
+            }
+            .sheet(isPresented: $model.showGroupSuggestions) { GroupSuggestionsSheet(model: model) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: model.setupHost) }
             .sheet(isPresented: $model.showSessionSearch) {
@@ -81,12 +85,43 @@ private struct WorkbenchDetail: View {
     @UILocalization private var L
     @ObservedObject var model: WorkbenchModel
 
+    @AppStorage("files.panel.width") private var filePanelWidth = 460.0
+    @State private var fullWidthReview = false
+    @State private var resizeStart: Double?
+
     var body: some View {
-        HStack(spacing: 0) {
-            conversation
-            if model.showFileViewer && !model.showDashboard && !model.draftingNewTask {
-                Divider()
-                RemoteFilePanel(browser: model.fileBrowser) { model.toggleFileViewer() }
+        GeometryReader { geometry in
+            let visible = model.showFileViewer && !model.showDashboard && !model.draftingNewTask
+            let expanded = visible && (fullWidthReview || geometry.size.width < 706)
+            let width = min(max(320, filePanelWidth), max(320, geometry.size.width - 386))
+            HStack(spacing: 0) {
+                conversation.frame(width: expanded ? 0 : nil).clipped()
+                    .accessibilityHidden(expanded).allowsHitTesting(!expanded)
+                if visible {
+                    if !expanded {
+                        Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 6)
+                            .contentShape(Rectangle())
+                            .gesture(DragGesture().onChanged { value in
+                                if resizeStart == nil { resizeStart = width }
+                                filePanelWidth = min(max(320, resizeStart! - value.translation.width), max(320, geometry.size.width - 386))
+                            }.onEnded { _ in resizeStart = nil })
+                            .accessibilityLabel("调整文件面板宽度")
+                            .accessibilityValue(String(Int(width)))
+                            .accessibilityAdjustableAction { direction in
+                                filePanelWidth = min(max(320, width + (direction == .increment ? 40 : -40)), max(320, geometry.size.width - 386))
+                            }
+                    }
+                    let reference = model.selectedReference
+                    RemoteFilePanel(browser: model.fileBrowser, fullWidth: expanded,
+                        onToggleWidth: geometry.size.width >= 706 ? { fullWidthReview.toggle() } : nil,
+                        onAddContext: model.canQuoteSelection ? { text in
+                            guard let reference else { return }
+                            model.appendReviewContext(text, to: reference)
+                            fullWidthReview = false
+                        } : nil,
+                        onClose: { model.toggleFileViewer(); fullWidthReview = false })
+                        .id(reference?.id).frame(width: expanded ? geometry.size.width : width)
+                }
             }
         }
     }
@@ -115,11 +150,17 @@ private struct WorkbenchDetail: View {
                     else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
                     else {
                         WorkbenchDashboard(
-                            attentionOnly: model.onlyAttention, projection: model.dashboardProjection,
+                            attentionOnly: model.onlyAttention, changes: model.dashboardChanges,
+                            onAcknowledgeChanges: { model.acknowledgeDashboardChanges() },
+                            onSuggestGroups: { model.showGroupSuggestions = true },
+                            projection: model.dashboardProjection,
                             context: model.dashboardContext, isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
                             onNewTask: { model.startNewTask() },
-                            onOpen: { model.open($0) },
+                            onOpen: { item in
+                                if item.section == .attention || item.section == .review { model.inspect(item) }
+                                else { model.open(item) }
+                            },
                             onMarkReviewed: { model.markReviewed($0) },
                             rowActions: { SessionActionsMenu(model: model, item: $0) },
                             groupNames: { index[$0.id] },
@@ -151,7 +192,7 @@ private struct WorkbenchDetail: View {
                         .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: 600, maxWidth: .infinity, maxHeight: .infinity)
+        }.frame(minWidth: model.showFileViewer ? 380 : 600, maxWidth: .infinity, maxHeight: .infinity)
             .background(WorkbenchTheme.contentBackground)
     }
 

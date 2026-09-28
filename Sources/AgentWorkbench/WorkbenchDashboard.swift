@@ -5,6 +5,10 @@ import WorkbenchCore
 /// Both use the same projection and rows, without maintaining a second inbox state.
 struct WorkbenchDashboard<RowActions: View>: View {
     var attentionOnly = false
+    var changes: [WorkspaceSession] = []
+    var onAcknowledgeChanges: (() -> Void)? = nil
+    var onSuggestGroups: (() -> Void)? = nil
+    @State private var queueOrder = ActionQueueOrder()
     let projection: DashboardProjection
     var context = DashboardContext()
     let isArchiving: Bool
@@ -35,6 +39,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
             VStack(alignment: .leading, spacing: 28) {
                 if let error = context.storageError { storageBanner(error) }
                 introduction
+                if !attentionOnly {
+                    if let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
+                    if !changes.isEmpty { changeSummary }
+                }
                 if attentionOnly {
                     if projection.attention.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
@@ -42,7 +50,11 @@ struct WorkbenchDashboard<RowActions: View>: View {
                                 .foregroundStyle(.secondary)
                             Button("返回工作台", action: onShowHome).buttonStyle(.link)
                         }.padding(.vertical, 12)
-                    } else { section(projection.attention, limit: projection.attention.items.count) }
+                    } else {
+                        let byID = Dictionary(uniqueKeysWithValues: projection.attention.items.map { ($0.id, $0) })
+                        let ordered = queueOrder.ids.compactMap { byID[$0] }
+                        section(DashboardSection(section: .attention, items: ordered), limit: ordered.count)
+                    }
                 } else {
                     if let empty = projection.emptyState, empty != .nothingPending { emptyState(empty) }
                     ForEach(projection.sections) { value in
@@ -89,6 +101,30 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly))
                 #endif
         }
+        .onAppear { queueOrder.update(projection.attention.items.map(\.id)) }
+        .onChange(of: projection.attention.items.map(\.id)) { _, ids in queueOrder.update(ids) }
+    }
+
+    private var changeSummary: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("新进展 · \(changes.count)").font(.system(size: 13, weight: .medium))
+                Spacer()
+                if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(.link) }
+            }
+            Text("自上次确认后新增或变化的请求与结果；首次使用会包含当前事项。")
+                .font(.caption).foregroundStyle(.secondary)
+            ForEach(changes.prefix(5)) { item in
+                Button { onOpen(item) } label: {
+                    HStack {
+                        Text(item.title).lineLimit(1)
+                        Spacer()
+                        Text(LocalizedStringKey(item.section.rawValue)).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+            }
+            if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.caption).foregroundStyle(.secondary) }
+        }.font(.system(size: 12))
     }
 
     private var title: LocalizedStringKey {

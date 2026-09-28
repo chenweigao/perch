@@ -315,9 +315,9 @@ private struct DiffText: View {
     let diff: String
     init(_ diff: String) { self.diff = diff }
     var body: some View {
-        SelectableReplyText(attributed: attributed)
+        SelectableReplyText(attributed: Self.attributed(diff))
     }
-    private var attributed: NSAttributedString {
+    static func attributed(_ diff: String) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = 3
         let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
@@ -345,13 +345,25 @@ private struct DiffText: View {
 
 struct RemoteFilePanel: View {
     @ObservedObject var browser: RemoteFileBrowser
+    var fullWidth = false
+    var onToggleWidth: (() -> Void)? = nil
+    var onAddContext: ((String) -> Void)? = nil
     let onClose: () -> Void
+    @State private var selection = NSRange(location: 0, length: 0)
+    @State private var feedbackContext: ReviewContext?
+    @State private var feedback = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "doc.text.magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
                 Text("文件").font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 0)
+                if let onToggleWidth {
+                    Button(action: onToggleWidth) {
+                        Image(systemName: fullWidth ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                            .frame(width: 28, height: 28).contentShape(Rectangle())
+                    }.buttonStyle(.plain).help(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
+                }
                 Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板")
             }.padding(.horizontal, 14).frame(height: WorkbenchChrome.headerHeight)
@@ -426,8 +438,41 @@ struct RemoteFilePanel: View {
                 }
             }.padding(.horizontal, 14).padding(.vertical, 12)
             Divider()
+            if onAddContext != nil {
+                HStack(spacing: 12) {
+                    Button("引用文件") { if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()) } }
+                        .disabled(!hasContext || browser.loading || browser.error != nil)
+                    Button("反馈选中代码…") {
+                        feedback = ""; feedbackContext = context(selection: selection)
+                    }.disabled(selection.length == 0 || browser.loading || browser.error != nil)
+                    Spacer(minLength: 0)
+                }.font(.system(size: 12)).padding(.horizontal, 14).padding(.vertical, 8)
+                Divider()
+            }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }.frame(width: 420).background(WorkbenchTheme.contentBackground)
+        }.background(WorkbenchTheme.contentBackground)
+            .onChange(of: browser.loading) { _, loading in if loading { selection = NSRange(location: 0, length: 0) } }
+            .onChange(of: browser.mode) { _, _ in selection = NSRange(location: 0, length: 0) }
+            .sheet(item: $feedbackContext) { context in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("代码反馈").font(.headline)
+                    Group {
+                        Text(context.reference).font(.caption).textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                        ScrollView { Text(context.excerpt).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 160)
+                    }
+                    TextField("希望如何修改？", text: $feedback, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder)
+                    Text("加入当前任务草稿，检查后再发送。").font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Button("取消") { feedbackContext = nil }.keyboardShortcut(.cancelAction)
+                        Spacer()
+                        Button("加入草稿") {
+                            onAddContext?(context.prompt(feedback: feedback))
+                            feedbackContext = nil
+                        }.disabled(feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }.padding(20).frame(width: 520)
+            }
     }
 
     @ViewBuilder private var content: some View {
@@ -464,7 +509,7 @@ struct RemoteFilePanel: View {
                                 }.buttonStyle(.plain)
                             }
                         }.padding(.vertical, 8)
-                    }.frame(minHeight: 120)
+                    }.frame(minHeight: 80, idealHeight: min(220, Double(entries.count) * 42 + 16), maxHeight: 220)
                     diffPane
                 }
             case nil:
@@ -483,9 +528,8 @@ struct RemoteFilePanel: View {
                         .padding(.horizontal, 14).padding(.vertical, 6)
                     Divider()
                 }
-                ScrollView([.horizontal, .vertical]) {
-                    DiffText(diff).fixedSize(horizontal: true, vertical: true).padding(14)
-                }
+                RemoteSourceText(text: diff, line: nil, diff: true, onSelection: { selection = $0 })
+                    .id("diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitStaged)")
             }
         case .binary: notice("二进制文件差异，不做预览。", symbol: "doc.zipper", tint: .secondary)
         case .empty: notice("该文件在当前范围内没有差异。", symbol: "equal.circle", tint: .secondary)
@@ -556,7 +600,7 @@ struct RemoteFilePanel: View {
                         Toggle("行号", isOn: $browser.showLineNumbers).toggleStyle(.checkbox).font(.system(size: 11))
                     }.padding(.horizontal, 14).padding(.vertical, 7)
                     Divider()
-                    RemoteSourceText(text: browser.showLineNumbers ? numbered(text) : text, line: browser.targetLine)
+                    RemoteSourceText(text: text, line: browser.targetLine, numbered: browser.showLineNumbers, onSelection: { selection = $0 }).id(browser.path)
 
                 }
             case .binary(let size):
@@ -583,12 +627,28 @@ struct RemoteFilePanel: View {
         return "\(revision) · \(directory)\(suffix)"
     }
 
-    private func numbered(_ text: String) -> String {
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
-        let width = String(lines.count).count
-        return lines.enumerated().map { index, line in
-            String(index + 1).padding(toLength: width, withPad: " ", startingAt: 0) + " │ " + line
-        }.joined(separator: "\n")
+    private var hasContext: Bool {
+        if browser.mode == .git { if case .text = browser.gitDiff { return true }; return false }
+        if case .text = browser.content { return true }; return false
+    }
+    private var contextPath: String? {
+        if browser.mode == .git {
+            guard let path = browser.gitPath else { return nil }
+            return (browser.gitDirectory as NSString).appendingPathComponent(path)
+        }
+        guard case .text = browser.content else { return nil }
+        return browser.path
+    }
+    private func context(selection: NSRange) -> ReviewContext? {
+        guard let path = contextPath else { return nil }
+        if browser.mode == .git {
+            guard case .text(let diff, _) = browser.gitDiff else { return nil }
+            return ReviewContext(path: path, text: diff, selection: selection, diff: true,
+                scope: "\(browser.hostName) · \(browser.gitStaged ? "staged" : "unstaged")")
+        }
+        guard case .text(let text, let truncated, _) = browser.content else { return nil }
+        return ReviewContext(path: path, text: text, selection: selection,
+            scope: "\(browser.hostName) · \(truncated ? "loaded file prefix" : "file")")
     }
     private func byteLabel(_ size: Int) -> String {
         size < 1024 ? "\(size) 字节" : size < 1_048_576
@@ -607,11 +667,27 @@ struct RemoteFilePanel: View {
 struct RemoteSourceText: NSViewRepresentable {
     let text: String
     let line: Int?
-    final class Coordinator { var text = ""; var line: Int? }
+    var diff = false
+    var numbered = false
+    var onSelection: ((NSRange) -> Void)? = nil
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var rendered = ""
+        var source = ""
+        var line: Int?
+        var onSelection: ((NSRange) -> Void)?
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let view = notification.object as? NSTextView else { return }
+            let range = ReviewContext.sourceSelection(in: source, rendered: rendered, selection: view.selectedRange())
+            let callback = onSelection
+            DispatchQueue.main.async { callback?(range) }
+        }
+    }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
         let view = NSTextView(); view.isEditable = false; view.isSelectable = true
+        view.identifier = NSUserInterfaceItemIdentifier("PerchReviewSource")
+        view.delegate = context.coordinator
         view.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         view.textContainerInset = NSSize(width: 14, height: 14)
         view.isHorizontallyResizable = true; view.isVerticallyResizable = true
@@ -622,17 +698,21 @@ struct RemoteSourceText: NSViewRepresentable {
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? NSTextView else { return }
-        guard context.coordinator.text != text || context.coordinator.line != line else { return }
-        context.coordinator.text = text; context.coordinator.line = line
-        view.string = text; view.sizeToFit()
-        guard let line, let range = RemoteFileContent.lineRange(in: text, line: line) else {
+        context.coordinator.onSelection = onSelection
+        let rendered = numbered ? text.split(separator: "\n", omittingEmptySubsequences: false).enumerated().map { "\($0.offset + 1) │ \($0.element)" }.joined(separator: "\n") : text
+        guard context.coordinator.rendered != rendered || context.coordinator.line != line else { return }
+        context.coordinator.rendered = rendered; context.coordinator.source = text; context.coordinator.line = line
+        if diff { view.textStorage?.setAttributedString(DiffText.attributed(text)) }
+        else { view.string = rendered }
+        view.sizeToFit()
+        guard let line, let range = RemoteFileContent.lineRange(in: rendered, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
             view.scrollRangeToVisible(NSRange(location: 0, length: 0))
             return
         }
         view.setSelectedRange(range)
         DispatchQueue.main.async {
-            guard view.string == text, context.coordinator.line == line else { return }
+            guard context.coordinator.rendered == rendered, context.coordinator.line == line else { return }
             view.scrollRangeToVisible(range)
         }
     }
