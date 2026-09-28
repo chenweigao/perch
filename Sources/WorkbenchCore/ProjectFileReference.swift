@@ -40,7 +40,15 @@ public struct ProjectFileCatalog {
         \(RemoteGitCommand.guardScript)
         root=$(git \(RemoteGitCommand.safety) rev-parse --show-toplevel) || exit $?
         printf '%s\\0' "$root"
-        git \(RemoteGitCommand.safety) -C "$root" ls-files --full-name --cached --others --exclude-standard -z -- | head -c \(limit + 1)
+        # Keep catalog bytes on fd 3 and capture Git's status separately on fd 4.
+        # Drain excess bytes so the output cap does not give Git a SIGPIPE error.
+        exec 3>&1
+        status=$(
+          exec 4>&1
+          { git \(RemoteGitCommand.safety) -C "$root" ls-files --full-name --cached --others --exclude-standard -z --; printf '%s' "$?" >&4; } \\
+            | { head -c \(limit + 1); cat >/dev/null; } >&3
+        )
+        exit "$status"
         """
         return ["/bin/sh", "-c", script, "perch-project-files", directory].map(SSHCommand.quote).joined(separator: " ")
     }
