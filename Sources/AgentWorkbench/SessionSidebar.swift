@@ -157,7 +157,7 @@ private struct SessionSidebarRow: View {
     let model: WorkbenchModel
     let item: WorkspaceSession
     /// Task groups this session belongs to. The subtitle is already spoken for by
-    /// attention and offline states, so membership stays in the tooltip.
+    /// attention and offline states, so membership stays in the hover preview.
     var groups: [String] = []
     let selected: Bool
     let onOpen: () -> Void
@@ -166,17 +166,12 @@ private struct SessionSidebarRow: View {
         if !item.online { return L("离线 · 状态未同步") }
         return item.section == .attention ? item.detail : nil
     }
-    private var tooltip: String {
-        var lines = [item.title, "\(item.reference.kind.label) · \(item.hostName) · \(item.directory)", item.detail]
-        if !groups.isEmpty {
-            let names = groups.joined(separator: "、")
-            lines.append(L("任务组：\(names)"))
-        }
-        return lines.joined(separator: "\n")
-    }
     var body: some View {
         SessionRowChrome(title: item.title, subtitle: subtitle,
-                         hostName: item.hostName, hostID: item.reference.hostID, selected: selected,
+                         hostName: item.hostName, hostID: item.reference.hostID,
+                         directory: item.directory, detail: "\(item.reference.kind.label) · \(item.detail)",
+                         groups: groups, updatedAt: item.updatedAt,
+                         selected: selected,
                          starred: model.workspace.starred.contains(item.reference), archived: item.archived,
                          canOpen: item.online && !item.archived,
                          canQuickArchive: model.canArchive(item) && (item.archived || item.section != .running),
@@ -186,7 +181,6 @@ private struct SessionSidebarRow: View {
             SessionStatusIndicator(item: item)
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
-            .help(tooltip)
     }
 }
 

@@ -97,6 +97,13 @@ private struct SidebarPreview: View {
                 Text("新建任务组次数：\(groupCreations)").sidebarProbe("preview.groupCreations", value: "\(groupCreations)")
                 Text(LocalizedStringKey(filter.rawValue)).sidebarProbe("preview.filter", value: filter.rawValue)
                 Toggle("禁用 SwiftUI 动画（预览）", isOn: $reduceMotion).sidebarProbe("preview.reduceMotion")
+                Text("悬浮预览卡片样式").font(.headline).padding(.top, 12)
+                SessionHoverPreview(title: "规划 Perch 工作台功能增强", hostName: "studio-mini.local",
+                                    hostID: UUID(uuidString: "11111111-2222-3333-4444-555555555555"),
+                                    directory: "/workspace/mini-workspace", detail: "Kimi · 已完成",
+                                    groups: [], updatedAt: Date().timeIntervalSince1970 - 259200)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.primary.opacity(0.08)))
                 Spacer()
             }.padding(36).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.sheet(isPresented: $showSearch) {
@@ -109,6 +116,9 @@ private struct SidebarPreview: View {
     }
     private func task(_ name: String, status: String, symbol: String) -> some View {
         SessionRowChrome(title: name, subtitle: status.contains("等你处理") || status.contains("连接中断") ? status : nil,
+                         hostName: "studio-mini.local", hostID: UUID(uuidString: "11111111-2222-3333-4444-555555555555"),
+                         directory: "/workspace/mini-workspace", detail: status,
+                         groups: ["Perch 工作台"], updatedAt: Date().timeIntervalSince1970 - 259200,
                          selected: title == name, starred: starred.contains(name), archived: archived.contains(name),
                          canOpen: !archived.contains(name) && !status.contains("连接中断"), canQuickArchive: !status.contains("运行中") && !status.contains("连接中断"), busy: false,
                          onOpen: { title = name; page = .other },
