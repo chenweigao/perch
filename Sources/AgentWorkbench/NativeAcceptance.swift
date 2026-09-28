@@ -42,7 +42,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     static let host = SSHHost(id: UUID(uuidString: "00000000-0000-0000-0000-000000000023")!,
                               name: "离线验收", destination: "")
     let sessions: [WorkspaceSession]
-    private var snapshots: [String: Data]
+    fileprivate var snapshots: [String: Data]
     private var streamingSnapshot: [String: Any]?
     private(set) var requests: [String] = []
     private(set) var responseMessages: [Int] = []
@@ -109,6 +109,27 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     }
     func request(_ path: String, body: JSONValue?) throws -> Data {
         requests.append(path)
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "workspace" {
+            if path == "/sessions" {
+                let catalog = try snapshots.keys.sorted().map { id -> [String: Any] in
+                    var value = try JSONSerialization.jsonObject(with: snapshots[id]!) as! [String: Any]
+                    value["pending"] = (value["interactions"] as! [[String: Any]]).count
+                    value["updated"] = 100.0; value["archived"] = false
+                    return value
+                }
+                return try JSONSerialization.data(withJSONObject: ["sessions": catalog])
+            }
+            if path.hasSuffix("/answer"), let body {
+                let id = String(path.split(separator: "/")[1])
+                var value = try JSONSerialization.jsonObject(with: snapshots[id]!) as! [String: Any]
+                let requests = value["interactions"] as! [[String: Any]]
+                guard requests.contains(where: { $0["id"] as? String == body["id"].string }) else { throw WorkbenchError("Wrong request identity") }
+                value["interactions"] = []; value["busy"] = true
+                value["revision"] = (value["revision"] as! Int) + 1
+                snapshots[id] = try JSONSerialization.data(withJSONObject: value)
+                return Data("{}".utf8)
+            }
+        }
         guard body == nil else { throw WorkbenchError("隔离验收不执行写请求：\(path)") }
         if path == "/models" { return Data(#"{"models":[]}"#.utf8) }
         let id = path.split(separator: "?")[0].replacingOccurrences(of: "/sessions/", with: "")
@@ -171,6 +192,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
+        if mode == "workspace" { await workspaceActions(); return }
         var report: [String: Any] = ["mode": mode, "history_turns": 200, "catalog_sessions": 500,
                                    "window_points": [1280, 820], "native_transport": "fixed in-memory JSON; real decode/select",
                                    "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS"]
@@ -505,6 +527,66 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         var value = rusage(); getrusage(RUSAGE_SELF, &value)
         return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
             + Double(value.ru_utime.tv_usec + value.ru_stime.tv_usec) / 1_000_000
+    }
+    private func workspaceActions() async {
+        var report: [String: Any] = ["mode": "workspace", "transport": "isolated in-memory native transport", "real_agent": false]
+        do {
+            try await Task.sleep(for: .seconds(2))
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
+            for index in 0..<3 {
+                let id = "session-\(index)"
+                var value = try JSONSerialization.jsonObject(with: fixture.snapshots[id]!) as! [String: Any]
+                value["interactions"] = index < 2 ? [["id": "approval-\(index)", "method": "confirm", "title": "确认第 \(index + 1) 个隔离请求"]] : []
+                value["completed"] = index == 2 ? 1 : 0
+                value["revision"] = 2
+                fixture.snapshots[id] = try JSONSerialization.data(withJSONObject: value)
+            }
+            try await model.native.refresh()
+            let catalog = Array(fixture.sessions.prefix(3).enumerated().map { index, item in
+                WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                    hostName: item.hostName, detail: index < 2 ? "等待确认" : "结果待查看", online: true,
+                    section: index < 2 ? .attention : .review, canMarkReviewed: index == 2)
+            })
+            model.acceptanceUpdateCatalog(catalog)
+            model.showInbox()
+            model.inspect(catalog[0])
+            try await model.native.poll()
+            try await settle(window, "first approval") { self.model.native.snapshot?.id == "session-0" && self.model.native.snapshot?.interactions.count == 1 }
+            try await Task.sleep(for: .milliseconds(400))
+            try await model.native.action("session-0", "answer", ["id": .string("approval-0"), "allow": .bool(true)])
+            try await model.native.poll()
+            try await settle(window, "automatic next") { self.model.inspectingSession?.id == catalog[1].id && self.model.native.snapshot?.id == "session-1" }
+            report["automatic_next_after_confirmed_resolution"] = true
+            model.inspectingSession = nil
+            try await Task.sleep(for: .milliseconds(500))
+            model.showHome()
+            guard model.dashboardChanges.count == 3 else { throw WorkbenchError("Missing dashboard changes") }
+            let reviews = model.workspace.reviewedKimiUpdates
+            model.acknowledgeDashboardChanges()
+            guard model.dashboardChanges.isEmpty, model.workspace.reviewedKimiUpdates == reviews else { throw WorkbenchError("Acknowledgement changed reviews") }
+            report["acknowledgement_independent_from_review"] = true
+            model.inspect(catalog[2])
+            try await settle(window, "result preview") { self.model.native.snapshot?.id == "session-2" }
+            let outcome = GroupOutcome(title: "隔离验收报告", detail: "完成标准、结果来源和归类撤销已核对", source: catalog[2].reference)
+            let groupID = model.workspace.groups[0].id
+            model.addOutcome(outcome, to: groupID)
+            var group = model.workspace.groups[0]
+            group.criteria = [GroupCriterion(title: "待处理连续处理", completed: true), GroupCriterion(title: "真实 Agent 验收")]
+            model.updateGroup(group)
+            guard model.workspace.groups[0].outcomes == [outcome], model.workspace.groups[0].stage == .active else { throw WorkbenchError("Group progress incorrect") }
+            report["outcome_source_and_manual_completion"] = true
+            report["only_expected_write"] = fixture.requests.filter { $0.hasSuffix("/answer") } == ["/sessions/session-0/answer"]
+            model.inspectingSession = nil
+            try await Task.sleep(for: .milliseconds(500))
+            model.showHome(groupID: groupID)
+            try await Task.sleep(for: .milliseconds(500))
+            report["status"] = "passed"
+        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        do { try writeReport(report, name: "result.json") }
+        catch { fputs("Workspace report failed: \(error)\n", stderr) }
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] != "1" {
+            exit(report["status"] as? String == "passed" ? 0 : 1)
+        }
     }
     private func writeReport(_ report: [String: Any], name: String) throws {
         guard let folder = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESULTS"] else { return }

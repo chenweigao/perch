@@ -9,6 +9,8 @@ struct ProtocolTests {
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
         try checkTaskRecaps()
+        try checkWorkspaceProgress()
+        try checkGroupSuggestions()
         try checkSessionNaming()
         try checkToolVisibility()
         try checkConversationTodos()

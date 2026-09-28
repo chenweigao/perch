@@ -10,6 +10,8 @@ struct WorkItemGroupEditor: View {
     @State private var goal = ""
     @State private var nextStep = ""
     @State private var search = ""
+    @State private var criteria = ""
+    @State private var stage: GroupStage = .active
     @State private var sessions = Set<SessionReference>()
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
@@ -19,6 +21,10 @@ struct WorkItemGroupEditor: View {
                 .font(.callout).foregroundStyle(.secondary)
             if !sessionsOnly {
                 Form {
+                    Picker("阶段", selection: $stage) {
+                        ForEach(GroupStage.allCases, id: \.self) { Text(LocalizedStringKey($0.title)).tag($0) }
+                    }
+                    TextField("完成标准（每行一项）", text: $criteria, axis: .vertical).lineLimit(2...4)
                     TextField("名称", text: $name, prompt: Text("例如：推理仿真前端优化"))
                     TextField("目标", text: $goal, prompt: Text("做到什么程度算完成？"), axis: .vertical).lineLimit(2...3)
                     TextField("下一步", text: $nextStep, prompt: Text("回来后先做什么？"), axis: .vertical).lineLimit(2...3)
@@ -52,12 +58,20 @@ struct WorkItemGroupEditor: View {
                     var group = model.editingGroup ?? WorkItemGroup(name: "", goal: "", nextStep: "", sessions: [])
                     group.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     group.goal = goal; group.nextStep = nextStep; group.sessions = sessions.sorted { $0.id < $1.id }
+                    if !sessionsOnly {
+                        group.stage = stage
+                        let old = group.criteria
+                        var seen = Set<String>()
+                        group.criteria = criteria.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                            .filter { !$0.isEmpty && seen.insert($0).inserted }.map { title in old.first { $0.title == title } ?? GroupCriterion(title: title) }
+                    }
                     model.saveGroup(group); dismiss()
                 }.keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }.padding(28).frame(width: 600)
             .onAppear {
                 if let group = model.editingGroup {
+                    criteria = group.criteria.map(\.title).joined(separator: "\n"); stage = group.stage
                     name = group.name; goal = group.goal; nextStep = group.nextStep; sessions = Set(group.sessions)
                 }
             }

@@ -74,6 +74,21 @@ public struct WorkItemGroup: Codable, Identifiable, Equatable, Sendable {
     public var goal: String
     public var nextStep: String
     public var sessions: [SessionReference]
+    public var criteria: [GroupCriterion] = []
+    public var outcomes: [GroupOutcome] = []
+    public var stage: GroupStage = .active
+    private enum CodingKeys: String, CodingKey { case id, name, goal, nextStep, sessions, criteria, outcomes, stage }
+    public init(from decoder: Decoder) throws {
+        let v = try decoder.container(keyedBy: CodingKeys.self)
+        id = try v.decode(UUID.self, forKey: .id)
+        name = try v.decode(String.self, forKey: .name)
+        goal = try v.decode(String.self, forKey: .goal)
+        nextStep = try v.decode(String.self, forKey: .nextStep)
+        sessions = try v.decode([SessionReference].self, forKey: .sessions)
+        criteria = try v.decodeIfPresent([GroupCriterion].self, forKey: .criteria) ?? []
+        outcomes = try v.decodeIfPresent([GroupOutcome].self, forKey: .outcomes) ?? []
+        stage = try v.decodeIfPresent(GroupStage.self, forKey: .stage) ?? .active
+    }
     public init(name: String, goal: String, nextStep: String, sessions: [SessionReference]) {
         self.name = name; self.goal = goal; self.nextStep = nextStep; self.sessions = sessions
     }
@@ -87,6 +102,7 @@ public struct SavedTerminal: Codable, Equatable, Sendable {
 
 public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var groups: [WorkItemGroup] = []
+    public var dashboardSeen: [String: DashboardObservation] = [:]
     public var pinned: [SavedTerminal] = []
     public var selectedTerminalID: String?
     public var selectedGroupID: UUID?
@@ -103,11 +119,12 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var reviewedRevisions: [String: UInt64] = [:]
     public init() {}
     private enum CodingKeys: String, CodingKey {
-        case sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions
+        case dashboardSeen, sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         groups = try values.decode([WorkItemGroup].self, forKey: .groups)
+        dashboardSeen = try values.decodeIfPresent([String: DashboardObservation].self, forKey: .dashboardSeen) ?? [:]
         pinned = try values.decode([SavedTerminal].self, forKey: .pinned)
         sessionTitles = try values.decodeIfPresent([String: String].self, forKey: .sessionTitles) ?? [:]
         autoNamedSessions = try values.decodeIfPresent(Set<String>.self, forKey: .autoNamedSessions) ?? []
@@ -133,6 +150,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
         sessionTitles[reference.id] = value.isEmpty ? nil : value
     }
     public mutating func removeSession(_ reference: SessionReference) {
+        dashboardSeen.removeValue(forKey: reference.id)
         sessionTitles.removeValue(forKey: reference.id)
         autoNamedSessions.remove(reference.id)
         starred.removeAll { $0 == reference }; archivedTerminals.remove(reference)

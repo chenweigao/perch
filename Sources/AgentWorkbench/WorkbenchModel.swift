@@ -51,6 +51,10 @@ final class WorkbenchModel: ObservableObject {
     @Published var localAgentPaths: [String: String] = [:]
     @Published var probingLocal = false
     @Published var groupingSession: WorkspaceSession?
+    @Published var inspectingSession: WorkspaceSession?
+    @Published var showGroupSuggestions = false
+    @Published var groupingUndo: GroupingUndo?
+    private var inspectionOrder = ActionQueueOrder()
     @Published var search = ""
     @Published var onlyAttention = false
     @Published var showAddHost = false
@@ -165,7 +169,9 @@ final class WorkbenchModel: ObservableObject {
         observers.append(NotificationCenter.default.addObserver(forName: .init("PerchOpenConversationFile"), object: nil, queue: .main) { [weak self] notice in
             guard let url = notice.object as? URL, let reference = ConversationFileReference(url: url) else { return }
             MainActor.assumeIsolated {
-                guard let self, !self.showDashboard, self.selectedHost != nil else { return }
+                guard let self else { return }
+                if let item = self.inspectingSession { self.inspectingSession = nil; self.open(item) }
+                guard !self.showDashboard, self.selectedHost != nil else { return }
                 self.showFileViewer = true; self.syncFileViewer()
                 self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
             }
@@ -191,6 +197,7 @@ final class WorkbenchModel: ObservableObject {
         selectedHostID = host.id
         canSaveWorkspace = false
         allSessions = sessions
+        kimiEnvironments[host.id] = kimi; nativeEnvironments[host.id] = native
         workspace.starred = Array(sessions.prefix(4).map(\.reference))
         workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
                                           sessions: Array(sessions.prefix(12).map(\.reference)))]
@@ -563,6 +570,88 @@ final class WorkbenchModel: ObservableObject {
         if let index = workspace.groups.firstIndex(where: { $0.id == group.id }) { workspace.groups[index] = group }
         else { workspace.groups.append(group) }
         showHome(groupID: group.id)
+    }
+    func updateGroup(_ group: WorkItemGroup) {
+        guard let index = workspace.groups.firstIndex(where: { $0.id == group.id }) else { return }
+        workspace.groups[index] = group; saveWorkspace()
+    }
+    func addOutcome(_ outcome: GroupOutcome, to groupID: UUID) {
+        guard let index = workspace.groups.firstIndex(where: { $0.id == groupID }) else { return }
+        workspace.groups[index].outcomes.append(outcome); saveWorkspace()
+    }
+    @discardableResult func applyGroupSuggestions(_ suggestions: [GroupSuggestion]) -> Int {
+        let undo = workspace.applyGrouping(suggestions, sessions: allSessions)
+        let count = undo.after.reduce(0) { $0 + $1.value.count - (undo.before[$1.key]?.count ?? 0) }
+        if count > 0 { groupingUndo = undo; saveWorkspace() }
+        return count
+    }
+    func undoGroupSuggestions() -> Bool {
+        guard let undo = groupingUndo, workspace.undoGrouping(undo) else { return false }
+        groupingUndo = nil; saveWorkspace(); return true
+    }
+    func inspect(_ item: WorkspaceSession) {
+        guard item.online, !item.archived else { return }
+        inspectionOrder.update(dashboardProjection.attention.items.map(\.id))
+        inspectingSession = item
+        if let agents = agentConnections(for: item.reference.hostID) {
+            if item.reference.kind == .kimi { agents.kimi.select(item.reference.terminalID) }
+            else if item.reference.kind != .terminal { agents.native.select(item.reference.terminalID) }
+        }
+    }
+    func inspectNext(after item: WorkspaceSession) {
+        let previousNext = inspectionOrder.next(after: item.id)
+        let remaining = dashboardProjection.attention.items.filter { $0.id != item.id }
+        inspectionOrder.update(remaining.map(\.id))
+        if let next = remaining.first(where: { $0.id == previousNext }) ?? remaining.first {
+            inspect(next)
+        } else { inspectingSession = nil }
+    }
+    func endInspection() {
+        guard let ref = selectedReference, let agents = agentConnections(for: ref.hostID) else { return }
+        if ref.kind == .kimi { agents.kimi.select(ref.terminalID) }
+        else if ref.kind != .terminal { agents.native.select(ref.terminalID) }
+    }
+    func dashboardObservation(_ item: WorkspaceSession) -> DashboardObservation {
+        let ref = item.reference
+        var revision = ""
+        var state = "other"
+        switch item.section {
+        case .attention: state = "attention"
+        case .review: state = "review"
+        case .running: state = "running"
+        case .other: break
+        }
+        if ref.kind == .kimi, let c = kimiEnvironments[ref.hostID], let session = c.sessions.first(where: { $0.id == ref.terminalID }) {
+            revision = item.section == .review ? session.updatedAt : session.pendingInteraction ?? session.lastTurnReason ?? ""
+        } else if ref.kind == .terminal {
+            let pane = connections.first { $0.id == ref.hostID }?.snapshot?.panes.first { $0.id == ref.terminalID }
+            revision = pane?.revision.map(String.init) ?? ""
+        } else if let session = nativeEnvironments[ref.hostID]?.sessions.first(where: { $0.id == ref.terminalID }) {
+            revision = item.section == .review ? String(session.completed) : "\(session.completed):\(session.pending):\(session.error ?? "")"
+        }
+        return DashboardObservation(state: state, revision: revision)
+    }
+    var dashboardChanges: [WorkspaceSession] {
+        scopedSessions.filter { $0.online && !$0.archived && dashboardObservation($0).isNew(since: workspace.dashboardSeen[$0.id]) }
+    }
+    func acknowledgeDashboardChanges() {
+        for item in scopedSessions where item.online && !item.archived {
+            workspace.dashboardSeen[item.id] = dashboardObservation(item)
+        }
+        saveWorkspace()
+    }
+    func reviewInspected(_ snapshot: NativeAgentSnapshot, on hostID: UUID) {
+        let ref = SessionReference(hostID: hostID, terminalID: snapshot.id, kind: snapshot.provider)
+        guard inspectingSession?.reference == ref else { return }
+        workspace.markReviewed(snapshot, on: hostID)
+        rebuildCatalog(); saveWorkspace()
+    }
+    func reviewInspected(_ session: KimiSession, on hostID: UUID) {
+        let ref = SessionReference(hostID: hostID, terminalID: session.id, kind: .kimi)
+        guard inspectingSession?.reference == ref,
+              kimiEnvironments[hostID]?.sessions.first(where: { $0.id == session.id })?.updatedAt == session.updatedAt else { return }
+        workspace.markReviewed(session, on: hostID)
+        rebuildCatalog(); saveWorkspace()
     }
     func markReviewed(_ item: WorkspaceSession) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
@@ -1022,6 +1111,12 @@ final class WorkbenchModel: ObservableObject {
     private func catalogChanged() {
         rebuildCatalog()
         updateTaskEvents()
+        var baselineChanged = false
+        for item in allSessions where item.online && !item.archived && (item.section == .running || item.section == .other) {
+            let observation = dashboardObservation(item)
+            if workspace.dashboardSeen[item.id] != observation { workspace.dashboardSeen[item.id] = observation; baselineChanged = true }
+        }
+        if baselineChanged { saveWorkspace() }
         if let id = pendingNotificationID, let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) {
             pendingNotificationID = nil; open(item)
         }
