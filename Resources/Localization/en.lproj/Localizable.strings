@@ -995,3 +995,31 @@
 "加入当前任务草稿，检查后再发送。" = "Add to this task’s draft. Review it before sending.";
 
 "加入草稿" = "Add to draft";
+
+"分支改动" = "Branch changes";
+
+"目标分支或提交，如 origin/main" = "Target branch or commit, e.g. origin/main";
+
+"比较" = "Compare";
+
+"比较共同祖先到当前提交的改动，不含未提交内容；引用使用仓库现有数据，不自动 fetch。" = "Compare committed changes since the common ancestor. Uncommitted edits are excluded; references use existing repository data without fetching.";
+
+"当前提交相对目标分支没有新增改动。" = "The current commit has no new changes relative to the target branch.";
+
+"输入目标分支或提交后开始审阅。" = "Enter a target branch or commit to start reviewing.";
+
+"目标分支或提交不存在于当前仓库；请先在执行环境中更新引用。" = "The target branch or commit is not available in this repository. Update references in the execution environment first.";
+
+"当前分支还没有提交，无法比较。" = "The current branch has no commits to compare.";
+
+"目标与当前分支没有共同祖先。" = "The target and current branch have no common ancestor.";
+
+"已修改" = "Modified";
+
+"新增" = "Added";
+
+"已删除" = "Deleted";
+
+"重命名" = "Renamed";
+
+"类型变更" = "Type changed";
