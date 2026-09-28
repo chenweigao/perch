@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import WorkbenchCore
@@ -23,9 +24,9 @@ struct NewTaskView: View {
     @State private var showSetup = false
     @State private var showConfiguration = false
     @State private var showDirectory = false
+    @State private var showConnectionDetails = false
     @State private var showReference = false
     @State private var permissionMode = PermissionDefaults.mode(for: .kimi) ?? "manual"
-    @FocusState private var cwdFocused: Bool
     private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
     private var permissionCapability: PermissionCapability {
         PermissionCatalog.capability(for: provider, selected: permissionMode)
@@ -33,6 +34,16 @@ struct NewTaskView: View {
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { recentDirectories(for: kimi.host.id) }
+    private var isConnected: Bool { provider == .kimi ? kimi.online : native.online }
+    private var isConnecting: Bool { provider == .kimi ? kimi.connecting : native.wantsConnection }
+    private var configurationSummary: String {
+        let name = selectedAgentModel?.name ?? (agentModel.isEmpty ? L("默认模型") : agentModel)
+        let effort: String
+        if let selectedAgentModel {
+            effort = selectedAgentModel.supportsThinking ? selectedAgentModel.resolve(thinking)?.label ?? L("默认") : L("不可调")
+        } else { effort = agentModel.isEmpty ? L("模型默认") : L("不可调") }
+        return "\(name) · \(effort)"
+    }
     private var availableModels: [AgentModel] {
         provider == .kimi ? kimi.catalog : native.models(for: provider)
     }
@@ -70,7 +81,10 @@ struct NewTaskView: View {
     /// does not exist on another, so the selected session and the last-used
     /// directory must not leak across environments.
     private func recentDirectories(for hostID: UUID) -> [String] {
-        Array(Set(model.allSessions.filter { $0.reference.hostID == hostID }.map(\.directory).filter { $0.hasPrefix("/") })).sorted()
+        var seen = Set<String>()
+        return model.allSessions.filter { $0.reference.hostID == hostID }
+            .sorted { $0.updatedAt > $1.updatedAt }.map(\.directory)
+            .filter { $0.hasPrefix("/") && seen.insert($0).inserted }
     }
     private func savedDirectoryKey(for hostID: UUID) -> String { "new.cwd.\(hostID.uuidString)" }
     private func defaultDirectory(for hostID: UUID) -> String {
@@ -137,8 +151,8 @@ struct NewTaskView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 32)
+        GeometryReader { geometry in
+            ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(spacing: 10) {
                     Text("想做点什么？").font(.system(size: 28, weight: .medium))
@@ -164,22 +178,28 @@ struct NewTaskView: View {
                                         referenceBrowser.configure(host: kimi.host, cwd: cwd)
                                         referenceBrowser.open(path)
                                         showReference = true
-                                    }, files: projectFiles)
-                        .frame(minHeight: 96, alignment: .top)
+                                    }, minimumEditorHeight: 96, files: projectFiles)
                     HStack(spacing: 12) {
                         ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
+                        agentMenu
                         Button { showConfiguration.toggle() } label: {
-                            Label {
-                                Text(agentModel.isEmpty ? provider.label : "\(provider.label) · \(selectedAgentModel?.name ?? agentModel)").lineLimit(1).truncationMode(.middle)
-                            } icon: { Image(systemName: "slider.horizontal.3") }
-                                .font(.system(size: 12))
-                        }.buttonStyle(.plain).help("Agent、模型、思考与权限")
+                            DraftMenuLabel {
+                                Text(configurationSummary).lineLimit(1).truncationMode(.middle)
+                            }
+                        }.buttonStyle(.plain).help("模型、思考与权限")
+                            .accessibilityLabel("任务配置").accessibilityValue(configurationSummary)
                             .popover(isPresented: $showConfiguration) { configuration }
                         Spacer(minLength: 0)
                         ComposerActionButton(isRunning: false, isStopping: creating, canSend: canStart, canStop: false,
                                              onSend: start, onStop: {})
                     }
-                }.padding(18).workbenchControlSurface().disabled(creating)
+                }.padding(18)
+                    .background {
+                        Color.clear.contentShape(Rectangle()).onTapGesture {
+                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                        }
+                    }
+                    .workbenchControlSurface().disabled(creating)
                 contextBar
                 if let directoryWarning {
                     Label(directoryWarning, systemImage: "exclamationmark.triangle")
@@ -196,27 +216,13 @@ struct NewTaskView: View {
                 if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
                     Text(modelsError).font(.caption).foregroundStyle(.orange)
                 }
-                if !availableProviders.contains(provider) || !(provider == .kimi ? kimi.online : native.online) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if let connectionError {
-                            Text(connectionError).font(.callout).foregroundStyle(.orange).textSelection(.enabled)
-                        } else {
-                            Text(LocalizedStringKey(!availableProviders.contains(provider) ? "此机器尚未配置原生 Agent。"
-                                : (provider == .kimi ? kimi.connecting : native.wantsConnection)
-                                    ? "正在连接所选 Agent…" : "尚未连接所选 Agent。"))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        HStack {
-                            Button("检查与修复连接") { showSetup = true }
-                            if availableProviders.contains(provider) {
-                                Button("重新连接") { if provider == .kimi { kimi.connect() } else { native.connect() } }
-                            }
-                        }
-                    }
-                }
+                connectionStatus
                 if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             }.padding(.horizontal, 32).frame(maxWidth: 784)
-            Spacer(minLength: 32)
+                .frame(maxWidth: .infinity)
+                .padding(.top, max(48, geometry.size.height * 0.25))
+                .padding(.bottom, 32)
+            }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(WorkbenchTheme.contentBackground)
             .overlay(alignment: .topTrailing) {
@@ -248,6 +254,7 @@ struct NewTaskView: View {
             .onChange(of: cwd) { _, _ in showReference = false; referenceBrowser.cancel() }
             .onChange(of: kimi.host.id) { _, _ in
                 showReference = false; referenceBrowser.cancel()
+                showDirectory = false; showConnectionDetails = false
                 if !availableProviders.contains(provider) {
                     selectProvider(availableProviders.first ?? .kimi)
                 }
@@ -326,7 +333,9 @@ struct NewTaskView: View {
                         .lineLimit(1).truncationMode(.middle)
                 }
             }.buttonStyle(.plain).help(cwd).accessibilityLabel("项目目录")
-                .popover(isPresented: $showDirectory) { directoryPicker }
+                .popover(isPresented: $showDirectory) {
+                    NewTaskDirectoryPicker(host: kimi.host, cwd: $cwd, recent: recent) { showDirectory = false }
+                }
             Spacer(minLength: 0)
             if !hasInitialContent && attachments.isEmpty {
                 Button(creating ? L("正在创建…") : L("仅创建空会话")) { create(sendInitialPrompt: false) }
@@ -335,35 +344,39 @@ struct NewTaskView: View {
         }.foregroundStyle(.secondary).padding(.horizontal, 6).disabled(creating)
     }
 
-    private var directoryPicker: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("项目目录").font(.headline)
-            Text(kimi.host.name).font(.caption).foregroundStyle(.secondary)
-            TextField("项目目录（绝对路径）", text: $cwd)
-                .textFieldStyle(.roundedBorder).focused($cwdFocused)
-                .onSubmit { showDirectory = false }
-            if !recent.isEmpty {
-                Text("最近使用").font(.caption).foregroundStyle(.secondary)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(recent, id: \.self) { path in
-                            Button { cwd = path; showDirectory = false } label: {
-                                Label(path, systemImage: "folder")
-                                    .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 6).contentShape(Rectangle())
-                            }.buttonStyle(.plain).help(path)
-                        }
+    @ViewBuilder private var connectionStatus: some View {
+        if !availableProviders.contains(provider) || !isConnected {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    if connectionError != nil {
+                        Button { showConnectionDetails.toggle() } label: {
+                            Label("连接失败", systemImage: showConnectionDetails ? "chevron.down" : "chevron.right")
+                        }.buttonStyle(.plain).foregroundStyle(.orange)
+                        Spacer(minLength: 0)
+                        Button("检查与修复连接") { showSetup = true }
+                    } else if !availableProviders.contains(provider) {
+                        Label("此机器尚未配置原生 Agent。", systemImage: "exclamationmark.circle")
+                        Spacer(minLength: 0)
+                        Button("配置其他 Agent…") { showSetup = true }
+                    } else if isConnecting {
+                        ProgressView().controlSize(.mini)
+                        Text("正在连接所选 Agent…")
+                    } else {
+                        Label("尚未连接所选 Agent。", systemImage: "network")
+                        Spacer(minLength: 0)
+                        Button("连接") { if provider == .kimi { kimi.connect() } else { native.connect() } }
                     }
-                }.frame(maxHeight: 200)
-            }
-            Button("完成") { showDirectory = false }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }.padding(18).frame(width: 380)
-            .onAppear { cwdFocused = true }
+                }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.plain)
+                if showConnectionDetails, let connectionError {
+                    Text(connectionError).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }.padding(.horizontal, 6).disabled(creating)
+        }
     }
 
     private func selectProvider(_ value: SessionKind) {
+        showConnectionDetails = false
         provider = value
         agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? ""
         thinking = savedThinking(for: value)

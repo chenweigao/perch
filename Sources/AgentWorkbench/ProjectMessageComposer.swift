@@ -43,6 +43,7 @@ struct ProjectMessageComposer: View {
     var onError: ((String) -> Void)? = nil
     var onKey: ((ComposerKey) -> Bool)? = nil
     var onOpenReference: ((String) -> Void)? = nil
+    var minimumEditorHeight: CGFloat = 40
     @StateObject var files = ProjectFileSuggestions()
     @State private var queryRange: NSRange?
     @State private var query = ""
@@ -109,7 +110,7 @@ struct ProjectMessageComposer: View {
             }
             MessageComposer(text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel,
                 canSend: canSend, onSend: onSend, onFiles: onFiles, onError: onError,
-                onKey: handle, onEditSelection: editSelection, selectionAfterReplacement: nextSelection)
+                onKey: handle, onEditSelection: editSelection, selectionAfterReplacement: nextSelection, minimumHeight: minimumEditorHeight)
         }
         .onChange(of: cwd) { _, _ in dismiss() }
         .onChange(of: host.id) { _, _ in dismiss() }

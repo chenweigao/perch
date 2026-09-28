@@ -21,13 +21,14 @@ struct MessageComposer: View {
     var onKey: ((ComposerKey) -> Bool)? = nil
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
+    var minimumHeight: CGFloat = 40
     @State private var height: CGFloat = 40
 
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
                        accessibilityLabel: accessibilityLabel, canSend: canSend,
-                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement)
-            .frame(height: height)
+                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
+            .frame(height: max(minimumHeight, height))
     }
 }
 
@@ -45,6 +46,8 @@ struct ComposerEditor: NSViewRepresentable {
 
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
+
+    var minimumHeight: CGFloat = 40
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeNSView(context: Context) -> NSScrollView {
@@ -90,6 +93,7 @@ struct ComposerEditor: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.parent = self
         guard let editor = coordinator.editor else { return }
+        editor.minSize = NSSize(width: 0, height: minimumHeight)
         editor.isEditable = isEnabled
         editor.canSend = canSend && isEnabled
         editor.placeholder = placeholder
@@ -132,7 +136,7 @@ struct ComposerEditor: NSViewRepresentable {
         func measure() {
             guard let editor, let layout = editor.layoutManager, let container = editor.textContainer else { return }
             layout.ensureLayout(for: container)
-            let measured = min(180, max(40, ceil(layout.usedRect(for: container).height + 8)))
+            let measured = max(parent.minimumHeight, min(180, ceil(layout.usedRect(for: container).height + 8)))
             guard measured != parent.height else { return }
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.parent.height != measured else { return }

@@ -7,6 +7,9 @@ import WorkbenchCore
 @main struct NewTaskPreviewApp: App {
     @NSApplicationDelegateAdaptor(NewTaskPreviewDelegate.self) private var delegate
     @StateObject private var model: WorkbenchModel
+    @Environment(\.openWindow) private var openWindow
+    @State private var showPreviewControls = true
+    @State private var selectedDirectory = "/opt/demo/perch"
 
     init() {
         let host = SSHHost(name: "dev-env", destination: "fixture.invalid", enabledAgents: [.kimi, .omp, .codex],
@@ -22,7 +25,23 @@ import WorkbenchCore
         WindowGroup("新建任务预览", id: ProcessInfo.processInfo.environment["PERCH_PREVIEW_NARROW"] == "1" ? "narrow-workflow" : "regular-workflow") {
             NewTaskView(model: model, native: model.native, kimi: model.kimi)
                 .preferredColorScheme(.light)
+                .toolbar {
+                    if showPreviewControls {
+                    Button("项目选择预览") { openWindow(id: "project-picker") }
+                    Button("模拟连接错误") { model.kimi.error = "预览：连接超时，请检查运行环境。" }
+                    Button("清除错误") { model.kimi.error = nil }
+                    Button("隐藏预览控件") { showPreviewControls = false }
+                    }
+                }
         }.defaultSize(width: ProcessInfo.processInfo.environment["PERCH_PREVIEW_NARROW"] == "1" ? 620 : 1100, height: 760)
+        Window("项目选择预览", id: "project-picker") {
+            VStack {
+                NewTaskDirectoryPicker(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "本机预览", destination: "", enabledAgents: [.kimi], autoConnectSSH: false, autoConnectHerdr: false),
+                    cwd: $selectedDirectory, recent: ["/opt/demo/perch", "/opt/demo/perch-docs", "/opt/demo/agent-service"]) {}
+                Text(selectedDirectory).font(.caption).padding(.bottom)
+            }.preferredColorScheme(.light)
+        }.defaultSize(width: 420, height: 410)
+
     }
 }
 
