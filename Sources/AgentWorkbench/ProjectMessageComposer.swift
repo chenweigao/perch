@@ -42,6 +42,7 @@ struct ProjectMessageComposer: View {
     var onFiles: (([URL]) -> Void)? = nil
     var onError: ((String) -> Void)? = nil
     var onKey: ((ComposerKey) -> Bool)? = nil
+    var onOpenReference: ((String) -> Void)? = nil
     @StateObject var files = ProjectFileSuggestions()
     @State private var queryRange: NSRange?
     @State private var query = ""
@@ -90,6 +91,7 @@ struct ProjectMessageComposer: View {
                         ForEach(Array(references.enumerated()), id: \.offset) { _, reference in
                             HStack(spacing: 4) {
                                 Button {
+                                    if let onOpenReference { onOpenReference(reference.path); return }
                                     var url = URLComponents(); url.scheme = "perch-file"
                                     url.queryItems = [URLQueryItem(name: "path", value: reference.path)]
                                     NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: url.url)

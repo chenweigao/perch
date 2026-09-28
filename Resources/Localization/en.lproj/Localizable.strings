@@ -617,6 +617,7 @@
 "过程记录 · %lld 次调用" = "Activity · %lld calls";
 "运行上下文" = "Runtime context";
 "想做点什么？" = "What would you like to work on?";
+"想做点什么？输入 @ 引用项目文件" = "What would you like to work on? Type @ to reference project files";
 "任务描述" = "Task prompt";
 "正在启动…" = "Starting…";
 "正在创建…" = "Creating…";

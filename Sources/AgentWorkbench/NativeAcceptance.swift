@@ -663,6 +663,59 @@ private struct ReferenceComposerFixtureView: View {
         return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
             + Double(value.ru_utime.tv_usec + value.ru_stime.tv_usec) / 1_000_000
     }
+    private func draftEditor(in view: NSView?) -> DraftTextView? {
+        guard let view else { return nil }
+        if let editor = view as? DraftTextView { return editor }
+        return view.subviews.lazy.compactMap { self.draftEditor(in: $0) }.first
+    }
+
+    private func newTaskReferences(directory: String) async throws {
+        let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: "", enabledAgents: [.omp])
+        var requests: [String] = []
+        let native = NativeAgentConnection(host: host) { path, body in
+            requests.append(path)
+            guard path == "/models" else { throw WorkbenchError("Unexpected task request: \(path)") }
+            return try self.fixture.request(path, body: body)
+        }
+        let draftModel = WorkbenchModel(acceptanceHost: host, sessions: [], native: native)
+        draftModel.draftingNewTask = true
+        let suggestions = ProjectFileSuggestions()
+        let defaults = UserDefaults.standard
+        let values: [String: Any] = ["new.task.prompt": "中文 before @Ex suffix", "new.cwd.\(host.id.uuidString)": directory]
+        let saved = Dictionary(uniqueKeysWithValues: (Array(values.keys) + ["new.task.defaults.global"]).map { ($0, defaults.object(forKey: $0)) })
+        defaults.removeObject(forKey: "new.task.defaults.global")
+        for (key, value) in values { defaults.set(value, forKey: key) }
+        let window = NSWindow(contentRect: NSRect(x: 160, y: 160, width: 620, height: 760),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.title = "New task file references"
+        window.contentViewController = NSHostingController(rootView:
+            NewTaskView(model: draftModel, native: native, kimi: draftModel.kimi, projectFiles: suggestions)
+                .preferredColorScheme(.light).frame(width: 620, height: 760))
+        window.makeKeyAndOrderFront(nil)
+        defer {
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] == "1" { probe.referenceWindow = window }
+            else {
+                window.close()
+                for (key, value) in saved { defaults.set(value, forKey: key) }
+            }
+        }
+        try await settle(window, "new task composer mounted") { self.draftEditor(in: window.contentView) != nil }
+        guard let editor = draftEditor(in: window.contentView) else { throw WorkbenchError("New task editor missing") }
+        window.makeFirstResponder(editor)
+        editor.setSelectedRange(NSRange(location: ("中文 before @Ex" as NSString).length, length: 0))
+        try await settle(window, "new task suggestions loaded") { !suggestions.loading && suggestions.catalog != nil }
+        guard let key = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, characters: "\t", charactersIgnoringModifiers: "\t", isARepeat: false, keyCode: 48),
+              editor.handleNavigation(key) else { throw WorkbenchError("New task palette did not claim Tab") }
+        try await settle(window, "new task reference inserted") { !ProjectFileReference.references(in: editor.string).isEmpty }
+        guard editor.string.hasPrefix("中文 before @"), editor.string.hasSuffix(" suffix"),
+              ProjectFileReference.references(in: editor.string).first?.path.hasSuffix("/Example.swift") == true,
+              draftModel.draftingNewTask, draftModel.selectedReference == nil, requests.allSatisfy({ $0 == "/models" }) else {
+            throw WorkbenchError("New task completion mismatch: text=\(editor.string), drafting=\(draftModel.draftingNewTask), requests=\(requests)")
+        }
+    }
+
     private func referenceComposer(directory: String) async throws {
         let fixture = ReferenceComposerFixture(), suggestions = ProjectFileSuggestions()
         let window = NSWindow(contentRect: NSRect(x: 160, y: 160, width: 620, height: 400),
@@ -675,13 +728,8 @@ private struct ReferenceComposerFixtureView: View {
             if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] == "1" { probe.referenceWindow = window }
             else { window.close() }
         }
-        func findEditor(_ view: NSView?) -> DraftTextView? {
-            guard let view else { return nil }
-            if let editor = view as? DraftTextView { return editor }
-            return view.subviews.lazy.compactMap { findEditor($0) }.first
-        }
-        try await settle(window, "reference composer mounted") { findEditor(window.contentView) != nil }
-        guard let editor = findEditor(window.contentView) else { throw WorkbenchError("Reference editor missing") }
+        try await settle(window, "reference composer mounted") { self.draftEditor(in: window.contentView) != nil }
+        guard let editor = draftEditor(in: window.contentView) else { throw WorkbenchError("Reference editor missing") }
         window.makeFirstResponder(editor)
         editor.setSelectedRange(NSRange(location: ("中文 before @Ex" as NSString).length, length: 0))
         try await settle(window, "file suggestions loaded") { !suggestions.loading && suggestions.catalog != nil }
@@ -816,6 +864,8 @@ private struct ReferenceComposerFixtureView: View {
                 report["project_file_catalog_uses_execution_environment"] = true
                 try await referenceComposer(directory: directory.path)
                 report["file_completion_preserves_text_and_never_sends"] = true
+                try await newTaskReferences(directory: directory.path)
+                report["new_task_file_completion_without_session"] = true
             }
             report["status"] = "passed"
         } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
