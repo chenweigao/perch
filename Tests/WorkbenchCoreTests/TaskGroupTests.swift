@@ -70,6 +70,12 @@ func checkTaskGroup() {
     precondition(SessionGroupIndex.label(index[unread.id]) == "Group +1")
     precondition(SessionGroupIndex.label(index[approval.id]) == "Group")
     precondition(SessionGroupIndex.label(index[outside.id]) == nil)
+    // Navigation uses IDs even when two groups have the same display name.
+    let sameName = WorkItemGroup(name: group.name, goal: "", nextStep: "", sessions: [unread.reference])
+    let links = SessionGroupIndex(groups: [group, sameName]).memberships[unread.id]!
+    precondition(links.map(\.id) == [group.id, sameName.id])
+    precondition(links.map(\.name) == [group.name, group.name])
+    precondition(index.memberships[outside.id] == nil)
     // Membership is read from the saved references, so a badge survives a session that
     // has not reconnected and is not in the catalog yet.
     precondition(index[missing.id] == ["Group"])

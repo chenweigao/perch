@@ -37,6 +37,7 @@ struct ProtocolTests {
         try await checkRemoteSetup()
         try checkDashboard()
         checkTaskGroup()
+        try checkUnifiedWorkbench()
         checkSidebar()
         try checkModelSelection()
         try checkSlashCommands()

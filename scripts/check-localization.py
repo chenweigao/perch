@@ -28,6 +28,7 @@ ZH_TABLE = ROOT / "Resources/Localization/zh-Hans.lproj/Localizable.strings"
 # previews under Tests/) are not listed here.
 SCOPED_FILES = [
     "Sources/AgentWorkbench/SessionSidebar.swift",
+    "Sources/AgentWorkbench/SessionGroupsSheet.swift",
     "Sources/AgentWorkbench/WorkspaceSidebarShell.swift",
     "Sources/AgentWorkbench/WorkItemGroupEditor.swift",
     "Sources/AgentWorkbench/GroupProgressView.swift",
@@ -35,6 +36,7 @@ SCOPED_FILES = [
     "Sources/AgentWorkbench/WorkspaceActionDetail.swift",
     "Sources/WorkbenchCore/WorkspaceProgress.swift",
     "Sources/AgentWorkbench/TaskGroupPage.swift",
+    "Sources/AgentWorkbench/TaskGroupOverview.swift",
     "Sources/AgentWorkbench/ModelPicker.swift",
     "Sources/AgentWorkbench/ComposerModelPicker.swift",
     "Sources/AgentWorkbench/ThinkingPicker.swift",

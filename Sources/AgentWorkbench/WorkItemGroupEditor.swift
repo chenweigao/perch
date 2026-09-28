@@ -21,13 +21,13 @@ struct WorkItemGroupEditor: View {
                 .font(.callout).foregroundStyle(.secondary)
             if !sessionsOnly {
                 Form {
+                    TextField("名称", text: $name, prompt: Text("例如：推理仿真前端优化"))
+                    TextField("目标", text: $goal, prompt: Text("做到什么程度算完成？"), axis: .vertical).lineLimit(2...3)
+                    TextField("下一步", text: $nextStep, prompt: Text("回来后先做什么？"), axis: .vertical).lineLimit(2...3)
                     Picker("阶段", selection: $stage) {
                         ForEach(GroupStage.allCases, id: \.self) { Text(LocalizedStringKey($0.title)).tag($0) }
                     }
                     TextField("完成标准（每行一项）", text: $criteria, axis: .vertical).lineLimit(2...4)
-                    TextField("名称", text: $name, prompt: Text("例如：推理仿真前端优化"))
-                    TextField("目标", text: $goal, prompt: Text("做到什么程度算完成？"), axis: .vertical).lineLimit(2...3)
-                    TextField("下一步", text: $nextStep, prompt: Text("回来后先做什么？"), axis: .vertical).lineLimit(2...3)
                 }
             }
             TextField("搜索要关联的对话或终端", text: $search).textFieldStyle(.roundedBorder)
@@ -55,7 +55,7 @@ struct WorkItemGroupEditor: View {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("保存任务组") {
-                    var group = model.editingGroup ?? WorkItemGroup(name: "", goal: "", nextStep: "", sessions: [])
+                    var group = model.workspace.groups.first { $0.id == model.editingGroup?.id } ?? model.editingGroup ?? WorkItemGroup(name: "", goal: "", nextStep: "", sessions: [])
                     group.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     group.goal = goal; group.nextStep = nextStep; group.sessions = sessions.sorted { $0.id < $1.id }
                     if !sessionsOnly {

@@ -6,16 +6,22 @@ import Foundation
 /// second while an agent streams, so the index is built once per view pass from the
 /// saved groups rather than walking every group inside every row.
 public struct SessionGroupIndex: Equatable, Sendable {
+    public struct Membership: Identifiable, Equatable, Sendable {
+        public let id: UUID
+        public let name: String
+    }
+    public let memberships: [String: [Membership]]
     public let names: [String: [String]]
 
     /// Names follow the sidebar's group order, so two rows in the same groups read
     /// the same way.
     public init(groups: [WorkItemGroup]) {
-        var index: [String: [String]] = [:]
+        var index: [String: [Membership]] = [:]
         for group in groups {
-            for reference in group.sessions { index[reference.id, default: []].append(group.name) }
+            for reference in group.sessions { index[reference.id, default: []].append(Membership(id: group.id, name: group.name)) }
         }
-        names = index
+        memberships = index
+        names = index.mapValues { $0.map(\.name) }
     }
 
     public subscript(sessionID: String) -> [String] { names[sessionID] ?? [] }

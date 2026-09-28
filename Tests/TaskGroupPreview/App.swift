@@ -16,6 +16,39 @@ import WorkbenchCore
     @Published var showGroupEditor = false
     @Published var notice: String?
     @Published var managing = Set<String>()
+    @Published var groupingSession: WorkspaceSession?
+    @Published var selectedGroupID: UUID?
+    @Published var showAllTaskGroups = false
+    @Published var search = ""
+    @Published var onlyAttention = false
+    var scopeHost: SSHHost? { nil }
+    var selectedGroup: WorkItemGroup? { workspace.groups.first { $0.id == selectedGroupID } }
+    var groupResumeSession: WorkspaceSession? { allSessions.first { $0.id == workspace.lastSessionByGroup[selectedGroupID?.uuidString ?? ""] } }
+    var groupSummaries: [TaskGroupSummary] { TaskGroupSummary.ordered(groups: workspace.groups, sessions: allSessions) }
+    var activeScope: ActiveScope { ActiveScope(groupName: selectedGroup?.name) }
+    var projection: DashboardProjection {
+        let scoped = SessionCatalog.scope(allSessions, starred: [], group: selectedGroup, hostFilter: nil,
+            search: search, onlyAttention: onlyAttention, showArchived: false).sessions
+        return DashboardProjection(sessions: scoped, subjects: [:], hasConfiguredEnvironment: true,
+            filtered: selectedGroup != nil || !search.isEmpty)
+    }
+    func setGroups(_ ids: Set<UUID>, for reference: SessionReference, newGroupName: String = "") {
+        for i in workspace.groups.indices {
+            workspace.groups[i].sessions.removeAll { $0 == reference }
+            if ids.contains(workspace.groups[i].id) { workspace.groups[i].sessions.append(reference) }
+        }
+        let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty { workspace.groups.append(WorkItemGroup(name: name, goal: "", nextStep: "", sessions: [reference])) }
+    }
+    func startNewTask() { showNewKimi = true }
+    func showHome(groupID: UUID? = nil) { selectedGroupID = groupID; search = ""; onlyAttention = false }
+    func toggleGroupPin(_ group: WorkItemGroup) { var changed = group; changed.isPinned.toggle(); updateGroup(changed) }
+    func updateGroup(_ group: WorkItemGroup) {
+        if let i = workspace.groups.firstIndex(where: { $0.id == group.id }) { workspace.groups[i] = group }
+    }
+    func addOutcome(_ outcome: GroupOutcome, to id: UUID) {
+        if let i = workspace.groups.firstIndex(where: { $0.id == id }) { workspace.groups[i].outcomes.append(outcome) }
+    }
     let configuredEnvironment = true
     func archiveSubject(_ item: WorkspaceSession) -> ArchiveSubject {
         ArchiveSubject(reference: item.reference, fingerprint: "fixture", busy: item.section == .running,
@@ -25,10 +58,14 @@ import WorkbenchCore
     func runBatchArchive(_ plan: BatchArchivePlan) { notice = "归档预览" }
     func undoBatchArchive() {}
     func retryBatchArchive() {}
-    func editGroup(_ group: WorkItemGroup, sessionsOnly: Bool = false) {
+    func editGroup(_ group: WorkItemGroup? = nil, sessionsOnly: Bool = false) {
         editingGroup = group; editingGroupSessionsOnly = sessionsOnly; showGroupEditor = true
     }
-    func saveGroup(_ group: WorkItemGroup) { workspace.groups = [group] }
+    func saveGroup(_ group: WorkItemGroup) {
+        if workspace.groups.contains(where: { $0.id == group.id }) { updateGroup(group) }
+        else { workspace.groups.append(group) }
+        showHome(groupID: group.id)
+    }
     func open(_ item: WorkspaceSession) { notice = "打开：" + item.title }
     func markReviewed(_ item: WorkspaceSession) { notice = "标记已查看：" + item.title }
     func canArchive(_ item: WorkspaceSession) -> Bool { item.online && item.section != .running }
@@ -59,7 +96,26 @@ import WorkbenchCore
         }
         if scenario == "空任务组" { group.sessions = [] }
         if scenario == "未同步" { allSessions = [] }
+        group.criteria = [GroupCriterion(title: "恢复后归属保持一致"), GroupCriterion(title: "结果来源可追溯", completed: true)]
+        group.outcomes = [GroupOutcome(title: "恢复验证记录", detail: "保存跨机器验证结论", link: "https://example.com/report", source: allSessions.first?.reference)]
         workspace.groups = [group]
+        selectedGroupID = group.id
+        if scenario == "归属检查" || scenario == "多组与离线" {
+            workspace.groups = []
+            selectedGroupID = nil
+            allSessions = (1...3).map { i in
+                WorkspaceSession(reference: SessionReference(hostID: host, terminalID: "worker-\(i)", kind: .kimi),
+                    title: "请阅读 WORKER.md，领取并执行当前假期队列。先做最小闭环，保存 CHECKPOINT 和完整复算证据。",
+                    directory: "/fixture/night-tasks", hostName: "dev-env", detail: "Kimi · 运行中",
+                    online: scenario != "多组与离线" || i != 3, section: .running, canMarkReviewed: false, updatedAt: Date().timeIntervalSince1970 - Double(i * 60))
+            }
+            if scenario == "多组与离线" {
+                workspace.groups = [
+                    WorkItemGroup(name: "假期队列", goal: "", nextStep: "", sessions: [allSessions[0].reference]),
+                    WorkItemGroup(name: "验收与复盘", goal: "", nextStep: "", sessions: [allSessions[0].reference])
+                ]
+            }
+        }
     }
 }
 
@@ -78,18 +134,34 @@ struct SessionActionsMenu: View {
 }
 private struct GroupPreview: View {
     @StateObject private var model = WorkbenchModel()
-    @State private var scenario = "尚未填写"
+    @State private var scenario = "归属检查"
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Text("任务组 · 示例数据").foregroundStyle(.secondary)
                 Spacer()
                 Picker("预览状态", selection: $scenario) {
-                    ForEach(["尚未填写", "已填写", "空任务组", "未同步"], id: \.self) { Text($0) }
+                    ForEach(["归属检查", "多组与离线", "尚未填写", "已填写", "空任务组", "未同步"], id: \.self) { Text($0) }
                 }.frame(width: 190)
             }.padding(16)
-            if let group = model.workspace.groups.first { TaskGroupPage(model: model, group: group).id(group.id) }
+            WorkbenchDashboard(attentionOnly: model.onlyAttention, projection: model.projection,
+                context: DashboardContext(scope: model.activeScope), group: model.selectedGroup, hasSessionSearch: !model.search.isEmpty,
+                onClearSessionFilters: { model.search = "" },
+                groupHeader: AnyView(GroupWorkbenchHeader(model: model)),
+                groupOverview: AnyView(TaskGroupOverview(model: model)),
+                groupProgress: AnyView(GroupWorkbenchProgress(model: model)),
+                groupHistory: AnyView(GroupWorkbenchHistory(model: model)),
+                isArchiving: false, archiveResult: nil, onNewTask: { model.startNewTask() },
+                onOpen: { model.open($0) }, onMarkReviewed: { model.markReviewed($0) },
+                rowActions: { SessionActionsMenu(model: model, item: $0) },
+                groupMemberships: { SessionGroupIndex(groups: model.workspace.groups).memberships[$0.id] ?? [] },
+                onOpenGroup: { model.showHome(groupID: $0) }, onManageGroups: { model.groupingSession = $0 },
+                onForgetRestoration: { _ in }, onUndoArchive: {}, onRetryArchive: {}, onStartLocal: {}, onConnectRemote: {},
+                onShowInbox: { model.onlyAttention = true }, onShowAll: { model.showHome() },
+                onShowHome: { model.onlyAttention = false }, onClearScope: { _ in model.showHome() },
+                onClearAllScopes: { model.showHome(); model.search = "" })
         }.onAppear { model.seed(scenario) }.onChange(of: scenario) { _, value in model.seed(value) }
+            .sheet(item: $model.groupingSession) { SessionGroupsSheet(model: model, item: $0) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .alert("预览操作", isPresented: Binding(get: { model.notice != nil || model.showNewKimi }, set: { if !$0 { model.notice = nil; model.showNewKimi = false } })) {
                 Button("好") { model.notice = nil; model.showNewKimi = false }

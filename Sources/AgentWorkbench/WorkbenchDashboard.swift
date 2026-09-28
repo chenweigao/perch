@@ -11,15 +11,23 @@ struct WorkbenchDashboard<RowActions: View>: View {
     @State private var queueOrder = ActionQueueOrder()
     let projection: DashboardProjection
     var context = DashboardContext()
+    var group: WorkItemGroup? = nil
+    var hasSessionSearch = false
+    var onClearSessionFilters: (() -> Void)? = nil
+    var groupHeader: AnyView = AnyView(EmptyView())
+    var groupOverview: AnyView = AnyView(EmptyView())
+    var groupProgress: AnyView = AnyView(EmptyView())
+    var groupHistory: AnyView = AnyView(EmptyView())
     let isArchiving: Bool
     let archiveResult: BatchArchiveRun?
     let onNewTask: () -> Void
     let onOpen: (WorkspaceSession) -> Void
     let onMarkReviewed: (WorkspaceSession) -> Void
     let rowActions: (WorkspaceSession) -> RowActions
-    /// Group names per session. The caller builds the index once for the pass; reading
-    /// it per row would rebuild it for every row on every catalog tick.
-    let groupNames: (WorkspaceSession) -> [String]
+    /// The caller builds the membership index once per view pass.
+    let groupMemberships: (WorkspaceSession) -> [SessionGroupIndex.Membership]
+    let onOpenGroup: (UUID) -> Void
+    let onManageGroups: (WorkspaceSession) -> Void
     let onForgetRestoration: (SavedTerminal) -> Void
     let onUndoArchive: () -> Void
     let onRetryArchive: () -> Void
@@ -39,10 +47,6 @@ struct WorkbenchDashboard<RowActions: View>: View {
             VStack(alignment: .leading, spacing: 28) {
                 if let error = context.storageError { storageBanner(error) }
                 introduction
-                if !attentionOnly {
-                    if let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
-                    if !changes.isEmpty { changeSummary }
-                }
                 if attentionOnly {
                     if projection.attention.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
@@ -56,18 +60,31 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         section(DashboardSection(section: .attention, items: ordered), limit: ordered.count)
                     }
                 } else {
-                    if let empty = projection.emptyState, empty != .nothingPending { emptyState(empty) }
-                    ForEach(projection.sections) { value in
-                        section(value, limit: value.section == .attention ? 3 : 5)
-                    }
+                    groupHeader
+                    if let empty = projection.emptyState, empty != .nothingPending,
+                       group == nil || hasSessionSearch || context.scope.facets.contains(where: { $0.kind == .host }) { emptyState(empty) }
+                    if !projection.attention.isEmpty { section(projection.attention, limit: 3) }
+                    groupOverview
+                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
+                    if !changes.isEmpty { changeSummary }
+                    groupProgress
+                    if !projection.review.isEmpty { section(projection.review, limit: 5) }
+                    if !projection.running.isEmpty { section(projection.running, limit: 5) }
                     if !projection.recent.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
                             HStack {
                                 Text("最近会话").accessibilityAddTraits(.isHeader)
                                 Spacer()
-                                Button("查看全部", action: onShowAll).buttonStyle(.link)
+                                if group == nil { Button("查看全部", action: onShowAll).buttonStyle(.link) }
                             }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
                             ForEach(projection.recent) { row($0, in: .other) }
+                            if group != nil && projection.other.count > projection.recent.count {
+                                DisclosureGroup("全部关联会话") {
+                                    ForEach(projection.other.filter { item in !projection.recent.contains(where: { $0.id == item.id }) }) {
+                                        row($0, in: .other)
+                                    }
+                                }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+                            }
                         }
                     }
                     if isArchiving {
@@ -94,11 +111,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
+                if !attentionOnly { groupHistory }
                 if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
             }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
                 .frame(maxWidth: 944).frame(maxWidth: .infinity)
                 #if PERCH_ACCEPTANCE
-                .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly))
+                .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly, groupID: group?.id))
                 #endif
         }
         .onAppear { queueOrder.update(projection.attention.items.map(\.id)) }
@@ -129,18 +147,24 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     private var title: LocalizedStringKey {
         if attentionOnly { return "等你处理" }
+        if let group { return LocalizedStringKey(group.name) }
         if projection.emptyState == .noEnvironment || projection.emptyState == .noSessions { return "开始第一段会话" }
-        return "接着做"
+        return "工作台"
     }
 
     private var introduction: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(title).font(.system(size: 25, weight: .semibold))
-            if !context.scope.isEmpty { scopeChips }
+            if let group, !attentionOnly {
+                if let facet = context.scope.facets.first(where: { $0.kind == .group }) {
+                    Button("工作台") { onClearScope(facet) }.buttonStyle(.link).font(.system(size: 12))
+                }
+                Text(group.name).font(.system(size: 25, weight: .semibold)).textSelection(.enabled)
+            } else { Text(title).font(.system(size: 25, weight: .semibold)) }
+            if !visibleFacets.isEmpty { scopeChips }
             if attentionOnly {
                 Text("确认、回答或处理错误；查看结果请到工作台。")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
-            } else if projection.emptyState == nil || projection.emptyState == .nothingPending {
+            } else if group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 14) { summary }
                     VStack(alignment: .leading, spacing: 5) { summary }
@@ -153,10 +177,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
     /// group filter and a machine filter answer different questions, and dropping one
     /// should not also drop the other. The whole pill is the target, so there is no
     /// second hit area inside it.
+    private var visibleFacets: [ActiveScope.Facet] {
+        context.scope.facets.filter { attentionOnly || group == nil || $0.kind == .host }
+    }
     private var scopeChips: some View {
         HStack(spacing: 6) {
             Text("筛选中").font(.system(size: 11)).foregroundStyle(.tertiary)
-            ForEach(context.scope.facets, id: \.self) { facet in
+            ForEach(visibleFacets, id: \.self) { facet in
                 Button { onClearScope(facet) } label: {
                     HStack(spacing: 5) {
                         Image(systemName: facet.symbol).font(.system(size: 10))
@@ -167,7 +194,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 }.buttonStyle(.plain)
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
-            if context.scope.facets.count > 1 {
+            if visibleFacets.count > 1 {
                 Button("全部清除", action: onClearAllScopes).buttonStyle(.link).font(.system(size: 11))
             }
         }
@@ -219,7 +246,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
             } else if state == .noMatches {
                 // Nothing is wrong with the workspace; the filter is hiding everything.
                 // Starting a session would not fix that and would bury the reason.
-                Button("清除筛选", action: onClearAllScopes).buttonStyle(.borderedProminent)
+                Button("清除筛选", action: onClearSessionFilters ?? onClearAllScopes).buttonStyle(.borderedProminent)
             } else {
                 Button("新建会话", action: onNewTask).buttonStyle(.borderedProminent)
             }
@@ -254,13 +281,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
         var parts = [item.detail, item.hostName]
         if !item.directory.isEmpty { parts.append(URL(fileURLWithPath: item.directory).lastPathComponent) }
-        // A group the queue is already filtered by is stated once, by the chip above the
-        // list. What remains is the useful part: the other groups this session is in.
-        let scopedGroup = context.scope.facets.first { $0.kind == .group }?.name
+        let memberships = groupMemberships(item)
+        let ordered = memberships.filter { $0.id == group?.id } + memberships.filter { $0.id != group?.id }
         return QueueRow(item: item,
                         time: SessionTime.label(since: item.updatedAt, waiting: section == .attention && item.online),
                         metadata: parts.joined(separator: " · "),
-                        groups: groupNames(item).filter { $0 != scopedGroup },
+                        groups: ordered,
+                        onOpenGroup: onOpenGroup, onManageGroups: { onManageGroups(item) },
                         onOpen: { onOpen(item) },
                         onMarkReviewed: { onMarkReviewed(item) }, actions: rowActions(item))
     }
@@ -271,58 +298,80 @@ struct QueueRow<Actions: View>: View {
     let item: WorkspaceSession
     let time: String?
     let metadata: String
-    /// Task groups this session belongs to. Left empty on a group's own page, where
-    /// every row is in that group and repeating the name would only cost width.
-    var groups: [String] = []
+    let groups: [SessionGroupIndex.Membership]
+    let onOpenGroup: (UUID) -> Void
+    let onManageGroups: () -> Void
     let onOpen: () -> Void
     let onMarkReviewed: () -> Void
     let actions: Actions
     @State private var hovered = false
 
-    private var groupBadge: String? { SessionGroupIndex.label(groups) }
+    private var groupBadge: String? { SessionGroupIndex.label(groups.map(\.name)) }
     private var tooltip: String {
         var lines = [item.title]
         if !item.directory.isEmpty { lines.append(item.directory) }
-        if !groups.isEmpty {
-            let names = groups.joined(separator: "、")
+        if groups.isEmpty { lines.append(L("未归组")) }
+        else {
+            let names = groups.map(\.name).joined(separator: "、")
             lines.append(L("任务组：\(names)"))
         }
         return lines.joined(separator: "\n")
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: onOpen) {
-                HStack(spacing: 14) {
-                    SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                        HStack(spacing: 6) {
-                            // The badge holds its own width so the metadata truncates
-                            // instead of pushing the group name out of the row.
-                            if let groupBadge {
-                                Label(groupBadge, systemImage: "folder")
-                                    .font(.system(size: 10)).foregroundStyle(.secondary)
-                                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                            }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                Button(action: onOpen) {
+                    HStack(spacing: 14) {
+                        SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
                             Text(metadata).font(.system(size: 11)).foregroundStyle(.secondary)
                                 .lineLimit(1).truncationMode(.middle)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                        if let time {
+                            Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
                         }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                    if let time {
-                        Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
-                    }
-                }.padding(.horizontal, 8).padding(.vertical, 13).frame(minHeight: 64).contentShape(Rectangle())
-            }.buttonStyle(.plain).disabled(!item.online)
-                .accessibilityLabel([item.title, groupBadge, metadata, time].compactMap { $0 }.joined(separator: "，"))
-            if item.canMarkReviewed && item.online {
-                Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
-                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
-            }
+                    }.padding(.horizontal, 8).padding(.top, 13).padding(.bottom, 7).frame(minHeight: 58).contentShape(Rectangle())
+                }.buttonStyle(.plain).disabled(!item.online)
+                    .accessibilityLabel([item.title, groupBadge, metadata, time].compactMap { $0 }.joined(separator: "，"))
+                if item.canMarkReviewed && item.online {
+                    Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
+                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
+                }
+            }.opacity(item.online ? 1 : 0.55)
+            membershipControls.padding(.leading, 39).padding(.trailing, 8).padding(.bottom, 12)
         }.background(hovered && item.online ? Color.primary.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
             .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
-            .opacity(item.online ? 1 : 0.55).onHover { hovered = $0 }
+            .onHover { hovered = $0 }
             .contextMenu { actions }
             .help(tooltip)
     }
+
+    private var membershipControls: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder").foregroundStyle(.secondary).accessibilityHidden(true)
+            if let first = groups.first {
+                Text("任务组").foregroundStyle(.secondary)
+                Button { onOpenGroup(first.id) } label: {
+                    Text(first.name).lineLimit(1).truncationMode(.middle)
+                }.buttonStyle(.link).help(first.name)
+                    .accessibilityLabel("打开任务组：\(first.name)")
+                if groups.count > 1 {
+                    Menu {
+                        ForEach(groups.dropFirst()) { group in
+                            Button(group.name) { onOpenGroup(group.id) }
+                        }
+                    } label: { Text("另 \(groups.count - 1) 组") }
+                        .menuStyle(.borderlessButton).fixedSize()
+                }
+                Button("管理归属", action: onManageGroups).buttonStyle(.link).foregroundStyle(.secondary).fixedSize()
+            } else {
+                Text("未归组").foregroundStyle(.secondary)
+                Button("关联任务组", action: onManageGroups).buttonStyle(.link)
+            }
+            Spacer(minLength: 0)
+        }.font(.system(size: 11))
+    }
+
 }

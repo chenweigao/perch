@@ -49,11 +49,11 @@ struct WorkbenchHeaderActions: View {
         }
         return nil
     }
-    private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil }
+    private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory }
     /// The scope narrows the action queue, so it is offered on the workbench and on its
     /// inbox. The archive and the session directory list everything on purpose.
     private var showsScope: Bool {
-        model.showDashboard && !model.showArchived && !model.showSessionDirectory && model.selectedGroup == nil
+        model.showDashboard && !model.showArchived && !model.showSessionDirectory
     }
     /// Bound to the resolved facet, so a group that no longer exists reads as "all"
     /// rather than as an invisible selection.
@@ -97,9 +97,7 @@ struct WorkbenchHeaderActions: View {
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                     .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
             } else {
-                // One control owns the queue's scope. Two menus about task groups, one
-                // filtering and one navigating, would not tell those apart; the sidebar
-                // and each session's menu already lead to a group's own page.
+                // Both sidebar and toolbar enter the same scoped workbench.
                 if showsScope {
                     Menu {
                         Picker("任务组", selection: groupScope) {
