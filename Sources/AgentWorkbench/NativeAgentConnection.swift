@@ -26,6 +26,9 @@ final class NativeAgentConnection: ObservableObject {
     /// new-task sheet, so its failure belongs to whichever control is showing a
     /// model list rather than to the whole session.
     @Published private(set) var modelsError: String?
+    /// The bridge process actually serving this connection: its source digest and
+    /// start time, not the files currently deployed on the host.
+    @Published private(set) var runtime = RunningRuntime.unknown
     var onSessionsChanged: (() -> Void)?
     private var api: KimiAPI?
     private var tunnel: Process?
@@ -131,8 +134,7 @@ final class NativeAgentConnection: ObservableObject {
         guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError("原生对话托管服务未安装或不可用") }
         if host.isLocal {
             api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
-            let health: JSONValue = try await request("/health")
-            guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+            try await readBridgeHealth()
             return
         }
         let local = try KimiAPI.availableLoopbackPort()
@@ -148,13 +150,20 @@ final class NativeAgentConnection: ObservableObject {
             if !p.isRunning { throw WorkbenchError("原生对话 SSH 转发失败") }
             if FileManager.default.fileExists(atPath: control) {
                 api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(local)")!, token: secret)
-                let health: JSONValue = try await request("/health")
-                guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+                try await readBridgeHealth()
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
         }
         throw WorkbenchError("原生对话 SSH 转发超时")
+    }
+    /// The protocol gate plus the identity of the process actually serving: a
+    /// hand-bumped version number does not say which source it is executing.
+    private func readBridgeHealth() async throws {
+        let health: JSONValue = try await request("/health")
+        guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+        runtime = RunningRuntime(version: health["implementation"].string,
+                                 startedAt: health["startedAt"].string)
     }
     private func request<T: Decodable>(_ path: String, body: JSONValue? = nil) async throws -> T {
         let data: Data

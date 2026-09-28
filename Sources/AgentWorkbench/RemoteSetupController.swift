@@ -42,6 +42,7 @@ final class RemoteSetupController: ObservableObject {
     private var native: NativeAgentConnection?
     private var terminal: HostConnection?
     private var kimiBinaryPath = ""
+    private var kimiInstalledVersion = ""
 
     init(host: SSHHost? = nil) {
         original = host; hostID = host?.id ?? UUID()
@@ -101,14 +102,14 @@ final class RemoteSetupController: ObservableObject {
     }
     func invalidateAgent() {
         cancel(); ready = false; verifiedDirectory = nil; checks = []; models = []; modelID = ""
-        awaitingInstallCheck = false; kimiBinaryPath = ""
+        awaitingInstallCheck = false; kimiBinaryPath = ""; kimiInstalledVersion = ""
         error = nil; hint = ""; failedCheck = nil
     }
     func invalidateProject() { error = nil }
     func back() {
         cancel(); error = nil; hint = ""; failedCheck = nil; awaitingInstallCheck = false
         if step == .project { step = .agent; verifiedDirectory = nil }
-        else { step = .machine; ready = false; checks = []; kimiBinaryPath = "" }
+        else { step = .machine; ready = false; checks = []; kimiBinaryPath = ""; kimiInstalledVersion = "" }
     }
     func cancel() {
         task?.cancel(); task = nil; disconnectProbes(); busy = false
@@ -182,14 +183,14 @@ final class RemoteSetupController: ObservableObject {
         }
     }
     private func checkKimiRuntime() async throws -> KimiRuntime {
-        kimiBinaryPath = ""
+        kimiBinaryPath = ""; kimiInstalledVersion = ""
         mark("runtime", .checking)
         hint = L("正在检查远端 Kimi 与运行环境。")
         let output = try await ssh(RemoteSetup.kimiRuntimeProbeCommand)
         try Task.checkCancellation()
         switch RemoteSetup.parseKimiRuntimeProbe(output) {
         case .ready(let runtime):
-            kimiBinaryPath = runtime.path
+            kimiBinaryPath = runtime.path; kimiInstalledVersion = runtime.version
             let suffix = runtime.source == .npmPrefix ? " · " + L("npm 全局目录") : ""
             mark("runtime", .passed, runtime.version.trimmingCharacters(in: .whitespacesAndNewlines) + suffix)
             return runtime
@@ -216,6 +217,7 @@ final class RemoteSetupController: ObservableObject {
         let connection = KimiConnection(setupHost: host); kimi = connection; connection.connect()
         try await awaitConnection(allowRetries: allowRetries, online: { connection.online }, error: { connection.error })
         mark("service", .passed, "127.0.0.1:\(host.kimiPort)")
+        reportKimiProcess(running: connection.runtime)
         mark("models", .checking)
         models = ModelCatalog.options(connection.models)
         hint = L("在远端 Kimi 中完成登录并配置模型，然后重新检查。")
@@ -223,6 +225,34 @@ final class RemoteSetupController: ObservableObject {
         if !models.contains(where: { $0.id == modelID }) { modelID = models.first?.id ?? "" }
         mark("models", .passed, L("模型列表已读取；实际模型鉴权将在首条消息时验证。"))
         hint = ""
+    }
+    /// Holds the version of the process serving the connection against the package
+    /// on disk. A `kimi web` started before an upgrade keeps running the old code,
+    /// so this row is informational and never blocks the wizard: Perch does not
+    /// stop someone else's running service.
+    private func reportKimiProcess(running: RunningRuntime) {
+        checks.removeAll { $0.id == "process" }
+        let detail: String
+        switch RuntimeVersion.compare(installed: kimiInstalledVersion, running: running.version) {
+        case .stale(let onDisk, let serving):
+            detail = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+        case .current, .unknown:
+            detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
+        }
+        guard !detail.isEmpty else { return }
+        checks.append(Check(id: "process", title: L("运行进程"), status: .information, detail: detail))
+    }
+    /// The bridge process serving this check. `--ensure` already replaces an idle
+    /// service whose source differs, so this row only makes the running one visible;
+    /// an agent CLI upgraded mid-session still applies from its next session.
+    private func reportBridgeProcess(running: RunningRuntime) {
+        checks.removeAll { $0.id == "process" }
+        var parts: [String] = []
+        if let source = running.version, !source.isEmpty { parts.append(L("桥接源码 \(source)")) }
+        if let started = RuntimeVersion.startedLabel(running.startedAt) { parts.append(started) }
+        guard !parts.isEmpty else { return }
+        checks.append(Check(id: "process", title: L("运行进程"), status: .information,
+                            detail: parts.joined(separator: " · ")))
     }
     private func checkKimi() async throws {
         _ = try await checkKimiRuntime()
@@ -243,6 +273,7 @@ final class RemoteSetupController: ObservableObject {
         let status = try await connection.setupStatus(provider: provider)
         try Task.checkCancellation()
         mark("service", .passed)
+        reportBridgeProcess(running: connection.runtime)
         mark("models", .checking)
         hint = L("在远端安装所选 Agent、完成登录和模型配置，然后重新检查。")
         guard status["installed"] == .bool(true) else {

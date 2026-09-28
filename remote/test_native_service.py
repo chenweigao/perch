@@ -937,7 +937,7 @@ class UpgradeLifecycleTests(unittest.TestCase):
     def test_changed_local_binary_does_not_interrupt_active_task(self):
         endpoint={'port':43210,'token':'fixture-token','pid':1234}
         with patch.dict(os.environ, {'PERCH_LOCAL_CODEX':'/new/codex'}), \
-             patch.object(broker, 'running_endpoint', return_value=(endpoint, {'version':broker.SERVICE_VERSION,'localCodexBinary':'/old/codex'})), \
+             patch.object(broker, 'running_endpoint', return_value=(endpoint, {'version':broker.SERVICE_VERSION,'implementation':broker.SOURCE_FINGERPRINT,'localCodexBinary':'/old/codex'})), \
              patch.object(broker, 'endpoint_request', return_value={'sessions':[{'id':'s','busy':True}]}), \
              patch.object(broker.os, 'kill') as kill:
             self.assertEqual(broker.reusable_endpoint(pathlib.Path('/fixture')),endpoint|{'restartPending':1})
@@ -947,7 +947,7 @@ class UpgradeLifecycleTests(unittest.TestCase):
         endpoint={'port':43210,'token':'fixture-token','pid':1234}
         binary=str(pathlib.Path('/same/codex').resolve())
         with patch.dict(os.environ, {'PERCH_LOCAL_CODEX':binary}), \
-             patch.object(broker, 'running_endpoint', return_value=(endpoint, {'version':broker.SERVICE_VERSION,'localCodexBinary':binary})), \
+             patch.object(broker, 'running_endpoint', return_value=(endpoint, {'version':broker.SERVICE_VERSION,'implementation':broker.SOURCE_FINGERPRINT,'localCodexBinary':binary})), \
              patch.object(broker, 'endpoint_request') as request:
             self.assertEqual(broker.reusable_endpoint(pathlib.Path('/fixture')),endpoint)
             request.assert_not_called()
@@ -976,10 +976,51 @@ server.serve_forever()
         value={'port':43210,'token':'fixture-token','pid':pid}
         path=pathlib.Path(directory)/'endpoint.json'; path.write_text(json.dumps(value))
         return path,value
+    def health(self, **overrides):
+        return {'version':broker.SERVICE_VERSION,'implementation':broker.SOURCE_FINGERPRINT}|overrides
     def test_current_service_is_reused(self):
         with tempfile.TemporaryDirectory() as directory:
             path,endpoint=self.endpoint(directory)
-            with patch.object(broker,'endpoint_request',return_value={'version':broker.SERVICE_VERSION}), patch.object(broker.os,'kill') as kill:
+            with patch.object(broker,'endpoint_request',return_value=self.health()), patch.object(broker.os,'kill') as kill:
+                self.assertEqual(broker.reusable_endpoint(path),endpoint)
+                kill.assert_not_called()
+    def test_fingerprint_reads_the_running_source_and_reports_nothing_when_absent(self):
+        script=pathlib.Path(broker.__file__)
+        self.assertEqual(broker.source_fingerprint(script),broker.SOURCE_FINGERPRINT)
+        self.assertNotEqual(broker.SOURCE_FINGERPRINT,'')
+        with tempfile.TemporaryDirectory() as directory:
+            edited=pathlib.Path(directory)/'edited.py'
+            edited.write_bytes(script.read_bytes()+b'\n# deployed change\n')
+            self.assertNotEqual(broker.source_fingerprint(edited),broker.SOURCE_FINGERPRINT)
+            self.assertEqual(broker.source_fingerprint(pathlib.Path(directory)/'missing.py'),'')
+    def test_same_protocol_with_other_source_is_retired_when_idle(self):
+        # A deployed change that keeps SERVICE_VERSION must still take effect.
+        with tempfile.TemporaryDirectory() as directory:
+            path,_=self.endpoint(directory)
+            idle={'id':'s','busy':False,'pending':0,'turnState':'completed'}
+            responses=[self.health(implementation='0123456789abcdef'),{'sessions':[idle]},idle,ConnectionRefusedError()]
+            with patch.object(broker,'endpoint_request',side_effect=responses), patch.object(broker.os,'kill') as kill, patch.object(broker.time,'sleep'):
+                self.assertIsNone(broker.reusable_endpoint(path))
+                kill.assert_called_once_with(1234,broker.signal.SIGTERM)
+    def test_same_protocol_with_other_source_waits_for_active_work(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            responses=[self.health(implementation='0123456789abcdef'),{'sessions':[{'id':'s','busy':True,'pending':0}]}]
+            with patch.object(broker,'endpoint_request',side_effect=responses), patch.object(broker.os,'kill') as kill:
+                self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':1})
+                kill.assert_not_called()
+    def test_service_predating_source_reporting_is_replaced_not_assumed_current(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            responses=[{'version':broker.SERVICE_VERSION},{'sessions':[{'id':'s','busy':True,'pending':0}]}]
+            with patch.object(broker,'endpoint_request',side_effect=responses):
+                self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':1})
+    def test_unreadable_local_source_leaves_a_healthy_service_alone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            with patch.object(broker,'SOURCE_FINGERPRINT',''), \
+                 patch.object(broker,'endpoint_request',return_value={'version':broker.SERVICE_VERSION}), \
+                 patch.object(broker.os,'kill') as kill:
                 self.assertEqual(broker.reusable_endpoint(path),endpoint)
                 kill.assert_not_called()
     def test_active_legacy_service_is_preserved(self):
@@ -1047,7 +1088,13 @@ server.serve_forever()
                 self.assertEqual(result.returncode,0,result.stderr)
                 self.assertEqual(result.stderr,'')
                 endpoint=json.loads(result.stdout)
-                self.assertEqual(broker.endpoint_request(endpoint,'/health')['version'],broker.SERVICE_VERSION)
+                health=broker.endpoint_request(endpoint,'/health')
+                self.assertEqual(health['version'],broker.SERVICE_VERSION)
+                # The started service reports the source it is executing, so the next
+                # --ensure can tell a deployed change from the running one.
+                self.assertEqual(health['implementation'],broker.SOURCE_FINGERPRINT)
+                started=broker.datetime.datetime.fromisoformat(health['startedAt'])
+                self.assertIsNotNone(started.tzinfo)
                 legacy.wait(timeout=2)
             finally:
                 try:

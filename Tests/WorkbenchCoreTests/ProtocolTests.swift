@@ -30,6 +30,7 @@ struct ProtocolTests {
         try checkBatchArchive()
         try checkRunControl()
         try checkConnectivity()
+        try checkRuntimeFreshness()
         try await checkRemoteSetup()
         try checkDashboard()
         checkTaskGroup()
