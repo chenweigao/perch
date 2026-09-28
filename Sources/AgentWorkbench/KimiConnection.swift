@@ -488,6 +488,8 @@ final class KimiConnection: ObservableObject {
                     try Task.checkCancellation()
                     guard token == selectionGeneration else { return }
                     conversation?.prepend(page)
+                    pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [],
+                                                            messages: conversation?.messages ?? [])
                     if !all || page.items.isEmpty { break }
                 }
             } catch is CancellationError {} catch {

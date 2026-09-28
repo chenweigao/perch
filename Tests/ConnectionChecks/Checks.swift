@@ -214,6 +214,7 @@ struct ConnectionChecks {
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
         try await checkKimiPendingSettle()
+        try await checkKimiPromptHistory()
         try await checkKimiSelectionIsolation()
         try await checkSendFailureIsolation()
         try await checkImmediateSelection()

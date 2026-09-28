@@ -47,7 +47,12 @@ public struct KimiPrompt: Decodable, Identifiable, Equatable, Sendable {
                 let error = waiting.contains(merged[index].status) && waiting.contains(prompt.status) ? merged[index].error : nil
                 merged[index] = prompt
                 if let error { merged[index].error = error }
-            } else { merged.append(prompt) }
+            } else if prompt.status != "running" {
+                // Recover waiting work, not an already executing turn. Its user
+                // message may be outside the loaded history page on first open.
+                // Locally tracked sends above still wait for their history echo.
+                merged.append(prompt)
+            }
         }
         // These receipts mean the server took the prompt into a turn.
         let delivered = ["running", "steered"]

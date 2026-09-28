@@ -12,11 +12,15 @@ private final class SelectionProtocol: URLProtocol {
     private static var sequence = 10
     private static var busy = false
     private static var goalActive = true
+    private static var recoveredPromptStatus: String?
     private var stopped = false
 
     static func reset() {
         lock.lock(); defer { lock.unlock() }
-        held = []; failed = []; pending = [:]; counts = [:]; bodies = [:]; sequence = 10; busy = false; goalActive = true
+        held = []; failed = []; pending = [:]; counts = [:]; bodies = [:]; sequence = 10; busy = false; goalActive = true; recoveredPromptStatus = nil
+    }
+    static func setRecoveredPrompt(_ status: String) {
+        lock.lock(); defer { lock.unlock() }; recoveredPromptStatus = status; busy = true
     }
     static func setSequence(_ value: Int) { lock.lock(); defer { lock.unlock() }; sequence = value }
     static func setBusy(_ value: Bool) { lock.lock(); defer { lock.unlock() }; busy = value; sequence += 1 }
@@ -57,7 +61,7 @@ private final class SelectionProtocol: URLProtocol {
     }
     private func respond() {
         let path = request.url!.path
-        Self.lock.lock(); let cancelled = stopped; let fail = Self.failed.contains(path); let sequence = Self.sequence; let busy = Self.busy; let goalOn = Self.goalActive; Self.lock.unlock()
+        Self.lock.lock(); let cancelled = stopped; let fail = Self.failed.contains(path); let sequence = Self.sequence; let busy = Self.busy; let goalOn = Self.goalActive; let promptStatus = Self.recoveredPromptStatus; Self.lock.unlock()
         guard !cancelled else { return }
         func session(_ id: String, _ updated: String) -> [String: Any] {
             ["id": id, "title": id, "updated_at": updated, "busy": busy,
@@ -93,6 +97,11 @@ private final class SelectionProtocol: URLProtocol {
                     let body = Self.submitted(path).last!
                     let content = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(body["content"]))
                     result = ["prompt_id": body["prompt_id"].string!, "status": "running", "content": content]
+                } else if let promptStatus {
+                    let prompt: [String: Any] = ["prompt_id": id + "-prompt", "user_message_id": id + "-older",
+                                               "status": promptStatus, "content": [["type": "text", "text": "original task"]]]
+                    result = ["active": promptStatus == "running" ? prompt as Any : NSNull(),
+                              "queued": promptStatus == "running" ? [] : [prompt]]
                 } else { result = ["active": NSNull(), "queued": []] }
             } else if path.hasSuffix(":compact") || path.hasSuffix("/profile") {
                 result = [String: Any]()
@@ -395,4 +404,37 @@ func checkKimiSelectionIsolation() async throws {
         }
     }
     if !failures.isEmpty { throw WorkbenchError(failures.joined(separator: "\n")) }
+}
+
+@MainActor
+func checkKimiPromptHistory() async throws {
+    for status in ["running", "queued", "blocked"] {
+        let client = selectionClient()
+        defer {
+            client.disconnect()
+            UserDefaults.standard.removeObject(forKey: "kimi.session.\(client.host.id)")
+        }
+        SelectionProtocol.setRecoveredPrompt(status)
+        client.select("a")
+        await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+        precondition(client.conversation?.hasOlder == true)
+        precondition(client.pendingPrompts["a"]?.count == (status == "running" ? 0 : 1),
+                     "Cold open restores waiting prompts, not the external active turn")
+        client.select("b")
+        await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+        client.select("a")
+        await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+        precondition(client.pendingPrompts["a"]?.count == (status == "running" ? 0 : 1))
+        client.loadOlder()
+        await ConnectionChecks.settle { !client.loadingOlder }
+        precondition(client.conversation?.messages.first?.id == "a-older",
+                     "The original task remains accessible in paginated history")
+        precondition(client.pendingPrompts["a"]?.isEmpty == true,
+                     "Loading the matching history retires the bubble immediately, without re-entering")
+        client.reloadSelected()
+        await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+        precondition(client.pendingPrompts["a"]?.isEmpty == true,
+                     "A new tail snapshot must not recreate an echoed prompt")
+        print("PASS: Kimi \(status) prompt cold open, cached re-entry and history reconciliation")
+    }
 }
