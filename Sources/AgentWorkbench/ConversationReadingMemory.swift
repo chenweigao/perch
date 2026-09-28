@@ -4,7 +4,6 @@ import WorkbenchCore
 /// Small presentation records survive detached hosting controllers and session switches.
 final class ConversationReadingMemory {
     static let shared = ConversationReadingMemory()
-    static let disclosureDuration: TimeInterval = 0.2
     struct Position {
         var entry: String
         var index: Int
@@ -52,14 +51,14 @@ final class ConversationReadingMemory {
     }
 }
 private struct ConversationReduceMotionKey: EnvironmentKey { static let defaultValue = false }
-private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: (Bool) -> Void = { _ in } }
+private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: () -> Void = {} }
 private struct ConversationMemoryKey: EnvironmentKey { static let defaultValue = "" }
 extension EnvironmentValues {
     var conversationReduceMotion: Bool {
         get { self[ConversationReduceMotionKey.self] }
         set { self[ConversationReduceMotionKey.self] = newValue }
     }
-    var conversationDisclosureWillChange: (Bool) -> Void {
+    var conversationDisclosureWillChange: () -> Void {
         get { self[ConversationDisclosureAction.self] }
         set { self[ConversationDisclosureAction.self] = newValue }
     }
@@ -70,8 +69,6 @@ extension EnvironmentValues {
 }
 @propertyWrapper struct RememberedExpansion: DynamicProperty {
     @Environment(\.conversationMemoryKey) private var scope
-    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
-    @Environment(\.conversationReduceMotion) private var inheritedReduceMotion
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var revision = 0
     let name: String
@@ -80,15 +77,27 @@ extension EnvironmentValues {
     var wrappedValue: Bool {
         get { _ = revision; return ConversationReadingMemory.shared.expansions[scope + ":" + name] ?? initial }
         nonmutating set {
-            let reduceMotion = systemReduceMotion || inheritedReduceMotion
-            disclosureWillChange(!reduceMotion)
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: ConversationReadingMemory.disclosureDuration)) {
+            guard newValue != wrappedValue else { return }
+            disclosureWillChange()
+            // Commit content and native row geometry without an intermediate
+            // clipping animation that can detach and reattach neighboring rows.
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 ConversationReadingMemory.shared.expansions[scope + ":" + name] = newValue
                 revision += 1
             }
         }
     }
-    var projectedValue: Binding<Bool> { Binding(get: { wrappedValue }, set: { wrappedValue = $0 }) }
+    var projectedValue: Binding<Bool> {
+        let binding = Binding(get: { wrappedValue }, set: { wrappedValue = $0 })
+        #if TRANSCRIPT_CHECKS
+        if ConversationDisclosureFixture.enabled {
+            ConversationDisclosureFixture.bindings[scope + ":" + name] = binding
+        }
+        #endif
+        return binding
+    }
 }
 
 struct ConversationFindTarget {
@@ -96,3 +105,11 @@ struct ConversationFindTarget {
     let hit: ConversationSearchHit
     let query: String
 }
+
+#if TRANSCRIPT_CHECKS
+/// Exercise the same state setter as the disclosure buttons in native fixtures.
+enum ConversationDisclosureFixture {
+    static var enabled = false
+    static var bindings: [String: Binding<Bool>] = [:]
+}
+#endif

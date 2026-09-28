@@ -241,9 +241,6 @@ private final class ConversationDocumentView: NSView {
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
     private var columnWidth: CGFloat = ReplyStyle.readingWidth
-    private var disclosureRow: String?
-    private var heightAnimation: (id: String, from: CGFloat, to: CGFloat, start: TimeInterval)?
-    private var heightTimer: Timer?
     private var refreshing = false
     private var contentOriginY: CGFloat = 0
     private var publishedHeight: CGFloat?
@@ -364,7 +361,6 @@ private final class ConversationDocumentView: NSView {
         }
         if self.sessionId != sessionId {
             readingIntent += 1
-            cancelHeightAnimation()
             saveReadingPosition()
             saveReadingHeights()
             restoreTarget = ConversationReadingMemory.shared.following[sessionId] == false ? ConversationReadingMemory.shared.positions[sessionId] : nil
@@ -404,7 +400,6 @@ private final class ConversationDocumentView: NSView {
     /// Releasing hundreds of hosting graphs in the selection transaction stalls
     /// the main thread. Drain a small batch between frames, on AppKit's thread.
     func prepareForRemoval() {
-        cancelHeightAnimation()
         saveReadingPosition()
         saveReadingHeights()
         for id in mounted { controllers[id]?.view.removeFromSuperview() }
@@ -503,7 +498,7 @@ private final class ConversationDocumentView: NSView {
                 let measuredSize: (width: CGFloat, height: CGFloat)? = measuredSizes[id].flatMap {
                     $0.width == columnWidth && $0.content == content ? ($0.width, $0.height) : nil
                 }
-                controller = ConversationEntryController(content: content, appearance: appearance, measuredSize: measuredSize, disclosureChanged: { [weak self] animated in self?.beginDisclosureChange(id, animated: animated) }) { [weak self] height in
+                controller = ConversationEntryController(content: content, appearance: appearance, measuredSize: measuredSize, disclosureChanged: { [weak self] in self?.beginDisclosureChange(id) }) { [weak self] height in
                     self?.rowHeightChanged(id, height: height)
                 }
                 controllers[id] = controller
@@ -540,54 +535,35 @@ private final class ConversationDocumentView: NSView {
         Self.retire(retired)
         publishHeight()
     }
-    private func beginDisclosureChange(_ id: String, animated: Bool) {
+    private func beginDisclosureChange(_ id: String) {
         measuredSizes.removeValue(forKey: id)
         laidOutRange = nil
         viewport?.pauseFollowing?()
-        if let previous = heightAnimation, previous.id != id, let index = indices[previous.id] {
-            heights[index] = previous.to
-            rebuildOffsets()
+        // Pin the reader before SwiftUI removes/inserts disclosure content.
+        // This also covers a change in the currently anchored row itself.
+        if restoreTarget == nil {
+            saveReadingPosition()
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
         }
-        cancelHeightAnimation()
-        disclosureRow = animated ? id : nil
-    }
-    private func cancelHeightAnimation() {
-        heightTimer?.invalidate(); heightTimer = nil
-        heightAnimation = nil; disclosureRow = nil
     }
     private func updateHeight(_ id: String, height: CGFloat) {
-        guard let index = indices[id], heightAnimation?.id != id, heights[index] != height else { return }
+        guard let index = indices[id], heights[index] != height else { return }
         if ConversationReadingMemory.shared.following[sessionId] == false,
            let reading = readingRowForAnchor(), index < reading {
             saveReadingPosition()
             restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
         }
-        if disclosureRow == id {
-            disclosureRow = nil
-            heightAnimation = (id, heights[index], height, ProcessInfo.processInfo.systemUptime)
-            let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.advanceHeightAnimation() }
-            heightTimer = timer
-            RunLoop.main.add(timer, forMode: .common)
-        } else {
-            heights[index] = height
-            rebuildOffsets()
-        }
-    }
-    private func advanceHeightAnimation() {
-        guard let animation = heightAnimation, let index = indices[animation.id] else { cancelHeightAnimation(); return }
-        let progress = min(1, (ProcessInfo.processInfo.systemUptime - animation.start) / ConversationReadingMemory.disclosureDuration)
-        let eased = progress * progress * (3 - 2 * progress)
-        heights[index] = animation.from + (animation.to - animation.from) * eased
-        if progress == 1 { cancelHeightAnimation() }
+        heights[index] = height
         rebuildOffsets()
-        refreshVisibleRows()
-        publishHeight()
     }
     private func rowHeightChanged(_ id: String, height: CGFloat) {
         if let controller = controllers[id], let index = indices[id] {
             measuredSizes[id] = (contents[index], controller.view.bounds.width, height)
         }
         updateHeight(id, height: height)
+        // Resize the host and reposition its neighbors together, before the
+        // deferred SwiftUI document-height publication can display stale frames.
+        refreshVisibleRows()
         publishHeight()
         restoreReadingPosition()
         viewport?.refresh()
@@ -654,7 +630,7 @@ private final class ConversationDocumentView: NSView {
             restoreTarget = nil
             return
         }
-        guard let target = restoreTarget, let clip = observedClip, bounds.height >= totalHeight - 1, !contents.isEmpty else { return }
+        guard let target = restoreTarget, let clip = observedClip, abs(bounds.height - totalHeight) < 1, !contents.isEmpty else { return }
         let index = indices[target.entry] ?? min(target.index, contents.count - 1)
         let y = max(0, offsets[index] + target.offset + contentOriginY)
         clip.scroll(to: NSPoint(x: 0, y: y))
@@ -684,7 +660,6 @@ private final class ConversationDocumentView: NSView {
         observeScroll()
     }
     deinit {
-        heightTimer?.invalidate()
         if let findObserver { NotificationCenter.default.removeObserver(findObserver) }
         if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
     }
@@ -742,7 +717,7 @@ private struct ConversationEntryAppearance: Equatable {
 private struct HostedConversationEntry: View {
     let content: ConversationEntryView
     let appearance: ConversationEntryAppearance
-    var disclosureChanged: (Bool) -> Void = { _ in }
+    var disclosureChanged: () -> Void = {}
     var sizeChanged: (CGSize) -> Void = { _ in }
     var body: some View {
         content.equatable().environment(\.conversationMemoryKey, content.memoryKey).fixedSize(horizontal: false, vertical: true)
@@ -772,11 +747,11 @@ private final class ConversationEntryController: NSViewController {
     private var publishedHeight: CGFloat?
     private var widthMeasurementScheduled = false
     var heightChanged: (CGFloat) -> Void
-    private let disclosureChanged: (Bool) -> Void
+    private let disclosureChanged: () -> Void
 
     init(content: ConversationEntryView, appearance: ConversationEntryAppearance,
          measuredSize: (width: CGFloat, height: CGFloat)? = nil,
-         disclosureChanged: @escaping (Bool) -> Void, heightChanged: @escaping (CGFloat) -> Void) {
+         disclosureChanged: @escaping () -> Void, heightChanged: @escaping (CGFloat) -> Void) {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("host_create", since: start) }
@@ -840,9 +815,9 @@ private final class ConversationEntryController: NSViewController {
     }
     private func setRoot() {
         let version = generation
-        host.rootView = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] animated in
+        host.rootView = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
-            self?.disclosureChanged(animated)
+            self?.disclosureChanged()
         }) { [weak self] size in
             self?.contentSizeChanged(size, generation: version)
         }
@@ -1054,7 +1029,7 @@ private enum ThoughtTextStyle {
 private struct ThoughtText: View {
     let text: String
     var body: some View {
-        SelectableReplyText(attributed: NSAttributedString(string: text, attributes: ThoughtTextStyle.attributes))
+        DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -1104,7 +1079,10 @@ private struct ThoughtOutput: View {
             }
         }
         .popover(isPresented: $showFullText, arrowEdge: .top) {
-            ScrollView { ThoughtText(text: fullText).padding(16) }
+            ScrollView {
+                SelectableReplyText(attributed: NSAttributedString(string: fullText, attributes: ThoughtTextStyle.attributes))
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+            }
                 .frame(width: 480, height: 300)
         }
     }
