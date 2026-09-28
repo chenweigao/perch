@@ -11,6 +11,8 @@ enum RemotePanelMode: String, CaseIterable, Identifiable {
     var label: String { self == .file ? "文件" : "Git 变更" }
 }
 
+enum GitReviewRange: String { case unstaged, staged, branch }
+
 @MainActor
 final class RemoteFileBrowser: ObservableObject {
     @Published private(set) var host: SSHHost?
@@ -29,7 +31,10 @@ final class RemoteFileBrowser: ObservableObject {
     @Published private(set) var gitDirectory = ""
     @Published private(set) var gitWorktrees: [RemoteGitWorktree] = []
     @Published var gitInput = ""
-    @Published var gitStaged = false
+    @Published var gitRange: GitReviewRange = .unstaged
+    @Published var gitBaseInput = ""
+    @Published private(set) var gitComparison: RemoteGitComparison?
+    var gitStaged: Bool { gitRange == .staged }
     /// Directories the agent recently touched (worktrees included), most recent
     /// first. Both conversation file resolution and the Git tab start from these.
     private var directoryHints: [String] = []
@@ -55,6 +60,9 @@ final class RemoteFileBrowser: ObservableObject {
         content = nil
         error = nil
         gitStatus = nil
+        gitComparison = nil
+        gitBaseInput = ""
+        gitRange = .unstaged
         gitPath = nil
         gitDiff = nil
         gitDirectory = ""
@@ -152,6 +160,7 @@ final class RemoteFileBrowser: ObservableObject {
         error = nil
         gitPath = nil
         gitDiff = nil
+        gitComparison = nil
         run(RemoteGitCommand.statusCommand(directories: directories), destination: host.destination, token: token) { browser, data in
             let status = try RemoteGitCommand.parseStatus(data)
             if allowSuggestion, let suggested = browser.suggestedWorktree(in: status.worktrees),
@@ -169,6 +178,7 @@ final class RemoteFileBrowser: ObservableObject {
             } else {
                 browser.gitWorktrees = []
             }
+            if browser.gitRange == .branch { browser.loadGitComparison() }
         } failed: { browser in
             browser.gitStatus = nil
         }
@@ -189,6 +199,16 @@ final class RemoteFileBrowser: ObservableObject {
 
     func loadGitDiff(_ entry: RemoteGitEntry) {
         guard let host, let root = gitStatus?.root else { return }
+        if gitRange == .branch {
+            guard let comparison = gitComparison, comparison.entries.contains(entry) else { return }
+            cancel()
+            gitPath = entry.path; gitDiff = nil; loading = true; error = nil
+            run(RemoteGitCommand.comparisonDiffCommand(comparison: comparison, entry: entry),
+                destination: host.destination, token: generation) { browser, data in
+                browser.gitDiff = try RemoteGitCommand.parseDiff(data)
+            } failed: { browser in browser.gitDiff = nil }
+            return
+        }
         cancel()
         generation += 1
         let token = generation
@@ -209,6 +229,25 @@ final class RemoteFileBrowser: ObservableObject {
         } failed: { browser in
             browser.gitDiff = nil
         }
+    }
+
+    func loadGitComparison() {
+        guard let host, let root = gitStatus?.root else { return }
+        cancel()
+        gitComparison = nil; gitPath = nil; gitDiff = nil; error = nil
+        let base = gitBaseInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !base.isEmpty else { return }
+        loading = true
+        run(RemoteGitCommand.comparisonCommand(directory: root, base: base),
+            destination: host.destination, token: generation) { browser, data in
+            browser.gitComparison = try RemoteGitCommand.parseComparison(data)
+        } failed: { browser in browser.gitComparison = nil }
+    }
+
+    func changeGitRange(from previous: GitReviewRange) {
+        if gitRange == .branch { loadGitComparison() }
+        else if previous == .branch { loadGitStatus() }
+        else { reloadGitDiff() }
     }
 
     /// Switching between staged and unstaged re-reads the same file rather than
@@ -427,14 +466,32 @@ struct RemoteFilePanel: View {
                         }
                     }
                     HStack(spacing: 7) {
-                        Picker("", selection: $browser.gitStaged) {
-                            Text("未暂存").tag(false)
-                            Text("已暂存").tag(true)
+                        Picker("", selection: $browser.gitRange) {
+                            Text("未暂存").tag(GitReviewRange.unstaged)
+                            Text("已暂存").tag(GitReviewRange.staged)
+                            Text("分支改动").tag(GitReviewRange.branch)
                         }.pickerStyle(.segmented).labelsHidden()
-                            .onChange(of: browser.gitStaged) { _, _ in browser.reloadGitDiff() }
+                            .onChange(of: browser.gitRange) { previous, _ in browser.changeGitRange(from: previous) }
                     }
-                    Text("只读：仅执行 worktree list、status 与 diff，不做任何写操作。")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                    if browser.gitRange == .branch {
+                        HStack(spacing: 7) {
+                            TextField("目标分支或提交，如 origin/main", text: $browser.gitBaseInput)
+                                .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                                .onSubmit { browser.loadGitComparison() }
+                            Button("比较") { browser.loadGitComparison() }.controlSize(.small)
+                                .disabled(browser.loading || browser.gitStatus?.root == nil || browser.gitBaseInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        if let comparison = browser.gitComparison {
+                            Text("\(comparison.baseRef) · \(comparison.mergeBase.prefix(8)) → \(comparison.headCommit.prefix(8))")
+                                .font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Text("比较共同祖先到当前提交的改动，不含未提交内容；引用使用仓库现有数据，不自动 fetch。")
+                            .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("只读：仅执行 worktree list、status 与 diff，不做任何写操作。")
+                            .font(.system(size: 10)).foregroundStyle(.secondary)
+                    }
                 }
             }.padding(.horizontal, 14).padding(.vertical, 12)
             Divider()
@@ -487,6 +544,11 @@ struct RemoteFilePanel: View {
                 ProgressView()
                 Text("正在读取…").font(.system(size: 12)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if browser.gitRange == .branch, browser.gitStatus?.root != nil {
+            if let comparison = browser.gitComparison {
+                if comparison.entries.isEmpty { notice("当前提交相对目标分支没有新增改动。", symbol: "checkmark.circle", tint: .secondary) }
+                else { gitChanges(comparison.entries) }
+            } else { notice("输入目标分支或提交后开始审阅。", symbol: "arrow.triangle.branch", tint: .secondary) }
         } else {
             switch browser.gitStatus {
             case .notARepository:
@@ -494,27 +556,31 @@ struct RemoteFilePanel: View {
             case .clean:
                 notice("所选工作树干净，没有未提交的改动。", symbol: "checkmark.circle", tint: .secondary)
             case .changes(_, _, let entries):
-                VSplitView {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 1) {
-                            ForEach(entries) { entry in
-                                Button { browser.loadGitDiff(entry) } label: {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
-                                            .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
-                                        Text(entry.label).font(.system(size: 10)).foregroundStyle(.secondary)
-                                    }.frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
-                                        .background(entry.path == browser.gitPath ? Color.primary.opacity(0.05) : .clear)
-                                }.buttonStyle(.plain)
-                            }
-                        }.padding(.vertical, 8)
-                    }.frame(minHeight: 80, idealHeight: min(220, Double(entries.count) * 42 + 16), maxHeight: 220)
-                    diffPane
-                }
+                gitChanges(entries)
             case nil:
                 notice("读取当前项目 Git 工作树的改动。", symbol: "arrow.triangle.branch", tint: .secondary)
             }
+        }
+    }
+
+    private func gitChanges(_ entries: [RemoteGitEntry]) -> some View {
+        VSplitView {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 1) {
+                    ForEach(entries) { entry in
+                        Button { browser.loadGitDiff(entry) } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
+                                    .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                                Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label).font(.system(size: 10)).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
+                                .background(entry.path == browser.gitPath ? Color.primary.opacity(0.05) : .clear)
+                        }.buttonStyle(.plain)
+                    }
+                }.padding(.vertical, 8)
+            }.frame(minHeight: 80, idealHeight: min(220, Double(entries.count) * 42 + 16), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))
+            diffPane
         }
     }
 
@@ -529,7 +595,7 @@ struct RemoteFilePanel: View {
                     Divider()
                 }
                 RemoteSourceText(text: diff, line: nil, diff: true, onSelection: { selection = $0 })
-                    .id("diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitStaged)")
+                    .id("diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitRange.rawValue)")
             }
         case .binary: notice("二进制文件差异，不做预览。", symbol: "doc.zipper", tint: .secondary)
         case .empty: notice("该文件在当前范围内没有差异。", symbol: "equal.circle", tint: .secondary)
@@ -644,7 +710,7 @@ struct RemoteFilePanel: View {
         if browser.mode == .git {
             guard case .text(let diff, _) = browser.gitDiff else { return nil }
             return ReviewContext(path: path, text: diff, selection: selection, diff: true,
-                scope: "\(browser.hostName) · \(browser.gitStaged ? "staged" : "unstaged")")
+                scope: "\(browser.hostName) · \(browser.gitComparison?.scope ?? browser.gitRange.rawValue)")
         }
         guard case .text(let text, let truncated, _) = browser.content else { return nil }
         return ReviewContext(path: path, text: text, selection: selection,
@@ -704,7 +770,14 @@ struct RemoteSourceText: NSViewRepresentable {
         context.coordinator.rendered = rendered; context.coordinator.source = text; context.coordinator.line = line
         if diff { view.textStorage?.setAttributedString(DiffText.attributed(text)) }
         else { view.string = rendered }
-        view.sizeToFit()
+        // A newly mounted split pane can still have a zero-sized viewport here.
+        // Size from laid-out glyphs so text is visible before a later window resize.
+        if let layout = view.layoutManager, let container = view.textContainer {
+            layout.ensureLayout(for: container)
+            let used = layout.usedRect(for: container)
+            view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + 28),
+                                     height: max(scroll.contentSize.height, used.height + 28)))
+        }
         guard let line, let range = RemoteFileContent.lineRange(in: rendered, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
             view.scrollRangeToVisible(NSRange(location: 0, length: 0))
