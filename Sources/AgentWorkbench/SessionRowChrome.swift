@@ -117,7 +117,8 @@ struct SessionHoverPreview: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
                 if updatedAt > 0 {
-                    Text(Date(timeIntervalSince1970: updatedAt), style: .relative)
+                    // Match SessionTime: a host clock ahead of this Mac is treated as fresh.
+                    Text(Date(timeIntervalSince1970: min(updatedAt, Date().timeIntervalSince1970)), style: .relative)
                         .font(.system(size: 11)).foregroundStyle(.tertiary).lineLimit(1)
                         .fixedSize()
                 }
