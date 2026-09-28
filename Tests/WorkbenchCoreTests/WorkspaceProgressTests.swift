@@ -41,7 +41,10 @@ func checkGroupSuggestions() throws {
     let input = GroupingInput(groups: [group, other], sessions: [session])
     func response(_ proposals: [[String: String]], finish: String = "stop") throws -> Data {
         let content = String(decoding: try JSONSerialization.data(withJSONObject: ["suggestions": proposals]), as: UTF8.self)
-        return try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": content], "finish_reason": finish]]])
+        return try rawResponse(content, finish: finish)
+    }
+    func rawResponse(_ content: String, finish: String) throws -> Data {
+        try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": content], "finish_reason": finish]]])
     }
     let proposal = ["sessionID": ref.id, "groupID": group.id.uuidString, "reason": "目标与会话均关于滚动"]
     let data = try response([proposal, proposal,
@@ -49,7 +52,13 @@ func checkGroupSuggestions() throws {
         ["sessionID": ref.id, "groupID": other.id.uuidString, "reason": "already linked"]])
     let suggestions = try GroupingClient.parse(data, input: input)
     precondition(suggestions.count == 1)
-    do { _ = try GroupingClient.parse(response([proposal], finish: "length"), input: input); preconditionFailure("truncated response accepted") }
+    let complete = String(decoding: try JSONSerialization.data(withJSONObject: ["suggestions": [proposal, proposal]]), as: UTF8.self)
+    let completeMarkedLength = try GroupingClient.parse(rawResponse(complete, finish: "length"), input: input)
+    precondition(completeMarkedLength.count == 1)
+    let cut = complete.firstIndex(of: "}")!
+    let salvaged = try GroupingClient.parse(rawResponse(String(complete[...cut]), finish: "length"), input: input)
+    precondition(salvaged.count == 1 && salvaged[0].sessionID == ref.id)
+    do { _ = try GroupingClient.parse(rawResponse("{\"suggestions\":[{\"sessionID\":\"\(ref.id)\",", finish: "length"), input: input); preconditionFailure("unsalvageable truncation accepted") }
     catch ActivitySummaryError.truncated { }
     var workspace = LocalWorkspace(); workspace.groups = [group, other]
     let undo = workspace.applyGrouping(suggestions, sessions: [session])
