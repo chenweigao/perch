@@ -228,7 +228,7 @@ public struct ActivitySummaryResult: Codable, Equatable, Sendable {
 }
 
 public enum ActivitySummaryError: LocalizedError {
-    case configuration, http(Int), emptyResponse, invalidResponse, truncated
+    case configuration, http(Int), emptyResponse, invalidResponse, truncated, echoedPrompt
     public var errorDescription: String? {
         switch self {
         case .configuration: return L("请填写有效的 Base URL 和模型名称。")
@@ -236,6 +236,7 @@ public enum ActivitySummaryError: LocalizedError {
         case .emptyResponse: return L("摘要服务没有返回文字。")
         case .invalidResponse: return L("摘要服务返回了无法识别的格式。")
         case .truncated: return L("摘要被输出上限截断，请关闭思考或更换模型。")
+        case .echoedPrompt: return L("模型复述了原文而没有生成名称，请更换模型。")
         }
     }
 }

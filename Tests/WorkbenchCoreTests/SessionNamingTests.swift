@@ -59,11 +59,28 @@ func checkSessionNaming() throws {
                      "A user title longer than the bridge rule must not be mistaken for it")
     }
 
+    // A generated name that only repeats the prompt is rejected, otherwise the
+    // next launch would read it back as a placeholder.
+    precondition(SessionNaming.echoes(echoed, of: echoed))
+    precondition(SessionNaming.echoes(String(echoed.prefix(12)), of: echoed))
+    precondition(!SessionNaming.echoes("登录重定向排查", of: echoed))
+
+    // Loading the rest of a history is decided without the first message, so
+    // any unnamed Kimi title still qualifies while a bridge keeps its bound.
+    precondition(SessionNaming.couldBePlaceholder(echoed, kind: .kimi),
+                 "A Kimi echo is unbounded, so its title alone cannot rule out naming")
+    precondition(!SessionNaming.couldBePlaceholder("", kind: .terminal))
+    precondition(SessionNaming.couldBePlaceholder(String(repeating: "x", count: 60), kind: .codex))
+    precondition(!SessionNaming.couldBePlaceholder(String(repeating: "x", count: 61), kind: .codex))
+
     precondition(SessionNaming.sanitize(" \"Fix login bug\"\nignored second line ") == "Fix login bug")
     precondition(SessionNaming.sanitize("「排查登录重定向」") == "排查登录重定向")
     precondition(SessionNaming.sanitize("\"\"") == "")
     precondition(SessionNaming.sanitize("   ") == "")
     precondition(SessionNaming.sanitize(String(repeating: "a", count: 80)).count == 40)
+    precondition(SessionNaming.sanitize("<think>\nThe user wants a title.\n</think>\n\n修复登录跳转") == "修复登录跳转",
+                 "A reasoning model's thinking is not the title")
+    precondition(SessionNaming.sanitize("</think>\n排查登录重定向") == "排查登录重定向")
 
     let client = SessionNamingClient()
     var config = ActivitySummaryConfiguration()
@@ -84,7 +101,8 @@ func checkSessionNaming() throws {
     let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
     let content = String(decoding: request.httpBody!, as: UTF8.self)
     precondition(!content.contains("test-token") && request.value(forHTTPHeaderField: "Authorization") == "Bearer test-token")
-    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 160)
+    precondition(body["tools"] == nil && body["stream"] as? Bool == false && body["max_tokens"] as? Int == 512,
+                 "A reasoning model needs room before the title or the response is discarded as truncated")
     precondition(body["temperature"] as? Double == 0)
     precondition((body["chat_template_kwargs"] as? [String: Bool])?["enable_thinking"] == false)
     let messagesBody = body["messages"] as? [[String: String]]
