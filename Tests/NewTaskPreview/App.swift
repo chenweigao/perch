@@ -19,7 +19,7 @@ import WorkbenchCore
     }
 
     var body: some Scene {
-        WindowGroup("新建任务预览") {
+        WindowGroup("新建任务预览", id: ProcessInfo.processInfo.environment["PERCH_PREVIEW_NARROW"] == "1" ? "narrow-workflow" : "regular-workflow") {
             NewTaskView(model: model, native: model.native, kimi: model.kimi)
                 .preferredColorScheme(.light)
         }.defaultSize(width: ProcessInfo.processInfo.environment["PERCH_PREVIEW_NARROW"] == "1" ? 620 : 1100, height: 760)

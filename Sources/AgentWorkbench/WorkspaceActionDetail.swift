@@ -58,7 +58,7 @@ private struct NativeActionDetail: View {
                 }
                 PublicResultPreview(model: model, item: item, messages: s.messages,
                     completed: !s.busy && s.interactions.isEmpty && s.error == nil && s.completed > 0,
-                    recapSession: "\(connection.host.id):native:\(s.id)",
+                    recapSession: "\(connection.host.id):native:\(s.id)", recapRevision: s.taskRecapRevision,
                     loadHistory: { try await connection.recapMessages(for: s.id) },
                     onReviewed: { model.reviewInspected(s, on: connection.host.id) })
             } else if connection.online { ProgressView("正在读取会话…") }
@@ -101,7 +101,7 @@ private struct KimiActionDetail: View {
                 ForEach(c.snapshot.pendingQuestions) { KimiQuestionView(question: $0, sessionID: item.reference.terminalID, connection: connection) }
                 PublicResultPreview(model: model, item: item, messages: c.displayMessages,
                     completed: !c.snapshot.session.busy && c.snapshot.session.lastTurnReason == "completed" && pending.isEmpty,
-                    recapSession: "\(connection.host.id):kimi:\(c.snapshot.session.id)",
+                    recapSession: "\(connection.host.id):kimi:\(c.snapshot.session.id)", recapRevision: c.taskRecapRevision,
                     loadHistory: { try await connection.recapMessages(for: c.snapshot.session.id) },
                     onReviewed: { model.reviewInspected(c.snapshot.session, on: connection.host.id) })
             } else if connection.online { ProgressView("正在读取会话…") }
@@ -119,6 +119,7 @@ private struct PublicResultPreview: View {
     let messages: [KimiMessage]
     let completed: Bool
     let recapSession: String
+    let recapRevision: String?
     let loadHistory: @MainActor () async throws -> [KimiMessage]
     let onReviewed: () -> Void
     @State private var showRecap = false
@@ -137,7 +138,7 @@ private struct PublicResultPreview: View {
             }
             if completed {
                 HStack {
-                    if let revision = TaskRecapInput.revision(in: messages) {
+                    if let revision = recapRevision {
                         Button("查看 Recap") { showRecap.toggle() }
                             .popover(isPresented: $showRecap) {
                                 TaskRecapPopover(key: "\(recapSession):\(revision)", messages: loadHistory,

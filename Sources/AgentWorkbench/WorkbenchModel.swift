@@ -848,6 +848,19 @@ final class WorkbenchModel: ObservableObject {
         }
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
     }
+    /// Review feedback is staged in the same task; it never sends automatically.
+    func appendReviewContext(_ text: String, to reference: SessionReference) {
+        guard selectedReference == reference, canQuoteSelection else { return }
+        let id = reference.terminalID
+        if reference.kind == .kimi {
+            let existing = kimi.drafts[id] ?? ""
+            kimi.drafts[id] = existing + (existing.isEmpty ? "" : "\n\n") + text + "\n\n"
+        } else {
+            let existing = native.drafts[id] ?? ""
+            native.drafts[id] = existing + (existing.isEmpty ? "" : "\n\n") + text + "\n\n"
+        }
+        DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+    }
     func discoverLocalAgents() {
         guard !probingLocal else { return }
         probingLocal = true

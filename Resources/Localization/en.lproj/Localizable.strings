@@ -944,3 +944,25 @@
 "链接或文件路径（可选）" = "Link or file path (optional)";
 "阶段" = "Stage";
 "关联已变化，请重新生成建议。" = "Memberships changed. Generate suggestions again.";
+
+"Agent、模型与权限" = "Agent, model and permissions";
+
+"任务配置" = "Task settings";
+
+"调整文件面板宽度" = "Resize file panel";
+
+"恢复并排布局" = "Restore side-by-side layout";
+
+"全宽审阅" = "Full-width review";
+
+"引用文件" = "Reference file";
+
+"反馈选中代码…" = "Comment on selected code…";
+
+"代码反馈" = "Code feedback";
+
+"希望如何修改？" = "What should change?";
+
+"加入当前任务草稿，检查后再发送。" = "Add to this task’s draft. Review it before sending.";
+
+"加入草稿" = "Add to draft";

@@ -193,6 +193,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
         if mode == "workspace" { await workspaceActions(); return }
+        if mode == "review" { await reviewWorkflow(); return }
         var report: [String: Any] = ["mode": mode, "history_turns": 200, "catalog_sessions": 500,
                                    "window_points": [1280, 820], "native_transport": "fixed in-memory JSON; real decode/select",
                                    "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS"]
@@ -528,6 +529,54 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
             + Double(value.ru_utime.tv_usec + value.ru_stime.tv_usec) / 1_000_000
     }
+    private func reviewWorkflow() async {
+        var report: [String: Any] = ["mode": "review", "real_agent": false]
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("perch-review-\(UUID())")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let file = directory.appendingPathComponent("Example.swift")
+            try "let title = \"Before\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
+            _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "init", "-q"])
+            _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "add", "Example.swift"])
+            _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Fixture"])
+            try "let title = \"After 中文\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
+            try await Task.sleep(for: .seconds(2))
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
+            let item = fixture.sessions[0]
+            model.open(item)
+            try await settle(window) { self.model.native.snapshot?.id == item.reference.terminalID }
+            model.native.drafts[item.reference.terminalID] = "Existing draft"
+            let browser = model.fileBrowser
+            model.showFileViewer = true
+            browser.configure(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""), cwd: directory.path)
+            browser.open(file.path, line: 1)
+            try await settle(window, "file read") { !browser.loading && browser.content != nil }
+            guard case .text(let text, _, _) = browser.content else { throw WorkbenchError("Missing file text") }
+            let reference = ReviewContext(path: file.path, text: text, selection: (text as NSString).range(of: "After"))
+            model.appendReviewContext(reference.prompt(feedback: "Review this change"), to: item.reference)
+            guard model.native.drafts[item.reference.terminalID]?.hasPrefix("Existing draft\n\n>") == true,
+                  model.native.drafts[item.reference.terminalID]?.contains(file.path + ":1-1") == true else { throw WorkbenchError("Draft reference lost") }
+            let previous = model.native.drafts[item.reference.terminalID]
+            model.appendReviewContext("Wrong task", to: fixture.sessions[1].reference)
+            guard model.native.drafts[item.reference.terminalID] == previous, model.native.queue.allItems.isEmpty else { throw WorkbenchError("Feedback sent or crossed task boundary") }
+            report["draft_preserved_without_send"] = true
+            report["stale_target_rejected"] = true
+            browser.mode = .git; browser.loadGitStatus()
+            try await settle(window, "Git status") { !browser.loading && browser.gitStatus != nil }
+            guard case .changes(_, _, let entries) = browser.gitStatus, let entry = entries.first else { throw WorkbenchError("Missing diff entry") }
+            browser.loadGitDiff(entry)
+            try await settle(window, "Git diff") { !browser.loading && browser.gitDiff != nil }
+            guard case .text(let diff, _) = browser.gitDiff, diff.contains("+let title") else { throw WorkbenchError("Missing diff") }
+            report["local_file_and_diff_read"] = true
+            report["status"] = "passed"
+        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        try? writeReport(report, name: "result.json")
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] != "1" {
+            try? FileManager.default.removeItem(at: directory)
+            exit(report["status"] as? String == "passed" ? 0 : 1)
+        }
+    }
+
     private func workspaceActions() async {
         var report: [String: Any] = ["mode": "workspace", "transport": "isolated in-memory native transport", "real_agent": false]
         do {

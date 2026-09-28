@@ -45,7 +45,7 @@ final class SelectionActionsController: NSObject {
     /// Only non-editable text views offer these actions, which keeps the composer
     /// and any field editor out of scope.
     private func selectionChanged(_ textView: NSTextView?) {
-        guard let textView, !textView.isEditable, textView.isSelectable else { hide(); return }
+        guard let textView, textView.identifier?.rawValue != "PerchReviewSource", !textView.isEditable, textView.isSelectable else { hide(); return }
         guard textView.selectedRange().length > 0, !selectedText(in: textView).isEmpty else {
             if textView === source { hide() }
             return
