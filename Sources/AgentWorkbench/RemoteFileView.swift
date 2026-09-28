@@ -458,6 +458,7 @@ struct RemoteFilePanel: View {
                     Text("代码反馈").font(.headline)
                     Group {
                         Text(context.reference).font(.caption).textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
                         ScrollView { Text(context.excerpt).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 160)
                     }
                     TextField("希望如何修改？", text: $feedback, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder)
