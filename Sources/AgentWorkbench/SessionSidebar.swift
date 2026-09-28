@@ -248,7 +248,7 @@ struct ArchivedSessionsView: View {
 private struct ConnectionControls: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: WorkbenchModel
-    @ObservedObject var kimi: KimiConnection
+    let kimi: KimiConnection
     let native: NativeAgentConnection
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -316,7 +316,7 @@ private struct ConnectionControls: View {
 struct KimiSelectionContent: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     var body: some View {
         if connection.conversation?.snapshot.session.id == model.selectedReference?.terminalID {
             KimiWorkspaceView(connection: connection, onNew: { model.startNewTask() }, onInput: {},

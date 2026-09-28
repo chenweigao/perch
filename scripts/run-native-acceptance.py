@@ -15,7 +15,7 @@ parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
 parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
 parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
-parser.add_argument("--mode", choices=["all", "joint", "switching", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation"], default="all")
+parser.add_argument("--mode", choices=["all", "joint", "switching", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation"], default="all")
 parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
 args = parser.parse_args()
 if args.seconds <= 0:
@@ -32,6 +32,10 @@ binary = app / "Contents/MacOS/NativeAcceptance"
 manifest = json.loads((app / "Contents/Resources/build.json").read_text())
 manifest.update(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(), capture=args.capture,
                 mode="frames" if args.capture == "frames" else args.mode)
+if manifest["mode"] == "kimi-invalidation":
+    # Kimi replaces the displayed catalog; native fixture responses remain resident.
+    manifest["catalog_sessions"] = 1
+    manifest["native_fixture_resident_snapshot_count"] = manifest.pop("resident_snapshot_count", 8)
 env = dict(os.environ, PERCH_ACCEPTANCE_MODE=manifest["mode"], PERCH_ACCEPTANCE_RESULTS=str(out))
 env["PERCH_ACCEPTANCE_KEEP_OPEN"] = "0"
 env["PERCH_ACCEPTANCE_JOINT_SECONDS"] = str(args.seconds)

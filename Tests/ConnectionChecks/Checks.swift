@@ -217,6 +217,7 @@ struct ConnectionChecks {
         try await checkKimiPendingSettle()
         try await checkKimiPromptHistory()
         try await checkKimiSelectionIsolation()
+        try await checkKimiObservation()
         try await checkSendFailureIsolation()
         try await checkImmediateSelection()
         try await checkSelectionRetry()

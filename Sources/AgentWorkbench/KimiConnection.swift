@@ -1,33 +1,48 @@
 import Foundation
+import Observation
 import UniformTypeIdentifiers
 import WorkbenchCore
 
-@MainActor
-final class KimiConnection: ObservableObject {
+@MainActor @Observable
+final class KimiConnection {
     private(set) var host: SSHHost
-    var onSessionsChanged: (() -> Void)?
+    @ObservationIgnored var onSessionsChanged: (() -> Void)?
+    @ObservationIgnored var onOnlineChanged: (() -> Void)?
+    @ObservationIgnored var onConversationChanged: ((KimiConversation?) -> Void)?
     var port: Int { host.kimiPort }
-    @Published private(set) var sessions: [KimiSession] = []
-    @Published private(set) var selectedId: String?
-    @Published private(set) var conversation: KimiConversation?
-    @Published private(set) var timings = ConversationTimings()
-    @Published private(set) var online = false
-    @Published private(set) var connecting = false
-    @Published private var stateMessage: String.LocalizationValue = "未连接"
+    private(set) var sessions: [KimiSession] = []
+    let detail = KimiConversationState()
+    private(set) var selectedId: String? {
+        get { detail.selectedID }
+        set { detail.selectedID = newValue }
+    }
+    private(set) var conversation: KimiConversation? {
+        get { detail.conversation }
+        set { detail.conversation = newValue; onConversationChanged?(newValue) }
+    }
+    private(set) var timings = ConversationTimings()
+    private(set) var online = false {
+        didSet { if online != oldValue { onOnlineChanged?() } }
+    }
+    private(set) var connecting = false
+    private var stateMessage: String.LocalizationValue = "未连接"
     var state: String { L(stateMessage) }
     func state(locale: Locale) -> String { L(stateMessage, locale: locale) }
-    @Published var error: String?
-    @Published var actionError: String?
-    @Published private(set) var commandFeedback: [String: String] = [:]
-    @Published private(set) var commandErrors: [String: String] = [:]
-    @Published var models: [JSONValue] = []
-    @Published private(set) var modelsError: String?
-    @Published var modelChoices: [String: String] = [:]
-    @Published var thinkingChoices: [String: ThinkingLevel] = [:]
+    var error: String?
+    var actionError: String? {
+        get { detail.actionError }
+        set { detail.actionError = newValue }
+    }
+    private(set) var commandFeedback: [String: String] = [:]
+    private(set) var commandErrors: [String: String] = [:]
+    var models: [JSONValue] = []
+    private(set) var modelsError: String?
+    var modelChoices: [String: String] = [:]
+    var thinkingChoices: [String: ThinkingLevel] = [:]
     /// Effort levels come from each model's own support_efforts, so a model with
     /// no declared levels does not imply that it cannot reason.
     var catalog: [AgentModel] { ModelSelectionCatalog.parseKimi(models) }
-    @Published var permissionChoices: [String: String] = [:]
+    var permissionChoices: [String: String] = [:]
     func permissionCapability(for id: String) -> PermissionCapability {
         PermissionCatalog.capability(for: .kimi, selected: permissionMode(for: id))
     }
@@ -43,60 +58,67 @@ final class KimiConnection: ObservableObject {
         guard let reported, PermissionCatalog.isValid(reported, for: .kimi) else { return nil }
         return reported
     }
-    @Published var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
-    @Published private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
-    @Published var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
-    @Published private(set) var aborting: Set<String> = []
-    @Published private(set) var loadingTaskOutput: Set<String> = []
-    @Published private(set) var stoppingTasks: Set<String> = []
+    var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
+    private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
+    var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
+    private(set) var aborting: Set<String> = []
+    private(set) var loadingTaskOutput: Set<String> = []
+    private(set) var stoppingTasks: Set<String> = []
     /// The task list is auxiliary information. A failed read stays in its own
     /// panel instead of presenting itself as a session error.
-    @Published private(set) var taskListError: String?
+    private(set) var taskListError: String?
     /// The selected session's active goal. A failed read keeps the last known
     /// value instead of presenting itself as a session error.
-    @Published private(set) var goal: KimiGoal?
+    private(set) var goal: KimiGoal?
     /// One subagent transcript at a time: the sheet that reads it owns the
     /// subscription, and closing it unsubscribes that agent again.
-    @Published private(set) var subagentTranscript: KimiSubagentTranscript?
-    @Published private(set) var subagentTranscriptError: String?
-    @Published private(set) var loadingSubagentTranscript = false
-    @Published private(set) var loadingOlderSubagentTurns = false
-    @Published private var sendingSessions: Set<String> = []
+    private(set) var subagentTranscript: KimiSubagentTranscript?
+    private(set) var subagentTranscriptError: String?
+    private(set) var loadingSubagentTranscript = false
+    private(set) var loadingOlderSubagentTurns = false
+    private var sendingSessions: Set<String> = []
     var sending: Bool { selectedId.map { sendingSessions.contains($0) } ?? false }
-    @Published var loading = false
-    @Published private(set) var snapshotReady = false
-    @Published var loadingOlder = false
-    @Published var resolving = Set<String>()
+    var loading: Bool {
+        get { detail.loading }
+        set { detail.loading = newValue }
+    }
+    private(set) var snapshotReady: Bool {
+        get { detail.snapshotReady }
+        set { detail.snapshotReady = newValue }
+    }
+    var loadingOlder: Bool {
+        get { detail.loadingOlder }
+        set { detail.loadingOlder = newValue }
+    }
+    var resolving = Set<String>()
     /// What the service answering this connection reports about itself, read from
     /// `/api/v1/meta` on every connect.
-    @Published private(set) var runtime = RunningRuntime.unknown
+    private(set) var runtime = RunningRuntime.unknown
     /// Set when the remote package is newer than the running service. Perch reports
     /// it and nothing more: the daemon belongs to the user, not to this client.
-    @Published private(set) var staleRuntimeNotice: String?
-    private(set) var api: KimiAPI?
-    private var cachedConversations = KimiConversationCache()
-    private var socket: URLSessionWebSocketTask?
-    private var tunnel: Process?
-    private var folder: URL?
-    private var task: Task<Void, Never>?
-    private var selectionTask: Task<Void, Never>?
-    private var historyTask: Task<Void, Never>?
-    private var listRefresh: Task<Void, Never>?
-    private var taskRefresh: Task<Void, Never>?
-    private var goalRefresh: Task<Void, Never>?
-    private var freshnessCheck: Task<Void, Never>?
+    private(set) var staleRuntimeNotice: String?
+    @ObservationIgnored private(set) var api: KimiAPI?
+    @ObservationIgnored private var cachedConversations = KimiConversationCache()
+    @ObservationIgnored private var socket: URLSessionWebSocketTask?
+    @ObservationIgnored private var tunnel: Process?
+    @ObservationIgnored private var folder: URL?
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var listRefresh: Task<Void, Never>?
+    @ObservationIgnored private var taskRefresh: Task<Void, Never>?
+    @ObservationIgnored private var goalRefresh: Task<Void, Never>?
+    @ObservationIgnored private var freshnessCheck: Task<Void, Never>?
     private let probesInstalledVersion: Bool
-    private var archivingBatch = false
+    @ObservationIgnored private var archivingBatch = false
     func beginArchiveBatch() { archivingBatch = true; listRefresh?.cancel() }
     func endArchiveBatch() { archivingBatch = false }
-    private var generation = UUID()
-    private var selectionGeneration = UUID()
-    private var subscribedId: String?
+    @ObservationIgnored private var generation = UUID()
+    private var selectionGeneration: UUID { detail.generation }
+    @ObservationIgnored private var subscribedId: String?
     private var savedSelectionKey: String { "kimi.session.\(host.id)" }
 
-    private var draftFile: DraftFile?
-    private var draftLoadError: String?
-    @Published private(set) var draftSaveError: String?
+    @ObservationIgnored private var draftFile: DraftFile?
+    @ObservationIgnored private var draftLoadError: String?
+    private(set) var draftSaveError: String?
     private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "kimi-\(host.id)")
@@ -224,11 +246,10 @@ final class KimiConnection: ObservableObject {
     }
 
     func disconnect() {
-        generation = UUID(); selectionGeneration = UUID()
+        generation = UUID(); detail.cancelLoads()
         freshnessCheck?.cancel(); freshnessCheck = nil
         runtime = .unknown; staleRuntimeNotice = nil
-        task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
-        historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
+        task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
         snapshotReady = false; goal = nil
         subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
@@ -371,17 +392,19 @@ final class KimiConnection: ObservableObject {
         loadSelected(id)
     }
     private func loadSelected(_ id: String) {
-        selectionGeneration = UUID(); let token = selectionGeneration
-        historyTask?.cancel(); historyTask = nil; loadingOlder = false
-        snapshotReady = false; loading = true; actionError = nil; taskListError = nil; goal = nil
-        selectionTask?.cancel()
-        selectionTask = Task { [weak self] in
+        detail.cancelLoads(); let token = selectionGeneration
+        snapshotReady = false; actionError = nil; taskListError = nil; goal = nil
+        detail.loadSelection { [weak self] in
             guard let self else { return }
             do { try await refreshConversation(selectionToken: token); try await subscribe(id) }
-            catch is CancellationError {} catch { if token == selectionGeneration { actionError = error.localizedDescription } }
+            catch {
+                if !Task.isCancelled, !(error is CancellationError), token == selectionGeneration {
+                    actionError = error.localizedDescription
+                }
+            }
+            guard !Task.isCancelled, token == selectionGeneration else { return }
             await refreshTasks(selectionToken: token)
             await refreshGoal(selectionToken: token)
-            if token == selectionGeneration { loading = false }
         }
     }
     private func refreshConversation(selectionToken: UUID) async throws {
@@ -427,6 +450,11 @@ final class KimiConnection: ObservableObject {
             "agent_filter": .object([id: .array([.string("main")])])
         ])
     }
+    #if PERCH_ACCEPTANCE
+    func acceptanceReceive(_ data: Data) async throws {
+        try await handle(KimiWire.decodeEvent(from: data), data: data)
+    }
+    #endif
     private func handle(_ event: KimiEvent, data: Data) async throws {
         // Transcript frames belong to the open subagent sheet; they never enter
         // the main conversation fold.
@@ -479,21 +507,16 @@ final class KimiConnection: ObservableObject {
     func loadAllHistoryForSearch() { loadHistory(all: true) }
     private func loadHistory(all: Bool) {
         guard online, snapshotReady, !loadingOlder, let api, let id = selectedId, conversation?.hasOlder == true else { return }
-        let token = selectionGeneration; loadingOlder = true
-        historyTask = Task {
-            defer { if token == selectionGeneration { loadingOlder = false; historyTask = nil } }
-            do {
-                while token == selectionGeneration, conversation?.hasOlder == true, let first = conversation?.messages.first {
-                    let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
-                    try Task.checkCancellation()
-                    guard token == selectionGeneration else { return }
-                    conversation?.prepend(page)
-                    pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [],
-                                                            messages: conversation?.messages ?? [])
-                    if !all || page.items.isEmpty { break }
-                }
-            } catch is CancellationError {} catch {
-                if token == selectionGeneration { actionError = error.localizedDescription }
+        let token = selectionGeneration
+        detail.loadHistory { [self] in
+            while token == selectionGeneration, conversation?.hasOlder == true, let first = conversation?.messages.first {
+                let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
+                try Task.checkCancellation()
+                guard token == selectionGeneration else { return }
+                conversation?.prepend(page)
+                pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [],
+                                                        messages: conversation?.messages ?? [])
+                if !all || page.items.isEmpty { break }
             }
         }
     }
@@ -678,7 +701,7 @@ final class KimiConnection: ObservableObject {
         drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
         permissionChoices.removeValue(forKey: id)
         if selectedId == id {
-            selectionGeneration = UUID(); selectionTask?.cancel(); historyTask?.cancel(); historyTask = nil
+            detail.cancelLoads()
             selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false; goal = nil
         }
         sessions.removeAll { $0.id == id }; onSessionsChanged?()

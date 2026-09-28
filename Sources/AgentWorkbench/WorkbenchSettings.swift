@@ -188,7 +188,7 @@ private struct HostSettingsRow: View {
 private struct HostConnectionControls: View {
     @Bindable var model: WorkbenchModel
     @ObservedObject var connection: HostConnection
-    @ObservedObject var kimi: KimiConnection
+    let kimi: KimiConnection
     let native: NativeAgentConnection
 
     private var sshRequested: Bool { kimi.connecting || native.wantsConnection }

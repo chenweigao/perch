@@ -25,8 +25,12 @@ a completed rewrite of every provider or a measured frame-rate improvement.
 - `NativeAgentConnection` uses Observation. `NativeConversationState` owns the
   selected snapshot and cancellable selection/history reads. Connection polling,
   drafts and the outbox retain their connection lifetime; explicit online/snapshot
-  events feed catalog updates and naming. Kimi/Herdr still use `ObservableObject`
-  and Combine event bridges. All connections outlive pages. Navigating or dismissing
+  events feed catalog updates and naming. `KimiConnection` uses the same Observation
+  boundary, with `KimiConversationState` owning selection/history reads and readiness.
+  Kimi keeps its streaming, pending prompt reconciliation, tasks and subagent policy
+  in the connection; explicit conversation events feed naming (including initial
+  catch-up). Herdr still uses `ObservableObject` and Combine event bridges.
+  All connections outlive pages. Navigating or dismissing
   a page must never disconnect a host or stop a remote agent.
 
 ## Rules for new features
@@ -52,10 +56,9 @@ which is already part of the macOS functional CI suite.
 
 ## Next migration boundaries
 
-Native session detail and selection/history reads now have this boundary. Apply
-the same contract to Kimi only with its distinct live stream, prompt recovery,
-subagent and paging checks. Keep rapid switching, reconnect, draft and approval
-recovery checks. Move catalog assembly/projections out of the
+Native and Kimi session detail and selection/history reads now have this boundary.
+Keep rapid switching, reconnect, draft, approval, prompt recovery, subagent and paging
+checks when changing either connection. Move catalog assembly/projections out of the
 coordinator only with profiling and semantic parity checks. Avoid migrating all
 connection state by mechanical annotation replacement.
 
@@ -93,3 +96,23 @@ isolation and stale selection/history results, including old cleanup and errors.
 
 See [performance and technology decisions](performance-and-technology.md) for
 technology selection criteria and the next measurements.
+
+## Kimi input isolation measurement
+
+`KimiComposerView` owns its palette and file picker state, keyed by session identity.
+The root reader no longer reads drafts. In the same mounted 200-turn Kimi fixture,
+40 draft writes caused 40 root body evaluations before migration and zero afterward.
+Each draft was verified in the mounted editor, and a decoded `assistant.delta` went
+through the production event handler as a positive control. A-B-A selection also
+verifies that each composer restores its own draft.
+
+`run-native-acceptance.py --mode kimi-invalidation` is included in macOS functional
+checks. It uses fixed HTTP responses through the real Kimi API decoder and an injected
+stream frame, without SSH, a live daemon or persistent user drafts. Connection checks
+cover model/attachment/draft isolation, event bridges, old selection cleanup, old page
+errors, disconnect and visible current errors. Existing Kimi checks still cover goals,
+tasks, subagent transcript, history recovery and promoted steering. Naming lifecycle
+checks exercise initial catch-up and later conversation events on the production model.
+
+The measured gain remains removal of unrelated body evaluations, not certified input
+latency, frame rate or real-transport recovery.

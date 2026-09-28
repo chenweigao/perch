@@ -72,7 +72,7 @@ private struct NativeActionDetail: View {
 private struct KimiActionDetail: View {
     @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     private var current: KimiConversation? {
         guard connection.snapshotReady, connection.conversation?.snapshot.session.id == item.reference.terminalID else { return nil }
         return connection.conversation

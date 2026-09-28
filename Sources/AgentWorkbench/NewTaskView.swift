@@ -9,7 +9,7 @@ import WorkbenchCore
 struct NewTaskView: View {
     @Bindable var model: WorkbenchModel
     let native: NativeAgentConnection
-    @ObservedObject var kimi: KimiConnection
+    let kimi: KimiConnection
     @StateObject var projectFiles = ProjectFileSuggestions()
     @StateObject var referenceBrowser = RemoteFileBrowser()
     @AppStorage("new.task.prompt") private var prompt = ""

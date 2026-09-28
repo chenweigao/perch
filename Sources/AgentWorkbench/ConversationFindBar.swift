@@ -3,7 +3,7 @@ import WorkbenchCore
 
 struct ConversationFindBar: View {
     @Bindable var model: WorkbenchModel
-    @ObservedObject var kimi: KimiConnection
+    let kimi: KimiConnection
     let native: NativeAgentConnection
     @State private var query = ""
     @State private var index = 0

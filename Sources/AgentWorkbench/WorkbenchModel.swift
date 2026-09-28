@@ -237,15 +237,15 @@ final class WorkbenchModel {
     #if PERCH_ACCEPTANCE
     /// Full production views with an in-memory native transport. No restoration,
     /// persistence, connection startup, notifications or user workspace observers.
-    init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection) {
-        kimi = KimiConnection(setupHost: host)
+    init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection, kimi: KimiConnection? = nil) {
+        self.kimi = kimi ?? KimiConnection(setupHost: host)
         self.native = native
         connections = []
         configuredEnvironment = true
         selectedHostID = host.id
         canSaveWorkspace = false
         allSessions = sessions
-        kimiEnvironments[host.id] = kimi; nativeEnvironments[host.id] = native
+        kimiEnvironments[host.id] = self.kimi; nativeEnvironments[host.id] = native
         workspace.starred = Array(sessions.prefix(4).map(\.reference))
         workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
                                           sessions: Array(sessions.prefix(12).map(\.reference)))]
@@ -259,8 +259,9 @@ final class WorkbenchModel {
         kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
         native.onOnlineChanged = { [weak self] in Task { @MainActor in self?.catalogChanged() } }
         native.onOnlineChanged?()
-        kimi.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
-        kimi.$conversation.sink { [weak self, weak kimi] conversation in
+        kimi.onOnlineChanged = { [weak self] in Task { @MainActor in self?.catalogChanged() } }
+        kimi.onOnlineChanged?()
+        kimi.onConversationChanged = { [weak self, weak kimi] conversation in
             Task { @MainActor in
                 guard let self, let kimi, let conversation else { return }
                 let session = conversation.snapshot.session
@@ -268,7 +269,8 @@ final class WorkbenchModel {
                                     remoteTitle: session.title, messages: conversation.messages,
                                     busy: session.busy, turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
             }
-        }.store(in: &subscriptions)
+        }
+        kimi.onConversationChanged?(kimi.conversation)
         native.onSnapshotChanged = { [weak self, weak native] snapshot in
             Task { @MainActor in
                 guard let self, let native, let snapshot else { return }

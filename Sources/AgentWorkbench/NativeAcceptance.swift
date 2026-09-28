@@ -9,6 +9,7 @@ import os
     static let shared = NativeAcceptanceProbe()
     @Published var query: String?
     var nativeBodyEvaluations = 0
+    var kimiBodyEvaluations = 0
     var renderedQuery: String?
     var selection: String?
     var dashboardProjection: DashboardProjection?
@@ -188,7 +189,9 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             try fixture.request(path, body: body)
         }
         _model = State(initialValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
-                                                         sessions: fixture.sessions, native: connection))
+                                                         sessions: fixture.sessions, native: connection,
+                                                         kimi: ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-invalidation"
+                                                            ? KimiAcceptanceProtocol.connection(host: NativeAcceptanceFixture.host) : nil))
     }
     var body: some Scene {
         WindowGroup("Perch · 隔离性能验收") {
@@ -227,6 +230,7 @@ private struct ReferenceComposerFixtureView: View {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
+        if mode == "kimi-invalidation" { await kimiInvalidation(); return }
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
         if mode == "branch-review" { await reviewWorkflow(branch: true); return }
@@ -319,6 +323,56 @@ private struct ReferenceComposerFixtureView: View {
             if report["status"] as? String != "passed" { exit(1) }
             NSApp.terminate(nil)
         }
+    }
+    private func kimiInvalidation() async {
+        var report: [String: Any] = ["mode": "kimi-invalidation", "history_turns": 200, "catalog_sessions_during_measurement": 1,
+            "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency"]
+        do {
+            let reference = SessionReference(hostID: model.kimi.host.id, terminalID: "a", kind: .kimi)
+            let item = WorkspaceSession(reference: reference, title: "Kimi 输入隔离", directory: "/fixture", hostName: "离线验收",
+                                        detail: "Kimi", online: true, section: .other, canMarkReviewed: false)
+            model.acceptanceUpdateCatalog([item]); model.open(item)
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else {
+                throw WorkbenchError("Missing acceptance window")
+            }
+            try await settle(window, "Kimi snapshot") { self.model.kimi.snapshotReady && self.transcript(in: window) != nil }
+            try await Task.sleep(for: .milliseconds(500)); flush(window)
+            let before = probe.kimiBodyEvaluations
+            for index in 0..<40 {
+                let draft = "Kimi 输入隔离 fixture \(index)"
+                model.kimi.drafts["a"] = draft
+                try await settle(window, "Kimi draft \(index)") { self.containsText(draft, in: window.contentView) }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let evaluations = probe.kimiBodyEvaluations - before
+            report["draft_mutations"] = 40; report["reading_body_evaluations_during_drafts"] = evaluations
+            let streamBefore = probe.kimiBodyEvaluations
+            try await model.kimi.acceptanceReceive(Data(#"{"type":"assistant.delta","session_id":"a","epoch":"fixture","seq":11,"volatile":true,"offset":0,"payload":{"agentId":"main","turnId":201,"delta":"流式正文 positive control"}}"#.utf8))
+            try await settle(window, "Kimi stream positive control") {
+                self.probe.kimiBodyEvaluations > streamBefore && self.model.kimi.conversation?.live?.assistantText == "流式正文 positive control"
+            }
+            report["stream_positive_control"] = true
+            let second = WorkspaceSession(reference: SessionReference(hostID: model.kimi.host.id, terminalID: "b", kind: .kimi),
+                title: "Kimi B", directory: "/fixture", hostName: "离线验收", detail: "Kimi", online: true, section: .other, canMarkReviewed: false)
+            model.acceptanceUpdateCatalog([item, second]); model.open(second)
+            try await settle(window, "Kimi B selection") { self.model.kimi.snapshotReady && self.model.kimi.conversation?.snapshot.session.id == "b" }
+            model.kimi.drafts["b"] = "B 独立草稿"
+            try await settle(window, "Kimi B draft") { self.containsText("B 独立草稿", in: window.contentView) }
+            model.open(item)
+            try await settle(window, "Kimi A draft restored") {
+                self.model.kimi.snapshotReady && self.model.kimi.conversation?.snapshot.session.id == "a" &&
+                self.containsText("Kimi 输入隔离 fixture 39", in: window.contentView)
+            }
+            report["selection_draft_roundtrip"] = true
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_ALLOW_INVALIDATION"] != "1", evaluations != 0 {
+                throw WorkbenchError("Kimi drafts invalidated reading body \(evaluations) times")
+            }
+            report["status"] = "passed"
+        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        do { try writeReport(report, name: "result.json") }
+        catch { fputs("Kimi acceptance result write failed: \(error)\n", stderr); exit(1) }
+        if report["status"] as? String != "passed" { exit(1) }
+        NSApp.terminate(nil)
     }
     private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
         // Allow initial tasks/layout to settle before measuring unrelated writes.
