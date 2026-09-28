@@ -17,6 +17,7 @@ app_files=(
     Sources/AgentWorkbench/KimiAttachmentView.swift
     Sources/AgentWorkbench/ConversationActivityBar.swift
     Sources/AgentWorkbench/WorkbenchGlass.swift
+    Sources/AgentWorkbench/WorkbenchTheme.swift
     Sources/AgentWorkbench/MessageComposer.swift
 )
 includes=( -I "$bin_dir/Modules" -I .build/checkouts/swift-markdown/Sources/CAtomic/include
