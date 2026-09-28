@@ -11,14 +11,16 @@ private final class SelectionProtocol: URLProtocol {
     private static var bodies: [String: [JSONValue]] = [:]
     private static var sequence = 10
     private static var busy = false
+    private static var goalActive = true
     private var stopped = false
 
     static func reset() {
         lock.lock(); defer { lock.unlock() }
-        held = []; failed = []; pending = [:]; counts = [:]; bodies = [:]; sequence = 10; busy = false
+        held = []; failed = []; pending = [:]; counts = [:]; bodies = [:]; sequence = 10; busy = false; goalActive = true
     }
     static func setSequence(_ value: Int) { lock.lock(); defer { lock.unlock() }; sequence = value }
     static func setBusy(_ value: Bool) { lock.lock(); defer { lock.unlock() }; busy = value; sequence += 1 }
+    static func setGoal(_ value: Bool) { lock.lock(); defer { lock.unlock() }; goalActive = value }
     static func hold(_ path: String) { lock.lock(); defer { lock.unlock() }; held.insert(path) }
     static func fail(_ path: String, _ value: Bool) {
         lock.lock(); defer { lock.unlock() }
@@ -55,7 +57,7 @@ private final class SelectionProtocol: URLProtocol {
     }
     private func respond() {
         let path = request.url!.path
-        Self.lock.lock(); let cancelled = stopped; let fail = Self.failed.contains(path); let sequence = Self.sequence; let busy = Self.busy; Self.lock.unlock()
+        Self.lock.lock(); let cancelled = stopped; let fail = Self.failed.contains(path); let sequence = Self.sequence; let busy = Self.busy; let goalOn = Self.goalActive; Self.lock.unlock()
         guard !cancelled else { return }
         func session(_ id: String, _ updated: String) -> [String: Any] {
             ["id": id, "title": id, "updated_at": updated, "busy": busy,
@@ -77,7 +79,7 @@ private final class SelectionProtocol: URLProtocol {
              "steps": [["kind": "step", "stepId": "\(id).1", "turnId": id, "ordinal": 1, "state": "completed",
                         "frames": [["kind": "text", "frameId": "\(id).1.f1", "role": "assistant", "text": "fixture text"]]]]]
         }
-        let result: [String: Any]
+        let result: Any
         if path == "/api/v1/sessions" {
             result = ["items": [session("a", "catalog"), session("b", "catalog")], "has_more": false]
         } else {
@@ -93,9 +95,9 @@ private final class SelectionProtocol: URLProtocol {
                     result = ["prompt_id": body["prompt_id"].string!, "status": "running", "content": content]
                 } else { result = ["active": NSNull(), "queued": []] }
             } else if path.hasSuffix(":compact") || path.hasSuffix("/profile") {
-                result = [:]
+                result = [String: Any]()
             } else if path.hasSuffix("/goal") {
-                result = ["objective": "Fixture goal", "status": "paused", "turnsUsed": 2, "tokensUsed": 42]
+                result = goalOn ? ["objective": "Fixture goal", "status": "paused", "turnsUsed": 2, "tokensUsed": 42] as [String: Any] : NSNull()
             } else if path.hasSuffix("/messages") {
                 result = ["items": [message(id + "-older")], "has_more": false]
             } else if path.hasSuffix("/tasks") {
@@ -132,7 +134,7 @@ private func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "task board", "subagent transcript", "disconnect"] {
+    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "task board", "subagent transcript", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -207,6 +209,31 @@ func checkKimiSelectionIsolation() async throws {
                 precondition(client.drafts["a"] == "fix scrolling", "A created goal must not be created again when retrying its starter")
                 precondition(client.actionError != nil && client.pendingPrompts["a"]?.first?.status == "unknown")
                 precondition(SelectionProtocol.submitted("/api/v1/sessions/a/profile").count == 1)
+            case "goal status":
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && client.goal != nil }
+                let goalPath = "/api/v1/sessions/a/goal"
+                precondition(client.goal == KimiGoal(objective: "Fixture goal", status: "paused", turnsUsed: 2, tokensUsed: 42),
+                             "Selecting a session loads its goal for the indicator")
+                precondition(SelectionProtocol.count(goalPath) == 1, "Selecting a session reads its goal once")
+                client.drafts["a"] = "/goal pause"
+                await client.sendPrompt(for: "a")
+                precondition(SelectionProtocol.count(goalPath) == 2, "A goal control refreshes the indicator")
+                precondition(client.goal?.status == "paused" && client.actionError == nil)
+                client.select("b")
+                await ConnectionChecks.settle { client.snapshotReady && client.goal != nil }
+                precondition(SelectionProtocol.count("/api/v1/sessions/b/goal") == 1,
+                             "Switching sessions reloads that session's goal")
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && client.goal != nil }
+                SelectionProtocol.setGoal(false)
+                client.drafts["a"] = "/goal cancel"
+                await client.sendPrompt(for: "a")
+                precondition(client.goal == nil, "A removed goal leaves the indicator")
+                SelectionProtocol.fail(goalPath, true)
+                await client.refreshGoal()
+                precondition(client.goal == nil && client.actionError == nil,
+                             "A failed goal read stays silent and keeps the last known value")
             case "task board":
                 client.select("a")
                 let list = "/api/v1/sessions/a/tasks"

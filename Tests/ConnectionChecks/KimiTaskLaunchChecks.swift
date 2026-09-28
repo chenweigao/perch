@@ -30,6 +30,7 @@ private final class LaunchProtocol: URLProtocol {
         let path = request.url!.path
         var status = 200
         var result: [String: Any] = [:]
+        var nullData = false
         func session(_ id: String, updated: String) -> [String: Any] {
             ["id": id, "title": "", "updated_at": updated, "busy": Self.busyOverride ?? (Self.promptStatus == "queued"),
              "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/model"]]
@@ -65,9 +66,11 @@ private final class LaunchProtocol: URLProtocol {
             if Self.failPrompt { status = 503 } else { Self.accepted.append(result) }
         } else if path.hasSuffix("/tasks") {
             result = ["items": []]
+        } else if path.hasSuffix("/goal") {
+            nullData = true
         } else { preconditionFailure("Unexpected route: \(path)") }
         Self.lock.unlock()
-        let envelope: [String: Any] = status == 200 ? ["code": 0, "data": result] : ["msg": "fixture unavailable"]
+        let envelope: [String: Any] = status == 200 ? ["code": 0, "data": nullData ? NSNull() : result] : ["msg": "fixture unavailable"]
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: try! JSONSerialization.data(withJSONObject: envelope))
         client?.urlProtocolDidFinishLoading(self)

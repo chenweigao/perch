@@ -52,6 +52,9 @@ final class KimiConnection: ObservableObject {
     /// The task list is auxiliary information. A failed read stays in its own
     /// panel instead of presenting itself as a session error.
     @Published private(set) var taskListError: String?
+    /// The selected session's active goal. A failed read keeps the last known
+    /// value instead of presenting itself as a session error.
+    @Published private(set) var goal: KimiGoal?
     /// One subagent transcript at a time: the sheet that reads it owns the
     /// subscription, and closing it unsubscribes that agent again.
     @Published private(set) var subagentTranscript: KimiSubagentTranscript?
@@ -80,6 +83,7 @@ final class KimiConnection: ObservableObject {
     private var historyTask: Task<Void, Never>?
     private var listRefresh: Task<Void, Never>?
     private var taskRefresh: Task<Void, Never>?
+    private var goalRefresh: Task<Void, Never>?
     private var freshnessCheck: Task<Void, Never>?
     private let probesInstalledVersion: Bool
     private var archivingBatch = false
@@ -173,6 +177,7 @@ final class KimiConnection: ObservableObject {
                             try await subscribe(id)
                         } catch is CancellationError { if Task.isCancelled { throw CancellationError() } }
                         await refreshTasks()
+                        await refreshGoal()
                         // A reconnect drops every subscription, including an open
                         // subagent transcript, so read and subscribe it again.
                         if let agentId = subagentTranscript?.agentId { await openSubagentTranscript(agentId) }
@@ -222,9 +227,9 @@ final class KimiConnection: ObservableObject {
         generation = UUID(); selectionGeneration = UUID()
         freshnessCheck?.cancel(); freshnessCheck = nil
         runtime = .unknown; staleRuntimeNotice = nil
-        task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel(); taskRefresh?.cancel()
+        task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
         historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
-        snapshotReady = false
+        snapshotReady = false; goal = nil
         subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
     }
@@ -368,13 +373,14 @@ final class KimiConnection: ObservableObject {
     private func loadSelected(_ id: String) {
         selectionGeneration = UUID(); let token = selectionGeneration
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
-        snapshotReady = false; loading = true; actionError = nil; taskListError = nil
+        snapshotReady = false; loading = true; actionError = nil; taskListError = nil; goal = nil
         selectionTask?.cancel()
         selectionTask = Task { [weak self] in
             guard let self else { return }
             do { try await refreshConversation(selectionToken: token); try await subscribe(id) }
             catch is CancellationError {} catch { if token == selectionGeneration { actionError = error.localizedDescription } }
             await refreshTasks(selectionToken: token)
+            await refreshGoal(selectionToken: token)
             if token == selectionGeneration { loading = false }
         }
     }
@@ -449,6 +455,7 @@ final class KimiConnection: ObservableObject {
         }
         guard event.sessionId == selectedId, conversation != nil else { return }
         if KimiTaskBoard.changesTaskList(event.type) { scheduleTaskRefresh() }
+        if event.type == "goal.updated" { scheduleGoalRefresh() }
         let needsSnapshot = conversation!.apply(event)
         if needsSnapshot {
             try await refreshConversation(selectionToken: selectionGeneration)
@@ -508,6 +515,24 @@ final class KimiConnection: ObservableObject {
         taskRefresh?.cancel()
         taskRefresh = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(300)); await self?.refreshTasks() } catch {}
+        }
+    }
+    /// The goal is auxiliary status: a failed read keeps the last known value
+    /// and never surfaces as a session error.
+    func refreshGoal(selectionToken: UUID? = nil) async {
+        let token = selectionToken ?? selectionGeneration
+        guard token == selectionGeneration, online, let api, let id = selectedId else { return }
+        do {
+            let value = try await api.get(KimiGoal?.self, "/api/v1/sessions/\(id)/goal")
+            guard token == selectionGeneration, id == selectedId else { return }
+            goal = value
+        } catch is CancellationError {
+        } catch {}
+    }
+    private func scheduleGoalRefresh() {
+        goalRefresh?.cancel()
+        goalRefresh = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(300)); await self?.refreshGoal() } catch {}
         }
     }
     /// Reads a tail on demand. An empty result is stored too, so expanding the
@@ -652,7 +677,7 @@ final class KimiConnection: ObservableObject {
         permissionChoices.removeValue(forKey: id)
         if selectedId == id {
             selectionGeneration = UUID(); selectionTask?.cancel(); historyTask?.cancel(); historyTask = nil
-            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false
+            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false; goal = nil
         }
         sessions.removeAll { $0.id == id }; onSessionsChanged?()
     }
@@ -783,8 +808,9 @@ final class KimiConnection: ObservableObject {
             commandFeedback[id] = KimiCommand.helpText
         case .goalStatus:
             let goal = try await api.get(KimiGoal?.self, path + "/goal")
+            if id == selectedId { self.goal = goal }
             if let goal {
-                commandFeedback[id] = "\(goal.objective)\n\(goal.status) · \(goal.turnsUsed) turns · \(goal.tokensUsed) tokens"
+                commandFeedback[id] = "\(goal.objective)\n\(goal.statusLine)"
             } else { commandFeedback[id] = L("No active goal.") }
         case .compact(let instructions):
             _ = try await api.post(JSONValue.self, path + ":compact", body: .object(["instruction": .string(instructions)]))
@@ -792,6 +818,7 @@ final class KimiConnection: ObservableObject {
         case .goalStart(let objective):
             _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["goal_objective": .string(objective)])]))
             commandFeedback[id] = L("Goal created. Sending the objective to start work.")
+            if id == selectedId { await refreshGoal() }
             return objective
         case .goalControl(let control):
             _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["goal_control": .string(control)])]))
@@ -802,6 +829,7 @@ final class KimiConnection: ObservableObject {
             case "cancel": commandFeedback[id] = L("Goal removed. An active turn can still finish; use Stop to interrupt it.")
             default: commandFeedback[id] = L("Goal resume requested.")
             }
+            if id == selectedId { await refreshGoal() }
         case .plan(let enabled):
             _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["plan_mode": .bool(enabled)])]))
             commandFeedback[id] = enabled ? L("Plan mode enabled.") : L("Plan mode disabled.")
