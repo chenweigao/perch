@@ -3,7 +3,7 @@ import Foundation
 /// Reasoning effort. A level is only sent after checking it against the target
 /// model's own catalog entry, because unsupported values are not rejected
 /// consistently by every runtime.
-public enum ThinkingLevel: String, CaseIterable, Sendable, Equatable {
+public enum ThinkingLevel: String, CaseIterable, Codable, Sendable, Equatable {
     case off, minimal, low, medium, high, xhigh, max, ultra, auto, none
 
     public var label: String {

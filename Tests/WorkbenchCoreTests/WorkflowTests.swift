@@ -129,8 +129,11 @@ func checkWorkflow() throws {
     precondition(events.observe(waiting, id: "a", online: true) == .needsInput)
     precondition(events.observe(waiting, id: "a", online: true) == nil)
     precondition(events.observe(.init(running: false, pending: false, failed: true, completion: "1"), id: "a", online: true) == .failed)
-    let defaults = TaskLaunchDefaults(hostID: host, provider: .omp, directory: "/fixture", model: "model")
+    let defaults = TaskLaunchDefaults(hostID: host, provider: .omp, directory: "/fixture", model: "model", thinking: .high)
     let restoredDefaults = try JSONDecoder().decode(TaskLaunchDefaults.self, from: JSONEncoder().encode(defaults))
     precondition(restoredDefaults == defaults)
+    let legacyDefaults = Data("{\"hostID\":\"\(host.uuidString)\",\"provider\":\"omp\",\"directory\":\"/legacy\",\"model\":\"legacy-model\"}".utf8)
+    let restoredLegacy = try JSONDecoder().decode(TaskLaunchDefaults.self, from: legacyDefaults)
+    precondition(restoredLegacy.thinking == nil && restoredLegacy.directory == "/legacy")
     print("PASS: durable drafts and attachments, safe outbox recovery, file references, search, navigation and task events")
 }

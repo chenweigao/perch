@@ -619,8 +619,11 @@
 "想做点什么？" = "What would you like to work on?";
 "任务描述" = "Task prompt";
 "正在启动…" = "Starting…";
+"正在创建…" = "Creating…";
+"仅创建空会话" = "Create empty session";
 "最近使用" = "Recent";
 "项目目录（绝对路径）" = "Project directory (absolute path)";
+"工作目录范围较大，Agent 可能访问多个项目。" = "This working directory is broad, so the agent may access multiple projects.";
 "选择 Agent" = "Choose agent";
 "选择 Codex 模型" = "Choose Codex model";
 "正在读取模型…" = "Loading models…";
@@ -810,6 +813,12 @@
 "不可用" = "Unavailable";
 "未知" = "Unknown";
 "默认" = "Default";
+"模型默认" = "Model default";
+"不可调" = "Not adjustable";
+"思考不可调" = "Thinking not adjustable";
+"首条消息生效" = "Applies to the first message";
+"使用默认模型时，思考强度由模型决定。" = "With the default model, thinking effort is determined by the model.";
+"尚未读取到模型目录，可继续使用默认模型。" = "The model catalog is not available yet. You can continue with the default model.";
 "尚未读取到模型目录，可继续使用会话模型。" = "The model catalog is not available yet. You can keep using the session model.";
 "尚未读取到当前模型的思考档位。" = "Thinking levels for the current model are not available yet.";
 "连接恢复后可修改设置。" = "Settings can be changed after reconnecting.";
@@ -964,6 +973,8 @@
 "关联已变化，请重新生成建议。" = "Memberships changed. Generate suggestions again.";
 
 "Agent、模型与权限" = "Agent, model and permissions";
+"Agent、模型、思考与权限" = "Agent, model, thinking and permissions";
+"权限" = "Permissions";
 
 "任务配置" = "Task settings";
 
