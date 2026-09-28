@@ -310,7 +310,9 @@ private final class ConversationDocumentView: NSView {
             marker.frame = view.bounds.insetBy(dx: 1, dy: 1)
             marker.cornerRadius = 12
             marker.borderWidth = 1
-            marker.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
+            view.effectiveAppearance.performAsCurrentDrawingAppearance {
+                marker.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
+            }
             marker.actions = ["opacity": NSNull()]
             view.layer?.addSublayer(marker)
             if rowAppearance?.reduceMotion != true {
