@@ -75,10 +75,36 @@ func checkRemoteGitComparison() async throws {
         do { _ = try await compare(base); fatalError("Expected invalid base") }
         catch { expectTrue(error.localizedDescription.contains("目标分支")) }
     }
+    let refs = String(decoding: try await ProcessRunner.run("/bin/sh", ["-c", RemoteGitCommand.reviewRefsCommand(directory: repo.path)]), as: UTF8.self)
+    expectTrue(refs.contains("refs/heads/main"))
+    expectTrue(refs.contains("refs/heads/feature"))
+    var progress = GitReviewProgress()
+    progress.reconcile(comparison.versions)
+    progress.toggleReviewed("说明.md")
+    progress.toggleReviewed("deleted.txt")
+    progress.lastPath = "说明.md"
+    progress.offsets["说明.md"] = 120
+    let persisted = try JSONDecoder().decode(GitReviewProgress.self, from: JSONEncoder().encode(progress))
+    expectEqual(persisted, progress)
+    progress.reconcile(comparison.versions)
+    expectTrue(progress.isReviewed("说明.md"))
+    expectEqual(progress.offsets["说明.md"], 120)
     // Both refs can move while the reader keeps reviewing the original snapshot.
     _ = try await git(["add", "说明.md"])
     _ = try await git(["commit", "-qm", "later feature change"])
+    let refreshed = try await compare(comparison.baseCommit)
+    progress.reconcile(refreshed.versions)
+    expectFalse(progress.isReviewed("说明.md"))
+    expectTrue(progress.changed.contains("说明.md"))
+    expectEqual(progress.offsets["说明.md"], nil)
+    expectTrue(progress.isReviewed("deleted.txt"))
+    expectEqual(progress.lastPath, "说明.md")
+    progress.toggleReviewed("说明.md")
+    expectFalse(progress.changed.contains("说明.md"))
     _ = try await git(["branch", "-f", "main", "HEAD"])
+    progress.reconcile(try await compare("main").versions)
+    expectTrue(progress.reviewed.isEmpty)
+    expectEqual(progress.lastPath, nil)
     expectEqual(try await diff(comparison, "说明.md"), .text(text, truncated: false))
     expectTrue(try await compare("main").entries.isEmpty)
     let unrelated = String(decoding: try await git(["commit-tree", "HEAD^{tree}", "-m", "unrelated root"]), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)

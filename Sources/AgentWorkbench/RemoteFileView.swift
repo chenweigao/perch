@@ -34,6 +34,8 @@ final class RemoteFileBrowser: ObservableObject {
     @Published var gitRange: GitReviewRange = .unstaged
     @Published var gitBaseInput = ""
     @Published private(set) var gitComparison: RemoteGitComparison?
+    @Published private(set) var gitRefs: [String] = []
+    @Published private(set) var reviewProgress = GitReviewProgress()
     var gitStaged: Bool { gitRange == .staged }
     /// Directories the agent recently touched (worktrees included), most recent
     /// first. Both conversation file resolution and the Git tab start from these.
@@ -62,6 +64,8 @@ final class RemoteFileBrowser: ObservableObject {
         gitStatus = nil
         gitComparison = nil
         gitBaseInput = ""
+        gitRefs = []
+        reviewProgress = GitReviewProgress()
         gitRange = .unstaged
         gitPath = nil
         gitDiff = nil
@@ -170,15 +174,23 @@ final class RemoteFileBrowser: ObservableObject {
                 browser.loadGitStatus(directories: [suggested.path], allowSuggestion: false)
                 return
             }
+            let previousRoot = browser.gitStatus?.root
             browser.gitStatus = status
             browser.gitWorktrees = status.worktrees
             if let root = status.root {
                 browser.gitDirectory = root
                 browser.gitInput = root
+                if previousRoot != root {
+                    browser.gitRefs = []
+                    browser.gitBaseInput = UserDefaults.standard.string(forKey: browser.preferenceKey(root: root)) ?? ""
+                    if let range = UserDefaults.standard.string(forKey: browser.preferenceKey(root: root) + ".range").flatMap(GitReviewRange.init(rawValue:)) {
+                        browser.gitRange = range
+                    }
+                }
             } else {
                 browser.gitWorktrees = []
             }
-            if browser.gitRange == .branch { browser.loadGitComparison() }
+            if browser.gitRange == .branch { browser.loadGitRefs() }
         } failed: { browser in
             browser.gitStatus = nil
         }
@@ -202,6 +214,8 @@ final class RemoteFileBrowser: ObservableObject {
         if gitRange == .branch {
             guard let comparison = gitComparison, comparison.entries.contains(entry) else { return }
             cancel()
+            reviewProgress.lastPath = entry.path
+            saveReviewProgress()
             gitPath = entry.path; gitDiff = nil; loading = true; error = nil
             run(RemoteGitCommand.comparisonDiffCommand(comparison: comparison, entry: entry),
                 destination: host.destination, token: generation) { browser, data in
@@ -240,14 +254,76 @@ final class RemoteFileBrowser: ObservableObject {
         loading = true
         run(RemoteGitCommand.comparisonCommand(directory: root, base: base),
             destination: host.destination, token: generation) { browser, data in
-            browser.gitComparison = try RemoteGitCommand.parseComparison(data)
+            let comparison = try RemoteGitCommand.parseComparison(data)
+            browser.gitComparison = comparison
+            let key = browser.preferenceKey(root: root, base: base)
+            browser.reviewProgress = UserDefaults.standard.data(forKey: key)
+                .flatMap { try? JSONDecoder().decode(GitReviewProgress.self, from: $0) } ?? GitReviewProgress()
+            browser.reviewProgress.reconcile(comparison.versions)
+            browser.saveReviewProgress()
+            UserDefaults.standard.set(base, forKey: browser.preferenceKey(root: root))
+            if let path = browser.reviewProgress.lastPath, let entry = comparison.entries.first(where: { $0.path == path }) {
+                browser.loadGitDiff(entry)
+            }
         } failed: { browser in browser.gitComparison = nil }
     }
 
     func changeGitRange(from previous: GitReviewRange) {
-        if gitRange == .branch { loadGitComparison() }
+        if let root = gitStatus?.root { UserDefaults.standard.set(gitRange.rawValue, forKey: preferenceKey(root: root) + ".range") }
+        if gitRange == .branch { loadGitRefs() }
         else if previous == .branch { loadGitStatus() }
         else { reloadGitDiff() }
+    }
+
+    private func loadGitRefs() {
+        guard let host, let root = gitStatus?.root else { return }
+        cancel(); loading = true
+        run(RemoteGitCommand.reviewRefsCommand(directory: root), destination: host.destination, token: generation) { browser, data in
+            browser.gitRefs = String(decoding: data, as: UTF8.self).split(separator: "\n").map(String.init)
+            browser.loadGitComparison()
+        } failed: { browser in browser.gitRefs = []; browser.gitComparison = nil; browser.gitDiff = nil }
+    }
+
+    private func preferenceKey(root: String, base: String? = nil) -> String {
+        let components = [host?.id.uuidString ?? "", root] + (base.map { [$0] } ?? [])
+        return "files.review." + (try! JSONEncoder().encode(components)).base64EncodedString()
+    }
+
+    private func saveReviewProgress() {
+        guard let comparison = gitComparison else { return }
+        UserDefaults.standard.set(try? JSONEncoder().encode(reviewProgress),
+            forKey: preferenceKey(root: comparison.root, base: comparison.baseRef))
+    }
+
+    func toggleReviewed() {
+        guard gitRange == .branch, !loading, error == nil, gitDiff != nil, let path = gitPath else { return }
+        reviewProgress.toggleReviewed(path)
+        saveReviewProgress()
+    }
+
+    func adjacentReview(_ delta: Int) -> RemoteGitEntry? {
+        guard let entries = gitComparison?.entries, let path = gitPath,
+              let index = entries.firstIndex(where: { $0.path == path }), entries.indices.contains(index + delta) else { return nil }
+        return entries[index + delta]
+    }
+
+    /// Capture the scope before the view unmounts, so a delayed callback cannot
+    /// save another worktree's offset or restore an offset for changed content.
+    func rememberReviewOffset() -> ((Double) -> Void)? {
+        guard gitRange == .branch, let comparison = gitComparison, let path = gitPath,
+              let version = comparison.versions[path] else { return nil }
+        let key = preferenceKey(root: comparison.root, base: comparison.baseRef)
+        return { [weak self] offset in
+            guard var progress = UserDefaults.standard.data(forKey: key)
+                .flatMap({ try? JSONDecoder().decode(GitReviewProgress.self, from: $0) }),
+                  progress.versions[path] == version else { return }
+            progress.offsets[path] = offset
+            UserDefaults.standard.set(try? JSONEncoder().encode(progress), forKey: key)
+            if let self, let current = self.gitComparison,
+               self.preferenceKey(root: current.root, base: current.baseRef) == key {
+                self.reviewProgress.offsets[path] = offset
+            }
+        }
     }
 
     /// Switching between staged and unstaged re-reads the same file rather than
@@ -296,7 +372,7 @@ final class RemoteFileBrowser: ObservableObject {
 }
 
 /// Owns one ssh process so a pending read can actually be stopped.
-private final class RemoteReader: @unchecked Sendable {
+final class RemoteReader: @unchecked Sendable {
     private let local: Bool
     init(local: Bool = false) { self.local = local }
     private let lock = NSLock()
@@ -387,10 +463,12 @@ struct RemoteFilePanel: View {
     var fullWidth = false
     var onToggleWidth: (() -> Void)? = nil
     var onAddContext: ((String) -> Void)? = nil
+    var onShowDraft: (() -> Void)? = nil
     let onClose: () -> Void
     @State private var selection = NSRange(location: 0, length: 0)
     @State private var feedbackContext: ReviewContext?
     @State private var feedback = ""
+    @State private var contextAdded = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
@@ -475,6 +553,16 @@ struct RemoteFilePanel: View {
                     }
                     if browser.gitRange == .branch {
                         HStack(spacing: 7) {
+                            if !browser.gitRefs.isEmpty {
+                                Menu {
+                                    ForEach(browser.gitRefs, id: \.self) { ref in
+                                        Button(ref.replacingOccurrences(of: "refs/heads/", with: "").replacingOccurrences(of: "refs/remotes/", with: "")) {
+                                            browser.gitBaseInput = ref; browser.loadGitComparison()
+                                        }
+                                    }
+                                } label: { Image(systemName: "arrow.triangle.branch") }
+                                    .help("选择已有分支")
+                            }
                             TextField("目标分支或提交，如 origin/main", text: $browser.gitBaseInput)
                                 .textFieldStyle(.roundedBorder).font(.system(size: 12))
                                 .onSubmit { browser.loadGitComparison() }
@@ -482,9 +570,13 @@ struct RemoteFilePanel: View {
                                 .disabled(browser.loading || browser.gitStatus?.root == nil || browser.gitBaseInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                         if let comparison = browser.gitComparison {
-                            Text("\(comparison.baseRef) · \(comparison.mergeBase.prefix(8)) → \(comparison.headCommit.prefix(8))")
-                                .font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
+                            Text("\(comparison.entries.count) 个文件 · 已读 \(browser.reviewProgress.reviewed.count) 个")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                            DisclosureGroup("比较版本") {
+                                Text("\(comparison.baseRef)\n\(comparison.mergeBase) → \(comparison.headCommit)")
+                                    .font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }.font(.system(size: 11))
                         }
                         Text("比较共同祖先到当前提交的改动，不含未提交内容；引用使用仓库现有数据，不自动 fetch。")
                             .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -497,7 +589,7 @@ struct RemoteFilePanel: View {
             Divider()
             if onAddContext != nil {
                 HStack(spacing: 12) {
-                    Button("引用文件") { if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()) } }
+                    Button("引用文件") { if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); contextAdded = true } }
                         .disabled(!hasContext || browser.loading || browser.error != nil)
                     Button("反馈选中代码…") {
                         feedback = ""; feedbackContext = context(selection: selection)
@@ -505,6 +597,13 @@ struct RemoteFilePanel: View {
                     Spacer(minLength: 0)
                 }.font(.system(size: 12)).padding(.horizontal, 14).padding(.vertical, 8)
                 Divider()
+            }
+            if contextAdded {
+                HStack {
+                    Label("已加入当前任务草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
+                    Spacer()
+                    if let onShowDraft { Button("查看草稿", action: onShowDraft) }
+                }.font(.system(size: 11)).padding(.horizontal, 14).padding(.vertical, 6)
             }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.background(WorkbenchTheme.contentBackground)
@@ -524,7 +623,7 @@ struct RemoteFilePanel: View {
                         Button("取消") { feedbackContext = nil }.keyboardShortcut(.cancelAction)
                         Spacer()
                         Button("加入草稿") {
-                            onAddContext?(context.prompt(feedback: feedback))
+                            onAddContext?(context.prompt(feedback: feedback)); contextAdded = true
                             feedbackContext = nil
                         }.disabled(feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
@@ -564,6 +663,18 @@ struct RemoteFilePanel: View {
     }
 
     private func gitChanges(_ entries: [RemoteGitEntry]) -> some View {
+        VStack(spacing: 0) {
+            if browser.gitRange == .branch {
+                HStack(spacing: 8) {
+                    Button("上一个文件") { if let entry = browser.adjacentReview(-1) { browser.loadGitDiff(entry) } }
+                        .disabled(browser.adjacentReview(-1) == nil)
+                    Button("下一个文件") { if let entry = browser.adjacentReview(1) { browser.loadGitDiff(entry) } }
+                        .disabled(browser.adjacentReview(1) == nil)
+                    Spacer(minLength: 0)
+                    Button(browser.reviewProgress.isReviewed(browser.gitPath ?? "") ? L("标为未读") : L("标为已读")) { browser.toggleReviewed() }
+                        .disabled(browser.gitDiff == nil)
+                }.font(.system(size: 11)).padding(10)
+            }
         VSplitView {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 1) {
@@ -572,7 +683,13 @@ struct RemoteFilePanel: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
                                     .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
-                                Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label).font(.system(size: 10)).foregroundStyle(.secondary)
+                                HStack(spacing: 6) {
+                                    Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label)
+                                    if browser.gitRange == .branch {
+                                        if browser.reviewProgress.isReviewed(entry.path) { Label("已读", systemImage: "checkmark.circle.fill") }
+                                        else if browser.reviewProgress.changed.contains(entry.path) { Text("有新改动").foregroundStyle(.orange) }
+                                    }
+                                }.font(.system(size: 10)).foregroundStyle(.secondary)
                             }.frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
                                 .background(entry.path == browser.gitPath ? Color.primary.opacity(0.05) : .clear)
@@ -581,6 +698,7 @@ struct RemoteFilePanel: View {
                 }.padding(.vertical, 8)
             }.frame(minHeight: 80, idealHeight: max(80, min(220, Double(entries.count) * 42 + 16)), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))
             diffPane
+        }
         }
     }
 
@@ -594,7 +712,9 @@ struct RemoteFilePanel: View {
                         .padding(.horizontal, 14).padding(.vertical, 6)
                     Divider()
                 }
-                RemoteSourceText(text: diff, line: nil, diff: true, onSelection: { selection = $0 })
+                RemoteSourceText(text: diff, line: nil, diff: true, onSelection: { selection = $0 },
+                    initialOffset: browser.gitRange == .branch ? browser.reviewProgress.offsets[browser.gitPath ?? ""] : nil,
+                    onSaveOffset: browser.rememberReviewOffset())
                     .id("diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitRange.rawValue)")
             }
         case .binary: notice("二进制文件差异，不做预览。", symbol: "doc.zipper", tint: .secondary)
@@ -736,7 +856,10 @@ struct RemoteSourceText: NSViewRepresentable {
     var diff = false
     var numbered = false
     var onSelection: ((NSRange) -> Void)? = nil
+    var initialOffset: Double? = nil
+    var onSaveOffset: ((Double) -> Void)? = nil
     final class Coordinator: NSObject, NSTextViewDelegate {
+        var onSaveOffset: ((Double) -> Void)?
         var rendered = ""
         var source = ""
         var line: Int?
@@ -747,6 +870,10 @@ struct RemoteSourceText: NSViewRepresentable {
             let callback = onSelection
             DispatchQueue.main.async { callback?(range) }
         }
+    }
+    static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+        let save = coordinator.onSaveOffset, offset = Double(scroll.contentView.bounds.origin.y)
+        DispatchQueue.main.async { save?(offset) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSScrollView {
@@ -765,6 +892,7 @@ struct RemoteSourceText: NSViewRepresentable {
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? NSTextView else { return }
         context.coordinator.onSelection = onSelection
+        context.coordinator.onSaveOffset = onSaveOffset
         let rendered = numbered ? text.split(separator: "\n", omittingEmptySubsequences: false).enumerated().map { "\($0.offset + 1) │ \($0.element)" }.joined(separator: "\n") : text
         guard context.coordinator.rendered != rendered || context.coordinator.line != line else { return }
         context.coordinator.rendered = rendered; context.coordinator.source = text; context.coordinator.line = line
@@ -780,7 +908,11 @@ struct RemoteSourceText: NSViewRepresentable {
         }
         guard let line, let range = RemoteFileContent.lineRange(in: rendered, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
-            view.scrollRangeToVisible(NSRange(location: 0, length: 0))
+            if let initialOffset {
+                let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
+                scroll.reflectScrolledClipView(scroll.contentView)
+            } else { view.scrollRangeToVisible(NSRange(location: 0, length: 0)) }
             return
         }
         view.setSelectedRange(range)
