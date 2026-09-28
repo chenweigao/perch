@@ -77,6 +77,17 @@ public enum KimiWire {
     }
 }
 
+/// `GET /api/v1/meta`. The version belongs to the process answering this
+/// connection, which is not necessarily the package installed on the host: a
+/// `kimi web` service keeps serving the code it started with after an upgrade.
+/// Fields stay optional so an older or trimmed service still connects.
+public struct KimiServerMeta: Decodable, Equatable, Sendable {
+    public let serverVersion: String?
+    public let serverId: String?
+    public let startedAt: String?
+    public var runtime: RunningRuntime { RunningRuntime(version: serverVersion, startedAt: startedAt) }
+}
+
 public struct KimiPage<Item: Decodable & Sendable>: Decodable, Sendable {
     public let items: [Item]
     public let hasMore: Bool

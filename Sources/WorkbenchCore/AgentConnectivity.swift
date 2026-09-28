@@ -96,9 +96,7 @@ public enum LocalAgentDiscovery {
     /// Parses `omp/17.1.4` or `omp v17.1.4`. Anything unrecognised stays unknown so
     /// capabilities are not inferred from a version we cannot read.
     public static func parseVersion(_ output: String) -> String? {
-        let text = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let match = text.range(of: "[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?", options: .regularExpression) else { return nil }
-        return String(text[match])
+        RuntimeVersion.parse(output)
     }
 
     public static var missingOMPHint: String {

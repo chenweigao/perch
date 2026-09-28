@@ -517,6 +517,12 @@
 "模型" = "Model";
 "模型与登录" = "Models and sign-in";
 "模型列表已读取；实际模型鉴权将在首条消息时验证。" = "Model catalog loaded. Model authentication will be verified with the first message.";
+"运行进程" = "Running process";
+"%@（安装与运行进程一致）" = "%@ (installed package and running process match)";
+"已安装 %@，运行进程仍是 %@" = "%1$@ installed, running process still %2$@";
+"%@ 启动" = "started %@";
+"桥接源码 %@" = "bridge source %@";
+"远端已安装 %@ %@，但正在服务的进程仍是 %@。重启该服务后新版本才会生效；Perch 不会替你终止运行中的服务。" = "%1$@ %2$@ is installed on the remote host, but the process serving this connection is still %3$@. The new version applies only after that service restarts, and Perch never stops a running service for you.";
 "模型（留空使用远端默认值）" = "Model (leave empty for the remote default)";
 "此 SSH 地址已添加。请从环境入口配置已有机器。" = "This SSH address is already added. Configure the existing machine from Environments.";
 "此构建缺少安装组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build is missing installer resources. Use Perch.app packaged by scripts/build.sh.";

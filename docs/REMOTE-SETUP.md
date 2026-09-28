@@ -30,6 +30,12 @@ controls. This takes inspiration from [Codex's SSH connection workflow](https://
   the required recheck explicit.
 - Starting Kimi Web uses the executable path found by that probe, waits for the
   service connection, and continues through the model check in the same action.
+- The installed package and the process serving the connection are read
+  separately: `kimi --version` (or the npm prefix) against `/api/v1/meta` for
+  Kimi, the deployed bridge file against `/health` for the native agents. A
+  mismatch is reported in the informational `Running process` row and, for Kimi,
+  in the conversation as well. It never blocks the wizard, and Perch does not
+  restart or stop a service the user is running.
 - The same machine UUID, agent, checked project path and selected model are
   passed to the existing task composer. No duplicate task-creation path is added.
 - Removing a machine only disconnects the Mac and removes the local entry. The
@@ -81,6 +87,20 @@ read 15 configured models after normalizing its `{ "models": [...] }` response;
 it did not send a prompt. Its first sandboxed attempt failed with a read-only
 CLI database, and the original check was replayed with normal user permissions.
 The macOS build and WorkbenchChecks could not run on that host (`swift` absent).
+
+On 2026-09-28, the runtime-version work was checked on Linux: the whole
+`check-functional.py portable` suite, 107 bridge tests (including source-digest
+reuse, idle replacement, active preservation, the local Codex binary match and
+the end-to-end `--ensure` handover), 6 installer tests, 4 localization tests,
+17 publication tests and `check-public-source.py`.
+The `server_version` / `started_at` fields were captured from a live
+`kimi web` 2.0.2 `GET /api/v1/meta` and are pinned in a decoding check.
+Swift was absent on that host; the macOS suite then ran on Xcode 27 through
+`check-functional.py macos`, where the build, WorkbenchChecks, ConnectionChecks,
+the composer, host-lifecycle, scroll and native/navigation acceptance runs all
+passed with the same compiler warnings as `main`. The setup `Running process`
+row and the conversation notice compile and are covered by checks, but have not
+been looked at on screen.
 
 The review reproduced installer cancellation waiting for a local SSH child to
 exit. The installer now handles cancellation while waiting, terminates that local

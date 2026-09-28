@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SSH-only loopback broker. Owns Agent stdin independently of any Mac client."""
-import argparse, bisect, base64, copy, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, urllib.request, uuid, warnings
+import argparse, bisect, base64, copy, datetime, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, urllib.request, uuid, warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-workbench/native')).expanduser()
@@ -8,6 +8,16 @@ ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
 SERVICE_VERSION = 4
+
+def source_fingerprint(path=None):
+    """Identity of the code a service is executing. SERVICE_VERSION is bumped by
+    hand, so a deployed change that keeps the number would otherwise leave the old
+    process serving; the digest is reported next to the version and compared on
+    every --ensure. An unreadable file reports nothing instead of a wrong digest."""
+    try: return hashlib.sha256(pathlib.Path(path or __file__).read_bytes()).hexdigest()[:16]
+    except OSError: return ''
+SOURCE_FINGERPRINT = source_fingerprint()
+STARTED_AT = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
 LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
@@ -1258,7 +1268,7 @@ class Handler(BaseHTTPRequestHandler):
                 if needs_codex_catalog: codex_models=codex_catalog()
             with LOCK:
                 if self.path=='/health':
-                    result={'version':SERVICE_VERSION}
+                    result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid()}
                     if os.environ.get('PERCH_LOCAL_CODEX'):
                         result['localCodexBinary']=str(pathlib.Path(os.environ['PERCH_LOCAL_CODEX']).resolve())
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
@@ -1468,12 +1478,22 @@ def active_session(session):
         session.get('turnState') in ('submitting','submitted','accepted','running') or
         isinstance(command,dict) and command.get('status')=='running')
 
+def serves_current_code(health):
+    """A running service counts as current only when it reports this protocol, the
+    selected local Codex binary and this exact source. A service too old to report
+    its source is not assumed to match. When the local file cannot be read the
+    version alone decides, so an unreadable digest never restarts a healthy
+    service on every check."""
+    if health.get('version')!=SERVICE_VERSION: return False
+    local_binary=os.environ.get('PERCH_LOCAL_CODEX')
+    if local_binary and health.get('localCodexBinary')!=str(pathlib.Path(local_binary).resolve()): return False
+    if not SOURCE_FINGERPRINT: return True
+    return health.get('implementation')==SOURCE_FINGERPRINT
+
 def reusable_endpoint(path):
     endpoint,health=running_endpoint(path)
     if endpoint is None: return None
-    local_binary=os.environ.get('PERCH_LOCAL_CODEX')
-    matches_binary=not local_binary or health.get('localCodexBinary')==str(pathlib.Path(local_binary).resolve())
-    if health.get('version')==SERVICE_VERSION and matches_binary: return endpoint
+    if serves_current_code(health): return endpoint
     try:
         catalog=endpoint_request(endpoint,'/sessions')
         sessions=catalog.get('sessions')
@@ -1517,7 +1537,7 @@ def ensure_service():
     for _ in range(100):
         time.sleep(.1)
         endpoint,health=running_endpoint(endpoint_path)
-        if endpoint is not None and health.get('version')==SERVICE_VERSION: return endpoint
+        if endpoint is not None and serves_current_code(health): return endpoint
     raise SystemExit('托管服务未启动')
 
 if __name__=='__main__':
