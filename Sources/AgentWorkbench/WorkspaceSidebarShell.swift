@@ -127,7 +127,7 @@ private struct SidebarNavigationBody: View {
     var body: some View {
         configuration.label.contentShape(Rectangle())
             .background {
-                RoundedRectangle(cornerRadius: 8).fill(.black.opacity(opacity))
+                RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(opacity))
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: opacity)
             }
             .onHover { hovered = $0 }

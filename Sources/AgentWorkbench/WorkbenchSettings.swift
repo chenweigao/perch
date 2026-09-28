@@ -10,6 +10,7 @@ struct WorkbenchSettings: View {
     @State private var editingHost: SSHHost?
     @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
+    @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex, .claude]
     var body: some View {
         Form {
@@ -90,6 +91,11 @@ struct WorkbenchSettings: View {
                 Text("完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。")
             }
             Section {
+                Picker("外观", selection: $appAppearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance)
+                    }
+                }
                 SettingsRow(action: { showSummary = true }) {
                     Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
                     Text("活动叙事与 Recap").foregroundStyle(.primary)

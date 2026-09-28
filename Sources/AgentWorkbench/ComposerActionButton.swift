@@ -32,12 +32,12 @@ struct ComposerActionButton: View {
                 if isRunning { onStop() } else { onSend() }
             } label: {
                 ZStack {
-                    Circle().fill(enabled ? Color(red: 0.16, green: 0.16, blue: 0.17) : Color.gray.opacity(0.3))
+                    Circle().fill(enabled ? WorkbenchTheme.accent : Color.gray.opacity(0.3))
                     if isStopping {
-                        ProgressView().controlSize(.mini).tint(.white)
+                        ProgressView().controlSize(.mini).tint(WorkbenchTheme.actionGlyph)
                     } else {
                         Image(systemName: isRunning ? "stop.fill" : "arrow.up")
-                            .font(.system(size: isRunning ? 12 : 15, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: isRunning ? 12 : 15, weight: .semibold)).foregroundStyle(WorkbenchTheme.actionGlyph)
                     }
                 }.frame(width: 32, height: 32)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)

@@ -2,10 +2,9 @@ import GhosttyTerminal
 import SwiftUI
 import WorkbenchCore
 
-private let ink = Color(red: 0.16, green: 0.18, blue: 0.23)
-private let accent = Color(red: 0.16, green: 0.16, blue: 0.17)
-private let quiet = Color(red: 0.48, green: 0.51, blue: 0.58)
-private let paper = Color(red: 0.965, green: 0.965, blue: 0.96)
+private let ink = WorkbenchTheme.ink
+private let accent = WorkbenchTheme.accent
+private let quiet = WorkbenchTheme.quiet
 
 struct WorkbenchView: View {
     @UILocalization private var L
@@ -153,7 +152,7 @@ private struct WorkbenchDetail: View {
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.frame(minWidth: 600, maxWidth: .infinity, maxHeight: .infinity)
-            .background(.white)
+            .background(WorkbenchTheme.contentBackground)
     }
 
     private var unavailableSession: some View {
@@ -178,9 +177,9 @@ private struct TerminalPane: View {
                     Text("终端连接已结束；可重新接入仍在运行的会话。").font(.system(size: 12))
                     Spacer()
                     Button("重新接入") { model.reconnectTerminal(terminal) }
-                }.padding(14).background(paper)
+                }.padding(14).background(Color.primary.opacity(0.035))
             }
-        }.background(.white)
+        }.background(WorkbenchTheme.contentBackground)
     }
 }
 

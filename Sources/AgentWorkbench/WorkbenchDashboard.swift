@@ -127,7 +127,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         Text(facet.name).font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
                         Image(systemName: "xmark.circle.fill").font(.system(size: 10)).foregroundStyle(.tertiary)
                     }.padding(.horizontal, 9).frame(minHeight: 28)
-                        .background(.black.opacity(0.05), in: Capsule()).contentShape(Capsule())
+                        .background(Color.primary.opacity(0.05), in: Capsule()).contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
@@ -283,7 +283,7 @@ struct QueueRow<Actions: View>: View {
                 Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
                     .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
             }
-        }.background(hovered && item.online ? Color.black.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
+        }.background(hovered && item.online ? Color.primary.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
             .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
             .opacity(item.online ? 1 : 0.55).onHover { hovered = $0 }
             .contextMenu { actions }

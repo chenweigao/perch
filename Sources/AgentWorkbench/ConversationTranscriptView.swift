@@ -753,9 +753,9 @@ private struct HostedConversationEntry: View {
             .environment(\.dynamicTypeSize, appearance.dynamicTypeSize)
             .environment(\.conversationReduceMotion, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
-            // Match Perch's current ink and monochrome disclosure/control tint.
-            .foregroundStyle(Color(red: 0.16, green: 0.18, blue: 0.23))
-            .tint(Color(red: 0.16, green: 0.16, blue: 0.17))
+            // Match Perch's ink and monochrome disclosure/control tint in both appearances.
+            .foregroundStyle(WorkbenchTheme.ink)
+            .tint(WorkbenchTheme.accent)
     }
 }
 

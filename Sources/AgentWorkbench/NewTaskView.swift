@@ -205,7 +205,7 @@ struct NewTaskView: View {
             }.frame(maxWidth: 680)
             Spacer(minLength: 32)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.white)
+            .background(WorkbenchTheme.contentBackground)
             .overlay(alignment: .topTrailing) {
                 Button { model.draftingNewTask = false } label: {
                     Image(systemName: "xmark").font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
