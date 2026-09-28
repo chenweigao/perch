@@ -1,5 +1,14 @@
 # Tool and thought disclosure latency
 
+## Acceptance status: unresolved flicker
+
+The user still reports conversation-region flicker and vertical jumps after
+trying `2e52b71` through remote control. We do not yet know whether this is a
+remaining rendering defect, remote-display behavior, or a combination. Geometry
+and latency checks below do not prove that the visible problem is resolved.
+Keep this change in draft pending a direct local-Mac trial of opening/closing
+Bash and thought disclosures in the affected real conversation.
+
 Large tool results and historical thoughts previously created one unbounded
 `SelectableReplyText` on every expansion. TextKit measured the full text before
 the main loop could continue. A separate SwiftUI transition also ran alongside

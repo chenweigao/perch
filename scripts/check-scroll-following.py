@@ -11,10 +11,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
     ["swift", "build", "--build-system", "native", "-c", "release", "--show-bin-path"],
     cwd=ROOT, text=True).strip())
-files = ["WorkbenchTheme", "ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory",
+files = ["ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory",
          "ActivitySummarySettings", "ActivitySummaryController",
          "ConversationScrollControls", "ReplyMarkdownView", "KimiAttachmentView",
-         "ConversationActivityBar", "WorkbenchGlass"]
+         "ConversationActivityBar", "WorkbenchGlass", "WorkbenchTheme"]
 includes = ["-I", str(BIN / "Modules")]
 for path in ["swift-markdown/Sources/CAtomic/include", "swift-cmark/src/include", "swift-cmark/extensions/include"]:
     includes += ["-I", str(ROOT / ".build/checkouts" / path)]
