@@ -1,0 +1,606 @@
+{
+  "baseline_commit": "374ada5",
+  "provenance": "Baseline application plus the input measurement instrumentation in this change. Exact measured source/binary identities below; no production behavior optimization in this step.",
+  "environment": {
+    "hw.model": "Mac16,10",
+    "hw.memsize": "17179869184",
+    "machdep.cpu.brand_string": "Apple M4",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0\nBuildVersion:\t\t26A428",
+    "measurement_policy": "Serial unprofiled repetitions; no task-owned builds or profilers in parallel. Other desktop processes remain uncontrolled."
+  },
+  "inputs": {
+    "identity": {
+      "source_sha256": "1a403bdfff970d4c6d9fa812c7c8f57bd091dde3304a098408ca9eef7c18fbc8",
+      "binary_sha256": "7268c77727a4c00e33a0d2e7721af4e1f0a3cbbac9c5d39538b35fcb63d017d7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ]
+    },
+    "providers": {
+      "input": {
+        "runs": [
+          "input-r1",
+          "input-r2",
+          "input-r3"
+        ],
+        "metrics": {
+          "commit_dispatch_ms": {
+            "median_of_run_medians_ms": 0.5881667020730674,
+            "run_median_range_ms": [
+              0.49833336379379034,
+              0.6513750413432717
+            ],
+            "run_p95_range_ms": [
+              0.7865833467803895,
+              0.8039583335630596
+            ]
+          },
+          "commit_layout_ms": {
+            "median_of_run_medians_ms": 3.5539166419766843,
+            "run_median_range_ms": [
+              3.0892500071786344,
+              3.5859166528098285
+            ],
+            "run_p95_range_ms": [
+              3.5814166767522693,
+              4.0838333661668
+            ]
+          },
+          "marked_layout_ms": {
+            "median_of_run_medians_ms": 2.167333324905485,
+            "run_median_range_ms": [
+              1.1183333699591458,
+              2.2120416397228837
+            ],
+            "run_p95_range_ms": [
+              2.8214166522957385,
+              2.9750833055004478
+            ]
+          },
+          "plain_dispatch_ms": {
+            "median_of_run_medians_ms": 0.9205833775922656,
+            "run_median_range_ms": [
+              0.7002083002589643,
+              0.951291702222079
+            ],
+            "run_p95_range_ms": [
+              1.1909999884665012,
+              1.2729583540931344
+            ]
+          },
+          "plain_layout_ms": {
+            "median_of_run_medians_ms": 3.6570000229403377,
+            "run_median_range_ms": [
+              2.939291705843061,
+              3.685375035274774
+            ],
+            "run_p95_range_ms": [
+              3.825999971013516,
+              4.462708369828761
+            ]
+          },
+          "stream_layout_ms": {
+            "median_of_run_medians_ms": 17.33233331469819,
+            "run_median_range_ms": [
+              15.121041680686176,
+              17.471666680648923
+            ],
+            "run_p95_range_ms": [
+              17.614291631616652,
+              20.099333312828094
+            ]
+          }
+        },
+        "composition_cycles": 72,
+        "maximum_anchor_drift_points": 0,
+        "input_reader_evaluations": 0
+      },
+      "kimi-input": {
+        "runs": [
+          "kimi-input-r1",
+          "kimi-input-r2",
+          "kimi-input-r3"
+        ],
+        "metrics": {
+          "commit_dispatch_ms": {
+            "median_of_run_medians_ms": 0.55741670075804,
+            "run_median_range_ms": [
+              0.4420416662469506,
+              0.6251249578781426
+            ],
+            "run_p95_range_ms": [
+              0.6865000468678772,
+              0.7522082887589931
+            ]
+          },
+          "commit_layout_ms": {
+            "median_of_run_medians_ms": 3.542208287399262,
+            "run_median_range_ms": [
+              3.067916666623205,
+              3.581791650503874
+            ],
+            "run_p95_range_ms": [
+              4.827166674658656,
+              6.480166630353779
+            ]
+          },
+          "marked_layout_ms": {
+            "median_of_run_medians_ms": 1.5010833158157766,
+            "run_median_range_ms": [
+              1.1370833381079137,
+              2.1299999789334834
+            ],
+            "run_p95_range_ms": [
+              2.0120833069086075,
+              2.7361250249668956
+            ]
+          },
+          "plain_dispatch_ms": {
+            "median_of_run_medians_ms": 0.7736666593700647,
+            "run_median_range_ms": [
+              0.590000010561198,
+              0.9573749848641455
+            ],
+            "run_p95_range_ms": [
+              0.9178332984447479,
+              1.1977083631791174
+            ]
+          },
+          "plain_layout_ms": {
+            "median_of_run_medians_ms": 4.09970834152773,
+            "run_median_range_ms": [
+              3.330041712615639,
+              4.764541692566127
+            ],
+            "run_p95_range_ms": [
+              3.907125035766512,
+              5.512541683856398
+            ]
+          },
+          "stream_layout_ms": {
+            "median_of_run_medians_ms": 12.259999988600612,
+            "run_median_range_ms": [
+              12.173208349850029,
+              12.275249988306314
+            ],
+            "run_p95_range_ms": [
+              12.394500023219734,
+              13.029791647568345
+            ]
+          }
+        },
+        "composition_cycles": 72,
+        "maximum_anchor_drift_points": 0,
+        "input_reader_evaluations": 0
+      }
+    },
+    "boundary": "Mounted AppKit input methods to production delegate/layout flush; includes readiness waits. No hardware/real IME candidate/display latency or FPS. Report per-run variation; samples are not independent users."
+  },
+  "switching": [
+    {
+      "run": 1,
+      "catalog_switch_ms": {
+        "count": 80,
+        "max": 99.49100000085309,
+        "median": 80.07316669682041,
+        "p95": 91.45645832177252
+      },
+      "idle_cpu_seconds_over_2s": 0.07415400000000005
+    },
+    {
+      "run": 2,
+      "catalog_switch_ms": {
+        "count": 80,
+        "max": 99.04574998654425,
+        "median": 78.69762502377853,
+        "p95": 90.85324994521216
+      },
+      "idle_cpu_seconds_over_2s": 0.07918599999999998
+    },
+    {
+      "run": 3,
+      "catalog_switch_ms": {
+        "count": 80,
+        "max": 98.26175001217052,
+        "median": 78.92829168122262,
+        "p95": 89.34337500249967
+      },
+      "idle_cpu_seconds_over_2s": 0.07640899999999995
+    }
+  ],
+  "input_control": {
+    "detected": true,
+    "injected_ms": 80,
+    "sample": {
+      "commit_dispatch_ms": 84.00683337822556,
+      "commit_layout_ms": 90.41579166660085,
+      "commit_reader_evaluations": 0,
+      "index": 12,
+      "marked_layout_ms": 2.3124583531171083,
+      "plain_dispatch_ms": 0.7767083588987589,
+      "plain_layout_ms": 3.464125038590282,
+      "plain_reader_evaluations": 0,
+      "stream_layout_ms": 17.854499979875982
+    }
+  },
+  "soak": {
+    "status": "passed",
+    "joint_duration_s": 120.35104470833903,
+    "joint_updates": 294,
+    "joint_switches": 18,
+    "joint_cpu_seconds": 11.955883,
+    "joint_samples": [
+      {
+        "cpu_seconds": 0.04510700000000001,
+        "elapsed_s": 0.040390916692558676,
+        "mounted": 3,
+        "recycled_text_views": 44,
+        "retained": 4,
+        "retired": 0,
+        "rss_mb": 175.78125,
+        "updates": 1
+      },
+      {
+        "cpu_seconds": 3.273129,
+        "elapsed_s": 30.10900645836955,
+        "mounted": 3,
+        "recycled_text_views": 32,
+        "retained": 5,
+        "retired": 0,
+        "rss_mb": 188.359375,
+        "updates": 74
+      },
+      {
+        "cpu_seconds": 5.783971,
+        "elapsed_s": 60.13314883335261,
+        "mounted": 3,
+        "recycled_text_views": 31,
+        "retained": 6,
+        "retired": 0,
+        "rss_mb": 185.921875,
+        "updates": 147
+      },
+      {
+        "cpu_seconds": 8.919427,
+        "elapsed_s": 90.28181645832956,
+        "mounted": 4,
+        "recycled_text_views": 32,
+        "retained": 5,
+        "retired": 0,
+        "rss_mb": 187.96875,
+        "updates": 221
+      }
+    ],
+    "joint_input_to_layout_ms": {
+      "count": 294,
+      "max": 11.687791673466563,
+      "median": 6.73979171551764,
+      "p95": 8.676374971400946
+    },
+    "joint_update_to_layout_ms": {
+      "count": 294,
+      "max": 32.7480832929723,
+      "median": 28.199541673529893,
+      "p95": 30.33054166007787
+    },
+    "rss_after_mb": 196.28125,
+    "rss_settled_mb": 196.296875,
+    "joint_note": "Real workbench; fixed full-history JSON updates, local draft binding, anchor and return checks at 2.5Hz. Excludes hardware keyboard/IME and network; CPU includes fixture serialization."
+  },
+  "switching_profile": {
+    "after_s": 3.087229125,
+    "before_s": 9.46856925,
+    "sample_rows": 6481,
+    "main_sample_rows": 6253,
+    "all_threads_sampled_cpu_ms": 6481.0,
+    "main_sampled_cpu_ms": 6253.0,
+    "main_app_inclusive_top": [
+      [
+        "static NativeAcceptanceApp.$main()",
+        3852.0
+      ],
+      [
+        "AgentWorkbench_main",
+        3852.0
+      ],
+      [
+        "NativeAcceptanceRunner.switching(_:)",
+        1471.0
+      ],
+      [
+        "NativeAcceptanceRunner.settle(_:_:until:)",
+        1460.0
+      ],
+      [
+        "specialized NativeAcceptanceRunner.flush(_:)",
+        1452.0
+      ],
+      [
+        "NativeAcceptanceRunner.run(_:)",
+        1450.0
+      ],
+      [
+        "NativeAcceptanceRunner.flush(_:)",
+        1450.0
+      ],
+      [
+        "closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+        1449.0
+      ],
+      [
+        "partial apply for closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+        1445.0
+      ],
+      [
+        "ConversationDocumentHost.updateNSView(_:context:)",
+        558.0
+      ],
+      [
+        "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+        558.0
+      ],
+      [
+        "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+        555.0
+      ],
+      [
+        "ConversationDocumentView.refreshVisibleRows()",
+        540.0
+      ],
+      [
+        "ConversationEntryController.measure(width:)",
+        479.0
+      ],
+      [
+        "ConversationTranscript.body.getter",
+        439.0
+      ],
+      [
+        "ConversationProjection.update(_:isRunning:)",
+        359.0
+      ],
+      [
+        "specialized static ConversationTurnSummary.make(_:entries:)",
+        318.0
+      ],
+      [
+        "static ConversationTurnSummary.make(_:entries:)",
+        318.0
+      ],
+      [
+        "excerpt #1 (_:) in static ConversationTurnSummary.make(_:entries:)",
+        314.0
+      ],
+      [
+        "specialized Optional.map<A, B>(_:)",
+        280.0
+      ],
+      [
+        "thunk for @callee_guaranteed (@guaranteed KimiMessage) -> (@owned String)",
+        280.0
+      ],
+      [
+        "specialized Collection.split(maxSplits:omittingEmptySubsequences:whereSeparator:)",
+        204.0
+      ],
+      [
+        "closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+        190.0
+      ],
+      [
+        "partial apply for closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+        190.0
+      ],
+      [
+        "specialized Collection.map<A, B>(_:)",
+        140.0
+      ],
+      [
+        "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+        134.0
+      ],
+      [
+        "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+        134.0
+      ],
+      [
+        "closure #3 in ConversationScrollView.body.getter",
+        129.0
+      ],
+      [
+        "closure #2 in closure #1 in closure #1 in NativeAgentView.body.getter",
+        129.0
+      ],
+      [
+        "partial apply for closure #3 in ConversationScrollView.body.getter",
+        129.0
+      ],
+      [
+        "ComposerToolbarLayout.sizeThatFits(proposal:subviews:cache:)",
+        128.0
+      ],
+      [
+        "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ComposerToolbarLayout",
+        128.0
+      ],
+      [
+        "ComposerToolbarLayout.dimensions(_:_:)",
+        128.0
+      ],
+      [
+        "specialized ComposerToolbarLayout.dimensions(_:_:)",
+        128.0
+      ],
+      [
+        "closure #1 in ComposerToolbarLayout.dimensions(_:_:)",
+        128.0
+      ]
+    ],
+    "main_inclusive_top": [
+      [
+        "<deduplicated_symbol>",
+        5459.0
+      ],
+      [
+        "_CFRunLoopRunSpecificWithOptions",
+        3901.0
+      ],
+      [
+        "RunCurrentEventLoopInMode",
+        3895.0
+      ],
+      [
+        "ReceiveNextEventCommon",
+        3888.0
+      ],
+      [
+        "_BlockUntilNextEventMatchingListInMode",
+        3882.0
+      ],
+      [
+        "_DPSBlockUntilNextEventMatchingListInMode",
+        3875.0
+      ],
+      [
+        "_DPSNextEvent",
+        3870.0
+      ],
+      [
+        "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+        3866.0
+      ],
+      [
+        "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+        3863.0
+      ],
+      [
+        "-[NSApplication run]",
+        3862.0
+      ],
+      [
+        "NSApplicationMain",
+        3861.0
+      ],
+      [
+        "specialized runApp(_:)",
+        3858.0
+      ],
+      [
+        "runApp<A>(_:)",
+        3855.0
+      ],
+      [
+        "static App.main()",
+        3853.0
+      ],
+      [
+        "AgentWorkbench_main",
+        3852.0
+      ],
+      [
+        "static NativeAcceptanceApp.$main()",
+        3852.0
+      ],
+      [
+        "start",
+        3851.0
+      ],
+      [
+        "AG::Graph::UpdateStack::update()",
+        3473.0
+      ],
+      [
+        "AG::Subgraph::update(unsigned int)",
+        2862.0
+      ],
+      [
+        "GraphHost.flushTransactions()",
+        2859.0
+      ],
+      [
+        "NSPerformVisuallyAtomicChange",
+        2755.0
+      ],
+      [
+        "0x18d4d4234",
+        2674.0
+      ],
+      [
+        "0x18d4d420c",
+        2673.0
+      ],
+      [
+        "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+        2601.0
+      ],
+      [
+        "-[NSView _layoutSubtreeWithOldSize:]",
+        2598.0
+      ],
+      [
+        "___NSViewLayout_block_invoke",
+        2588.0
+      ],
+      [
+        "_NSViewLayout",
+        2584.0
+      ],
+      [
+        "0x18d584d24",
+        2581.0
+      ],
+      [
+        "0x18d585890",
+        2579.0
+      ],
+      [
+        "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+        2575.0
+      ],
+      [
+        "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+        2573.0
+      ],
+      [
+        "-[NSView layoutSubtreeIfNeeded]",
+        2570.0
+      ],
+      [
+        "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+        2556.0
+      ],
+      [
+        "+[NSAnimationContext runAnimationGroup:]",
+        2521.0
+      ],
+      [
+        "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+        2461.0
+      ],
+      [
+        "closure #1 in ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+        2458.0
+      ],
+      [
+        "closure #1 in NSHostingView.layout()",
+        2454.0
+      ],
+      [
+        "@objc NSHostingView.layout()",
+        2446.0
+      ],
+      [
+        "NSHostingView.layout()",
+        2446.0
+      ],
+      [
+        "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+        2432.0
+      ]
+    ],
+    "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+  },
+  "raw_traces": "Local .local/experience-baseline/switching-phase-cpu; excluded from Git. Input raw samples committed in input-samples.json."
+}

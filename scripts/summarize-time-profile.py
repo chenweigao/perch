@@ -8,7 +8,10 @@ import xml.etree.ElementTree as ET
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("xml")
 parser.add_argument("--after", type=float, default=0, help="Exclude startup seconds")
+parser.add_argument("--before", type=float, default=float("inf"), help="Stop at the end of a measured interval")
 args = parser.parse_args()
+if args.before <= args.after:
+    parser.error("--before must be later than --after")
 root = ET.parse(args.xml).getroot()
 refs = {node.attrib["id"]: node for node in root.iter() if "id" in node.attrib}
 
@@ -25,7 +28,7 @@ examples = {}
 for row in root.findall(".//row"):
     cells = list(row)
     timestamp = int(resolve(cells[0]).text) / 1e9
-    if timestamp < args.after:
+    if timestamp < args.after or timestamp >= args.before:
         continue
     thread = resolve(cells[1]).attrib.get("fmt", "")
     weight = int(resolve(cells[5]).text) / 1e6
@@ -53,7 +56,7 @@ for row in root.findall(".//row"):
 
 top_app = app_frames.most_common(35)
 print(json.dumps({
-    "after_s": args.after, "sample_rows": samples, "main_sample_rows": main_samples,
+    "after_s": args.after, "before_s": args.before if args.before != float("inf") else None, "sample_rows": samples, "main_sample_rows": main_samples,
     "all_threads_sampled_cpu_ms": round(all_ms, 3), "main_sampled_cpu_ms": round(main_ms, 3),
     "main_cpu_ms_per_second": dict(sorted(bins.items())),
     "main_inclusive_top": inclusive.most_common(40), "main_leaf_top": leaves.most_common(25),

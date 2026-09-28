@@ -15,9 +15,12 @@ parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
 parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
 parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
-parser.add_argument("--mode", choices=["all", "joint", "switching", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation"], default="all")
+parser.add_argument("--mode", choices=["all", "joint", "switching", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
+parser.add_argument("--input-positive-control", action="store_true", help="Inject one 80ms delay into the mounted input measurement")
 parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
 args = parser.parse_args()
+if args.input_positive_control and (args.mode not in ["input", "kimi-input"] or args.capture != "none"):
+    parser.error("--input-positive-control requires an uncaptured input or kimi-input run")
 if args.seconds <= 0:
     parser.error("--seconds must be positive")
 if args.mode == "joint" and (args.capture == "frames" or (args.capture == "cpu" and args.seconds > 30)):
@@ -32,11 +35,13 @@ binary = app / "Contents/MacOS/NativeAcceptance"
 manifest = json.loads((app / "Contents/Resources/build.json").read_text())
 manifest.update(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(), capture=args.capture,
                 mode="frames" if args.capture == "frames" else args.mode)
-if manifest["mode"] == "kimi-invalidation":
+if manifest["mode"].startswith("kimi-"):
     # Kimi replaces the displayed catalog; native fixture responses remain resident.
     manifest["catalog_sessions"] = 1
     manifest["native_fixture_resident_snapshot_count"] = manifest.pop("resident_snapshot_count", 8)
 env = dict(os.environ, PERCH_ACCEPTANCE_MODE=manifest["mode"], PERCH_ACCEPTANCE_RESULTS=str(out))
+env["PERCH_ACCEPTANCE_INPUT_STALL"] = "1" if args.input_positive_control else "0"
+manifest["input_positive_control"] = args.input_positive_control
 env["PERCH_ACCEPTANCE_KEEP_OPEN"] = "0"
 env["PERCH_ACCEPTANCE_JOINT_SECONDS"] = str(args.seconds)
 env["PERCH_ACCEPTANCE_STALL"] = "1" if args.positive_control else "0"
@@ -69,6 +74,10 @@ with (out / "process.log").open("w") as log:
 manifest["elapsed_s"] = time.monotonic() - started
 result = json.loads((out / "result.json").read_text()) if (out / "result.json").exists() else {}
 manifest["behavior_passed"] = result.get("status") == "passed"
+if args.input_positive_control and (result.get("input_positive_control") is not True
+                                    or result.get("input_positive_control_detected") is not True):
+    manifest["failure"] = "known input delay was not detected; input timing is unverified"
+
 
 
 def export(arguments, filename):

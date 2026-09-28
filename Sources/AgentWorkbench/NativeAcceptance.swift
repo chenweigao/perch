@@ -190,7 +190,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         }
         _model = State(initialValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
                                                          sessions: fixture.sessions, native: connection,
-                                                         kimi: ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-invalidation"
+                                                         kimi: ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"]?.hasPrefix("kimi-") == true
                                                             ? KimiAcceptanceProtocol.connection(host: NativeAcceptanceFixture.host) : nil))
     }
     var body: some Scene {
@@ -230,7 +230,7 @@ private struct ReferenceComposerFixtureView: View {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
-        if mode == "kimi-invalidation" { await kimiInvalidation(); return }
+        if mode.hasPrefix("kimi-") { await kimiInvalidation(input: mode == "kimi-input"); return }
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
         if mode == "branch-review" { await reviewWorkflow(branch: true); return }
@@ -244,6 +244,14 @@ private struct ReferenceComposerFixtureView: View {
             }
             try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             report["rss_before_mb"] = residentMB()
+            if mode == "input" {
+                report.merge(try await InputAcceptance.run(window: window,
+                    draft: { self.model.native.drafts["session-0"] ?? "" },
+                    readerEvaluations: { self.probe.nativeBodyEvaluations }, stream: { step in
+                        try self.fixture.advanceStream(step)
+                        try await self.model.native.acceptanceRefreshSelected()
+                    })) { _, new in new }
+            }
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
             if mode == "joint" {
@@ -272,7 +280,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "paging", "dashboard", "invalidation"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -324,8 +332,8 @@ private struct ReferenceComposerFixtureView: View {
             NSApp.terminate(nil)
         }
     }
-    private func kimiInvalidation() async {
-        var report: [String: Any] = ["mode": "kimi-invalidation", "history_turns": 200, "catalog_sessions_during_measurement": 1,
+    private func kimiInvalidation(input: Bool = false) async {
+        var report: [String: Any] = ["mode": input ? "kimi-input" : "kimi-invalidation", "history_turns": 200, "catalog_sessions_during_measurement": 1,
             "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency"]
         do {
             let reference = SessionReference(hostID: model.kimi.host.id, terminalID: "a", kind: .kimi)
@@ -337,6 +345,17 @@ private struct ReferenceComposerFixtureView: View {
             }
             try await settle(window, "Kimi snapshot") { self.model.kimi.snapshotReady && self.transcript(in: window) != nil }
             try await Task.sleep(for: .milliseconds(500)); flush(window)
+            if input {
+                report.merge(try await InputAcceptance.run(window: window,
+                    draft: { self.model.kimi.drafts["a"] ?? "" },
+                    readerEvaluations: { self.probe.kimiBodyEvaluations }, stream: { _ in
+                        let offset = self.model.kimi.conversation?.live?.assistantText.utf16.count ?? 0
+                        let frame: [String: Any] = ["type": "assistant.delta", "session_id": "a", "epoch": "fixture",
+                            "seq": 11, "volatile": true, "offset": offset,
+                            "payload": ["agentId": "main", "turnId": 201, "delta": "流式增量 "]]
+                        try await self.model.kimi.acceptanceReceive(JSONSerialization.data(withJSONObject: frame))
+                    })) { _, new in new }
+            }
             let before = probe.kimiBodyEvaluations
             for index in 0..<40 {
                 let draft = "Kimi 输入隔离 fixture \(index)"
@@ -347,9 +366,12 @@ private struct ReferenceComposerFixtureView: View {
             let evaluations = probe.kimiBodyEvaluations - before
             report["draft_mutations"] = 40; report["reading_body_evaluations_during_drafts"] = evaluations
             let streamBefore = probe.kimiBodyEvaluations
-            try await model.kimi.acceptanceReceive(Data(#"{"type":"assistant.delta","session_id":"a","epoch":"fixture","seq":11,"volatile":true,"offset":0,"payload":{"agentId":"main","turnId":201,"delta":"流式正文 positive control"}}"#.utf8))
+            let controlFrame: [String: Any] = ["type": "assistant.delta", "session_id": "a", "epoch": "fixture",
+                "seq": 11, "volatile": true, "offset": model.kimi.conversation?.live?.assistantText.utf16.count ?? 0,
+                "payload": ["agentId": "main", "turnId": 201, "delta": "流式正文 positive control"]]
+            try await model.kimi.acceptanceReceive(JSONSerialization.data(withJSONObject: controlFrame))
             try await settle(window, "Kimi stream positive control") {
-                self.probe.kimiBodyEvaluations > streamBefore && self.model.kimi.conversation?.live?.assistantText == "流式正文 positive control"
+                self.probe.kimiBodyEvaluations > streamBefore && self.model.kimi.conversation?.live?.assistantText.hasSuffix("流式正文 positive control") == true
             }
             report["stream_positive_control"] = true
             let second = WorkspaceSession(reference: SessionReference(hostID: model.kimi.host.id, terminalID: "b", kind: .kimi),
@@ -565,6 +587,7 @@ private struct ReferenceComposerFixtureView: View {
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
         try checkNavigationCaches()
         var durations: [Double] = []
+        let switchingSpan = probe.signposter.beginInterval("CatalogSwitching")
         for step in 0..<80 {
             // Switch while catalog refreshes change row heights, order and the
             // presence of the favorites section in the real sidebar.
@@ -589,6 +612,7 @@ private struct ReferenceComposerFixtureView: View {
             }
             durations.append((CACurrentMediaTime() - start) * 1000)
         }
+        probe.signposter.endInterval("CatalogSwitching", switchingSpan)
         let cpu = processCPU()
         try await Task.sleep(for: .seconds(2))
         let idleCPU = processCPU() - cpu

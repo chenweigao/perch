@@ -40,3 +40,20 @@ Observation。当前已定位的问题是视图读了过多状态，因此先修
 
 参考：[Apple SwiftUI 性能分析](https://developer.apple.com/videos/play/wwdc2025/306/)、
 [TCA 官方设计与示例](https://github.com/pointfreeco/swift-composable-architecture)。
+
+## 输入体验测量契约
+
+`run-native-acceptance.py --mode input` 与 `--mode kimi-input` 使用真实挂载的
+`DraftTextView`，通过 AppKit `insertText` / `setMarkedText` 和生产 delegate
+分别测量普通文本、中文组字及提交。每轮组字期间注入流式正文更新，并检查已提交
+草稿、marked text、Return 归属和阅读锚点。每次报告保留原始样本。
+
+这是控件方法入口到状态/布局刷新的测量：不包含硬件事件、真实输入法候选框、
+窗口合成器或显示器延迟。异步布局检查至少等待 1ms，流式刷新检查额外等待 10ms；
+因此同时报告同步派发耗时，不能把布局样本当成纯业务执行时间。
+`--input-positive-control` 在一次中文提交中注入 80ms 延迟，并要求成功检测。
+
+常规 CI 检查组字/草稿/阅读位置及正向对照，不用本机绝对毫秒数作为共享 runner
+的性能门槛。性能比较至少重复三轮，保持源码、窗口、工具链和数据一致，不与编译
+或其他采样任务并行。Instruments 的 `CatalogSwitching` 区间分开统计，排除启动、
+空闲及后续滚动；采样权重不能替代响应耗时或相加重叠的 inclusive 栈权重。
