@@ -525,6 +525,11 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         if let view = root as? NSTextView, view.string == text { return true }
         return root.subviews.contains { containsText(text, in: $0) }
     }
+    private func reviewSource(in root: NSView?) -> NSTextView? {
+        guard let root else { return nil }
+        if let text = root as? NSTextView, text.identifier?.rawValue == "PerchReviewSource" { return text }
+        return root.subviews.lazy.compactMap { reviewSource(in: $0) }.first
+    }
     private func processCPU() -> Double {
         var value = rusage(); getrusage(RUSAGE_SELF, &value)
         return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
@@ -599,10 +604,17 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                 try await settle(window, "working diff") { !browser.loading && browser.gitDiff != nil }
                 guard case .text(let working, _) = browser.gitDiff, working.contains("Dirty edit") else { throw WorkbenchError("Working range did not restore") }
                 report["working_range_restored"] = true
-                browser.gitBaseInput = "review-base"; browser.gitRange = .branch
+                browser.gitBaseInput = "HEAD"; browser.gitRange = .branch
+                try await settle(window, "empty comparison") { !browser.loading && browser.gitComparison?.entries.isEmpty == true }
+                browser.gitBaseInput = "review-base"; browser.loadGitComparison()
                 try await settle(window, "restore comparison") { !browser.loading && browser.gitComparison != nil }
                 browser.loadGitDiff(changed)
                 try await settle(window, "restore committed diff") { !browser.loading && browser.gitDiff != nil }
+                try await settle(window, "visible diff after empty comparison") {
+                    guard let source = self.reviewSource(in: window.contentView) else { return false }
+                    return source.visibleRect.width > 20 && source.visibleRect.height > 20
+                }
+                report["diff_visible_after_empty_comparison"] = true
             }
             report["status"] = "passed"
         } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }

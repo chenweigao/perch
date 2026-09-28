@@ -775,8 +775,8 @@ struct RemoteSourceText: NSViewRepresentable {
         if let layout = view.layoutManager, let container = view.textContainer {
             layout.ensureLayout(for: container)
             let used = layout.usedRect(for: container)
-            view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + 28),
-                                     height: max(scroll.contentSize.height, used.height + 28)))
+            view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + 2 * view.textContainerInset.width),
+                                     height: max(scroll.contentSize.height, used.height + 2 * view.textContainerInset.height)))
         }
         guard let line, let range = RemoteFileContent.lineRange(in: rendered, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
