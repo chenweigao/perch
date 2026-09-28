@@ -23,6 +23,17 @@ done
 cp -R "$PWD/Resources/Localization/"*.lproj "$app_dir/Contents/Resources/"
 cp Resources/Brand/Perch.icns "$app_dir/Contents/Resources/Perch.icns"
 cp Resources/Info.plist "$app_dir/Contents/Info.plist"
+# The marketing version lives in Resources/Info.plist; the build identity is stamped
+# here so any bundle can be traced back to the commit it was built from. A checkout
+# without Git metadata keeps the source values.
+revision="$(git describe --tags --dirty --always 2>/dev/null || true)"
+commits="$(git rev-list --count HEAD 2>/dev/null || true)"
+if [ -n "$revision" ]; then
+    plutil -replace PerchSourceRevision -string "$revision" "$app_dir/Contents/Info.plist"
+fi
+if [ -n "$commits" ]; then
+    plutil -replace CFBundleVersion -string "$commits" "$app_dir/Contents/Info.plist"
+fi
 mkdir -p "$app_dir/Contents/Resources/RemoteSetup/scripts" "$app_dir/Contents/Resources/RemoteSetup/remote"
 cp scripts/install-native-service.sh "$app_dir/Contents/Resources/RemoteSetup/scripts/"
 cp remote/local-agent-service.py remote/native-agent-service.py remote/qoder-worker.mjs remote/claude-worker.mjs remote/package.json "$app_dir/Contents/Resources/RemoteSetup/remote/"
