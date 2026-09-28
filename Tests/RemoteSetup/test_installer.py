@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class InstallerTests(unittest.TestCase):
     def run_installer(self, *arguments):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(prefix='perch-npm-pip-kill-') as directory:
             folder = Path(directory)
             for name in ('ssh', 'scp'):
                 binary = folder / name
@@ -20,6 +20,9 @@ class InstallerTests(unittest.TestCase):
             env = dict(os.environ, PATH=str(folder) + os.pathsep + os.environ['PATH'], SETUP_RECORD=str(folder / 'record'))
             result = subprocess.run(['bash', str(ROOT / 'scripts/install-native-service.sh'), *arguments], env=env, capture_output=True, text=True)
             calls = [json.loads(line) for line in (folder / 'record').read_text().splitlines()] if (folder / 'record').exists() else []
+            # Executable locations are random fixture paths, not remote commands.
+            for call in calls:
+                call[0] = Path(call[0]).name
             return result, calls
 
     def test_omp_does_not_install_qoder_or_require_npm(self):

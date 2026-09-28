@@ -1091,3 +1091,20 @@
 "↑↓ 选择 · Return / Tab 引用 · Esc 关闭，不会发送消息" = "↑↓ select · Return / Tab reference · Esc dismiss; never sends";
 
 "移除文件引用" = "Remove file reference";
+
+"选择项目目录" = "Choose project directory";
+"项目目录" = "Project directory";
+"描述你的任务，输入 @ 引用项目文件" = "Describe your task, type @ to reference project files";
+
+"模型、思考与权限" = "Model, reasoning and permissions";
+"搜索最近项目" = "Search recent projects";
+"还没有最近项目，可在下方输入目录。" = "No recent projects. Enter a directory below.";
+"没有匹配的项目" = "No matching projects";
+"选择文件夹…" = "Choose folder…";
+"连接失败" = "Connection failed";
+
+"请选择项目目录后再开始。" = "Choose a project directory to start.";
+"请选择可用的 Codex 模型后再开始。" = "Choose an available Codex model to start.";
+"请切换到 Kimi 或移除附件后再开始。" = "Choose Kimi or remove attachments to start.";
+"输入任务内容后发送，也可仅创建空会话。" = "Enter a task to send, or create an empty session.";
+"Return 发送，Shift Return 换行" = "Return to send, Shift Return for a new line";
