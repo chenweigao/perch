@@ -9,6 +9,8 @@ struct NewTaskView: View {
     @ObservedObject var model: WorkbenchModel
     @ObservedObject var native: NativeAgentConnection
     @ObservedObject var kimi: KimiConnection
+    @StateObject var projectFiles = ProjectFileSuggestions()
+    @StateObject var referenceBrowser = RemoteFileBrowser()
     @AppStorage("new.task.prompt") private var prompt = ""
     @State private var provider: SessionKind = .kimi
     @State private var cwd = ""
@@ -20,6 +22,7 @@ struct NewTaskView: View {
     @State private var chooseFiles = false
     @State private var showSetup = false
     @State private var showConfiguration = false
+    @State private var showReference = false
     @State private var permissionMode = PermissionDefaults.mode(for: .kimi) ?? "manual"
     @FocusState private var cwdFocused: Bool
     private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
@@ -193,11 +196,15 @@ struct NewTaskView: View {
                             }
                         }
                     }
-                    MessageComposer(text: $prompt, placeholder: L("想做点什么？"),
+                    ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("想做点什么？输入 @ 引用项目文件"),
                                     accessibilityLabel: L("任务描述"),
                                     canSend: canStart, onSend: start,
                                     onFiles: provider == .kimi ? addAttachments : nil,
-                                    onError: { error = $0 })
+                                    onError: { error = $0 }, onOpenReference: { path in
+                                        referenceBrowser.configure(host: kimi.host, cwd: cwd)
+                                        referenceBrowser.open(path)
+                                        showReference = true
+                                    }, files: projectFiles)
                     HStack(spacing: 12) {
                         ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                         Button { showConfiguration.toggle() } label: {
@@ -269,7 +276,16 @@ struct NewTaskView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showReference, onDismiss: {
+                referenceBrowser.cancel()
+                NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+            }) {
+                RemoteFilePanel(browser: referenceBrowser, onClose: { showReference = false })
+                    .frame(minWidth: 540, idealWidth: 680, minHeight: 400, idealHeight: 560)
+            }
+            .onChange(of: cwd) { _, _ in showReference = false; referenceBrowser.cancel() }
             .onChange(of: kimi.host.id) { _, _ in
+                showReference = false; referenceBrowser.cancel()
                 if !availableProviders.contains(provider) {
                     selectProvider(availableProviders.first ?? .kimi)
                 }
@@ -279,7 +295,10 @@ struct NewTaskView: View {
                 reconcileThinking()
             }
             .onChange(of: agentModel) { _, _ in reconcileThinking() }
-            .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
+            .onDisappear {
+                referenceBrowser.cancel()
+                if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) }
+            }
             .task(id: catalogID) {
                 // A native catalog is now needed before any session exists. Qoder
                 // reports none and Kimi reads its own connection.
