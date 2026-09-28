@@ -24,9 +24,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
     let onOpen: (WorkspaceSession) -> Void
     let onMarkReviewed: (WorkspaceSession) -> Void
     let rowActions: (WorkspaceSession) -> RowActions
-    /// Group names per session. The caller builds the index once for the pass; reading
-    /// it per row would rebuild it for every row on every catalog tick.
-    let groupNames: (WorkspaceSession) -> [String]
+    /// The caller builds the membership index once per view pass.
+    let groupMemberships: (WorkspaceSession) -> [SessionGroupIndex.Membership]
+    let onOpenGroup: (UUID) -> Void
+    let onManageGroups: (WorkspaceSession) -> Void
     let onForgetRestoration: (SavedTerminal) -> Void
     let onUndoArchive: () -> Void
     let onRetryArchive: () -> Void
@@ -280,13 +281,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
         var parts = [item.detail, item.hostName]
         if !item.directory.isEmpty { parts.append(URL(fileURLWithPath: item.directory).lastPathComponent) }
-        // A group the queue is already filtered by is stated once, by the chip above the
-        // list. What remains is the useful part: the other groups this session is in.
-        let scopedGroup = context.scope.facets.first { $0.kind == .group }?.name
+        let memberships = groupMemberships(item)
+        let ordered = memberships.filter { $0.id == group?.id } + memberships.filter { $0.id != group?.id }
         return QueueRow(item: item,
                         time: SessionTime.label(since: item.updatedAt, waiting: section == .attention && item.online),
                         metadata: parts.joined(separator: " · "),
-                        groups: groupNames(item).filter { $0 != scopedGroup },
+                        groups: ordered,
+                        onOpenGroup: onOpenGroup, onManageGroups: { onManageGroups(item) },
                         onOpen: { onOpen(item) },
                         onMarkReviewed: { onMarkReviewed(item) }, actions: rowActions(item))
     }
@@ -297,58 +298,80 @@ struct QueueRow<Actions: View>: View {
     let item: WorkspaceSession
     let time: String?
     let metadata: String
-    /// Task groups this session belongs to. Left empty on a group's own page, where
-    /// every row is in that group and repeating the name would only cost width.
-    var groups: [String] = []
+    let groups: [SessionGroupIndex.Membership]
+    let onOpenGroup: (UUID) -> Void
+    let onManageGroups: () -> Void
     let onOpen: () -> Void
     let onMarkReviewed: () -> Void
     let actions: Actions
     @State private var hovered = false
 
-    private var groupBadge: String? { SessionGroupIndex.label(groups) }
+    private var groupBadge: String? { SessionGroupIndex.label(groups.map(\.name)) }
     private var tooltip: String {
         var lines = [item.title]
         if !item.directory.isEmpty { lines.append(item.directory) }
-        if !groups.isEmpty {
-            let names = groups.joined(separator: "、")
+        if groups.isEmpty { lines.append(L("未归组")) }
+        else {
+            let names = groups.map(\.name).joined(separator: "、")
             lines.append(L("任务组：\(names)"))
         }
         return lines.joined(separator: "\n")
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: onOpen) {
-                HStack(spacing: 14) {
-                    SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                        HStack(spacing: 6) {
-                            // The badge holds its own width so the metadata truncates
-                            // instead of pushing the group name out of the row.
-                            if let groupBadge {
-                                Label(groupBadge, systemImage: "folder")
-                                    .font(.system(size: 10)).foregroundStyle(.secondary)
-                                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                            }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                Button(action: onOpen) {
+                    HStack(spacing: 14) {
+                        SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
                             Text(metadata).font(.system(size: 11)).foregroundStyle(.secondary)
                                 .lineLimit(1).truncationMode(.middle)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                        if let time {
+                            Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
                         }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                    if let time {
-                        Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
-                    }
-                }.padding(.horizontal, 8).padding(.vertical, 13).frame(minHeight: 64).contentShape(Rectangle())
-            }.buttonStyle(.plain).disabled(!item.online)
-                .accessibilityLabel([item.title, groupBadge, metadata, time].compactMap { $0 }.joined(separator: "，"))
-            if item.canMarkReviewed && item.online {
-                Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
-                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
-            }
+                    }.padding(.horizontal, 8).padding(.top, 13).padding(.bottom, 7).frame(minHeight: 58).contentShape(Rectangle())
+                }.buttonStyle(.plain).disabled(!item.online)
+                    .accessibilityLabel([item.title, groupBadge, metadata, time].compactMap { $0 }.joined(separator: "，"))
+                if item.canMarkReviewed && item.online {
+                    Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
+                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
+                }
+            }.opacity(item.online ? 1 : 0.55)
+            membershipControls.padding(.leading, 39).padding(.trailing, 8).padding(.bottom, 12)
         }.background(hovered && item.online ? Color.primary.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
             .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
-            .opacity(item.online ? 1 : 0.55).onHover { hovered = $0 }
+            .onHover { hovered = $0 }
             .contextMenu { actions }
             .help(tooltip)
     }
+
+    private var membershipControls: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder").foregroundStyle(.secondary).accessibilityHidden(true)
+            if let first = groups.first {
+                Text("任务组").foregroundStyle(.secondary)
+                Button { onOpenGroup(first.id) } label: {
+                    Text(first.name).lineLimit(1).truncationMode(.middle)
+                }.buttonStyle(.link).help(first.name)
+                    .accessibilityLabel("打开任务组：\(first.name)")
+                if groups.count > 1 {
+                    Menu {
+                        ForEach(groups.dropFirst()) { group in
+                            Button(group.name) { onOpenGroup(group.id) }
+                        }
+                    } label: { Text("另 \(groups.count - 1) 组") }
+                        .menuStyle(.borderlessButton).fixedSize()
+                }
+                Button("管理归属", action: onManageGroups).buttonStyle(.link).foregroundStyle(.secondary).fixedSize()
+            } else {
+                Text("未归组").foregroundStyle(.secondary)
+                Button("关联任务组", action: onManageGroups).buttonStyle(.link)
+            }
+            Spacer(minLength: 0)
+        }.font(.system(size: 11))
+    }
+
 }

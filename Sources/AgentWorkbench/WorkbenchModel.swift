@@ -704,10 +704,14 @@ final class WorkbenchModel: ObservableObject {
         animateCatalogChange { workspace.toggleStar(reference) }
         saveWorkspace()
     }
-    func setGroups(_ groupIDs: Set<UUID>, for reference: SessionReference) {
+    func setGroups(_ groupIDs: Set<UUID>, for reference: SessionReference, newGroupName: String = "") {
         for index in workspace.groups.indices {
             workspace.groups[index].sessions.removeAll { $0 == reference }
             if groupIDs.contains(workspace.groups[index].id) { workspace.groups[index].sessions.append(reference) }
+        }
+        let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty {
+            workspace.groups.append(WorkItemGroup(name: name, goal: "", nextStep: "", sessions: [reference]))
         }
         saveWorkspace()
     }

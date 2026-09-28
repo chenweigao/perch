@@ -16,7 +16,7 @@ swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \
     Sources/AgentWorkbench/SessionStatusIndicator.swift Sources/AgentWorkbench/ConversationActivityBar.swift \
     Sources/AgentWorkbench/ActivitySummaryController.swift Sources/AgentWorkbench/ActivitySummarySettings.swift \
-    Sources/AgentWorkbench/HostIdentityIcon.swift \
+    Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionGroupsSheet.swift \
     Sources/AgentWorkbench/BatchArchiveControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
     Sources/AgentWorkbench/TaskGroupPage.swift Sources/AgentWorkbench/WorkItemGroupEditor.swift \

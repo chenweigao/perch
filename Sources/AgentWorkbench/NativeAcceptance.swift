@@ -403,9 +403,29 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         model.clearScope(); model.showHome()
         try await settle(window, "return global") { self.probe.dashboardGroupID == nil && self.probe.dashboardProjection == self.model.dashboardProjection }
         guard model.dashboardProjection.attention.items.count == 1 else { throw WorkbenchError("Global return retained hidden group") }
+        // Association is local: it works for offline references and creates the
+        // first group on the same save, without altering unrelated membership.
+        let offlineReference = catalog[3].reference
+        model.setGroups([related.id], for: offlineReference, newGroupName: "  夜间任务  ")
+        guard let created = model.workspace.groups.last, created.name == "夜间任务",
+              created.sessions == [offlineReference],
+              model.groupIndex.memberships[offlineReference.id]?.map(\.id) == [related.id, created.id],
+              model.groupIndex.memberships[first.id]?.map(\.id) == [goal.id, related.id] else {
+            throw WorkbenchError("Group association changed unrelated sessions or lost new group")
+        }
+        model.setGroups([], for: offlineReference, newGroupName: "   ")
+        guard model.groupIndex[offlineReference.id].isEmpty, model.workspace.groups.count == 3 else {
+            throw WorkbenchError("Removing membership created an empty-name group")
+        }
         model.connections = []; model.workspace.groups = []
+        model.setGroups([], for: second.reference, newGroupName: "首个任务组")
+        let membershipRestored = try JSONDecoder().decode(LocalWorkspace.self, from: JSONEncoder().encode(model.workspace))
+        guard membershipRestored.groups.count == 1, membershipRestored.groups[0].sessions == [second.reference] else {
+            throw WorkbenchError("First group membership was not persisted")
+        }
+        model.workspace.groups = []
         model.acceptanceUpdateCatalog(fixture.sessions)
-        return ["rendered_navigation": true, "combined_group_machine_scope": true, "scoped_inbox": true,
+        return ["membership_create_remove_and_persist": true, "offline_membership": true, "rendered_navigation": true, "combined_group_machine_scope": true, "scoped_inbox": true,
                 "global_action_deduplication": true, "offline_excluded_from_actions": true,
                 "manual_completion": true, "outcome_source_persistence": true, "pin_persistence": true]
     }

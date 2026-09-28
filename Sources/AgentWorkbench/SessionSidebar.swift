@@ -201,7 +201,7 @@ struct SessionActionsMenu: View {
                 Label(model.workspace.starred.contains(item.reference) ? "取消置顶" : "置顶会话", systemImage: "pin")
             }
         }
-        Button { model.groupingSession = item } label: { Label("分组…", systemImage: "folder") }
+        Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "folder") }
         Button { model.toggleTaskNotifications(item.id) } label: {
             Label(model.mutedTasks.contains(item.id) ? L("恢复任务通知") : L("静音任务通知"),
                   systemImage: model.mutedTasks.contains(item.id) ? "bell" : "bell.slash")
@@ -224,31 +224,6 @@ struct SessionActionsMenu: View {
         Button(role: .destructive) { model.pendingDeletion = item } label: {
             Label(item.reference.kind == .terminal ? L("结束远端终端…") : L("删除会话…"), systemImage: "trash")
         }.disabled(busy || !item.online || (item.reference.kind != .terminal && !model.canArchive(item)))
-    }
-}
-
-struct SessionGroupsSheet: View {
-    @ObservedObject var model: WorkbenchModel
-    let item: WorkspaceSession
-    @State private var selected = Set<UUID>()
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("会话分组").font(.title2.weight(.semibold))
-            Text(item.title).lineLimit(2).foregroundStyle(.secondary)
-            if model.workspace.groups.isEmpty { Text("先在侧栏新建任务组，再关联会话。").foregroundStyle(.secondary) }
-            ForEach(model.workspace.groups) { group in
-                Toggle(group.name, isOn: Binding(get: { selected.contains(group.id) }, set: { value in
-                    if value { selected.insert(group.id) } else { selected.remove(group.id) }
-                })).toggleStyle(.checkbox)
-            }
-            Text("可选多个任务组；取消全部选择即移出分组。不会共享对话上下文。").font(.caption).foregroundStyle(.secondary)
-            HStack {
-                Spacer(); Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("保存") { model.setGroups(selected, for: item.reference); dismiss() }.keyboardShortcut(.defaultAction)
-            }
-        }.padding(26).frame(width: 440)
-            .onAppear { selected = Set(model.workspace.groups.filter { $0.sessions.contains(item.reference) }.map(\.id)) }
     }
 }
 

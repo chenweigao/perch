@@ -1004,3 +1004,16 @@
 "查看全部任务组" = "View all task groups";
 "%lld 项状态未同步" = "%lld not synced";
 "目标与下一步" = "Goal and next step";
+
+/* Explicit conversation membership */
+"未归组" = "Ungrouped";
+"关联任务组" = "Link to task group";
+"另 %lld 组" = "%lld more groups";
+"打开任务组：%@" = "Open task group: %@";
+"管理归属" = "Manage groups";
+"管理任务组归属…" = "Manage task groups…";
+"任务组归属" = "Task group membership";
+"还没有任务组。在下方填写名称，保存后会创建并关联此会话。" = "No task groups yet. Enter a name below to create one and link this conversation when you save.";
+"新建并关联任务组" = "Create and link a task group";
+"任务组名称（可选）" = "Task group name (optional)";
+"可选多个任务组；取消全部选择且不新建，保存后即移出所有任务组。不会共享对话上下文。" = "Select multiple groups if needed. Clear all selections and leave the name empty to remove all memberships when saving. Conversation context is not shared.";
