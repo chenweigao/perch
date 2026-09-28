@@ -128,6 +128,15 @@ func checkRemoteFileViewer() async throws {
     expectEqual(try await reference(relative, roots: [worktree]),
                 .text("another worktree", truncated: false, size: 16))
 
+    // Only an absolute tool path is known; ./ must not let the stale main copy win.
+    for cited in [relative, "./" + relative, "./Sources/./AgentWorkbench/" + filename] {
+        let command = try RemoteFileCommand.referenceCommand(path: cited, cwd: main,
+            roots: [duplicateFile.path, duplicate.path])
+        let data = try await ProcessRunner.run("/bin/sh", ["-c", command])
+        expectEqual(try RemoteFileCommand.parse(data), .text("another worktree", truncated: false, size: 16))
+        expectEqual(RemoteFileCommand.resolvedPath(in: data), duplicateFile.path)
+    }
+
     // The header echoes the path the remote actually read.
     let echo = try RemoteFileCommand.referenceCommand(path: relative, cwd: root.path, roots: [worktree])
     let echoedData = try await ProcessRunner.run("/bin/sh", ["-c", echo])

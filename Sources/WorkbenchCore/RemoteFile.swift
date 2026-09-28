@@ -113,15 +113,24 @@ public enum RemoteFileCommand {
     /// another checkout. Only a bare filename falls back to a name search, which
     /// then spans every root. Absolute and ~ paths stay authoritative as before.
     public static func referenceCommand(path: String, cwd: String, roots: [String]) throws -> String {
-        let reference = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !reference.isEmpty, !reference.contains("\0") else {
-            return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd))
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains("\0") else {
+            return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd))
         }
-        guard !reference.hasPrefix("/"), !reference.hasPrefix("~") else {
-            return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd))
+        guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~") else {
+            return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd))
+        }
+        let reference = (trimmed as NSString).standardizingPath
+        // Normalize before matching absolute tool paths, so ./Sources/Foo.swift
+        // identifies the same worktree root as Sources/Foo.swift.
+        let suffix = "/" + reference
+        var candidates = roots
+        if let evidence = roots.first(where: { $0.hasSuffix(suffix) }) {
+            let root = String(evidence.dropLast(suffix.count))
+            candidates.insert(root.isEmpty ? "/" : root, at: 0)
         }
         var ordered: [String] = []
-        for root in roots + [cwd] where root.hasPrefix("/") && !root.contains("\0") {
+        for root in candidates + [cwd] where root.hasPrefix("/") && !root.contains("\0") {
             let standardized = (root as NSString).standardizingPath
             if !ordered.contains(standardized) { ordered.append(standardized) }
         }

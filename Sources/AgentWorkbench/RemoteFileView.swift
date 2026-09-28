@@ -76,7 +76,7 @@ final class RemoteFileBrowser: ObservableObject {
             if !host.isLocal { try SSHCommand.validateDestination(host.destination) }
             if fromConversation {
                 command = try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd,
-                                                                 roots: resolutionRoots(for: requested))
+                                                                 roots: directoryHints)
                 resolved = (try? RemoteFilePath.resolve(requested, cwd: cwd)) ?? requested
             } else {
                 resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
@@ -109,18 +109,6 @@ final class RemoteFileBrowser: ObservableObject {
         } failed: { browser in
             browser.content = nil
         }
-    }
-
-    /// Hints are most-recent-first. When a tool call's absolute path ends with the
-    /// referenced relative path, its root goes first: the agent touched that file,
-    /// so its checkout wins over a stale same-path copy at the session directory.
-    private func resolutionRoots(for reference: String) -> [String] {
-        let trimmed = reference.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~") else { return directoryHints }
-        let suffix = "/" + trimmed
-        guard let evidence = directoryHints.first(where: { $0.hasSuffix(suffix) }) else { return directoryHints }
-        let root = String(evidence.dropLast(suffix.count))
-        return [root.isEmpty ? "/" : root] + directoryHints
     }
 
     func loadGitStatus() {
