@@ -12,6 +12,11 @@ private func probeKimi(path: URL) async throws -> KimiRuntimeProbeResult {
     return RemoteSetup.parseKimiRuntimeProbe(output)
 }
 
+private func probeBridge(home: URL) async throws -> BridgeProbeResult {
+    let command = "HOME=\(SSHCommand.quote(home.path)); export HOME; " + RemoteSetup.bridgeProbeCommand
+    return RemoteSetup.parseBridgeProbe(try await SetupCommandRunner.run("/bin/sh", ["-c", command]))
+}
+
 func checkRemoteSetup() async throws {
     let id = UUID()
     let old = Data("{\"id\":\"\(id)\",\"name\":\"Existing\",\"destination\":\"fixture\"}".utf8)
@@ -109,6 +114,21 @@ func checkRemoteSetup() async throws {
     let startedArguments = try String(contentsOf: argumentsFile, encoding: .utf8).split(separator: "\n").map(String.init)
     precondition(startedArguments == ["web", "--host", "127.0.0.1", "--port", "60123", "--no-open"])
 
+    let bridgeHome = runtimeRoot.appendingPathComponent("bridge home")
+    let bridgeDirectory = bridgeHome.appendingPathComponent(".local/share/agent-workbench/native")
+    try FileManager.default.createDirectory(at: bridgeDirectory, withIntermediateDirectories: true)
+    let uninstalledBridge = try await probeBridge(home: bridgeHome)
+    precondition(uninstalledBridge == .missing)
+    let bridgeScript = bridgeDirectory.appendingPathComponent("native-agent-service.py")
+    try "#!/usr/bin/env python3\nROOT = 1\nSERVICE_VERSION = 7\n".write(to: bridgeScript, atomically: true, encoding: .utf8)
+    let installedBridge = try await probeBridge(home: bridgeHome)
+    precondition(installedBridge == .installed(version: 7))
+    // A commented or renamed constant must not read as a compatible version.
+    try "#!/usr/bin/env python3\n# SERVICE_VERSION = 7\nOTHER_VERSION = 9\n".write(to: bridgeScript, atomically: true, encoding: .utf8)
+    let unreadableBridge = try await probeBridge(home: bridgeHome)
+    precondition(unreadableBridge == .unreadable)
+    precondition(RemoteSetup.parseBridgeProbe(Data("installed\0x\0".utf8)) == .invalid(output: "installed\0x\0"))
+
     let args = try RemoteSetup.sshArguments("fixture", command: "true")
     precondition(args.contains("StrictHostKeyChecking=yes") && args.contains("BatchMode=yes"))
     do { _ = try RemoteSetup.terminalCommand(destination: "-oProxyCommand=bad"); preconditionFailure("SSH option accepted") } catch {}
@@ -124,5 +144,5 @@ func checkRemoteSetup() async throws {
     do { _ = try await check.value; preconditionFailure("cancelled check succeeded") }
     catch is CancellationError {} // Cancellation must not turn into a connection failure.
     precondition(Date().timeIntervalSince(cancelled) < 3)
-    print("PASS: remote setup migration, Kimi runtime discovery, safe startup, aliases, path quoting, timeout and cancellation")
+    print("PASS: remote setup migration, Kimi runtime discovery, bridge version probe, safe startup, aliases, path quoting, timeout and cancellation")
 }

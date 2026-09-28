@@ -258,6 +258,23 @@ final class RemoteSetupController: ObservableObject {
         _ = try await checkKimiRuntime()
         try await checkKimiServiceAndModels()
     }
+    /// Compares the installed bridge with the protocol this build speaks, so a stale
+    /// or newer remote copy is named here instead of failing later during a task.
+    private func checkBridge() async throws -> Int {
+        let expected = RemoteSetup.bridgeServiceVersion
+        switch RemoteSetup.parseBridgeProbe(try await ssh(RemoteSetup.bridgeProbeCommand)) {
+        case .installed(let version) where version == expected:
+            return version
+        case .installed(let version) where version < expected:
+            throw WorkbenchError(L("远端桥接组件是 v\(version)，此 Perch 需要 v\(expected)。请安装 / 更新桥接组件后重新检查。"))
+        case .installed(let version):
+            throw WorkbenchError(L("远端桥接组件是 v\(version)，比此 Perch 支持的 v\(expected) 更新。请升级 Perch；不要降级远端组件，其他客户端可能正在使用它。"))
+        case .missing:
+            throw WorkbenchError(L("远端未安装 Perch 桥接组件。请安装桥接组件后重新检查。"))
+        case .unreadable, .invalid:
+            throw WorkbenchError(L("无法读取远端桥接组件的版本。请重新安装桥接组件后检查。"))
+        }
+    }
     private func checkNative() async throws {
         mark("runtime", .checking)
         hint = L("远端需要 Python 3；Qoder 与 Claude Code 还需要 Node.js 与 npm。")
@@ -266,13 +283,13 @@ final class RemoteSetupController: ObservableObject {
         mark("runtime", .passed)
         mark("service", .checking)
         hint = L("安装或更新 Perch 桥接组件后重新检查。空闲的旧服务会自动安全重启；有任务运行时会等待任务结束。")
-        _ = try await ssh("test -f ~/.local/share/agent-workbench/native/native-agent-service.py")
+        let bridge = try await checkBridge()
         try Task.checkCancellation()
         let connection = NativeAgentConnection(setupHost: host); native = connection; connection.connect()
         try await awaitConnection(online: { connection.online }, error: { connection.error })
         let status = try await connection.setupStatus(provider: provider)
         try Task.checkCancellation()
-        mark("service", .passed)
+        mark("service", .passed, L("桥接组件 v\(bridge)"))
         reportBridgeProcess(running: connection.runtime)
         mark("models", .checking)
         hint = L("在远端安装所选 Agent、完成登录和模型配置，然后重新检查。")

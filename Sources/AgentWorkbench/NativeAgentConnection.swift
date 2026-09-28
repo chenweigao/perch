@@ -161,7 +161,13 @@ final class NativeAgentConnection: ObservableObject {
     /// hand-bumped version number does not say which source it is executing.
     private func readBridgeHealth() async throws {
         let health: JSONValue = try await request("/health")
-        guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+        let expected = RemoteSetup.bridgeServiceVersion
+        guard let version = health["version"].int else {
+            throw WorkbenchError(L("无法读取远端桥接服务的版本。请重新安装桥接组件后重试。"))
+        }
+        guard version == expected else {
+            throw WorkbenchError(L("远端桥接服务是 v\(version)，此 Perch 需要 v\(expected)。请在主机设置中安装 / 更新桥接组件。"))
+        }
         runtime = RunningRuntime(version: health["implementation"].string,
                                  startedAt: health["startedAt"].string)
     }
