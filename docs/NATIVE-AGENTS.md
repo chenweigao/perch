@@ -28,7 +28,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek、Codex
 # 保留旧的全套安装方式：<host> 或 <host> --with-dsh
 ```
 
-所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；Claude Code 使用 Node.js/npm 与已登录的 `claude` CLI；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装且登录可用的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。活动叙事元数据使用 bridge 协议版本 3，Mac 客户端会拒绝缺少该协议的旧服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查会验证协议版本，并只在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
+所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；Claude Code 使用 Node.js/npm 与已登录的 `claude` CLI；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装且登录可用的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。桥接协议版本由 `remote/native-agent-service.py` 的 `SERVICE_VERSION` 与客户端的 `RemoteSetup.bridgeServiceVersion` 共同声明，两者必须相等（`scripts/check-version.py` 强制校验）。“服务连接”检查读取远端脚本里的该常量，版本过旧提示重新安装桥接组件，版本过新提示升级 Perch，并显示当前生效的版本；连接时再按 `/health` 校验实际运行的服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查会验证协议版本，并只在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
 
 `/health` 同时上报 `implementation`（运行中服务自身源码的 sha256 前 16 位）与 `startedAt`，`--ensure` 两者都比对：协议号相同但源码不同（改动没有提升 SERVICE_VERSION，或服务早于该字段）同样走空闲替换流程，有活动任务时照旧保留旧服务并提示等待；本机源码读不出来时退回只比协议号，避免每次检查都重启健康服务。向导以「运行进程」信息行显示运行中的源码指纹与启动时间。注意这只覆盖桥自身：Agent CLI 与 SDK worker 在每个会话启动时从磁盘读取，升级后已运行的会话仍是旧版本，从下一个会话生效。
 

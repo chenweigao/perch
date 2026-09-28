@@ -310,7 +310,9 @@ private final class ConversationDocumentView: NSView {
             marker.frame = view.bounds.insetBy(dx: 1, dy: 1)
             marker.cornerRadius = 12
             marker.borderWidth = 1
-            marker.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
+            view.effectiveAppearance.performAsCurrentDrawingAppearance {
+                marker.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
+            }
             marker.actions = ["opacity": NSNull()]
             view.layer?.addSublayer(marker)
             if rowAppearance?.reduceMotion != true {
@@ -753,9 +755,9 @@ private struct HostedConversationEntry: View {
             .environment(\.dynamicTypeSize, appearance.dynamicTypeSize)
             .environment(\.conversationReduceMotion, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
-            // Match Perch's current ink and monochrome disclosure/control tint.
-            .foregroundStyle(Color(red: 0.16, green: 0.18, blue: 0.23))
-            .tint(Color(red: 0.16, green: 0.16, blue: 0.17))
+            // Match Perch's ink and monochrome disclosure/control tint in both appearances.
+            .foregroundStyle(WorkbenchTheme.ink)
+            .tint(WorkbenchTheme.accent)
     }
 }
 

@@ -24,6 +24,7 @@ def main():
     python = sys.executable
     if args.suite == "portable":
         commands = [
+            ("version", [python, "scripts/check-version.py"], 60),
             ("bridge", [python, "-m", "unittest", "discover", "-s", "remote", "-p", "test_*.py"], 180),
             ("installer", [python, "-m", "unittest", "discover", "-s", "Tests/RemoteSetup"], 60),
             ("model-metadata", [python, "-m", "unittest", "discover", "-s", "Tests/ModelMetadata"], 60),
@@ -35,6 +36,7 @@ def main():
         commands = [
             ("build", ["bash", "scripts/build.sh"], 1200),
             ("signature", ["codesign", "--verify", "--deep", "--strict", "build/Perch.app"], 60),
+            ("version", [python, "scripts/check-version.py", "--app", "build/Perch.app"], 60),
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),

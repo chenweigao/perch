@@ -327,13 +327,13 @@ private struct DiffText: View {
             if line.hasPrefix("+++") || line.hasPrefix("---") || line.hasPrefix("diff ") || line.hasPrefix("index ") {
                 colour = .secondaryLabelColor
             } else if line.hasPrefix("@@") {
-                colour = NSColor(red: 0.42, green: 0.32, blue: 0.62, alpha: 1)
+                colour = WorkbenchTheme.diffHunk
             } else if line.hasPrefix("+") {
-                colour = NSColor(red: 0.12, green: 0.45, blue: 0.29, alpha: 1)
+                colour = WorkbenchTheme.diffAdded
             } else if line.hasPrefix("-") {
-                colour = NSColor(red: 0.64, green: 0.22, blue: 0.24, alpha: 1)
+                colour = WorkbenchTheme.diffRemoved
             } else {
-                colour = NSColor.labelColor.withAlphaComponent(0.88)
+                colour = ReplyStyle.nativeInk
             }
             result.append(NSAttributedString(string: String(line) + "\n", attributes: [
                 .font: font, .foregroundColor: colour, .paragraphStyle: paragraph
@@ -450,7 +450,7 @@ struct RemoteFilePanel: View {
                 Divider()
             }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }.background(.white)
+        }.background(WorkbenchTheme.contentBackground)
             .onChange(of: browser.loading) { _, loading in if loading { selection = NSRange(location: 0, length: 0) } }
             .onChange(of: browser.mode) { _, _ in selection = NSRange(location: 0, length: 0) }
             .sheet(item: $feedbackContext) { context in
@@ -505,7 +505,7 @@ struct RemoteFilePanel: View {
                                         Text(entry.label).font(.system(size: 10)).foregroundStyle(.secondary)
                                     }.frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
-                                        .background(entry.path == browser.gitPath ? Color.black.opacity(0.05) : .clear)
+                                        .background(entry.path == browser.gitPath ? Color.primary.opacity(0.05) : .clear)
                                 }.buttonStyle(.plain)
                             }
                         }.padding(.vertical, 8)

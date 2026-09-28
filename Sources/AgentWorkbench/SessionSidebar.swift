@@ -323,7 +323,7 @@ private struct ConnectionControls: View {
                     }
                 }.padding(.vertical, 6)
             }
-        }.font(.system(size: 11)).padding(15).background(.black.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
+        }.font(.system(size: 11)).padding(15).background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
     }
     private func agentStatus(_ name: String, online: Bool, error: String?, reconnect: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 5) {

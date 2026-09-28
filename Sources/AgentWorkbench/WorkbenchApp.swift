@@ -8,10 +8,11 @@ struct WorkbenchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = WorkbenchModel()
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
+    @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: appLanguage.resolvedLocale) }
     var body: some Scene {
         WindowGroup("Perch") {
-            WorkbenchView(model: model).preferredColorScheme(.light)
+            WorkbenchView(model: model).preferredColorScheme(appAppearance.colorScheme)
                 .frame(minWidth: 940, minHeight: 620)
                 .environment(\.locale, appLanguage.resolvedLocale)
                 .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }

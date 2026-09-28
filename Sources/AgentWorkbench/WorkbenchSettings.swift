@@ -10,6 +10,7 @@ struct WorkbenchSettings: View {
     @State private var editingHost: SSHHost?
     @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
+    @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex, .claude]
     var body: some View {
         Form {
@@ -90,6 +91,11 @@ struct WorkbenchSettings: View {
                 Text("完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。")
             }
             Section {
+                Picker("外观", selection: $appAppearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance)
+                    }
+                }
                 SettingsRow(action: { showSummary = true }) {
                     Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
                     Text("活动叙事与 Recap").foregroundStyle(.primary)
@@ -106,7 +112,7 @@ struct WorkbenchSettings: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
-                    Text(verbatim: "Perch \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                    Text(verbatim: versionLabel)
                         .font(.caption2).foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 8)
@@ -116,6 +122,13 @@ struct WorkbenchSettings: View {
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
             .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
             .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
+    }
+
+    private var versionLabel: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? ""
+        let revision = info?["PerchSourceRevision"] as? String ?? ""
+        return revision.isEmpty ? "Perch \(version)" : "Perch \(version) (\(revision))"
     }
 
     @ViewBuilder private var localAgentStatus: some View {
