@@ -11,7 +11,7 @@ bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
     Sources/AgentWorkbench/ToolActivityView.swift
-    Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
+    Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/ReplyMarkdownView.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
