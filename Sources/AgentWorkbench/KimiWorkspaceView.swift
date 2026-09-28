@@ -23,11 +23,7 @@ struct KimiWorkspaceView: View {
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
                 if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
-                let recapRevision = !conversation.snapshot.session.busy
-                    && conversation.snapshot.session.lastTurnReason == "completed"
-                    && pending == 0 && conversation.error == nil
-                    ? TaskRecapInput.revision(in: conversation.displayMessages) : nil
-                let recapKey = recapRevision.map {
+                let recapKey = conversation.taskRecapRevision.map {
                     "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
                 }
                 ConversationActivityBar(activity: ConversationActivity(
@@ -130,6 +126,8 @@ struct KimiWorkspaceView: View {
                                         disabledReason: !connection.online ? L("连接恢复后可修改设置。")
                                             : !connection.snapshotReady ? L("正在同步会话，请稍候。")
                                             : connection.sending ? L("消息发送中，请稍候。") : nil,
+                                        catalogError: connection.modelsError,
+                                        onRefreshCatalog: { await connection.refreshModels() },
                                         sessionModel: sessionModel, usesSessionModel: choice.isEmpty,
                                         onUseSessionModel: {
                                             connection.modelChoices[sessionID] = ""

@@ -341,6 +341,7 @@ private final class ConversationDocumentView: NSView {
     func configure(_ next: [ConversationEntryView], navigation: [ConversationTurnSummary], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
                    contentOriginY: CGFloat) {
+        ConversationReadingMemory.shared.visit(sessionId)
         // An older page changes every subsequent row's y, but not the reader's
         // message or offset inside it. Capture using the outgoing geometry.
         if self.sessionId == sessionId, let first = contents.first?.entry.id,
@@ -634,12 +635,12 @@ private final class ConversationDocumentView: NSView {
         guard restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
               let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
-        ConversationReadingMemory.shared.positions[sessionId] = .init(entry: contents[index].entry.id,
-            index: index, offset: clip.bounds.minY - contentOriginY - offsets[index])
+        ConversationReadingMemory.shared.savePosition(.init(entry: contents[index].entry.id,
+            index: index, offset: clip.bounds.minY - contentOriginY - offsets[index]), for: sessionId)
     }
     private func saveReadingHeights() {
         guard !sessionId.isEmpty else { return }
-        ConversationReadingMemory.shared.measuredHeights[sessionId] = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
+        ConversationReadingMemory.shared.saveHeights(Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights)), for: sessionId)
     }
     fileprivate func cancelPendingRestoration() {
         readingIntent += 1

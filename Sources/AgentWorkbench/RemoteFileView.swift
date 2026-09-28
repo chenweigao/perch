@@ -69,14 +69,14 @@ final class RemoteFileBrowser: ObservableObject {
     func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false) {
         targetLine = line
         mode = .file
-        guard let host else { error = "当前会话没有可用的远端主机。"; return }
+        guard let host else { error = "当前会话没有可用的执行环境。"; return }
         let resolved: String
         let command: String
         do {
-            try SSHCommand.validateDestination(host.destination)
+            if !host.isLocal { try SSHCommand.validateDestination(host.destination) }
             if fromConversation {
                 command = try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd,
-                                                                 roots: resolutionRoots(for: requested))
+                                                                 roots: directoryHints)
                 resolved = (try? RemoteFilePath.resolve(requested, cwd: cwd)) ?? requested
             } else {
                 resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
@@ -111,20 +111,8 @@ final class RemoteFileBrowser: ObservableObject {
         }
     }
 
-    /// Hints are most-recent-first. When a tool call's absolute path ends with the
-    /// referenced relative path, its root goes first: the agent touched that file,
-    /// so its checkout wins over a stale same-path copy at the session directory.
-    private func resolutionRoots(for reference: String) -> [String] {
-        let trimmed = reference.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~") else { return directoryHints }
-        let suffix = "/" + trimmed
-        guard let evidence = directoryHints.first(where: { $0.hasSuffix(suffix) }) else { return directoryHints }
-        let root = String(evidence.dropLast(suffix.count))
-        return [root.isEmpty ? "/" : root] + directoryHints
-    }
-
     func loadGitStatus() {
-        guard host != nil else { error = "当前会话没有可用的远端主机。"; return }
+        guard host != nil else { error = "当前会话没有可用的执行环境。"; return }
         if !gitDirectory.isEmpty {
             loadGitStatus(directories: [gitDirectory], allowSuggestion: false)
             return
@@ -134,7 +122,7 @@ final class RemoteFileBrowser: ObservableObject {
         candidates = candidates.filter { !$0.isEmpty }.reduce(into: []) { values, value in
             if !values.contains(value) { values.append(value) }
         }
-        guard !candidates.isEmpty else { error = "当前会话没有远端工作目录。"; return }
+        guard !candidates.isEmpty else { error = "当前会话没有工作目录。"; return }
         loadGitStatus(directories: candidates, allowSuggestion: !gitSelectionExplicit)
     }
 
@@ -234,7 +222,7 @@ final class RemoteFileBrowser: ObservableObject {
     private func run(_ command: String, destination: String, token: Int,
                      apply: @escaping (RemoteFileBrowser, Data) throws -> Void,
                      failed: @escaping (RemoteFileBrowser) -> Void) {
-        let session = RemoteReader()
+        let session = RemoteReader(local: host?.isLocal == true)
         reader = session
         task = Task { [weak self] in
             let result = await session.run(command: command, destination: destination)
@@ -270,6 +258,8 @@ final class RemoteFileBrowser: ObservableObject {
 
 /// Owns one ssh process so a pending read can actually be stopped.
 private final class RemoteReader: @unchecked Sendable {
+    private let local: Bool
+    init(local: Bool = false) { self.local = local }
     private let lock = NSLock()
     private var process: Process?
     private var cancelled = false
@@ -292,8 +282,8 @@ private final class RemoteReader: @unchecked Sendable {
 
     private func execute(command: String, destination: String) -> Result<Data, Error> {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = RemoteGitCommand.sshArguments(destination: destination, command: command)
+        process.executableURL = URL(fileURLWithPath: local ? "/bin/sh" : "/usr/bin/ssh")
+        process.arguments = local ? ["-c", command] : RemoteGitCommand.sshArguments(destination: destination, command: command)
         process.standardInput = FileHandle.nullDevice
         let output = Pipe(), errors = Pipe()
         process.standardOutput = output
@@ -360,7 +350,7 @@ struct RemoteFilePanel: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "doc.text.magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
-                Text("远端文件").font(.system(size: 13, weight: .semibold))
+                Text("文件").font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 0)
                 Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板")
@@ -369,7 +359,7 @@ struct RemoteFilePanel: View {
             VStack(alignment: .leading, spacing: 9) {
                 Text("\(browser.hostName)\(browser.cwd.isEmpty ? "" : " · \(browser.cwd)")")
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    .help("读取在该 SSH 主机上执行，只读。")
+                    .help("在当前执行环境中只读查看文件。")
                 Picker("", selection: $browser.mode) {
                     ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
                 }.pickerStyle(.segmented).labelsHidden()
@@ -378,7 +368,7 @@ struct RemoteFilePanel: View {
                     }
                 if browser.mode == .file {
                     HStack(spacing: 7) {
-                        TextField("远端路径，可用绝对路径或相对当前目录", text: $browser.input)
+                        TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
                             .textFieldStyle(.roundedBorder).font(.system(size: 12)).onSubmit { browser.submit() }
                         if browser.loading {
                             Button("取消") { browser.cancel() }.controlSize(.small)
@@ -478,7 +468,7 @@ struct RemoteFilePanel: View {
                     diffPane
                 }
             case nil:
-                notice("读取远端 Git 工作树的改动。", symbol: "arrow.triangle.branch", tint: .secondary)
+                notice("读取当前项目 Git 工作树的改动。", symbol: "arrow.triangle.branch", tint: .secondary)
             }
         }
     }
@@ -576,7 +566,7 @@ struct RemoteFilePanel: View {
             case .missing:
                 notice("路径不存在。", symbol: "questionmark.folder", tint: .orange)
             case nil:
-                notice("输入远端路径后打开。只读查看，不修改远端内容。", symbol: "doc.text", tint: .secondary)
+                notice("输入文件路径后打开。只读查看，不修改文件。", symbol: "doc.text", tint: .secondary)
             }
         }
     }

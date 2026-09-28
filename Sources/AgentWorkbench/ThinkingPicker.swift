@@ -28,6 +28,8 @@ struct ThinkingPicker: View {
                 Text("较高强度会花更多时间思考。")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            } else if model?.hasThinkingCapability == true {
+                explanation(L("支持思考，但尚未声明可选档位。请补充 Agent 的模型配置。"))
             } else {
                 explanation(model == nil ? L("尚未读取到当前模型的思考档位。") : L("此模型未提供思考档位设置。"))
             }

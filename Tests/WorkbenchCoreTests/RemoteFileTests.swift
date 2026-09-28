@@ -128,10 +128,27 @@ func checkRemoteFileViewer() async throws {
     expectEqual(try await reference(relative, roots: [worktree]),
                 .text("another worktree", truncated: false, size: 16))
 
+    // Only an absolute tool path is known; ./ must not let the stale main copy win.
+    for cited in [relative, "./" + relative, "./Sources/./AgentWorkbench/" + filename] {
+        let command = try RemoteFileCommand.referenceCommand(path: cited, cwd: main,
+            roots: [duplicateFile.path, duplicate.path])
+        let data = try await ProcessRunner.run("/bin/sh", ["-c", command])
+        expectEqual(try RemoteFileCommand.parse(data), .text("another worktree", truncated: false, size: 16))
+        expectEqual(RemoteFileCommand.resolvedPath(in: data), duplicateFile.path)
+    }
+
     // The header echoes the path the remote actually read.
     let echo = try RemoteFileCommand.referenceCommand(path: relative, cwd: root.path, roots: [worktree])
     let echoedData = try await ProcessRunner.run("/bin/sh", ["-c", echo])
     expectEqual(RemoteFileCommand.resolvedPath(in: echoedData), duplicateFile.path)
+
+    // A valid filename can contain the wire header delimiter; it must not become content.
+    let multiline = source.appendingPathComponent("before\n--\nafter.swift")
+    try Data("payload\n".utf8).write(to: multiline)
+    let multilineCommand = try RemoteFileCommand.referenceCommand(path: multiline.path, cwd: main, roots: [])
+    let multilineData = try await ProcessRunner.run("/bin/sh", ["-c", multilineCommand])
+    expectEqual(try RemoteFileCommand.parse(multilineData), .text("payload\n", truncated: false, size: 8))
+    expectEqual(RemoteFileCommand.resolvedPath(in: multilineData), multiline.path)
 
     // A bare filename is searched across every root, including one outside the
     // session directory; a root that vanished mid-session is skipped, and

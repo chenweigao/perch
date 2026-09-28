@@ -10,11 +10,46 @@ final class ConversationReadingMemory {
         var index: Int
         var offset: CGFloat
     }
-    var measuredHeights: [String: [String: CGFloat]] = [:]
-    var positions: [String: Position] = [:]
+    private(set) var measuredHeights: [String: [String: CGFloat]] = [:]
+    private var heightOrder: [String] = []
+    private var sessionOrder: [String] = []
+    private(set) var positions: [String: Position] = [:]
     var following: [String: Bool] = [:]
     var expansions: [String: Bool] = [:]
     var seenRevision: [String: String] = [:]
+
+    func visit(_ session: String) {
+        if sessionOrder.last != session {
+            sessionOrder.removeAll { $0 == session }
+            sessionOrder.append(session)
+        }
+        if sessionOrder.count > 256 { remove(sessionOrder[0]) }
+    }
+
+    func saveHeights(_ heights: [String: CGFloat], for session: String) {
+        // SwiftUI can dismantle a deleted/evicted transcript after its records
+        // were removed. That late teardown must not recreate the cache entry.
+        guard sessionOrder.contains(session) else { return }
+        measuredHeights[session] = heights
+        heightOrder.removeAll { $0 == session }
+        heightOrder.append(session)
+        if heightOrder.count > 16 { measuredHeights.removeValue(forKey: heightOrder.removeFirst()) }
+    }
+
+    func savePosition(_ position: Position, for session: String) {
+        guard sessionOrder.contains(session) else { return }
+        positions[session] = position
+    }
+
+    func remove(_ session: String) {
+        sessionOrder.removeAll { $0 == session }
+        heightOrder.removeAll { $0 == session }
+        measuredHeights.removeValue(forKey: session)
+        positions.removeValue(forKey: session)
+        following.removeValue(forKey: session)
+        seenRevision.removeValue(forKey: session)
+        expansions = expansions.filter { !$0.key.hasPrefix(session + ":") }
+    }
 }
 private struct ConversationReduceMotionKey: EnvironmentKey { static let defaultValue = false }
 private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: (Bool) -> Void = { _ in } }

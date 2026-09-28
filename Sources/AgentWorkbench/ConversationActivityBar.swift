@@ -319,26 +319,27 @@ private struct TaskRecapPopover: View {
     }
 
     private func resultView(_ result: TaskRecapResult) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 13) {
-                Text(result.outcome).font(.system(size: 13, weight: .medium)).textSelection(.enabled)
-                recapSection("主要改动", items: result.changes)
-                recapSection("验证", items: result.validation)
-                recapSection("遗留", items: result.remaining)
-                recapSection("下一步", items: result.nextSteps)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
-        }.frame(maxHeight: 360)
-            .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 14) {
-                    Button(copied ? "已复制" : "复制") { copy(result) }.buttonStyle(.borderless)
-                    Spacer()
-                    if configured {
-                        Button("重新生成") { generate(force: true) }.buttonStyle(.borderless)
-                    } else {
-                        Button("配置后重新生成") { showSettings = true }.buttonStyle(.borderless)
-                    }
-                }.padding(.top, 8).background(.background)
+        VStack(spacing: 8) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 13) {
+                    Text(result.outcome).font(.system(size: 13, weight: .medium)).textSelection(.enabled)
+                    recapSection("主要改动", items: result.changes)
+                    recapSection("验证", items: result.validation)
+                    recapSection("遗留", items: result.remaining)
+                    recapSection("下一步", items: result.nextSteps)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
+            }.frame(height: 360)
+            Divider()
+            HStack(spacing: 14) {
+                Button(copied ? "已复制" : "复制") { copy(result) }.buttonStyle(.borderless)
+                Spacer()
+                if configured {
+                    Button("重新生成") { generate(force: true) }.buttonStyle(.borderless)
+                } else {
+                    Button("配置后重新生成") { showSettings = true }.buttonStyle(.borderless)
+                }
             }
+        }
     }
 
     @ViewBuilder private func recapSection(_ title: LocalizedStringKey, items: [String]) -> some View {

@@ -1,5 +1,22 @@
 import Foundation
 
+extension KimiConversation {
+    /// Completion identity must not depend on which transcript pages are loaded.
+    public var taskRecapRevision: String? {
+        let session = snapshot.session
+        guard !session.busy, session.lastTurnReason == "completed", error == nil,
+              snapshot.pendingApprovals.isEmpty, snapshot.pendingQuestions.isEmpty else { return nil }
+        return "completed:\(session.updatedAt)"
+    }
+}
+
+extension NativeAgentSnapshot {
+    public var taskRecapRevision: String? {
+        guard !busy, interactions.isEmpty, error == nil, completed > 0 else { return nil }
+        return "completed:\(history?.epoch ?? ""):\(completed):\(revision)"
+    }
+}
+
 public struct TaskRecapInput: Encodable, Equatable {
     public struct Turn: Encodable, Equatable {
         public let request: String
@@ -33,32 +50,6 @@ public struct TaskRecapInput: Encodable, Equatable {
     enum CodingKeys: String, CodingKey {
         case turns, steps, evidence
         case omittedTurnCount = "omitted_turn_count"
-    }
-
-    public static func revision(in messages: [KimiMessage]) -> String? {
-        guard let user = messages.last(where: \.isUserPrompt) else { return nil }
-        let start = messages.lastIndex(where: { $0.id == user.id }) ?? messages.startIndex
-        let tail = messages[start...]
-        let answer = tail.last { $0.role == "assistant" && !$0.content.compactMap(\.visibleText).joined().isEmpty }
-        let last = answer ?? tail.last
-        guard let last else { return nil }
-        var digest: UInt64 = 14_695_981_039_346_656_037
-        func add(_ value: String) {
-            for byte in value.utf8 { digest = (digest ^ UInt64(byte)) &* 1_099_511_628_211 }
-            digest = (digest ^ 0xff) &* 1_099_511_628_211
-        }
-        for message in tail {
-            add(message.id)
-            for part in message.content {
-                if let text = part.visibleText { add(text) }
-                if part.type == "tool_result" {
-                    add(part.toolCallId ?? "")
-                    add(part.isError == true ? "error" : "result")
-                    add(part.output?.display ?? "")
-                }
-            }
-        }
-        return "\(user.id):\(last.id):\(String(digest, radix: 16))"
     }
 
     public static func make(messages: [KimiMessage], includeToolOutput: Bool = false) -> Self? {

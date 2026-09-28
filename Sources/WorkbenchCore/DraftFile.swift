@@ -12,6 +12,8 @@ public struct SavedDrafts: Codable, Sendable {
 /// Ordered atomic writes keep text and queued instructions recoverable after restart.
 public final class DraftFile: @unchecked Sendable {
     private let writer = DispatchQueue(label: "perch.drafts")
+    private var pending: (SavedDrafts, @Sendable (String?) -> Void)?
+    private var scheduledSave: DispatchWorkItem?
     public let url: URL
     public init(url: URL) { self.url = url }
     public static func applicationFile(namespace: String) -> DraftFile {
@@ -30,8 +32,32 @@ public final class DraftFile: @unchecked Sendable {
         try JSONEncoder().encode(value).write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
-    public func save(_ value: SavedDrafts, completion: @escaping @Sendable (String?) -> Void) {
-        writer.async { do { try self.write(value); completion(nil) } catch { completion(error.localizedDescription) } }
+    /// Text edits share a bounded 250 ms window. Queue and attachment changes bypass
+    /// it; only the newest pending text save reports completion.
+    public func save(_ value: SavedDrafts, coalescing: Bool = false, completion: @escaping @Sendable (String?) -> Void) {
+        writer.async {
+            self.pending = (value, completion)
+            if coalescing {
+                guard self.scheduledSave == nil else { return }
+                let work = DispatchWorkItem { self.writePending() }
+                self.scheduledSave = work
+                self.writer.asyncAfter(deadline: .now() + .milliseconds(250), execute: work)
+            } else {
+                self.scheduledSave?.cancel()
+                self.writePending()
+            }
+        }
     }
-    public func flush(_ value: SavedDrafts) throws { try writer.sync { try write(value) } }
+    private func writePending() {
+        scheduledSave = nil
+        guard let (value, completion) = pending else { return }
+        pending = nil
+        do { try write(value); completion(nil) } catch { completion(error.localizedDescription) }
+    }
+    public func flush(_ value: SavedDrafts) throws {
+        try writer.sync {
+            scheduledSave?.cancel(); scheduledSave = nil; pending = nil
+            try write(value)
+        }
+    }
 }

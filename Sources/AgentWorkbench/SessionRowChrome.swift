@@ -24,7 +24,7 @@ struct SessionRowChrome<Indicator: View>: View {
     @FocusState private var focus: Focus?
 
     private var showActions: Bool { hovered || selected || archived || focus != nil }
-    private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 24 : 0 }
+    private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 28 : 0 }
     var body: some View {
         HStack(spacing: 0) {
             Button(action: onOpen) {
@@ -45,7 +45,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 if !archived {
                     Button(action: onPin) {
                         Image(systemName: starred ? "pin.slash" : "pin")
-                            .frame(width: 24, height: 28).contentShape(Rectangle())
+                            .frame(width: 28, height: 28).contentShape(Rectangle())
                     }.help(starred ? L("取消置顶") : L("置顶会话"))
                         .accessibilityLabel(starred ? L("取消置顶") : L("置顶会话")).disabled(busy)
                         .focused($focus, equals: .pin)
@@ -53,7 +53,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 if canQuickArchive {
                     Button(action: onArchive) {
                         Image(systemName: archived ? "arrow.uturn.backward" : "archivebox")
-                            .frame(width: 24, height: 28).contentShape(Rectangle())
+                            .frame(width: 28, height: 28).contentShape(Rectangle())
                     }.help(archived ? L("恢复会话") : L("归档会话"))
                         .accessibilityLabel(archived ? L("恢复会话") : L("归档会话")).disabled(busy)
                         .focused($focus, equals: .archive)
@@ -70,7 +70,7 @@ struct SessionRowChrome<Indicator: View>: View {
             }
         }.padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
             .background {
-                RoundedRectangle(cornerRadius: 8).fill(.black.opacity(selected ? 0.065 : hovered ? 0.03 : 0))
+                RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(selected ? 0.065 : hovered ? 0.03 : 0))
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: selected)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: hovered)
             }

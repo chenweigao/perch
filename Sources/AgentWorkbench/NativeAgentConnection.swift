@@ -13,7 +13,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var wantsConnection = false
     @Published var error: String?
     @Published var actionError: String?
-    @Published var drafts: [String: String] = [:] { didSet { persistDrafts() } }
+    @Published var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
     @Published private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     @Published var queue = OutboundQueue() { didSet { persistDrafts() } }
@@ -36,6 +36,7 @@ final class NativeAgentConnection: ObservableObject {
     @Published private(set) var loadingOlder = false
     private var historyWindows: [String: (start: Int, epoch: String)] = [:]
     private var nextCatalogRefresh = Date.distantPast
+    private var nextIdleSnapshotRefresh = Date.distantPast
     private var selectionGeneration = UUID()
     private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
@@ -50,11 +51,11 @@ final class NativeAgentConnection: ObservableObject {
             drafts = saved.text
             queue = saved.outbox
             draftFile = file
-        } catch { draftLoadError = error.localizedDescription; draftSaveError = "Draft recovery failed; the original file was preserved: \(error.localizedDescription)" }
+        } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
-    private func persistDrafts() {
-        draftFile?.save(savedDrafts) { [weak self] error in
-            Task { @MainActor in self?.draftSaveError = error.map { "Drafts could not be saved: " + $0 } }
+    private func persistDrafts(coalescing: Bool = false) {
+        draftFile?.save(savedDrafts, coalescing: coalescing) { [weak self] error in
+            Task { @MainActor in self?.draftSaveError = error.map { L("草稿保存失败：\($0)") } }
         }
     }
     func flushDrafts() throws {
@@ -77,7 +78,7 @@ final class NativeAgentConnection: ObservableObject {
         try await request("/setup?provider=" + provider.rawValue)
     }
     func connect() {
-        guard !host.destination.isEmpty else { return }
+        guard host.isLocal || !host.destination.isEmpty else { return }
         disconnect(); let token = UUID(); generation = token; wantsConnection = true
         task = Task {
             while !Task.isCancelled && generation == token {
@@ -102,6 +103,7 @@ final class NativeAgentConnection: ObservableObject {
         task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
         nextCatalogRefresh = .distantPast
+        nextIdleSnapshotRefresh = .distantPast
         online = false; wantsConnection = false; error = nil; closeTunnel()
     }
     private func closeTunnel() {
@@ -110,9 +112,14 @@ final class NativeAgentConnection: ObservableObject {
         if let directory { try? FileManager.default.removeItem(at: directory) }; directory = nil
     }
     private func establish(_ token: UUID) async throws {
-        try SSHCommand.validateDestination(host.destination)
-        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
-            command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
+        let data: Data
+        if host.isLocal {
+            data = try await LocalAgentRuntime.endpoint(for: .codex, host: host)
+        } else {
+            try SSHCommand.validateDestination(host.destination)
+            data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+                command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
+        }
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
         if let pending = endpoint["restartPending"].int {
@@ -122,6 +129,12 @@ final class NativeAgentConnection: ObservableObject {
             throw WorkbenchError(L("桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。"))
         }
         guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError("原生对话托管服务未安装或不可用") }
+        if host.isLocal {
+            api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
+            let health: JSONValue = try await request("/health")
+            guard health["version"].int == 4 else { throw WorkbenchError(L("请更新原生对话桥接服务后重新连接")) }
+            return
+        }
         let local = try KimiAPI.availableLoopbackPort()
         let folder = URL(fileURLWithPath: "/tmp/awb-native-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]); directory = folder
@@ -165,12 +178,29 @@ final class NativeAgentConnection: ObservableObject {
             try await refresh()
             nextCatalogRefresh = now.addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
         } else { try await refreshReceipts() }
-        if selectionTask == nil { try await refreshSelected() }
+        let selected = sessions.first { $0.id == selectedID }
+        let active = snapshot == nil || snapshot?.busy == true || selected?.busy == true
+            || (selected?.pending ?? 0) > 0 || snapshot?.interactions.isEmpty == false
+            || queue.allItems.contains { message in
+                guard message.session.terminalID == selectedID else { return false }
+                switch message.state {
+                case .submitting, .accepted, .running, .unknown: return true
+                case .draftQueued: return queue.nextPendingID(for: message.session, isStreaming: false) == message.id
+                case .failed, .stoppedBeforeDelivery, .delivered: return false
+                }
+            }
+        if selectionTask == nil && (active || now >= nextIdleSnapshotRefresh) {
+            nextIdleSnapshotRefresh = now.addingTimeInterval(2)
+            try await refreshSelected()
+        }
     }
     func refresh() async throws {
         struct Catalog: Decodable { let sessions: [NativeAgentSession] }
         let value: Catalog = try await request("/sessions")
         let next = value.sessions.sorted { $0.updated > $1.updated }
+        if next.first(where: { $0.id == selectedID }) != sessions.first(where: { $0.id == selectedID }) {
+            nextIdleSnapshotRefresh = .distantPast
+        }
         var clocks = timings
         for session in next {
             clocks.observe(sessionID: session.id, turnID: session.turnId, requestID: session.turnId,
@@ -229,7 +259,7 @@ final class NativeAgentConnection: ObservableObject {
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
         if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }
-        selectedID = id; snapshot = nil; actionError = nil
+        selectedID = id; snapshot = nil; actionError = nil; nextIdleSnapshotRefresh = .distantPast
         historyTask?.cancel(); historyTask = nil; loadingOlder = false
         selectionTask?.cancel()
         selectionGeneration = UUID(); let token = selectionGeneration
@@ -264,7 +294,10 @@ final class NativeAgentConnection: ObservableObject {
         // A page may have expanded the window while this delta was in flight.
         // It did not cover edits in that newly loaded prefix: leave the revision
         // untouched and let the next normal tick request the expanded window.
-        if let window = value.history, window.indices != nil, window.start != snapshot?.history?.start { return }
+        if let window = value.history, window.indices != nil, window.start != snapshot?.history?.start {
+            nextIdleSnapshotRefresh = .distantPast
+            return
+        }
         let next = try value.applying(to: snapshot)
         if let previous = snapshot, previous.busy != next.busy || previous.completed != next.completed || previous.interactions != next.interactions {
             nextCatalogRefresh = .distantPast

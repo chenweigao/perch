@@ -165,7 +165,46 @@ struct ConnectionChecks {
         preconditionFailure("connection did not settle")
     }
     @MainActor
+    static func checkIdleSnapshotPolling() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Polling", destination: "fixture"), transport: fixture.request)
+        try await client.refresh()
+        client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        let started = Date()
+        let before = fixture.snapshotRequests.count
+        for tick in 0..<20 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        precondition(fixture.snapshotRequests.count - before == 4, "Idle snapshots should be checked every two seconds")
+        fixture.sessions["a"]?["busy"] = true
+        try await client.refresh()
+        let runningBefore = fixture.snapshotRequests.count
+        for tick in 0..<10 { try await client.poll(now: started.addingTimeInterval(8 + Double(tick) * 0.4)) }
+        precondition(fixture.snapshotRequests.count - runningBefore == 10, "Running replies retain every polling tick")
+        fixture.sessions["a"]?["busy"] = false
+        fixture.sessions["a"]?["pending"] = 1
+        try await client.refresh()
+        let approvalBefore = fixture.snapshotRequests.count
+        for tick in 0..<5 { try await client.poll(now: started.addingTimeInterval(12 + Double(tick) * 0.4)) }
+        precondition(fixture.snapshotRequests.count - approvalBefore == 5, "Pending approvals must not be throttled")
+        client.select("b")
+        await settle { client.snapshot?.id == "b" }
+        let reference = client.reference("b")!
+        client.queue.enqueue("Failed send", for: reference, mode: .nextTurn, id: "failed-idle")
+        client.queue.markFailed("failed-idle", "Rejected")
+        client.queue.enqueue("Paused send", for: reference, mode: .nextTurn, id: "paused-idle")
+        client.queue.pauseForStop(reference)
+        let retainedBefore = fixture.snapshotRequests.count
+        for tick in 0..<20 { try await client.poll(now: started.addingTimeInterval(16 + Double(tick) * 0.4)) }
+        precondition(fixture.snapshotRequests.count - retainedBefore == 4, "Failed and paused sends must not keep an idle transcript polling rapidly")
+        precondition(client.queue.message("failed-idle")?.state == .failed("Rejected"))
+        precondition(client.queue.message("paused-idle")?.state == .stoppedBeforeDelivery && fixture.prompts.isEmpty)
+        client.disconnect()
+        print("PASS: idle snapshot requests 20 → 4 including failed/paused sends, running and approvals stay responsive, selection loads immediately")
+    }
+
+    @MainActor
     static func main() async throws {
+        try await checkIdleSnapshotPolling()
         try await checkNativeLoading()
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()

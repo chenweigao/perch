@@ -14,6 +14,15 @@ func checkConnectivity() throws {
     let remoteSession = SessionReference(hostID: remote.hostID, terminalID: "productB-shared", kind: .omp)
     precondition(localSession.id != remoteSession.id)
 
+    var localHost = SSHHost(id: ExecutionEnvironment.localHostID, name: "Local", destination: "",
+                            enabledAgents: [.kimi, .codex], autoConnectHerdr: false)
+    localHost.localAgentPaths = ["kimi": "/path with spaces/kimi"]
+    let restored = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(localHost))
+    precondition(restored.isLocal && restored.localAgentPaths == localHost.localAgentPaths)
+    precondition(!SSHHost(name: "Remote", destination: "host").isLocal)
+    precondition(LocalAgentDiscovery.supported == [.kimi, .codex])
+    precondition(LocalAgentDiscovery.executableName(.qoder) == "qoderclicn")
+
     // A GUI app does not inherit the shell PATH, so absolute defaults come first.
     let candidates = LocalAgentDiscovery.candidates(
         named: "omp", defaults: LocalAgentDiscovery.ompSearchPaths,
@@ -31,9 +40,10 @@ func checkConnectivity() throws {
                                                  path: nil, home: "/Users/developer").isEmpty)
 
     // Version parsing accepts the installed format; unreadable output stays unknown.
-    precondition(LocalAgentDiscovery.parseOMPVersion("omp/17.1.4") == "17.1.4")
-    precondition(LocalAgentDiscovery.parseOMPVersion("omp v17.1.4\n") == "17.1.4")
-    precondition(LocalAgentDiscovery.parseOMPVersion("command not found") == nil)
+    precondition(LocalAgentDiscovery.parseVersion("omp/17.1.4") == "17.1.4")
+    precondition(LocalAgentDiscovery.parseVersion("omp v17.1.4\n") == "17.1.4")
+    precondition(LocalAgentDiscovery.parseVersion("command not found") == nil)
+    precondition(LocalAgentDiscovery.parseVersion("codex-cli 0.155.0-alpha.16.3") == "0.155.0-alpha.16.3")
     precondition(LocalAgentDiscovery.missingOMPHint.contains("不会自动安装"))
 
     // Launch arguments keep approvals explicit and never enable yolo.

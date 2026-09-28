@@ -66,10 +66,12 @@ struct NewTaskView: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 32)
-            VStack(alignment: .leading, spacing: 16) {
-                Text("新建任务").font(.title2.weight(.semibold))
-                if let group = model.selectedGroup { Text(group.name).foregroundStyle(.secondary) }
-                VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(spacing: 6) {
+                    Text("新建任务").font(.title2.weight(.semibold))
+                    if let group = model.selectedGroup { Text(group.name).font(.callout).foregroundStyle(.secondary) }
+                }.frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: 8) {
                     if !attachments.isEmpty {
                         ScrollView(.horizontal) {
                             HStack {
@@ -84,65 +86,75 @@ struct NewTaskView: View {
                                     canSend: canStart, onSend: start,
                                     onFiles: provider == .kimi ? addAttachments : nil,
                                     onError: { error = $0 })
-                }.frame(minHeight: 80, alignment: .top).padding(14).workbenchControlSurface().disabled(creating)
-                if provider != .kimi && !attachments.isEmpty {
-                    Text("Choose Kimi or remove the attachments to start this task.").font(.caption).foregroundStyle(.secondary)
-                }
-                HStack(spacing: 12) {
-                    ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
-                    Menu {
-                        ForEach(model.connections) { connection in
-                            Button {
-                                agentModel = ""
-                                model.activateAgentEnvironment(connection.id)
-                                cwd = defaultDirectory(for: connection.id)
-                            } label: {
-                                Label { Text(connection.host.name) } icon: { HostIdentityIcon.menuImage(for: connection.id) }
-                                    .labelStyle(.titleAndIcon)
+                    HStack(spacing: 12) {
+                        ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
+                        Menu {
+                            ForEach(model.connections) { connection in
+                                Button {
+                                    agentModel = ""
+                                    model.activateAgentEnvironment(connection.id)
+                                    cwd = defaultDirectory(for: connection.id)
+                                } label: {
+                                    Label { Text(connection.host.name) } icon: { HostIdentityIcon.menuImage(for: connection.id) }
+                                        .labelStyle(.titleAndIcon)
+                                }
                             }
-                        }
-                    } label: {
-                        DraftMenuLabel { Label { Text(kimi.host.name) } icon: { HostIdentityIcon.menuImage(for: kimi.host.id) } }
-                    }.menuStyle(.borderlessButton).fixedSize()
-                        .accessibilityLabel("运行环境")
-                    Menu {
-                        ForEach(availableProviders, id: \.self) { kind in
-                            Button {
-                                selectProvider(kind)
-                            } label: {
-                                if kind == provider { Label(kind.label, systemImage: "checkmark") } else { Text(kind.label) }
+                            Divider()
+                            Button("配置其他 Agent…") { showSetup = true }
+                        } label: {
+                            DraftMenuLabel { Label { Text(kimi.host.name) } icon: { HostIdentityIcon.menuImage(for: kimi.host.id) } }
+                        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                            .accessibilityLabel("运行环境")
+                        Menu {
+                            ForEach(availableProviders, id: \.self) { kind in
+                                Button {
+                                    selectProvider(kind)
+                                } label: {
+                                    if kind == provider { Label(kind.label, systemImage: "checkmark") } else { Text(kind.label) }
+                                }
                             }
-                        }
-                    } label: {
-                        DraftMenuLabel { Text(provider.label) }
-                    }.menuStyle(.borderlessButton).fixedSize()
-                        .accessibilityLabel("选择 Agent")
-                    Spacer()
-                    if provider == .kimi {
-                        ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel, emphasizesSelection: true)
-                    } else if showsNativePicker {
-                        ModelPicker(models: nativeModelOptions, selection: $agentModel, emphasizesSelection: true)
-                    } else if provider == .codex {
-                        ModelControlWidth {
-                            Menu {
-                                ForEach(codexModels) { option in
-                                    Button {
-                                        agentModel = option.id
-                                    } label: {
-                                        if option.id == agentModel { Label(option.name, systemImage: "checkmark") }
-                                        else { Text(option.name) }
+                        } label: {
+                            DraftMenuLabel { Text(provider.label) }
+                        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                            .accessibilityLabel("选择 Agent")
+                        if provider == .kimi {
+                            ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel, emphasizesSelection: true)
+                        } else if showsNativePicker {
+                            ModelPicker(models: nativeModelOptions, selection: $agentModel, emphasizesSelection: true)
+                        } else if provider == .codex {
+                            ModelControlWidth {
+                                Menu {
+                                    ForEach(codexModels) { option in
+                                        Button {
+                                            agentModel = option.id
+                                        } label: {
+                                            if option.id == agentModel { Label(option.name, systemImage: "checkmark") }
+                                            else { Text(option.name) }
+                                        }
                                     }
-                                }
-                                if codexModels.isEmpty { Text("正在读取模型…") }
-                            } label: {
-                                DraftMenuLabel {
-                                    Text(selectedCodexModel?.name ?? "选择 Codex 模型")
-                                        .foregroundStyle(selectedCodexModel != nil ? .primary : .secondary)
-                                }
-                            }.menuStyle(.borderlessButton).fixedSize().disabled(codexModels.isEmpty)
+                                    if codexModels.isEmpty { Text("正在读取模型…") }
+                                } label: {
+                                    DraftMenuLabel {
+                                        Text(selectedCodexModel?.name ?? "选择 Codex 模型")
+                                            .foregroundStyle(selectedCodexModel != nil ? .primary : .secondary)
+                                    }
+                                }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(codexModels.isEmpty)
+                            }
                         }
+                        Spacer(minLength: 0)
+                        PermissionPicker(provider: provider, capability: permissionCapability,
+                                         disabled: creating, allowsSelection: provider != .dsh) { mode in
+                            permissionMode = mode
+                        }
+                        ComposerActionButton(isRunning: false, isStopping: creating, canSend: canStart, canStop: false,
+                                             onSend: start, onStop: {})
                     }
-                }.disabled(creating)
+                }.padding(12).workbenchControlSurface().disabled(creating)
+                if provider != .kimi {
+                    Text("附件当前仅支持 Kimi；可在消息中提供运行环境中的文件路径。")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 HStack(spacing: 12) {
                     HStack(spacing: 8) {
                         Image(systemName: "folder").foregroundStyle(.secondary)
@@ -160,14 +172,13 @@ struct NewTaskView: View {
                         ForEach(recent, id: \.self) { path in Button(path) { cwd = path } }
                     } label: {
                         DraftMenuLabel { Text("最近使用") }
-                    }.menuStyle(.borderlessButton).fixedSize()
+                    }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 }.disabled(creating)
                 if provider != .kimi && provider != .codex {
                     TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel).textFieldStyle(.roundedBorder).disabled(creating)
                 }
-                PermissionPicker(provider: provider, capability: permissionCapability, layout: .form,
-                                 disabled: creating, allowsSelection: provider != .dsh) { mode in
-                    permissionMode = mode
+                if provider != .kimi && !attachments.isEmpty {
+                    Text("Choose Kimi or remove the attachments to start this task.").font(.caption).foregroundStyle(.secondary)
                 }
                 if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
                     Text(modelsError).font(.caption).foregroundStyle(.orange)
@@ -177,7 +188,9 @@ struct NewTaskView: View {
                         if let connectionError {
                             Text(connectionError).font(.callout).foregroundStyle(.orange).textSelection(.enabled)
                         } else {
-                            Text(LocalizedStringKey(availableProviders.isEmpty ? "此机器尚未配置原生 Agent。" : "正在连接所选 Agent…"))
+                            Text(LocalizedStringKey(!availableProviders.contains(provider) ? "此机器尚未配置原生 Agent。"
+                                : (provider == .kimi ? kimi.connecting : native.wantsConnection)
+                                    ? "正在连接所选 Agent…" : "尚未连接所选 Agent。"))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         HStack {
@@ -189,26 +202,26 @@ struct NewTaskView: View {
                     }
                 }
                 if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
-                HStack {
-                    Button("配置其他 Agent…") { showSetup = true }
-                        .font(.caption).buttonStyle(.plain).foregroundStyle(.secondary).disabled(creating)
-                    Spacer()
-                    Button("取消") { model.draftingNewTask = false }.keyboardShortcut(.cancelAction).disabled(creating)
-                        .controlSize(.large)
-                    Button(creating ? L("正在启动…") : L("开始任务"), action: start).keyboardShortcut(.defaultAction)
-                        .buttonStyle(.borderedProminent).disabled(!canStart)
-                        .controlSize(.large)
-                }
-            }.padding(24).frame(maxWidth: 650)
+            }.frame(maxWidth: 680)
             Spacer(minLength: 32)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.white)
+            .overlay(alignment: .topTrailing) {
+                Button { model.draftingNewTask = false } label: {
+                    Image(systemName: "xmark").font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28).contentShape(Rectangle())
+                }.buttonStyle(.plain).keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("取消").padding(14)
+            }
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
             }
             .sheet(isPresented: $showSetup) {
-                AddHostSheet(model: model, host: kimi.host) { launch in
-                    selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
+                if kimi.host.isLocal { LocalAgentSetupSheet(model: model) }
+                else {
+                    AddHostSheet(model: model, host: kimi.host) { launch in
+                        selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
+                    }
                 }
             }
             .onChange(of: kimi.host.id) { _, _ in
@@ -266,6 +279,12 @@ struct NewTaskView: View {
         let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
         Task {
             do {
+                if kimi.host.isLocal {
+                    var isDirectory: ObjCBool = false
+                    guard FileManager.default.fileExists(atPath: directory, isDirectory: &isDirectory), isDirectory.boolValue else {
+                        throw WorkbenchError(L("本机项目目录不存在"))
+                    }
+                }
                 if selectedProvider == .kimi {
                     let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text,
                                                                model: selectedModel, permissionMode: selectedPermission)
