@@ -43,6 +43,7 @@ struct ProtocolTests {
         try checkSlashCommands()
         try await checkRemoteFileViewer()
         try await checkRemoteGitDiff()
+        try await checkRemoteGitComparison()
         let checks = ProtocolTests()
         checks.testPreviewAndPinnedTabs()
         try checks.testWorkspacePersistenceAndReviewRevision()

@@ -118,9 +118,9 @@ struct KimiToolCard: View {
             if expanded {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(tool.name).foregroundStyle(.secondary)
-                    if let input = tool.input { Text("Input").foregroundStyle(.secondary); SelectableReplyText(input.display) }
-                    if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); SelectableReplyText(progress.display) }
-                    if let output = tool.output { Text("Output").foregroundStyle(.secondary); SelectableReplyText(output.display) }
+                    if let input = tool.input { Text("Input").foregroundStyle(.secondary); DisclosureReplyText(text: input.display) }
+                    if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
+                    if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
                     if tool.input == nil && tool.output == nil && tool.progress == nil { Text("暂无Input或返回内容").foregroundStyle(.secondary) }
                 }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
                     .padding(10)

@@ -174,7 +174,7 @@ private struct SessionSidebarRow: View {
     var body: some View {
         SessionRowChrome(title: item.title, subtitle: subtitle,
                          hostName: item.hostName, hostID: item.reference.hostID,
-                         directory: item.directory, detail: "\(item.reference.kind.label) · \(item.detail)",
+                         directory: item.directory, detail: item.detail,
                          groups: groups, updatedAt: item.updatedAt,
                          selected: selected,
                          starred: model.workspace.starred.contains(item.reference), archived: item.archived,

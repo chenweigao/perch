@@ -13,6 +13,7 @@ struct NewTaskView: View {
     @State private var provider: SessionKind = .kimi
     @State private var cwd = ""
     @State private var agentModel = ""
+    @State private var thinking: ThinkingLevel?
     @State private var creating = false
     @State private var error: String?
     @State private var attachments: [URL] = []
@@ -28,6 +29,39 @@ struct NewTaskView: View {
     private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
     private var recent: [String] { recentDirectories(for: kimi.host.id) }
+    private var availableModels: [AgentModel] {
+        provider == .kimi ? kimi.catalog : native.models(for: provider)
+    }
+    private var selectedAgentModel: AgentModel? {
+        availableModels.first { $0.id == agentModel }
+    }
+    private var supportsModelCatalog: Bool {
+        [.kimi, .omp, .dsh, .codex].contains(provider)
+    }
+    private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
+    private var modelCatalogID: String {
+        availableModels.map { "\($0.provider):\($0.id):\($0.thinking.map(\.rawValue).joined(separator: ","))" }.joined(separator: "|")
+    }
+    private var hasInitialContent: Bool {
+        !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
+    }
+    private var canCreate: Bool {
+        let modelIsValid = provider != .codex || selectedAgentModel != nil
+        return !creating && modelIsValid && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/")
+            && availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online)
+    }
+    private var canStart: Bool { canCreate && hasInitialContent }
+    private var canCreateEmpty: Bool { canCreate && !hasInitialContent && attachments.isEmpty }
+    private var directoryWarning: String? {
+        let path = cwd.trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = path.split(separator: "/")
+        if path == "/" || (components.count == 2 && (components[0] == "Users" || components[0] == "home")) {
+            return L("工作目录范围较大，Agent 可能访问多个项目。")
+        }
+        let prefix = path.hasSuffix("/") ? path : path + "/"
+        let descendants = Set(recent.filter { $0 != path && $0.hasPrefix(prefix) })
+        return descendants.count > 1 ? L("工作目录范围较大，Agent 可能访问多个项目。") : nil
+    }
     /// Directory defaults stay scoped to their host: a path valid on one machine
     /// does not exist on another, so the selected session and the last-used
     /// directory must not leak across environments.
@@ -40,19 +74,6 @@ struct NewTaskView: View {
         if let saved = UserDefaults.standard.string(forKey: savedDirectoryKey(for: hostID)) { return saved }
         return recentDirectories(for: hostID).first ?? ""
     }
-    private var codexModels: [AgentModel] { native.models(for: .codex) }
-    private var nativeModelOptions: [ModelOption] { ModelCatalog.options(native.models(for: provider)) }
-    private var showsNativePicker: Bool { (provider == .omp || provider == .dsh) && !nativeModelOptions.isEmpty }
-    private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
-    private var selectedCodexModel: AgentModel? { codexModels.first { $0.id == agentModel } }
-    /// Attachments ride the Kimi session channel; native adapters have none, so an
-    /// attachment-only draft can start a Kimi task but never a native one.
-    private var canStart: Bool {
-        let hasContent = !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
-        let modelIsValid = provider != .codex || selectedCodexModel != nil
-        return !creating && hasContent && modelIsValid && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/")
-            && availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online)
-    }
     /// Menu triggers on this page match the composer row: a 12pt value with a quiet chevron.
     private struct DraftMenuLabel<Content: View>: View {
         let content: Content
@@ -64,6 +85,53 @@ struct NewTaskView: View {
             }.font(.system(size: 12)).padding(.vertical, 6).contentShape(Rectangle())
         }
     }
+
+    private var agentMenu: some View {
+        Menu {
+            ForEach(availableProviders, id: \.self) { kind in
+                Button { selectProvider(kind) } label: {
+                    if kind == provider { Label(kind.label, systemImage: "checkmark") } else { Text(kind.label) }
+                }
+            }
+        } label: {
+            DraftMenuLabel { Text(provider.label) }
+        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            .accessibilityLabel("选择 Agent")
+    }
+
+    @ViewBuilder private var modelControl: some View {
+        if supportsModelCatalog {
+            VStack(alignment: .leading, spacing: 6) {
+                ComposerModelPicker(models: availableModels, modelID: agentModel, thinking: thinking,
+                                    disabledReason: creating ? L("正在启动…") : nil,
+                                    catalogError: provider == .kimi ? nil : native.modelsError,
+                                    onRefreshCatalog: {
+                                        if provider == .kimi { await kimi.refreshModels() }
+                                        else { await native.loadModels() }
+                                    }, layout: .combined, usesDefaultModel: agentModel.isEmpty,
+                                    onUseDefaultModel: provider == .codex ? nil : {
+                                        agentModel = ""; thinking = nil
+                                    }, scope: L("首条消息生效"), onSelectModel: { option in
+                                        agentModel = option.id
+                                        thinking = option.resolve(thinking)
+                                    }, onSelectThinking: { thinking = $0 })
+                if availableModels.isEmpty && (provider == .omp || provider == .dsh) {
+                    TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"),
+                              text: $agentModel)
+                        .textFieldStyle(.roundedBorder).frame(maxWidth: 300)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                ModelControlWidth(maximum: 260) {
+                    TextField(L("模型（留空使用远端默认值）"), text: $agentModel)
+                        .textFieldStyle(.roundedBorder)
+                }
+                Text("思考不可调").font(.system(size: 11)).foregroundStyle(.secondary).fixedSize()
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 32)
@@ -72,11 +140,12 @@ struct NewTaskView: View {
                     Text("新建任务").font(.title2.weight(.semibold))
                     if let group = model.selectedGroup { Text(group.name).font(.callout).foregroundStyle(.secondary) }
                 }.frame(maxWidth: .infinity)
-                HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 12) {
                         Menu {
                             ForEach(model.connections) { connection in
                                 Button {
-                                    agentModel = ""
+                                    agentModel = ""; thinking = nil
                                     model.activateAgentEnvironment(connection.id)
                                     cwd = defaultDirectory(for: connection.id)
                                 } label: {
@@ -91,23 +160,28 @@ struct NewTaskView: View {
                         }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                             .accessibilityLabel("运行环境")
 
-                    HStack(spacing: 8) {
-                        Image(systemName: "folder").foregroundStyle(.secondary)
-                        TextField("项目目录（绝对路径）", text: $cwd).textFieldStyle(.plain).focused($cwdFocused)
-                    }.padding(.horizontal, 10).padding(.vertical, 7)
-                        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(cwdFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12),
-                                              lineWidth: cwdFocused ? 2 : 1)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { cwdFocused = true }
-                    Menu {
-                        ForEach(recent, id: \.self) { path in Button(path) { cwd = path } }
-                    } label: {
-                        DraftMenuLabel { Text("最近使用") }
-                    }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        HStack(spacing: 8) {
+                            Image(systemName: "folder").foregroundStyle(.secondary)
+                            TextField("项目目录（绝对路径）", text: $cwd).textFieldStyle(.plain).focused($cwdFocused)
+                        }.padding(.horizontal, 10).padding(.vertical, 7)
+                            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(cwdFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12),
+                                                  lineWidth: cwdFocused ? 2 : 1)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { cwdFocused = true }
+                        Menu {
+                            ForEach(recent, id: \.self) { path in Button(path) { cwd = path } }
+                        } label: {
+                            DraftMenuLabel { Text("最近使用") }
+                        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    }
+                    if let directoryWarning {
+                        Label(directoryWarning, systemImage: "exclamationmark.triangle")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
                 }.disabled(creating)
                 VStack(alignment: .leading, spacing: 8) {
                     if !attachments.isEmpty {
@@ -131,9 +205,13 @@ struct NewTaskView: View {
                                 Text(agentModel.isEmpty ? provider.label : "\(provider.label) · \(agentModel)").lineLimit(1).truncationMode(.middle)
                             } icon: { Image(systemName: "slider.horizontal.3") }
                                 .font(.system(size: 12))
-                        }.buttonStyle(.plain).help("Agent、模型与权限")
+                        }.buttonStyle(.plain).help("Agent、模型、思考与权限")
                             .popover(isPresented: $showConfiguration) { configuration }
                         Spacer(minLength: 0)
+                        if !hasInitialContent && attachments.isEmpty {
+                            Button(creating ? L("正在创建…") : L("仅创建空会话")) { create(sendInitialPrompt: false) }
+                                .disabled(!canCreateEmpty).controlSize(.small)
+                        }
                         ComposerActionButton(isRunning: false, isStopping: creating, canSend: canStart, canStop: false,
                                              onSend: start, onStop: {})
                     }
@@ -187,6 +265,7 @@ struct NewTaskView: View {
                 else {
                     AddHostSheet(model: model, host: kimi.host) { launch in
                         selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
+                        reconcileThinking()
                     }
                 }
             }
@@ -195,6 +274,11 @@ struct NewTaskView: View {
                     selectProvider(availableProviders.first ?? .kimi)
                 }
             }
+            .onChange(of: modelCatalogID) { _, _ in
+                if provider == .codex { selectCodexModel() }
+                reconcileThinking()
+            }
+            .onChange(of: agentModel) { _, _ in reconcileThinking() }
             .onDisappear { if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) } }
             .task(id: catalogID) {
                 // A native catalog is now needed before any session exists. Qoder
@@ -203,15 +287,17 @@ struct NewTaskView: View {
                 await native.loadModels()
                 guard !Task.isCancelled else { return }
                 if provider == .codex { selectCodexModel() }
+                reconcileThinking()
             }
             .onAppear {
                 if let launch = model.launchAfterSetup {
                     model.launchAfterSetup = nil
                     model.activateAgentEnvironment(launch.hostID)
                     provider = launch.provider; cwd = launch.directory; agentModel = launch.model
+                    thinking = savedThinking(for: provider)
                 } else if let data = UserDefaults.standard.data(forKey: defaultsKey), let saved = try? JSONDecoder().decode(TaskLaunchDefaults.self, from: data),
                           model.connections.contains(where: { $0.id == saved.hostID }) {
-                    provider = saved.provider; cwd = saved.directory; agentModel = saved.model
+                    provider = saved.provider; cwd = saved.directory; agentModel = saved.model; thinking = saved.thinking
                     model.activateAgentEnvironment(saved.hostID)
                 } else {
                     let groupItem = model.groupResumeSession ?? model.allSessions.first { model.selectedGroup?.sessions.contains($0.reference) == true }
@@ -220,80 +306,71 @@ struct NewTaskView: View {
                     if let host = groupItem?.reference.hostID { model.activateAgentEnvironment(host) }
                     cwd = groupItem?.directory ?? defaultDirectory(for: model.kimi.host.id)
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
+                    thinking = savedThinking(for: provider)
                 }
-                if !model.kimi.host.enabledAgents.contains(provider) { provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi }
-                permissionMode = PermissionDefaults.mode(for: provider) ?? PermissionCatalog.runtimeManaged
+                if !model.kimi.host.enabledAgents.contains(provider) {
+                    selectProvider(model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi)
+                } else {
+                    permissionMode = PermissionDefaults.mode(for: provider) ?? PermissionCatalog.runtimeManaged
+                    reconcileThinking()
+                }
             }
     }
     private func selectProvider(_ value: SessionKind) {
         provider = value
         agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? ""
+        thinking = savedThinking(for: value)
         permissionMode = PermissionDefaults.mode(for: value) ?? PermissionCatalog.runtimeManaged
+        if value == .codex { selectCodexModel() }
+        reconcileThinking()
     }
     private func selectCodexModel() {
-        if selectedCodexModel != nil { return }
+        if selectedAgentModel != nil { return }
         let saved = UserDefaults.standard.string(forKey: "new.model.codex") ?? ""
-        agentModel = codexModels.first { $0.id == saved }?.id ?? codexModels.first?.id ?? ""
+        agentModel = availableModels.first { $0.id == saved }?.id ?? availableModels.first?.id ?? ""
+        reconcileThinking()
+    }
+    private func savedThinking(for provider: SessionKind) -> ThinkingLevel? {
+        ThinkingLevel.parse(UserDefaults.standard.string(forKey: "new.thinking.\(provider.rawValue)"))
+    }
+    private func reconcileThinking() {
+        if let selectedAgentModel {
+            thinking = selectedAgentModel.resolve(thinking)
+        } else if agentModel.isEmpty || !availableModels.isEmpty {
+            thinking = nil
+        }
     }
     private var configuration: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("任务配置").font(.headline)
-            Menu {
-                ForEach(availableProviders, id: \.self) { kind in
-                    Button {
-                        selectProvider(kind)
-                    } label: {
-                        if kind == provider { Label(kind.label, systemImage: "checkmark") } else { Text(kind.label) }
-                    }
-                }
-            } label: {
-                DraftMenuLabel { Text(provider.label) }
-            }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .accessibilityLabel("选择 Agent")
-            if provider == .kimi {
-                ModelPicker(models: ModelCatalog.options(kimi.models), selection: $agentModel, emphasizesSelection: true)
-            } else if showsNativePicker {
-                ModelPicker(models: nativeModelOptions, selection: $agentModel, emphasizesSelection: true)
-            } else if provider == .codex {
-                ModelControlWidth {
-                    Menu {
-                        ForEach(codexModels) { option in
-                            Button {
-                                agentModel = option.id
-                            } label: {
-                                if option.id == agentModel { Label(option.name, systemImage: "checkmark") }
-                                else { Text(option.name) }
-                            }
-                        }
-                        if codexModels.isEmpty { Text("正在读取模型…") }
-                    } label: {
-                        DraftMenuLabel {
-                            Text(selectedCodexModel?.name ?? "选择 Codex 模型")
-                                .foregroundStyle(selectedCodexModel != nil ? .primary : .secondary)
-                        }
-                    }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(codexModels.isEmpty)
-                }
-            }
-            if provider != .kimi && provider != .codex && !showsNativePicker {
-                TextField(L("模型（留空使用远端默认值）"), text: $agentModel)
-                    .textFieldStyle(.roundedBorder)
-            }
-            PermissionPicker(provider: provider, capability: permissionCapability, layout: .form,
-                             disabled: creating, allowsSelection: provider != .dsh) { mode in
+            Text("Agent").font(.caption).foregroundStyle(.secondary)
+            agentMenu
+            Divider()
+            Text("模型与思考").font(.caption).foregroundStyle(.secondary)
+            modelControl
+            Divider()
+            Text("权限").font(.caption).foregroundStyle(.secondary)
+            PermissionPicker(provider: provider, capability: permissionCapability,
+                             disabled: creating, allowsSelection: provider != .dsh, showsTitle: true) { mode in
                 permissionMode = mode
             }
             Button("完成") { showConfiguration = false }
                 .frame(maxWidth: .infinity, alignment: .trailing)
-        }.padding(18).frame(width: 340).disabled(creating)
+        }.padding(18).frame(width: 360).disabled(creating)
     }
     private func addAttachments(_ files: [URL]) {
         for file in files where !attachments.contains(file) { attachments.append(file) }
     }
-    private func start() {
-        guard canStart else { return }; creating = true
+    private func start() { create(sendInitialPrompt: true) }
+    private func create(sendInitialPrompt: Bool) {
+        guard sendInitialPrompt ? canStart : canCreateEmpty else { return }
+        creating = true
         let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd, files = attachments
         let selectedPermission = permissionMode
-        let defaults = TaskLaunchDefaults(hostID: kimi.host.id, provider: selectedProvider, directory: directory, model: selectedModel)
+        let selectedThinking = selectedAgentModel?.resolve(thinking)
+        let selectedHost = kimi.host.id
+        let defaults = TaskLaunchDefaults(hostID: selectedHost, provider: selectedProvider, directory: directory,
+                                          model: selectedModel, thinking: selectedThinking)
         Task {
             do {
                 if kimi.host.isLocal {
@@ -303,21 +380,30 @@ struct NewTaskView: View {
                     }
                 }
                 if selectedProvider == .kimi {
-                    let session = try await kimi.createSession(title: "", cwd: directory, initialPrompt: text,
-                                                               model: selectedModel, permissionMode: selectedPermission)
-                    if !files.isEmpty { kimi.attachments[session.id] = files }
-                    model.newKimiCreated(session)
-                    await kimi.sendPrompt(for: session.id)
+                    let session = try await kimi.createSession(title: "", cwd: directory,
+                                                               initialPrompt: sendInitialPrompt ? text : nil,
+                                                               model: selectedModel.isEmpty ? nil : selectedModel,
+                                                               thinking: selectedThinking, permissionMode: selectedPermission)
+                    if sendInitialPrompt {
+                        if !files.isEmpty { kimi.attachments[session.id] = files }
+                        model.newKimiCreated(session)
+                        await kimi.sendPrompt(for: session.id)
+                    } else {
+                        model.newKimiCreated(session)
+                    }
                 } else {
                     let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel,
-                                                          permissionMode: selectedPermission)
-                    native.drafts[session.id] = text
+                                                          thinking: selectedThinking, permissionMode: selectedPermission)
+                    if sendInitialPrompt { native.drafts[session.id] = text }
                     model.newNativeCreated(session)
-                    native.send()
+                    if sendInitialPrompt { native.send() }
                 }
                 UserDefaults.standard.set(try JSONEncoder().encode(defaults), forKey: defaultsKey)
                 UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
-                UserDefaults.standard.set(directory, forKey: savedDirectoryKey(for: kimi.host.id))
+                let thinkingKey = "new.thinking.\(selectedProvider.rawValue)"
+                if let selectedThinking { UserDefaults.standard.set(selectedThinking.rawValue, forKey: thinkingKey) }
+                else { UserDefaults.standard.removeObject(forKey: thinkingKey) }
+                UserDefaults.standard.set(directory, forKey: savedDirectoryKey(for: selectedHost))
                 prompt = ""; attachments = []; model.draftingNewTask = false
             } catch { self.error = error.localizedDescription; creating = false }
         }

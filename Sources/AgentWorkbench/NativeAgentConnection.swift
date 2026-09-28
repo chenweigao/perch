@@ -343,15 +343,17 @@ final class NativeAgentConnection: ObservableObject {
         }
     }
 
-    func create(provider: SessionKind, cwd: String, model: String, permissionMode: String? = nil) async throws -> NativeAgentSession {
+    func create(provider: SessionKind, cwd: String, model: String, thinking: ThinkingLevel? = nil,
+                permissionMode: String? = nil) async throws -> NativeAgentSession {
         guard let selectedPermission = permissionMode ?? PermissionDefaults.mode(for: provider),
               PermissionCatalog.isValid(selectedPermission, for: provider) else {
             throw WorkbenchError("当前 Agent 的权限模式无效")
         }
-        let body: [String: JSONValue] = [
+        var body: [String: JSONValue] = [
             "provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model),
             "permissionMode": .string(selectedPermission)
         ]
+        if let thinking { body["thinking"] = .string(thinking.rawValue) }
         let session: NativeAgentSession = try await request("/sessions", body: .object(body))
         sessions.insert(session, at: 0); onSessionsChanged?(); select(session.id); return session
     }

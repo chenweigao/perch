@@ -1,6 +1,11 @@
 import SwiftUI
 import WorkbenchCore
 
+enum ComposerModelPickerLayout {
+    case split
+    case combined
+}
+
 struct ComposerModelPicker: View {
     @UILocalization private var L
     let models: [AgentModel]
@@ -13,6 +18,9 @@ struct ComposerModelPicker: View {
     var sessionModel: String?
     var usesSessionModel = false
     var onUseSessionModel: (() -> Void)?
+    var layout: ComposerModelPickerLayout = .split
+    var usesDefaultModel = false
+    var onUseDefaultModel: (() -> Void)?
     let scope: String
     let onSelectModel: (AgentModel) -> Void
     let onSelectThinking: (ThinkingLevel) -> Void
@@ -20,57 +28,81 @@ struct ComposerModelPicker: View {
     @State private var thinkingPresented = false
 
     private var model: AgentModel? { models.first { $0.id == modelID } }
-    private var title: String { model?.name ?? (modelID.isEmpty ? L("选择模型") : modelID) }
+    private var title: String { model?.name ?? (modelID.isEmpty ? L("默认模型") : modelID) }
     private var thinkingTitle: String {
-        model?.resolve(thinking)?.label ?? "Default"
+        guard let model else { return modelID.isEmpty ? L("模型默认") : L("不可调") }
+        guard model.supportsThinking else { return L("不可调") }
+        return model.resolve(thinking)?.label ?? L("默认")
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            ModelControlWidth {
+        if layout == .combined {
+            ModelControlWidth(maximum: 300) {
                 Button { presented.toggle() } label: {
                     HStack(spacing: 5) {
-                        Text(title).lineLimit(1).truncationMode(.middle)
+                        Text(title).lineLimit(1).truncationMode(.middle).layoutPriority(1)
+                        Text("· \(thinkingTitle)").foregroundStyle(.secondary).fixedSize()
                         chevron
                     }
                     .font(.system(size: 12))
                     .padding(.vertical, 6).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(L("选择模型"))
-                .accessibilityLabel(L("选择模型"))
-                .accessibilityValue(title)
+                .help(disabledReason ?? L("模型与思考"))
+                .accessibilityLabel(L("模型与思考"))
+                .accessibilityValue("\(title) · \(thinkingTitle)")
                 .accessibilityIdentifier("composer-model-thinking")
                 .popover(isPresented: $presented, arrowEdge: .top) {
                     panel.task { await onRefreshCatalog?() }
                 }
             }
-            if let model, model.supportsThinking, unavailableReason == nil {
-                Button { thinkingPresented.toggle() } label: {
-                    HStack(spacing: 5) {
-                        Text(verbatim: thinkingTitle)
-                        chevron
-                    }
-                    .font(.system(size: 12)).foregroundStyle(.secondary)
-                    .padding(.vertical, 6).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain).fixedSize()
-                .help(disabledReason ?? L("思考强度"))
-                .accessibilityLabel(L("思考强度"))
-                .accessibilityValue(thinkingTitle)
-                .accessibilityIdentifier("composer-thinking")
-                .popover(isPresented: $thinkingPresented, arrowEdge: .top) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ThinkingPicker(model: model, current: thinking, disabled: disabledReason != nil) {
-                            onSelectThinking($0)
-                            thinkingPresented = false
+        } else {
+            HStack(spacing: 12) {
+                ModelControlWidth {
+                    Button { presented.toggle() } label: {
+                        HStack(spacing: 5) {
+                            Text(title).lineLimit(1).truncationMode(.middle)
+                            chevron
                         }
-                        Divider()
-                        Text(disabledReason ?? scope)
-                            .font(.system(size: 11)).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }.padding(12).frame(width: 240)
-                        .onExitCommand { thinkingPresented = false }
+                        .font(.system(size: 12))
+                        .padding(.vertical, 6).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(L("选择模型"))
+                    .accessibilityLabel(L("选择模型"))
+                    .accessibilityValue(title)
+                    .accessibilityIdentifier("composer-model-thinking")
+                    .popover(isPresented: $presented, arrowEdge: .top) {
+                        panel.task { await onRefreshCatalog?() }
+                    }
+                }
+                if let model, model.supportsThinking, unavailableReason == nil {
+                    Button { thinkingPresented.toggle() } label: {
+                        HStack(spacing: 5) {
+                            Text(verbatim: thinkingTitle)
+                            chevron
+                        }
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .padding(.vertical, 6).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).fixedSize()
+                    .help(disabledReason ?? L("思考强度"))
+                    .accessibilityLabel(L("思考强度"))
+                    .accessibilityValue(thinkingTitle)
+                    .accessibilityIdentifier("composer-thinking")
+                    .popover(isPresented: $thinkingPresented, arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ThinkingPicker(model: model, current: thinking, disabled: disabledReason != nil) {
+                                onSelectThinking($0)
+                                thinkingPresented = false
+                            }
+                            Divider()
+                            Text(disabledReason ?? scope)
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }.padding(12).frame(width: 240)
+                            .onExitCommand { thinkingPresented = false }
+                    }
                 }
             }
         }
@@ -82,11 +114,12 @@ struct ComposerModelPicker: View {
     }
 
     private var panel: ComposerModelPanel {
-        ComposerModelPanel(models: models, modelID: modelID,
+        ComposerModelPanel(models: models, modelID: modelID, thinking: thinking,
                            disabledReason: disabledReason, unavailableReason: unavailableReason,
                            catalogError: catalogError, sessionModel: sessionModel, usesSessionModel: usesSessionModel,
-                           onUseSessionModel: onUseSessionModel, scope: scope,
-                           onSelectModel: onSelectModel,
+                           onUseSessionModel: onUseSessionModel, layout: layout,
+                           usesDefaultModel: usesDefaultModel, onUseDefaultModel: onUseDefaultModel,
+                           scope: scope, onSelectModel: onSelectModel, onSelectThinking: onSelectThinking,
                            dismiss: { presented = false })
     }
 }
@@ -95,14 +128,19 @@ private struct ComposerModelPanel: View {
     @UILocalization private var L
     let models: [AgentModel]
     let modelID: String
+    let thinking: ThinkingLevel?
     let disabledReason: String?
     let unavailableReason: String?
     let catalogError: String?
     let sessionModel: String?
     let usesSessionModel: Bool
     let onUseSessionModel: (() -> Void)?
+    let layout: ComposerModelPickerLayout
+    let usesDefaultModel: Bool
+    let onUseDefaultModel: (() -> Void)?
     let scope: String
     let onSelectModel: (AgentModel) -> Void
+    let onSelectThinking: (ThinkingLevel) -> Void
     let dismiss: () -> Void
     @State private var query = ""
     @State private var provider = ""
@@ -124,6 +162,13 @@ private struct ComposerModelPanel: View {
                     .fixedSize(horizontal: false, vertical: true).padding(14)
             }
             if unavailableReason == nil {
+                if layout == .combined {
+                    ThinkingPicker(model: model, current: thinking, disabled: disabledReason != nil,
+                                   unavailableReason: modelID.isEmpty ? L("使用默认模型时，思考强度由模型决定。") : nil,
+                                   onSelect: onSelectThinking)
+                        .padding(14)
+                    Divider()
+                }
                 VStack(spacing: 10) {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
@@ -145,6 +190,15 @@ private struct ComposerModelPanel: View {
                     Text(catalogError).font(.caption).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 14).padding(.bottom, 8)
                 }
+                if let onUseDefaultModel {
+                    ModelPickerRow(title: Text("使用默认模型"), detail: nil,
+                                   selected: usesDefaultModel) {
+                        onUseDefaultModel()
+                        if layout == .split { dismiss() }
+                    }
+                        .disabled(disabledReason != nil).padding(.horizontal, 6)
+                        .accessibilityIdentifier("model-thinking-default")
+                }
                 if let onUseSessionModel {
                     ModelPickerRow(title: Text("沿用会话模型"), detail: sessionModel,
                                    selected: usesSessionModel) {
@@ -159,16 +213,18 @@ private struct ComposerModelPanel: View {
                         ForEach(providers, id: \.self) { group in
                             ForEach(matches.filter { $0.provider == group }) { option in
                                 ModelPickerRow(title: Text(option.name), detail: option.provider,
-                                               selected: !usesSessionModel && option.id == modelID) {
+                                               selected: !usesSessionModel && !usesDefaultModel && option.id == modelID) {
                                     onSelectModel(option)
-                                    dismiss()
+                                    if layout == .split { dismiss() }
                                 }
                                     .help(option.id).disabled(disabledReason != nil)
                                     .accessibilityIdentifier("model-option:\(option.provider):\(option.id)")
                             }
                         }
                         if matches.isEmpty {
-                            Text(models.isEmpty ? L("尚未读取到模型目录，可继续使用会话模型。") : L("没有匹配的模型"))
+                            Text(models.isEmpty
+                                 ? L(onUseDefaultModel == nil ? "尚未读取到模型目录，可继续使用会话模型。" : "尚未读取到模型目录，可继续使用默认模型。")
+                                 : L("没有匹配的模型"))
                                 .font(.system(size: 12)).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(12)
                         }
@@ -179,7 +235,7 @@ private struct ComposerModelPanel: View {
             VStack(alignment: .leading, spacing: 6) {
                 if let disabledReason {
                     Label(disabledReason, systemImage: "lock")
-                } else if let model, !model.supportsThinking, unavailableReason == nil {
+                } else if layout == .split, let model, !model.supportsThinking, unavailableReason == nil {
                     if model.hasThinkingCapability == true {
                         Text("支持思考，但尚未声明可选档位。请补充 Agent 的模型配置。")
                     } else {

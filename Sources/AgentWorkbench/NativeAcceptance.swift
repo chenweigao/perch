@@ -210,6 +210,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     func run(_ mode: String) async {
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
+        if mode == "branch-review" { await reviewWorkflow(branch: true); return }
         var report: [String: Any] = ["mode": mode, "history_turns": 200, "catalog_sessions": 500,
                                    "window_points": [1280, 820], "native_transport": "fixed in-memory JSON; real decode/select",
                                    "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS"]
@@ -634,13 +635,18 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         if let view = root as? NSTextView, view.string == text { return true }
         return root.subviews.contains { containsText(text, in: $0) }
     }
+    private func reviewSource(in root: NSView?) -> NSTextView? {
+        guard let root else { return nil }
+        if let text = root as? NSTextView, text.identifier?.rawValue == "PerchReviewSource" { return text }
+        return root.subviews.lazy.compactMap { self.reviewSource(in: $0) }.first
+    }
     private func processCPU() -> Double {
         var value = rusage(); getrusage(RUSAGE_SELF, &value)
         return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
             + Double(value.ru_utime.tv_usec + value.ru_stime.tv_usec) / 1_000_000
     }
-    private func reviewWorkflow() async {
-        var report: [String: Any] = ["mode": "review", "real_agent": false]
+    private func reviewWorkflow(branch: Bool = false) async {
+        var report: [String: Any] = ["mode": branch ? "branch-review" : "review", "real_agent": false]
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("perch-review-\(UUID())")
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -678,6 +684,48 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             try await settle(window, "Git diff") { !browser.loading && browser.gitDiff != nil }
             guard case .text(let diff, _) = browser.gitDiff, diff.contains("+let title") else { throw WorkbenchError("Missing diff") }
             report["local_file_and_diff_read"] = true
+            if branch {
+                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "branch", "review-base"])
+                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "add", "Example.swift"])
+                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Reviewed change"])
+                try "let title = \"Dirty edit\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
+                browser.gitBaseInput = "review-base"
+                browser.gitRange = .branch
+                try await settle(window, "branch comparison") { !browser.loading && browser.gitComparison != nil }
+                guard let comparison = browser.gitComparison, let changed = comparison.entries.first else { throw WorkbenchError("Missing committed entry") }
+                browser.loadGitDiff(changed)
+                try await settle(window, "committed diff") { !browser.loading && browser.gitDiff != nil }
+                guard case .text(let committed, _) = browser.gitDiff,
+                      committed.contains("After 中文"), !committed.contains("Dirty edit") else { throw WorkbenchError("Uncommitted content leaked into branch review") }
+                let selected = ReviewContext(path: file.path, text: committed, selection: (committed as NSString).range(of: "+let title"), diff: true, scope: comparison.scope)
+                model.appendReviewContext(selected.prompt(feedback: "Review committed change"), to: item.reference)
+                guard model.native.drafts[item.reference.terminalID]?.contains(comparison.headCommit) == true,
+                      model.native.drafts[item.reference.terminalID]?.contains(comparison.mergeBase) == true,
+                      model.native.queue.allItems.isEmpty else { throw WorkbenchError("Branch scope lost or sent") }
+                report["committed_only_and_versioned_draft"] = true
+                browser.gitBaseInput = "missing-branch"; browser.loadGitComparison()
+                try await settle(window, "invalid base") { !browser.loading && browser.error != nil }
+                guard browser.gitComparison == nil, browser.gitDiff == nil else { throw WorkbenchError("Invalid target retained stale diff") }
+                report["invalid_target_clears_previous_diff"] = true
+                browser.gitRange = .unstaged
+                try await settle(window, "return to working changes") { !browser.loading && browser.error == nil && browser.gitComparison == nil }
+                guard case .changes(_, _, let dirtyEntries) = browser.gitStatus, let dirty = dirtyEntries.first else { throw WorkbenchError("Missing working changes") }
+                browser.loadGitDiff(dirty)
+                try await settle(window, "working diff") { !browser.loading && browser.gitDiff != nil }
+                guard case .text(let working, _) = browser.gitDiff, working.contains("Dirty edit") else { throw WorkbenchError("Working range did not restore") }
+                report["working_range_restored"] = true
+                browser.gitBaseInput = "HEAD"; browser.gitRange = .branch
+                try await settle(window, "empty comparison") { !browser.loading && browser.gitComparison?.entries.isEmpty == true }
+                browser.gitBaseInput = "review-base"; browser.loadGitComparison()
+                try await settle(window, "restore comparison") { !browser.loading && browser.gitComparison != nil }
+                browser.loadGitDiff(changed)
+                try await settle(window, "restore committed diff") { !browser.loading && browser.gitDiff != nil }
+                try await settle(window, "visible diff after empty comparison") {
+                    guard let source = self.reviewSource(in: window.contentView) else { return false }
+                    return source.visibleRect.width > 20 && source.visibleRect.height > 20
+                }
+                report["diff_visible_after_empty_comparison"] = true
+            }
             report["status"] = "passed"
         } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
         try? writeReport(report, name: "result.json")

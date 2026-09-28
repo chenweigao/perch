@@ -11,22 +11,24 @@ public struct RemoteGitEntry: Equatable, Identifiable, Sendable {
     public var hasUnstaged: Bool { !untracked && worktreeStatus != " " }
     public var label: String {
         if untracked { return "未跟踪" }
-        func name(_ code: Character) -> String? {
-            switch code {
-            case "M": return "已修改"
-            case "A": return "新增"
-            case "D": return "已删除"
-            case "R": return "重命名"
-            case "C": return "复制"
-            case "T": return "类型变更"
-            case "U": return "冲突"
-            default: return nil
-            }
-        }
-        let staged = name(indexStatus).map { "暂存：\($0)" }
-        let unstaged = name(worktreeStatus).map { "未暂存：\($0)" }
+        let staged = Self.name(indexStatus).map { "暂存：\($0)" }
+        let unstaged = Self.name(worktreeStatus).map { "未暂存：\($0)" }
         return [staged, unstaged].compactMap { $0 }.joined(separator: " · ")
     }
+    public var changeLabel: String { Self.name(worktreeStatus) ?? "" }
+    private static func name(_ code: Character) -> String? {
+        switch code {
+        case "M": return "已修改"
+        case "A": return "新增"
+        case "D": return "已删除"
+        case "R": return "重命名"
+        case "C": return "复制"
+        case "T": return "类型变更"
+        case "U": return "冲突"
+        default: return nil
+        }
+    }
+
 }
 
 public struct RemoteGitWorktree: Equatable, Identifiable, Sendable {
@@ -119,9 +121,9 @@ public enum RemoteGitCommand {
     public static let diffLimit = 262_144
 
     /// Paired with GIT_OPTIONAL_LOCKS=0 to avoid configured helpers and index refreshes.
-    private static let safety = "--no-pager -c core.pager=cat -c core.fsmonitor=false -c diff.external= -c diff.noprefix=false"
+    static let safety = "--no-pager -c core.pager=cat -c core.fsmonitor=false -c diff.external= -c diff.noprefix=false"
 
-    private static let guardScript = """
+    static let guardScript = """
     export GIT_OPTIONAL_LOCKS=0
     cd -- "$1" 2>/dev/null || { printf 'kind=notrepo\\n'; exit 0; }
     if ! git \(safety) rev-parse --show-toplevel >/dev/null 2>&1; then printf 'kind=notrepo\\n'; exit 0; fi
