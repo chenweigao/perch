@@ -142,6 +142,14 @@ func checkRemoteFileViewer() async throws {
     let echoedData = try await ProcessRunner.run("/bin/sh", ["-c", echo])
     expectEqual(RemoteFileCommand.resolvedPath(in: echoedData), duplicateFile.path)
 
+    // A valid filename can contain the wire header delimiter; it must not become content.
+    let multiline = source.appendingPathComponent("before\n--\nafter.swift")
+    try Data("payload\n".utf8).write(to: multiline)
+    let multilineCommand = try RemoteFileCommand.referenceCommand(path: multiline.path, cwd: main, roots: [])
+    let multilineData = try await ProcessRunner.run("/bin/sh", ["-c", multilineCommand])
+    expectEqual(try RemoteFileCommand.parse(multilineData), .text("payload\n", truncated: false, size: 8))
+    expectEqual(RemoteFileCommand.resolvedPath(in: multilineData), multiline.path)
+
     // A bare filename is searched across every root, including one outside the
     // session directory; a root that vanished mid-session is skipped, and
     // overlapping roots never list the same file twice.

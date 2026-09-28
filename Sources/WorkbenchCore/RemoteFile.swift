@@ -88,11 +88,11 @@ public enum RemoteFileCommand {
         """
         if [ -d "$p" ]; then
           if [ ! -x "$p" ] || [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
-          printf 'kind=dir\\npath=%s\\n--\\n' "$p"
+          printf 'kind=dir\\npath_base64=%s\\n--\\n' "$(printf '%s' "$p" | base64 | tr -d '\\n')"
           ls -A -p -1 -- "$p"
         elif [ -e "$p" ]; then
           if [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
-          printf 'kind=file\\npath=%s\\nsize=%s\\n--\\n' "$p" "$(wc -c < "$p")"
+          printf 'kind=file\\npath_base64=%s\\nsize=%s\\n--\\n' "$(printf '%s' "$p" | base64 | tr -d '\\n')" "$(wc -c < "$p")"
           head -c \(limit) -- "$p"
         else
           printf 'kind=missing\\n'
@@ -171,13 +171,15 @@ public enum RemoteFileCommand {
         return arguments
     }
 
-    /// The header's `path` field names the path the remote actually read, which a
+    /// The header's base64-encoded path names the path the remote actually read, which a
     /// multi-root reference lookup can pick outside the session directory.
     public static func resolvedPath(in data: Data) -> String? {
         guard let separator = data.range(of: Data("\n--\n".utf8)) else { return nil }
         for line in String(decoding: data[..<separator.lowerBound], as: UTF8.self).split(separator: "\n") {
             let parts = line.split(separator: "=", maxSplits: 1)
-            if parts.count == 2, parts[0] == "path" { return String(parts[1]) }
+            if parts.count == 2, parts[0] == "path_base64", let path = Data(base64Encoded: String(parts[1])) {
+                return String(data: path, encoding: .utf8)
+            }
         }
         return nil
     }
