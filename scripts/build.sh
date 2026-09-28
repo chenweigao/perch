@@ -13,7 +13,7 @@ fi
 # which disables the native floating sidebar. Native preserves the actual SDK.
 swift build --build-system native --configuration "$configuration"
 bin_dir="$(swift build --build-system native --configuration "$configuration" --show-bin-path)"
-app_dir="$PWD/build/Perch.app"
+app_dir="${WORKBENCH_APP_DIR:-$PWD/build/Perch.app}"
 rm -rf "$app_dir"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp "$bin_dir/AgentWorkbench" "$app_dir/Contents/MacOS/AgentWorkbench"

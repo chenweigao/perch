@@ -1158,6 +1158,7 @@ extension NavigationRunner {
             }
             return result.sorted { $0.frame.minY < $1.frame.minY }
         }
+        let withContext = ProcessInfo.processInfo.environment["NAVIGATION_DISCLOSURE_CONTEXT"] == "1"
         var samples: [[String: Any]] = []
         for kind in ["Bash", "Thoughts"] {
             let session = "disclosure-" + kind
@@ -1177,6 +1178,12 @@ extension NavigationRunner {
             }
             messages.append(["id": "disclosure-answer", "role": "assistant", "created_at": "",
                              "content": [["type": "text", "text": "Following reply remains readable."]]])
+            if withContext {
+                messages.insert(["id": "disclosure-prefix", "role": "user", "created_at": "",
+                    "content": [["type": "text", "text": Array(repeating: "Earlier conversation remains above the clicked row.", count: 45).joined(separator: "\n")]]], at: 0)
+                messages.append(["id": "disclosure-tail", "role": "user", "created_at": "",
+                    "content": [["type": "text", "text": Array(repeating: "Later conversation keeps the viewport away from the document boundary.", count: 45).joined(separator: "\n")]]])
+            }
             let snapshot: [String: Any] = ["as_of_seq": 1, "epoch": "fixture",
                 "session": ["id": session, "title": session, "updated_at": "", "busy": false,
                             "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture"]],
@@ -1184,18 +1191,27 @@ extension NavigationRunner {
             model.selected = session
             model.conversation = KimiConversation(try KimiWire.decoder().decode(KimiSnapshot.self,
                 from: JSONSerialization.data(withJSONObject: snapshot)))
-            targetRowID = ConversationProjection().update(model.conversation!.displayMessages, isRunning: false).entries.first!.id
+            targetRowID = ConversationProjection().update(model.conversation!.displayMessages, isRunning: false).entries.first {
+                $0.messages.flatMap(\.content).contains { $0.type == "tool_use" || $0.type == "thinking" }
+            }!.id
+            if withContext {
+                guard await flushAndWait(host, until: { self.model.marker.contentToken == NavigationModel.token(self.model.conversation) }) != nil else {
+                    throw NavigationError("context transcript did not mount")
+                }
+                ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
+            }
             guard await flushAndWait(host, until: { binding(for: kind) != nil }) != nil,
                   let scroll = findScrollView(host) else { throw NavigationError("missing \(kind) disclosure") }
-            scroll.contentView.scroll(to: .zero)
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: withContext ? max(0, scroll.contentView.bounds.minY - 80) : 0))
             try await Task.sleep(for: .milliseconds(350))
             let collapsed = rows().first?.frame.height ?? 0
             for iteration in 0..<6 {
                 guard let control = binding(for: kind) else { throw NavigationError("lost disclosure") }
                 NavigationRenderMetrics.stages = [:]
+                let headerY = rows().first?.convert(.zero, to: host).y ?? 0
                 let start = CACurrentMediaTime()
                 control.wrappedValue.toggle()
-                var heights: [CGFloat] = [], gaps: [Double] = []
+                var heights: [CGFloat] = [], gaps: [Double] = [], contentHeights: [CGFloat] = [], scrollOffsets: [CGFloat] = [], headerOffsets: [CGFloat] = []
                 var previous = start, lastChange = start
                 repeat {
                     try await Task.sleep(for: .milliseconds(8))
@@ -1205,6 +1221,9 @@ extension NavigationRunner {
                     let height = rows().first?.frame.height ?? 0
                     if heights.last != height { lastChange = now }
                     heights.append(height)
+                    contentHeights.append(rows().first?.subviews.first?.frame.height ?? 0)
+                    scrollOffsets.append(scroll.contentView.bounds.minY)
+                    headerOffsets.append((rows().first?.convert(.zero, to: host).y ?? 0) - headerY)
                 } while CACurrentMediaTime() - start < 0.5
                 let expanded = iteration % 2 == 0
                 let finalHeight = heights.last ?? 0
@@ -1213,7 +1232,15 @@ extension NavigationRunner {
                         "heights": heights, "keys": Array(ConversationDisclosureFixture.bindings.keys)])
                     throw NavigationError("wrong final \(kind) height: \(finalHeight), collapsed \(collapsed)")
                 }
-                samples.append(["kind": kind, "expanded": expanded,
+                let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count
+                if ProcessInfo.processInfo.environment["NAVIGATION_ASSERT_ATOMIC_DISCLOSURE"] == "1" {
+                    guard mismatches == 0 else { throw NavigationError("\(kind) had \(mismatches) frames with mismatched content and row heights") }
+                }
+                if withContext && headerOffsets.contains(where: { abs($0) > 1 }) {
+                    throw NavigationError("\(kind) disclosure header moved during toggle: \(headerOffsets)")
+                }
+                samples.append(["kind": kind, "expanded": expanded, "header_offsets": headerOffsets,
+                    "mismatched_frames": mismatches, "content_heights": contentHeights, "scroll_offsets": scrollOffsets,
                     "settled_ms": (lastChange - start) * 1_000, "main_loop_gaps": statistics(gaps),
                     "heights": heights, "render_stages": NavigationRenderMetrics.report])
             }

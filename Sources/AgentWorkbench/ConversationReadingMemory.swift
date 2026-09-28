@@ -4,7 +4,6 @@ import WorkbenchCore
 /// Small presentation records survive detached hosting controllers and session switches.
 final class ConversationReadingMemory {
     static let shared = ConversationReadingMemory()
-    static let disclosureDuration: TimeInterval = 0.2
     struct Position {
         var entry: String
         var index: Int
@@ -52,14 +51,14 @@ final class ConversationReadingMemory {
     }
 }
 private struct ConversationReduceMotionKey: EnvironmentKey { static let defaultValue = false }
-private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: (Bool) -> Void = { _ in } }
+private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: () -> Void = {} }
 private struct ConversationMemoryKey: EnvironmentKey { static let defaultValue = "" }
 extension EnvironmentValues {
     var conversationReduceMotion: Bool {
         get { self[ConversationReduceMotionKey.self] }
         set { self[ConversationReduceMotionKey.self] = newValue }
     }
-    var conversationDisclosureWillChange: (Bool) -> Void {
+    var conversationDisclosureWillChange: () -> Void {
         get { self[ConversationDisclosureAction.self] }
         set { self[ConversationDisclosureAction.self] = newValue }
     }
@@ -70,8 +69,6 @@ extension EnvironmentValues {
 }
 @propertyWrapper struct RememberedExpansion: DynamicProperty {
     @Environment(\.conversationMemoryKey) private var scope
-    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
-    @Environment(\.conversationReduceMotion) private var inheritedReduceMotion
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var revision = 0
     let name: String
@@ -81,11 +78,9 @@ extension EnvironmentValues {
         get { _ = revision; return ConversationReadingMemory.shared.expansions[scope + ":" + name] ?? initial }
         nonmutating set {
             guard newValue != wrappedValue else { return }
-            let reduceMotion = systemReduceMotion || inheritedReduceMotion
-            disclosureWillChange(!reduceMotion)
-            // The native row animates its clipping height. Give it the final
-            // content size once, without a second SwiftUI transition retaining
-            // outgoing text and feeding intermediate heights back into layout.
+            disclosureWillChange()
+            // Commit content and native row geometry without an intermediate
+            // clipping animation that can detach and reattach neighboring rows.
             var transaction = Transaction(animation: nil)
             transaction.disablesAnimations = true
             withTransaction(transaction) {
