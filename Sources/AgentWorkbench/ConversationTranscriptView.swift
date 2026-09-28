@@ -128,8 +128,9 @@ struct ConversationTranscript: View {
     // Preview/benchmark transcripts never invoke a user's configured service.
     var allowsActivitySummaries = false
     var followsLatest = true
-    @State private var toolProjection = ToolVisibilityProjection()
-    @State private var projection = ConversationProjection()
+    var historyEpoch: String?
+    @Environment(\.conversationPresentations) private var presentations
+    @State private var presentation = ConversationPresentationHandle()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.self) private var environment
@@ -137,36 +138,17 @@ struct ConversationTranscript: View {
     @State private var contentOriginY: CGFloat = 0
     var body: some View {
         let key = memoryKey ?? sessionId
-        let visible = toolProjection.update(messages, sessionID: sessionId, live: liveTools, running: running, online: online)
-        let snapshot = projection.update(visible.messages, isRunning: isRunning)
-        let narrative = ActivityNarrativeProjection.make(entries: snapshot.entries, tools: visible.tools,
-                                                           isRunning: isRunning)
-        let batch = ActivitySummaryBatch.latest(in: snapshot.entries, tools: visible.tools,
-            isRunning: isRunning, enabled: summarySettings.configuration.enabled && allowsActivitySummaries && online,
-            includeToolOutput: summarySettings.configuration.includeToolOutput)
-        let narrativeKey = [narrative.current?.stageID, narrative.current?.headline,
-                            narrative.current?.detail, narrative.current?.source.rawValue,
-                            narrative.current?.lifecycle.rawValue,
-                            narrative.current.map { String($0.revision) },
-                            narrative.current?.evidenceIDs.joined(separator: ","),
-                            String(narrative.entryStageIDs.count)].compactMap { $0 }.joined(separator: "|")
-        let observation = SummaryObservation(session: key, batch: batch, narrativeKey: narrativeKey,
+        let snapshot = presentation.update(key: key, input: ConversationPresentationModel.Input(
+            messages: messages, live: liveTools, running: running, isRunning: isRunning, online: online,
+            epoch: historyEpoch, language: environment.locale.identifier + ":" + AppLanguage.current.localization,
+            summariesEnabled: summarySettings.configuration.enabled && allowsActivitySummaries && online,
+            includeToolOutput: summarySettings.configuration.includeToolOutput), cache: presentations)
+        let observation = SummaryObservation(session: key, batch: snapshot.batch, narrativeKey: snapshot.narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
             settingsRevision: summarySettings.revision)
-        let projectedRows = narrative.rows
-        let contents = snapshot.entries.compactMap { entry -> ConversationEntryView? in
-            let ids = Set(entry.messages.flatMap(\.content).compactMap(\.toolCallId))
-            let tools = ids.reduce(into: [String: VisibleTool]()) { result, id in
-                if let value = visible.tools[id] { result[id] = value }
-            }
-            let narrativeRow = narrativeStore.row(session: key, entryID: entry.id)
-                ?? projectedRows[entry.id]
-            if let narrativeRow, narrativeRow.isAnchor, !narrativeRow.stageClosed,
-               entry.isNarrativeSource(for: narrativeRow.narrative) {
-                return nil
-            }
-            return ConversationEntryView(entry: entry, tools: tools, api: api, sessionId: sessionId,
-                memoryKey: key + ":" + entry.id, activityNarrative: narrativeRow)
+        let contents = snapshot.displayedRows { narrativeStore.row(session: key, entryID: $0) }.map { row in
+            ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity)
         }
         ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
@@ -178,7 +160,7 @@ struct ConversationTranscript: View {
                 $0.frame(in: .named("conversation-content")).minY
             } action: { contentOriginY = $0 }
             .task(id: observation) {
-                narrativeStore.observe(session: observation.session, snapshot: narrative, batch: batch,
+                narrativeStore.observe(session: observation.session, snapshot: snapshot.narrative, batch: snapshot.batch,
                     running: isRunning, online: observation.online, following: followsLatest,
                     settings: summarySettings)
             }

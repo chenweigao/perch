@@ -16,6 +16,7 @@ let namingLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "dev.agentwork
 final class WorkbenchModel {
     let navigationState = WorkbenchNavigationState()
     let catalog = SessionCatalogState()
+    let conversationPresentations = ConversationPresentationCache()
     var kimi: KimiConnection
     var native: NativeAgentConnection
     @ObservationIgnored private var kimiEnvironments: [UUID: KimiConnection] = [:]
@@ -504,6 +505,7 @@ final class WorkbenchModel {
     }
     func removeHost(_ host: SSHHost) {
         guard let index = connections.firstIndex(where: { $0.id == host.id }) else { return }
+        conversationPresentations.remove(prefix: host.id.uuidString + ":")
         connections[index].disconnect()
         kimiEnvironments[host.id]?.disconnect(); nativeEnvironments[host.id]?.disconnect()
         kimiEnvironments.removeValue(forKey: host.id); nativeEnvironments.removeValue(forKey: host.id)
@@ -1156,6 +1158,7 @@ final class WorkbenchModel {
                 if tabs.ids.contains(item.id) { close(item.id) }
                 workspace.removeSession(item.reference)
                 let kind = item.reference.kind == .kimi ? "kimi" : "native"
+                conversationPresentations.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 ConversationReadingMemory.shared.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 rebuildCatalog(); saveWorkspace()
             } catch { managementError = error.localizedDescription }
@@ -1287,6 +1290,7 @@ final class WorkbenchModel {
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        conversationPresentations.removeAll()
         try? flushDrafts()
         saveWorkspace()
         if canSaveWorkspace { do { try workspaceWriter.flush(workspace) } catch { workspaceError = error.localizedDescription } }

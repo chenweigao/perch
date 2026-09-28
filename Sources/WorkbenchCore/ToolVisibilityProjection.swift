@@ -34,6 +34,7 @@ public final class ToolVisibilityProjection {
     private var observed: [String: ObservedLive] = [:]
     private var order: [String] = []
     public init() {}
+    public var retainedLiveTools: [KimiLiveTool] { order.compactMap { observed[$0]?.tool } }
 
     public func update(_ messages: [KimiMessage], sessionID: String, live: [KimiLiveTool] = [],
                        running: Set<String> = [], online: Bool = true) -> Snapshot {

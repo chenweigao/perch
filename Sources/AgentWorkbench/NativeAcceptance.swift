@@ -613,11 +613,17 @@ private struct ReferenceComposerFixtureView: View {
             durations.append((CACurrentMediaTime() - start) * 1000)
         }
         probe.signposter.endInterval("CatalogSwitching", switchingSpan)
+        let presentations = model.conversationPresentations
+        guard presentations.count == 8, presentations.restorationCount >= 64 else {
+            throw WorkbenchError("Mounted conversations did not restore shared presentations: \(presentations.count) models, \(presentations.restorationCount) restorations")
+        }
         let cpu = processCPU()
         try await Task.sleep(for: .seconds(2))
         let idleCPU = processCPU() - cpu
         guard idleCPU < 1 else { throw WorkbenchError("UI kept consuming CPU after session switches: \(idleCPU)s / 2s") }
-        return ["navigation_cache_invalidation": true, "catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
+        return ["presentation_cache": ["models": presentations.count, "restorations": presentations.restorationCount,
+                    "preparations": presentations.retainedPreparationCount, "payload_cost": presentations.retainedPayloadCost],
+                "navigation_cache_invalidation": true, "catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
                 "idle_cpu_seconds_over_2s": idleCPU,
                 "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }

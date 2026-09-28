@@ -40,7 +40,7 @@ struct NativeAgentView: View {
                         ConversationTranscript(messages: s.messages, sessionId: s.id,
                                                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                                isRunning: s.busy, online: connection.online, memoryKey: readingKey,
-                                               allowsActivitySummaries: true, followsLatest: follow)
+                                               allowsActivitySummaries: true, followsLatest: follow, historyEpoch: s.history?.epoch)
                         NativeRunControls(connection: connection, sessionID: s.id)
                         Color.clear.frame(height: 1).id("pending-interactions")
                         ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }

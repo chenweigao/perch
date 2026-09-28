@@ -116,3 +116,34 @@ checks exercise initial catch-up and later conversation events on the production
 
 The measured gain remains removal of unrelated body evaluations, not certified input
 latency, frame rate or real-transport recovery.
+
+## Conversation presentation ownership
+
+`ConversationPresentationModel` owns pure tool visibility, turn projection, narrative,
+summary batch and per-row tool mapping. Its immutable snapshot is reused only when
+all source values match: message contents, live tools, running IDs, busy/online state,
+history epoch, locale and summary policy. Same-ID edits remain authoritative. Runtime
+epoch changes clear remembered live tools; language changes rebuild localized turn
+summaries without losing tool handoff evidence. External narrative-store updates are
+overlaid at read time, so a cache hit cannot freeze a newly arrived summary.
+
+`ConversationPresentationHandle` belongs to the transcript view. The workbench owns
+an LRU of at most eight presentation models, injected directly into `WorkbenchDetail`
+(the custom AppKit hosting boundary). Each admitted model has at most 1,000 source
+messages and 1 MiB of estimated UTF-8 payload/record cost, including nested tool JSON
+and remembered live tools. This admission estimate is not an RSS limit: snapshots,
+Swift collections and AppKit have additional costs. Oversized active conversations
+render normally and retain their view-local model, but are not kept in the shared
+cache after leaving. Host/provider/session identity separates entries; deleting a
+session, removing a host or shutting down clears the corresponding cache entries.
+
+The model/cache are synchronous computation objects, called on the UI owner thread;
+they are deliberately outside Observation and own no tasks, providers or AppKit row
+hosts. Actual view construction/layout stays on the main thread. Summary effects
+remain in the existing `.task(id:)` boundary. A background actor or row-host cache
+requires separate profiling and cancellation/identity/appearance evidence.
+
+Core checks cover parity, changed content, pagination, epoch/language invalidation,
+external overlays, LRU eviction, host/provider separation, oversized admission and
+release. Mounted switching acceptance additionally checks that eight conversations
+actually restore their models across navigation.

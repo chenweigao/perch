@@ -127,7 +127,7 @@ private struct WorkbenchDetail: View {
                         .id(reference?.id).frame(width: expanded ? geometry.size.width : width)
                 }
             }
-        }
+        }.environment(\.conversationPresentations, model.conversationPresentations)
     }
 
     @ViewBuilder private var conversation: some View {

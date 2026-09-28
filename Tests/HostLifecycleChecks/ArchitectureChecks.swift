@@ -82,7 +82,11 @@ private final class Invalidation: @unchecked Sendable {
     precondition(favorites.occurred && model.sidebarProjection(filter: .all).favorites.map(\.id) == [item.id],
                  "warm sidebar cache must observe favorite changes")
     print("PASS: warm projection caches preserve catalog, group and favorite observation")
+    _ = ConversationPresentationHandle().update(key: "shutdown:native:fixture",
+        input: .init(messages: [], language: "en"), cache: model.conversationPresentations)
+    precondition(model.conversationPresentations.count == 1)
     model.shutdown()
+    precondition(model.conversationPresentations.count == 0, "Shutdown releases retained presentation models")
     print("PASS: Observation dependency isolation, nested navigation bindings and equal catalog snapshots")
 
     let state = GroupSuggestionsState()

@@ -91,14 +91,22 @@ import WorkbenchCore
             let model = WorkbenchModel()
             precondition(model.configuredEnvironment && model.connections.map(\.host) == [a, b, c])
             precondition(model.kimi.host.id == a.id && model.selectedConnection?.id == c.id)
+            for host in [a, b, c] {
+                _ = ConversationPresentationHandle().update(key: "\(host.id):native:fixture",
+                    input: .init(messages: [], language: "en"), cache: model.conversationPresentations)
+            }
+            precondition(model.conversationPresentations.count == 3)
             model.removeHost(a)
+            precondition(model.conversationPresentations.count == 2)
             precondition(model.selectedReference == terminal && model.selectedConnection?.id == c.id,
                          "removing A must not redirect C's terminal actions to B")
             precondition(model.kimi.host.id == c.id && model.native.host.id == c.id)
             model.removeHost(c)
+            precondition(model.conversationPresentations.count == 1)
             precondition(model.selectedReference == nil && model.selectedConnection?.id == b.id)
             precondition(model.showDashboard && model.openedSessions.isEmpty)
             model.removeHost(b)
+            precondition(model.conversationPresentations.count == 0)
             precondition(model.connections.isEmpty && !model.configuredEnvironment && model.selectedConnection == nil)
             let persisted = try JSONDecoder().decode([SSHHost].self, from: UserDefaults.standard.data(forKey: "hosts")!)
             precondition(persisted.isEmpty)

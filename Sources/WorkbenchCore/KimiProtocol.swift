@@ -196,7 +196,7 @@ public struct KimiMessage: Decodable, Identifiable, Equatable, Sendable {
         role == "user" && !isCompactionSummary && !content.allSatisfy(\.isRuntimeContext)
     }
 }
-public struct KimiLiveTool: Decodable, Identifiable, Sendable {
+public struct KimiLiveTool: Decodable, Identifiable, Equatable, Sendable {
     public let toolCallId: String
     public let name: String
     public let args: JSONValue?
