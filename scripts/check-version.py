@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the declared app version and, optionally, the build identity of a bundle."""
+"""Check the declared versions and, optionally, the build identity of a bundle."""
 import argparse
 import plistlib
 import re
@@ -11,11 +11,25 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PLIST = ROOT / "Resources/Info.plist"
 RELEASE = re.compile(r"^\d+\.\d+\.\d+$")
 BUILD = re.compile(r"^\d+$")
+# The client and the bridge it installs must agree on one protocol version.
+BRIDGE = [(Path("Sources/WorkbenchCore/RemoteSetup.swift"), re.compile(r"^\s*public static let bridgeServiceVersion = (\d+)$", re.M)),
+          (Path("remote/native-agent-service.py"), re.compile(r"^SERVICE_VERSION = (\d+)$", re.M))]
 
 
 def git(*arguments):
     result = subprocess.run(["git", *arguments], cwd=ROOT, capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def bridge_versions(failures):
+    versions = {}
+    for path, pattern in BRIDGE:
+        found = pattern.findall((ROOT / path).read_text(encoding="utf-8"))
+        if len(found) != 1:
+            failures.append(f"{path} declares {len(found)} bridge protocol versions; expected exactly one")
+        else:
+            versions[path] = int(found[0])
+    return versions
 
 
 def main():
@@ -41,6 +55,14 @@ def main():
                             "bump Resources/Info.plist before tagging a release")
         else:
             print(f"HEAD is tagged {', '.join(releases)} and declares the same version")
+
+    bridge = bridge_versions(failures)
+    if len(set(bridge.values())) > 1:
+        failures.append("the bridge protocol version differs between "
+                        + " and ".join(f"{path} (v{found})" for path, found in bridge.items())
+                        + "; a client must speak the version of the bridge it installs")
+    elif bridge:
+        print(f"Bridge protocol v{next(iter(bridge.values()))} in client and service")
 
     if args.app:
         bundle = plistlib.loads((args.app / "Contents/Info.plist").read_bytes())

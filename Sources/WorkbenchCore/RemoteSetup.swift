@@ -18,9 +18,20 @@ public enum KimiRuntimeProbeResult: Equatable, Sendable {
     case invalid(output: String)
 }
 
+public enum BridgeProbeResult: Equatable, Sendable {
+    case installed(version: Int)
+    case missing
+    case unreadable
+    case invalid(output: String)
+}
+
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
     public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal]
+
+    /// The bridge protocol this build speaks. It must match SERVICE_VERSION in
+    /// remote/native-agent-service.py; scripts/check-version.py enforces that.
+    public static let bridgeServiceVersion = 4
 
     public static func sshAliases(_ config: String) -> [String] {
         var aliases = Set<String>()
@@ -132,6 +143,36 @@ public enum RemoteSetup {
         case "unusable" where fields.count >= 3: return .unusable(path: fields[1], reason: fields[2])
         default: return .invalid(output: String(decoding: data, as: UTF8.self))
         }
+    }
+
+    /// Reads the installed bridge's version without starting or restarting it.
+    public static let bridgeProbeCommand = #"""
+    perch_script="$HOME/.local/share/agent-workbench/native/native-agent-service.py"
+    if [ ! -f "$perch_script" ]; then
+        printf 'missing\0'
+        exit 0
+    fi
+    perch_version="$(sed -n 's/^SERVICE_VERSION *= *\([0-9][0-9]*\) *$/\1/p' "$perch_script" | head -n 1)"
+    if [ -z "$perch_version" ]; then
+        printf 'unreadable\0'
+        exit 0
+    fi
+    printf 'installed\0%s\0' "$perch_version"
+    """#
+
+    public static func parseBridgeProbe(_ data: Data) -> BridgeProbeResult {
+        let fields = data.split(separator: 0, omittingEmptySubsequences: false)
+            .map { String(decoding: $0, as: UTF8.self) }
+        guard let status = fields.first else { return .invalid(output: "") }
+        switch status {
+        case "missing": return .missing
+        case "unreadable": return .unreadable
+        case "installed" where fields.count >= 2:
+            guard let version = Int(fields[1]) else { break }
+            return .installed(version: version)
+        default: break
+        }
+        return .invalid(output: String(decoding: data, as: UTF8.self))
     }
 
     public static func directoryListCommand(_ directory: String) -> String {
