@@ -4,7 +4,7 @@ import WorkbenchCore
 struct ConversationFindBar: View {
     @Bindable var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    let native: NativeAgentConnection
     @State private var query = ""
     @State private var index = 0
     @State private var hits: [ConversationSearchHit] = []

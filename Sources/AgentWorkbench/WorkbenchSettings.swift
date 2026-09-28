@@ -189,7 +189,7 @@ private struct HostConnectionControls: View {
     @Bindable var model: WorkbenchModel
     @ObservedObject var connection: HostConnection
     @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    let native: NativeAgentConnection
 
     private var sshRequested: Bool { kimi.connecting || native.wantsConnection }
     private var sshOnline: Bool {

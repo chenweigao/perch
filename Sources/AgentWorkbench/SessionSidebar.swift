@@ -249,7 +249,7 @@ private struct ConnectionControls: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    let native: NativeAgentConnection
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {

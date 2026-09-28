@@ -44,7 +44,7 @@ struct WorkspaceActionDetail: View {
 private struct NativeActionDetail: View {
     @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     private var snapshot: NativeAgentSnapshot? { connection.snapshot.flatMap { $0.id == item.reference.terminalID ? $0 : nil } }
     private var pending: [String] { snapshot?.interactions.map(\.display) ?? [] }
     var body: some View {

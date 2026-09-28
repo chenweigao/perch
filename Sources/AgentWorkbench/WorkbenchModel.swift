@@ -257,7 +257,8 @@ final class WorkbenchModel {
         kimiEnvironments[kimi.host.id] = kimi; nativeEnvironments[native.host.id] = native
         native.onSessionsChanged = { [weak self] in self?.catalogChanged() }
         kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
-        native.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
+        native.onOnlineChanged = { [weak self] in Task { @MainActor in self?.catalogChanged() } }
+        native.onOnlineChanged?()
         kimi.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
         kimi.$conversation.sink { [weak self, weak kimi] conversation in
             Task { @MainActor in
@@ -268,14 +269,15 @@ final class WorkbenchModel {
                                     busy: session.busy, turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
             }
         }.store(in: &subscriptions)
-        native.$snapshot.sink { [weak self, weak native] snapshot in
+        native.onSnapshotChanged = { [weak self, weak native] snapshot in
             Task { @MainActor in
                 guard let self, let native, let snapshot else { return }
                 self.considerNaming(reference: SessionReference(hostID: native.host.id, terminalID: snapshot.id, kind: snapshot.provider),
                                     remoteTitle: snapshot.title, messages: snapshot.messages,
                                     busy: snapshot.busy, turnCompleted: false, hasOlder: snapshot.hasOlder)
             }
-        }.store(in: &subscriptions)
+        }
+        native.onSnapshotChanged?(native.snapshot)
     }
     func activateAgentEnvironment(_ hostID: UUID) {
         guard let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }

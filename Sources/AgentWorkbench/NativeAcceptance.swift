@@ -8,6 +8,7 @@ import os
 @MainActor final class NativeAcceptanceProbe: ObservableObject {
     static let shared = NativeAcceptanceProbe()
     @Published var query: String?
+    var nativeBodyEvaluations = 0
     var renderedQuery: String?
     var selection: String?
     var dashboardProjection: DashboardProjection?
@@ -239,6 +240,7 @@ private struct ReferenceComposerFixtureView: View {
             }
             try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             report["rss_before_mb"] = residentMB()
+            if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
@@ -266,7 +268,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "paging", "dashboard"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "paging", "dashboard", "invalidation"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -317,6 +319,33 @@ private struct ReferenceComposerFixtureView: View {
             if report["status"] as? String != "passed" { exit(1) }
             NSApp.terminate(nil)
         }
+    }
+    private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
+        // Allow initial tasks/layout to settle before measuring unrelated writes.
+        try await Task.sleep(for: .milliseconds(200))
+        flush(window)
+        let before = probe.nativeBodyEvaluations
+        for index in 0..<40 {
+            let draft = "输入隔离 fixture \(index)"
+            model.native.drafts["session-0"] = draft
+            try await settle(window, "composer draft \(index)") { self.containsText(draft, in: window.contentView) }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let draftEvaluations = probe.nativeBodyEvaluations - before
+        let snapshotBefore = probe.nativeBodyEvaluations
+        try fixture.advanceStream(0)
+        try await model.native.acceptanceRefreshSelected()
+        try await settle(window, "stream positive control") {
+            self.probe.nativeBodyEvaluations > snapshotBefore && self.model.native.snapshot?.revision == 2
+        }
+        let report: [String: Any] = ["draft_mutations": 40, "reading_body_evaluations_during_drafts": draftEvaluations,
+            "snapshot_positive_control": true,
+            "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency"]
+        try writeReport(report, name: "invalidation.json")
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_ALLOW_INVALIDATION"] != "1", draftEvaluations != 0 {
+            throw WorkbenchError("Draft writes invalidated reading body \(draftEvaluations) times")
+        }
+        return report
     }
     private func dashboard(_ window: NSWindow) async throws -> [String: Any] {
         let unified = try await unifiedWorkbench(window)

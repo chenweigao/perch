@@ -54,6 +54,34 @@ private final class Invalidation: @unchecked Sendable {
     withObservationTracking { _ = model.allSessions } onChange: { sameCatalog.mark() }
     model.catalog.replace([item])
     precondition(!sameCatalog.occurred)
+    let group = WorkItemGroup(name: "Original", goal: "", nextStep: "", sessions: [item.reference])
+    model.workspace.groups = [group]
+    model.selectedGroupID = group.id
+    // Warm each cache before observing it: the hit path must retain dependencies.
+    _ = model.sidebarProjection(filter: .all)
+    _ = model.groupIndex; _ = model.groupShortcuts
+    let sidebar = Invalidation()
+    withObservationTracking { _ = model.sidebarProjection(filter: .all) } onChange: { sidebar.mark() }
+    model.catalog.replace([item])
+    precondition(!sidebar.occurred, "equal catalogs must leave warm sidebar projections valid")
+    model.catalog.replace([])
+    precondition(sidebar.occurred && model.sidebarProjection(filter: .all).recent.isEmpty,
+                 "warm sidebar cache must observe and rebuild for a changed catalog")
+    let groups = Invalidation()
+    _ = model.groupShortcuts
+    withObservationTracking { _ = model.groupIndex; _ = model.groupShortcuts } onChange: { groups.mark() }
+    model.workspace.groups[0].name = "Renamed"
+    precondition(groups.occurred && model.groupIndex[item.id] == ["Renamed"]
+                 && model.groupShortcuts.first?.group.name == "Renamed",
+                 "warm group caches must retain membership/name dependencies")
+    model.catalog.replace([item])
+    _ = model.sidebarProjection(filter: .all)
+    let favorites = Invalidation()
+    withObservationTracking { _ = model.sidebarProjection(filter: .all) } onChange: { favorites.mark() }
+    model.workspace.starred = [item.reference]
+    precondition(favorites.occurred && model.sidebarProjection(filter: .all).favorites.map(\.id) == [item.id],
+                 "warm sidebar cache must observe favorite changes")
+    print("PASS: warm projection caches preserve catalog, group and favorite observation")
     model.shutdown()
     print("PASS: Observation dependency isolation, nested navigation bindings and equal catalog snapshots")
 

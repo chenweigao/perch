@@ -4,12 +4,11 @@ import UniformTypeIdentifiers
 import WorkbenchCore
 
 struct NativeAgentView: View {
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let onResultDisplayed: (NativeAgentSnapshot) -> Void
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     @State private var activityReview = 0
-    @State private var palette = CommandPaletteState()
     private var displayedResultKey: String? {
         guard appActive, follow, connection.online,
               let snapshot = connection.snapshot, snapshot.id == connection.selectedID,
@@ -19,6 +18,9 @@ struct NativeAgentView: View {
         return "\(key):\(snapshot.completed)"
     }
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = NativeAcceptanceProbe.shared.nativeBodyEvaluations += 1
+        #endif
         VStack(spacing: 0) {
             if let s = connection.snapshot {
                 let readingKey = "\(connection.host.id):native:\(s.id)"
@@ -105,46 +107,7 @@ struct NativeAgentView: View {
                             .font(.caption).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                     }.padding(6)
                 }
-                VStack(spacing: 8) {
-                    if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
-                        CommandPalette(completion: completion, selection: palette.selection) { command in
-                            apply(command, completion, to: s.id)
-                        }
-                    }
-                    VStack(spacing: 8) {
-                        ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
-                                                      set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
-                                        host: connection.host, cwd: s.cwd,
-                                        placeholder: L("继续此任务…"),
-                                        accessibilityLabel: "Message \(s.provider.label)",
-                                        canSend: canSend(s),
-                                        onSend: { connection.send(mode: defaultMode(s)) },
-                                        onKey: { key in handle(key, for: s) }).id(s.id)
-                        ComposerToolbarLayout {
-                            ComposerAddButton(supportsFiles: false)
-                            NativeModelControls(connection: connection, snapshot: s)
-                            PermissionPicker(
-                                provider: s.provider,
-                                capability: connection.sessions.first { $0.id == s.id }?.permission
-                                    ?? s.permission
-                                    ?? PermissionCatalog.capability(for: s.provider),
-                                disabled: !connection.online,
-                                allowsSelection: [.qoder, .claude].contains(s.provider)
-                            ) { mode in
-                                connection.setPermission(mode, for: s.id)
-                            }
-                            ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
-                                         reportedAt: s.context?.reportedAt, isStale: !connection.online)
-                            ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
-                                                 canSend: canSend(s), canStop: connection.canStop,
-                                                 queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
-                                                 onSend: { connection.send(mode: defaultMode(s)) },
-                                                 onStop: { connection.stop() },
-                                                 onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
-                        }
-                    }.padding(12).workbenchControlSurface()
-                    ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
-                }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
+                NativeComposerView(connection: connection, s: s).id(s.id)
             } else if connection.online && connection.selectedID == nil {
                 Text("此会话已移除，请从侧栏选择其他会话。").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = connection.actionError, let id = connection.selectedID {
@@ -157,8 +120,56 @@ struct NativeAgentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
-        .onChange(of: connection.selectedID) { _, _ in palette = CommandPaletteState() }
 
+    }
+}
+
+/// Draft and palette updates are local to the input area, not the long transcript.
+private struct NativeComposerView: View {
+    let connection: NativeAgentConnection
+    let s: NativeAgentSnapshot
+    @State private var palette = CommandPaletteState()
+    var body: some View {
+        VStack(spacing: 8) {
+            if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
+                CommandPalette(completion: completion, selection: palette.selection) { command in
+                    apply(command, completion, to: s.id)
+                }
+            }
+            VStack(spacing: 8) {
+                ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
+                                              set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
+                                host: connection.host, cwd: s.cwd,
+                                placeholder: L("继续此任务…"),
+                                accessibilityLabel: "Message \(s.provider.label)",
+                                canSend: canSend(s),
+                                onSend: { connection.send(mode: defaultMode(s)) },
+                                onKey: { key in handle(key, for: s) }).id(s.id)
+                ComposerToolbarLayout {
+                    ComposerAddButton(supportsFiles: false)
+                    NativeModelControls(connection: connection, snapshot: s)
+                    PermissionPicker(
+                        provider: s.provider,
+                        capability: connection.sessions.first { $0.id == s.id }?.permission
+                            ?? s.permission
+                            ?? PermissionCatalog.capability(for: s.provider),
+                        disabled: !connection.online,
+                        allowsSelection: [.qoder, .claude].contains(s.provider)
+                    ) { mode in
+                        connection.setPermission(mode, for: s.id)
+                    }
+                    ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
+                                 reportedAt: s.context?.reportedAt, isStale: !connection.online)
+                    ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
+                                         canSend: canSend(s), canStop: connection.canStop,
+                                         queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
+                                         onSend: { connection.send(mode: defaultMode(s)) },
+                                         onStop: { connection.stop() },
+                                         onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
+                }
+            }.padding(12).workbenchControlSurface()
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
+        }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
     }
     /// A running session may still accept text when the adapter can queue it, so the
     /// composer is not disabled just because a turn is in progress.
@@ -197,7 +208,7 @@ struct NativeAgentView: View {
 
 struct NativeModelControls: View {
     @UILocalization private var L
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
     private var editable: Bool { [.omp, .dsh, .codex].contains(snapshot.provider) }
@@ -226,7 +237,7 @@ struct NativeModelControls: View {
 /// connection's controllers, so the label always reflects protocol evidence rather
 /// than the fact that a request was sent.
 struct NativeRunControls: View {
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let sessionID: String
     @State private var editingMessage: OutboundMessage?
 
@@ -310,7 +321,7 @@ private struct PendingMessageEditor: View {
 }
 
 struct NativeInteractionView: View {
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let request: JSONValue
     var sessionID: String? = nil
     @State private var text = ""

@@ -38,7 +38,7 @@ struct WorkbenchHeaderActions: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    let native: NativeAgentConnection
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var status: String? {
         if model.showDashboard { return nil }

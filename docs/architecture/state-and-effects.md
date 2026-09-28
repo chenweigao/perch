@@ -4,8 +4,8 @@
 
 Use Apple's Observation and Swift Concurrency as Perch's default feature foundation
 (macOS 14+). Preserve native SwiftUI/AppKit presentation and existing persistence.
-This first migration introduces state ownership boundaries; it is not a completed
-rewrite of the connection layer or a measured frame-rate improvement.
+These migrations introduce state ownership and rendering boundaries; they are not
+a completed rewrite of every provider or a measured frame-rate improvement.
 
 ## Ownership
 
@@ -16,12 +16,17 @@ rewrite of the connection layer or a measured frame-rate improvement.
   filters. Existing coordinator properties forward to it so transition actions
   keep their persistence, focus and visibility behavior during migration.
 - `SessionCatalogState` owns the projected session list. Equal catalog snapshots
-  do not publish changes. The coordinator still assembles provider snapshots.
+  do not publish changes. A revision identifies distinct catalogs for derived caches.
+  Cache hits must still read their observable inputs; cache storage stays ignored
+  by Observation. The coordinator still assembles provider snapshots.
 - `GroupSuggestionsState` is sheet-owned feature state. Its request captures the
   exact input, configuration revision and language at the user's click. Applying
   and undoing suggestions still go through the existing workspace operations.
-- Kimi/native/Herdr connections retain their existing `ObservableObject` lifecycle
-  and explicit Combine event bridges. They outlive pages. Navigating or dismissing
+- `NativeAgentConnection` uses Observation. `NativeConversationState` owns the
+  selected snapshot and cancellable selection/history reads. Connection polling,
+  drafts and the outbox retain their connection lifetime; explicit online/snapshot
+  events feed catalog updates and naming. Kimi/Herdr still use `ObservableObject`
+  and Combine event bridges. All connections outlive pages. Navigating or dismissing
   a page must never disconnect a host or stop a remote agent.
 
 ## Rules for new features
@@ -47,9 +52,10 @@ which is already part of the macOS functional CI suite.
 
 ## Next migration boundaries
 
-Migrate one provider's session detail state and selection/history loads together,
-with rapid switch, reconnect, draft and approval recovery checks. Then apply that
-contract to the other provider. Move catalog assembly/projections out of the
+Native session detail and selection/history reads now have this boundary. Apply
+the same contract to Kimi only with its distinct live stream, prompt recovery,
+subagent and paging checks. Keep rapid switching, reconnect, draft and approval
+recovery checks. Move catalog assembly/projections out of the
 coordinator only with profiling and semantic parity checks. Avoid migrating all
 connection state by mechanical annotation replacement.
 
@@ -66,3 +72,24 @@ isolated UI interactions. None alone proves live SSH recovery, real-model qualit
 long-session smoothness or frame-rate gains.
 
 Reference: [Apple Observation migration guide](https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro).
+
+## Native input isolation measurement
+
+The native reader and composer are separate SwiftUI views. The reader does not
+read drafts or palette state. Observing a connection property alone is not enough
+if the same view body still reads unrelated input state.
+
+With 200 conversation turns and a 500-session catalog, 40 sequential draft writes
+produced 40 `NativeAgentView.body` evaluations before this migration and zero
+afterward. Every write was verified against the mounted composer text. A streaming
+snapshot was then delivered as a positive control and did invalidate the reader.
+This counts body evaluation, not keyboard/IME latency, CPU savings or frame rate.
+
+`run-native-acceptance.py --mode invalidation` requires zero unrelated reader
+updates by default; macOS functional CI includes it and paged-history acceptance.
+The baseline-only `PERCH_ACCEPTANCE_ALLOW_INVALIDATION=1` captures the old count;
+the functional runner removes this override. Connection checks cover Observation
+isolation and stale selection/history results, including old cleanup and errors.
+
+See [performance and technology decisions](performance-and-technology.md) for
+technology selection criteria and the next measurements.

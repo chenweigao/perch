@@ -44,7 +44,7 @@ def main():
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
             ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
         ]
-        for mode in ["all", "switching", "dashboard", "joint", "workspace", "review", "branch-review"]:
+        for mode in ["all", "switching", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation"]:
             commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
                 "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
@@ -57,6 +57,7 @@ def main():
     env = dict(os.environ)
     # A developer's optional live SSH target must never turn these into online checks.
     env.pop("WORKBENCH_LIVE_HOST", None)
+    env.pop("PERCH_ACCEPTANCE_ALLOW_INVALIDATION", None)
     for name, command, timeout in commands:
         print("Running " + name, flush=True)
         started = time.monotonic()

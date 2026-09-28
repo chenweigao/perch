@@ -8,7 +8,7 @@ import WorkbenchCore
 /// session clears `draftingNewTask`.
 struct NewTaskView: View {
     @Bindable var model: WorkbenchModel
-    @ObservedObject var native: NativeAgentConnection
+    let native: NativeAgentConnection
     @ObservedObject var kimi: KimiConnection
     @StateObject var projectFiles = ProjectFileSuggestions()
     @StateObject var referenceBrowser = RemoteFileBrowser()
