@@ -80,15 +80,29 @@ extension EnvironmentValues {
     var wrappedValue: Bool {
         get { _ = revision; return ConversationReadingMemory.shared.expansions[scope + ":" + name] ?? initial }
         nonmutating set {
+            guard newValue != wrappedValue else { return }
             let reduceMotion = systemReduceMotion || inheritedReduceMotion
             disclosureWillChange(!reduceMotion)
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: ConversationReadingMemory.disclosureDuration)) {
+            // The native row animates its clipping height. Give it the final
+            // content size once, without a second SwiftUI transition retaining
+            // outgoing text and feeding intermediate heights back into layout.
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 ConversationReadingMemory.shared.expansions[scope + ":" + name] = newValue
                 revision += 1
             }
         }
     }
-    var projectedValue: Binding<Bool> { Binding(get: { wrappedValue }, set: { wrappedValue = $0 }) }
+    var projectedValue: Binding<Bool> {
+        let binding = Binding(get: { wrappedValue }, set: { wrappedValue = $0 })
+        #if TRANSCRIPT_CHECKS
+        if ConversationDisclosureFixture.enabled {
+            ConversationDisclosureFixture.bindings[scope + ":" + name] = binding
+        }
+        #endif
+        return binding
+    }
 }
 
 struct ConversationFindTarget {
@@ -96,3 +110,11 @@ struct ConversationFindTarget {
     let hit: ConversationSearchHit
     let query: String
 }
+
+#if TRANSCRIPT_CHECKS
+/// Exercise the same state setter as the disclosure buttons in native fixtures.
+enum ConversationDisclosureFixture {
+    static var enabled = false
+    static var bindings: [String: Binding<Bool>] = [:]
+}
+#endif

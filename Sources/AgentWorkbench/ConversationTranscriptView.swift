@@ -1054,7 +1054,7 @@ private enum ThoughtTextStyle {
 private struct ThoughtText: View {
     let text: String
     var body: some View {
-        SelectableReplyText(attributed: NSAttributedString(string: text, attributes: ThoughtTextStyle.attributes))
+        DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -1104,7 +1104,10 @@ private struct ThoughtOutput: View {
             }
         }
         .popover(isPresented: $showFullText, arrowEdge: .top) {
-            ScrollView { ThoughtText(text: fullText).padding(16) }
+            ScrollView {
+                SelectableReplyText(attributed: NSAttributedString(string: fullText, attributes: ThoughtTextStyle.attributes))
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+            }
                 .frame(width: 480, height: 300)
         }
     }
