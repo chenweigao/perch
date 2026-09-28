@@ -36,6 +36,12 @@ app_files=(
     Sources/AgentWorkbench/WorkbenchGlass.swift
     Sources/AgentWorkbench/WorkspaceSplitView.swift
 )
+# Preserve the selected revision's source set, including baselines before themes.
+theme_ref="$source_ref"
+if [[ "$variant" == baseline ]]; then theme_ref="$baseline_ref"; fi
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/WorkbenchTheme.swift" 2>/dev/null; then
+    app_files+=(Sources/AgentWorkbench/WorkbenchTheme.swift)
+fi
 # The historical baseline predates the extracted tool component.
 if [[ "$variant" == current ]]; then
     app_files+=(Sources/AgentWorkbench/ToolActivityView.swift)
