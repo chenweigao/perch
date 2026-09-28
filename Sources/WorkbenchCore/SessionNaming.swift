@@ -17,6 +17,13 @@ public enum SessionNaming {
         return nil
     }
 
+    /// Whether a title is the prompt itself rather than a name. A generated
+    /// title is never a prefix of the prompt; the reverse direction covers a
+    /// prompt longer than the excerpt bound, where the echo outgrows it.
+    public static func echoes(_ title: String, of firstUserText: String) -> Bool {
+        title.hasPrefix(firstUserText) || firstUserText.hasPrefix(title)
+    }
+
     /// A real title set by the user or the remote agent is never replaced.
     /// Runtimes that backfill the title with the prompt itself read as raw
     /// input rather than a name: native bridges use its first 60 characters,
@@ -28,10 +35,7 @@ public enum SessionNaming {
         case .kimi:
             if trimmed.isEmpty { return true }
             guard let first = firstUserText else { return false }
-            // A generated title is never a prefix of the prompt. The reverse
-            // check covers prompts longer than the excerpt bound, where the
-            // echoed title outgrows the excerpt instead.
-            return first.hasPrefix(trimmed) || trimmed.hasPrefix(first)
+            return echoes(trimmed, of: first)
         case .omp, .qoder, .dsh, .codex, .claude:
             // The bridge's default title is a literal, not a localized string.
             if trimmed.isEmpty || trimmed == "新对话" { return true }
@@ -40,9 +44,28 @@ public enum SessionNaming {
         }
     }
 
-    /// One line, no wrapping quotes, bounded to fit the sidebar.
+    /// Whether a title can still turn out to be a placeholder while the first
+    /// user message is unknown, which is what decides that loading the rest of
+    /// a history is worth it. Kimi echoes the whole prompt, so any title of an
+    /// unnamed session qualifies; a bridge echoes only its first 60 characters.
+    public static func couldBePlaceholder(_ title: String, kind: SessionKind) -> Bool {
+        switch kind {
+        case .terminal: return false
+        case .kimi: return true
+        case .omp, .qoder, .dsh, .codex, .claude:
+            return title.trimmingCharacters(in: .whitespacesAndNewlines).count <= 60
+        }
+    }
+
+    /// One line, no wrapping quotes, bounded to fit the sidebar. Reasoning
+    /// models emit their thinking ahead of the answer, so only the text after
+    /// the final closing tag is a candidate title.
     public static func sanitize(_ text: String, limit: Int = 40) -> String {
-        var value = text.components(separatedBy: .newlines).first ?? ""
+        var answer = text
+        if let end = answer.range(of: "</think>", options: .backwards) {
+            answer = String(answer[end.upperBound...])
+        }
+        var value = answer.components(separatedBy: .newlines).first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? ""
         value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         let pairs = [("\"", "\""), ("'", "'"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』"), ("《", "》")]
         for (open, close) in pairs where value.count > open.count + close.count - 1
@@ -82,7 +105,9 @@ public final class SessionNamingClient: NSObject, URLSessionTaskDelegate, @unche
         var body: [String: Any] = [
             "model": configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
             "messages": [["role": "system", "content": instructions], ["role": "user", "content": excerpt]],
-            "stream": false, "temperature": 0, "max_tokens": 160
+            // A reasoning model spends its budget before the title, and a
+            // truncated response is discarded outright.
+            "stream": false, "temperature": 0, "max_tokens": 512
         ]
         if configuration.disableThinking { body["chat_template_kwargs"] = ["enable_thinking": false] }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -103,6 +128,9 @@ public final class SessionNamingClient: NSObject, URLSessionTaskDelegate, @unche
         }
         let title = SessionNaming.sanitize(try ActivitySummaryClient.responseText(data))
         guard !title.isEmpty else { throw ActivitySummaryError.emptyResponse }
+        // A title that only repeats the prompt is what `isPlaceholder` rejects,
+        // so storing one would leave the session unnamed while marking it done.
+        guard !SessionNaming.echoes(title, of: excerpt) else { throw ActivitySummaryError.echoedPrompt }
         return title
     }
 }
