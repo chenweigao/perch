@@ -106,7 +106,7 @@ struct WorkbenchSettings: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
-                    Text(verbatim: "Perch \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                    Text(verbatim: versionLabel)
                         .font(.caption2).foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 8)
@@ -116,6 +116,13 @@ struct WorkbenchSettings: View {
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
             .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
             .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
+    }
+
+    private var versionLabel: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? ""
+        let revision = info?["PerchSourceRevision"] as? String ?? ""
+        return revision.isEmpty ? "Perch \(version)" : "Perch \(version) (\(revision))"
     }
 
     @ViewBuilder private var localAgentStatus: some View {
