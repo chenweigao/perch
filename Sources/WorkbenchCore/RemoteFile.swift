@@ -77,13 +77,22 @@ public enum RemoteFileCommand {
     static func script(limit: Int) -> String {
         """
         p=$1
+        \(readScript(limit: limit))
+        """
+    }
+
+    /// Shared read body; the caller's script sets `p` to the path being inspected.
+    /// The header echoes the path actually read so a multi-root lookup can display
+    /// the real location instead of the requested guess.
+    static func readScript(limit: Int) -> String {
+        """
         if [ -d "$p" ]; then
           if [ ! -x "$p" ] || [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
-          printf 'kind=dir\\n--\\n'
+          printf 'kind=dir\\npath=%s\\n--\\n' "$p"
           ls -A -p -1 -- "$p"
         elif [ -e "$p" ]; then
           if [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
-          printf 'kind=file\\nsize=%s\\n--\\n' "$(wc -c < "$p")"
+          printf 'kind=file\\npath=%s\\nsize=%s\\n--\\n' "$p" "$(wc -c < "$p")"
           head -c \(limit) -- "$p"
         else
           printf 'kind=missing\\n'
@@ -97,23 +106,50 @@ public enum RemoteFileCommand {
             .map(SSHCommand.quote).joined(separator: " ")
     }
 
-    /// Conversation replies can cite only a filename. Keep exact paths authoritative;
-    /// search below the session directory only when that filename is missing there.
-    public static func referenceCommand(path: String, cwd: String) throws -> String {
-        let resolved = try RemoteFilePath.resolve(path, cwd: cwd)
-        guard !path.contains("/"), path != "~" else { return remoteCommand(path: resolved) }
+    /// Conversation replies cite paths relative to wherever the agent happened to
+    /// work, which is often a worktree rather than the session directory. Roots are
+    /// tried in the given order with the session directory appended as the final
+    /// fallback, so a file the agent just touched wins over a same-path copy in
+    /// another checkout. Only a bare filename falls back to a name search, which
+    /// then spans every root. Absolute and ~ paths stay authoritative as before.
+    public static func referenceCommand(path: String, cwd: String, roots: [String]) throws -> String {
+        let reference = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !reference.isEmpty, !reference.contains("\0") else {
+            return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd))
+        }
+        guard !reference.hasPrefix("/"), !reference.hasPrefix("~") else {
+            return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd))
+        }
+        var ordered: [String] = []
+        for root in roots + [cwd] where root.hasPrefix("/") && !root.contains("\0") {
+            let standardized = (root as NSString).standardizingPath
+            if !ordered.contains(standardized) { ordered.append(standardized) }
+        }
+        // Without any usable root the session directory is required, which is
+        // exactly what resolve validates; its error reaches the panel unchanged.
+        guard !ordered.isEmpty else { return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd)) }
         // find's -name operand is a glob, even when passed as a quoted argument.
-        let name = path.trimmingCharacters(in: .whitespacesAndNewlines)
-            .reduce("") { $0 + ("\\*?[".contains($1) ? "\\" : "") + String($1) }
+        let name = reference.reduce("") { $0 + ("\\*?[".contains($1) ? "\\" : "") + String($1) }
         let lookup = """
-        if [ ! -e "$1" ]; then
+        ref=$1; name=$2; shift 2
+        p=
+        for root do
+          if [ -e "$root/$ref" ]; then p=$root/$ref; break; fi
+        done
+        if [ -z "$p" ]; then
+          case "$ref" in
+            */*) printf 'kind=missing\\n'; exit 0 ;;
+          esac
           printf 'kind=matches\\n--\\n'
-          find "$2" -type d \\( -name .git -o -name .build -o -name node_modules \\) -prune -o -type f -name "$3" -print0
-          exit $?
+          for root do
+            [ -d "$root" ] || continue
+            find "$root" -type d \\( -name .git -o -name .build -o -name node_modules \\) -prune -o -type f -name "$name" -print0
+          done
+          exit 0
         fi
-        \(script(limit: readLimit))
+        \(readScript(limit: readLimit))
         """
-        return ["/bin/sh", "-c", lookup, "perch-file-reference", resolved, cwd, name]
+        return (["/bin/sh", "-c", lookup, "perch-file-reference", reference, name] + ordered)
             .map(SSHCommand.quote).joined(separator: " ")
     }
 
@@ -124,6 +160,17 @@ public enum RemoteFileCommand {
         if let controlPath, !controlPath.isEmpty { arguments += ["-S", controlPath] }
         arguments += [destination, remoteCommand(path: path, limit: limit)]
         return arguments
+    }
+
+    /// The header's `path` field names the path the remote actually read, which a
+    /// multi-root reference lookup can pick outside the session directory.
+    public static func resolvedPath(in data: Data) -> String? {
+        guard let separator = data.range(of: Data("\n--\n".utf8)) else { return nil }
+        for line in String(decoding: data[..<separator.lowerBound], as: UTF8.self).split(separator: "\n") {
+            let parts = line.split(separator: "=", maxSplits: 1)
+            if parts.count == 2, parts[0] == "path" { return String(parts[1]) }
+        }
+        return nil
     }
 
     public static func parse(_ data: Data, limit: Int = readLimit) throws -> RemoteFileContent {
@@ -142,7 +189,10 @@ public enum RemoteFileCommand {
         }
         switch fields["kind"] {
         case "matches":
-            let paths = String(decoding: body, as: UTF8.self).split(separator: "\0").map(String.init).sorted()
+            // Overlapping roots can list the same file twice; keep the first copy.
+            var seen = Set<String>()
+            let paths = String(decoding: body, as: UTF8.self).split(separator: "\0").map(String.init)
+                .filter { seen.insert($0).inserted }.sorted()
             return paths.isEmpty ? .missing : .matches(paths)
         case "dir":
             let entries = String(decoding: body, as: UTF8.self).split(separator: "\n").map { line -> RemoteDirectoryEntry in
