@@ -12,19 +12,35 @@ import os
     var selection: String?
     var dashboardProjection: DashboardProjection?
     var dashboardAttentionOnly = false
+    var dashboardGroupID: UUID?
     weak var dashboardView: NSView?
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
 }
 
-struct NativeDashboardProbe: NSViewRepresentable {
-    let projection: DashboardProjection
-    let attentionOnly: Bool
-    func makeNSView(context: Context) -> NSView { NSView() }
-    func updateNSView(_ view: NSView, context: Context) {
+/// Report only the mounted dashboard. During destination replacement SwiftUI can
+/// update the outgoing representable after creating the incoming one.
+@MainActor final class NativeDashboardProbeView: NSView {
+    var projection: DashboardProjection?
+    var attentionOnly = false
+    var groupID: UUID?
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); publish() }
+    func publish() {
+        guard window != nil else { return }
         let probe = NativeAcceptanceProbe.shared
         probe.dashboardProjection = projection
         probe.dashboardAttentionOnly = attentionOnly
-        probe.dashboardView = view
+        probe.dashboardGroupID = groupID
+        probe.dashboardView = self
+    }
+}
+struct NativeDashboardProbe: NSViewRepresentable {
+    let projection: DashboardProjection
+    let attentionOnly: Bool
+    let groupID: UUID?
+    func makeNSView(context: Context) -> NativeDashboardProbeView { NativeDashboardProbeView() }
+    func updateNSView(_ view: NativeDashboardProbeView, context: Context) {
+        view.projection = projection; view.attentionOnly = attentionOnly; view.groupID = groupID
+        view.publish()
     }
 }
 
@@ -262,7 +278,15 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             report["rss_after_mb"] = residentMB(); report["requests"] = fixture.requests
             try await Task.sleep(for: .seconds(2))
             report["rss_settled_mb"] = residentMB(); report["status"] = "passed"
-        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        } catch {
+            report["status"] = "failed"; report["error"] = error.localizedDescription
+            report["dashboard_diagnostic"] = ["expected_group": model.selectedGroupID?.uuidString ?? "global",
+                "rendered_group": probe.dashboardGroupID?.uuidString ?? "global",
+                "projection_matches": probe.dashboardProjection == model.dashboardProjection,
+                "mounted": probe.dashboardView?.window != nil,
+                "expected_projection": String(describing: model.dashboardProjection),
+                "rendered_projection": String(describing: probe.dashboardProjection)]
+        }
         do {
             let path = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESULTS"]!
             let output = URL(fileURLWithPath: path)
@@ -276,6 +300,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         }
     }
     private func dashboard(_ window: NSWindow) async throws -> [String: Any] {
+        let unified = try await unifiedWorkbench(window)
         var durations: [Double] = []
         for step in 0..<60 {
             // Whole sections appear/disappear while their rows change height,
@@ -315,9 +340,74 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         guard idleCPU < 1 else { throw WorkbenchError("Dashboard kept consuming CPU: \(idleCPU)s / 2s") }
         model.open(fixture.sessions[0])
         try await settle(window, "return from dashboard") { self.hasMountedMessage(window, session: "session-0") }
-        return ["dashboard_updates": durations.count, "dashboard_update_ms": stats(durations),
+        return ["unified_workbench": unified, "dashboard_updates": durations.count, "dashboard_update_ms": stats(durations),
                 "dashboard_idle_cpu_seconds_over_2s": idleCPU,
                 "dashboard_contract": "rendered projection and inbox state; scrolling during section/height/order changes; return to transcript; offline fixture"]
+    }
+    private func unifiedWorkbench(_ window: NSWindow) async throws -> [String: Any] {
+        let first = fixture.sessions[0], second = fixture.sessions[1]
+        let remoteHost = SSHHost(id: UUID(), name: "Remote fixture", destination: "")
+        model.connections = [HostConnection(host: NativeAcceptanceFixture.host), HostConnection(host: remoteHost)]
+        func item(_ original: WorkspaceSession, section: WorkQueueSection, online: Bool = true) -> WorkspaceSession {
+            WorkspaceSession(reference: original.reference, title: original.title, directory: original.directory,
+                hostName: original.hostName, detail: "验收", online: online, section: section,
+                canMarkReviewed: section == .review, updatedAt: original.updatedAt)
+        }
+        let remote = WorkspaceSession(reference: SessionReference(hostID: remoteHost.id, terminalID: "remote", kind: .codex),
+            title: "跨机器结果", directory: "/fixture", hostName: remoteHost.name, detail: "结果待查看", online: true,
+            section: .review, canMarkReviewed: true)
+        let catalog = [item(first, section: .attention), item(second, section: .running), remote,
+                       item(fixture.sessions[2], section: .attention, online: false)]
+        var goal = WorkItemGroup(name: "连接稳定性", goal: "跨机器恢复工作，保留结果来源", nextStep: "核对离线机器恢复后的状态", sessions: catalog.map(\.reference))
+        goal.criteria = [GroupCriterion(title: "跨机器恢复验证"), GroupCriterion(title: "结果来源可追溯", completed: true)]
+        goal.outcomes = [GroupOutcome(title: "恢复验证记录", detail: "会话归属保留；待处理按唯一会话计数", link: "/fixture/report.md", source: first.reference)]
+        let related = WorkItemGroup(name: "交互验收", goal: "验证共享会话", nextStep: "", sessions: [first.reference])
+        model.workspace.groups = [goal, related]
+        model.workspace.lastSessionByGroup[goal.id.uuidString] = first.id
+        model.acceptanceUpdateCatalog(catalog)
+        model.clearScope(); model.showHome()
+        try await settle(window, "global goals") { self.probe.dashboardGroupID == nil && self.probe.dashboardProjection == self.model.dashboardProjection }
+        guard model.dashboardProjection.attention.items.count == 1 else { throw WorkbenchError("Shared action counted twice") }
+        model.showHome(groupID: goal.id)
+        try await settle(window, "group workbench") { self.probe.dashboardGroupID == goal.id && self.probe.dashboardProjection == self.model.dashboardProjection }
+        model.setScope(hostID: remoteHost.id)
+        guard model.dashboardProjection.review.items.count == 1 && model.dashboardProjection.attention.isEmpty else { throw WorkbenchError("Machine scope ignored in group") }
+        model.setScope(groupID: related.id)
+        try await settle(window, "group and machine empty") { self.probe.dashboardGroupID == related.id && self.probe.dashboardProjection == self.model.dashboardProjection }
+        guard model.dashboardProjection.emptyState == .noMatches && model.scopeHost?.id == remoteHost.id else { throw WorkbenchError("Group navigation dropped machine scope") }
+        model.setScope(groupID: goal.id)
+        model.clearScope(model.activeScope.facets.first { $0.kind == .host })
+        model.showInbox(groupID: goal.id)
+        try await settle(window, "group inbox") { self.probe.dashboardAttentionOnly && self.probe.dashboardGroupID == goal.id }
+        guard model.dashboardProjection.attention.items.map(\.id) == [first.id] else { throw WorkbenchError("Group inbox included results or offline state") }
+        model.setScope(groupID: related.id)
+        guard model.onlyAttention && model.selectedGroupID == related.id else { throw WorkbenchError("Group picker lost inbox mode") }
+        model.showHome(groupID: goal.id)
+        model.search = "no-matching-session"
+        try await settle(window, "group search") { self.probe.dashboardProjection == self.model.dashboardProjection }
+        guard model.dashboardProjection.emptyState == .noMatches && model.selectedGroup?.goal == goal.goal else { throw WorkbenchError("Search changed goal") }
+        model.clearSessionFilters()
+        guard model.selectedGroupID == goal.id && model.search.isEmpty && model.scopeHost == nil else {
+            throw WorkbenchError("Clearing session filters left the goal")
+        }
+        model.toggleGroupPin(model.selectedGroup!)
+        goal = model.selectedGroup!
+        goal.criteria[0].completed = true; model.updateGroup(goal)
+        guard model.selectedGroup?.stage == .active else { throw WorkbenchError("Criteria auto-completed goal") }
+        goal.stage = .completed; model.updateGroup(goal)
+        guard model.dashboardProjection.attention.items.count == 1 else { throw WorkbenchError("Completed goal hid pending action") }
+        model.addOutcome(GroupOutcome(title: "最终报告", source: first.reference), to: goal.id)
+        let saved = try JSONEncoder().encode(model.workspace)
+        let restored = try JSONDecoder().decode(LocalWorkspace.self, from: saved)
+        guard restored.groups[0].isPinned && restored.groups[0].stage == .completed && restored.groups[0].outcomes.last?.source == first.reference else { throw WorkbenchError("Goal persistence lost metadata") }
+        model.clearScope(); model.showHome()
+        try await settle(window, "return global") { self.probe.dashboardGroupID == nil && self.probe.dashboardProjection == self.model.dashboardProjection }
+        guard model.dashboardProjection.attention.items.count == 1 else { throw WorkbenchError("Global return retained hidden group") }
+        model.connections = []; model.workspace.groups = []
+        model.acceptanceUpdateCatalog(fixture.sessions)
+        return ["rendered_navigation": true, "combined_group_machine_scope": true, "scoped_inbox": true,
+                "global_action_deduplication": true, "offline_excluded_from_actions": true,
+                "manual_completion": true, "outcome_source_persistence": true, "pin_persistence": true]
     }
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
         var durations: [Double] = []

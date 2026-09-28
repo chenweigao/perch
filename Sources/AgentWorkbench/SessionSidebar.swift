@@ -19,31 +19,36 @@ struct WorkbenchSidebar: View {
                               environmentSummary: L("\(model.connections.count) 个环境"),
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
-                              onHome: { model.showHome() }, onInbox: { model.showInbox() },
+                              onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
                               onArchive: { model.showArchive() }) {
             if !projection.favorites.isEmpty {
                 SidebarSection("置顶", id: "favorites") {
                     ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
                 }
             }
-            SidebarSection("任务组", id: "groups") {
-                ForEach(model.workspace.groups) { group in
-                    let items = TaskGroupProjection(group: group, allSessions: model.allSessions, lastSessionID: nil, search: "")
+            SidebarSection("常用任务组", id: "groups") {
+                ForEach(model.groupShortcuts) { summary in
+                    let group = summary.group
                     Button { model.showHome(groupID: group.id) } label: {
                         HStack(spacing: WorkbenchChrome.labelSpacing) {
-                            Image(systemName: "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                            Image(systemName: group.isPinned ? "pin" : "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
                                 .frame(width: WorkbenchChrome.sidebarSymbolWidth)
                             Text(group.name).lineLimit(1); Spacer(minLength: 4)
-                            Text("\(items.totalCount)").font(.system(size: 11)).foregroundStyle(.secondary)
+                            if summary.attentionCount > 0 {
+                                Text("\(summary.attentionCount)").font(.system(size: 11)).foregroundStyle(.orange)
+                            }
                         }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
                     }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
-                        .help("\(items.totalCount) 个未归档 · \(items.archivedCount) 个已归档 · \(items.missingCount) 个尚未同步")
-                        .contextMenu { Button("编辑任务组") { model.editGroup(group) } }
+                        .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
+                        .contextMenu {
+                            Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }
+                            Button("编辑任务组") { model.editGroup(group) }
+                        }
                 }
-                if model.workspace.groups.isEmpty {
-                    Button("创建任务组…") { model.editGroup() }.buttonStyle(.plain)
-                        .foregroundStyle(.secondary).padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 6)
-                }
+                Button("全部任务组") {
+                    model.clearScope(); model.showHome(); model.showAllTaskGroups = true
+                }.buttonStyle(.plain).foregroundStyle(.secondary)
+                    .padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 8)
             } actions: {
                 Button { model.editGroup() } label: {
                     Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())

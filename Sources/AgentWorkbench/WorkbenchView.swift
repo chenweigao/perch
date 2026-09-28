@@ -147,14 +147,19 @@ private struct WorkbenchDetail: View {
                 } else if model.showDashboard {
                     if model.showArchived { ArchivedSessionsView(model: model) }
                     else if model.showSessionDirectory { SessionDirectoryView(model: model) }
-                    else if let group = model.selectedGroup { TaskGroupPage(model: model, group: group).id(group.id) }
                     else {
                         WorkbenchDashboard(
                             attentionOnly: model.onlyAttention, changes: model.dashboardChanges,
                             onAcknowledgeChanges: { model.acknowledgeDashboardChanges() },
                             onSuggestGroups: { model.showGroupSuggestions = true },
                             projection: model.dashboardProjection,
-                            context: model.dashboardContext, isArchiving: model.isArchiving,
+                            context: model.dashboardContext, group: model.selectedGroup, hasSessionSearch: !model.search.isEmpty,
+                            onClearSessionFilters: { model.clearSessionFilters() },
+                            groupHeader: AnyView(GroupWorkbenchHeader(model: model)),
+                            groupOverview: AnyView(TaskGroupOverview(model: model)),
+                            groupProgress: AnyView(GroupWorkbenchProgress(model: model)),
+                            groupHistory: AnyView(GroupWorkbenchHistory(model: model)),
+                            isArchiving: model.isArchiving,
                             archiveResult: model.archiveResult,
                             onNewTask: { model.startNewTask() },
                             onOpen: { item in
@@ -169,11 +174,13 @@ private struct WorkbenchDetail: View {
                             onRetryArchive: { model.retryBatchArchive() },
                             onStartLocal: { model.showLocalSetup = true },
                             onConnectRemote: { model.configureHost() },
-                            onShowInbox: { model.showInbox() },
+                            onShowInbox: { model.showInbox(groupID: model.selectedGroupID) },
                             onShowAll: { model.showAllSessions() },
-                            onShowHome: { model.showHome() },
+                            onShowHome: { model.showHome(groupID: model.selectedGroupID) },
                             onClearScope: { model.clearScope($0) },
                             onClearAllScopes: { model.clearScope() })
+                            .id(DashboardDestination(groupID: model.selectedGroupID,
+                                                     hostID: model.scopeHost?.id, inbox: model.onlyAttention))
                     }
                 }
                 else if model.showKimi {
@@ -238,4 +245,11 @@ private struct StatusBar: View {
         }.font(.system(size: 10)).foregroundStyle(quiet).padding(.horizontal, 18).padding(.vertical, 9)
             .help(connection.error ?? L("会话状态每 3 秒同步一次；终端内容实时传输"))
     }
+}
+
+/// Destination changes start at the goal heading; live catalog updates keep scroll position.
+private struct DashboardDestination: Hashable {
+    let groupID: UUID?
+    let hostID: UUID?
+    let inbox: Bool
 }

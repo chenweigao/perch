@@ -26,11 +26,12 @@ final class WorkbenchModel: ObservableObject {
     @Published private(set) var openedSessions: [SavedTerminal] = []
     @Published private(set) var terminals: [AttachedTerminal] = []
     @Published var showDashboard = true
+    @Published var showAllTaskGroups = false
     @Published var selectedGroupID: UUID?
     /// Narrows the workbench queue without leaving it. Deliberately not persisted:
     /// a filter is a question about right now, and restoring one would hide sessions
     /// on the first screen after launch.
-    @Published var scope = DashboardScope()
+    @Published var scopeHostID: UUID?
     @Published var workspace = LocalWorkspace()
     @Published var workspaceError: String?
     @Published private(set) var allSessions: [WorkspaceSession] = []
@@ -342,24 +343,30 @@ final class WorkbenchModel: ObservableObject {
     /// The scope resolved against what still exists. A group that was removed or a
     /// machine that was disconnected leaves nothing to narrow by and nothing to show,
     /// so the queue and the chips on screen can never disagree.
-    var scopeGroup: WorkItemGroup? { workspace.groups.first { $0.id == scope.groupID } }
-    var scopeHost: SSHHost? { connections.first { $0.id == scope.hostID }?.host }
+    var scopeGroup: WorkItemGroup? { selectedGroup }
+    var scopeHost: SSHHost? { connections.first { $0.id == scopeHostID }?.host }
     var activeScope: ActiveScope { ActiveScope(groupName: scopeGroup?.name, hostName: scopeHost?.name) }
     /// Built per access, so a view reads it once per pass and hands rows plain names.
     /// Reading it inside a row would rebuild it for every row on every catalog tick,
     /// which is the cost `SessionSidebarRow` exists to avoid.
     var groupIndex: SessionGroupIndex { SessionGroupIndex(groups: workspace.groups) }
-    func setScope(groupID: UUID?) { scope.groupID = groupID }
-    func setScope(hostID: UUID?) { scope.hostID = hostID }
+    func setScope(groupID: UUID?) {
+        let inbox = onlyAttention
+        showHome(groupID: groupID)
+        onlyAttention = inbox
+    }
+    func setScope(hostID: UUID?) { scopeHostID = hostID }
     /// Clears one facet, or both. A group filter and a machine filter answer
     /// different questions, so dropping one keeps the other.
     func clearScope(_ facet: ActiveScope.Facet? = nil) {
         switch facet?.kind {
-        case .group: scope.groupID = nil
-        case .host: scope.hostID = nil
-        case nil: scope = DashboardScope()
+        case .group: selectedGroupID = nil; search = ""
+        case .host: scopeHostID = nil
+        case nil: selectedGroupID = nil; scopeHostID = nil; search = ""
         }
+        saveWorkspace()
     }
+    func clearSessionFilters() { scopeHostID = nil; search = "" }
     var pendingRestoration: [SavedTerminal] {
         openedSessions.filter { saved in
             !allSessions.contains { $0.id == saved.session.id && $0.online }
@@ -418,8 +425,7 @@ final class WorkbenchModel: ObservableObject {
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { changes() }
         else { withAnimation(.easeInOut(duration: 0.24), changes) }
     }
-    /// Read by the workbench queue and by the archive list. Both are on screen only
-    /// with no group landing page open, so the scope's two facets are the whole filter.
+    /// Home, group workbench and inbox share one resolved group/machine scope.
     var sessionScope: SessionScope {
         SessionCatalog.scope(allSessions, starred: workspace.starred, group: scopeGroup,
                              hostFilter: scopeHost?.id, search: search,
@@ -448,7 +454,7 @@ final class WorkbenchModel: ObservableObject {
             showDashboard = true; tabs.showOverview()
         }
         configuredEnvironment = !connections.isEmpty
-        if scope.hostID == host.id { scope.hostID = nil }
+        if scopeHostID == host.id { scopeHostID = nil }
         do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
         catch { managementError = L("机器已移除，但保存机器列表失败：\(error.localizedDescription)") }
         rebuildCatalog(); syncFileViewer(); saveWorkspace()
@@ -534,14 +540,13 @@ final class WorkbenchModel: ObservableObject {
         onlyAttention = false; search = ""; showSessionDirectory = false
         showArchived = false; draftingNewTask = false
         selectedGroupID = groupID
-        // The workbench and its inbox are the same queue, so a filter survives the move
-        // between them. A group landing page does not read the queue's scope, and
-        // leaving one set there would silently narrow the list again on the way back.
-        if groupID != nil { clearScope() }
+        if let index = workspace.groups.firstIndex(where: { $0.id == groupID }) {
+            workspace.groups[index].lastOpenedAt = Date().timeIntervalSince1970
+        }
         showDashboard = true
         tabs.showOverview(); updateVisibility(); saveWorkspace()
     }
-    func showInbox() { showHome(); onlyAttention = true }
+    func showInbox(groupID: UUID? = nil) { showHome(groupID: groupID); onlyAttention = true }
     func showAllSessions() { showHome(); showSessionDirectory = true }
     func newKimiCreated(_ session: KimiSession) {
         search = ""; onlyAttention = false; showArchived = false
@@ -574,6 +579,9 @@ final class WorkbenchModel: ObservableObject {
     func updateGroup(_ group: WorkItemGroup) {
         guard let index = workspace.groups.firstIndex(where: { $0.id == group.id }) else { return }
         workspace.groups[index] = group; saveWorkspace()
+    }
+    func toggleGroupPin(_ group: WorkItemGroup) {
+        var updated = group; updated.isPinned.toggle(); updateGroup(updated)
     }
     func addOutcome(_ outcome: GroupOutcome, to groupID: UUID) {
         guard let index = workspace.groups.firstIndex(where: { $0.id == groupID }) else { return }
@@ -652,6 +660,12 @@ final class WorkbenchModel: ObservableObject {
               kimiEnvironments[hostID]?.sessions.first(where: { $0.id == session.id })?.updatedAt == session.updatedAt else { return }
         workspace.markReviewed(session, on: hostID)
         rebuildCatalog(); saveWorkspace()
+    }
+    var groupSummaries: [TaskGroupSummary] {
+        TaskGroupSummary.ordered(groups: workspace.groups, sessions: allSessions, hostID: scopeHost?.id)
+    }
+    var groupShortcuts: [TaskGroupSummary] {
+        TaskGroupSummary.shortcuts(groups: workspace.groups, sessions: allSessions, selectedID: selectedGroupID)
     }
     func markReviewed(_ item: WorkspaceSession) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
@@ -747,13 +761,16 @@ final class WorkbenchModel: ObservableObject {
         let subjects = Dictionary(uniqueKeysWithValues: scoped.map { ($0.id, archiveSubject($0)) })
         return DashboardProjection(sessions: scoped, subjects: subjects,
                                    hasConfiguredEnvironment: configuredEnvironment, concurrencyLimit: 4,
-                                   filtered: !activeScope.isEmpty)
+                                   filtered: !activeScope.isEmpty || !search.isEmpty)
     }
     /// What could not be restored, any local-storage failure, and the filters currently
     /// narrowing the queue. A save or read failure used to be recorded and never shown,
     /// and an invisible filter reads as missing sessions.
     var dashboardContext: DashboardContext {
-        DashboardContext(pendingRestoration: pendingRestoration, storageError: workspaceError,
+        DashboardContext(pendingRestoration: pendingRestoration.filter { saved in
+            (selectedGroup.map { $0.sessions.contains(saved.session) } ?? true) &&
+            (scopeHost.map { saved.session.hostID == $0.id } ?? true)
+        }, storageError: workspaceError,
                          scope: activeScope)
     }
     /// Runs one batch to completion. Each item is re-validated immediately before

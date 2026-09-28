@@ -984,3 +984,23 @@
 "加入当前任务草稿，检查后再发送。" = "Add to this task’s draft. Review it before sending.";
 
 "加入草稿" = "Add to draft";
+
+"%lld 项等你处理 · %lld 项状态未同步" = "%lld need your input · %lld not synced";
+"全部关联会话" = "All linked sessions";
+"写下目标" = "Add a goal";
+"常用任务组" = "Frequent task groups";
+"恢复" = "Restore";
+"编辑目标" = "Edit goal";
+"置顶任务组" = "Pin task group";
+"收起任务组" = "Show active groups";
+"正在推进的任务组" = "Active task groups";
+"搜索任务组" = "Search task groups";
+"把共同目标和相关会话放在一起，也可以直接开始会话。" = "Organize related sessions around a goal, or start a conversation directly.";
+"没有匹配的任务组" = "No matching task groups";
+"暂无进行中的任务组" = "No active task groups";
+"下一步：%@" = "Next: %@";
+"最近成果：%@" = "Latest outcome: %@";
+"待查看结果：%@" = "Result to review: %@";
+"查看全部任务组" = "View all task groups";
+"%lld 项状态未同步" = "%lld not synced";
+"目标与下一步" = "Goal and next step";

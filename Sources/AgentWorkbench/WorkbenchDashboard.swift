@@ -11,6 +11,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
     @State private var queueOrder = ActionQueueOrder()
     let projection: DashboardProjection
     var context = DashboardContext()
+    var group: WorkItemGroup? = nil
+    var hasSessionSearch = false
+    var onClearSessionFilters: (() -> Void)? = nil
+    var groupHeader: AnyView = AnyView(EmptyView())
+    var groupOverview: AnyView = AnyView(EmptyView())
+    var groupProgress: AnyView = AnyView(EmptyView())
+    var groupHistory: AnyView = AnyView(EmptyView())
     let isArchiving: Bool
     let archiveResult: BatchArchiveRun?
     let onNewTask: () -> Void
@@ -39,10 +46,6 @@ struct WorkbenchDashboard<RowActions: View>: View {
             VStack(alignment: .leading, spacing: 28) {
                 if let error = context.storageError { storageBanner(error) }
                 introduction
-                if !attentionOnly {
-                    if let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
-                    if !changes.isEmpty { changeSummary }
-                }
                 if attentionOnly {
                     if projection.attention.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
@@ -56,18 +59,31 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         section(DashboardSection(section: .attention, items: ordered), limit: ordered.count)
                     }
                 } else {
-                    if let empty = projection.emptyState, empty != .nothingPending { emptyState(empty) }
-                    ForEach(projection.sections) { value in
-                        section(value, limit: value.section == .attention ? 3 : 5)
-                    }
+                    groupHeader
+                    if let empty = projection.emptyState, empty != .nothingPending,
+                       group == nil || hasSessionSearch || context.scope.facets.contains(where: { $0.kind == .host }) { emptyState(empty) }
+                    if !projection.attention.isEmpty { section(projection.attention, limit: 3) }
+                    groupOverview
+                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
+                    if !changes.isEmpty { changeSummary }
+                    groupProgress
+                    if !projection.review.isEmpty { section(projection.review, limit: 5) }
+                    if !projection.running.isEmpty { section(projection.running, limit: 5) }
                     if !projection.recent.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
                             HStack {
                                 Text("最近会话").accessibilityAddTraits(.isHeader)
                                 Spacer()
-                                Button("查看全部", action: onShowAll).buttonStyle(.link)
+                                if group == nil { Button("查看全部", action: onShowAll).buttonStyle(.link) }
                             }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
                             ForEach(projection.recent) { row($0, in: .other) }
+                            if group != nil && projection.other.count > projection.recent.count {
+                                DisclosureGroup("全部关联会话") {
+                                    ForEach(projection.other.filter { item in !projection.recent.contains(where: { $0.id == item.id }) }) {
+                                        row($0, in: .other)
+                                    }
+                                }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+                            }
                         }
                     }
                     if isArchiving {
@@ -94,11 +110,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
+                if !attentionOnly { groupHistory }
                 if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
             }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
                 .frame(maxWidth: 944).frame(maxWidth: .infinity)
                 #if PERCH_ACCEPTANCE
-                .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly))
+                .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly, groupID: group?.id))
                 #endif
         }
         .onAppear { queueOrder.update(projection.attention.items.map(\.id)) }
@@ -129,18 +146,24 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     private var title: LocalizedStringKey {
         if attentionOnly { return "等你处理" }
+        if let group { return LocalizedStringKey(group.name) }
         if projection.emptyState == .noEnvironment || projection.emptyState == .noSessions { return "开始第一段会话" }
-        return "接着做"
+        return "工作台"
     }
 
     private var introduction: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(title).font(.system(size: 25, weight: .semibold))
-            if !context.scope.isEmpty { scopeChips }
+            if let group, !attentionOnly {
+                if let facet = context.scope.facets.first(where: { $0.kind == .group }) {
+                    Button("工作台") { onClearScope(facet) }.buttonStyle(.link).font(.system(size: 12))
+                }
+                Text(group.name).font(.system(size: 25, weight: .semibold)).textSelection(.enabled)
+            } else { Text(title).font(.system(size: 25, weight: .semibold)) }
+            if !visibleFacets.isEmpty { scopeChips }
             if attentionOnly {
                 Text("确认、回答或处理错误；查看结果请到工作台。")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
-            } else if projection.emptyState == nil || projection.emptyState == .nothingPending {
+            } else if group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 14) { summary }
                     VStack(alignment: .leading, spacing: 5) { summary }
@@ -153,10 +176,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
     /// group filter and a machine filter answer different questions, and dropping one
     /// should not also drop the other. The whole pill is the target, so there is no
     /// second hit area inside it.
+    private var visibleFacets: [ActiveScope.Facet] {
+        context.scope.facets.filter { attentionOnly || group == nil || $0.kind == .host }
+    }
     private var scopeChips: some View {
         HStack(spacing: 6) {
             Text("筛选中").font(.system(size: 11)).foregroundStyle(.tertiary)
-            ForEach(context.scope.facets, id: \.self) { facet in
+            ForEach(visibleFacets, id: \.self) { facet in
                 Button { onClearScope(facet) } label: {
                     HStack(spacing: 5) {
                         Image(systemName: facet.symbol).font(.system(size: 10))
@@ -167,7 +193,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 }.buttonStyle(.plain)
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
-            if context.scope.facets.count > 1 {
+            if visibleFacets.count > 1 {
                 Button("全部清除", action: onClearAllScopes).buttonStyle(.link).font(.system(size: 11))
             }
         }
@@ -219,7 +245,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
             } else if state == .noMatches {
                 // Nothing is wrong with the workspace; the filter is hiding everything.
                 // Starting a session would not fix that and would bury the reason.
-                Button("清除筛选", action: onClearAllScopes).buttonStyle(.borderedProminent)
+                Button("清除筛选", action: onClearSessionFilters ?? onClearAllScopes).buttonStyle(.borderedProminent)
             } else {
                 Button("新建会话", action: onNewTask).buttonStyle(.borderedProminent)
             }
