@@ -64,6 +64,12 @@ final class KimiConnection: ObservableObject {
     @Published private(set) var snapshotReady = false
     @Published var loadingOlder = false
     @Published var resolving = Set<String>()
+    /// What the service answering this connection reports about itself, read from
+    /// `/api/v1/meta` on every connect.
+    @Published private(set) var runtime = RunningRuntime.unknown
+    /// Set when the remote package is newer than the running service. Perch reports
+    /// it and nothing more: the daemon belongs to the user, not to this client.
+    @Published private(set) var staleRuntimeNotice: String?
     private(set) var api: KimiAPI?
     private var cachedConversations = KimiConversationCache()
     private var socket: URLSessionWebSocketTask?
@@ -74,6 +80,8 @@ final class KimiConnection: ObservableObject {
     private var historyTask: Task<Void, Never>?
     private var listRefresh: Task<Void, Never>?
     private var taskRefresh: Task<Void, Never>?
+    private var freshnessCheck: Task<Void, Never>?
+    private let probesInstalledVersion: Bool
     private var archivingBatch = false
     func beginArchiveBatch() { archivingBatch = true; listRefresh?.cancel() }
     func endArchiveBatch() { archivingBatch = false }
@@ -105,13 +113,19 @@ final class KimiConnection: ObservableObject {
         try draftFile?.flush(savedDrafts)
     }
 
-    init(host: SSHHost) { self.host = host; selectedId = UserDefaults.standard.string(forKey: savedSelectionKey); loadDrafts() }
+    init(host: SSHHost) {
+        self.host = host; probesInstalledVersion = true
+        selectedId = UserDefaults.standard.string(forKey: savedSelectionKey); loadDrafts()
+    }
 
-    /// Setup never restores drafts, selection or an existing conversation.
-    init(setupHost: SSHHost) { self.host = setupHost }
+    /// Setup never restores drafts, selection or an existing conversation. It also
+    /// reads the installed version itself, so this connection skips that probe.
+    init(setupHost: SSHHost) { self.host = setupHost; probesInstalledVersion = false }
 
     /// Isolated connection checks use a local HTTP fixture without SSH.
-    init(host: SSHHost, api: KimiAPI) { self.host = host; self.api = api; online = true }
+    init(host: SSHHost, api: KimiAPI) {
+        self.host = host; self.api = api; probesInstalledVersion = false; online = true
+    }
 
     func refreshModels() async {
         guard online, let api else { return }
@@ -152,6 +166,7 @@ final class KimiConnection: ObservableObject {
                     }
                     try await sendFrame(ws, type: "client_hello", payload: ["client_id": .string("agent-workbench")])
                     online = true; stateMessage = "已连接"; error = nil; delay = 1
+                    checkRuntimeFreshness()
                     if let id = selectedId, sessions.contains(where: { $0.id == id }) {
                         do {
                             try await refreshConversation(selectionToken: selectionGeneration)
@@ -174,9 +189,14 @@ final class KimiConnection: ObservableObject {
                         }
                     }
                     let poll = Task { [weak self] in
+                        var ticks = 0
                         while !Task.isCancelled {
                             do { try await Task.sleep(for: .seconds(30)); try await self?.refreshSessions() }
                             catch { return }
+                            ticks += 1
+                            // An upgrade happens by hand between sessions, so this
+                            // re-probe stays rare: it costs an SSH round trip.
+                            if ticks % 20 == 0 { self?.checkRuntimeFreshness() }
                         }
                     }
                     defer { heartbeat.cancel(); poll.cancel(); ws.cancel(with: .goingAway, reason: nil) }
@@ -200,6 +220,8 @@ final class KimiConnection: ObservableObject {
 
     func disconnect() {
         generation = UUID(); selectionGeneration = UUID()
+        freshnessCheck?.cancel(); freshnessCheck = nil
+        runtime = .unknown; staleRuntimeNotice = nil
         task?.cancel(); task = nil; selectionTask?.cancel(); listRefresh?.cancel(); taskRefresh?.cancel()
         historyTask?.cancel(); historyTask = nil; loadingOlder = false; loading = false
         snapshotReady = false
@@ -245,12 +267,37 @@ final class KimiConnection: ObservableObject {
             if FileManager.default.fileExists(atPath: control) {
                 let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(localPort)")!, token: secret)
                 api = client
-                _ = try await client.get(JSONValue.self, "/api/v1/meta")
+                runtime = try await client.get(KimiServerMeta.self, "/api/v1/meta").runtime
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
         }
         throw WorkbenchError("Kimi SSH 转发建立超时")
+    }
+
+    /// Compares the package installed on the host with the process that is serving
+    /// this connection. A failed or unreadable probe stays silent: a version check
+    /// must not interrupt a session or surface as a connection error.
+    func checkRuntimeFreshness() {
+        guard probesInstalledVersion, freshnessCheck == nil,
+              runtime.version != nil, !host.destination.isEmpty else { return }
+        freshnessCheck = Task { [weak self] in
+            await self?.probeRuntimeFreshness()
+            self?.freshnessCheck = nil
+        }
+    }
+    private func probeRuntimeFreshness() async {
+        guard let running = runtime.version else { return }
+        do {
+            let output = try await SetupCommandRunner.run("/usr/bin/ssh",
+                RemoteSetup.sshArguments(host.destination, command: RemoteSetup.kimiRuntimeProbeCommand), timeout: 20)
+            guard case .ready(let installed) = RemoteSetup.parseKimiRuntimeProbe(output) else { return }
+            guard case .stale(let onDisk, let serving) =
+                    RuntimeVersion.compare(installed: installed.version, running: running) else {
+                staleRuntimeNotice = nil; return
+            }
+            staleRuntimeNotice = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+        } catch {}
     }
 
     func refreshSessions() async throws {

@@ -68,6 +68,7 @@ struct KimiWorkspaceView: View {
                 Spacer()
             }
             if let problem = connection.error { errorBanner("连接中断，显示的是最近同步的内容。\n" + problem) }
+            if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(.white)
             .onChange(of: connection.selectedId) { _, _ in palette = CommandPaletteState() }
             .tint(kimiAccent)
@@ -200,6 +201,16 @@ struct KimiWorkspaceView: View {
                 Button("Retry") { connection.reloadSelected() }.disabled(!connection.online || connection.loading)
             }
         }.font(.system(size: 12)).foregroundStyle(.orange).padding(12).background(.orange.opacity(0.06)).padding(.horizontal, 28)
+    }
+    /// An upgraded package with an older service still running. Informational: the
+    /// session keeps working, and restarting that service stays the user's call.
+    private func runtimeNotice(_ text: String) -> some View {
+        HStack(alignment: .top) {
+            Image(systemName: "info.circle")
+            Text(text).textSelection(.enabled)
+            Spacer()
+        }.font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
+            .background(Color.secondary.opacity(0.06)).padding(.horizontal, 28)
     }
 }
 

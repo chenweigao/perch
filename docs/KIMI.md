@@ -31,6 +31,9 @@ Kimi 与 Herdr 共用任务组、侧栏、打开标签和待处理队列；两�
 ## 协议边界
 
 - 实际对接版本为 Kimi Code 2.0.2（Node 版），WebSocket protocol_version 2。
+- 连接时读取 `GET /api/v1/meta` 的 `server_version` 与 `started_at`，记录的是正在服务的进程，不是远端安装的包。握手仍只接受 protocol_version 2；同一协议内的版本差异不阻断连接。
+- 安装版本由接入向导的运行环境探测读取（`kimi --version`，找不到再查 npm 全局目录）。两者不一致说明升级后旧 `kimi web` 仍在跑：向导以「运行进程」信息行显示，会话内显示一条灰色提示，不阻断发送。Perch 只提示，不终止运行中的服务，升级生效需要用户自行重启。
+- 会话期间每约 10 分钟、以及每次重新连接后重读安装版本；探测失败保持安静，不转成连接错误。
 - 通过独立 SSH TCP 转发访问服务。本地端口随机分配且仅监听 loopback。
 - SSH 读取该机器配置的令牌文件（默认 `~/.kimi-code/server.token`）；Bearer 仅留在进程内存，不写入本地配置、日志或 URL。
 - 直接使用 REST 和 WebSocket，不嵌入网页，也不抓取终端文本。
