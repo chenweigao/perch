@@ -4,7 +4,7 @@ import WorkbenchCore
 
 struct WorkbenchSidebar: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @State private var filter = SidebarRecentFilter.all
     private var page: SidebarPage {
         guard model.showDashboard else { return .other }
@@ -88,7 +88,7 @@ struct WorkbenchSidebar: View {
 
 struct SessionDirectoryView: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var isSearchSheet = false
     @State private var query = ""
     @State private var selection: String?
@@ -191,7 +191,7 @@ private struct SessionSidebarRow: View {
 
 struct SessionActionsMenu: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
     var body: some View {
@@ -228,7 +228,7 @@ struct SessionActionsMenu: View {
 }
 
 struct ArchivedSessionsView: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         let sessions = model.scopedSessions
         let index = model.groupIndex
@@ -247,7 +247,7 @@ struct ArchivedSessionsView: View {
 
 private struct ConnectionControls: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @ObservedObject var kimi: KimiConnection
     @ObservedObject var native: NativeAgentConnection
     var body: some View {
@@ -315,7 +315,7 @@ private struct ConnectionControls: View {
 
 struct KimiSelectionContent: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @ObservedObject var connection: KimiConnection
     var body: some View {
         if connection.conversation?.snapshot.session.id == model.selectedReference?.terminalID {

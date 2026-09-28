@@ -2,10 +2,10 @@ import AppKit
 import Foundation
 import WorkbenchCore
 
-/// Real WorkbenchModel checks in an isolated app domain. All phases stay on
-/// the main actor without yielding; queued connection tasks never launch SSH.
+/// Real WorkbenchModel checks in an isolated app domain. Host phases do not
+/// yield; architecture checks await only injected operations with no configured hosts.
 @main struct HostLifecycleChecks {
-    @MainActor static func main() throws {
+    @MainActor static func main() async throws {
         _ = NSApplication.shared
         let domain = Bundle.main.bundleIdentifier!
         precondition(domain.hasPrefix("dev.agentworkbench.hostqa."))
@@ -14,6 +14,10 @@ import WorkbenchCore
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
         switch CommandLine.arguments[1] {
+        case "architecture":
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+            try await checkStateArchitecture()
+
         case "seed":
             let empty = WorkbenchModel()
             precondition(!empty.configuredEnvironment && empty.connections.isEmpty && empty.selectedConnection == nil)

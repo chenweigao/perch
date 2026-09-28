@@ -3,7 +3,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct LocalAgentSetupSheet: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Set<SessionKind> = Set(LocalAgentDiscovery.supported)
     @State private var error: String?

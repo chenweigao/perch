@@ -8,7 +8,7 @@ private let quiet = WorkbenchTheme.quiet
 
 struct WorkbenchView: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         WorkbenchWorkspace(model: model).equatable()
             .ignoresSafeArea(.container, edges: .top).foregroundStyle(ink).tint(accent)
@@ -83,7 +83,7 @@ private struct WorkbenchWorkspace: View, Equatable {
 
 private struct WorkbenchDetail: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
 
     @AppStorage("files.panel.width") private var filePanelWidth = 460.0
     @State private var fullWidthReview = false
@@ -222,7 +222,7 @@ private struct WorkbenchDetail: View {
 
 private struct TerminalPane: View {
     @ObservedObject var terminal: AttachedTerminal
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         VStack(spacing: 0) {
             TerminalSurfaceView(context: terminal.context)

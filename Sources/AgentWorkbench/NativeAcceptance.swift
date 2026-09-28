@@ -176,7 +176,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
 
 @main struct NativeAcceptanceApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var model: WorkbenchModel
+    @State private var model: WorkbenchModel
     private let fixture: NativeAcceptanceFixture
     init() {
         precondition(Bundle.main.bundleIdentifier == "dev.perch.nativeacceptance")
@@ -186,7 +186,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         let connection = NativeAgentConnection(host: NativeAcceptanceFixture.host) { path, body in
             try fixture.request(path, body: body)
         }
-        _model = StateObject(wrappedValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
+        _model = State(initialValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
                                                          sessions: fixture.sessions, native: connection))
     }
     var body: some Scene {

@@ -2,7 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct WorkspaceActionDetail: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -42,7 +42,7 @@ struct WorkspaceActionDetail: View {
 }
 
 private struct NativeActionDetail: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     @ObservedObject var connection: NativeAgentConnection
     private var snapshot: NativeAgentSnapshot? { connection.snapshot.flatMap { $0.id == item.reference.terminalID ? $0 : nil } }
@@ -70,7 +70,7 @@ private struct NativeActionDetail: View {
 }
 
 private struct KimiActionDetail: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     @ObservedObject var connection: KimiConnection
     private var current: KimiConversation? {
@@ -114,7 +114,7 @@ private struct KimiActionDetail: View {
 }
 
 private struct PublicResultPreview: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     let messages: [KimiMessage]
     let completed: Bool

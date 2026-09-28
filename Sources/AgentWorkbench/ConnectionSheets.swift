@@ -4,7 +4,7 @@ import WorkbenchCore
 struct NewTerminalSheet: View {
     @UILocalization private var L
     @ObservedObject var connection: HostConnection
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @Environment(\.dismiss) private var dismiss
     @State private var workspaceID = ""
     @State private var cwd = ""

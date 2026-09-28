@@ -19,3 +19,7 @@ to light.
   or `codex/<task>`) and make all commits there. This directory only tracks
   `main` and reviews others' work. Do not modify unrelated work.
 - Build with scripts/build.sh; run swift run WorkbenchChecks for protocol and command contracts.
+
+- New or migrated UI features follow `docs/architecture/state-and-effects.md`:
+  Observation state owners, explicit dependencies, and `.task(id:)` for page-bound
+  work. Keep remote connection lifetimes independent of page navigation.

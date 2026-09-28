@@ -3,7 +3,7 @@ import WorkbenchCore
 
 /// Goal context augments the shared dashboard; it never renders a second queue.
 struct GroupWorkbenchHeader: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         if let group = model.selectedGroup {
             VStack(alignment: .leading, spacing: 14) {
@@ -42,14 +42,14 @@ struct GroupWorkbenchHeader: View {
 }
 
 struct GroupWorkbenchProgress: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         if let group = model.selectedGroup { GroupProgressView(model: model, group: group).id(group.id) }
     }
 }
 
 struct GroupWorkbenchHistory: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         if let group = model.selectedGroup {
             let references = Set(group.sessions.filter { model.scopeHost == nil || $0.hostID == model.scopeHost?.id })

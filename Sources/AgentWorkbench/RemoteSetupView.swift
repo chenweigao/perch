@@ -2,7 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct AddHostSheet: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var setup: RemoteSetupController
     @State private var saveError: String?

@@ -2,7 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct GroupProgressView: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let group: WorkItemGroup
     @State private var addingOutcome = false
     var body: some View {
@@ -66,7 +66,7 @@ struct GroupProgressView: View {
 }
 
 private struct GroupOutcomeEditor: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let group: WorkItemGroup
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
