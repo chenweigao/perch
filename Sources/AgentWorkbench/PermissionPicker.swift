@@ -12,18 +12,21 @@ struct PermissionPicker: View {
     let layout: PermissionPickerLayout
     let disabled: Bool
     let allowsSelection: Bool
+    let showsTitle: Bool
     let onSelect: (String) -> Void
     @State private var pendingDangerousOption: PermissionOption?
     @State private var showingDetails = false
 
     init(provider: SessionKind, capability: PermissionCapability,
          layout: PermissionPickerLayout = .compact, disabled: Bool = false,
-         allowsSelection: Bool? = nil, onSelect: @escaping (String) -> Void) {
+         allowsSelection: Bool? = nil, showsTitle: Bool = false,
+         onSelect: @escaping (String) -> Void) {
         self.provider = provider
         self.capability = capability
         self.layout = layout
         self.disabled = disabled
         self.allowsSelection = allowsSelection ?? capability.canSelect
+        self.showsTitle = showsTitle
         self.onSelect = onSelect
     }
 
@@ -125,7 +128,7 @@ struct PermissionPicker: View {
     private var permissionLabel: some View {
         HStack(spacing: 4) {
             Image(systemName: symbol)
-            if layout == .form || risk != .standard { Text(title) }
+            if layout == .form || showsTitle || risk != .standard { Text(title) }
         }
         .font(.system(size: layout == .compact ? 12 : 13))
         .foregroundStyle(riskColor)
