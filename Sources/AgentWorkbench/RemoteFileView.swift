@@ -546,9 +546,9 @@ struct RemoteFilePanel: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if browser.gitRange == .branch, browser.gitStatus?.root != nil {
             if let comparison = browser.gitComparison {
-                if comparison.entries.isEmpty { notice("当前提交相对目标分支没有新增改动。", symbol: "checkmark.circle", tint: .secondary) }
+                if comparison.entries.isEmpty { notice(L("当前提交相对目标分支没有新增改动。"), symbol: "checkmark.circle", tint: .secondary) }
                 else { gitChanges(comparison.entries) }
-            } else { notice("输入目标分支或提交后开始审阅。", symbol: "arrow.triangle.branch", tint: .secondary) }
+            } else { notice(L("输入目标分支或提交后开始审阅。"), symbol: "arrow.triangle.branch", tint: .secondary) }
         } else {
             switch browser.gitStatus {
             case .notARepository:
@@ -579,7 +579,7 @@ struct RemoteFilePanel: View {
                         }.buttonStyle(.plain)
                     }
                 }.padding(.vertical, 8)
-            }.frame(minHeight: 80, idealHeight: min(220, Double(entries.count) * 42 + 16), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))
+            }.frame(minHeight: 80, idealHeight: max(80, min(220, Double(entries.count) * 42 + 16)), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))
             diffPane
         }
     }
