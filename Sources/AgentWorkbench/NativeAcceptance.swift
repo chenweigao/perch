@@ -671,8 +671,12 @@ private struct ReferenceComposerFixtureView: View {
 
     private func newTaskReferences(directory: String) async throws {
         let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: "", enabledAgents: [.omp])
-        var requests = 0
-        let native = NativeAgentConnection(host: host) { _, _ in requests += 1; throw WorkbenchError("Unexpected task request") }
+        var requests: [String] = []
+        let native = NativeAgentConnection(host: host) { path, body in
+            requests.append(path)
+            guard path == "/models" else { throw WorkbenchError("Unexpected task request: \(path)") }
+            return try self.fixture.request(path, body: body)
+        }
         let draftModel = WorkbenchModel(acceptanceHost: host, sessions: [], native: native)
         draftModel.draftingNewTask = true
         let suggestions = ProjectFileSuggestions()
@@ -705,8 +709,8 @@ private struct ReferenceComposerFixtureView: View {
         try await settle(window, "new task reference inserted") { !ProjectFileReference.references(in: editor.string).isEmpty }
         guard editor.string.hasPrefix("中文 before @"), editor.string.hasSuffix(" suffix"),
               ProjectFileReference.references(in: editor.string).first?.path.hasSuffix("/Example.swift") == true,
-              draftModel.draftingNewTask, draftModel.selectedReference == nil, requests == 0 else {
-            throw WorkbenchError("New task completion changed the draft or created a session")
+              draftModel.draftingNewTask, draftModel.selectedReference == nil, requests.allSatisfy({ $0 == "/models" }) else {
+            throw WorkbenchError("New task completion mismatch: text=\(editor.string), drafting=\(draftModel.draftingNewTask), requests=\(requests)")
         }
     }
 
