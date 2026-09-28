@@ -528,7 +528,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     private func reviewSource(in root: NSView?) -> NSTextView? {
         guard let root else { return nil }
         if let text = root as? NSTextView, text.identifier?.rawValue == "PerchReviewSource" { return text }
-        return root.subviews.lazy.compactMap { reviewSource(in: $0) }.first
+        return root.subviews.lazy.compactMap { self.reviewSource(in: $0) }.first
     }
     private func processCPU() -> Double {
         var value = rusage(); getrusage(RUSAGE_SELF, &value)
