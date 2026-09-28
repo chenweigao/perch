@@ -14,3 +14,14 @@ Git 面板增加“分支改动”：输入执行环境中已有的分支、远�
 `WorkbenchChecks` 使用临时 Git 仓库覆盖目标分支分叉、固定提交、未提交隔离、重命名/删除/二进制、路径字面值、外部 diff 禁用、截断、缺失引用和原仓库状态保留。
 
 `run-native-acceptance.py --mode branch-review` 验证实际 RemoteFileBrowser：提交差异与工作区差异切换、错误清理和带提交信息的草稿。此模式加入 macOS 功能检查。验收使用本机临时仓库和内存 Agent，不代表真实 SSH/模型或双 Mac 恢复验收。
+
+
+## 2026-09-28 实际结果
+
+- 已同步主线 `6b345de` 和预览依赖补充修复；最终产品代码为 `bb45788`。
+- 便携套件 7/7 通过。macOS 共 20 项分两阶段通过：8 项产品构建/契约检查保留在 `.local/branch-review/macos-final/results.json`；验收探针补齐 Swift 显式 self 捕获后，12 项原生/导航检查通过，记录在 `macos-remaining/results.json`。失败原始日志保留，未改写为成功。
+- 同步主线后的最终正式构建、签名/版本、WorkbenchChecks、ConnectionChecks、原生 `all` 和 `branch-review` 再次通过；记录为 `.local/branch-review/*-integrated.log` 与 `integrated-all/`、`integrated-branch/`。本地化覆盖检查通过（684 个键）。
+- 真实 GUI 操作验证了缺失目标错误、HEAD 空比较、恢复分支差异、选中代码加入草稿及固定提交信息。复验发现新挂载正文偶尔要调整窗口才显示，现按已排版文本计算初始尺寸；再次执行“HEAD 空比较 → 原目标 → 点击文件”，正文立即可见。自动验收也检查了此路径的可见区域。
+- 文件较少时列表随数量收缩（单文件 80 点，最多 220 点），保留更多正文空间。
+
+没有执行真实 SSH、真实模型或双 Mac 恢复验收；也没有测量帧率收益。新功能保留在独立本地分支，未推送或替换已安装应用。
