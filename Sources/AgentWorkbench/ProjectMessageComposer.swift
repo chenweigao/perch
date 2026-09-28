@@ -44,6 +44,7 @@ struct ProjectMessageComposer: View {
     var onKey: ((ComposerKey) -> Bool)? = nil
     var onOpenReference: ((String) -> Void)? = nil
     var minimumEditorHeight: CGFloat = 40
+    var referencesBelowEditor = false
     @StateObject var files = ProjectFileSuggestions()
     @State private var queryRange: NSRange?
     @State private var query = ""
@@ -53,6 +54,7 @@ struct ProjectMessageComposer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
+            if referencesBelowEditor { editor }
             if queryRange != nil {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -108,13 +110,17 @@ struct ProjectMessageComposer: View {
                     }
                 }
             }
-            MessageComposer(text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel,
-                canSend: canSend, onSend: onSend, onFiles: onFiles, onError: onError,
-                onKey: handle, onEditSelection: editSelection, selectionAfterReplacement: nextSelection, minimumHeight: minimumEditorHeight)
+            if !referencesBelowEditor { editor }
         }
         .onChange(of: cwd) { _, _ in dismiss() }
         .onChange(of: host.id) { _, _ in dismiss() }
         .onDisappear { dismiss() }
+    }
+
+    private var editor: some View {
+        MessageComposer(text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel,
+                canSend: canSend, onSend: onSend, onFiles: onFiles, onError: onError,
+                onKey: handle, onEditSelection: editSelection, selectionAfterReplacement: nextSelection, minimumHeight: minimumEditorHeight)
     }
 
     private func editSelection(_ draft: String, _ selection: NSRange) {

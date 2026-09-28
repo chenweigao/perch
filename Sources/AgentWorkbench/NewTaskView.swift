@@ -23,6 +23,7 @@ struct NewTaskView: View {
     @State private var chooseFiles = false
     @State private var showSetup = false
     @State private var showConfiguration = false
+    @State private var showCustomModel = false
     @State private var showDirectory = false
     @State private var showConnectionDetails = false
     @State private var showReference = false
@@ -36,14 +37,6 @@ struct NewTaskView: View {
     private var recent: [String] { recentDirectories(for: kimi.host.id) }
     private var isConnected: Bool { provider == .kimi ? kimi.online : native.online }
     private var isConnecting: Bool { provider == .kimi ? kimi.connecting : native.wantsConnection }
-    private var configurationSummary: String {
-        let name = selectedAgentModel?.name ?? (agentModel.isEmpty ? L("默认模型") : agentModel)
-        let effort: String
-        if let selectedAgentModel {
-            effort = selectedAgentModel.supportsThinking ? selectedAgentModel.resolve(thinking)?.label ?? L("默认") : L("不可调")
-        } else { effort = agentModel.isEmpty ? L("模型默认") : L("不可调") }
-        return "\(name) · \(effort)"
-    }
     private var availableModels: [AgentModel] {
         provider == .kimi ? kimi.catalog : native.models(for: provider)
     }
@@ -60,11 +53,19 @@ struct NewTaskView: View {
     private var hasInitialContent: Bool {
         !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
     }
-    private var canCreate: Bool {
-        let modelIsValid = provider != .codex || selectedAgentModel != nil
-        return !creating && modelIsValid && (provider == .kimi || attachments.isEmpty) && cwd.hasPrefix("/")
-            && availableProviders.contains(provider) && (provider == .kimi ? kimi.online : native.online)
+    private var creationBlocker: String? {
+        if creating { return L("正在启动…") }
+        if !availableProviders.contains(provider) { return L("此机器尚未配置原生 Agent。") }
+        if !isConnected { return L(isConnecting ? "正在连接所选 Agent…" : "尚未连接所选 Agent。") }
+        if !cwd.hasPrefix("/") { return L("请选择项目目录后再开始。") }
+        if provider == .codex && selectedAgentModel == nil { return L("请选择可用的 Codex 模型后再开始。") }
+        if provider != .kimi && !attachments.isEmpty { return L("请切换到 Kimi 或移除附件后再开始。") }
+        return nil
     }
+    private var sendHint: String? {
+        creationBlocker ?? (hasInitialContent ? nil : L("输入任务内容后发送，也可仅创建空会话。"))
+    }
+    private var canCreate: Bool { creationBlocker == nil }
     private var canStart: Bool { canCreate && hasInitialContent }
     private var canCreateEmpty: Bool { canCreate && !hasInitialContent && attachments.isEmpty }
     private var directoryWarning: String? {
@@ -118,35 +119,31 @@ struct NewTaskView: View {
     }
 
     @ViewBuilder private var modelControl: some View {
-        if supportsModelCatalog {
-            VStack(alignment: .leading, spacing: 6) {
-                ComposerModelPicker(models: availableModels, modelID: agentModel, thinking: thinking,
-                                    disabledReason: creating ? L("正在启动…") : nil,
-                                    catalogError: provider == .kimi ? nil : native.modelsError,
-                                    onRefreshCatalog: {
-                                        if provider == .kimi { await kimi.refreshModels() }
-                                        else { await native.loadModels() }
-                                    }, layout: .combined, usesDefaultModel: agentModel.isEmpty,
-                                    onUseDefaultModel: provider == .codex ? nil : {
-                                        agentModel = ""; thinking = nil
-                                    }, scope: L("首条消息生效"), onSelectModel: { option in
-                                        agentModel = option.id
-                                        thinking = option.resolve(thinking)
-                                    }, onSelectThinking: { thinking = $0 })
-                if availableModels.isEmpty && (provider == .omp || provider == .dsh) {
-                    TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"),
-                              text: $agentModel)
-                        .textFieldStyle(.roundedBorder).frame(maxWidth: 300)
-                }
-            }
+        if supportsModelCatalog && !(availableModels.isEmpty && (provider == .omp || provider == .dsh)) {
+            ComposerModelPicker(models: availableModels, modelID: agentModel, thinking: thinking,
+                disabledReason: creating ? L("正在启动…") : nil,
+                catalogError: provider == .kimi ? nil : native.modelsError,
+                onRefreshCatalog: {
+                    if provider == .kimi { await kimi.refreshModels() }
+                    else { await native.loadModels() }
+                }, layout: .split, usesDefaultModel: agentModel.isEmpty,
+                onUseDefaultModel: provider == .codex ? nil : { agentModel = ""; thinking = nil },
+                scope: L("首条消息生效"), onSelectModel: { option in
+                    agentModel = option.id; thinking = option.resolve(thinking)
+                }, onSelectThinking: { thinking = $0 })
         } else {
-            HStack(spacing: 8) {
-                ModelControlWidth(maximum: 260) {
-                    TextField(L("模型（留空使用远端默认值）"), text: $agentModel)
-                        .textFieldStyle(.roundedBorder)
+            Button { showCustomModel.toggle() } label: {
+                DraftMenuLabel { Text(agentModel.isEmpty ? L("默认模型") : agentModel).lineLimit(1).truncationMode(.middle) }
+            }.buttonStyle(.plain).accessibilityLabel("选择模型")
+                .popover(isPresented: $showCustomModel) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("模型与思考").font(.headline)
+                        TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel)
+                            .textFieldStyle(.roundedBorder)
+                        Text("思考不可调").font(.caption).foregroundStyle(.secondary)
+                        Button("完成") { showCustomModel = false }.frame(maxWidth: .infinity, alignment: .trailing)
+                    }.padding(18).frame(width: 340).disabled(creating)
                 }
-                Text("思考不可调").font(.system(size: 11)).foregroundStyle(.secondary).fixedSize()
-            }
         }
     }
 
@@ -161,6 +158,15 @@ struct NewTaskView: View {
                     }
                 }.frame(maxWidth: .infinity).padding(.bottom, 18)
                 VStack(alignment: .leading, spacing: 8) {
+                    ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
+                                    accessibilityLabel: L("任务描述"),
+                                    canSend: canStart, onSend: start,
+                                    onFiles: provider == .kimi ? addAttachments : nil,
+                                    onError: { error = $0 }, onOpenReference: { path in
+                                        referenceBrowser.configure(host: kimi.host, cwd: cwd)
+                                        referenceBrowser.open(path)
+                                        showReference = true
+                                    }, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
                     if !attachments.isEmpty {
                         ScrollView(.horizontal) {
                             HStack {
@@ -170,28 +176,18 @@ struct NewTaskView: View {
                             }
                         }
                     }
-                    ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
-                                    accessibilityLabel: L("任务描述"),
-                                    canSend: canStart, onSend: start,
-                                    onFiles: provider == .kimi ? addAttachments : nil,
-                                    onError: { error = $0 }, onOpenReference: { path in
-                                        referenceBrowser.configure(host: kimi.host, cwd: cwd)
-                                        referenceBrowser.open(path)
-                                        showReference = true
-                                    }, minimumEditorHeight: 96, files: projectFiles)
                     HStack(spacing: 12) {
                         ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                         agentMenu
-                        Button { showConfiguration.toggle() } label: {
-                            DraftMenuLabel {
-                                Text(configurationSummary).lineLimit(1).truncationMode(.middle)
-                            }
-                        }.buttonStyle(.plain).help("模型、思考与权限")
-                            .accessibilityLabel("任务配置").accessibilityValue(configurationSummary)
-                            .popover(isPresented: $showConfiguration) { configuration }
+                        modelControl
                         Spacer(minLength: 0)
+                        Button { showConfiguration.toggle() } label: {
+                            Image(systemName: "slider.horizontal.3").frame(width: 24, height: 28).contentShape(Rectangle())
+                        }.buttonStyle(.plain).help("权限").accessibilityLabel("权限")
+                            .popover(isPresented: $showConfiguration) { configuration }
                         ComposerActionButton(isRunning: false, isStopping: creating, canSend: canStart, canStop: false,
                                              onSend: start, onStop: {})
+                            .help(sendHint ?? L("Return 发送，Shift Return 换行"))
                     }
                 }.padding(18)
                     .background {
@@ -210,13 +206,13 @@ struct NewTaskView: View {
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if provider != .kimi && !attachments.isEmpty {
-                    Text("Choose Kimi or remove the attachments to start this task.").font(.caption).foregroundStyle(.secondary)
-                }
                 if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
                     Text(modelsError).font(.caption).foregroundStyle(.orange)
                 }
                 connectionStatus
+                if availableProviders.contains(provider) && isConnected, let sendHint {
+                    Text(sendHint).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 6)
+                }
                 if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             }.padding(.horizontal, 32).frame(maxWidth: 784)
                 .frame(maxWidth: .infinity)
@@ -402,14 +398,7 @@ struct NewTaskView: View {
     }
     private var configuration: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("任务配置").font(.headline)
-            Text("Agent").font(.caption).foregroundStyle(.secondary)
-            agentMenu
-            Divider()
-            Text("模型与思考").font(.caption).foregroundStyle(.secondary)
-            modelControl
-            Divider()
-            Text("权限").font(.caption).foregroundStyle(.secondary)
+            Text("权限").font(.headline)
             PermissionPicker(provider: provider, capability: permissionCapability,
                              disabled: creating, allowsSelection: provider != .dsh, showsTitle: true) { mode in
                 permissionMode = mode

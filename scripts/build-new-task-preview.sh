@@ -36,5 +36,11 @@ cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+# Local, synthetic Git project for @ references and attachment acceptance.
+fixture_dir="$PWD/build/new-task-fixture"
+mkdir -p "$fixture_dir"
+printf 'let preview = true\n' > "$fixture_dir/Example.swift"
+printf '# Preview project\n' > "$fixture_dir/README.md"
+git -C "$fixture_dir" init -q
 codesign --force --sign - "$app_dir"
 printf '%s\n' "$app_dir"

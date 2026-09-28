@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// Visual fixture for the inline new-task page. Seeds one fake host plus draft
-/// defaults into this preview's own defaults domain; nothing contacts a network.
+/// Visual fixture with local and fake remote hosts in its own defaults domain.
+/// The simulated-ready control uses in-process transports; auto-connect is off.
 @main struct NewTaskPreviewApp: App {
     @NSApplicationDelegateAdaptor(NewTaskPreviewDelegate.self) private var delegate
     @StateObject private var model: WorkbenchModel
@@ -12,12 +12,16 @@ import WorkbenchCore
     @State private var selectedDirectory = "/opt/demo/perch"
 
     init() {
-        let host = SSHHost(name: "dev-env", destination: "fixture.invalid", enabledAgents: [.kimi, .omp, .codex],
+        let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "本机预览", destination: "", enabledAgents: [.kimi, .omp, .codex],
                            autoConnectSSH: false, autoConnectHerdr: false)
-        UserDefaults.standard.set(try? JSONEncoder().encode([host]), forKey: "hosts")
-        UserDefaults.standard.set("/opt/demo/perch", forKey: "new.cwd.\(host.id.uuidString)")
+        let remote = SSHHost(name: "远程预览", destination: "fixture.invalid", enabledAgents: [.kimi, .codex], autoConnectSSH: false, autoConnectHerdr: false)
+        UserDefaults.standard.set(try? JSONEncoder().encode([host, remote]), forKey: "hosts")
+        let directory = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("new-task-fixture").path
+        UserDefaults.standard.set(directory, forKey: "new.cwd.\(host.id.uuidString)")
+        UserDefaults.standard.set("fixture-model", forKey: "new.model.kimi")
         UserDefaults.standard.set("把登录页改成两栏布局，左侧放品牌插画", forKey: "new.task.prompt")
         let model = WorkbenchModel()
+        model.kimi.models = previewModels
         _model = StateObject(wrappedValue: model)
     }
 
@@ -28,6 +32,15 @@ import WorkbenchCore
                 .toolbar {
                     if showPreviewControls {
                     Button("项目选择预览") { openWindow(id: "project-picker") }
+                    Button("模拟就绪") {
+                        let configuration = URLSessionConfiguration.ephemeral
+                        configuration.protocolClasses = [NewTaskPreviewProtocol.self]
+                        let connection = KimiConnection(host: model.kimi.host,
+                            api: KimiAPI(baseURL: URL(string: "https://fixture.invalid")!, token: "fixture", configuration: configuration))
+                        connection.models = previewModels
+                        model.kimi = connection
+                        model.native = NativeAgentConnection(host: model.native.host) { _, _ in Data(#"{"models":[]}"#.utf8) }
+                    }
                     Button("模拟连接错误") { model.kimi.error = "预览：连接超时，请检查运行环境。" }
                     Button("清除错误") { model.kimi.error = nil }
                     Button("隐藏预览控件") { showPreviewControls = false }
@@ -57,4 +70,24 @@ final class NewTaskPreviewDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+}
+
+private let previewModels: [JSONValue] = [.object([
+    "model": .string("fixture-model"), "provider": .string("fixture"), "display_name": .string("Preview Model"),
+    "support_efforts": .array([.string("low"), .string("high")]), "default_effort": .string("high")
+])]
+
+/// All simulated requests stay in-process, including an accidental send.
+final class NewTaskPreviewProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let isCatalog = request.url?.path == "/api/v1/models"
+        let body: JSONValue = isCatalog ? .object(["items": .array(previewModels)]) : .object(["error": .string("Preview only")])
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: isCatalog ? 200 : 400,
+            httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: try! JSONEncoder().encode(body))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
 }

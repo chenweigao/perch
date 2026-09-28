@@ -1102,3 +1102,9 @@
 "没有匹配的项目" = "No matching projects";
 "选择文件夹…" = "Choose folder…";
 "连接失败" = "Connection failed";
+
+"请选择项目目录后再开始。" = "Choose a project directory to start.";
+"请选择可用的 Codex 模型后再开始。" = "Choose an available Codex model to start.";
+"请切换到 Kimi 或移除附件后再开始。" = "Choose Kimi or remove attachments to start.";
+"输入任务内容后发送，也可仅创建空会话。" = "Enter a task to send, or create an empty session.";
+"Return 发送，Shift Return 换行" = "Return to send, Shift Return for a new line";
