@@ -315,6 +315,35 @@ final class ReplyTextView: NSTextView {
 
 }
 
+/// A disclosure should not synchronously lay out an unbounded log on opening.
+/// Keep the full source available for explicit inspection and copying.
+struct DisclosureReplyText: View {
+    let text: String
+    var attributes: [NSAttributedString.Key: Any]? = nil
+    @State private var showingAll = false
+
+    var body: some View {
+        let prefix = text.prefix(4_000)
+        let isLong = prefix.endIndex != text.endIndex
+        let visible = showingAll || !isLong ? text : String(prefix)
+        VStack(alignment: .leading, spacing: 8) {
+            if let attributes {
+                SelectableReplyText(attributed: NSAttributedString(string: visible, attributes: attributes))
+            } else {
+                SelectableReplyText(visible)
+            }
+            if isLong {
+                HStack(spacing: 12) {
+                    if !showingAll { Text("…").foregroundStyle(.secondary) }
+                    Button(showingAll ? "收起长内容" : "显示完整内容") { showingAll.toggle() }
+                        .buttonStyle(.plain).foregroundStyle(.secondary)
+                    ReplyCopyButton(text: text, label: "复制完整内容")
+                }.font(.system(size: 11))
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 struct ReplyCopyButton: View {
     let text: String
     var label = "复制回复"

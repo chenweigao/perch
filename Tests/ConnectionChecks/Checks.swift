@@ -12,7 +12,7 @@ private final class TransportFixture {
     var promptReceiptStatus = "accepted"
     var prompts: [String] = []
     var steers: [String] = []
-    var creates: [(SessionKind, String, String)] = []
+    var creates: [(SessionKind, String, String, String?)] = []
     var permissionChanges: [(String, String)] = []
     var modelChanges: [(String, String, String)] = []
     var thinkingChanges: [(String, String)] = []
@@ -68,12 +68,17 @@ private final class TransportFixture {
             let provider = SessionKind(rawValue: body["provider"].string ?? "")!
             let id = provider == .codex ? "native-codex-thread" : "created"
             let permissionMode = body["permissionMode"].string!
-            creates.append((provider, body["model"].string ?? "", permissionMode))
-            sessions[id] = ["id": id, "provider": provider.rawValue, "title": "created", "cwd": body["cwd"].string ?? "/fixture",
-                            "busy": false, "archived": false, "updated": 2.0, "completed": 0,
-                            "pending": 0, "model": body["model"].string ?? "", "cancelled": false, "steer": provider == .codex,
-                            "permission": Self.permission(provider, permissionMode)]
-            result = sessions[id]!
+            let thinking = body["thinking"].string
+            creates.append((provider, body["model"].string ?? "", permissionMode, thinking))
+            var created: [String: Any] = [
+                "id": id, "provider": provider.rawValue, "title": "created", "cwd": body["cwd"].string ?? "/fixture",
+                "busy": false, "archived": false, "updated": 2.0, "completed": 0,
+                "pending": 0, "model": body["model"].string ?? "", "cancelled": false, "steer": provider == .codex,
+                "permission": Self.permission(provider, permissionMode)
+            ]
+            if let thinking { created["thinking"] = thinking }
+            sessions[id] = created
+            result = created
         } else if parts.count == 3 && parts[2] == "permission", let body {
             let id = parts[1], mode = body["mode"].string!
             guard let raw = sessions[id]?["provider"] as? String,
@@ -361,16 +366,20 @@ struct ConnectionChecks {
             preconditionFailure("Codex model catalog was not decoded")
         }
         precondition(model.defaultThinking == .medium && model.thinking.last == .ultra)
-        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id, permissionMode: "workspace-auto")
+        let session = try await client.create(provider: .codex, cwd: "/fixture", model: model.id,
+                                              thinking: .ultra, permissionMode: "workspace-auto")
         precondition(session.permission?.selected == "workspace-auto" && session.permission?.scope == .newSession)
         precondition(session.id == "native-codex-thread" && session.provider == .codex)
         precondition(fixture.creates.count == 1 && fixture.creates[0].0 == .codex
-                     && fixture.creates[0].1 == model.id && fixture.creates[0].2 == "workspace-auto")
+                     && fixture.creates[0].1 == model.id && fixture.creates[0].2 == "workspace-auto"
+                     && fixture.creates[0].3 == "ultra")
         client.setPermission("full-access", for: session.id)
         precondition(client.actionError != nil && fixture.permissionChanges.isEmpty,
                      "Codex permissions are fixed when the session is created")
         await settle { client.snapshot?.id == session.id }
 
+        fixture.sessions[session.id]?["thinking"] = "high"
+        try await client.refresh()
         client.setModel(model, for: session.id)
         await settle { fixture.modelChanges.count == 1 && fixture.thinkingChanges.count == 1 }
         precondition(fixture.modelChanges[0].1 == "codex" && fixture.modelChanges[0].2 == model.id)

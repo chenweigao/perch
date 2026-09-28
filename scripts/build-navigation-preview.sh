@@ -10,14 +10,15 @@ swift build --build-system native -c release --target WorkbenchCore
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
+    Sources/AgentWorkbench/WorkbenchTheme.swift
     Sources/AgentWorkbench/ToolActivityView.swift
-    Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
+     Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/ReplyMarkdownView.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
     Sources/AgentWorkbench/ConversationActivityBar.swift
     Sources/AgentWorkbench/WorkbenchGlass.swift
-    Sources/AgentWorkbench/WorkbenchTheme.swift
+
     Sources/AgentWorkbench/MessageComposer.swift
 )
 includes=( -I "$bin_dir/Modules" -I .build/checkouts/swift-markdown/Sources/CAtomic/include

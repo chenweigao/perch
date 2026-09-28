@@ -83,10 +83,16 @@ func checkKimiTaskLaunch() async throws {
         let api = KimiAPI(baseURL: URL(string: "http://fixture.invalid")!, token: "fixture", configuration: configuration)
         let host = SSHHost(name: "Launch fixture", destination: "fixture")
         let connection = KimiConnection(host: host, api: api)
+        connection.models = [.object([
+            "model": .string("chosen/model"), "provider": .string("fixture"),
+            "display_name": .string("Chosen"), "support_efforts": .array([.string("low"), .string("high")]),
+            "default_effort": .string("low")
+        ])]
         // Match WorkbenchModel restoring its currently open tab on catalog changes.
         connection.onSessionsChanged = { [weak connection] in connection?.select("old") }
         connection.drafts["old"] = "Existing draft must not be sent"
-        let created = try await connection.createSession(title: "", cwd: "/fixture", initialPrompt: "新任务只发送一次", model: "chosen/model", permissionMode: "auto")
+        let created = try await connection.createSession(title: "", cwd: "/fixture", initialPrompt: "新任务只发送一次",
+                                                         model: "chosen/model", thinking: .high, permissionMode: "auto")
         precondition(created.id == "new")
         // A selection/snapshot change must not retarget or suppress the launch.
         connection.select("old")
@@ -95,6 +101,7 @@ func checkKimiTaskLaunch() async throws {
         precondition(sent.count == 1 && sent[0].0 == "/api/v1/sessions/new/prompts")
         precondition(sent[0].1["content"].array.first?["text"].string == "新任务只发送一次")
         precondition(sent[0].1["model"].string == "chosen/model")
+        precondition(sent[0].1["thinking"].string == "high")
         precondition(sent[0].1["permission_mode"].string == "auto")
         if mode != "snapshot-failure" {
             await ConnectionChecks.settle { connection.conversation?.snapshot.session.id == "old" }
@@ -113,6 +120,28 @@ func checkKimiTaskLaunch() async throws {
         connection.disconnect()
         UserDefaults.standard.removeObject(forKey: "kimi.session.\(host.id)")
     }
+
+    LaunchProtocol.reset()
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [LaunchProtocol.self]
+    let api = KimiAPI(baseURL: URL(string: "http://fixture.invalid")!, token: "fixture", configuration: configuration)
+    let host = SSHHost(name: "Unsupported thinking fixture", destination: "fixture")
+    let connection = KimiConnection(host: host, api: api)
+    connection.models = [.object([
+        "model": .string("fixed/model"), "provider": .string("fixture"),
+        "display_name": .string("Fixed"), "support_efforts": .array([])
+    ])]
+    let empty = try await connection.createSession(title: "", cwd: "/fixture", model: "fixed/model", thinking: .max)
+    precondition(LaunchProtocol.sent.isEmpty && connection.drafts[empty.id] == nil,
+                 "Creating an empty session must not submit a prompt")
+    connection.drafts[empty.id] = "Use the model default"
+    await connection.sendPrompt(for: empty.id)
+    precondition(LaunchProtocol.sent.first?.1["thinking"].string == nil,
+                 "A model without declared effort support must not receive thinking")
+    await ConnectionChecks.settle { !connection.loading }
+    connection.disconnect()
+    UserDefaults.standard.removeObject(forKey: "kimi.session.\(host.id)")
+    print("PASS: Kimi empty launch and unsupported thinking omission")
 }
 
 @MainActor
