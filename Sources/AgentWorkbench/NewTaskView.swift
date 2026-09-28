@@ -22,6 +22,7 @@ struct NewTaskView: View {
     @State private var chooseFiles = false
     @State private var showSetup = false
     @State private var showConfiguration = false
+    @State private var showDirectory = false
     @State private var showReference = false
     @State private var permissionMode = PermissionDefaults.mode(for: .kimi) ?? "manual"
     @FocusState private var cwdFocused: Bool
@@ -139,53 +140,12 @@ struct NewTaskView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 32)
             VStack(alignment: .leading, spacing: 14) {
-                VStack(spacing: 6) {
-                    Text("新建任务").font(.title2.weight(.semibold))
-                    if let group = model.selectedGroup { Text(group.name).font(.callout).foregroundStyle(.secondary) }
-                }.frame(maxWidth: .infinity)
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 12) {
-                        Menu {
-                            ForEach(model.connections) { connection in
-                                Button {
-                                    agentModel = ""; thinking = nil
-                                    model.activateAgentEnvironment(connection.id)
-                                    cwd = defaultDirectory(for: connection.id)
-                                } label: {
-                                    Label { Text(connection.host.name) } icon: { HostIdentityIcon.menuImage(for: connection.id) }
-                                        .labelStyle(.titleAndIcon)
-                                }
-                            }
-                            Divider()
-                            Button("配置其他 Agent…") { showSetup = true }
-                        } label: {
-                            DraftMenuLabel { Label { Text(kimi.host.name) } icon: { HostIdentityIcon.menuImage(for: kimi.host.id) } }
-                        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                            .accessibilityLabel("运行环境")
-
-                        HStack(spacing: 8) {
-                            Image(systemName: "folder").foregroundStyle(.secondary)
-                            TextField("项目目录（绝对路径）", text: $cwd).textFieldStyle(.plain).focused($cwdFocused)
-                        }.padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(cwdFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12),
-                                                  lineWidth: cwdFocused ? 2 : 1)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture { cwdFocused = true }
-                        Menu {
-                            ForEach(recent, id: \.self) { path in Button(path) { cwd = path } }
-                        } label: {
-                            DraftMenuLabel { Text("最近使用") }
-                        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                VStack(spacing: 10) {
+                    Text("想做点什么？").font(.system(size: 28, weight: .medium))
+                    if let group = model.selectedGroup {
+                        Text(group.name).font(.callout).foregroundStyle(.secondary)
                     }
-                    if let directoryWarning {
-                        Label(directoryWarning, systemImage: "exclamationmark.triangle")
-                            .font(.caption).foregroundStyle(.orange)
-                    }
-                }.disabled(creating)
+                }.frame(maxWidth: .infinity).padding(.bottom, 18)
                 VStack(alignment: .leading, spacing: 8) {
                     if !attachments.isEmpty {
                         ScrollView(.horizontal) {
@@ -196,7 +156,7 @@ struct NewTaskView: View {
                             }
                         }
                     }
-                    ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("想做点什么？输入 @ 引用项目文件"),
+                    ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
                                     accessibilityLabel: L("任务描述"),
                                     canSend: canStart, onSend: start,
                                     onFiles: provider == .kimi ? addAttachments : nil,
@@ -205,24 +165,26 @@ struct NewTaskView: View {
                                         referenceBrowser.open(path)
                                         showReference = true
                                     }, files: projectFiles)
+                        .frame(minHeight: 96, alignment: .top)
                     HStack(spacing: 12) {
                         ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
                         Button { showConfiguration.toggle() } label: {
                             Label {
-                                Text(agentModel.isEmpty ? provider.label : "\(provider.label) · \(agentModel)").lineLimit(1).truncationMode(.middle)
+                                Text(agentModel.isEmpty ? provider.label : "\(provider.label) · \(selectedAgentModel?.name ?? agentModel)").lineLimit(1).truncationMode(.middle)
                             } icon: { Image(systemName: "slider.horizontal.3") }
                                 .font(.system(size: 12))
                         }.buttonStyle(.plain).help("Agent、模型、思考与权限")
                             .popover(isPresented: $showConfiguration) { configuration }
                         Spacer(minLength: 0)
-                        if !hasInitialContent && attachments.isEmpty {
-                            Button(creating ? L("正在创建…") : L("仅创建空会话")) { create(sendInitialPrompt: false) }
-                                .disabled(!canCreateEmpty).controlSize(.small)
-                        }
                         ComposerActionButton(isRunning: false, isStopping: creating, canSend: canStart, canStop: false,
                                              onSend: start, onStop: {})
                     }
-                }.padding(12).workbenchControlSurface().disabled(creating)
+                }.padding(18).workbenchControlSurface().disabled(creating)
+                contextBar
+                if let directoryWarning {
+                    Label(directoryWarning, systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.orange)
+                }
                 if provider != .kimi {
                     Text("附件当前仅支持 Kimi；可在消息中提供运行环境中的文件路径。")
                         .font(.caption).foregroundStyle(.secondary)
@@ -253,7 +215,7 @@ struct NewTaskView: View {
                     }
                 }
                 if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
-            }.padding(.horizontal, 24).frame(maxWidth: 728)
+            }.padding(.horizontal, 32).frame(maxWidth: 784)
             Spacer(minLength: 32)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(WorkbenchTheme.contentBackground)
@@ -335,6 +297,72 @@ struct NewTaskView: View {
                 }
             }
     }
+    private var contextBar: some View {
+        HStack(spacing: 14) {
+            Menu {
+                ForEach(model.connections) { connection in
+                    Button {
+                        agentModel = ""; thinking = nil
+                        model.activateAgentEnvironment(connection.id)
+                        cwd = defaultDirectory(for: connection.id)
+                    } label: {
+                        Label { Text(connection.host.name) } icon: { HostIdentityIcon.menuImage(for: connection.id) }
+                    }
+                }
+                Divider()
+                Button("配置其他 Agent…") { showSetup = true }
+            } label: {
+                DraftMenuLabel {
+                    Label { Text(kimi.host.name).lineLimit(1).truncationMode(.middle) }
+                        icon: { HostIdentityIcon.menuImage(for: kimi.host.id) }
+                }
+            }.menuStyle(.borderlessButton).menuIndicator(.hidden)
+                .fixedSize(horizontal: false, vertical: true).accessibilityLabel("运行环境")
+            Rectangle().fill(.quaternary).frame(width: 1, height: 14)
+            Button { showDirectory.toggle() } label: {
+                DraftMenuLabel {
+                    Label(cwd.isEmpty ? L("选择项目目录") : (cwd == "/" ? "/" : (cwd as NSString).lastPathComponent),
+                          systemImage: "folder")
+                        .lineLimit(1).truncationMode(.middle)
+                }
+            }.buttonStyle(.plain).help(cwd).accessibilityLabel("项目目录")
+                .popover(isPresented: $showDirectory) { directoryPicker }
+            Spacer(minLength: 0)
+            if !hasInitialContent && attachments.isEmpty {
+                Button(creating ? L("正在创建…") : L("仅创建空会话")) { create(sendInitialPrompt: false) }
+                    .buttonStyle(.plain).font(.system(size: 12)).disabled(!canCreateEmpty)
+            }
+        }.foregroundStyle(.secondary).padding(.horizontal, 6).disabled(creating)
+    }
+
+    private var directoryPicker: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("项目目录").font(.headline)
+            Text(kimi.host.name).font(.caption).foregroundStyle(.secondary)
+            TextField("项目目录（绝对路径）", text: $cwd)
+                .textFieldStyle(.roundedBorder).focused($cwdFocused)
+                .onSubmit { showDirectory = false }
+            if !recent.isEmpty {
+                Text("最近使用").font(.caption).foregroundStyle(.secondary)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(recent, id: \.self) { path in
+                            Button { cwd = path; showDirectory = false } label: {
+                                Label(path, systemImage: "folder")
+                                    .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 6).contentShape(Rectangle())
+                            }.buttonStyle(.plain).help(path)
+                        }
+                    }
+                }.frame(maxHeight: 200)
+            }
+            Button("完成") { showDirectory = false }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }.padding(18).frame(width: 380)
+            .onAppear { cwdFocused = true }
+    }
+
     private func selectProvider(_ value: SessionKind) {
         provider = value
         agentModel = UserDefaults.standard.string(forKey: "new.model.\(value.rawValue)") ?? ""
