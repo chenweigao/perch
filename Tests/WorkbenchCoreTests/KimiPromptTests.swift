@@ -23,6 +23,13 @@ func checkKimiPrompts() throws {
     var running = prompt; running.status = "running"
     precondition(KimiPrompt.reconcile(local: [steerFailed], remote: [running], messages: []).first?.error == nil,
                  "Once the message runs, its old steer warning is no longer actionable")
+    precondition(KimiPrompt.reconcile(local: [], remote: [running], messages: []).isEmpty,
+                 "Opening an externally started turn must not recreate its active prompt below the transcript")
+    precondition(KimiPrompt.reconcile(local: [local], remote: [running], messages: []).count == 1,
+                 "A locally submitted message still waits for its history echo")
+    var waiting = other; waiting.status = "queued"
+    precondition(KimiPrompt.reconcile(local: [], remote: [running, waiting], messages: []).map(\.id) == [other.id],
+                 "Recover queued work even when the active prompt is outside the history page")
     // A long turn pushes the user message out of the snapshot's trailing page. Once the
     // session is idle and the server no longer reports the prompt, its outcome is in the
     // transcript and the bubble must retire instead of showing "Running" forever.
