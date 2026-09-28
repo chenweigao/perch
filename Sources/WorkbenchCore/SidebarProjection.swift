@@ -13,15 +13,22 @@ public struct SidebarProjection {
     public let attentionCount: Int
 
     public init(sessions: [WorkspaceSession], starred: [SessionReference], filter: SidebarRecentFilter = .all) {
-        let active = sessions.filter { !$0.archived }
         let pins = Set(starred)
-        favorites = starred.compactMap { ref in active.first { $0.reference == ref } }
-        attentionCount = active.filter { $0.online && $0.section == .attention }.count
-        let candidates = active.filter { item in
-            !pins.contains(item.reference) &&
-            (filter == .all || (filter == .running && item.section == .running))
+        var pinned: [SessionReference: WorkspaceSession] = [:]
+        var recent: [WorkspaceSession] = []
+        var count = 0, attention = 0
+        for item in sessions where !item.archived {
+            if item.online && item.section == .attention { attention += 1 }
+            if pins.contains(item.reference) {
+                if pinned[item.reference] == nil { pinned[item.reference] = item }
+            } else if filter == .all || item.section == .running {
+                count += 1
+                if recent.count < 20 { recent.append(item) }
+            }
         }
-        totalRecentCount = candidates.count
-        recent = Array(candidates.prefix(20))
+        favorites = starred.compactMap { pinned[$0] }
+        self.recent = recent
+        totalRecentCount = count
+        attentionCount = attention
     }
 }

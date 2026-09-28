@@ -13,7 +13,7 @@ struct WorkbenchSidebar: View {
         return model.selectedGroupID == nil && !model.showSessionDirectory ? .home : .other
     }
     var body: some View {
-        let projection = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
+        let projection = model.sidebarProjection(filter: filter)
         let index = model.groupIndex
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个环境"),
