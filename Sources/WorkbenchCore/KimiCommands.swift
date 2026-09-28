@@ -48,9 +48,13 @@ public enum KimiCommand: Equatable {
     }
 }
 
-public struct KimiGoal: Decodable {
+public struct KimiGoal: Decodable, Equatable, Sendable {
     public let objective: String
     public let status: String
     public let turnsUsed: Int
     public let tokensUsed: Int
+    public init(objective: String, status: String, turnsUsed: Int, tokensUsed: Int) {
+        self.objective = objective; self.status = status; self.turnsUsed = turnsUsed; self.tokensUsed = tokensUsed
+    }
+    public var statusLine: String { "\(status) · \(turnsUsed) turns · \(tokensUsed) tokens" }
 }

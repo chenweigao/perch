@@ -88,6 +88,17 @@ struct KimiWorkspaceView: View {
 
     private func composer(sessionID: String) -> some View {
         VStack(spacing: 10) {
+            if let goal = connection.goal {
+                HStack(spacing: 8) {
+                    Image(systemName: "flag").foregroundStyle(kimiAccent)
+                    Text(goal.objective).lineLimit(1).truncationMode(.tail).help(goal.objective)
+                    Spacer(minLength: 8)
+                    Text(goal.statusLine).foregroundStyle(.secondary)
+                }.font(.caption)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(L("目标"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             if let feedback = connection.commandFeedback[sessionID] {
                 Text(feedback).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     .lineLimit(4).help(feedback)
