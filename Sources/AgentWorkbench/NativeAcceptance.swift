@@ -689,7 +689,9 @@ private struct ReferenceComposerFixtureView: View {
             styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.title = "New task file references"
-        window.contentViewController = NSHostingController(rootView: NewTaskView(model: draftModel, native: native, kimi: draftModel.kimi, projectFiles: suggestions))
+        window.contentViewController = NSHostingController(rootView:
+            NewTaskView(model: draftModel, native: native, kimi: draftModel.kimi, projectFiles: suggestions)
+                .preferredColorScheme(.light).frame(width: 620, height: 760))
         window.makeKeyAndOrderFront(nil)
         defer {
             if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] == "1" { probe.referenceWindow = window }
