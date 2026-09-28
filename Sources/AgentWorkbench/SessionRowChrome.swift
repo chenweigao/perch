@@ -102,6 +102,7 @@ struct SessionRowChrome<Indicator: View>: View {
 }
 
 struct SessionHoverPreview: View {
+    @Environment(\.locale) private var locale
     let title: String
     let hostName: String?
     let hostID: UUID?
@@ -117,9 +118,11 @@ struct SessionHoverPreview: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
                 if updatedAt > 0 {
-                    Text(Date(timeIntervalSince1970: updatedAt), style: .relative)
-                        .font(.system(size: 11)).foregroundStyle(.tertiary).lineLimit(1)
-                        .fixedSize()
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        Text(updateTime(relativeTo: context.date))
+                            .font(.system(size: 11)).foregroundStyle(.tertiary).lineLimit(1)
+                            .fixedSize()
+                    }
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -148,4 +151,14 @@ struct SessionHoverPreview: View {
             }.font(.system(size: 13))
         }.padding(14).frame(width: 340, alignment: .leading)
     }
+
+    private func updateTime(relativeTo now: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = locale
+        formatter.unitsStyle = .abbreviated
+        formatter.dateTimeStyle = .named
+        // Match SessionTime on each tick, including while the remote clock is ahead.
+        return formatter.localizedString(fromTimeInterval: min(0, updatedAt - now.timeIntervalSince1970))
+    }
+
 }
