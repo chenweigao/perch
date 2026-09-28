@@ -56,7 +56,7 @@ struct ProjectMessageComposer: View {
                     HStack {
                         Text("引用项目文件").font(.system(size: 11, weight: .medium))
                         Spacer()
-                        Button("刷新") { files.load(host: host, cwd: cwd) }
+                        Button("刷新") { choice = 0; files.load(host: host, cwd: cwd) }
                         Button("关闭") { dismiss() }
                     }.font(.system(size: 11))
                     if files.loading { ProgressView().controlSize(.small) }
@@ -69,13 +69,13 @@ struct ProjectMessageComposer: View {
                                     ForEach(Array(matches.enumerated()), id: \.element) { index, path in
                                         Button { choose(path) } label: {
                                             Text(path).font(.system(size: 11, design: .monospaced)).lineLimit(1).truncationMode(.middle)
-                                                .frame(maxWidth: .infinity, alignment: .leading).padding(5)
+                                                .frame(maxWidth: .infinity, alignment: .leading).frame(height: 23).padding(.horizontal, 5)
                                                 .background(index == choice ? Color.primary.opacity(0.07) : .clear)
                                                 .contentShape(Rectangle())
-                                        }.buttonStyle(.plain).id(index)
+                                        }.buttonStyle(.plain).help(path).id(index)
                                     }
                                 }
-                            }.frame(maxHeight: 150)
+                            }.frame(height: CGFloat(min(150, matches.count * 25 - 2)))
                                 .onChange(of: choice) { _, value in proxy.scrollTo(value) }
                         }
                     }

@@ -40,7 +40,7 @@ public struct ProjectFileCatalog {
         \(RemoteGitCommand.guardScript)
         root=$(git \(RemoteGitCommand.safety) rev-parse --show-toplevel) || exit $?
         printf '%s\\0' "$root"
-        git \(RemoteGitCommand.safety) ls-files --full-name --cached --others --exclude-standard -z -- | head -c \(limit + 1)
+        git \(RemoteGitCommand.safety) -C "$root" ls-files --full-name --cached --others --exclude-standard -z -- | head -c \(limit + 1)
         """
         return ["/bin/sh", "-c", script, "perch-project-files", directory].map(SSHCommand.quote).joined(separator: " ")
     }
@@ -57,6 +57,18 @@ public struct ProjectFileCatalog {
     }
 
     public func matches(_ query: String) -> [String] {
-        Array(paths.filter { query.isEmpty || $0.localizedCaseInsensitiveContains(query) }.prefix(30))
+        guard !query.isEmpty else { return Array(paths.prefix(30)) }
+        var exact: [String] = [], prefix: [String] = [], other: [String] = []
+        for path in paths where path.localizedCaseInsensitiveContains(query) {
+            let name = (path as NSString).lastPathComponent
+            if name.localizedCaseInsensitiveCompare(query) == .orderedSame {
+                exact.append(path)
+            } else if name.range(of: query, options: [.anchored, .caseInsensitive], locale: .current) != nil {
+                prefix.append(path)
+            } else {
+                other.append(path)
+            }
+        }
+        return Array((exact + prefix + other).prefix(30))
     }
 }

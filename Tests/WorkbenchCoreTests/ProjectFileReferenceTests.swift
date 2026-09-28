@@ -33,11 +33,39 @@ func checkProjectFileReferences() async throws {
     expectFalse(catalog.paths.contains("ignored.txt"))
     expectEqual(catalog.matches("TRACKED"), ["tracked.swift"])
     expectEqual(catalog.matches("空"), ["空 格.swift"])
+
+    // A session can start below the repository root. Both tracked and new files
+    // in sibling directories must remain available, with root-relative paths.
+    for directory in ["Sources/Nested", "Sibling"] {
+        try FileManager.default.createDirectory(at: repo.appendingPathComponent(directory), withIntermediateDirectories: true)
+    }
+    for name in ["Sources/Nested/local.swift", "Sibling/tracked.swift", "Sibling/new.swift", "Sibling/ignored.txt"] {
+        try "fixture".write(to: repo.appendingPathComponent(name), atomically: true, encoding: .utf8)
+    }
+    _ = try await ProcessRunner.run("/usr/bin/git", ["-C", repo.path, "add", "Sibling/tracked.swift"])
+    let nested = try ProjectFileCatalog.parse(await ProcessRunner.run("/bin/sh", ["-c",
+        ProjectFileCatalog.command(directory: repo.appendingPathComponent("Sources/Nested").path)]))
+    expectTrue(nested.paths.contains("tracked.swift"))
+    expectTrue(nested.paths.contains("空 格.swift"))
+    expectTrue(nested.paths.contains("Sibling/tracked.swift"))
+    expectTrue(nested.paths.contains("Sibling/new.swift"))
+    expectTrue(nested.paths.contains("Sources/Nested/local.swift"))
+    expectFalse(nested.paths.contains("Sibling/ignored.txt"))
+
+    // Ranking happens before the result limit, so folder-name hits cannot hide
+    // the exact file or filename prefixes. Equal ranks retain catalog order.
+    let rankingPaths = (0..<35).map { "A/File.swift/child-\($0).txt" }
+        + ["Z/File.swift", "Y/File.swift.backup", "Z/File.swift.backup", "Z/空 格.swift"]
+    let ranked = try ProjectFileCatalog.parse(Data(("/project\0" + rankingPaths.joined(separator: "\0") + "\0").utf8))
+    expectEqual(Array(ranked.matches("FILE.SWIFT").prefix(3)), ["Z/File.swift", "Y/File.swift.backup", "Z/File.swift.backup"])
+    expectEqual(ranked.matches("FILE.SWIFT").count, 30)
+    expectEqual(ranked.matches("空"), ["Z/空 格.swift"])
+    expectEqual(ranked.matches(""), Array(ranked.paths.prefix(30)))
     do { _ = try ProjectFileCatalog.parse(Data("kind=notrepo\n".utf8)); fatalError("Non-repository must report an error") }
     catch { expectTrue(error.localizedDescription.contains("Git")) }
     do {
         _ = try ProjectFileCatalog.parse(Data("/project\0".utf8) + Data(repeating: 65, count: ProjectFileCatalog.limit + 1))
         fatalError("Oversized lists must not produce partial paths")
     } catch { expectTrue(error.localizedDescription.contains("文件")) }
-    print("PASS: project file references preserve Unicode selections and draft text; Git catalog excludes ignored paths and bounds output")
+    print("PASS: project file references preserve Unicode drafts; catalog searches the whole repository, excludes ignored paths and prioritizes filenames")
 }
