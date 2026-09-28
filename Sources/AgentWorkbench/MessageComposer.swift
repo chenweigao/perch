@@ -19,12 +19,14 @@ struct MessageComposer: View {
     /// Lets an attached suggestion list claim navigation keys. Returning false leaves
     /// the key to normal editing, so the composer stays a text editor.
     var onKey: ((ComposerKey) -> Bool)? = nil
+    var onEditSelection: ((String, NSRange) -> Void)? = nil
+    var selectionAfterReplacement: NSRange? = nil
     @State private var height: CGFloat = 40
 
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
                        accessibilityLabel: accessibilityLabel, canSend: canSend,
-                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey)
+                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement)
             .frame(height: height)
     }
 }
@@ -40,6 +42,9 @@ struct ComposerEditor: NSViewRepresentable {
     let onFiles: (([URL]) -> Void)?
     let onError: ((String) -> Void)?
     let onKey: ((ComposerKey) -> Bool)?
+
+    var onEditSelection: ((String, NSRange) -> Void)? = nil
+    var selectionAfterReplacement: NSRange? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeNSView(context: Context) -> NSScrollView {
@@ -93,7 +98,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.onFiles = onFiles
         editor.onError = onError
         editor.onKey = onKey
-        editor.syncDraft(text)
+        editor.syncDraft(text, selection: selectionAfterReplacement)
         coordinator.measure()
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
@@ -115,7 +120,14 @@ struct ComposerEditor: NSViewRepresentable {
             // entirely inside NSTextView until the input method finishes it.
             if !editor.hasMarkedText(), parent.text != editor.string { parent.text = editor.string }
             editor.needsDisplay = true
+            publishSelection()
             measure()
+        }
+        func textViewDidChangeSelection(_ notification: Notification) { publishSelection() }
+        private func publishSelection() {
+            guard let editor, !editor.hasMarkedText(), let callback = parent.onEditSelection else { return }
+            let text = editor.string, range = editor.selectedRange()
+            DispatchQueue.main.async { callback(text, range) }
         }
         func measure() {
             guard let editor, let layout = editor.layoutManager, let container = editor.textContainer else { return }
@@ -141,12 +153,12 @@ final class DraftTextView: NSTextView {
     var onLayout: (() -> Void)?
     var onKey: ((ComposerKey) -> Bool)?
 
-    func syncDraft(_ value: String) {
+    func syncDraft(_ value: String, selection: NSRange? = nil) {
         guard !hasMarkedText(), string != value else { return }
         string = value
         // Programmatic replacements are a completed send, quote, or completion.
         // Resume typing after the replacement; undo must not revive a sent draft.
-        setSelectedRange(NSRange(location: (value as NSString).length, length: 0))
+        setSelectedRange(selection ?? NSRange(location: (value as NSString).length, length: 0))
         undoManager?.removeAllActions()
         needsDisplay = true
     }

@@ -67,7 +67,7 @@ import WorkbenchCore
             model.showHome()
             precondition(!model.draftingNewTask && model.showDashboard,
                          "returning home must leave the inline draft")
-            precondition(model.scope.hostID == saved.pinned[0].session.hostID,
+            precondition(model.scopeHost?.id == saved.pinned[0].session.hostID,
                          "inline draft integration must preserve the workbench host scope")
             print("PASS: inline draft preserves selection, leaves on navigation and retains queue scope")
             print("PASS: restart restores endpoint settings, session, pins and drafts")

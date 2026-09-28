@@ -108,14 +108,15 @@ struct KimiWorkspaceView: View {
                         }
                     }
                 }
-                MessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
+                ProjectMessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
                                               set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0) }),
+                                host: connection.host, cwd: connection.conversation?.snapshot.session.cwd ?? "",
                                 placeholder: L("继续此任务…"),
                                 accessibilityLabel: "Message Kimi", canSend: canSend,
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 },
-                                onKey: { handle($0, for: sessionID) })
+                                onKey: { handle($0, for: sessionID) }).id(sessionID)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
                     let sessionModel = connection.conversation?.snapshot.session.model ?? ""

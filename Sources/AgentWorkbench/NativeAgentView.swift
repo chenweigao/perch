@@ -112,8 +112,9 @@ struct NativeAgentView: View {
                         }
                     }
                     VStack(spacing: 8) {
-                        MessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
+                        ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                                       set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
+                                        host: connection.host, cwd: s.cwd,
                                         placeholder: L("继续此任务…"),
                                         accessibilityLabel: "Message \(s.provider.label)",
                                         canSend: canSend(s),

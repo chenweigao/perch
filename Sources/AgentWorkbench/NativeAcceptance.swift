@@ -13,6 +13,7 @@ import os
     var dashboardProjection: DashboardProjection?
     var dashboardAttentionOnly = false
     var dashboardGroupID: UUID?
+    var referenceWindow: NSWindow?
     weak var dashboardView: NSView?
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
 }
@@ -199,6 +200,23 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                     await NativeAcceptanceRunner(model: model, fixture: fixture).run(mode)
                 }
         }.defaultSize(width: 1280, height: 820).windowStyle(.hiddenTitleBar)
+    }
+}
+
+@MainActor private final class ReferenceComposerFixture: ObservableObject {
+    @Published var text = "中文 before @Ex suffix"
+    var sends = 0
+}
+private struct ReferenceComposerFixtureView: View {
+    @ObservedObject var fixture: ReferenceComposerFixture
+    let directory: String
+    let suggestions: ProjectFileSuggestions
+    var body: some View {
+        ProjectMessageComposer(text: $fixture.text,
+            host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""),
+            cwd: directory, placeholder: "", accessibilityLabel: "Reference fixture", canSend: true,
+            onSend: { fixture.sends += 1 }, files: suggestions)
+            .padding(20).frame(width: 620, height: 400)
     }
 }
 
@@ -645,6 +663,37 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         return Double(value.ru_utime.tv_sec + value.ru_stime.tv_sec)
             + Double(value.ru_utime.tv_usec + value.ru_stime.tv_usec) / 1_000_000
     }
+    private func referenceComposer(directory: String) async throws {
+        let fixture = ReferenceComposerFixture(), suggestions = ProjectFileSuggestions()
+        let window = NSWindow(contentRect: NSRect(x: 160, y: 160, width: 620, height: 400),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.title = "File reference acceptance"
+        window.contentViewController = NSHostingController(rootView: ReferenceComposerFixtureView(fixture: fixture, directory: directory, suggestions: suggestions))
+        window.makeKeyAndOrderFront(nil)
+        defer {
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] == "1" { probe.referenceWindow = window }
+            else { window.close() }
+        }
+        func findEditor(_ view: NSView?) -> DraftTextView? {
+            guard let view else { return nil }
+            if let editor = view as? DraftTextView { return editor }
+            return view.subviews.lazy.compactMap { findEditor($0) }.first
+        }
+        try await settle(window, "reference composer mounted") { findEditor(window.contentView) != nil }
+        guard let editor = findEditor(window.contentView) else { throw WorkbenchError("Reference editor missing") }
+        window.makeFirstResponder(editor)
+        editor.setSelectedRange(NSRange(location: ("中文 before @Ex" as NSString).length, length: 0))
+        try await settle(window, "file suggestions loaded") { !suggestions.loading && suggestions.catalog != nil }
+        guard let key = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, characters: "\t", charactersIgnoringModifiers: "\t", isARepeat: false, keyCode: 48),
+              editor.handleNavigation(key) else { throw WorkbenchError("File palette did not claim Tab") }
+        try await settle(window, "file reference inserted") { !ProjectFileReference.references(in: fixture.text).isEmpty }
+        guard fixture.text.hasPrefix("中文 before @"), fixture.text.hasSuffix(" suffix"), fixture.sends == 0,
+              ProjectFileReference.references(in: fixture.text).first.map { URL(fileURLWithPath: $0.path).resolvingSymlinksInPath().path } == URL(fileURLWithPath: directory).resolvingSymlinksInPath().path + "/Example.swift",
+              editor.selectedRange().location < (fixture.text as NSString).length else { throw WorkbenchError("File completion mismatch: text=\(fixture.text), caret=\(editor.selectedRange()), sends=\(fixture.sends)") }
+    }
+
     private func reviewWorkflow(branch: Bool = false) async {
         var report: [String: Any] = ["mode": branch ? "branch-review" : "review", "real_agent": false]
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("perch-review-\(UUID())")
@@ -686,7 +735,8 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             report["local_file_and_diff_read"] = true
             if branch {
                 _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "branch", "review-base"])
-                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "add", "Example.swift"])
+                try (1...120).map { "let line\($0) = \($0)" }.joined(separator: "\n").write(to: directory.appendingPathComponent("ZZCompanion.swift"), atomically: true, encoding: .utf8)
+                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "add", "."])
                 _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Reviewed change"])
                 try "let title = \"Dirty edit\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
                 browser.gitBaseInput = "review-base"
@@ -725,6 +775,47 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                     return source.visibleRect.width > 20 && source.visibleRect.height > 20
                 }
                 report["diff_visible_after_empty_comparison"] = true
+                browser.toggleReviewed()
+                guard browser.reviewProgress.isReviewed(changed.path) else { throw WorkbenchError("Review mark missing") }
+                browser.loadGitComparison()
+                try await settle(window, "review position restored") { !browser.loading && browser.gitPath == changed.path && browser.gitDiff != nil }
+                guard browser.reviewProgress.isReviewed(changed.path) else { throw WorkbenchError("Unchanged file lost review mark") }
+                guard let next = browser.adjacentReview(1) else { throw WorkbenchError("Next file unavailable") }
+                browser.loadGitDiff(next)
+                try await settle(window, "next file") { !browser.loading && browser.gitDiff != nil }
+                browser.toggleReviewed()
+                guard let source = self.reviewSource(in: window.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: 240)); scroll.reflectScrolledClipView(scroll.contentView)
+                guard let previous = browser.adjacentReview(-1), previous.path == changed.path else { throw WorkbenchError("Previous file unavailable") }
+                browser.loadGitDiff(previous)
+                try await settle(window, "previous file") { !browser.loading && browser.gitDiff != nil }
+                browser.loadGitDiff(next)
+                try await settle(window, "restored scroll offset") {
+                    !browser.loading && (self.reviewSource(in: window.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
+                }
+                browser.loadGitDiff(changed)
+                try await settle(window, "return to reviewed file") { !browser.loading && browser.gitDiff != nil }
+                let restored = RemoteFileBrowser()
+                restored.configure(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""), cwd: directory.path)
+                restored.loadGitStatus()
+                try await settle(window, "new browser restores review") { !restored.loading && restored.gitDiff != nil }
+                guard restored.gitPath == changed.path, restored.reviewProgress.isReviewed(next.path) else { throw WorkbenchError("Persisted review context missing") }
+                restored.cancel()
+                report["review_navigation_scroll_and_scope_restore"] = true
+                guard browser.gitRefs.contains("refs/heads/review-base") else { throw WorkbenchError("Branch picker refs missing") }
+                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "add", "Example.swift"])
+                _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Follow-up fix"])
+                browser.loadGitComparison()
+                try await settle(window, "changed review") { !browser.loading && browser.gitDiff != nil }
+                guard !browser.reviewProgress.isReviewed(changed.path), browser.reviewProgress.changed.contains(changed.path) else { throw WorkbenchError("Changed file remained reviewed") }
+                report["review_progress_restores_and_invalidates_changed_files"] = true
+                let suggestions = ProjectFileSuggestions()
+                suggestions.load(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""), cwd: directory.path)
+                try await settle(window, "project files") { !suggestions.loading && suggestions.catalog != nil }
+                guard suggestions.catalog?.matches("Example") == ["Example.swift"] else { throw WorkbenchError("Project file suggestion missing") }
+                report["project_file_catalog_uses_execution_environment"] = true
+                try await referenceComposer(directory: directory.path)
+                report["file_completion_preserves_text_and_never_sends"] = true
             }
             report["status"] = "passed"
         } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
