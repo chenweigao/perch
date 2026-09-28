@@ -27,21 +27,36 @@ public struct TaskGroupSummary: Identifiable, Equatable, Sendable {
 
     /// Stable while agents stream: navigation recency, not session ticks, orders goals.
     public static func ordered(groups: [WorkItemGroup], sessions: [WorkspaceSession], hostID: UUID? = nil) -> [Self] {
+        summarize(groups: orderedGroups(groups), sessions: sessions, hostID: hostID)
+    }
+
+    private static func orderedGroups(_ groups: [WorkItemGroup]) -> [WorkItemGroup] {
         groups.enumerated().sorted { lhs, rhs in
             if lhs.element.isPinned != rhs.element.isPinned { return lhs.element.isPinned }
             if lhs.element.lastOpenedAt != rhs.element.lastOpenedAt { return lhs.element.lastOpenedAt > rhs.element.lastOpenedAt }
             return lhs.offset < rhs.offset
-        }.map { Self(group: $0.element, sessions: sessions, hostID: hostID) }
+        }.map(\.element)
+    }
+
+    /// One catalog pass shared by all groups, then visit only their members.
+    /// Grouping keeps duplicate catalog entries' existing counting semantics.
+    private static func summarize(groups: [WorkItemGroup], sessions: [WorkspaceSession], hostID: UUID? = nil) -> [Self] {
+        guard !groups.isEmpty else { return [] }
+        let index = Dictionary(grouping: sessions, by: \.reference)
+        return groups.map { group in
+            let members = Set(group.sessions).flatMap { index[$0] ?? [] }
+            return Self(group: group, sessions: members, hostID: hostID)
+        }
     }
 
     public static func shortcuts(groups: [WorkItemGroup], sessions: [WorkspaceSession], selectedID: UUID?) -> [Self] {
-        let ordered = ordered(groups: groups, sessions: sessions)
-        let pinned = ordered.filter { $0.group.isPinned }
-        let recent = ordered.filter { !$0.group.isPinned && ($0.group.lastOpenedAt > 0 || $0.id == selectedID) }
-        var result = pinned + recent.prefix(5)
-        if let selected = ordered.first(where: { $0.id == selectedID }), !result.contains(where: { $0.id == selectedID }) {
-            result.append(selected)
+        let ordered = orderedGroups(groups)
+        let pinned = ordered.filter(\.isPinned)
+        let recent = ordered.filter { !$0.isPinned && ($0.lastOpenedAt > 0 || $0.id == selectedID) }
+        var visible = pinned + recent.prefix(5)
+        if let selected = ordered.first(where: { $0.id == selectedID }), !visible.contains(where: { $0.id == selectedID }) {
+            visible.append(selected)
         }
-        return result
+        return summarize(groups: visible, sessions: sessions)
     }
 }

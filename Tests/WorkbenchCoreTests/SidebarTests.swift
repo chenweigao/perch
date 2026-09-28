@@ -2,6 +2,7 @@ import Foundation
 import WorkbenchCore
 
 func checkSidebar() {
+    checkSidebarPerformance()
     let remote = UUID()
     func session(_ id: String, section: WorkQueueSection = .other, online: Bool = true,
                  archived: Bool = false, local: Bool = false) -> WorkspaceSession {

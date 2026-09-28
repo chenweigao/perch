@@ -32,9 +32,22 @@ final class WorkbenchModel: ObservableObject {
     /// a filter is a question about right now, and restoring one would hide sessions
     /// on the first screen after launch.
     @Published var scopeHostID: UUID?
-    @Published var workspace = LocalWorkspace()
+    @Published var workspace = LocalWorkspace() {
+        didSet {
+            if workspace.groups != oldValue.groups {
+                cachedGroupIndex = nil
+                cachedGroupShortcuts = nil
+            }
+            if workspace.starred != oldValue.starred { cachedSidebar = nil }
+        }
+    }
     @Published var workspaceError: String?
-    @Published private(set) var allSessions: [WorkspaceSession] = []
+    @Published private(set) var allSessions: [WorkspaceSession] = [] {
+        didSet { cachedSidebar = nil; cachedGroupShortcuts = nil }
+    }
+    private var cachedGroupIndex: SessionGroupIndex?
+    private var cachedGroupShortcuts: (selectedID: UUID?, summaries: [TaskGroupSummary])?
+    private var cachedSidebar: (filter: SidebarRecentFilter, projection: SidebarProjection)?
     @Published var showArchived = false
     @Published var showSessionDirectory = false
     @Published var pendingDeletion: WorkspaceSession?
@@ -346,10 +359,20 @@ final class WorkbenchModel: ObservableObject {
     var scopeGroup: WorkItemGroup? { selectedGroup }
     var scopeHost: SSHHost? { connections.first { $0.id == scopeHostID }?.host }
     var activeScope: ActiveScope { ActiveScope(groupName: scopeGroup?.name, hostName: scopeHost?.name) }
-    /// Built per access, so a view reads it once per pass and hands rows plain names.
-    /// Reading it inside a row would rebuild it for every row on every catalog tick,
-    /// which is the cost `SessionSidebarRow` exists to avoid.
-    var groupIndex: SessionGroupIndex { SessionGroupIndex(groups: workspace.groups) }
+    /// Navigation/selection changes do not change membership. Rebuild only when
+    /// saved groups change, not once per view pass or streamed catalog update.
+    var groupIndex: SessionGroupIndex {
+        if let cachedGroupIndex { return cachedGroupIndex }
+        let index = SessionGroupIndex(groups: workspace.groups)
+        cachedGroupIndex = index
+        return index
+    }
+    func sidebarProjection(filter: SidebarRecentFilter) -> SidebarProjection {
+        if let cachedSidebar, cachedSidebar.filter == filter { return cachedSidebar.projection }
+        let projection = SidebarProjection(sessions: allSessions, starred: workspace.starred, filter: filter)
+        cachedSidebar = (filter, projection)
+        return projection
+    }
     func setScope(groupID: UUID?) {
         let inbox = onlyAttention
         showHome(groupID: groupID)
@@ -665,7 +688,10 @@ final class WorkbenchModel: ObservableObject {
         TaskGroupSummary.ordered(groups: workspace.groups, sessions: allSessions, hostID: scopeHost?.id)
     }
     var groupShortcuts: [TaskGroupSummary] {
-        TaskGroupSummary.shortcuts(groups: workspace.groups, sessions: allSessions, selectedID: selectedGroupID)
+        if let cachedGroupShortcuts, cachedGroupShortcuts.selectedID == selectedGroupID { return cachedGroupShortcuts.summaries }
+        let summaries = TaskGroupSummary.shortcuts(groups: workspace.groups, sessions: allSessions, selectedID: selectedGroupID)
+        cachedGroupShortcuts = (selectedGroupID, summaries)
+        return summaries
     }
     func markReviewed(_ item: WorkspaceSession) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }

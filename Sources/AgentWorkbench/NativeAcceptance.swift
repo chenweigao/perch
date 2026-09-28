@@ -448,7 +448,39 @@ private struct ReferenceComposerFixtureView: View {
                 "global_action_deduplication": true, "offline_excluded_from_actions": true,
                 "manual_completion": true, "outcome_source_persistence": true, "pin_persistence": true]
     }
+    private func checkNavigationCaches() throws {
+        let workspace = model.workspace, sessions = model.allSessions, selected = model.selectedGroupID
+        defer {
+            model.workspace = workspace
+            model.acceptanceUpdateCatalog(sessions)
+            model.selectedGroupID = selected
+        }
+        func check() throws {
+            for filter in [SidebarRecentFilter.all, .running, .all] {
+                let cached = model.sidebarProjection(filter: filter)
+                let fresh = SidebarProjection(sessions: model.allSessions, starred: model.workspace.starred, filter: filter)
+                guard cached.favorites == fresh.favorites, cached.recent == fresh.recent,
+                      cached.attentionCount == fresh.attentionCount, cached.totalRecentCount == fresh.totalRecentCount,
+                      model.groupIndex == SessionGroupIndex(groups: model.workspace.groups),
+                      model.groupShortcuts == TaskGroupSummary.shortcuts(groups: model.workspace.groups, sessions: model.allSessions, selectedID: model.selectedGroupID)
+                else { throw WorkbenchError("Stale sidebar navigation cache") }
+                _ = model.sidebarProjection(filter: filter) // Same-filter hit.
+            }
+        }
+        try check()
+        model.workspace.starred = Array(sessions.suffix(3).map(\.reference)); try check()
+        model.workspace.groups[0].name = "Renamed"; try check()
+        model.workspace.groups[0].sessions = Array(sessions.suffix(8).map(\.reference)); try check()
+        model.workspace.groups[0].isPinned = true; try check()
+        let group = WorkItemGroup(name: "Selected", goal: "", nextStep: "", sessions: [])
+        model.workspace.groups.append(group); try check()
+        model.selectedGroupID = group.id; try check()
+        model.acceptanceUpdateCatalog(Array(sessions.suffix(20))); try check()
+        model.workspace.groups.removeAll(); try check()
+        model.acceptanceUpdateCatalog([]); try check()
+    }
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
+        try checkNavigationCaches()
         var durations: [Double] = []
         for step in 0..<80 {
             // Switch while catalog refreshes change row heights, order and the
@@ -478,7 +510,7 @@ private struct ReferenceComposerFixtureView: View {
         try await Task.sleep(for: .seconds(2))
         let idleCPU = processCPU() - cpu
         guard idleCPU < 1 else { throw WorkbenchError("UI kept consuming CPU after session switches: \(idleCPU)s / 2s") }
-        return ["catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
+        return ["navigation_cache_invalidation": true, "catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
                 "idle_cpu_seconds_over_2s": idleCPU,
                 "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }
