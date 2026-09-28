@@ -659,7 +659,7 @@ final class KimiConnection: ObservableObject {
 
     @discardableResult
     func createSession(title: String, cwd: String, initialPrompt: String? = nil, model: String? = nil,
-                       permissionMode: String? = nil) async throws -> KimiSession {
+                       thinking: ThinkingLevel? = nil, permissionMode: String? = nil) async throws -> KimiSession {
         guard let api else { throw WorkbenchError("请先连接 Kimi Web") }
         if let permissionMode, !PermissionCatalog.isValid(permissionMode, for: .kimi) {
             throw WorkbenchError("Kimi 权限模式无效")
@@ -670,6 +670,7 @@ final class KimiConnection: ObservableObject {
         let session = try await api.post(KimiSession.self, "/api/v1/sessions", body: .object(body))
         if let initialPrompt { drafts[session.id] = initialPrompt }
         if let model { modelChoices[session.id] = model }
+        if let thinking { thinkingChoices[session.id] = thinking }
         if let initialPermission { permissionChoices[session.id] = initialPermission }
         sessions.insert(session, at: 0); onSessionsChanged?()
         select(session.id)

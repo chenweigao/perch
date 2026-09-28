@@ -4,7 +4,10 @@ public struct TaskLaunchDefaults: Codable, Equatable {
     public var provider: SessionKind
     public var directory: String
     public var model: String
-    public init(hostID: UUID, provider: SessionKind, directory: String, model: String) {
+    public var thinking: ThinkingLevel?
+    public init(hostID: UUID, provider: SessionKind, directory: String, model: String,
+                thinking: ThinkingLevel? = nil) {
         self.hostID = hostID; self.provider = provider; self.directory = directory; self.model = model
+        self.thinking = thinking
     }
 }
