@@ -95,10 +95,12 @@ the end-to-end `--ensure` handover), 6 installer tests, 4 localization tests,
 17 publication tests and `check-public-source.py`.
 The `server_version` / `started_at` fields were captured from a live
 `kimi web` 2.0.2 `GET /api/v1/meta` and are pinned in a decoding check.
-Swift was absent on that host, so the new WorkbenchChecks case, the setup
-`Running process` row and the conversation notice have not been compiled or
-seen on screen; `./scripts/build.sh`, `swift run WorkbenchChecks` and
-`swift run ConnectionChecks` remain required on macOS.
+Swift was absent on that host; the macOS suite then ran on Xcode 27 through
+`check-functional.py macos`, where the build, WorkbenchChecks, ConnectionChecks,
+the composer, host-lifecycle, scroll and native/navigation acceptance runs all
+passed with the same compiler warnings as `main`. The setup `Running process`
+row and the conversation notice compile and are covered by checks, but have not
+been looked at on screen.
 
 The review reproduced installer cancellation waiting for a local SSH child to
 exit. The installer now handles cancellation while waiting, terminates that local
