@@ -9,6 +9,7 @@ public struct RemoteGitComparison: Equatable, Sendable {
     public let mergeBase: String
     public let headCommit: String
     public let entries: [RemoteGitEntry]
+    public let versions: [String: String]
 
     public var scope: String { "\(baseRef) · \(mergeBase)…\(headCommit) (committed)" }
 }
@@ -22,7 +23,7 @@ extension RemoteGitCommand {
         ancestor=$(git \(safety) merge-base "$base" "$head") || { printf 'kind=unrelated\\n'; exit 0; }
         root=$(git \(safety) rev-parse --show-toplevel) || exit $?
         printf 'kind=comparison\\n--\\n%s\\0%s\\0%s\\0%s\\0%s\\0' "$root" "$2" "$base" "$ancestor" "$head"
-        git \(safety) diff --name-status -z --find-renames --no-ext-diff --no-textconv "$ancestor" "$head" --
+        git \(safety) diff --raw --no-abbrev -z --find-renames --no-ext-diff --no-textconv "$ancestor" "$head" --
         """
         return ["/bin/sh", "-c", script, "perch-git", directory, base].map(SSHCommand.quote).joined(separator: " ")
     }
@@ -60,9 +61,12 @@ extension RemoteGitCommand {
         guard fields.count >= 6, fields.prefix(5).allSatisfy({ !$0.isEmpty }) else {
             throw WorkbenchError("远端返回了无法识别的结果。")
         }
-        var entries: [RemoteGitEntry] = [], index = 5
+        var entries: [RemoteGitEntry] = [], versions: [String: String] = [:], index = 5
         while index < fields.count - 1 {
-            guard let code = fields[index].first, "ACDMRT".contains(code), index + 1 < fields.count else {
+            let version = fields[index]
+            let metadata = version.split(separator: " ")
+            guard metadata.count == 5, metadata[0].hasPrefix(":"),
+                  let code = metadata.last?.first, "ACDMRT".contains(code), index + 1 < fields.count else {
                 throw WorkbenchError("远端返回了无法识别的结果。")
             }
             index += 1
@@ -72,9 +76,22 @@ extension RemoteGitCommand {
                 guard index < fields.count - 1 else { throw WorkbenchError("远端返回了无法识别的结果。") }
                 original = first; path = fields[index]; index += 1
             }
+            versions[path] = version + "\0" + (original ?? "")
             entries.append(RemoteGitEntry(path: path, originalPath: original, indexStatus: " ", worktreeStatus: code))
         }
         return RemoteGitComparison(root: fields[0], baseRef: fields[1], baseCommit: fields[2], mergeBase: fields[3],
-            headCommit: fields[4], entries: entries.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending })
+            headCommit: fields[4], entries: entries.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }, versions: versions)
+    }
+}
+
+
+extension RemoteGitCommand {
+    /// Enumerate only refs already present in this repository; never fetch.
+    public static func reviewRefsCommand(directory: String) -> String {
+        let script = """
+        \(guardScript)
+        git \(safety) for-each-ref --format='%(refname)' refs/heads refs/remotes
+        """
+        return ["/bin/sh", "-c", script, "perch-git-refs", directory].map(SSHCommand.quote).joined(separator: " ")
     }
 }

@@ -1056,3 +1056,37 @@
 "重命名" = "Renamed";
 
 "类型变更" = "Type changed";
+
+"选择已有分支" = "Choose an existing branch";
+
+"%lld 个文件 · 已读 %lld 个" = "%lld files · %lld reviewed";
+
+"比较版本" = "Compared revisions";
+
+"已加入当前任务草稿" = "Added to this task’s draft";
+
+"查看草稿" = "View draft";
+
+"上一个文件" = "Previous file";
+
+"下一个文件" = "Next file";
+
+"标为未读" = "Mark unread";
+
+"标为已读" = "Mark reviewed";
+
+"已读" = "Reviewed";
+
+"有新改动" = "Changed since last review";
+
+"当前目录不是 Git 项目，请在文件面板按路径引用。" = "This directory is not a Git project. Reference a path in the file panel.";
+
+"项目文件列表过大，请在文件面板按路径引用。" = "The project file list is too large. Reference a path in the file panel.";
+
+"引用项目文件" = "Reference a project file";
+
+"没有匹配文件" = "No matching files";
+
+"↑↓ 选择 · Return / Tab 引用 · Esc 关闭，不会发送消息" = "↑↓ select · Return / Tab reference · Esc dismiss; never sends";
+
+"移除文件引用" = "Remove file reference";

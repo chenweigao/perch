@@ -119,6 +119,10 @@ private struct WorkbenchDetail: View {
                             model.appendReviewContext(text, to: reference)
                             fullWidthReview = false
                         } : nil,
+                        onShowDraft: {
+                            model.showFileViewer = false; fullWidthReview = false
+                            DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+                        },
                         onClose: { model.toggleFileViewer(); fullWidthReview = false })
                         .id(reference?.id).frame(width: expanded ? geometry.size.width : width)
                 }
