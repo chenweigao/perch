@@ -116,6 +116,20 @@ private struct UserMessageLayout: Layout {
 
 /// Supplies individually identified rows to the conversation viewport.
 /// Keep historical rows equatable so live tokens only invalidate their own content.
+/// Complete inputs of the hosted rows. Snapshot identity is safe because its
+/// values are immutable; external summaries and action context remain explicit.
+private struct ConversationContentIdentity: Equatable {
+    let snapshot: ConversationPresentationModel.Snapshot
+    let narratives: [String: ActivityNarrativeRow]
+    let api: KimiAPI?
+    let session: String
+    let memoryKey: String
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.snapshot === rhs.snapshot && lhs.narratives == rhs.narratives
+            && lhs.api === rhs.api && lhs.session == rhs.session && lhs.memoryKey == rhs.memoryKey
+    }
+}
+
 struct ConversationTranscript: View {
     let messages: [KimiMessage]
     var api: KimiAPI? = nil
@@ -135,7 +149,7 @@ struct ConversationTranscript: View {
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.self) private var environment
     @State private var measured: (session: String, height: CGFloat)?
-    @State private var contentOriginY: CGFloat = 0
+    @State private var documentLayout = ConversationDocumentLayout()
     var body: some View {
         let key = memoryKey ?? sessionId
         let snapshot = presentation.update(key: key, input: ConversationPresentationModel.Input(
@@ -146,19 +160,22 @@ struct ConversationTranscript: View {
         let observation = SummaryObservation(session: key, batch: snapshot.batch, narrativeKey: snapshot.narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
             settingsRevision: summarySettings.revision)
-        let contents = snapshot.displayedRows { narrativeStore.row(session: key, entryID: $0) }.map { row in
+        let narratives = narrativeStore.rows(session: key)
+        let identity = ConversationContentIdentity(snapshot: snapshot, narratives: narratives,
+            api: api, session: sessionId, memoryKey: key)
+        let contents = snapshot.displayedRows { narratives[$0] }.map { row in
             ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity)
         }
-        ConversationDocumentHost(contents: contents, navigation: snapshot.navigation, sessionId: key,
+        ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
-                                 contentOriginY: contentOriginY) { height in
+                                 layout: documentLayout) { height in
             measured = (sessionId, height)
         }.frame(height: measured?.session == sessionId ? measured?.height : nil)
             .onGeometryChange(for: CGFloat.self) {
                 $0.frame(in: .named("conversation-content")).minY
-            } action: { contentOriginY = $0 }
+            } action: { documentLayout.updateOrigin($0) }
             .task(id: observation) {
                 narrativeStore.observe(session: observation.session, snapshot: snapshot.narrative, batch: snapshot.batch,
                     running: isRunning, online: observation.online, following: followsLatest,
@@ -176,24 +193,43 @@ struct ConversationTranscript: View {
     }
 }
 
+/// Geometry belongs to the mounted document, not observable transcript data.
+/// An origin change must not rebuild the SwiftUI row values or presentation input.
+@MainActor private final class ConversationDocumentLayout {
+    private(set) var originY: CGFloat = 0
+    weak var document: ConversationDocumentView?
+    func updateOrigin(_ value: CGFloat) {
+        guard originY != value else { return }
+        originY = value
+        document?.updateContentOrigin(value)
+    }
+}
+
 private struct ConversationDocumentHost: NSViewRepresentable {
     let contents: [ConversationEntryView]
+    let contentIdentity: ConversationContentIdentity
     let navigation: [ConversationTurnSummary]
     let sessionId: String
     let appearance: ConversationEntryAppearance
     let viewport: ConversationViewport?
-    let contentOriginY: CGFloat
+    let layout: ConversationDocumentLayout
     let heightChanged: (CGFloat) -> Void
-    func makeNSView(context: Context) -> ConversationDocumentView { ConversationDocumentView() }
+    func makeCoordinator() -> ConversationDocumentLayout { layout }
+    func makeNSView(context: Context) -> ConversationDocumentView {
+        let document = ConversationDocumentView()
+        context.coordinator.document = document
+        return document
+    }
     func updateNSView(_ view: ConversationDocumentView, context: Context) {
         view.heightChanged = heightChanged
-        view.configure(contents, navigation: navigation, sessionId: sessionId, appearance: appearance,
-                       viewport: viewport, contentOriginY: contentOriginY)
+        view.configure(contents, contentIdentity: contentIdentity, navigation: navigation, sessionId: sessionId, appearance: appearance,
+                       viewport: viewport, contentOriginY: layout.originY)
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ConversationDocumentView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
     }
-    static func dismantleNSView(_ view: ConversationDocumentView, coordinator: ()) {
+    static func dismantleNSView(_ view: ConversationDocumentView, coordinator: ConversationDocumentLayout) {
+        if coordinator.document === view { coordinator.document = nil }
         view.prepareForRemoval()
     }
 }
@@ -203,6 +239,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
 /// survive detachment; disclosure state lives in ConversationReadingMemory.
 private final class ConversationDocumentView: NSView {
     private var contents: [ConversationEntryView] = []
+    private var contentIdentity: ConversationContentIdentity?
     private var indices: [String: Int] = [:]
     private var navigation: [ConversationTurnSummary] = []
     private var turnRows: [Int] = []
@@ -232,6 +269,79 @@ private final class ConversationDocumentView: NSView {
     var totalHeight: CGFloat { geometry.totalHeight }
     private var findObserver: NSObjectProtocol?
     #if TRANSCRIPT_CHECKS
+    fileprivate func checkReconciliation() throws -> [String: Any] {
+        guard let appearance = rowAppearance, let identity = contentIdentity, !mounted.isEmpty,
+              let offscreen = contents.indices.first(where: { !mounted.contains(contents[$0].entry.id) && contents[$0].entry.messages.first?.isUserPrompt == true }),
+              let visible = contents.indices.first(where: { mounted.contains(contents[$0].entry.id) && contents[$0].entry.messages.first?.isUserPrompt == true }) else {
+            throw WorkbenchError("Reconciliation fixture requires visible and offscreen user rows")
+        }
+        let original = contents, originalNavigation = navigation
+        func count(_ key: String) -> Int { NavigationRenderMetrics.stages[key]?.count ?? 0 }
+        func apply(_ rows: [ConversationEntryView], _ style: ConversationEntryAppearance, force: Bool = true) {
+            if force { contentIdentity = nil }
+            configure(rows, contentIdentity: identity, navigation: originalNavigation, sessionId: sessionId, appearance: style,
+                      viewport: viewport, contentOriginY: contentOriginY)
+        }
+        let before = [count("document_reconcile"), count("row_geometry"), count("host_measure")]
+        for _ in 0..<40 { apply(original, appearance, force: false); _ = measure(width: columnWidth) }
+        guard before == [count("document_reconcile"), count("row_geometry"), count("host_measure")] else {
+            throw WorkbenchError("Unchanged viewport replay rebuilt or remeasured rows")
+        }
+        func replacement(_ index: Int, id: String? = nil) throws -> ConversationEntryView {
+            let row = original[index], message = row.entry.messages[0]
+            let raw: [String: Any] = ["id": id ?? message.id, "role": message.role, "created_at": message.createdAt,
+                "content": [["type": "text", "text": String(repeating: "same-ID changed content 中文 ", count: 30)]]]
+            let changed = try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: raw))
+            return ConversationEntryView(entry: ConversationTimelineEntry.make([changed])[0], tools: row.tools,
+                api: row.api, sessionId: row.sessionId, memoryKey: row.memoryKey, activityNarrative: row.activityNarrative)
+        }
+        // Restore source rows even if an assertion throws; this is a mounted fixture.
+        defer { apply(original, appearance) }
+        var edited = original
+        edited[offscreen] = try replacement(offscreen)
+        let range = laidOutRange, geometryCount = count("row_geometry")
+        reconcileRows(edited, sessionId: sessionId, appearance: appearance)
+        guard contents[offscreen] == edited[offscreen], laidOutRange == range, count("row_geometry") == geometryCount else {
+            throw WorkbenchError("Offscreen same-ID edit invalidated visible geometry or lost content")
+        }
+        reconcileRows(original, sessionId: sessionId, appearance: appearance)
+        edited = original; edited[visible] = try replacement(visible)
+        reconcileRows(edited, sessionId: sessionId, appearance: appearance)
+        guard laidOutRange == nil, measuredSizes[edited[visible].entry.id] == nil else {
+            throw WorkbenchError("Visible same-ID edit reused stale row measurement")
+        }
+        apply(original, appearance)
+        // A summary can arrive without replacing the immutable source snapshot.
+        let summary = ActivityNarrativeRow(narrative: .init(turnID: "fixture", stageID: "external", phase: .exploring,
+            headline: "New external summary", source: .external, lifecycle: .final), isAnchor: true, stageClosed: true)
+        var overlays = identity.narratives
+        overlays[original[visible].entry.id] = summary
+        var summarized = original; summarized[visible].activityNarrative = summary
+        let summaryIdentity = ConversationContentIdentity(snapshot: identity.snapshot, narratives: overlays,
+            api: identity.api, session: identity.session, memoryKey: identity.memoryKey)
+        configure(summarized, contentIdentity: summaryIdentity, navigation: originalNavigation, sessionId: sessionId,
+                  appearance: appearance, viewport: viewport, contentOriginY: contentOriginY)
+        guard contents[visible].activityNarrative == summary else { throw WorkbenchError("Summary update was hidden by source identity") }
+        apply(original, appearance)
+        var environment = EnvironmentValues()
+        environment.colorScheme = appearance.colorScheme == .light ? .dark : .light
+        let changedAppearance = ConversationEntryAppearance(environment)
+        reconcileRows(original, sessionId: sessionId, appearance: changedAppearance)
+        guard laidOutRange == nil, measuredSizes.isEmpty else { throw WorkbenchError("Appearance kept stale measurements") }
+        apply(original, appearance)
+        let added = try replacement(offscreen, id: "layout-fixture-prepend")
+        reconcileRows([added] + original, sessionId: sessionId, appearance: appearance)
+        guard contents.count == original.count + 1, indices[original[visible].entry.id] == visible + 1 else {
+            throw WorkbenchError("Prepend failed to rebuild row indices")
+        }
+        reconcileRows(Array(original.dropFirst()), sessionId: sessionId, appearance: appearance)
+        guard indices[original[0].entry.id] == nil, heights.count == original.count - 1 else {
+            throw WorkbenchError("Removal kept obsolete row geometry")
+        }
+        return ["unchanged_replays": 40, "unchanged_reconciliations": 0, "unchanged_geometry_rebuilds": 0,
+                "unchanged_host_measurements": 0, "same_id_offscreen_and_visible_edits": true,
+                "appearance_invalidation": true, "external_summary_same_snapshot": true, "prepend_and_removal": true]
+    }
     fileprivate var navigator: ConversationTurnNavigation? { viewport?.navigator }
     fileprivate var retainedHostCount: Int { controllers.count }
     fileprivate var mountedHostCount: Int { mounted.count }
@@ -319,29 +429,65 @@ private final class ConversationDocumentView: NSView {
     var heightChanged: (CGFloat) -> Void = { _ in }
     override var isFlipped: Bool { true }
 
-    func configure(_ next: [ConversationEntryView], navigation: [ConversationTurnSummary], sessionId: String,
+    func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
                    contentOriginY: CGFloat) {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("document_configure", since: start) }
+        #endif
         ConversationReadingMemory.shared.visit(sessionId)
-        // An older page changes every subsequent row's y, but not the reader's
-        // message or offset inside it. Capture using the outgoing geometry.
-        if self.sessionId == sessionId, let first = contents.first?.entry.id,
-           next.first?.entry.id != first, next.contains(where: { $0.entry.id == first }) {
-            saveReadingPosition()
-            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
-        }
         if self.viewport !== viewport {
             self.viewport?.remove(self)
             self.viewport = viewport
             viewport?.add(self)
         }
-        let nextIndices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
-        if self.sessionId != sessionId || rowAppearance != appearance {
-            measuredSizes.removeAll(keepingCapacity: true)
+        let structureChanged: Bool
+        if self.contentIdentity == contentIdentity, self.sessionId == sessionId, rowAppearance == appearance {
+            structureChanged = false
         } else {
-            measuredSizes = measuredSizes.filter { nextIndices[$0.key] != nil }
+            structureChanged = reconcileRows(next, sessionId: sessionId, appearance: appearance)
+            self.contentIdentity = contentIdentity
         }
-        if self.sessionId != sessionId {
+        if structureChanged || self.navigation != navigation {
+            self.navigation = navigation
+            turnRows = navigation.compactMap { indices[$0.id] }
+        }
+        self.contentOriginY = contentOriginY
+        observeScroll()
+        restoreReadingPosition()
+        refreshVisibleRows()
+        publishHeight()
+        viewport?.refresh()
+    }
+
+    func updateContentOrigin(_ value: CGFloat) {
+        guard contentOriginY != value else { return }
+        contentOriginY = value
+        restoreReadingPosition()
+        refreshVisibleRows()
+        viewport?.refresh()
+    }
+
+    /// Content reconciliation and viewport layout have separate invalidation rules.
+    /// Scrolling/origin updates preserve row geometry; same-ID edits update only
+    /// their controllers, and offscreen edits do not remeasure the visible range.
+    @discardableResult
+    private func reconcileRows(_ next: [ConversationEntryView], sessionId: String,
+                               appearance: ConversationEntryAppearance) -> Bool {
+        let changedSession = self.sessionId != sessionId
+        let changedAppearance = rowAppearance != appearance
+        guard changedSession || changedAppearance || contents != next else { return false }
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("document_reconcile", since: start) }
+        #endif
+        if !changedSession, let first = contents.first?.entry.id,
+           next.first?.entry.id != first, next.contains(where: { $0.entry.id == first }) {
+            saveReadingPosition()
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+        }
+        if changedSession {
             readingIntent += 1
             saveReadingPosition()
             saveReadingHeights()
@@ -356,28 +502,36 @@ private final class ConversationDocumentView: NSView {
             publishedHeight = nil
             self.sessionId = sessionId
         }
-        self.contentOriginY = contentOriginY
-        let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
-        contents = next
-        indices = nextIndices
-        self.navigation = navigation
-        turnRows = navigation.compactMap { indices[$0.id] }
-        heights = next.map { previous[$0.entry.id] ?? ConversationReadingMemory.shared.measuredHeights[sessionId]?[$0.entry.id] ?? 160 }
-        self.rowAppearance = appearance
-        for id in Array(controllers.keys) {
-            guard let index = indices[id] else {
-                controllers.removeValue(forKey: id)?.view.removeFromSuperview()
-                mounted.remove(id)
-                continue
-            }
-            controllers[id]?.update(next[index], appearance: appearance)
+        let structureChanged = changedSession || contents.count != next.count || !zip(contents, next).allSatisfy {
+            $0.entry.id == $1.entry.id && $0.entry.isProcess == $1.entry.isProcess
         }
-        rebuildOffsets()
-        observeScroll()
-        restoreReadingPosition()
-        refreshVisibleRows()
-        publishHeight()
-        viewport?.refresh()
+        if changedSession || changedAppearance { measuredSizes.removeAll(keepingCapacity: true) }
+        if structureChanged {
+            let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
+            indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
+            measuredSizes = measuredSizes.filter { indices[$0.key] != nil }
+            heights = next.map { previous[$0.entry.id] ?? ConversationReadingMemory.shared.measuredHeights[sessionId]?[$0.entry.id] ?? 160 }
+            for id in Array(controllers.keys) {
+                guard let index = indices[id] else {
+                    controllers.removeValue(forKey: id)?.view.removeFromSuperview()
+                    mounted.remove(id)
+                    continue
+                }
+                controllers[id]?.update(next[index], appearance: appearance)
+            }
+            contents = next
+            rebuildOffsets()
+        } else {
+            for (old, new) in zip(contents, next) where changedAppearance || old != new {
+                let id = new.entry.id
+                measuredSizes.removeValue(forKey: id)
+                controllers[id]?.update(new, appearance: appearance)
+                if mounted.contains(id) { laidOutRange = nil }
+            }
+            contents = next
+        }
+        self.rowAppearance = appearance
+        return structureChanged
     }
     /// Releasing hundreds of hosting graphs in the selection transaction stalls
     /// the main thread. Drain a small batch between frames, on AppKit's thread.
@@ -442,6 +596,10 @@ private final class ConversationDocumentView: NSView {
         return CGSize(width: columnWidth, height: totalHeight)
     }
     private func rebuildOffsets() {
+        #if TRANSCRIPT_CHECKS
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("row_geometry", since: start) }
+        #endif
         laidOutRange = nil
         let spacing = contents.indices.map { index -> CGFloat in
             index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess ? 6 : 18
@@ -649,6 +807,13 @@ private final class ConversationDocumentView: NSView {
 
 #if TRANSCRIPT_CHECKS
 extension ConversationTranscript {
+    static func checkReconciliation(in root: NSView) throws -> [String: Any]? {
+        if let document = root as? ConversationDocumentView { return try document.checkReconciliation() }
+        for child in root.subviews {
+            if let result = try checkReconciliation(in: child) { return result }
+        }
+        return nil
+    }
     static func navigator(in root: NSView) -> ConversationTurnNavigation? {
         if let document = root as? ConversationDocumentView { return document.navigator }
         for view in root.subviews {
@@ -768,8 +933,9 @@ private final class ConversationEntryController: NSViewController {
         view = container
     }
     func layout(frame: CGRect, contentHeight: CGFloat) {
-        view.frame = frame
-        host.view.frame = CGRect(x: 0, y: 0, width: frame.width, height: contentHeight)
+        if view.frame != frame { view.frame = frame }
+        let hostFrame = CGRect(x: 0, y: 0, width: frame.width, height: contentHeight)
+        if host.view.frame != hostFrame { host.view.frame = hostFrame }
     }
     private func committedWidthChanged() {
         // A detached host cannot report geometry after a window/sidebar resize.

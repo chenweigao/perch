@@ -1,0 +1,3341 @@
+{
+  "boundary": "Fixed offline mounted workbench, serial uncaptured timings and separate CPU profiles; no SSH, real model, hardware input, real IME candidate UI or FPS proof. Other desktop processes uncontrolled.",
+  "runs": {
+    "all": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "all",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45337,
+        "exit_code": 0,
+        "elapsed_s": 10.176231834,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "all",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "row_reconciliation": {
+          "appearance_invalidation": true,
+          "external_summary_same_snapshot": true,
+          "prepend_and_removal": true,
+          "same_id_offscreen_and_visible_edits": true,
+          "unchanged_geometry_rebuilds": 0,
+          "unchanged_host_measurements": 0,
+          "unchanged_reconciliations": 0,
+          "unchanged_replays": 40
+        },
+        "rss_after_mb": 224.28125,
+        "rss_before_mb": 170.8125,
+        "rss_settled_mb": 224.296875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.766750019509345,
+          "median": 4.8534999950788915,
+          "p95": 22.55279169185087
+        },
+        "search_sheet": {
+          "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+          "query_to_layout_ms": {
+            "count": 6,
+            "max": 335.8062916668132,
+            "median": 34.46195833384991,
+            "p95": 39.88604171900079
+          },
+          "states": [
+            {
+              "query": "验收",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "0002",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+            },
+            {
+              "query": "不存在的验收会话",
+              "selection": "none"
+            },
+            {
+              "query": "English",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "project-3",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+            },
+            {
+              "query": "",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            }
+          ]
+        },
+        "session_directory": {
+          "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+          "query_to_layout_ms": {
+            "count": 6,
+            "max": 102.35762497177348,
+            "median": 51.38341669226065,
+            "p95": 58.18691663444042
+          },
+          "states": [
+            {
+              "query": "验收",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "0002",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+            },
+            {
+              "query": "不存在的验收会话",
+              "selection": "none"
+            },
+            {
+              "query": "English",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "project-3",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+            },
+            {
+              "query": "",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            }
+          ]
+        },
+        "session_switch_ms": {
+          "count": 16,
+          "max": 93.43266667565331,
+          "median": 54.749124974478036,
+          "p95": 66.00020837504417
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "paging": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "paging",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46014,
+        "exit_code": 0,
+        "elapsed_s": 7.8046869580000005,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "paging",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "paging_anchor_preserved": true,
+        "paging_delta_messages": 1,
+        "paging_final_turns": 200,
+        "paging_initial_turns": 50,
+        "paging_response_bytes": [
+          41033,
+          41033,
+          488,
+          41033,
+          81282,
+          40640,
+          40558
+        ],
+        "paging_response_messages": [
+          100,
+          100,
+          1,
+          100,
+          200,
+          100,
+          100
+        ],
+        "paging_search_and_navigation": "passed",
+        "rss_after_mb": 187.3125,
+        "rss_before_mb": 168.765625,
+        "rss_settled_mb": 187.359375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 34.88658333662897,
+          "median": 4.121208330616355,
+          "p95": 25.898124964442104
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 4
+          }
+        }
+      }
+    },
+    "input": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "input",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46028,
+        "exit_code": 0,
+        "elapsed_s": 9.5856785,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "input_boundary": "Mounted NSTextInputClient insertText/setMarkedText through production delegate and layout flush. Layout samples include a >=1ms async readiness wait; streaming samples include a 10ms UI settle. Excludes hardware events, actual IME candidate UI, compositor/display latency, network and FPS.",
+        "input_composition_cycles": 24,
+        "input_marked_text_preserved": true,
+        "input_max_anchor_drift_points": 0,
+        "input_metrics": {
+          "commit_dispatch_ms": {
+            "count": 24,
+            "max": 0.8900833199732006,
+            "median": 0.6295833154581487,
+            "p95": 0.8477916708216071
+          },
+          "commit_layout_ms": {
+            "count": 24,
+            "max": 6.905291636940092,
+            "median": 3.3269166597165167,
+            "p95": 3.9116666885092854
+          },
+          "marked_layout_ms": {
+            "count": 24,
+            "max": 5.073125008493662,
+            "median": 2.420666627585888,
+            "p95": 3.3035416272468865
+          },
+          "plain_dispatch_ms": {
+            "count": 24,
+            "max": 1.5305833076126873,
+            "median": 1.0086250258609653,
+            "p95": 1.3562083477154374
+          },
+          "plain_layout_ms": {
+            "count": 24,
+            "max": 8.558583329431713,
+            "median": 3.7885416531935334,
+            "p95": 4.503833362832665
+          },
+          "stream_layout_ms": {
+            "count": 24,
+            "max": 42.95491665834561,
+            "median": 17.88116671377793,
+            "p95": 20.037333306390792
+          }
+        },
+        "input_positive_control": false,
+        "input_positive_control_detected": false,
+        "input_samples": [
+          {
+            "commit_dispatch_ms": 0.42595830745995045,
+            "commit_layout_ms": 5.4355000029318035,
+            "commit_reader_evaluations": 0,
+            "index": 0,
+            "marked_layout_ms": 5.073125008493662,
+            "plain_dispatch_ms": 1.4118750113993883,
+            "plain_layout_ms": 8.558583329431713,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 42.95491665834561
+          },
+          {
+            "commit_dispatch_ms": 0.443791679572314,
+            "commit_layout_ms": 3.178041661158204,
+            "commit_reader_evaluations": 0,
+            "index": 1,
+            "marked_layout_ms": 1.223416649736464,
+            "plain_dispatch_ms": 0.5904582794755697,
+            "plain_layout_ms": 3.4144166274927557,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 18.238333344925195
+          },
+          {
+            "commit_dispatch_ms": 0.447375001385808,
+            "commit_layout_ms": 3.1348750344477594,
+            "commit_reader_evaluations": 0,
+            "index": 2,
+            "marked_layout_ms": 1.506458327639848,
+            "plain_dispatch_ms": 0.5490416660904884,
+            "plain_layout_ms": 3.4012083197012544,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 18.115249986294657
+          },
+          {
+            "commit_dispatch_ms": 0.5481250118464231,
+            "commit_layout_ms": 2.6064167032018304,
+            "commit_reader_evaluations": 0,
+            "index": 3,
+            "marked_layout_ms": 1.5595000004395843,
+            "plain_dispatch_ms": 0.712333363480866,
+            "plain_layout_ms": 3.299625008367002,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.57887500571087
+          },
+          {
+            "commit_dispatch_ms": 0.5026666331104934,
+            "commit_layout_ms": 2.949291665572673,
+            "commit_reader_evaluations": 0,
+            "index": 4,
+            "marked_layout_ms": 1.6258333344012499,
+            "plain_dispatch_ms": 0.6525833159685135,
+            "plain_layout_ms": 3.450291638728231,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.001041676849127
+          },
+          {
+            "commit_dispatch_ms": 0.6464166799560189,
+            "commit_layout_ms": 3.5271666711196303,
+            "commit_reader_evaluations": 0,
+            "index": 5,
+            "marked_layout_ms": 1.6948750126175582,
+            "plain_dispatch_ms": 0.6074166740290821,
+            "plain_layout_ms": 2.8684999560937285,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 18.310708343051374
+          },
+          {
+            "commit_dispatch_ms": 0.47658331459388137,
+            "commit_layout_ms": 3.152666671667248,
+            "commit_reader_evaluations": 0,
+            "index": 6,
+            "marked_layout_ms": 1.8890833016484976,
+            "plain_dispatch_ms": 0.9379583061672747,
+            "plain_layout_ms": 3.7616249755956233,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 18.00129166804254
+          },
+          {
+            "commit_dispatch_ms": 0.5232916446402669,
+            "commit_layout_ms": 2.941333339549601,
+            "commit_reader_evaluations": 0,
+            "index": 7,
+            "marked_layout_ms": 1.8192916759289801,
+            "plain_dispatch_ms": 0.7281249854713678,
+            "plain_layout_ms": 3.1104583176784217,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.990208289120346
+          },
+          {
+            "commit_dispatch_ms": 0.6262499955482781,
+            "commit_layout_ms": 3.3269166597165167,
+            "commit_reader_evaluations": 0,
+            "index": 8,
+            "marked_layout_ms": 1.9081250065937638,
+            "plain_dispatch_ms": 0.7012500427663326,
+            "plain_layout_ms": 2.9394583543762565,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.909583286382258
+          },
+          {
+            "commit_dispatch_ms": 0.5642499891109765,
+            "commit_layout_ms": 3.4637500066310167,
+            "commit_reader_evaluations": 0,
+            "index": 9,
+            "marked_layout_ms": 2.15741666033864,
+            "plain_dispatch_ms": 1.0270833736285567,
+            "plain_layout_ms": 3.9847500156611204,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.631916620302945
+          },
+          {
+            "commit_dispatch_ms": 0.6295833154581487,
+            "commit_layout_ms": 3.5332083352841437,
+            "commit_reader_evaluations": 0,
+            "index": 10,
+            "marked_layout_ms": 2.2214166820049286,
+            "plain_dispatch_ms": 1.1847499990835786,
+            "plain_layout_ms": 4.503833362832665,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.978625022806227
+          },
+          {
+            "commit_dispatch_ms": 0.5772499716840684,
+            "commit_layout_ms": 3.3913750085048378,
+            "commit_reader_evaluations": 0,
+            "index": 11,
+            "marked_layout_ms": 2.242624992504716,
+            "plain_dispatch_ms": 1.0362916509620845,
+            "plain_layout_ms": 4.078749974723905,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 18.041208328213543
+          },
+          {
+            "commit_dispatch_ms": 0.7157917134463787,
+            "commit_layout_ms": 2.7686250396072865,
+            "commit_reader_evaluations": 0,
+            "index": 12,
+            "marked_layout_ms": 2.420666627585888,
+            "plain_dispatch_ms": 0.9705416741780937,
+            "plain_layout_ms": 3.811416681855917,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.4875000375323
+          },
+          {
+            "commit_dispatch_ms": 0.7044583326205611,
+            "commit_layout_ms": 2.5667916634120047,
+            "commit_reader_evaluations": 0,
+            "index": 13,
+            "marked_layout_ms": 2.450541651342064,
+            "plain_dispatch_ms": 1.0086250258609653,
+            "plain_layout_ms": 3.7885416531935334,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.837458348367363
+          },
+          {
+            "commit_dispatch_ms": 0.6268333527259529,
+            "commit_layout_ms": 6.905291636940092,
+            "commit_reader_evaluations": 0,
+            "index": 14,
+            "marked_layout_ms": 3.639750008005649,
+            "plain_dispatch_ms": 0.9787083836272359,
+            "plain_layout_ms": 3.558083379175514,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 21.329374983906746
+          },
+          {
+            "commit_dispatch_ms": 0.6194166489876807,
+            "commit_layout_ms": 2.339625032618642,
+            "commit_reader_evaluations": 0,
+            "index": 15,
+            "marked_layout_ms": 2.9865833348594606,
+            "plain_dispatch_ms": 0.8334583253599703,
+            "plain_layout_ms": 3.140374959912151,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 20.037333306390792
+          },
+          {
+            "commit_dispatch_ms": 0.6505833007395267,
+            "commit_layout_ms": 2.3170000058598816,
+            "commit_reader_evaluations": 0,
+            "index": 16,
+            "marked_layout_ms": 2.325958339497447,
+            "plain_dispatch_ms": 0.9297083015553653,
+            "plain_layout_ms": 3.426333307288587,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.177958332467824
+          },
+          {
+            "commit_dispatch_ms": 0.6931250100024045,
+            "commit_layout_ms": 3.69991670595482,
+            "commit_reader_evaluations": 0,
+            "index": 17,
+            "marked_layout_ms": 2.5905832881107926,
+            "plain_dispatch_ms": 1.0466250241734087,
+            "plain_layout_ms": 3.6575000267475843,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.773541680071503
+          },
+          {
+            "commit_dispatch_ms": 0.8518333197571337,
+            "commit_layout_ms": 3.875874972436577,
+            "commit_reader_evaluations": 0,
+            "index": 18,
+            "marked_layout_ms": 2.8177499771118164,
+            "plain_dispatch_ms": 1.5305833076126873,
+            "plain_layout_ms": 4.540874972008169,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.869666626211256
+          },
+          {
+            "commit_dispatch_ms": 0.8477916708216071,
+            "commit_layout_ms": 3.9116666885092854,
+            "commit_reader_evaluations": 0,
+            "index": 19,
+            "marked_layout_ms": 2.8172916499897838,
+            "plain_dispatch_ms": 1.2199166812933981,
+            "plain_layout_ms": 4.021416651085019,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.79795833863318
+          },
+          {
+            "commit_dispatch_ms": 0.8425416308455169,
+            "commit_layout_ms": 3.880791657138616,
+            "commit_reader_evaluations": 0,
+            "index": 20,
+            "marked_layout_ms": 3.170875017531216,
+            "plain_dispatch_ms": 1.3562083477154374,
+            "plain_layout_ms": 4.365125030744821,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.88116671377793
+          },
+          {
+            "commit_dispatch_ms": 0.8900833199732006,
+            "commit_layout_ms": 3.809833317063749,
+            "commit_reader_evaluations": 0,
+            "index": 21,
+            "marked_layout_ms": 3.124291659332812,
+            "plain_dispatch_ms": 1.2145833461545408,
+            "plain_layout_ms": 4.116666677873582,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.817833344452083
+          },
+          {
+            "commit_dispatch_ms": 0.8331250282935798,
+            "commit_layout_ms": 2.8655833448283374,
+            "commit_reader_evaluations": 0,
+            "index": 22,
+            "marked_layout_ms": 3.1978333718143404,
+            "plain_dispatch_ms": 1.2521666940301657,
+            "plain_layout_ms": 4.07900003483519,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 16.89479168271646
+          },
+          {
+            "commit_dispatch_ms": 0.8456250070594251,
+            "commit_layout_ms": 2.9451249865815043,
+            "commit_reader_evaluations": 0,
+            "index": 23,
+            "marked_layout_ms": 3.3035416272468865,
+            "plain_dispatch_ms": 1.2736250064335763,
+            "plain_layout_ms": 4.256875021383166,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 17.67816668143496
+          }
+        ],
+        "intentional_stall_ms": 0,
+        "mode": "input",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "rss_after_mb": 185.40625,
+        "rss_before_mb": 170.609375,
+        "rss_settled_mb": 185.421875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 39.41929171560332,
+          "median": 4.024416615720838,
+          "p95": 26.211666641756892
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 4
+          }
+        }
+      }
+    },
+    "kimi-input": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 1,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "kimi-input",
+        "native_fixture_resident_snapshot_count": 8,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46040,
+        "exit_code": 0,
+        "elapsed_s": 4.5113280829999995,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions_during_measurement": 1,
+        "draft_mutations": 40,
+        "history_turns": 200,
+        "input_boundary": "Mounted NSTextInputClient insertText/setMarkedText through production delegate and layout flush. Layout samples include a >=1ms async readiness wait; streaming samples include a 10ms UI settle. Excludes hardware events, actual IME candidate UI, compositor/display latency, network and FPS.",
+        "input_composition_cycles": 24,
+        "input_marked_text_preserved": true,
+        "input_max_anchor_drift_points": 0,
+        "input_metrics": {
+          "commit_dispatch_ms": {
+            "count": 24,
+            "max": 0.9697916684672236,
+            "median": 0.6687082932330668,
+            "p95": 0.8892916375771165
+          },
+          "commit_layout_ms": {
+            "count": 24,
+            "max": 10.417750047054142,
+            "median": 3.6741249496117234,
+            "p95": 4.4198333052918315
+          },
+          "marked_layout_ms": {
+            "count": 24,
+            "max": 4.001083318144083,
+            "median": 2.3379583144560456,
+            "p95": 3.0654166475869715
+          },
+          "plain_dispatch_ms": {
+            "count": 24,
+            "max": 1.8207500106655061,
+            "median": 0.9949583327397704,
+            "p95": 1.321916643064469
+          },
+          "plain_layout_ms": {
+            "count": 24,
+            "max": 10.37408335832879,
+            "median": 5.023833306040615,
+            "p95": 5.947083351202309
+          },
+          "stream_layout_ms": {
+            "count": 24,
+            "max": 19.528416683897376,
+            "median": 12.31766666751355,
+            "p95": 15.709625033196062
+          }
+        },
+        "input_positive_control": false,
+        "input_positive_control_detected": false,
+        "input_samples": [
+          {
+            "commit_dispatch_ms": 0.6806249730288982,
+            "commit_layout_ms": 4.4198333052918315,
+            "commit_reader_evaluations": 0,
+            "index": 0,
+            "marked_layout_ms": 3.7472082767635584,
+            "plain_dispatch_ms": 1.8207500106655061,
+            "plain_layout_ms": 10.37408335832879,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 19.528416683897376
+          },
+          {
+            "commit_dispatch_ms": 0.5575833492912352,
+            "commit_layout_ms": 3.7031249958090484,
+            "commit_reader_evaluations": 0,
+            "index": 1,
+            "marked_layout_ms": 1.408666663337499,
+            "plain_dispatch_ms": 0.9337083320133388,
+            "plain_layout_ms": 4.650250019039959,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.489958375226706
+          },
+          {
+            "commit_dispatch_ms": 0.468333309981972,
+            "commit_layout_ms": 3.057041671127081,
+            "commit_reader_evaluations": 0,
+            "index": 2,
+            "marked_layout_ms": 1.3315000105649233,
+            "plain_dispatch_ms": 0.7223749998956919,
+            "plain_layout_ms": 4.614916688296944,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.303958355914801
+          },
+          {
+            "commit_dispatch_ms": 0.5384999676607549,
+            "commit_layout_ms": 3.6741249496117234,
+            "commit_reader_evaluations": 0,
+            "index": 3,
+            "marked_layout_ms": 1.4870833256281912,
+            "plain_dispatch_ms": 0.7951667066663504,
+            "plain_layout_ms": 4.830833349842578,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.308791687246412
+          },
+          {
+            "commit_dispatch_ms": 0.6112916162237525,
+            "commit_layout_ms": 3.5149166360497475,
+            "commit_reader_evaluations": 0,
+            "index": 4,
+            "marked_layout_ms": 1.672249985858798,
+            "plain_dispatch_ms": 0.8834166219457984,
+            "plain_layout_ms": 5.023833306040615,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.31766666751355
+          },
+          {
+            "commit_dispatch_ms": 0.5937499809078872,
+            "commit_layout_ms": 3.643416683189571,
+            "commit_reader_evaluations": 0,
+            "index": 5,
+            "marked_layout_ms": 1.8993749981746078,
+            "plain_dispatch_ms": 1.1432917090132833,
+            "plain_layout_ms": 6.215416709892452,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.333999969996512
+          },
+          {
+            "commit_dispatch_ms": 0.5747083341702819,
+            "commit_layout_ms": 3.4860000014305115,
+            "commit_reader_evaluations": 0,
+            "index": 6,
+            "marked_layout_ms": 1.9308750052005053,
+            "plain_dispatch_ms": 0.8484167046844959,
+            "plain_layout_ms": 4.875833343248814,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.3346250038594
+          },
+          {
+            "commit_dispatch_ms": 0.6552499835379422,
+            "commit_layout_ms": 3.708708332851529,
+            "commit_reader_evaluations": 0,
+            "index": 7,
+            "marked_layout_ms": 1.9591249874792993,
+            "plain_dispatch_ms": 0.8973749936558306,
+            "plain_layout_ms": 5.409208359196782,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.364875001367182
+          },
+          {
+            "commit_dispatch_ms": 0.6605833186767995,
+            "commit_layout_ms": 3.6394166527315974,
+            "commit_reader_evaluations": 0,
+            "index": 8,
+            "marked_layout_ms": 1.9838333828374743,
+            "plain_dispatch_ms": 0.9582083439454436,
+            "plain_layout_ms": 4.957458353601396,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.291541672311723
+          },
+          {
+            "commit_dispatch_ms": 0.6438749842345715,
+            "commit_layout_ms": 3.3550416701473296,
+            "commit_reader_evaluations": 0,
+            "index": 9,
+            "marked_layout_ms": 2.1482916781678796,
+            "plain_dispatch_ms": 1.792416675016284,
+            "plain_layout_ms": 5.947083351202309,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.284166703466326
+          },
+          {
+            "commit_dispatch_ms": 0.6321249529719353,
+            "commit_layout_ms": 3.5945416311733425,
+            "commit_reader_evaluations": 0,
+            "index": 10,
+            "marked_layout_ms": 2.252708363812417,
+            "plain_dispatch_ms": 1.0095832985825837,
+            "plain_layout_ms": 5.123166658449918,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.286124983802438
+          },
+          {
+            "commit_dispatch_ms": 0.7686666795052588,
+            "commit_layout_ms": 3.87858331669122,
+            "commit_reader_evaluations": 0,
+            "index": 11,
+            "marked_layout_ms": 2.2032083361409605,
+            "plain_dispatch_ms": 0.9812916978262365,
+            "plain_layout_ms": 4.815499996766448,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 11.060999997425824
+          },
+          {
+            "commit_dispatch_ms": 0.6687082932330668,
+            "commit_layout_ms": 3.8573333295062184,
+            "commit_reader_evaluations": 0,
+            "index": 12,
+            "marked_layout_ms": 2.3379583144560456,
+            "plain_dispatch_ms": 0.9064166806638241,
+            "plain_layout_ms": 4.919250030070543,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.458541663363576
+          },
+          {
+            "commit_dispatch_ms": 0.6047916831448674,
+            "commit_layout_ms": 3.643583331722766,
+            "commit_reader_evaluations": 0,
+            "index": 13,
+            "marked_layout_ms": 2.3655000259168446,
+            "plain_dispatch_ms": 0.952750036958605,
+            "plain_layout_ms": 4.597874998580664,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 13.93845834536478
+          },
+          {
+            "commit_dispatch_ms": 0.7760833250358701,
+            "commit_layout_ms": 10.417750047054142,
+            "commit_reader_evaluations": 0,
+            "index": 14,
+            "marked_layout_ms": 4.001083318144083,
+            "plain_dispatch_ms": 0.9949583327397704,
+            "plain_layout_ms": 4.818500019609928,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 18.312625004909933
+          },
+          {
+            "commit_dispatch_ms": 0.678333337418735,
+            "commit_layout_ms": 3.395166655536741,
+            "commit_reader_evaluations": 0,
+            "index": 15,
+            "marked_layout_ms": 2.923083317000419,
+            "plain_dispatch_ms": 0.982375000603497,
+            "plain_layout_ms": 4.806249984540045,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 15.709625033196062
+          },
+          {
+            "commit_dispatch_ms": 0.6650832947343588,
+            "commit_layout_ms": 3.6292499862611294,
+            "commit_reader_evaluations": 0,
+            "index": 16,
+            "marked_layout_ms": 2.1257500047795475,
+            "plain_dispatch_ms": 0.9298750082962215,
+            "plain_layout_ms": 4.11858333973214,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 11.441166629083455
+          },
+          {
+            "commit_dispatch_ms": 0.8191666565835476,
+            "commit_layout_ms": 4.006708331871778,
+            "commit_reader_evaluations": 0,
+            "index": 17,
+            "marked_layout_ms": 2.3871667217463255,
+            "plain_dispatch_ms": 1.0009583202190697,
+            "plain_layout_ms": 4.451291635632515,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.298874964471906
+          },
+          {
+            "commit_dispatch_ms": 0.7877916214056313,
+            "commit_layout_ms": 3.7177499616518617,
+            "commit_reader_evaluations": 0,
+            "index": 18,
+            "marked_layout_ms": 2.7373749762773514,
+            "plain_dispatch_ms": 1.308874983806163,
+            "plain_layout_ms": 5.49862498883158,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.301166716497391
+          },
+          {
+            "commit_dispatch_ms": 0.9697916684672236,
+            "commit_layout_ms": 4.1975833009928465,
+            "commit_reader_evaluations": 0,
+            "index": 19,
+            "marked_layout_ms": 2.9591666534543037,
+            "plain_dispatch_ms": 1.1506250011734664,
+            "plain_layout_ms": 5.184041627217084,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 10.846666700672358
+          },
+          {
+            "commit_dispatch_ms": 0.8800416835583746,
+            "commit_layout_ms": 5.455125006847084,
+            "commit_reader_evaluations": 0,
+            "index": 20,
+            "marked_layout_ms": 3.0654166475869715,
+            "plain_dispatch_ms": 1.2968333321623504,
+            "plain_layout_ms": 5.392124992795289,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.305083335377276
+          },
+          {
+            "commit_dispatch_ms": 0.8278333116322756,
+            "commit_layout_ms": 3.642000025138259,
+            "commit_reader_evaluations": 0,
+            "index": 21,
+            "marked_layout_ms": 2.894833334721625,
+            "plain_dispatch_ms": 1.321916643064469,
+            "plain_layout_ms": 5.517041659913957,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.320291716605425
+          },
+          {
+            "commit_dispatch_ms": 0.9432916413061321,
+            "commit_layout_ms": 4.056916630361229,
+            "commit_reader_evaluations": 0,
+            "index": 22,
+            "marked_layout_ms": 2.9161249985918403,
+            "plain_dispatch_ms": 1.2160416808910668,
+            "plain_layout_ms": 5.4402916575782,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.30662496527657
+          },
+          {
+            "commit_dispatch_ms": 0.8892916375771165,
+            "commit_layout_ms": 3.613791661337018,
+            "commit_reader_evaluations": 0,
+            "index": 23,
+            "marked_layout_ms": 3.0131249804981053,
+            "plain_dispatch_ms": 1.316791633144021,
+            "plain_layout_ms": 5.236041673924774,
+            "plain_reader_evaluations": 0,
+            "stream_layout_ms": 12.319375004153699
+          }
+        ],
+        "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+        "mode": "kimi-input",
+        "reading_body_evaluations_during_drafts": 0,
+        "selection_draft_roundtrip": true,
+        "status": "passed",
+        "stream_positive_control": true
+      }
+    },
+    "invalidation": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "invalidation",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46047,
+        "exit_code": 0,
+        "elapsed_s": 8.702336459,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "draft_mutations": 40,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+        "mode": "invalidation",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "reading_body_evaluations_during_drafts": 0,
+        "rss_after_mb": 189.4375,
+        "rss_before_mb": 170.9375,
+        "rss_settled_mb": 189.453125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.044583344832063,
+          "median": 5.016708339098841,
+          "p95": 22.454416670370847
+        },
+        "snapshot_positive_control": true,
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 11
+          }
+        }
+      }
+    },
+    "kimi-invalidation": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 1,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "kimi-invalidation",
+        "native_fixture_resident_snapshot_count": 8,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46130,
+        "exit_code": 0,
+        "elapsed_s": 2.395062334,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions_during_measurement": 1,
+        "draft_mutations": 40,
+        "history_turns": 200,
+        "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+        "mode": "kimi-invalidation",
+        "reading_body_evaluations_during_drafts": 0,
+        "selection_draft_roundtrip": true,
+        "status": "passed",
+        "stream_positive_control": true
+      }
+    },
+    "dashboard": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "dashboard",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46154,
+        "exit_code": 0,
+        "elapsed_s": 30.0870975,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "dashboard_contract": "rendered projection and inbox state; scrolling during section/height/order changes; return to transcript; offline fixture",
+        "dashboard_idle_cpu_seconds_over_2s": 0.011368999999998408,
+        "dashboard_update_ms": {
+          "count": 60,
+          "max": 747.5062499870546,
+          "median": 196.50808337610215,
+          "p95": 718.8000416499563
+        },
+        "dashboard_updates": 60,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "dashboard",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "rss_after_mb": 242.015625,
+        "rss_before_mb": 170.90625,
+        "rss_settled_mb": 242.03125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.13141667097807,
+          "median": 5.0279583665542305,
+          "p95": 22.812124982010573
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "unified_workbench": {
+          "combined_group_machine_scope": true,
+          "global_action_deduplication": true,
+          "manual_completion": true,
+          "membership_create_remove_and_persist": true,
+          "offline_excluded_from_actions": true,
+          "offline_membership": true,
+          "outcome_source_persistence": true,
+          "pin_persistence": true,
+          "rendered_navigation": true,
+          "scoped_inbox": true
+        },
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "workspace": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "workspace",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46181,
+        "exit_code": 0,
+        "elapsed_s": 5.2433155000000005,
+        "behavior_passed": true
+      },
+      "result": {
+        "acknowledgement_independent_from_review": true,
+        "automatic_next_after_confirmed_resolution": true,
+        "mode": "workspace",
+        "only_expected_write": true,
+        "outcome_source_and_manual_completion": true,
+        "real_agent": false,
+        "status": "passed",
+        "transport": "isolated in-memory native transport"
+      }
+    },
+    "review": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "review",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46212,
+        "exit_code": 0,
+        "elapsed_s": 3.114082292,
+        "behavior_passed": true
+      },
+      "result": {
+        "draft_preserved_without_send": true,
+        "local_file_and_diff_read": true,
+        "mode": "review",
+        "real_agent": false,
+        "stale_target_rejected": true,
+        "status": "passed"
+      }
+    },
+    "branch-review": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "branch-review",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 46393,
+        "exit_code": 0,
+        "elapsed_s": 9.723890417,
+        "behavior_passed": true
+      },
+      "result": {
+        "committed_only_and_versioned_draft": true,
+        "diff_visible_after_empty_comparison": true,
+        "draft_preserved_without_send": true,
+        "file_completion_preserves_text_and_never_sends": true,
+        "invalid_target_clears_previous_diff": true,
+        "local_file_and_diff_read": true,
+        "mode": "branch-review",
+        "new_task_file_completion_without_session": true,
+        "project_file_catalog_uses_execution_environment": true,
+        "real_agent": false,
+        "review_navigation_scroll_and_scope_restore": true,
+        "review_progress_restores_and_invalidates_changed_files": true,
+        "stale_target_rejected": true,
+        "status": "passed",
+        "working_range_restored": true
+      }
+    },
+    "baseline-switching-r1": {
+      "manifest": {
+        "commit": "28098905b65b5665093d43d043750de27c9ee046",
+        "source_sha256": "209813e0eaee04caeda17ab850bdb1af6ae6ee94bb3299cda731d41f74212209",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ee55ed2ae76b56790ad314c00af2dbb818c5cd51f7da6caa5caa71c143591cc9",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45635,
+        "exit_code": 0,
+        "elapsed_s": 15.365617417,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 93.59920828137547,
+          "median": 73.51291668601334,
+          "p95": 81.42891665920615
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.0784590000000005,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "rss_after_mb": 221.1875,
+        "rss_before_mb": 171.03125,
+        "rss_settled_mb": 221.1875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 45.17970833694562,
+          "median": 4.853541671764106,
+          "p95": 23.797791625838727
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "baseline-switching-r2": {
+      "manifest": {
+        "commit": "28098905b65b5665093d43d043750de27c9ee046",
+        "source_sha256": "209813e0eaee04caeda17ab850bdb1af6ae6ee94bb3299cda731d41f74212209",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ee55ed2ae76b56790ad314c00af2dbb818c5cd51f7da6caa5caa71c143591cc9",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45684,
+        "exit_code": 0,
+        "elapsed_s": 15.511013209,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 100.14479170786217,
+          "median": 75.47629170585424,
+          "p95": 85.7695416198112
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.07555200000000006,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "rss_after_mb": 220.890625,
+        "rss_before_mb": 171,
+        "rss_settled_mb": 220.890625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 46.16537503898144,
+          "median": 4.8310416750609875,
+          "p95": 23.35116663016379
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "baseline-switching-r3": {
+      "manifest": {
+        "commit": "28098905b65b5665093d43d043750de27c9ee046",
+        "source_sha256": "209813e0eaee04caeda17ab850bdb1af6ae6ee94bb3299cda731d41f74212209",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ee55ed2ae76b56790ad314c00af2dbb818c5cd51f7da6caa5caa71c143591cc9",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45850,
+        "exit_code": 0,
+        "elapsed_s": 15.336937165999998,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 91.18504170328379,
+          "median": 73.86012503411621,
+          "p95": 83.9014999801293
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.07929600000000026,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "rss_after_mb": 221.4375,
+        "rss_before_mb": 169.40625,
+        "rss_settled_mb": 221.4375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 45.97079165978357,
+          "median": 4.896499973256141,
+          "p95": 22.967708355281502
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "baseline-joint": {
+      "manifest": {
+        "commit": "28098905b65b5665093d43d043750de27c9ee046",
+        "source_sha256": "209813e0eaee04caeda17ab850bdb1af6ae6ee94bb3299cda731d41f74212209",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ee55ed2ae76b56790ad314c00af2dbb818c5cd51f7da6caa5caa71c143591cc9",
+        "capture": "none",
+        "mode": "joint",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 120,
+        "supervisor_pid": 46641,
+        "exit_code": 0,
+        "elapsed_s": 127.436415708,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "joint_cpu_seconds": 12.405629,
+        "joint_duration_s": 120.16606254165526,
+        "joint_input_to_layout_ms": {
+          "count": 296,
+          "max": 10.568124998826534,
+          "median": 7.019083306659013,
+          "p95": 8.759583288338035
+        },
+        "joint_note": "Real workbench; fixed full-history JSON updates, local draft binding, anchor and return checks at 2.5Hz. Excludes hardware keyboard/IME and network; CPU includes fixture serialization.",
+        "joint_samples": [
+          {
+            "cpu_seconds": 0.04102400000000006,
+            "elapsed_s": 0.03621233336161822,
+            "mounted": 3,
+            "recycled_text_views": 44,
+            "retained": 4,
+            "retired": 0,
+            "rss_mb": 174.90625,
+            "updates": 1
+          },
+          {
+            "cpu_seconds": 3.164076,
+            "elapsed_s": 30.04286845831666,
+            "mounted": 3,
+            "recycled_text_views": 32,
+            "retained": 5,
+            "retired": 0,
+            "rss_mb": 187.21875,
+            "updates": 75
+          },
+          {
+            "cpu_seconds": 6.115581,
+            "elapsed_s": 60.09575604170095,
+            "mounted": 3,
+            "recycled_text_views": 33,
+            "retained": 6,
+            "retired": 0,
+            "rss_mb": 189.9375,
+            "updates": 149
+          },
+          {
+            "cpu_seconds": 9.373025,
+            "elapsed_s": 90.18165370833594,
+            "mounted": 4,
+            "recycled_text_views": 32,
+            "retained": 5,
+            "retired": 0,
+            "rss_mb": 188.09375,
+            "updates": 223
+          }
+        ],
+        "joint_switches": 18,
+        "joint_update_to_layout_ms": {
+          "count": 296,
+          "max": 29.489124950487167,
+          "median": 26.87308331951499,
+          "p95": 28.63575000083074
+        },
+        "joint_updates": 296,
+        "mode": "joint",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "rss_after_mb": 195.578125,
+        "rss_before_mb": 171.015625,
+        "rss_settled_mb": 195.578125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 61.372249969281256,
+          "median": 2.89649999467656,
+          "p95": 26.06975001981482
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 6
+          }
+        }
+      }
+    },
+    "baseline-cpu": {
+      "manifest": {
+        "commit": "28098905b65b5665093d43d043750de27c9ee046",
+        "source_sha256": "209813e0eaee04caeda17ab850bdb1af6ae6ee94bb3299cda731d41f74212209",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ee55ed2ae76b56790ad314c00af2dbb818c5cd51f7da6caa5caa71c143591cc9",
+        "capture": "cpu",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 47475,
+        "exit_code": 0,
+        "elapsed_s": 21.214928750000002,
+        "behavior_passed": true,
+        "missing_schemas": [],
+        "trace_exported": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 93.75716670183465,
+          "median": 74.79700003750622,
+          "p95": 82.44025002932176
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.07421100000000003,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "rss_after_mb": 221.84375,
+        "rss_before_mb": 171.234375,
+        "rss_settled_mb": 221.84375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 46.006958349607885,
+          "median": 5.3291667136363685,
+          "p95": 23.69541669031605
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "candidate-switching-r1": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45652,
+        "exit_code": 0,
+        "elapsed_s": 15.434890166,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 95.53700004471466,
+          "median": 72.80933333095163,
+          "p95": 78.9220416918397
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.07743500000000036,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 1580,
+            "ms": 21.1375838262029
+          },
+          "document_configure": {
+            "count": 237,
+            "ms": 523.8764163805172
+          },
+          "document_reconcile": {
+            "count": 79,
+            "ms": 13.639666431117803
+          },
+          "host_attach": {
+            "count": 632,
+            "ms": 19.1505411057733
+          },
+          "host_create": {
+            "count": 316,
+            "ms": 15.152249834500253
+          },
+          "host_measure": {
+            "count": 316,
+            "ms": 479.1697504115291
+          },
+          "host_view": {
+            "count": 316,
+            "ms": 4.081291146576405
+          },
+          "markdown_parse": {
+            "count": 316,
+            "ms": 47.25516779581085
+          },
+          "row_geometry": {
+            "count": 107,
+            "ms": 0.5163754103705287
+          },
+          "text_create": {
+            "count": 1738,
+            "ms": 10.794582136441022
+          },
+          "text_measure": {
+            "count": 1896,
+            "ms": 38.64524752134457
+          },
+          "text_reuse": {
+            "count": 1738,
+            "ms": 0.0634161988273263
+          }
+        },
+        "rss_after_mb": 222.9375,
+        "rss_before_mb": 170.5625,
+        "rss_settled_mb": 222.953125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 41.69537499547005,
+          "median": 4.885416652541608,
+          "p95": 23.12445838470012
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 11
+          }
+        }
+      }
+    },
+    "candidate-switching-r2": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45825,
+        "exit_code": 0,
+        "elapsed_s": 15.315424333000001,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 95.65100003965199,
+          "median": 72.39225000375882,
+          "p95": 79.799999948591
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.07149600000000067,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 1580,
+            "ms": 21.19729289552197
+          },
+          "document_configure": {
+            "count": 237,
+            "ms": 523.858750180807
+          },
+          "document_reconcile": {
+            "count": 79,
+            "ms": 13.684249890502542
+          },
+          "host_attach": {
+            "count": 632,
+            "ms": 19.169623963534832
+          },
+          "host_create": {
+            "count": 316,
+            "ms": 15.089500113390386
+          },
+          "host_measure": {
+            "count": 316,
+            "ms": 479.09154184162617
+          },
+          "host_view": {
+            "count": 316,
+            "ms": 4.084916377905756
+          },
+          "markdown_parse": {
+            "count": 316,
+            "ms": 47.29154129745439
+          },
+          "row_geometry": {
+            "count": 107,
+            "ms": 0.5075834924355149
+          },
+          "text_create": {
+            "count": 1738,
+            "ms": 10.802623757626861
+          },
+          "text_measure": {
+            "count": 1896,
+            "ms": 38.78896008245647
+          },
+          "text_reuse": {
+            "count": 1738,
+            "ms": 0.06225035758689046
+          }
+        },
+        "rss_after_mb": 220.640625,
+        "rss_before_mb": 170.640625,
+        "rss_settled_mb": 220.65625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 41.881291661411524,
+          "median": 4.98195830732584,
+          "p95": 23.019624990411103
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "candidate-switching-r3": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 45867,
+        "exit_code": 0,
+        "elapsed_s": 15.273298666,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 93.91362499445677,
+          "median": 72.8802916710265,
+          "p95": 81.96704171132296
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.07455500000000015,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 1580,
+            "ms": 21.381666010711342
+          },
+          "document_configure": {
+            "count": 237,
+            "ms": 526.2728752568364
+          },
+          "document_reconcile": {
+            "count": 79,
+            "ms": 13.666666520293802
+          },
+          "host_attach": {
+            "count": 632,
+            "ms": 19.416209077462554
+          },
+          "host_create": {
+            "count": 316,
+            "ms": 15.118667099159211
+          },
+          "host_measure": {
+            "count": 316,
+            "ms": 481.3227920094505
+          },
+          "host_view": {
+            "count": 316,
+            "ms": 4.12391620920971
+          },
+          "markdown_parse": {
+            "count": 316,
+            "ms": 47.35391651047394
+          },
+          "row_geometry": {
+            "count": 107,
+            "ms": 0.47791661927476525
+          },
+          "text_create": {
+            "count": 1738,
+            "ms": 10.875334322918206
+          },
+          "text_measure": {
+            "count": 1896,
+            "ms": 38.99512579664588
+          },
+          "text_reuse": {
+            "count": 1738,
+            "ms": 0.07662398274987936
+          }
+        },
+        "rss_after_mb": 220.75,
+        "rss_before_mb": 170.640625,
+        "rss_settled_mb": 220.765625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 44.29445834830403,
+          "median": 4.9526666989549994,
+          "p95": 23.391416703816503
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    },
+    "candidate-joint": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "none",
+        "mode": "joint",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 120,
+        "supervisor_pid": 47057,
+        "exit_code": 0,
+        "elapsed_s": 127.556096834,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "joint_cpu_seconds": 11.916699999999999,
+        "joint_duration_s": 120.16934600000968,
+        "joint_input_to_layout_ms": {
+          "count": 296,
+          "max": 10.068333300296217,
+          "median": 7.300125027541071,
+          "p95": 8.814166649244726
+        },
+        "joint_note": "Real workbench; fixed full-history JSON updates, local draft binding, anchor and return checks at 2.5Hz. Excludes hardware keyboard/IME and network; CPU includes fixture serialization.",
+        "joint_samples": [
+          {
+            "cpu_seconds": 0.04111500000000001,
+            "elapsed_s": 0.035139583342242986,
+            "mounted": 3,
+            "recycled_text_views": 44,
+            "retained": 4,
+            "retired": 0,
+            "rss_mb": 174.203125,
+            "updates": 1
+          },
+          {
+            "cpu_seconds": 3.133817,
+            "elapsed_s": 30.079440791683737,
+            "mounted": 3,
+            "recycled_text_views": 32,
+            "retained": 5,
+            "retired": 0,
+            "rss_mb": 187.171875,
+            "updates": 75
+          },
+          {
+            "cpu_seconds": 5.817668,
+            "elapsed_s": 60.14867854164913,
+            "mounted": 3,
+            "recycled_text_views": 31,
+            "retained": 6,
+            "retired": 0,
+            "rss_mb": 189.140625,
+            "updates": 149
+          },
+          {
+            "cpu_seconds": 8.984359999999999,
+            "elapsed_s": 90.16114412498428,
+            "mounted": 4,
+            "recycled_text_views": 32,
+            "retained": 5,
+            "retired": 0,
+            "rss_mb": 192.125,
+            "updates": 223
+          }
+        ],
+        "joint_switches": 18,
+        "joint_update_to_layout_ms": {
+          "count": 296,
+          "max": 28.222958382684737,
+          "median": 25.570541678462178,
+          "p95": 27.310875011608005
+        },
+        "joint_updates": 296,
+        "mode": "joint",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "rss_after_mb": 200.140625,
+        "rss_before_mb": 170.609375,
+        "rss_settled_mb": 200.15625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 59.99120831256732,
+          "median": 4.302791669033468,
+          "p95": 25.628208299167454
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 6
+          }
+        }
+      }
+    },
+    "candidate-cpu": {
+      "manifest": {
+        "commit": "100e60386274f7eaac23a9e2ff302304d5801621",
+        "source_sha256": "0d0ddbe3f0e7f5de93d397225047967241565a512922f2d390a13934c8cadd6e",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "806152a587ad3a0e6e543dedfb0acf13a82f3614caf59f03f60ae2b01f8812a8",
+        "capture": "cpu",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 47638,
+        "exit_code": 0,
+        "elapsed_s": 19.820312124999997,
+        "behavior_passed": true,
+        "missing_schemas": [],
+        "trace_exported": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 93.0740000330843,
+          "median": 74.16112499777228,
+          "p95": 85.26487497147173
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.0764149999999999,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 1580,
+            "ms": 21.305625035893172
+          },
+          "document_configure": {
+            "count": 237,
+            "ms": 530.0892499508336
+          },
+          "document_reconcile": {
+            "count": 79,
+            "ms": 13.734250038396567
+          },
+          "host_attach": {
+            "count": 632,
+            "ms": 20.33070829929784
+          },
+          "host_create": {
+            "count": 316,
+            "ms": 15.22283343365416
+          },
+          "host_measure": {
+            "count": 316,
+            "ms": 484.88233279203996
+          },
+          "host_view": {
+            "count": 316,
+            "ms": 4.09908319124952
+          },
+          "markdown_parse": {
+            "count": 316,
+            "ms": 47.759540961124
+          },
+          "row_geometry": {
+            "count": 107,
+            "ms": 0.4992918693460524
+          },
+          "text_create": {
+            "count": 1738,
+            "ms": 11.056874878704548
+          },
+          "text_measure": {
+            "count": 1896,
+            "ms": 39.02195760747418
+          },
+          "text_reuse": {
+            "count": 1738,
+            "ms": 0.08404161781072617
+          }
+        },
+        "rss_after_mb": 221.6875,
+        "rss_before_mb": 170.90625,
+        "rss_settled_mb": 221.703125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 41.61604167893529,
+          "median": 5.120124958921224,
+          "p95": 23.13412498915568
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_count_summary": {
+          "samples": 120,
+          "minimum": {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          "maximum": {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 10
+          }
+        }
+      }
+    }
+  },
+  "switching": {
+    "baseline": {
+      "median_of_run_medians_ms": 73.86012503411621,
+      "run_median_range_ms": [
+        73.51291668601334,
+        75.47629170585424
+      ],
+      "run_p95_range_ms": [
+        81.42891665920615,
+        85.7695416198112
+      ],
+      "settled_rss_mb": [
+        221.1875,
+        220.890625,
+        221.4375
+      ]
+    },
+    "candidate": {
+      "median_of_run_medians_ms": 72.80933333095163,
+      "run_median_range_ms": [
+        72.39225000375882,
+        72.8802916710265
+      ],
+      "run_p95_range_ms": [
+        78.9220416918397,
+        81.96704171132296
+      ],
+      "settled_rss_mb": [
+        222.953125,
+        220.65625,
+        220.765625
+      ]
+    }
+  },
+  "profiles": {
+    "baseline": {
+      "after_s": 2.951910958,
+      "before_s": 8.957455166,
+      "sample_rows": 6101,
+      "main_sample_rows": 5872,
+      "all_threads_sampled_cpu_ms": 6101.0,
+      "main_sampled_cpu_ms": 5872.0,
+      "main_cpu_ms_per_second": {
+        "2": 47.0,
+        "3": 983.0,
+        "4": 976.0,
+        "5": 976.0,
+        "6": 981.0,
+        "7": 977.0,
+        "8": 932.0
+      },
+      "main_inclusive_top": [
+        [
+          "<deduplicated_symbol>",
+          5043.0
+        ],
+        [
+          "_CFRunLoopRunSpecificWithOptions",
+          3922.0
+        ],
+        [
+          "RunCurrentEventLoopInMode",
+          3918.0
+        ],
+        [
+          "ReceiveNextEventCommon",
+          3913.0
+        ],
+        [
+          "_BlockUntilNextEventMatchingListInMode",
+          3908.0
+        ],
+        [
+          "_DPSBlockUntilNextEventMatchingListInMode",
+          3901.0
+        ],
+        [
+          "_DPSNextEvent",
+          3896.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+          3890.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+          3888.0
+        ],
+        [
+          "-[NSApplication run]",
+          3880.0
+        ],
+        [
+          "NSApplicationMain",
+          3877.0
+        ],
+        [
+          "specialized runApp(_:)",
+          3867.0
+        ],
+        [
+          "runApp<A>(_:)",
+          3863.0
+        ],
+        [
+          "static App.main()",
+          3860.0
+        ],
+        [
+          "static NativeAcceptanceApp.$main()",
+          3857.0
+        ],
+        [
+          "AgentWorkbench_main",
+          3857.0
+        ],
+        [
+          "start",
+          3855.0
+        ],
+        [
+          "AG::Graph::UpdateStack::update()",
+          3097.0
+        ],
+        [
+          "AG::Subgraph::update(unsigned int)",
+          2488.0
+        ],
+        [
+          "NSPerformVisuallyAtomicChange",
+          2479.0
+        ],
+        [
+          "GraphHost.flushTransactions()",
+          2477.0
+        ],
+        [
+          "0x18d4d420c",
+          2434.0
+        ],
+        [
+          "0x18d4d4234",
+          2433.0
+        ],
+        [
+          "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+          2338.0
+        ],
+        [
+          "-[NSView _layoutSubtreeWithOldSize:]",
+          2335.0
+        ],
+        [
+          "___NSViewLayout_block_invoke",
+          2331.0
+        ],
+        [
+          "_NSViewLayout",
+          2327.0
+        ],
+        [
+          "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+          2325.0
+        ],
+        [
+          "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+          2323.0
+        ],
+        [
+          "0x18d584d24",
+          2323.0
+        ],
+        [
+          "-[NSView layoutSubtreeIfNeeded]",
+          2321.0
+        ],
+        [
+          "0x18d585890",
+          2321.0
+        ],
+        [
+          "+[NSAnimationContext runAnimationGroup:]",
+          2246.0
+        ],
+        [
+          "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+          2234.0
+        ],
+        [
+          "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+          2212.0
+        ],
+        [
+          "closure #1 in NSHostingView.layout()",
+          2209.0
+        ],
+        [
+          "closure #1 in ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+          2206.0
+        ],
+        [
+          "NSHostingView.layout()",
+          2205.0
+        ],
+        [
+          "@objc NSHostingView.layout()",
+          2202.0
+        ],
+        [
+          "__CFRunLoopRun",
+          2174.0
+        ]
+      ],
+      "main_leaf_top": [
+        [
+          "<deduplicated_symbol>",
+          277.0
+        ],
+        [
+          "objc_msgSend",
+          227.0
+        ],
+        [
+          "swift_release",
+          90.0
+        ],
+        [
+          "_xzm_free_main",
+          84.0
+        ],
+        [
+          "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+          79.0
+        ],
+        [
+          "AG::Graph::UpdateStack::update()",
+          78.0
+        ],
+        [
+          "_platform_memmove",
+          72.0
+        ],
+        [
+          "_xzm_xzone_malloc_tiny",
+          69.0
+        ],
+        [
+          "__CF_IS_OBJC",
+          65.0
+        ],
+        [
+          "AG::Graph::propagate_dirty(AG::AttributeID)",
+          60.0
+        ],
+        [
+          "__CFStringHash",
+          56.0
+        ],
+        [
+          "swift_retain",
+          51.0
+        ],
+        [
+          "__CFFromUTF8",
+          50.0
+        ],
+        [
+          "objc::lookup8(unsigned char const*, unsigned long, unsigned long long)",
+          48.0
+        ],
+        [
+          "__kdebug_trace64",
+          43.0
+        ],
+        [
+          "weak_entry_for_referent",
+          41.0
+        ],
+        [
+          "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+          40.0
+        ],
+        [
+          "objc_release",
+          39.0
+        ],
+        [
+          "___CFBasicHashFindBucket_Linear",
+          37.0
+        ],
+        [
+          "swift_conformsToProtocolMaybeInstantiateSuperclasses(swift::TargetMetadata<swift::InProcess> const*, swift::TargetProtocolDescriptor<swift::InProcess> const*, bool)",
+          34.0
+        ],
+        [
+          "___chkstk_darwin",
+          34.0
+        ],
+        [
+          "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+          32.0
+        ],
+        [
+          "swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const",
+          32.0
+        ],
+        [
+          "__open",
+          31.0
+        ],
+        [
+          "std::__1::pair<(anonymous namespace)::ConformanceCacheEntry*, unsigned int> swift::ConcurrentReadableHashMap<(anonymous namespace)::ConformanceCacheEntry, swift::LazyMutex>::find<(anonymous namespace)::ConformanceCacheKey>((anonymous namespace)::ConformanceCacheKey const&, swift::ConcurrentReadableHashMap<(anonymous namespace)::ConformanceCacheEntry, swift::LazyMutex>::IndexStorage, unsigned long, (anonymous namespace)::ConformanceCacheEntry*)",
+          30.0
+        ]
+      ],
+      "main_app_inclusive_top": [
+        [
+          "static NativeAcceptanceApp.$main()",
+          3857.0
+        ],
+        [
+          "AgentWorkbench_main",
+          3857.0
+        ],
+        [
+          "NativeAcceptanceRunner.switching(_:)",
+          1082.0
+        ],
+        [
+          "NativeAcceptanceRunner.settle(_:_:until:)",
+          1072.0
+        ],
+        [
+          "specialized NativeAcceptanceRunner.flush(_:)",
+          1063.0
+        ],
+        [
+          "NativeAcceptanceRunner.flush(_:)",
+          1062.0
+        ],
+        [
+          "NativeAcceptanceRunner.run(_:)",
+          1058.0
+        ],
+        [
+          "closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+          1056.0
+        ],
+        [
+          "partial apply for closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+          1054.0
+        ],
+        [
+          "ConversationDocumentHost.updateNSView(_:context:)",
+          541.0
+        ],
+        [
+          "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)",
+          541.0
+        ],
+        [
+          "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+          541.0
+        ],
+        [
+          "ConversationDocumentView.refreshVisibleRows()",
+          513.0
+        ],
+        [
+          "ConversationEntryController.measure(width:)",
+          467.0
+        ],
+        [
+          "closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+          199.0
+        ],
+        [
+          "partial apply for closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+          199.0
+        ],
+        [
+          "specialized Collection.map<A, B>(_:)",
+          162.0
+        ],
+        [
+          "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          144.0
+        ],
+        [
+          "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          144.0
+        ],
+        [
+          "closure #2 in closure #1 in closure #1 in NativeAgentView.body.getter",
+          142.0
+        ],
+        [
+          "partial apply for closure #3 in ConversationScrollView.body.getter",
+          142.0
+        ],
+        [
+          "closure #3 in ConversationScrollView.body.getter",
+          142.0
+        ],
+        [
+          "partial apply for closure #2 in static ConversationDocumentView.retire(_:)",
+          134.0
+        ],
+        [
+          "closure #2 in static ConversationDocumentView.retire(_:)",
+          134.0
+        ],
+        [
+          "specialized autoreleasepool<A, B>(invoking:)",
+          134.0
+        ],
+        [
+          "ComposerToolbarLayout.sizeThatFits(proposal:subviews:cache:)",
+          131.0
+        ],
+        [
+          "specialized ComposerToolbarLayout.dimensions(_:_:)",
+          131.0
+        ],
+        [
+          "ComposerToolbarLayout.dimensions(_:_:)",
+          131.0
+        ],
+        [
+          "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ComposerToolbarLayout",
+          131.0
+        ],
+        [
+          "closure #1 in ComposerToolbarLayout.dimensions(_:_:)",
+          131.0
+        ],
+        [
+          "SessionRowChrome.body.getter",
+          119.0
+        ],
+        [
+          "ConversationTranscript.body.getter",
+          95.0
+        ],
+        [
+          "closure #1 in SessionRowChrome.body.getter",
+          87.0
+        ],
+        [
+          "ConversationDocumentView.prepareForRemoval()",
+          86.0
+        ],
+        [
+          "protocol witness for static NSViewRepresentable.dismantleNSView(_:coordinator:) in conformance ConversationDocumentHost",
+          86.0
+        ]
+      ],
+      "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings.",
+      "selected_inclusive_ms": {
+        "AG::Graph::UpdateStack::update()": 3097.0,
+        "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke": 2338.0,
+        "-[NSView _layoutSubtreeWithOldSize:]": 2335.0,
+        "ConversationDocumentView.refreshVisibleRows()": 513.0,
+        "ConversationEntryController.measure(width:)": 467.0,
+        "ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)": 541.0,
+        "closure #6 in ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)": 13.0,
+        "closure #2 in ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)": 16.0,
+        "closure #4 in ConversationDocumentView.configure(_:navigation:sessionId:appearance:viewport:contentOriginY:)": 5.0
+      }
+    },
+    "candidate": {
+      "after_s": 2.9532485,
+      "before_s": 8.930278625,
+      "sample_rows": 6053,
+      "main_sample_rows": 5823,
+      "all_threads_sampled_cpu_ms": 6053.0,
+      "main_sampled_cpu_ms": 5823.0,
+      "main_cpu_ms_per_second": {
+        "2": 45.0,
+        "3": 967.0,
+        "4": 970.0,
+        "5": 981.0,
+        "6": 973.0,
+        "7": 982.0,
+        "8": 905.0
+      },
+      "main_inclusive_top": [
+        [
+          "<deduplicated_symbol>",
+          4990.0
+        ],
+        [
+          "_CFRunLoopRunSpecificWithOptions",
+          3909.0
+        ],
+        [
+          "RunCurrentEventLoopInMode",
+          3901.0
+        ],
+        [
+          "ReceiveNextEventCommon",
+          3898.0
+        ],
+        [
+          "_BlockUntilNextEventMatchingListInMode",
+          3895.0
+        ],
+        [
+          "_DPSBlockUntilNextEventMatchingListInMode",
+          3887.0
+        ],
+        [
+          "_DPSNextEvent",
+          3883.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+          3879.0
+        ],
+        [
+          "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+          3873.0
+        ],
+        [
+          "-[NSApplication run]",
+          3870.0
+        ],
+        [
+          "NSApplicationMain",
+          3866.0
+        ],
+        [
+          "specialized runApp(_:)",
+          3860.0
+        ],
+        [
+          "runApp<A>(_:)",
+          3853.0
+        ],
+        [
+          "static App.main()",
+          3852.0
+        ],
+        [
+          "static NativeAcceptanceApp.$main()",
+          3851.0
+        ],
+        [
+          "AgentWorkbench_main",
+          3851.0
+        ],
+        [
+          "start",
+          3848.0
+        ],
+        [
+          "AG::Graph::UpdateStack::update()",
+          3070.0
+        ],
+        [
+          "AG::Subgraph::update(unsigned int)",
+          2473.0
+        ],
+        [
+          "GraphHost.flushTransactions()",
+          2452.0
+        ],
+        [
+          "NSPerformVisuallyAtomicChange",
+          2438.0
+        ],
+        [
+          "0x18d4d420c",
+          2375.0
+        ],
+        [
+          "0x18d4d4234",
+          2374.0
+        ],
+        [
+          "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+          2289.0
+        ],
+        [
+          "-[NSView _layoutSubtreeWithOldSize:]",
+          2287.0
+        ],
+        [
+          "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+          2281.0
+        ],
+        [
+          "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+          2280.0
+        ],
+        [
+          "-[NSView layoutSubtreeIfNeeded]",
+          2278.0
+        ],
+        [
+          "___NSViewLayout_block_invoke",
+          2277.0
+        ],
+        [
+          "_NSViewLayout",
+          2276.0
+        ],
+        [
+          "0x18d584d24",
+          2275.0
+        ],
+        [
+          "0x18d585890",
+          2273.0
+        ],
+        [
+          "+[NSAnimationContext runAnimationGroup:]",
+          2221.0
+        ],
+        [
+          "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+          2216.0
+        ],
+        [
+          "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+          2176.0
+        ],
+        [
+          "closure #1 in NSHostingView.layout()",
+          2176.0
+        ],
+        [
+          "__CFRunLoopRun",
+          2174.0
+        ],
+        [
+          "closure #1 in ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+          2172.0
+        ],
+        [
+          "NSHostingView.layout()",
+          2171.0
+        ],
+        [
+          "@objc NSHostingView.layout()",
+          2168.0
+        ]
+      ],
+      "main_leaf_top": [
+        [
+          "<deduplicated_symbol>",
+          274.0
+        ],
+        [
+          "objc_msgSend",
+          217.0
+        ],
+        [
+          "swift_release",
+          99.0
+        ],
+        [
+          "AG::Graph::UpdateStack::update()",
+          93.0
+        ],
+        [
+          "_xzm_xzone_malloc_tiny",
+          81.0
+        ],
+        [
+          "_platform_memmove",
+          77.0
+        ],
+        [
+          "_xzm_free_main",
+          72.0
+        ],
+        [
+          "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+          70.0
+        ],
+        [
+          "AG::Graph::propagate_dirty(AG::AttributeID)",
+          61.0
+        ],
+        [
+          "swift_retain",
+          59.0
+        ],
+        [
+          "__CFFromUTF8",
+          58.0
+        ],
+        [
+          "objc::lookup8(unsigned char const*, unsigned long, unsigned long long)",
+          48.0
+        ],
+        [
+          "___CFBasicHashFindBucket_Linear",
+          45.0
+        ],
+        [
+          "__CFStringHash",
+          41.0
+        ],
+        [
+          "__CF_IS_OBJC",
+          41.0
+        ],
+        [
+          "___chkstk_darwin",
+          39.0
+        ],
+        [
+          "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+          39.0
+        ],
+        [
+          "__kdebug_trace64",
+          38.0
+        ],
+        [
+          "swift_conformsToProtocolMaybeInstantiateSuperclasses(swift::TargetMetadata<swift::InProcess> const*, swift::TargetProtocolDescriptor<swift::InProcess> const*, bool)",
+          37.0
+        ],
+        [
+          "weak_entry_for_referent",
+          37.0
+        ],
+        [
+          "objc_release",
+          36.0
+        ],
+        [
+          "swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const",
+          35.0
+        ],
+        [
+          "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+          34.0
+        ],
+        [
+          "__open",
+          33.0
+        ],
+        [
+          "find(_:key:filter:)",
+          30.0
+        ]
+      ],
+      "main_app_inclusive_top": [
+        [
+          "static NativeAcceptanceApp.$main()",
+          3851.0
+        ],
+        [
+          "AgentWorkbench_main",
+          3851.0
+        ],
+        [
+          "NativeAcceptanceRunner.switching(_:)",
+          1038.0
+        ],
+        [
+          "NativeAcceptanceRunner.settle(_:_:until:)",
+          1032.0
+        ],
+        [
+          "specialized NativeAcceptanceRunner.flush(_:)",
+          1025.0
+        ],
+        [
+          "NativeAcceptanceRunner.flush(_:)",
+          1025.0
+        ],
+        [
+          "closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+          1013.0
+        ],
+        [
+          "NativeAcceptanceRunner.run(_:)",
+          1013.0
+        ],
+        [
+          "partial apply for closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+          1012.0
+        ],
+        [
+          "ConversationDocumentView.refreshVisibleRows()",
+          517.0
+        ],
+        [
+          "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:contentOriginY:)",
+          512.0
+        ],
+        [
+          "ConversationDocumentHost.updateNSView(_:context:)",
+          512.0
+        ],
+        [
+          "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+          512.0
+        ],
+        [
+          "ConversationEntryController.measure(width:)",
+          459.0
+        ],
+        [
+          "partial apply for closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+          191.0
+        ],
+        [
+          "closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+          191.0
+        ],
+        [
+          "closure #2 in closure #1 in closure #1 in NativeAgentView.body.getter",
+          163.0
+        ],
+        [
+          "partial apply for closure #3 in ConversationScrollView.body.getter",
+          163.0
+        ],
+        [
+          "closure #3 in ConversationScrollView.body.getter",
+          163.0
+        ],
+        [
+          "specialized Collection.map<A, B>(_:)",
+          159.0
+        ],
+        [
+          "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          137.0
+        ],
+        [
+          "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          137.0
+        ],
+        [
+          "specialized ComposerToolbarLayout.dimensions(_:_:)",
+          133.0
+        ],
+        [
+          "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ComposerToolbarLayout",
+          133.0
+        ],
+        [
+          "closure #1 in ComposerToolbarLayout.dimensions(_:_:)",
+          133.0
+        ],
+        [
+          "ComposerToolbarLayout.sizeThatFits(proposal:subviews:cache:)",
+          132.0
+        ],
+        [
+          "ComposerToolbarLayout.dimensions(_:_:)",
+          132.0
+        ],
+        [
+          "partial apply for closure #2 in static ConversationDocumentView.retire(_:)",
+          130.0
+        ],
+        [
+          "closure #2 in static ConversationDocumentView.retire(_:)",
+          130.0
+        ],
+        [
+          "specialized autoreleasepool<A, B>(invoking:)",
+          130.0
+        ],
+        [
+          "SessionRowChrome.body.getter",
+          121.0
+        ],
+        [
+          "closure #1 in SessionRowChrome.body.getter",
+          90.0
+        ],
+        [
+          "ConversationDocumentView.prepareForRemoval()",
+          88.0
+        ],
+        [
+          "protocol witness for static NSViewRepresentable.dismantleNSView(_:coordinator:) in conformance ConversationDocumentHost",
+          88.0
+        ],
+        [
+          "static ConversationDocumentHost.dismantleNSView(_:coordinator:)",
+          88.0
+        ]
+      ],
+      "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings.",
+      "selected_inclusive_ms": {
+        "AG::Graph::UpdateStack::update()": 3070.0,
+        "-[NSView _layoutSubtreeWithOldSize:]": 2287.0,
+        "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke": 2289.0,
+        "ConversationDocumentView.refreshVisibleRows()": 517.0,
+        "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:contentOriginY:)": 512.0,
+        "ConversationEntryController.measure(width:)": 459.0,
+        "closure #4 in ConversationDocumentView.reconcileRows(_:sessionId:appearance:)": 5.0,
+        "ConversationDocumentView.reconcileRows(_:sessionId:appearance:)": 17.0,
+        "closure #6 in ConversationDocumentView.reconcileRows(_:sessionId:appearance:)": 6.0,
+        "closure #1 in ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:contentOriginY:)": 5.0
+      }
+    }
+  },
+  "validation": {
+    "production_build": "passed",
+    "core": "passed",
+    "connections": "passed",
+    "host_lifecycle": "passed",
+    "python_tests": 18,
+    "navigation": {
+      "reading": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "binary_sha256": "111a19fffbd6166d8cc410048ca566a917af4054d35656d061ce11d3f2df83c3",
+        "pid": 49825,
+        "exit_code": 0,
+        "elapsed_s": 16.240904334,
+        "passed": true
+      },
+      "interactions": {
+        "status": "exited",
+        "mode": "interactions",
+        "timeout_s": 120,
+        "binary_sha256": "e0dd959d3817a461c2be4da7f6f53ee529c65b720ff0ee2a7854d4f763867670",
+        "pid": 51017,
+        "exit_code": 0,
+        "elapsed_s": 7.312081125,
+        "passed": true
+      },
+      "roundtrip": {
+        "status": "exited",
+        "mode": "roundtrip",
+        "timeout_s": 120,
+        "binary_sha256": "111a19fffbd6166d8cc410048ca566a917af4054d35656d061ce11d3f2df83c3",
+        "pid": 50015,
+        "exit_code": 0,
+        "elapsed_s": 7.025550249999999,
+        "passed": true
+      },
+      "anchor": {
+        "status": "exited",
+        "mode": "anchor",
+        "timeout_s": 120,
+        "binary_sha256": "111a19fffbd6166d8cc410048ca566a917af4054d35656d061ce11d3f2df83c3",
+        "pid": 50022,
+        "exit_code": 0,
+        "elapsed_s": 4.2308794999999995,
+        "passed": true
+      },
+      "turns": {
+        "status": "exited",
+        "mode": "turns",
+        "timeout_s": 120,
+        "binary_sha256": "111a19fffbd6166d8cc410048ca566a917af4054d35656d061ce11d3f2df83c3",
+        "pid": 50028,
+        "exit_code": 0,
+        "elapsed_s": 7.211596334,
+        "passed": true
+      }
+    },
+    "same_id_native_text": {
+      "host_reused": true,
+      "updated": true
+    }
+  }
+}

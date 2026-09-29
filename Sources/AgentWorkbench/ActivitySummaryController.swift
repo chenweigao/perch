@@ -58,6 +58,7 @@ struct ActivityNarrativeFailure: Equatable {
 
     func narrative(session: String) -> ActivityNarrative? { sessions[session]?.current }
     func row(session: String, entryID: String) -> ActivityNarrativeRow? { sessions[session]?.rows[entryID] }
+    func rows(session: String) -> [String: ActivityNarrativeRow] { sessions[session]?.rows ?? [:] }
     func failure(session: String) -> ActivityNarrativeFailure? { sessions[session]?.failure }
     func canRetry(session: String) -> Bool { sessions[session]?.retryBatch != nil }
 

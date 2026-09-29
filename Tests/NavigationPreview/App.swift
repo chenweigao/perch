@@ -758,6 +758,31 @@ final class NavigationRunner {
         try record("session_return", ["before_entry": narrow.entry, "after_entry": restored.entry,
                                       "before_offset": narrow.offset, "after_offset": restored.offset])
         if narrow.entry != restored.entry || abs(narrow.offset - restored.offset) > 1 { failures.append("session return anchor") }
+        // Verify the hosted native text, not just the provider snapshot/marker.
+        let oldReply = "远端任务不受本地测试影响"
+        guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: oldReply, running: false).last else {
+            throw NavigationError("missing same-ID replacement target")
+        }
+        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: hit, query: oldReply))
+        try await settle()
+        func row(in view: NSView) -> NSView? {
+            if view.identifier?.rawValue == hit.entryID { return view }
+            return view.subviews.lazy.compactMap { row(in: $0) }.first
+        }
+        func contains(_ text: String, in view: NSView) -> Bool {
+            if let reply = view as? ReplyTextView, reply.string.contains(text) { return true }
+            return view.subviews.contains { contains(text, in: $0) }
+        }
+        guard let oldHost = row(in: scroll), contains(oldReply, in: oldHost) else { throw NavigationError("replacement target is not mounted") }
+        let revisedReply = "同 ID 正文替换已到达原生行 · hosted replacement verified"
+        let revised = try NavigationHistory.conversation(turns: 200, salt: targets[0] + ":", revisedReply: revisedReply)
+        model.conversation?.reconcile(revised.snapshot)
+        try await settle()
+        guard let newHost = row(in: scroll), newHost === oldHost,
+              contains(revisedReply, in: newHost), !contains(oldReply, in: newHost) else {
+            throw NavigationError("same-ID update failed to replace mounted text or unnecessarily replaced its row host")
+        }
+        try record("same_id_native_text", ["updated": true, "host_reused": true])
         try record("failures", ["checks": failures])
         guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
         return report

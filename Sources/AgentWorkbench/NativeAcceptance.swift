@@ -264,6 +264,10 @@ private struct ReferenceComposerFixtureView: View {
                 report.merge(try await dashboard(window)) { _, new in new }
             }
             if mode == "all" {
+                guard let root = window.contentView, let checks = try ConversationTranscript.checkReconciliation(in: root) else {
+                    throw WorkbenchError("Missing mounted row reconciliation fixture")
+                }
+                report["row_reconciliation"] = checks
                 var switches: [Double] = []
                 for index in 1...16 {
                     let item = fixture.sessions[index % 8]
@@ -587,6 +591,7 @@ private struct ReferenceComposerFixtureView: View {
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
         try checkNavigationCaches()
         var durations: [Double] = []
+        NavigationRenderMetrics.stages = [:]
         let switchingSpan = probe.signposter.beginInterval("CatalogSwitching")
         for step in 0..<80 {
             // Switch while catalog refreshes change row heights, order and the
@@ -613,6 +618,7 @@ private struct ReferenceComposerFixtureView: View {
             durations.append((CACurrentMediaTime() - start) * 1000)
         }
         probe.signposter.endInterval("CatalogSwitching", switchingSpan)
+        let renderStages = NavigationRenderMetrics.report
         let presentations = model.conversationPresentations
         guard presentations.count == 8, presentations.restorationCount >= 64 else {
             throw WorkbenchError("Mounted conversations did not restore shared presentations: \(presentations.count) models, \(presentations.restorationCount) restorations")
@@ -621,7 +627,7 @@ private struct ReferenceComposerFixtureView: View {
         try await Task.sleep(for: .seconds(2))
         let idleCPU = processCPU() - cpu
         guard idleCPU < 1 else { throw WorkbenchError("UI kept consuming CPU after session switches: \(idleCPU)s / 2s") }
-        return ["presentation_cache": ["models": presentations.count, "restorations": presentations.restorationCount,
+        return ["render_stages": renderStages, "presentation_cache": ["models": presentations.count, "restorations": presentations.restorationCount,
                     "preparations": presentations.retainedPreparationCount, "payload_cost": presentations.retainedPayloadCost],
                 "navigation_cache_invalidation": true, "catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
                 "idle_cpu_seconds_over_2s": idleCPU,

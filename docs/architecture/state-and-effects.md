@@ -147,3 +147,38 @@ Core checks cover parity, changed content, pagination, epoch/language invalidati
 external overlays, LRU eviction, host/provider separation, oversized admission and
 release. Mounted switching acceptance additionally checks that eight conversations
 actually restore their models across navigation.
+
+## Transcript content and viewport invalidation
+
+`ConversationDocumentView.configure` updates viewport attachment, content origin,
+navigation and reading-position restoration. It delegates source changes to
+`reconcileRows`, whose invalidation is independent of scrolling/layout callbacks:
+
+- Equal content, session and appearance preserve indices, heights and measured rows.
+- Same-ID edits replace their source rows and invalidate only affected controller
+  measurements. An offscreen edit does not invalidate the mounted range merely
+  because data changed. Actual height callbacks still rebuild geometry and preserve
+  the reader's anchor, including callbacks from retained offscreen hosts.
+- Session changes, row insertion/removal/reordering and process-row spacing changes
+  rebuild structural geometry. Appearance changes invalidate measured sizes.
+- Width changes, disclosure callbacks and asynchronously loaded content retain their
+  existing independent measurement/anchor paths. Local view state must never rely
+  on source-array equality to publish its new size.
+
+The controller writes AppKit frames only when the frames differ. No additional row
+host retention or cross-session measurement cache is introduced. Native acceptance
+checks unchanged replay, visible/offscreen same-ID edits, appearance, prepend and
+removal; navigation fixtures cover the interaction and reading contracts.
+
+The hosting boundary carries the immutable presentation snapshot identity together
+with the complete external-summary map, provider API identity and session/memory
+scope. Equal viewport updates compare these inputs without walking every message.
+External summaries are captured once per transcript render; they remain independent
+of the source snapshot, so their arrival must invalidate hosted rows even when the
+presentation snapshot itself is unchanged. Acceptance includes that positive control.
+
+`ConversationDocumentLayout` is view-lifetime, non-observable geometry state. Origin
+notifications update the mounted AppKit document directly instead of invalidating
+`ConversationTranscript.body`. The representable coordinator holds only a weak
+reference to that document and clears it on dismantling; content and appearance
+still flow through SwiftUI's normal representable update path.
