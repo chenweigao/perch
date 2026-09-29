@@ -18,7 +18,8 @@ parser.add_argument("--positive-control", action="store_true", help="Inject one 
 parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-pins-unprobed", "sidebar-layout-height", "sidebar-layout-height-fixed", "sidebar-layout-header", "sidebar-layout-membership", "sidebar-layout-pins-fixed-members", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
 parser.add_argument("--input-positive-control", action="store_true", help="Inject one 80ms delay into the mounted input measurement")
 parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
-parser.add_argument("--sidebar-variant", choices=["baseline", "flat", "keep-header", "persistent-subtitle"], default="flat")
+parser.add_argument("--sidebar-variant", choices=["baseline", "flat", "keep-header", "persistent-subtitle", "table"], default="flat")
+parser.add_argument("--responsiveness-control", action="store_true", help="Inject an 80ms main-actor delay before the workload")
 args = parser.parse_args()
 if args.input_positive_control and (args.mode not in ["input", "kimi-input"] or args.capture != "none"):
     parser.error("--input-positive-control requires an uncaptured input or kimi-input run")
@@ -43,6 +44,8 @@ if manifest["mode"].startswith("kimi-"):
 env = dict(os.environ, PERCH_ACCEPTANCE_MODE=manifest["mode"], PERCH_ACCEPTANCE_RESULTS=str(out))
 manifest["sidebar_variant"] = args.sidebar_variant
 env["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] = args.sidebar_variant
+manifest["responsiveness_control"] = args.responsiveness_control
+env["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] = "1" if args.responsiveness_control else "0"
 env["PERCH_ACCEPTANCE_INPUT_STALL"] = "1" if args.input_positive_control else "0"
 manifest["input_positive_control"] = args.input_positive_control
 env["PERCH_ACCEPTANCE_KEEP_OPEN"] = "0"
@@ -56,7 +59,7 @@ if args.capture != "none":
                "Animation Hitches" if args.capture == "frames" else "Time Profiler",
                "--instrument", "Points of Interest", "--time-limit", "12s" if args.capture == "frames" else "60s",
                "--output", str(out / "run.trace")]
-    for key in ["PERCH_ACCEPTANCE_SIDEBAR_VARIANT", "PERCH_ACCEPTANCE_MODE", "PERCH_ACCEPTANCE_RESULTS", "PERCH_ACCEPTANCE_STALL", "PERCH_ACCEPTANCE_KEEP_OPEN", "PERCH_ACCEPTANCE_JOINT_SECONDS"]:
+    for key in ["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL", "PERCH_ACCEPTANCE_SIDEBAR_VARIANT", "PERCH_ACCEPTANCE_MODE", "PERCH_ACCEPTANCE_RESULTS", "PERCH_ACCEPTANCE_STALL", "PERCH_ACCEPTANCE_KEEP_OPEN", "PERCH_ACCEPTANCE_JOINT_SECONDS"]:
         command += ["--env", f"{key}={env[key]}"]
     command += ["--launch", "--", str(binary)]
 started = time.monotonic()
@@ -77,6 +80,8 @@ with (out / "process.log").open("w") as log:
 manifest["elapsed_s"] = time.monotonic() - started
 result = json.loads((out / "result.json").read_text()) if (out / "result.json").exists() else {}
 manifest["behavior_passed"] = result.get("status") == "passed"
+if args.responsiveness_control and not result.get("responsiveness_control_detected", False):
+    manifest["failure"] = "main-actor positive control was not detected"
 if args.input_positive_control and (result.get("input_positive_control") is not True
                                     or result.get("input_positive_control_detected") is not True):
     manifest["failure"] = "known input delay was not detected; input timing is unverified"

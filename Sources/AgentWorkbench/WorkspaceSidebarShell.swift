@@ -12,6 +12,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let onHome: () -> Void
     let onInbox: () -> Void
     let onArchive: () -> Void
+    var scrollRows = true
     @ViewBuilder let rows: Rows
     @ViewBuilder let environments: Environments
     @State private var showEnvironments = false
@@ -25,6 +26,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
             }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 8)
+            if scrollRows {
             ScrollView {
                 // Recents are capped at 20. Lay this short navigation list out
                 // eagerly: switching sessions can change row heights and order
@@ -32,6 +34,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 VStack(alignment: .leading, spacing: 3) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
             }.scrollIndicators(.hidden)
+            } else { rows.padding(.horizontal, 10).padding(.bottom, 10) }
             VStack(spacing: 2) {
                 Divider().padding(.vertical, 6)
                 navigation("已归档", symbol: "archivebox", selected: page == .archive, action: onArchive)

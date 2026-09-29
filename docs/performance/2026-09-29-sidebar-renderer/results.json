@@ -1,0 +1,2737 @@
+{
+  "comparisons": {
+    "input": {
+      "flat": {
+        "metrics": {
+          "input_commit_ms": {
+            "median": 3.5756666329689324,
+            "p95": 4.06270835082978,
+            "max": 8.890541677828878,
+            "median_range": [
+              3.553083341103047,
+              3.652708313893527
+            ]
+          }
+        },
+        "cpu_seconds": null,
+        "main_actor_p99_ms": 13.33558332407847,
+        "main_actor_max_ms": 46.32441664580256,
+        "over_50ms_per_run": [
+          0,
+          0,
+          0
+        ]
+      },
+      "table": {
+        "metrics": {
+          "input_commit_ms": {
+            "median": 3.5070000449195504,
+            "p95": 3.9630000246688724,
+            "max": 8.120874990709126,
+            "median_range": [
+              3.4635416814126074,
+              3.5379999899305403
+            ]
+          }
+        },
+        "cpu_seconds": null,
+        "main_actor_p99_ms": 15.136500005610287,
+        "main_actor_max_ms": 48.70337498141453,
+        "over_50ms_per_run": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "joint": {
+      "flat": {
+        "metrics": {
+          "joint_input_to_layout_ms": {
+            "median": 7.095333363395184,
+            "p95": 8.610291697550565,
+            "max": 10.953249991871417,
+            "median_range": [
+              6.959291698876768,
+              7.336666632909328
+            ]
+          },
+          "joint_update_to_layout_ms": {
+            "median": 26.427750010043383,
+            "p95": 28.32958335056901,
+            "max": 37.33995830407366,
+            "median_range": [
+              26.262958359438926,
+              26.80829167366028
+            ]
+          }
+        },
+        "cpu_seconds": 3.5655460000000003,
+        "main_actor_p99_ms": 10.433458315674216,
+        "main_actor_max_ms": 51.72079167095944,
+        "over_50ms_per_run": [
+          0,
+          0,
+          2
+        ]
+      },
+      "table": {
+        "metrics": {
+          "joint_input_to_layout_ms": {
+            "median": 6.754833331797272,
+            "p95": 8.377625024877489,
+            "max": 11.845666682347655,
+            "median_range": [
+              5.489208328071982,
+              7.0932916714809835
+            ]
+          },
+          "joint_update_to_layout_ms": {
+            "median": 26.17345831822604,
+            "p95": 28.275249991565943,
+            "max": 32.05716662341729,
+            "median_range": [
+              21.28779166378081,
+              26.24520834069699
+            ]
+          }
+        },
+        "cpu_seconds": 3.370971,
+        "main_actor_p99_ms": 10.052249999716878,
+        "main_actor_max_ms": 60.25158328702673,
+        "over_50ms_per_run": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    "render-catalog": {
+      "flat": {
+        "metrics": {
+          "render_step_ms": {
+            "median": 26.760749984532595,
+            "p95": 31.133500044234097,
+            "max": 63.443958351854235,
+            "median_range": [
+              26.394083339255303,
+              26.982333336491138
+            ]
+          }
+        },
+        "cpu_seconds": 2.180097,
+        "main_actor_p99_ms": 41.76445829216391,
+        "main_actor_max_ms": 65.56354166241363,
+        "over_50ms_per_run": [
+          1,
+          2,
+          1
+        ]
+      },
+      "table": {
+        "metrics": {
+          "render_step_ms": {
+            "median": 20.875291666015983,
+            "p95": 28.181791654787958,
+            "max": 46.734458359424025,
+            "median_range": [
+              20.78033337602392,
+              23.767208331264555
+            ]
+          }
+        },
+        "cpu_seconds": 1.742495,
+        "main_actor_p99_ms": 33.92516664462164,
+        "main_actor_max_ms": 48.63637499511242,
+        "over_50ms_per_run": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "render-combined": {
+      "flat": {
+        "metrics": {
+          "render_step_ms": {
+            "median": 81.04575000470504,
+            "p95": 94.17020832188427,
+            "max": 133.35670833475888,
+            "median_range": [
+              78.75841663917527,
+              81.37383329449221
+            ]
+          }
+        },
+        "cpu_seconds": 6.762196,
+        "main_actor_p99_ms": 68.59749997965991,
+        "main_actor_max_ms": 73.46099999267608,
+        "over_50ms_per_run": [
+          16,
+          18,
+          15
+        ]
+      },
+      "table": {
+        "metrics": {
+          "render_step_ms": {
+            "median": 76.4549583545886,
+            "p95": 86.69712499249727,
+            "max": 117.77108331443742,
+            "median_range": [
+              74.95883334195241,
+              77.78841664548963
+            ]
+          }
+        },
+        "cpu_seconds": 6.38731,
+        "main_actor_p99_ms": 66.01291662082076,
+        "main_actor_max_ms": 72.49829167267308,
+        "over_50ms_per_run": [
+          14,
+          20,
+          8
+        ]
+      }
+    },
+    "render-switching": {
+      "flat": {
+        "metrics": {
+          "render_step_ms": {
+            "median": 64.08779165940359,
+            "p95": 70.99916663719341,
+            "max": 113.70008334051818,
+            "median_range": [
+              63.8244166621007,
+              64.3327499856241
+            ]
+          }
+        },
+        "cpu_seconds": 5.3909839999999996,
+        "main_actor_p99_ms": 49.777000036556274,
+        "main_actor_max_ms": 57.978458353318274,
+        "over_50ms_per_run": [
+          3,
+          2,
+          2
+        ]
+      },
+      "table": {
+        "metrics": {
+          "render_step_ms": {
+            "median": 60.34941668622196,
+            "p95": 65.50562503980473,
+            "max": 108.31733333179727,
+            "median_range": [
+              60.190374962985516,
+              60.596791678108275
+            ]
+          }
+        },
+        "cpu_seconds": 5.094065,
+        "main_actor_p99_ms": 47.19704168383032,
+        "main_actor_max_ms": 51.92287499085069,
+        "over_50ms_per_run": [
+          3,
+          0,
+          1
+        ]
+      }
+    },
+    "sidebar-layout-height": {
+      "flat": {
+        "metrics": {
+          "layout_step_ms": {
+            "median": 22.731625009328127,
+            "p95": 25.78087500296533,
+            "max": 44.163000013213605,
+            "median_range": [
+              22.7000416489318,
+              22.81970833428204
+            ]
+          }
+        },
+        "cpu_seconds": 1.6901670000000002,
+        "main_actor_p99_ms": 40.424583305139095,
+        "main_actor_max_ms": 73.42404162045568,
+        "over_50ms_per_run": [
+          1,
+          1,
+          1
+        ]
+      },
+      "table": {
+        "metrics": {
+          "layout_step_ms": {
+            "median": 13.553333352319896,
+            "p95": 15.934958355501294,
+            "max": 44.66387501452118,
+            "median_range": [
+              13.346124964300543,
+              13.79187504062429
+            ]
+          }
+        },
+        "cpu_seconds": 1.111872,
+        "main_actor_p99_ms": 37.27337496820837,
+        "main_actor_max_ms": 62.12479167152196,
+        "over_50ms_per_run": [
+          1,
+          1,
+          0
+        ]
+      }
+    },
+    "sidebar-layout-pins-unprobed": {
+      "flat": {
+        "metrics": {
+          "layout_step_ms": {
+            "median": 20.202375017106533,
+            "p95": 23.003000009339303,
+            "max": 52.39249998703599,
+            "median_range": [
+              20.129874988924712,
+              20.390583376865834
+            ]
+          }
+        },
+        "cpu_seconds": 1.4995729999999998,
+        "main_actor_p99_ms": 48.27670834492892,
+        "main_actor_max_ms": 61.85450003249571,
+        "over_50ms_per_run": [
+          1,
+          1,
+          1
+        ]
+      },
+      "table": {
+        "metrics": {
+          "layout_step_ms": {
+            "median": 7.89474998600781,
+            "p95": 11.20154169620946,
+            "max": 33.5155000211671,
+            "median_range": [
+              7.877958356402814,
+              8.063666697125882
+            ]
+          }
+        },
+        "cpu_seconds": 0.6882600000000001,
+        "main_actor_p99_ms": 25.391249975655228,
+        "main_actor_max_ms": 51.04729166487232,
+        "over_50ms_per_run": [
+          0,
+          1,
+          0
+        ]
+      }
+    }
+  },
+  "runs": [
+    {
+      "name": "flat-input-r1",
+      "variant": "flat",
+      "mode": "input",
+      "metrics": {
+        "input_commit_ms": {
+          "count": 24,
+          "max": 8.890541677828878,
+          "median": 3.553083341103047,
+          "p95": 4.06270835082978
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 46.32441664580256,
+        "over_16ms": 3,
+        "over_50ms": 0,
+        "p50_ms": 1.0739166755229235,
+        "p95_ms": 3.5752083058468997,
+        "p99_ms": 21.75074996193871,
+        "sample_count": 189
+      },
+      "cpu_seconds": null,
+      "anchor_drift_points": 0,
+      "input_composition_preserved": true,
+      "rss_settled_mb": 186.515625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "input",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87738,
+        "exit_code": 0,
+        "elapsed_s": 9.561153166,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-input-r2",
+      "variant": "flat",
+      "mode": "input",
+      "metrics": {
+        "input_commit_ms": {
+          "count": 24,
+          "max": 8.679208345711231,
+          "median": 3.5756666329689324,
+          "p95": 4.056208359543234
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 32.84599998733029,
+        "over_16ms": 2,
+        "over_50ms": 0,
+        "p50_ms": 2.0698750158771873,
+        "p95_ms": 6.585625000298023,
+        "p99_ms": 9.853208321146667,
+        "sample_count": 176
+      },
+      "cpu_seconds": null,
+      "anchor_drift_points": 0,
+      "input_composition_preserved": true,
+      "rss_settled_mb": 186.484375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "input",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 88476,
+        "exit_code": 0,
+        "elapsed_s": 9.601896792000002,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-input-r3",
+      "variant": "flat",
+      "mode": "input",
+      "metrics": {
+        "input_commit_ms": {
+          "count": 24,
+          "max": 8.922041684854776,
+          "median": 3.652708313893527,
+          "p95": 4.158125026151538
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 43.344041623640805,
+        "over_16ms": 1,
+        "over_50ms": 0,
+        "p50_ms": 2.068958361633122,
+        "p95_ms": 8.160249970387667,
+        "p99_ms": 13.33558332407847,
+        "sample_count": 177
+      },
+      "cpu_seconds": null,
+      "anchor_drift_points": 0,
+      "input_composition_preserved": true,
+      "rss_settled_mb": 185.796875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "input",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89947,
+        "exit_code": 0,
+        "elapsed_s": 9.666224208,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-joint-r1",
+      "variant": "flat",
+      "mode": "joint",
+      "metrics": {
+        "joint_input_to_layout_ms": {
+          "count": 75,
+          "max": 11.809499992523342,
+          "median": 7.336666632909328,
+          "p95": 8.610291697550565
+        },
+        "joint_update_to_layout_ms": {
+          "count": 75,
+          "max": 33.07483333628625,
+          "median": 26.80829167366028,
+          "p95": 28.41174998320639
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 47.47466667322442,
+        "over_16ms": 12,
+        "over_50ms": 0,
+        "p50_ms": 1.113374950364232,
+        "p95_ms": 2.682166639715433,
+        "p99_ms": 10.433458315674216,
+        "sample_count": 2648
+      },
+      "cpu_seconds": 3.6815210000000005,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 193.234375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "joint",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 30,
+        "supervisor_pid": 87773,
+        "exit_code": 0,
+        "elapsed_s": 37.738961749999994,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-joint-r2",
+      "variant": "flat",
+      "mode": "joint",
+      "metrics": {
+        "joint_input_to_layout_ms": {
+          "count": 75,
+          "max": 9.284916683100164,
+          "median": 6.959291698876768,
+          "p95": 8.357333310414106
+        },
+        "joint_update_to_layout_ms": {
+          "count": 75,
+          "max": 39.16158329229802,
+          "median": 26.262958359438926,
+          "p95": 28.26641662977636
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 42.196041671559215,
+        "over_16ms": 14,
+        "over_50ms": 0,
+        "p50_ms": 2.089833316858858,
+        "p95_ms": 3.2657916890457273,
+        "p99_ms": 10.249999992083758,
+        "sample_count": 2487
+      },
+      "cpu_seconds": 3.368764,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 192.90625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "joint",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 30,
+        "supervisor_pid": 88200,
+        "exit_code": 0,
+        "elapsed_s": 37.712213167,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-joint-r3",
+      "variant": "flat",
+      "mode": "joint",
+      "metrics": {
+        "joint_input_to_layout_ms": {
+          "count": 75,
+          "max": 10.953249991871417,
+          "median": 7.095333363395184,
+          "p95": 8.736499992664903
+        },
+        "joint_update_to_layout_ms": {
+          "count": 75,
+          "max": 37.33995830407366,
+          "median": 26.427750010043383,
+          "p95": 28.32958335056901
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 51.72079167095944,
+        "over_16ms": 15,
+        "over_50ms": 2,
+        "p50_ms": 2.100208308547735,
+        "p95_ms": 3.1994166783988476,
+        "p99_ms": 11.94587501231581,
+        "sample_count": 2477
+      },
+      "cpu_seconds": 3.5655460000000003,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 193.171875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "joint",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 30,
+        "supervisor_pid": 89985,
+        "exit_code": 0,
+        "elapsed_s": 37.709557958,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-catalog-r1",
+      "variant": "flat",
+      "mode": "render-catalog",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 65.74525003088638,
+          "median": 26.760749984532595,
+          "p95": 31.133500044234097
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 65.56354166241363,
+        "over_16ms": 41,
+        "over_50ms": 1,
+        "p50_ms": 16.06145832920447,
+        "p95_ms": 21.13479166291654,
+        "p99_ms": 36.15808335598558,
+        "sample_count": 81
+      },
+      "cpu_seconds": 2.180097,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 191.671875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-catalog",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87395,
+        "exit_code": 0,
+        "elapsed_s": 9.495954166999999,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-catalog-r2",
+      "variant": "flat",
+      "mode": "render-catalog",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 63.443958351854235,
+          "median": 26.982333336491138,
+          "p95": 32.48466667719185
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 56.146083341445774,
+        "over_16ms": 42,
+        "over_50ms": 2,
+        "p50_ms": 17.354916606564075,
+        "p95_ms": 40.540416608564556,
+        "p99_ms": 53.08087496086955,
+        "sample_count": 76
+      },
+      "cpu_seconds": 2.18397,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 191.4375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-catalog",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89352,
+        "exit_code": 0,
+        "elapsed_s": 9.569854292,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-catalog-r3",
+      "variant": "flat",
+      "mode": "render-catalog",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 62.57420836482197,
+          "median": 26.394083339255303,
+          "p95": 30.864541651681066
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 60.737916675861925,
+        "over_16ms": 41,
+        "over_50ms": 1,
+        "p50_ms": 17.290375020820647,
+        "p95_ms": 38.96020830143243,
+        "p99_ms": 41.76445829216391,
+        "sample_count": 76
+      },
+      "cpu_seconds": 2.1598260000000002,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 190.8125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-catalog",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89851,
+        "exit_code": 0,
+        "elapsed_s": 9.616037042,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-combined-r1",
+      "variant": "flat",
+      "mode": "render-combined",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 133.35670833475888,
+          "median": 81.04575000470504,
+          "p95": 94.17020832188427
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 69.17962501756847,
+        "over_16ms": 148,
+        "over_50ms": 16,
+        "p50_ms": 30.566083325538784,
+        "p95_ms": 63.370499992743134,
+        "p99_ms": 68.59749997965991,
+        "sample_count": 151
+      },
+      "cpu_seconds": 6.762196,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 203.453125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-combined",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87416,
+        "exit_code": 0,
+        "elapsed_s": 13.829480084,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-combined-r2",
+      "variant": "flat",
+      "mode": "render-combined",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 134.22041665762663,
+          "median": 81.37383329449221,
+          "p95": 94.96558335376903
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 73.46099999267608,
+        "over_16ms": 144,
+        "over_50ms": 18,
+        "p50_ms": 31.210791668854654,
+        "p95_ms": 65.884041658137,
+        "p99_ms": 72.04099994851276,
+        "sample_count": 148
+      },
+      "cpu_seconds": 6.8660000000000005,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 203.546875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-combined",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 88983,
+        "exit_code": 0,
+        "elapsed_s": 14.136855833,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-combined-r3",
+      "variant": "flat",
+      "mode": "render-combined",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 125.62454165890813,
+          "median": 78.75841663917527,
+          "p95": 91.39570832485333
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 73.1050000176765,
+        "over_16ms": 147,
+        "over_50ms": 15,
+        "p50_ms": 29.369208321440965,
+        "p95_ms": 60.56833331240341,
+        "p99_ms": 66.24120828928426,
+        "sample_count": 149
+      },
+      "cpu_seconds": 6.604261,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 202.03125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-combined",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89878,
+        "exit_code": 0,
+        "elapsed_s": 13.823793958,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-switching-r1",
+      "variant": "flat",
+      "mode": "render-switching",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 123.47937497543171,
+          "median": 64.3327499856241,
+          "p95": 70.40762499673292
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 54.60179166402668,
+        "over_16ms": 117,
+        "over_50ms": 3,
+        "p50_ms": 24.341041687875986,
+        "p95_ms": 34.72470835549757,
+        "p99_ms": 51.11233331263065,
+        "sample_count": 156
+      },
+      "cpu_seconds": 5.4267840000000005,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 198.640625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-switching",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87698,
+        "exit_code": 0,
+        "elapsed_s": 12.573994459,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-switching-r2",
+      "variant": "flat",
+      "mode": "render-switching",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 112.41695837816224,
+          "median": 64.08779165940359,
+          "p95": 71.35908328928053
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 53.02991665666923,
+        "over_16ms": 113,
+        "over_50ms": 2,
+        "p50_ms": 24.67545832041651,
+        "p95_ms": 46.09379160683602,
+        "p99_ms": 49.777000036556274,
+        "sample_count": 154
+      },
+      "cpu_seconds": 5.3909839999999996,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 198.9375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-switching",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 88757,
+        "exit_code": 0,
+        "elapsed_s": 12.666562291,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-render-switching-r3",
+      "variant": "flat",
+      "mode": "render-switching",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 113.70008334051818,
+          "median": 63.8244166621007,
+          "p95": 70.99916663719341
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 57.978458353318274,
+        "over_16ms": 115,
+        "over_50ms": 2,
+        "p50_ms": 24.45399994030595,
+        "p95_ms": 42.609791620634496,
+        "p99_ms": 48.23125002440065,
+        "sample_count": 153
+      },
+      "cpu_seconds": 5.365728,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 199.125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-switching",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89917,
+        "exit_code": 0,
+        "elapsed_s": 12.643512750000001,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-sidebar-layout-height-r1",
+      "variant": "flat",
+      "mode": "sidebar-layout-height",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 44.163000013213605,
+          "median": 22.81970833428204,
+          "p95": 25.78087500296533
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 66.51079165749252,
+        "over_16ms": 14,
+        "over_50ms": 1,
+        "p50_ms": 7.848458364605904,
+        "p95_ms": 30.360375007148832,
+        "p99_ms": 40.424583305139095,
+        "sample_count": 92
+      },
+      "cpu_seconds": 1.6901670000000002,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 190.828125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-height",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87376,
+        "exit_code": 0,
+        "elapsed_s": 9.323508333,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-sidebar-layout-height-r2",
+      "variant": "flat",
+      "mode": "sidebar-layout-height",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 41.01816669572145,
+          "median": 22.731625009328127,
+          "p95": 26.020458375569433
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 73.42404162045568,
+        "over_16ms": 14,
+        "over_50ms": 1,
+        "p50_ms": 8.413416682742536,
+        "p95_ms": 30.79608327243477,
+        "p99_ms": 35.31537496019155,
+        "sample_count": 90
+      },
+      "cpu_seconds": 1.7016519999999997,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 189.921875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-height",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89550,
+        "exit_code": 0,
+        "elapsed_s": 9.440519291,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-sidebar-layout-height-r3",
+      "variant": "flat",
+      "mode": "sidebar-layout-height",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 45.20308331120759,
+          "median": 22.7000416489318,
+          "p95": 25.408999994397163
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 66.52691669296473,
+        "over_16ms": 15,
+        "over_50ms": 1,
+        "p50_ms": 7.795916695613414,
+        "p95_ms": 30.72945831809193,
+        "p99_ms": 44.131916656624526,
+        "sample_count": 90
+      },
+      "cpu_seconds": 1.6871479999999999,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 190.625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-height",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89795,
+        "exit_code": 0,
+        "elapsed_s": 9.375186833,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-sidebar-layout-pins-unprobed-r1",
+      "variant": "flat",
+      "mode": "sidebar-layout-pins-unprobed",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 52.92512499727309,
+          "median": 20.129874988924712,
+          "p95": 23.003000009339303
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 61.85450003249571,
+        "over_16ms": 8,
+        "over_50ms": 1,
+        "p50_ms": 5.69487496977672,
+        "p95_ms": 25.556458276696503,
+        "p99_ms": 43.366875033825636,
+        "sample_count": 95
+      },
+      "cpu_seconds": 1.500121,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 187.734375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-pins-unprobed",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87349,
+        "exit_code": 0,
+        "elapsed_s": 9.242134417,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-sidebar-layout-pins-unprobed-r2",
+      "variant": "flat",
+      "mode": "sidebar-layout-pins-unprobed",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 51.7642917111516,
+          "median": 20.390583376865834,
+          "p95": 23.31708330893889
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 59.89379168022424,
+        "over_16ms": 12,
+        "over_50ms": 1,
+        "p50_ms": 5.942791642155498,
+        "p95_ms": 26.05916664469987,
+        "p99_ms": 48.378749983385205,
+        "sample_count": 90
+      },
+      "cpu_seconds": 1.4995729999999998,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 187.3125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-pins-unprobed",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89761,
+        "exit_code": 0,
+        "elapsed_s": 9.24874925,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "flat-sidebar-layout-pins-unprobed-r3",
+      "variant": "flat",
+      "mode": "sidebar-layout-pins-unprobed",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 52.39249998703599,
+          "median": 20.202375017106533,
+          "p95": 22.297375020571053
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 58.02708334522322,
+        "over_16ms": 8,
+        "over_50ms": 1,
+        "p50_ms": 5.3682083380408585,
+        "p95_ms": 24.920124968048185,
+        "p99_ms": 48.27670834492892,
+        "sample_count": 93
+      },
+      "cpu_seconds": 1.4876930000000002,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 188.34375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-pins-unprobed",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89773,
+        "exit_code": 0,
+        "elapsed_s": 9.230504084,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-input-r1",
+      "variant": "table",
+      "mode": "input",
+      "metrics": {
+        "input_commit_ms": {
+          "count": 24,
+          "max": 8.120874990709126,
+          "median": 3.4635416814126074,
+          "p95": 3.9630000246688724
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 47.12754167849198,
+        "over_16ms": 2,
+        "over_50ms": 0,
+        "p50_ms": 1.0777083225548267,
+        "p95_ms": 3.388624987564981,
+        "p99_ms": 15.136500005610287,
+        "sample_count": 189
+      },
+      "cpu_seconds": null,
+      "anchor_drift_points": 0,
+      "input_composition_preserved": true,
+      "rss_settled_mb": 182.09375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "input",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87749,
+        "exit_code": 0,
+        "elapsed_s": 9.515019958,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-input-r2",
+      "variant": "table",
+      "mode": "input",
+      "metrics": {
+        "input_commit_ms": {
+          "count": 24,
+          "max": 8.063833287451416,
+          "median": 3.5379999899305403,
+          "p95": 3.953208331950009
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 48.70337498141453,
+        "over_16ms": 3,
+        "over_50ms": 0,
+        "p50_ms": 2.069624955765903,
+        "p95_ms": 8.863583323545754,
+        "p99_ms": 17.13191665476188,
+        "sample_count": 174
+      },
+      "cpu_seconds": null,
+      "anchor_drift_points": 0,
+      "input_composition_preserved": true,
+      "rss_settled_mb": 182.5625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "input",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 88412,
+        "exit_code": 0,
+        "elapsed_s": 9.594650042,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-input-r3",
+      "variant": "table",
+      "mode": "input",
+      "metrics": {
+        "input_commit_ms": {
+          "count": 24,
+          "max": 8.332083350978792,
+          "median": 3.5070000449195504,
+          "p95": 4.001041641458869
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 43.73183328425512,
+        "over_16ms": 2,
+        "over_50ms": 0,
+        "p50_ms": 2.063875028397888,
+        "p95_ms": 8.339166699443012,
+        "p99_ms": 13.83766665821895,
+        "sample_count": 176
+      },
+      "cpu_seconds": null,
+      "anchor_drift_points": 0,
+      "input_composition_preserved": true,
+      "rss_settled_mb": 182.65625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "input",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89973,
+        "exit_code": 0,
+        "elapsed_s": 9.656719875,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-joint-r1",
+      "variant": "table",
+      "mode": "joint",
+      "metrics": {
+        "joint_input_to_layout_ms": {
+          "count": 75,
+          "max": 11.867583321873099,
+          "median": 5.489208328071982,
+          "p95": 8.102124964352697
+        },
+        "joint_update_to_layout_ms": {
+          "count": 75,
+          "max": 34.166291705332696,
+          "median": 21.28779166378081,
+          "p95": 28.194833314046264
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 44.51458330731839,
+        "over_16ms": 9,
+        "over_50ms": 0,
+        "p50_ms": 1.0612916084937751,
+        "p95_ms": 1.1897916556335986,
+        "p99_ms": 9.269416681490839,
+        "sample_count": 2690
+      },
+      "cpu_seconds": 2.635612,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 188.8125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "joint",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 30,
+        "supervisor_pid": 87793,
+        "exit_code": 0,
+        "elapsed_s": 37.73613275,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-joint-r2",
+      "variant": "table",
+      "mode": "joint",
+      "metrics": {
+        "joint_input_to_layout_ms": {
+          "count": 75,
+          "max": 11.617875017691404,
+          "median": 6.754833331797272,
+          "p95": 8.377625024877489
+        },
+        "joint_update_to_layout_ms": {
+          "count": 75,
+          "max": 29.29183334344998,
+          "median": 26.17345831822604,
+          "p95": 28.275249991565943
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 60.25158328702673,
+        "over_16ms": 11,
+        "over_50ms": 1,
+        "p50_ms": 1.119166612625122,
+        "p95_ms": 2.960166661068797,
+        "p99_ms": 11.490083299577236,
+        "sample_count": 2606
+      },
+      "cpu_seconds": 3.519675,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 189.046875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "joint",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 30,
+        "supervisor_pid": 88122,
+        "exit_code": 0,
+        "elapsed_s": 37.784280916,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-joint-r3",
+      "variant": "table",
+      "mode": "joint",
+      "metrics": {
+        "joint_input_to_layout_ms": {
+          "count": 75,
+          "max": 11.845666682347655,
+          "median": 7.0932916714809835,
+          "p95": 8.716708282008767
+        },
+        "joint_update_to_layout_ms": {
+          "count": 75,
+          "max": 32.05716662341729,
+          "median": 26.24520834069699,
+          "p95": 28.418791654985398
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 49.21454162104055,
+        "over_16ms": 12,
+        "over_50ms": 0,
+        "p50_ms": 2.0852083107456565,
+        "p95_ms": 2.788541605696082,
+        "p99_ms": 10.052249999716878,
+        "sample_count": 2501
+      },
+      "cpu_seconds": 3.370971,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 188.84375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "joint",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": 30,
+        "supervisor_pid": 90069,
+        "exit_code": 0,
+        "elapsed_s": 37.541756,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-catalog-r1",
+      "variant": "table",
+      "mode": "render-catalog",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 48.459583369549364,
+          "median": 20.875291666015983,
+          "p95": 28.52991665713489
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 48.63637499511242,
+        "over_16ms": 8,
+        "over_50ms": 0,
+        "p50_ms": 10.97591663710773,
+        "p95_ms": 21.242416638415307,
+        "p99_ms": 29.523124976549298,
+        "sample_count": 79
+      },
+      "cpu_seconds": 1.742495,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 187.546875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-catalog",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87407,
+        "exit_code": 0,
+        "elapsed_s": 9.2255185,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-catalog-r2",
+      "variant": "table",
+      "mode": "render-catalog",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 36.68900002958253,
+          "median": 23.767208331264555,
+          "p95": 28.181791654787958
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 35.26583331404254,
+        "over_16ms": 17,
+        "over_50ms": 0,
+        "p50_ms": 14.071041659917682,
+        "p95_ms": 24.93849996244535,
+        "p99_ms": 34.037375007756054,
+        "sample_count": 78
+      },
+      "cpu_seconds": 1.9103200000000002,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 188.734375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-catalog",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89169,
+        "exit_code": 0,
+        "elapsed_s": 9.485485625,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-catalog-r3",
+      "variant": "table",
+      "mode": "render-catalog",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 46.734458359424025,
+          "median": 20.78033337602392,
+          "p95": 28.042249963618815
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 44.930625008419156,
+        "over_16ms": 11,
+        "over_50ms": 0,
+        "p50_ms": 10.978000005707145,
+        "p95_ms": 30.27991665294394,
+        "p99_ms": 33.92516664462164,
+        "sample_count": 75
+      },
+      "cpu_seconds": 1.737521,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 187.5,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-catalog",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89865,
+        "exit_code": 0,
+        "elapsed_s": 9.202762708,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-combined-r1",
+      "variant": "table",
+      "mode": "render-combined",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 117.77108331443742,
+          "median": 74.95883334195241,
+          "p95": 86.69712499249727
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 68.56466666795313,
+        "over_16ms": 146,
+        "over_50ms": 14,
+        "p50_ms": 28.51950004696846,
+        "p95_ms": 60.30941667268053,
+        "p99_ms": 66.01291662082076,
+        "sample_count": 148
+      },
+      "cpu_seconds": 6.356897,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 199.140625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-combined",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87684,
+        "exit_code": 0,
+        "elapsed_s": 13.574257584,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-combined-r2",
+      "variant": "table",
+      "mode": "render-combined",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 115.958166657947,
+          "median": 77.78841664548963,
+          "p95": 87.88399997865781
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 72.49829167267308,
+        "over_16ms": 140,
+        "over_50ms": 20,
+        "p50_ms": 30.208249983843416,
+        "p95_ms": 64.03379165567458,
+        "p99_ms": 69.65195829980075,
+        "sample_count": 142
+      },
+      "cpu_seconds": 6.496637,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 199.03125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-combined",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 88781,
+        "exit_code": 0,
+        "elapsed_s": 13.840432250000001,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-combined-r3",
+      "variant": "table",
+      "mode": "render-combined",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 119.93716668803245,
+          "median": 76.4549583545886,
+          "p95": 84.98129167128354
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 70.42191666550934,
+        "over_16ms": 152,
+        "over_50ms": 8,
+        "p50_ms": 28.878041659481823,
+        "p95_ms": 48.11983334366232,
+        "p99_ms": 61.85970833757892,
+        "sample_count": 154
+      },
+      "cpu_seconds": 6.38731,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 198.015625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-combined",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89893,
+        "exit_code": 0,
+        "elapsed_s": 13.675805667,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-switching-r1",
+      "variant": "table",
+      "mode": "render-switching",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 110.46679166611284,
+          "median": 60.34941668622196,
+          "p95": 65.50562503980473
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 51.92287499085069,
+        "over_16ms": 82,
+        "over_50ms": 3,
+        "p50_ms": 26.32349997293204,
+        "p95_ms": 46.932958299294114,
+        "p99_ms": 50.257458351552486,
+        "sample_count": 144
+      },
+      "cpu_seconds": 5.094065,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 197.5625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-switching",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87710,
+        "exit_code": 0,
+        "elapsed_s": 12.366367,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-switching-r2",
+      "variant": "table",
+      "mode": "render-switching",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 108.31733333179727,
+          "median": 60.596791678108275,
+          "p95": 66.16250000661239
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 47.97320830402896,
+        "over_16ms": 80,
+        "over_50ms": 0,
+        "p50_ms": 25.222958356607705,
+        "p95_ms": 42.520458286162466,
+        "p99_ms": 45.02195835812017,
+        "sample_count": 153
+      },
+      "cpu_seconds": 5.118421,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 194.203125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-switching",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 88718,
+        "exit_code": 0,
+        "elapsed_s": 12.477143334,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-render-switching-r3",
+      "variant": "table",
+      "mode": "render-switching",
+      "metrics": {
+        "render_step_ms": {
+          "count": 80,
+          "max": 105.92470836127177,
+          "median": 60.190374962985516,
+          "p95": 65.33020833740011
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 50.30900001293048,
+        "over_16ms": 83,
+        "over_50ms": 1,
+        "p50_ms": 25.111083348747343,
+        "p95_ms": 41.438416694290936,
+        "p99_ms": 47.19704168383032,
+        "sample_count": 152
+      },
+      "cpu_seconds": 5.073969,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 197.109375,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "render-switching",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89931,
+        "exit_code": 0,
+        "elapsed_s": 12.325357625,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-sidebar-layout-height-r1",
+      "variant": "table",
+      "mode": "sidebar-layout-height",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 40.77283333754167,
+          "median": 13.553333352319896,
+          "p95": 16.55475003644824
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 60.85999996867031,
+        "over_16ms": 9,
+        "over_50ms": 1,
+        "p50_ms": 3.3998749568127096,
+        "p95_ms": 16.498624987434596,
+        "p99_ms": 31.25687502324581,
+        "sample_count": 89
+      },
+      "cpu_seconds": 1.111872,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 188.265625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-height",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87387,
+        "exit_code": 0,
+        "elapsed_s": 8.727755334000001,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-sidebar-layout-height-r2",
+      "variant": "table",
+      "mode": "sidebar-layout-height",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 44.66387501452118,
+          "median": 13.79187504062429,
+          "p95": 15.934958355501294
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 62.12479167152196,
+        "over_16ms": 4,
+        "over_50ms": 1,
+        "p50_ms": 3.6603333428502083,
+        "p95_ms": 15.681916673202068,
+        "p99_ms": 44.753166672308,
+        "sample_count": 89
+      },
+      "cpu_seconds": 1.114348,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 189.046875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-height",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89535,
+        "exit_code": 0,
+        "elapsed_s": 8.87955025,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-sidebar-layout-height-r3",
+      "variant": "table",
+      "mode": "sidebar-layout-height",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 46.74483329290524,
+          "median": 13.346124964300543,
+          "p95": 15.365666651632637
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 41.31116665666923,
+        "over_16ms": 3,
+        "over_50ms": 0,
+        "p50_ms": 3.249499946832657,
+        "p95_ms": 15.50724997650832,
+        "p99_ms": 37.27337496820837,
+        "sample_count": 93
+      },
+      "cpu_seconds": 1.093395,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 189.015625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-height",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89837,
+        "exit_code": 0,
+        "elapsed_s": 8.858547208000001,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-sidebar-layout-pins-unprobed-r1",
+      "variant": "table",
+      "mode": "sidebar-layout-pins-unprobed",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 33.5155000211671,
+          "median": 8.063666697125882,
+          "p95": 10.109500028192997
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 23.298791667912155,
+        "over_16ms": 2,
+        "over_50ms": 0,
+        "p50_ms": 5.076916655525565,
+        "p95_ms": 8.911375014577061,
+        "p99_ms": 22.370416671037674,
+        "sample_count": 65
+      },
+      "cpu_seconds": 0.691346,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 184.640625,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-pins-unprobed",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 87367,
+        "exit_code": 0,
+        "elapsed_s": 8.407977875,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-sidebar-layout-pins-unprobed-r2",
+      "variant": "table",
+      "mode": "sidebar-layout-pins-unprobed",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 31.608749995939434,
+          "median": 7.89474998600781,
+          "p95": 11.20154169620946
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 51.04729166487232,
+        "over_16ms": 2,
+        "over_50ms": 1,
+        "p50_ms": 4.570041666738689,
+        "p95_ms": 9.127833298407495,
+        "p99_ms": 26.146374992094934,
+        "sample_count": 62
+      },
+      "cpu_seconds": 0.6792360000000001,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 184.296875,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-pins-unprobed",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89570,
+        "exit_code": 0,
+        "elapsed_s": 8.335140083,
+        "behavior_passed": true
+      }
+    },
+    {
+      "name": "table-sidebar-layout-pins-unprobed-r3",
+      "variant": "table",
+      "mode": "sidebar-layout-pins-unprobed",
+      "metrics": {
+        "layout_step_ms": {
+          "count": 80,
+          "max": 34.908583329524845,
+          "median": 7.877958356402814,
+          "p95": 11.602874961681664
+        }
+      },
+      "main_actor_lateness": {
+        "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+        "max_ms": 47.027874970808625,
+        "over_16ms": 2,
+        "over_50ms": 0,
+        "p50_ms": 5.226958310231566,
+        "p95_ms": 7.681166636757553,
+        "p99_ms": 25.391249975655228,
+        "sample_count": 62
+      },
+      "cpu_seconds": 0.6882600000000001,
+      "anchor_drift_points": null,
+      "input_composition_preserved": null,
+      "rss_settled_mb": 184.78125,
+      "manifest": {
+        "commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+        "source_sha256": "6a08d530639a048e798583202ccdefda3ce59fda08b8c74cb46b66fa89fc62c2",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "66ad57f700f33562dd29184241195746da9c250289cf8ee66f527d807e0b2638",
+        "capture": "none",
+        "mode": "sidebar-layout-pins-unprobed",
+        "sidebar_variant": "table",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 89784,
+        "exit_code": 0,
+        "elapsed_s": 8.373607125,
+        "behavior_passed": true
+      }
+    }
+  ],
+  "controls": [
+    {
+      "variant": "flat",
+      "passed": true,
+      "name": "control-flat"
+    },
+    {
+      "variant": "table",
+      "passed": true,
+      "name": "control-table"
+    }
+  ],
+  "main_actor_control_verified": true,
+  "real_display_frames": "unverified",
+  "hardware_input_and_ime": "unverified",
+  "production_adoption": "requires complete interaction and real-experience acceptance",
+  "boundary": "Three-run medians, fixed offline fixture. Main-actor lateness is not FPS; missing evidence is not a pass."
+}

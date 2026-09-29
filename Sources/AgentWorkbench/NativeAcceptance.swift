@@ -23,7 +23,8 @@ import os
     }()
     let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
     let sidebarVariant = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] ?? "flat"
-    var flatSidebar: Bool { sidebarVariant == "flat" }
+    var flatSidebar: Bool { sidebarVariant == "flat" || sidebarVariant == "table" }
+    weak var sidebarTable: AcceptanceSidebarTable.Coordinator?
     var keepSidebarHeader: Bool { sidebarVariant == "keep-header" }
     var persistentSubtitle: Bool { sidebarVariant == "persistent-subtitle" }
     @Published var showEmptySidebarHeader = false
@@ -309,6 +310,8 @@ private struct ReferenceComposerFixtureView: View {
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
         if mode == "branch-review" { await reviewWorkflow(branch: true); return }
+        let responsiveness = AcceptanceResponsiveness()
+        defer { _ = responsiveness.finish() }
         var report: [String: Any] = ["mode": mode, "history_turns": 200, "catalog_sessions": 500,
                                    "window_points": [1280, 820], "native_transport": "fixed in-memory JSON; real decode/select",
                                    "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS"]
@@ -319,6 +322,12 @@ private struct ReferenceComposerFixtureView: View {
             }
             try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             report["rss_before_mb"] = residentMB()
+            responsiveness.start()
+            try await Task.sleep(for: .milliseconds(30))
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1" {
+                usleep(80_000)
+                try await Task.sleep(for: .milliseconds(30))
+            }
             if mode == "input" {
                 report.merge(try await InputAcceptance.run(window: window,
                     draft: { self.model.native.drafts["session-0"] ?? "" },
@@ -367,6 +376,12 @@ private struct ReferenceComposerFixtureView: View {
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
             } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            let responsivenessReport = responsiveness.finish()
+            report["main_actor_lateness"] = responsivenessReport
+            let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
+            let detected = (responsivenessReport["max_ms"] as? Double ?? 0) >= 70
+            report["responsiveness_control_detected"] = control && detected
+            if control && !detected { throw WorkbenchError("Main-actor delay positive control was not detected") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -822,6 +837,15 @@ private struct ReferenceComposerFixtureView: View {
                   rendered.favorites == expected.favorites, rendered.recent == expected.recent,
                   rendered.attentionCount == expected.attentionCount else { return false }
             if unprobed { return true }
+            if let table = probe.sidebarTable {
+                let sessions = table.items.compactMap(\.session)
+                guard sessions == expected.favorites + expected.recent else { return false }
+                let visible = table.visibleSessions
+                let actual = mounted().filter { row in visible.contains(where: { $0.id == row.0.item.id }) }
+                return actual.map { $0.0.item } == visible && actual.allSatisfy { row in
+                    abs(row.1.height - (probe.fixedSidebarHeight || row.0.item.section == .attention ? 48 : 34)) <= 0.5
+                }
+            }
             let actual = mounted(), items = expected.favorites + expected.recent
             guard actual.count == items.count else { return false }
             return zip(actual, items).allSatisfy { row, item in
@@ -845,6 +869,7 @@ private struct ReferenceComposerFixtureView: View {
         var previous = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
         probe.sidebarBodyEvaluations = 0; probe.sidebarRowEvaluations = [:]
         NavigationRenderMetrics.stages = [:]
+        let tableCreates = probe.sidebarTable?.created ?? 0, tableReuses = probe.sidebarTable?.reused ?? 0
         let cpuStart = processCPU()
         let span = probe.signposter.beginInterval("SidebarLayout")
         for step in 0..<80 {
@@ -905,19 +930,22 @@ private struct ReferenceComposerFixtureView: View {
         guard hasMountedMessage(window, session: "session-0"), containsText("目录布局独立场景", in: window.contentView) else {
             throw WorkbenchError("Directory mutation changed the active conversation or draft")
         }
-        if changesHeight && !probe.fixedSidebarHeight && changedHeights != 1600 { throw WorkbenchError("Missing dynamic row-height changes") }
+        if probe.sidebarTable == nil && changesHeight && !probe.fixedSidebarHeight && changedHeights != 1600 { throw WorkbenchError("Missing dynamic row-height changes") }
         if (!changesHeight || probe.fixedSidebarHeight) && changedHeights != 0 { throw WorkbenchError("Fixed-height control changed row sizes") }
         let crossesSections = kind == "pins" || kind == "pins-fixed-members"
         let expectedReplacements = crossesSections && !probe.flatSidebar && !unprobed ? 320 : 0
-        guard replacedIdentities == expectedReplacements,
-              probe.sidebarRowCreates == insertedRows + expectedReplacements,
-              probe.sidebarRowDismantles == removedRows + expectedReplacements else {
+        guard probe.sidebarTable != nil || (replacedIdentities == expectedReplacements &&
+              probe.sidebarRowCreates == insertedRows + expectedReplacements &&
+              probe.sidebarRowDismantles == removedRows + expectedReplacements) else {
             throw WorkbenchError("Unexpected sidebar row-marker lifecycle")
         }
         if kind == "header" && !probe.keepSidebarHeader && movedRows != 1600 {
             throw WorkbenchError("Header control did not move the existing rows")
         }
         return ["sidebar_variant": probe.sidebarVariant, "row_probes_enabled": !unprobed,
+                "virtualized_table": probe.sidebarTable != nil,
+                "table_cell_creates": (probe.sidebarTable?.created ?? 0) - tableCreates,
+                "table_cell_reuses": (probe.sidebarTable?.reused ?? 0) - tableReuses,
                 "native_row_lifecycle": ["created": probe.sidebarRowCreates, "dismantled": probe.sidebarRowDismantles,
                                          "retained_common_ids": retainedIdentities, "replaced_common_ids": replacedIdentities],
                 "layout_kind": kind, "layout_catalog_sessions": base.count, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
@@ -927,7 +955,7 @@ private struct ReferenceComposerFixtureView: View {
                 "geometry": ["height_changes": changedHeights, "moved_rows": movedRows,
                              "inserted_rows": insertedRows, "removed_rows": removedRows], "initial_geometry_samples": samples,
                 "render_stages": NavigationRenderMetrics.report,
-                "layout_contract": unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
+                "layout_contract": probe.sidebarTable != nil ? "full native table data and visible row values/order/heights; offscreen rows unmounted; geometry counts cover mounted markers only" : unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
                 "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
     }
     private func sidebarStructure(_ window: NSWindow) async throws -> [String: Any] {
@@ -946,10 +974,18 @@ private struct ReferenceComposerFixtureView: View {
                 return root.isFlipped ? a.minY < b.minY : a.maxY > b.maxY
             }.compactMap(\.value)
         }
+        func matches(_ expected: [WorkspaceSession]) -> Bool {
+            if let table = probe.sidebarTable {
+                guard table.items.compactMap(\.session) == expected else { return false }
+                let visible = table.visibleSessions
+                return rows().filter { row in visible.contains(where: { $0.id == row.item.id }) }.map(\.item) == visible
+            }
+            return rows().map(\.item) == expected
+        }
         let all = SidebarProjection(sessions: fixture.sessions, starred: pins)
-        try await settle(window, "expanded sections") { rows().map { $0.item.id } == (all.favorites + all.recent).map(\.id) }
+        try await settle(window, "expanded sections") { matches(all.favorites + all.recent) }
         defaults.set(false, forKey: keys[0])
-        try await settle(window, "collapsed favorites") { rows().map { $0.item.id } == all.recent.map(\.id) }
+        try await settle(window, "collapsed favorites") { matches(all.recent) }
         defaults.set(false, forKey: keys[1])
         try await settle(window, "collapsed both") { rows().isEmpty }
         // Updates while hidden must appear on expansion, including per-row busy state.
@@ -977,9 +1013,21 @@ private struct ReferenceComposerFixtureView: View {
         probe.sidebarFilter = .all
         model.acceptanceUpdateCatalog(fixture.sessions)
         try await settle(window, "restore all sessions") {
-            rows().map(\.item) == SidebarProjection(sessions: self.fixture.sessions, starred: []).recent
+            matches(SidebarProjection(sessions: self.fixture.sessions, starred: []).recent)
         }
-        return ["collapse_expand_and_hidden_updates": true, "filter_and_last_pin_removal": true,
+        if let table = probe.sidebarTable {
+            table.table.scrollRowToVisible(table.items.count - 1)
+            try await settle(window, "virtualized bottom rows") {
+                table.visibleSessions.contains(where: { $0.id == table.items.compactMap(\.session).last?.id }) &&
+                    matches(SidebarProjection(sessions: self.fixture.sessions, starred: []).recent)
+            }
+            table.table.scrollRowToVisible(0)
+            try await settle(window, "virtualized top rows") {
+                table.visibleSessions.first?.id == self.fixture.sessions[0].id &&
+                    matches(SidebarProjection(sessions: self.fixture.sessions, starred: []).recent)
+            }
+        }
+        return ["virtualized_scroll_values": probe.sidebarTable != nil, "collapse_expand_and_hidden_updates": true, "filter_and_last_pin_removal": true,
                 "structure_contract": "real AppStorage/local filter state, mounted values and physical order; no mouse/keyboard delivery claim"]
     }
     private func sidebarInvalidation(_ window: NSWindow) async throws -> [String: Any] {

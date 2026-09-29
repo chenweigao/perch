@@ -5,6 +5,7 @@ import WorkbenchCore
 struct WorkbenchSidebar: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
+    @Environment(\.locale) private var locale
     @State private var filter = SidebarRecentFilter.all
     @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
     @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
@@ -25,9 +26,10 @@ struct WorkbenchSidebar: View {
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
-                              onArchive: { model.showArchive() }) {
+                              onArchive: { model.showArchive() }, scrollRows: !usesTable) {
             #if PERCH_ACCEPTANCE
-            if experiment.flatSidebar { flatRows(projection, index: index) }
+            if usesTable { tableRows(projection, index: index) }
+            else if experiment.flatSidebar { flatRows(projection, index: index) }
             else { sectionRows(projection, index: index) }
             #else
             flatRows(projection, index: index)
@@ -40,6 +42,43 @@ struct WorkbenchSidebar: View {
         .onReceive(experiment.$sidebarFilter) { if let value = $0 { filter = value } }
         #endif
     }
+    private var usesTable: Bool {
+        #if PERCH_ACCEPTANCE
+        return experiment.sidebarVariant == "table"
+        #else
+        return false
+        #endif
+    }
+    #if PERCH_ACCEPTANCE
+    @AppStorage("sidebar.groups.expanded") private var groupsExpanded = true
+    private func tableRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
+        let _ = model.tabs.selectedID
+        let _ = model.managing
+        let items = entries(projection).map { entry -> AcceptanceSidebarTable.Item in
+            let height: CGFloat
+            let view: AnyView
+            var session: WorkspaceSession?
+            switch entry {
+            case .favorites:
+                height = 47; view = AnyView(SidebarSection("置顶", id: "favorites") { EmptyView() })
+            case .recent:
+                height = 47; view = AnyView(SidebarSection("最近会话", id: "recent") { EmptyView() } actions: { recentActions })
+            case .groups:
+                height = groupsExpanded ? CGFloat(82 + model.groupShortcuts.count * 37) : 47
+                view = AnyView(groupSection)
+            case .footer:
+                height = projection.recent.isEmpty ? 72 : 36; view = AnyView(recentFooter(projection))
+            case .session(let item):
+                session = item
+                height = experiment.fixedSidebarHeight || (!item.archived && (!item.online || item.section == .attention)) ? 48 : 34
+                view = AnyView(sessionRow(item, groups: index[item.id]))
+            }
+            return .init(id: entry.id, session: session, height: height,
+                         content: AnyView(view.id(entry.id).font(.system(size: 13)).environment(\.locale, locale)))
+        }
+        return AcceptanceSidebarTable(items: items)
+    }
+    #endif
     private func showsFavorites(_ projection: SidebarProjection) -> Bool {
         #if PERCH_ACCEPTANCE
         if experiment.keepSidebarHeader || experiment.showEmptySidebarHeader { return true }
