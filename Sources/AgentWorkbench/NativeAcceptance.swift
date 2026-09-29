@@ -17,7 +17,11 @@ import os
     var dashboardGroupID: UUID?
     var referenceWindow: NSWindow?
     weak var dashboardView: NSView?
-    let checkSidebarInvalidation = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-invalidation"
+    let checkSidebarInvalidation: Bool = {
+        let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? ""
+        return mode == "sidebar-invalidation" || mode.hasPrefix("sidebar-layout-")
+    }()
+    let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
     var sidebarBodyEvaluations = 0
     var sidebarRowEvaluations: [String: Int] = [:]
     let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
@@ -312,6 +316,7 @@ private struct ReferenceComposerFixtureView: View {
             }
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
+            if mode.hasPrefix("sidebar-layout-") { report.merge(try await sidebarLayout(window, mode: mode)) { _, new in new } }
             if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
             if mode == "joint" {
@@ -347,7 +352,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -775,6 +780,109 @@ private struct ReferenceComposerFixtureView: View {
         }
         return ["query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
+    }
+    /// Independent directory mutations with mounted data, order and row-height
+    /// readiness. Fixed height is an acceptance-only ablation, never a UI policy.
+    private func sidebarLayout(_ window: NSWindow, mode: String) async throws -> [String: Any] {
+        let kind = String(mode.dropFirst("sidebar-layout-".count))
+        let changesHeight = kind == "height" || kind == "height-fixed"
+        let base = fixture.sessions.map { item in
+            WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                hostName: item.hostName, detail: "固定待处理内容", online: true,
+                section: changesHeight ? .attention : .review, canMarkReviewed: false,
+                archived: false, updatedAt: item.updatedAt)
+        }
+        model.workspace.starred = []; model.workspace.groups = []
+        model.native.drafts["session-0"] = "目录布局独立场景"
+        model.acceptanceUpdateCatalog(base)
+        func mounted() -> [(NativeSidebarRowProbe, CGRect)] {
+            guard let root = probe.sidebarView else { return [] }
+            return probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap { view in
+                guard let value = view.value else { return nil }
+                return (value, view.convert(view.bounds, to: root))
+            }.sorted { probe.sidebarView?.isFlipped == true ? $0.1.minY < $1.1.minY : $0.1.minY > $1.1.minY }
+        }
+        func ready(_ expected: SidebarProjection) -> Bool {
+            guard let rendered = probe.sidebarProjection, probe.sidebarView?.window === window,
+                  rendered.favorites == expected.favorites, rendered.recent == expected.recent,
+                  rendered.attentionCount == expected.attentionCount else { return false }
+            let actual = mounted(), items = expected.favorites + expected.recent
+            guard actual.count == items.count else { return false }
+            return zip(actual, items).allSatisfy { row, item in
+                let height: CGFloat = probe.fixedSidebarHeight || item.section == .attention ? 48 : 34
+                return row.0.item == item && row.0.starred == expected.favorites.contains(where: { $0.id == item.id }) &&
+                    row.0.selected == (item.id == base[0].id) && abs(row.1.height - height) <= 0.5
+            }
+        }
+        let initial = SidebarProjection(sessions: base, starred: [])
+        try await settle(window, "sidebar layout initial geometry") { ready(initial) }
+        try await Task.sleep(for: .milliseconds(200))
+        var durations: [Double] = [], samples: [[String: Any]] = []
+        var changedHeights = 0, movedRows = 0, insertedRows = 0, removedRows = 0
+        var previous = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
+        probe.sidebarBodyEvaluations = 0; probe.sidebarRowEvaluations = [:]
+        NavigationRenderMetrics.stages = [:]
+        let cpuStart = processCPU()
+        let span = probe.signposter.beginInterval("SidebarLayout")
+        for step in 0..<80 {
+            var next = base
+            var pins: [SessionReference] = []
+            switch kind {
+            case "content":
+                next = base.enumerated().map { index, item in
+                    guard index < 20 else { return item }
+                    return WorkspaceSession(reference: item.reference, title: String(format: "状态 %04d · 中文 English", step),
+                        directory: item.directory, hostName: item.hostName, detail: item.detail, online: item.online,
+                        section: item.section, canMarkReviewed: false, updatedAt: item.updatedAt)
+                }
+            case "order":
+                let offset = (step + 1) % 20
+                next = Array(base[offset..<20] + base[..<offset] + base[20...])
+            case "pins": pins = step % 2 == 0 ? Array(base.prefix(4).map(\.reference)) : []
+            case "height", "height-fixed":
+                next = base.enumerated().map { index, item in
+                    guard index < 20 else { return item }
+                    return WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                        hostName: item.hostName, detail: item.detail, online: item.online,
+                        section: step % 2 == 0 ? .review : .attention, canMarkReviewed: false, updatedAt: item.updatedAt)
+                }
+            default: break // no-op measures the same flush/readiness floor.
+            }
+            let expected = SidebarProjection(sessions: next, starred: pins)
+            let start = CACurrentMediaTime()
+            if kind == "pins" { model.workspace.starred = pins }
+            model.acceptanceUpdateCatalog(next)
+            try await settle(window, "\(mode) step \(step)") { ready(expected) }
+            durations.append((CACurrentMediaTime() - start) * 1000)
+            // Detailed geometry accounting is outside each response sample.
+            let current = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
+            for (id, rect) in current {
+                if let old = previous[id] {
+                    if abs(old.height - rect.height) > 0.5 { changedHeights += 1 }
+                    let delta = probe.sidebarView?.isFlipped == true ? old.minY - rect.minY : old.maxY - rect.maxY
+                    if abs(delta) > 0.5 { movedRows += 1 }
+                } else { insertedRows += 1 }
+            }
+            removedRows += previous.keys.filter { current[$0] == nil }.count
+            if step < 2 { samples.append(["step": step, "rows": current.count, "height_sum": current.values.reduce(0) { $0 + $1.height }]) }
+            previous = current
+        }
+        probe.signposter.endInterval("SidebarLayout", span)
+        let cpuSeconds = processCPU() - cpuStart
+        guard hasMountedMessage(window, session: "session-0"), containsText("目录布局独立场景", in: window.contentView) else {
+            throw WorkbenchError("Directory mutation changed the active conversation or draft")
+        }
+        if changesHeight && !probe.fixedSidebarHeight && changedHeights != 1600 { throw WorkbenchError("Missing dynamic row-height changes") }
+        if (!changesHeight || probe.fixedSidebarHeight) && changedHeights != 0 { throw WorkbenchError("Fixed-height control changed row sizes") }
+        return ["layout_kind": kind, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
+                "layout_process_cpu_seconds": cpuSeconds,
+                "sidebar_body_evaluations": probe.sidebarBodyEvaluations,
+                "sidebar_row_body_evaluations": probe.sidebarRowEvaluations.values.reduce(0, +),
+                "geometry": ["height_changes": changedHeights, "moved_rows": movedRows,
+                             "inserted_rows": insertedRows, "removed_rows": removedRows], "initial_geometry_samples": samples,
+                "render_stages": NavigationRenderMetrics.report,
+                "layout_contract": "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
+                "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
     }
     private func sidebarInvalidation(_ window: NSWindow) async throws -> [String: Any] {
         func rows() -> [NativeSidebarRowProbe] {

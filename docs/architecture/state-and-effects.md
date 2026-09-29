@@ -229,3 +229,20 @@ A two-boundary value/equality prototype reduced unrelated row body work but did 
 improve end-to-end rendering; catalog refresh became slower. It was rejected, leaving
 the production sidebar unchanged. The reproducible patch, fixed-binary measurements
 and rationale are in [the experiment report](../performance/2026-09-29-sidebar-boundaries/REPORT.md).
+
+## Sidebar layout stimulus contract
+
+The `sidebar-layout-*` acceptance modes separate title edits, permutations of the
+same rows, favorites-section/member changes, and status/subtitle/height changes.
+A no-op replay is the timing floor; `height-fixed` repeats identical status changes
+while reserving 48pt. Only acceptance builds can enable that height override.
+Production rows continue to use 34pt or 48pt according to their subtitle.
+
+Mounted row probes verify actual order and height as well as row values before
+ending each response sample. ID-based membership and top-edge changes are counted
+outside response samples; they are not native view creation counts. The functional
+suite includes order, pin and dynamic-height contracts. Timing/profiling runs remain
+separate and do not establish hardware-input latency or frame rate.
+
+See [the layout diagnosis](../performance/2026-09-29-sidebar-layout/REPORT.md) before
+changing section identity, row density or the underlying list control.
