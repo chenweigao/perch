@@ -217,6 +217,15 @@ notifications update the mounted AppKit document directly instead of invalidatin
 reference to that document and clears it on dismantling; content and appearance
 still flow through SwiftUI's normal representable update path.
 
+The native document is top-aligned inside its measured SwiftUI height frame.
+Disclosure changes can resize native rows before the deferred outer height is
+published; default centering would move the entire document by half that height
+difference for a layout pass. Keep the origin stable across this handoff and test
+every sampled disclosure state, not just the final restored anchor. The isolated
+`disclosure --disclosure-context --assert-atomic-disclosure` navigation check
+verifies row/content height agreement and a stationary header during expansion
+and collapse. This geometry contract is separate from rendering latency or FPS.
+
 ## Sidebar invalidation diagnostic
 
 `sidebar-invalidation` records body evaluations and mounted per-row inputs while

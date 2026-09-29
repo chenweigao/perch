@@ -1,0 +1,25 @@
+{
+  "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+  "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+  "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+  "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+  "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+  "mode": "disclosure",
+  "template": "Time Profiler",
+  "history_turns": 200,
+  "sessions": 500,
+  "configuration": {
+    "NAVIGATION_AUTORUN": "disclosure",
+    "NAVIGATION_TURNS": "200",
+    "NAVIGATION_SESSIONS": "500",
+    "NAVIGATION_SWITCHES": "20",
+    "NAVIGATION_AUTOQUIT": "1",
+    "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/disclosure-cpu",
+    "NAVIGATION_WINDOW_SECONDS": "8",
+    "NAVIGATION_SOAK_SECONDS": "60",
+    "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+    "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+  },
+  "record_exit_code": 0
+}

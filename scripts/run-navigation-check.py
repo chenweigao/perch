@@ -9,13 +9,19 @@ import subprocess
 import time
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("mode", choices=["reading", "click", "scroll", "soak", "anchor", "interactions", "search", "roundtrip", "turns", "image"])
+parser.add_argument("mode", choices=["reading", "click", "scroll", "soak", "anchor", "interactions", "search", "roundtrip", "turns", "image", "disclosure"])
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built A/B fixture app")
 parser.add_argument("--seconds", type=int, default=1260)
 parser.add_argument("--switches", type=int, default=40)
 parser.add_argument("--recreate", action="store_true")
+parser.add_argument("--scroll-step-points", type=float, default=0,
+                    help="Use 1200 small scroll steps instead of the whole-document sweep")
+parser.add_argument("--disclosure-context", action="store_true")
+parser.add_argument("--assert-atomic-disclosure", action="store_true")
 args = parser.parse_args()
+if args.scroll_step_points < 0:
+    parser.error("--scroll-step-points must be nonnegative")
 root = Path(__file__).resolve().parent.parent
 output = args.output.resolve()
 output.mkdir(parents=True, exist_ok=False)
@@ -25,9 +31,16 @@ environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="2
                    NAVIGATION_AUTOQUIT="1", NAVIGATION_RESULTS=str(output),
                    NAVIGATION_SWITCHES=str(args.switches),
                    NAVIGATION_SOAK_SECONDS=str(args.seconds),
-                   NAVIGATION_RECREATE="1" if args.recreate else "0")
+                   NAVIGATION_RECREATE="1" if args.recreate else "0",
+                   NAVIGATION_DISCLOSURE_CONTEXT="1" if args.disclosure_context else "0",
+                   NAVIGATION_ASSERT_ATOMIC_DISCLOSURE="1" if args.assert_atomic_disclosure else "0")
+environment.pop("NAVIGATION_SCROLL_STEP_POINTS", None)
+if args.scroll_step_points:
+    environment["NAVIGATION_SCROLL_STEP_POINTS"] = str(args.scroll_step_points)
 timeout = args.seconds + 120 if args.mode == "soak" else 120
 record = {"status": "starting", "mode": args.mode, "timeout_s": timeout,
+          "configuration": {key: value for key, value in environment.items() if key.startswith("NAVIGATION_")},
+          "build": json.loads((app / "Contents/Resources/build.json").read_text()),
           "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest()}
 
 

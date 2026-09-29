@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("mode", choices=["reading", "scroll", "small-scroll", "roundtrip", "interactions", "anchor", "turns", "resource", "soak"])
+parser.add_argument("mode", choices=["reading", "scroll", "small-scroll", "roundtrip", "interactions", "anchor", "turns", "resource", "soak", "disclosure"])
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a fixed A/B fixture build")
 parser.add_argument("--image-fixture", type=Path, help="Include the same local attachment in each fixture history")
@@ -29,8 +29,13 @@ env = {"NAVIGATION_AUTORUN": "scroll" if args.mode == "small-scroll" else args.m
        "NAVIGATION_WINDOW_SECONDS": "8", "NAVIGATION_SOAK_SECONDS": "60"}
 if args.mode == "small-scroll":
     env["NAVIGATION_SCROLL_STEP_POINTS"] = "8"
+if args.mode == "disclosure":
+    env["NAVIGATION_DISCLOSURE_CONTEXT"] = "1"
+    env["NAVIGATION_ASSERT_ATOMIC_DISCLOSURE"] = "1"
 if args.image_fixture:
     env["NAVIGATION_IMAGE_FIXTURE"] = str(args.image_fixture.resolve())
+metadata["configuration"] = env
+(out / "manifest.json").write_text(json.dumps(metadata, indent=2))
 command = ["xcrun", "xctrace", "record", "--template", "Time Profiler", "--time-limit", "180s",
            "--output", str(out / "run.trace")]
 for key, value in env.items():

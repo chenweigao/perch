@@ -173,7 +173,10 @@ struct ConversationTranscript: View {
                                  viewport: environment.conversationViewport,
                                  layout: documentLayout, suspended: isSuspended) { height in
             measured = (sessionId, height)
-        }.frame(height: measured?.session == sessionId ? measured?.height : nil)
+        // Native rows can report their new height one layout pass before the
+        // outer SwiftUI frame receives it. Keep the document's top fixed during
+        // that handoff; centering shifts every row by half the height delta.
+        }.frame(height: measured?.session == sessionId ? measured?.height : nil, alignment: .top)
             .onGeometryChange(for: CGFloat.self) {
                 $0.frame(in: .named("conversation-content")).minY
             } action: { documentLayout.updateOrigin($0) }

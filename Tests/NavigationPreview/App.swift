@@ -1237,6 +1237,7 @@ extension NavigationRunner {
                 let start = CACurrentMediaTime()
                 control.wrappedValue.toggle()
                 var heights: [CGFloat] = [], gaps: [Double] = [], contentHeights: [CGFloat] = [], scrollOffsets: [CGFloat] = [], headerOffsets: [CGFloat] = []
+                var geometry: [[String: CGFloat]] = []
                 var previous = start, lastChange = start
                 repeat {
                     try await Task.sleep(for: .milliseconds(8))
@@ -1249,25 +1250,34 @@ extension NavigationRunner {
                     contentHeights.append(rows().first?.subviews.first?.frame.height ?? 0)
                     scrollOffsets.append(scroll.contentView.bounds.minY)
                     headerOffsets.append((rows().first?.convert(.zero, to: host).y ?? 0) - headerY)
+                    if let document = ConversationTranscript.document(in: host), let row = rows().first {
+                        geometry.append(["document_height": document.bounds.height,
+                            "document_origin_in_host": document.convert(.zero, to: host).y,
+                            "row_y": row.frame.minY,
+                            "scroll_document_height": scroll.documentView?.bounds.height ?? 0])
+                    }
                 } while CACurrentMediaTime() - start < 0.5
                 let expanded = iteration % 2 == 0
                 let finalHeight = heights.last ?? 0
+                let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count
+                samples.append(["kind": kind, "iteration": iteration, "expanded": expanded, "header_offsets": headerOffsets,
+                    "mismatched_frames": mismatches, "content_heights": contentHeights, "scroll_offsets": scrollOffsets,
+                    "settled_ms": (lastChange - start) * 1_000, "main_loop_gaps": statistics(gaps),
+                    "heights": heights, "geometry": geometry, "render_stages": NavigationRenderMetrics.report])
+                // Preserve the failing sample too; assertions must not erase the
+                // geometry needed to distinguish stale row height from scroll drift.
+                try writeNavigationArtifact("disclosure-samples.json", ["disclosures": samples])
                 guard expanded ? finalHeight > collapsed + 500 : abs(finalHeight - collapsed) < 1 else {
                     try writeNavigationArtifact("disclosure-failure.json", ["kind": kind, "iteration": iteration,
                         "heights": heights, "keys": Array(ConversationDisclosureFixture.bindings.keys)])
                     throw NavigationError("wrong final \(kind) height: \(finalHeight), collapsed \(collapsed)")
                 }
-                let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count
                 if ProcessInfo.processInfo.environment["NAVIGATION_ASSERT_ATOMIC_DISCLOSURE"] == "1" {
                     guard mismatches == 0 else { throw NavigationError("\(kind) had \(mismatches) frames with mismatched content and row heights") }
                 }
                 if withContext && headerOffsets.contains(where: { abs($0) > 1 }) {
                     throw NavigationError("\(kind) disclosure header moved during toggle: \(headerOffsets)")
                 }
-                samples.append(["kind": kind, "expanded": expanded, "header_offsets": headerOffsets,
-                    "mismatched_frames": mismatches, "content_heights": contentHeights, "scroll_offsets": scrollOffsets,
-                    "settled_ms": (lastChange - start) * 1_000, "main_loop_gaps": statistics(gaps),
-                    "heights": heights, "render_stages": NavigationRenderMetrics.report])
             }
         }
         return ["disclosures": samples]
