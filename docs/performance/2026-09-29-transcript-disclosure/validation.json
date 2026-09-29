@@ -292,8 +292,9 @@
   "production_diagnostic_symbol_matches": 0,
   "production_binary_sha256": "68370f670cff2d47faf1f614e15d4361854d5a6becd7f66dcf52060ab8b66afa",
   "real_ssh": "skipped: WORKBENCH_LIVE_HOST unset",
-  "real_private_disclosure": "blocked pending explicit authorization after automatic approval rejection",
+  "real_private_disclosure": "User explicitly authorized; read-only expand/collapse and scroll observation completed on running build 306, not the candidate. See LIVE-OBSERVATION.md.",
   "display_frames": "unverified",
   "pushed": false,
-  "deployed": false
+  "deployed": false,
+  "live_cpu_capture": "45 seconds; 819 main-thread samples; 406ms inclusive accessibility entry-point weight. Observer overhead prevents natural-interaction performance conclusions."
 }
