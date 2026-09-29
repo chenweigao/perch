@@ -1,0 +1,2763 @@
+{
+  "environment": "Apple M4, 16 GiB, macOS 27, Swift 6.4, release -O, 1280x820",
+  "parent_commit": "6b4a97359849235755e126256067bf712702c495",
+  "method": "Three paired rounds; round 1 and 3 switching/catalog/combined baseline then candidate, round 2 combined/catalog/switching candidate then baseline. No concurrent task compiler/profiler; unrelated desktop activity uncontrolled. RSS after 80 render steps, 120 scroll steps and settling. Nested stages cannot be added. No event-to-photon, FPS, hardware IME or SSH claim.",
+  "aggregate": {
+    "switching": {
+      "baseline": {
+        "median_ms": 52.52654163632542,
+        "median_range_ms": [
+          52.40958329522982,
+          53.77520830370486
+        ],
+        "p95_range_ms": [
+          60.17754168715328,
+          61.89599999925122
+        ],
+        "cpu_median_seconds": 4.484351,
+        "rss_median_mib": 198.890625,
+        "rss_range_mib": [
+          198.875,
+          199.40625
+        ]
+      },
+      "candidate": {
+        "median_ms": 52.82437498681247,
+        "median_range_ms": [
+          52.79991670977324,
+          52.94962495099753
+        ],
+        "p95_range_ms": [
+          58.490208291914314,
+          60.736958344932646
+        ],
+        "cpu_median_seconds": 4.449995,
+        "rss_median_mib": 199,
+        "rss_range_mib": [
+          198.21875,
+          199.390625
+        ]
+      },
+      "delta": {
+        "median_percent": 0.5670149627385435,
+        "cpu_percent": -0.7661309295369567,
+        "rss_mib": 0.109375
+      }
+    },
+    "catalog": {
+      "baseline": {
+        "median_ms": 25.34829161595553,
+        "median_range_ms": [
+          25.297583313658834,
+          26.02504164678976
+        ],
+        "p95_range_ms": [
+          32.63462497852743,
+          33.651750010903925
+        ],
+        "cpu_median_seconds": 2.021682,
+        "rss_median_mib": 190.4375,
+        "rss_range_mib": [
+          190.421875,
+          190.59375
+        ]
+      },
+      "candidate": {
+        "median_ms": 26.386083336547017,
+        "median_range_ms": [
+          26.040750031825155,
+          26.458000007551163
+        ],
+        "p95_range_ms": [
+          31.831958331167698,
+          33.645416668150574
+        ],
+        "cpu_median_seconds": 2.089533,
+        "rss_median_mib": 190.53125,
+        "rss_range_mib": [
+          190.25,
+          190.78125
+        ]
+      },
+      "delta": {
+        "median_percent": 4.094128852211276,
+        "cpu_percent": 3.3561658064918065,
+        "rss_mib": 0.09375
+      }
+    },
+    "combined": {
+      "baseline": {
+        "median_ms": 73.37112503591925,
+        "median_range_ms": [
+          73.25191667769104,
+          74.37175000086427
+        ],
+        "p95_range_ms": [
+          83.30404170555994,
+          84.70324997324497
+        ],
+        "cpu_median_seconds": 6.119554,
+        "rss_median_mib": 203.40625,
+        "rss_range_mib": [
+          203.015625,
+          203.578125
+        ]
+      },
+      "candidate": {
+        "median_ms": 73.69887497043237,
+        "median_range_ms": [
+          73.25362495612353,
+          74.58958332426846
+        ],
+        "p95_range_ms": [
+          81.9714583340101,
+          83.7664999999106
+        ],
+        "cpu_median_seconds": 6.141942,
+        "rss_median_mib": 202.78125,
+        "rss_range_mib": [
+          202.203125,
+          202.828125
+        ]
+      },
+      "delta": {
+        "median_percent": 0.44670152509269645,
+        "cpu_percent": 0.36584365461926893,
+        "rss_mib": -0.625
+      }
+    }
+  },
+  "render_runs": [
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-switching-r1",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 12495,
+        "exit_code": 0,
+        "elapsed_s": 11.658882875,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.495101,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.506999106146395
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 607.5670832651667
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 102.832208678592
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.76824946096167
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.996583303902298
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.793082362506539
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 466.11399989342317
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 466.0796246607788
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 424.0881248260848
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 42.15241671772674
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3522079465910792
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 47.14308283291757
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5567918415181339
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.805708589032292
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.51299983821809
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.05508377216756344
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 78.50820833118632,
+          "median": 52.40958329522982,
+          "p95": 61.89599999925122
+        },
+        "render_steps": 80,
+        "rss_after_mb": 199.25,
+        "rss_before_mb": 171.59375,
+        "rss_settled_mb": 198.890625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.441208319738507,
+          "median": 5.022416706196964,
+          "p95": 22.546416672412306
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-switching-r1",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 12651,
+        "exit_code": 0,
+        "elapsed_s": 11.666012916,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.491359,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.609416940715164
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 605.8482915977947
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 103.48912526387721
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.531666344031692
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 13.069666922092438
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.56558342417702
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 464.2482085037045
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 464.21629178803414
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 421.9112084247172
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 42.47787466738373
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3314163447357714
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 47.029290813952684
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.533249753061682
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.79437491716817
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.59733325103298
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.050042057409882545
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 98.61154167447239,
+          "median": 52.82437498681247,
+          "p95": 60.736958344932646
+        },
+        "render_steps": 80,
+        "rss_after_mb": 199.359375,
+        "rss_before_mb": 171.203125,
+        "rss_settled_mb": 199,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.336083294358104,
+          "median": 4.627416667062789,
+          "p95": 23.271958343684673
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-catalog-r1",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 12684,
+        "exit_code": 0,
+        "elapsed_s": 9.259682667,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.021682,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 61.0250832978636,
+          "median": 25.34829161595553,
+          "p95": 32.952666690107435
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.578125,
+        "rss_before_mb": 171.46875,
+        "rss_settled_mb": 190.59375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.227249986026436,
+          "median": 2.816083317156881,
+          "p95": 22.012791654560715
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-catalog-r1",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 12950,
+        "exit_code": 0,
+        "elapsed_s": 9.431984041,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.089533,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 64.29183331783861,
+          "median": 26.040750031825155,
+          "p95": 33.184083353262395
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.765625,
+        "rss_before_mb": 171.203125,
+        "rss_settled_mb": 190.78125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.263083320576698,
+          "median": 2.7122083120048046,
+          "p95": 22.6842500269413
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-combined-r1",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 12981,
+        "exit_code": 0,
+        "elapsed_s": 13.373588625,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.142112,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.62774944351986
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 598.636249313131
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 103.17074990598485
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.46320813940838
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.745500775054097
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.489749843254685
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 457.32300024246797
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 457.2944582323544
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 416.1253332858905
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.32304136874154
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3013332867994905
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.6371665825136
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5193752585910261
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.628165968228132
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.0036665070802
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.052250223234295845
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 118.34037501830608,
+          "median": 74.37175000086427,
+          "p95": 83.30404170555994
+        },
+        "render_steps": 80,
+        "rss_after_mb": 203.390625,
+        "rss_before_mb": 171.359375,
+        "rss_settled_mb": 203.40625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 29.19145830674097,
+          "median": 4.9809583579190075,
+          "p95": 22.285583312623203
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-combined-r1",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 12995,
+        "exit_code": 0,
+        "elapsed_s": 13.284754458999998,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.128261,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.309917628765106
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 595.6468752701767
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 102.06866607768461
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.331125410739332
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.918749765958637
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.36624995060265
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 455.63995896372944
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 455.6172082084231
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 414.5462916349061
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.22570849722251
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.320958581753075
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.960375155322254
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5311249988153577
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.645998176187277
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 31.721331703010947
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.04620914114639163
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 121.78870831849054,
+          "median": 73.25362495612353,
+          "p95": 83.36400002008304
+        },
+        "render_steps": 80,
+        "rss_after_mb": 202.765625,
+        "rss_before_mb": 171.4375,
+        "rss_settled_mb": 202.78125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.653833279851824,
+          "median": 4.484375007450581,
+          "p95": 22.973416664171964
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-switching-r2",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13097,
+        "exit_code": 0,
+        "elapsed_s": 11.671508124999999,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.484351,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.535706833470613
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 599.9987085815519
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 101.80904134176672
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.473499952349812
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.937249906826764
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.499749744776636
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 460.23070777300745
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 460.2042498299852
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 418.3665830641985
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.9883745489642
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3360414672642946
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 47.15079179732129
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5152500816620886
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.62762492801994
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.36404218478128
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.04945846740156412
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 107.33487497782335,
+          "median": 52.52654163632542,
+          "p95": 60.65804167883471
+        },
+        "render_steps": 80,
+        "rss_after_mb": 199.203125,
+        "rss_before_mb": 171.25,
+        "rss_settled_mb": 198.875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.62183333793655,
+          "median": 4.673708346672356,
+          "p95": 22.79687498230487
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-switching-r2",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13082,
+        "exit_code": 0,
+        "elapsed_s": 11.668086166,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.449995,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.440165884792805
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 593.8986243563704
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 99.51087518129498
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.184958174359053
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 13.101916294544935
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.213583537843078
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 456.6601249971427
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 456.6254166420549
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 415.35937489243224
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.434000013396144
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3203335478901863
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.67966702254489
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5128334742039442
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.684748645871878
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.09062438691035
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.052084040362387896
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 100.8960833423771,
+          "median": 52.79991670977324,
+          "p95": 59.06075000530109
+        },
+        "render_steps": 80,
+        "rss_after_mb": 198.578125,
+        "rss_before_mb": 171.109375,
+        "rss_settled_mb": 198.21875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.878958345856518,
+          "median": 4.347083333414048,
+          "p95": 22.36533333780244
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-catalog-r2",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13068,
+        "exit_code": 0,
+        "elapsed_s": 9.380144875000001,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.011785,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 61.06416665716097,
+          "median": 25.297583313658834,
+          "p95": 33.651750010903925
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.375,
+        "rss_before_mb": 170.8125,
+        "rss_settled_mb": 190.421875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.12766664242372,
+          "median": 4.487833357416093,
+          "p95": 21.83441666420549
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-catalog-r2",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13058,
+        "exit_code": 0,
+        "elapsed_s": 9.528945499999999,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.068757,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 61.45945831667632,
+          "median": 26.386083336547017,
+          "p95": 31.831958331167698
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.515625,
+        "rss_before_mb": 171.25,
+        "rss_settled_mb": 190.53125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 30.810458352789283,
+          "median": 4.03783330693841,
+          "p95": 22.70679170032963
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-combined-r2",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13044,
+        "exit_code": 0,
+        "elapsed_s": 13.345872167,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.115311,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.474207820370793
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 592.5658746855333
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 101.61670797970146
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.230125281959772
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.795374961569905
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.255125472322106
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 453.54775059968233
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 453.51133350050077
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 412.3595007113181
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.31233331281692
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.344083554111421
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.648957941215485
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.522417074535042
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.550374863669276
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 31.782500620465726
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.047833542339503765
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 120.86287495912984,
+          "median": 73.25191667769104,
+          "p95": 84.70324997324497
+        },
+        "render_steps": 80,
+        "rss_after_mb": 203.5625,
+        "rss_before_mb": 171.375,
+        "rss_settled_mb": 203.578125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.129416645038873,
+          "median": 4.8585416516289115,
+          "p95": 22.641833347734064
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-combined-r2",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13011,
+        "exit_code": 0,
+        "elapsed_s": 13.383744083,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.169986,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.83108405349776
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 596.8118332093582
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 102.04316664021462
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.288500697351992
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.938166852109134
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.330417023506016
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 456.9423334323801
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 456.9151667528786
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 415.60216626385227
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.47912509506568
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3022917923517525
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.91808292409405
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5160836153663695
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.624209127854556
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 31.838333059567958
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.0572913559153676
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 119.33666665572673,
+          "median": 74.58958332426846,
+          "p95": 81.9714583340101
+        },
+        "render_steps": 80,
+        "rss_after_mb": 202.8125,
+        "rss_before_mb": 171.28125,
+        "rss_settled_mb": 202.828125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.799333340022713,
+          "median": 4.719958349596709,
+          "p95": 22.52662496175617
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 11
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-switching-r3",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13117,
+        "exit_code": 0,
+        "elapsed_s": 11.629915667,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.4750570000000005,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.459832798223943
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 597.037291910965
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 101.11320822034031
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.395750000607222
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.843916949350387
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.421124931890517
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 458.0768330488354
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 458.0435833777301
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 416.9106248882599
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.29895818186924
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3335830084979534
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.66212515439838
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5064165452495217
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.653459990862757
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.048873719759285
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.06737443618476391
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 104.4170000241138,
+          "median": 53.77520830370486,
+          "p95": 60.17754168715328
+        },
+        "render_steps": 80,
+        "rss_after_mb": 199.765625,
+        "rss_before_mb": 171.40625,
+        "rss_settled_mb": 199.40625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.624249992892146,
+          "median": 4.5580833102576435,
+          "p95": 22.951999970246106
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-switching-r3",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13127,
+        "exit_code": 0,
+        "elapsed_s": 11.656970167,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.440408,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.615085668396205
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 596.9219583203085
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 100.92687496216968
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.419874107465148
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 13.001708255615085
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.453082683961838
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 458.198458829429
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 458.17141683073714
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 416.6208748938516
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.71779187163338
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3244580845348537
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.66229180293158
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5105417803861201
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.708957794122398
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 31.997165468055755
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.07037300383672118
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 100.12770834146068,
+          "median": 52.94962495099753,
+          "p95": 58.490208291914314
+        },
+        "render_steps": 80,
+        "rss_after_mb": 199.75,
+        "rss_before_mb": 170.671875,
+        "rss_settled_mb": 199.390625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.636166672687978,
+          "median": 4.631416697520763,
+          "p95": 22.32308336533606
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 11
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-catalog-r3",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13139,
+        "exit_code": 0,
+        "elapsed_s": 9.403106917,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.0890649999999997,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 60.74170838110149,
+          "median": 26.02504164678976,
+          "p95": 32.63462497852743
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.421875,
+        "rss_before_mb": 171,
+        "rss_settled_mb": 190.4375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.401499995496124,
+          "median": 4.142249992582947,
+          "p95": 21.936458360869437
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-catalog-r3",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13172,
+        "exit_code": 0,
+        "elapsed_s": 9.479377625,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.145998,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 47.94629168463871,
+          "median": 26.458000007551163,
+          "p95": 33.645416668150574
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.203125,
+        "rss_before_mb": 170.640625,
+        "rss_settled_mb": 190.25,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 30.00958333723247,
+          "median": 4.660958307795227,
+          "p95": 21.931791678071022
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/baseline-combined-r3",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13327,
+        "exit_code": 0,
+        "elapsed_s": 13.365389875,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.119554,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.496999262832105
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 596.4159165741876
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 102.46370814274997
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.380292024929076
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.852333835326135
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.404458856210113
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 456.1303333612159
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 456.0917494818568
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 414.9615417700261
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.299208416603506
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3427083981223404
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.60629166755825
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5324584199115634
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.512500302866101
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 31.941958412062377
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.05016569048166275
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 121.11016665585339,
+          "median": 73.37112503591925,
+          "p95": 83.53487501153722
+        },
+        "render_steps": 80,
+        "rss_after_mb": 203,
+        "rss_before_mb": 171.015625,
+        "rss_settled_mb": 203.015625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.292208349332213,
+          "median": 4.646791669074446,
+          "p95": 22.800583334174007
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/candidate-combined-r3",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 13362,
+        "exit_code": 0,
+        "elapsed_s": 13.319565208,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.141942,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.46341635286808
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 595.084291358944
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 102.2921668482013
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.388541505672038
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.874749663751572
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.416375012136996
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 455.1126667065546
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 455.09233308257535
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 413.8299578917213
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.41204175539315
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3305000397376716
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.655500773340464
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5251248367130756
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.660292231477797
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 31.925332790706307
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.06974977441132069
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 118.19166666828096,
+          "median": 73.69887497043237,
+          "p95": 83.7664999999106
+        },
+        "render_steps": 80,
+        "rss_after_mb": 202.1875,
+        "rss_before_mb": 170.875,
+        "rss_settled_mb": 202.203125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.89570834627375,
+          "median": 4.709749948233366,
+          "p95": 22.516291646752506
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    }
+  ],
+  "decision": "Rejected: no consistent end-to-end gain and catalog refresh regressed. Candidate is preserved as a patch against 6b4a973; production sidebar unchanged.",
+  "patch_source_sha256_verified": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+  "candidate_sidebar_invalidation": {
+    "artifact": ".local/sidebar-boundaries/verified-boundaries",
+    "manifest": {
+      "commit": "6b4a97359849235755e126256067bf712702c495",
+      "source_sha256": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "155e29ad05132bc3a9fc00e0af9db8c95da2969b0c06bbc678ae13d35a928565",
+      "capture": "none",
+      "mode": "sidebar-invalidation",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 12316,
+      "exit_code": 0,
+      "elapsed_s": 8.071367792,
+      "behavior_passed": true
+    },
+    "result": {
+      "boundary": "mounted row probes and body counts; no timing or hardware event claim",
+      "busy_state_isolated": true,
+      "catalog_sessions": 500,
+      "group_membership_isolated": true,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "sidebar-invalidation",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "pin_order_and_content_refresh": true,
+      "rss_after_mb": 188.34375,
+      "rss_before_mb": 172.578125,
+      "rss_settled_mb": 188.359375,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 27.195375005248934,
+        "median": 3.9565417100675404,
+        "p95": 21.99525001924485
+      },
+      "selection_changed_rows": 2,
+      "selection_sidebar_body_evaluations": 0,
+      "single_row_edit_isolated": true,
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 11
+      }
+    }
+  },
+  "candidate_source_digest_verified": "19794a117d93a89e6e0da49f708c785932ec58c11d3a53a53e4c674e0cf230e8",
+  "retained_sidebar_invalidation": {
+    "artifact": ".local/sidebar-boundaries/retained-boundaries",
+    "manifest": {
+      "commit": "6b4a97359849235755e126256067bf712702c495",
+      "source_sha256": "e757fec34f3b4700a044c08456049029b8625f6cb5b450180d2c16c4c62c0574",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "1cdbd10a2b4bce56f23319a5cca987c2f9d2f0a2292f429ed6913c533090ff66",
+      "capture": "none",
+      "mode": "sidebar-invalidation",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 14172,
+      "exit_code": 0,
+      "elapsed_s": 8.141807709,
+      "behavior_passed": true
+    },
+    "result": {
+      "boundary": "mounted row probes and body counts; no timing or hardware event claim",
+      "busy_changed_rows": 20,
+      "busy_state_refresh": true,
+      "catalog_sessions": 500,
+      "group_changed_rows": 20,
+      "group_membership_refresh": true,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "sidebar-invalidation",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "pin_order_and_content_refresh": true,
+      "rss_after_mb": 188.234375,
+      "rss_before_mb": 172.84375,
+      "rss_settled_mb": 188.25,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 25.81250004004687,
+        "median": 4.907916649244726,
+        "p95": 22.338874987326562
+      },
+      "selection_changed_rows": 20,
+      "selection_sidebar_body_evaluations": 0,
+      "single_row_changed_rows": 20,
+      "single_row_content_refresh": true,
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ]
+    }
+  },
+  "retained_checks": [
+    {
+      "name": "retained-all",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "all",
+        "--app",
+        ".local/sidebar-boundaries/Diagnostic.app",
+        "--output",
+        ".local/sidebar-boundaries/retained-all"
+      ],
+      "exit_code": 0,
+      "seconds": 9.679743041
+    },
+    {
+      "name": "retained-switching",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "switching",
+        "--app",
+        ".local/sidebar-boundaries/Diagnostic.app",
+        "--output",
+        ".local/sidebar-boundaries/retained-switching"
+      ],
+      "exit_code": 0,
+      "seconds": 15.460561166000002
+    },
+    {
+      "name": "retained-invalidation",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "invalidation",
+        "--app",
+        ".local/sidebar-boundaries/Diagnostic.app",
+        "--output",
+        ".local/sidebar-boundaries/retained-invalidation"
+      ],
+      "exit_code": 0,
+      "seconds": 8.851144291999997
+    },
+    {
+      "name": "production-build",
+      "command": [
+        "bash",
+        "scripts/build.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 53.223457708
+    },
+    {
+      "name": "signature",
+      "command": [
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "build/Perch.app"
+      ],
+      "exit_code": 0,
+      "seconds": 0.024090416999996478
+    },
+    {
+      "name": "WorkbenchChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "WorkbenchChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 14.066752832999995
+    },
+    {
+      "name": "ConnectionChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "ConnectionChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 1.633003959000007
+    },
+    {
+      "name": "performance-tools",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Tests/Performance",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "seconds": 4.433048792000008
+    }
+  ],
+  "retained_functional_runs": [
+    {
+      "artifact": ".local/sidebar-boundaries/retained-all",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "e757fec34f3b4700a044c08456049029b8625f6cb5b450180d2c16c4c62c0574",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "1cdbd10a2b4bce56f23319a5cca987c2f9d2f0a2292f429ed6913c533090ff66",
+        "capture": "none",
+        "mode": "all",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 14600,
+        "exit_code": 0,
+        "elapsed_s": 9.599514708,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "all",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "row_reconciliation": {
+          "appearance_invalidation": true,
+          "external_summary_same_snapshot": true,
+          "prepend_and_removal": true,
+          "same_id_offscreen_and_visible_edits": true,
+          "unchanged_geometry_rebuilds": 0,
+          "unchanged_host_measurements": 0,
+          "unchanged_reconciliations": 0,
+          "unchanged_replays": 40
+        },
+        "rss_after_mb": 222.90625,
+        "rss_before_mb": 170.90625,
+        "rss_settled_mb": 222.921875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 31.64025000296533,
+          "median": 4.496374982409179,
+          "p95": 22.417916683480144
+        },
+        "search_sheet": {
+          "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+          "query_to_layout_ms": {
+            "count": 6,
+            "max": 40.204333316069096,
+            "median": 28.53708330076188,
+            "p95": 33.77954167081043
+          },
+          "states": [
+            {
+              "query": "验收",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "0002",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+            },
+            {
+              "query": "不存在的验收会话",
+              "selection": "none"
+            },
+            {
+              "query": "English",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "project-3",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+            },
+            {
+              "query": "",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            }
+          ]
+        },
+        "session_directory": {
+          "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+          "query_to_layout_ms": {
+            "count": 6,
+            "max": 107.41441667778417,
+            "median": 49.4078749907203,
+            "p95": 56.969375000335276
+          },
+          "states": [
+            {
+              "query": "验收",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "0002",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+            },
+            {
+              "query": "不存在的验收会话",
+              "selection": "none"
+            },
+            {
+              "query": "English",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            },
+            {
+              "query": "project-3",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+            },
+            {
+              "query": "",
+              "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+            }
+          ]
+        },
+        "session_switch_ms": {
+          "count": 16,
+          "max": 78.51429167203605,
+          "median": 60.53870829055086,
+          "p95": 69.41504165297374
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ]
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/retained-switching",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "e757fec34f3b4700a044c08456049029b8625f6cb5b450180d2c16c4c62c0574",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "1cdbd10a2b4bce56f23319a5cca987c2f9d2f0a2292f429ed6913c533090ff66",
+        "capture": "none",
+        "mode": "switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 14746,
+        "exit_code": 0,
+        "elapsed_s": 15.321405375,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_session_switches": 80,
+        "catalog_sessions": 500,
+        "catalog_switch_ms": {
+          "count": 80,
+          "max": 94.82233336893842,
+          "median": 73.50500003667548,
+          "p95": 80.9969583642669
+        },
+        "history_turns": 200,
+        "idle_cpu_seconds_over_2s": 0.04668700000000037,
+        "intentional_stall_ms": 0,
+        "mode": "switching",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "navigation_cache_invalidation": true,
+        "presentation_cache": {
+          "models": 8,
+          "payload_cost": 1860288,
+          "preparations": 8,
+          "restorations": 72
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 1520,
+            "ms": 20.014706708025187
+          },
+          "document_configure": {
+            "count": 158,
+            "ms": 584.3763748998754
+          },
+          "document_reconcile": {
+            "count": 79,
+            "ms": 99.75129179656506
+          },
+          "host_attach": {
+            "count": 246,
+            "ms": 15.11295820819214
+          },
+          "host_create": {
+            "count": 246,
+            "ms": 12.511666747741401
+          },
+          "host_first_attach": {
+            "count": 246,
+            "ms": 15.147708298172802
+          },
+          "host_first_measure": {
+            "count": 246,
+            "ms": 447.72341643692926
+          },
+          "host_measure": {
+            "count": 246,
+            "ms": 447.674791153986
+          },
+          "host_measure_assistant": {
+            "count": 158,
+            "ms": 407.7881248667836
+          },
+          "host_measure_user": {
+            "count": 88,
+            "ms": 40.07079161237925
+          },
+          "host_view": {
+            "count": 246,
+            "ms": 3.272124333307147
+          },
+          "markdown_parse": {
+            "count": 248,
+            "ms": 45.78616685466841
+          },
+          "row_geometry": {
+            "count": 100,
+            "ms": 0.4990830784663558
+          },
+          "text_create": {
+            "count": 1679,
+            "ms": 10.450374917127192
+          },
+          "text_measure": {
+            "count": 1768,
+            "ms": 31.347999814897776
+          },
+          "text_reuse": {
+            "count": 1679,
+            "ms": 0.04758435534313321
+          }
+        },
+        "rss_after_mb": 203.265625,
+        "rss_before_mb": 171.359375,
+        "rss_settled_mb": 203.28125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 33.20066665764898,
+          "median": 4.905375011730939,
+          "p95": 23.095249955076724
+        },
+        "status": "passed",
+        "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ]
+      }
+    },
+    {
+      "artifact": ".local/sidebar-boundaries/retained-invalidation",
+      "manifest": {
+        "commit": "6b4a97359849235755e126256067bf712702c495",
+        "source_sha256": "e757fec34f3b4700a044c08456049029b8625f6cb5b450180d2c16c4c62c0574",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "1cdbd10a2b4bce56f23319a5cca987c2f9d2f0a2292f429ed6913c533090ff66",
+        "capture": "none",
+        "mode": "invalidation",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 14762,
+        "exit_code": 0,
+        "elapsed_s": 8.756907791000001,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "draft_mutations": 40,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+        "mode": "invalidation",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "reading_body_evaluations_during_drafts": 0,
+        "rss_after_mb": 189.578125,
+        "rss_before_mb": 171.125,
+        "rss_settled_mb": 189.59375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.67491666600108,
+          "median": 5.210999981500208,
+          "p95": 22.694166691508144
+        },
+        "snapshot_positive_control": true,
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ]
+      }
+    }
+  ],
+  "retained_source_digest_verified": "e757fec34f3b4700a044c08456049029b8625f6cb5b450180d2c16c4c62c0574"
+}

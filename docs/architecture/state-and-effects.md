@@ -216,3 +216,16 @@ notifications update the mounted AppKit document directly instead of invalidatin
 `ConversationTranscript.body`. The representable coordinator holds only a weak
 reference to that document and clears it on dismantling; content and appearance
 still flow through SwiftUI's normal representable update path.
+
+## Sidebar invalidation diagnostic
+
+`sidebar-invalidation` records body evaluations and mounted per-row inputs while
+exercising selection, one catalog item, busy state, group membership, pinning and
+order/content restoration. Counts diagnose invalidation; functional readiness checks
+verify actual mounted row data. It uses no network or hardware input. Probes and
+counters are active only in this acceptance mode and absent from production builds.
+
+A two-boundary value/equality prototype reduced unrelated row body work but did not
+improve end-to-end rendering; catalog refresh became slower. It was rejected, leaving
+the production sidebar unchanged. The reproducible patch, fixed-binary measurements
+and rationale are in [the experiment report](../performance/2026-09-29-sidebar-boundaries/REPORT.md).

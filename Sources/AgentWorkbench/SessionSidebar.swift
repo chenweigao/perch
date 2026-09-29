@@ -13,6 +13,9 @@ struct WorkbenchSidebar: View {
         return model.selectedGroupID == nil && !model.showSessionDirectory ? .home : .other
     }
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = { if NativeAcceptanceProbe.shared.checkSidebarInvalidation { NativeAcceptanceProbe.shared.sidebarBodyEvaluations += 1 } }()
+        #endif
         let projection = model.sidebarProjection(filter: filter)
         let index = model.groupIndex
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
@@ -175,6 +178,9 @@ private struct SessionSidebarRow: View {
         return item.section == .attention ? item.detail : nil
     }
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = recordBody()
+        #endif
         SessionRowChrome(title: item.title, subtitle: subtitle,
                          hostName: item.hostName, hostID: item.reference.hostID,
                          directory: item.directory, detail: item.detail,
@@ -189,7 +195,22 @@ private struct SessionSidebarRow: View {
             SessionStatusIndicator(item: item)
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
+            #if PERCH_ACCEPTANCE
+            .background {
+                if NativeAcceptanceProbe.shared.checkSidebarInvalidation {
+                    NativeSidebarRowProbe(item: item, groups: groups, selected: selected,
+                        starred: model.workspace.starred.contains(item.reference), busy: model.managing.contains(item.id),
+                        canQuickArchive: model.canArchive(item) && (item.archived || item.section != .running))
+                }
+            }
+            #endif
     }
+    #if PERCH_ACCEPTANCE
+    private func recordBody() {
+        let probe = NativeAcceptanceProbe.shared
+        if probe.checkSidebarInvalidation { probe.sidebarRowEvaluations[item.id, default: 0] += 1 }
+    }
+    #endif
 }
 
 struct SessionActionsMenu: View {

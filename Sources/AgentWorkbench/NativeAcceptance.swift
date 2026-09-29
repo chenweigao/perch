@@ -17,6 +17,10 @@ import os
     var dashboardGroupID: UUID?
     var referenceWindow: NSWindow?
     weak var dashboardView: NSView?
+    let checkSidebarInvalidation = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-invalidation"
+    var sidebarBodyEvaluations = 0
+    var sidebarRowEvaluations: [String: Int] = [:]
+    let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
     var sidebarProjection: SidebarProjection?
     weak var sidebarView: NSView?
     weak var detailView: NSView?
@@ -32,6 +36,24 @@ struct NativeDetailProbe: NSViewRepresentable {
         NativeAcceptanceProbe.shared.detailView = view
         NativeAcceptanceProbe.shared.detailCurrent = current
     }
+}
+
+@MainActor final class NativeSidebarRowProbeView: NSView {
+    var value: NativeSidebarRowProbe?
+}
+struct NativeSidebarRowProbe: NSViewRepresentable {
+    let item: WorkspaceSession
+    let groups: [String]
+    let selected: Bool
+    let starred: Bool
+    let busy: Bool
+    let canQuickArchive: Bool
+    func makeNSView(context: Context) -> NativeSidebarRowProbeView {
+        let view = NativeSidebarRowProbeView()
+        NativeAcceptanceProbe.shared.sidebarRows.add(view)
+        return view
+    }
+    func updateNSView(_ view: NativeSidebarRowProbeView, context: Context) { view.value = self }
 }
 
 struct NativeSidebarProbe: NSViewRepresentable {
@@ -290,6 +312,7 @@ private struct ReferenceComposerFixtureView: View {
             }
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
+            if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
@@ -324,7 +347,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -357,6 +380,14 @@ private struct ReferenceComposerFixtureView: View {
             report["rss_settled_mb"] = residentMB(); report["status"] = "passed"
         } catch {
             report["status"] = "failed"; report["error"] = error.localizedDescription
+            if probe.checkSidebarInvalidation {
+                report["sidebar_diagnostic"] = [
+                    "recent": probe.sidebarProjection?.recent.map(\.id) ?? [],
+                    "favorites": probe.sidebarProjection?.favorites.map(\.id) ?? [],
+                    "rows": probe.sidebarRows.allObjects.filter { $0.window != nil }.compactMap { $0.value }.map {
+                        ["id": $0.item.id, "title": $0.item.title, "starred": String($0.starred)]
+                    }, "evaluations": probe.sidebarRowEvaluations]
+            }
             report["dashboard_diagnostic"] = ["expected_group": model.selectedGroupID?.uuidString ?? "global",
                 "rendered_group": probe.dashboardGroupID?.uuidString ?? "global",
                 "projection_matches": probe.dashboardProjection == model.dashboardProjection,
@@ -744,6 +775,65 @@ private struct ReferenceComposerFixtureView: View {
         }
         return ["query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
+    }
+    private func sidebarInvalidation(_ window: NSWindow) async throws -> [String: Any] {
+        func rows() -> [NativeSidebarRowProbe] {
+            probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap(\.value)
+        }
+        func counts() -> [String: Int] { probe.sidebarRowEvaluations }
+        func changed(_ before: [String: Int]) -> Set<String> {
+            Set(probe.sidebarRowEvaluations.filter { $0.value > before[$0.key, default: 0] }.map(\.key))
+        }
+        model.workspace.starred = []
+        model.workspace.groups = []
+        try await settle(window, "sidebar initial rows") { rows().count == 20 }
+        let beforeSelection = counts(), rootBefore = probe.sidebarBodyEvaluations
+        model.open(fixture.sessions[1])
+        try await settle(window, "sidebar selection") {
+            rows().filter(\.selected).map { $0.item.id } == [self.fixture.sessions[1].id] &&
+                self.hasMountedMessage(window, session: "session-1")
+        }
+        let selectionRoots = probe.sidebarBodyEvaluations - rootBefore
+        let selectionRows = changed(beforeSelection)
+        var sessions = fixture.sessions
+        let old = sessions[4]
+        sessions[4] = WorkspaceSession(reference: old.reference, title: "新的行标题", directory: old.directory,
+            hostName: old.hostName, detail: "新的待处理状态", online: old.online, section: .attention,
+            canMarkReviewed: old.canMarkReviewed, archived: old.archived, updatedAt: old.updatedAt + 1)
+        let beforeItem = counts()
+        model.acceptanceUpdateCatalog(sessions)
+        try await settle(window, "sidebar single row") { rows().contains { $0.item == sessions[4] } }
+        let itemRows = changed(beforeItem).count
+        // Operational state must refresh without relying on a catalog edit.
+        let beforeBusy = counts()
+        model.managing.insert(old.id)
+        try await settle(window, "sidebar busy") { rows().contains { $0.item.id == old.id && $0.busy } }
+        let busyRows = changed(beforeBusy).count
+        model.managing.remove(old.id)
+        try await settle(window, "sidebar busy reset") { rows().contains { $0.item.id == old.id && !$0.busy } }
+        let beforeGroups = counts()
+        model.workspace.groups = [WorkItemGroup(name: "新的任务组", goal: "", nextStep: "", sessions: [old.reference])]
+        try await settle(window, "sidebar group membership") { rows().contains { $0.item.id == old.id && $0.groups == ["新的任务组"] } }
+        let groupRows = changed(beforeGroups).count
+        model.workspace.groups = []
+        try await settle(window, "sidebar group reset") { rows().contains { $0.item.id == old.id && $0.groups.isEmpty } }
+        model.workspace.starred = [old.reference]
+        try await settle(window, "sidebar pin") {
+            self.probe.sidebarProjection?.favorites.map(\.id) == [old.id] && rows().contains { $0.item.id == old.id && $0.starred }
+        }
+        model.workspace.starred = []
+        model.acceptanceUpdateCatalog(Array(sessions[1...] + sessions[..<1]))
+        try await settle(window, "sidebar order") {
+            self.probe.sidebarProjection?.recent.map(\.id) == Array(sessions.dropFirst().filter { !$0.archived }.prefix(20).map(\.id)) &&
+                rows().contains { $0.item == sessions[4] && !$0.starred }
+        }
+        model.acceptanceUpdateCatalog(fixture.sessions)
+        try await settle(window, "sidebar content restore") { rows().contains { $0.item == old } }
+        return ["selection_changed_rows": selectionRows.count, "selection_sidebar_body_evaluations": selectionRoots,
+                "single_row_changed_rows": itemRows, "busy_changed_rows": busyRows, "group_changed_rows": groupRows,
+                "single_row_content_refresh": true, "busy_state_refresh": true, "group_membership_refresh": true,
+                "pin_order_and_content_refresh": true,
+                "boundary": "mounted row probes and body counts; no timing or hardware event claim"]
     }
     private func detailLifecycle(_ window: NSWindow) async throws -> [String: Any] {
         guard let scroll = transcript(in: window), let document = ConversationTranscript.document(in: scroll),
