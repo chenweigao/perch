@@ -25,6 +25,8 @@ private final class NativeInvalidationFlag: @unchecked Sendable {
     await client.loadModels()
     precondition(!reader.value, "draft and model catalog updates invalidated snapshot consumers")
     client.select("b")
+    precondition(client.snapshot == nil && client.conversation.presentationSnapshot?.id == "a",
+                 "pending selection must retain presentation only, never authoritative readiness")
     precondition(reader.value, "selection changes must invalidate snapshot consumers")
     client.disconnect()
 
@@ -63,5 +65,10 @@ private final class NativeInvalidationFlag: @unchecked Sendable {
     state.loadSelection { throw URLError(.badServerResponse) }
     await ConnectionChecks.settle { !state.isSelecting }
     precondition(state.actionError != nil, "current selection failure must remain visible and retryable")
+    state.snapshot = try JSONDecoder().decode(NativeAgentSnapshot.self, from: Data(#"{"id":"b","provider":"omp","title":"Fixture","cwd":"/fixture","busy":false,"revision":1,"completed":0,"model":"fixture-model","messages":[],"interactions":[]}"#.utf8))
+    state.select("c")
+    precondition(state.snapshot == nil && state.presentationSnapshot?.id == "b")
+    state.select(nil)
+    precondition(state.presentationSnapshot == nil, "removal must release the retained presentation")
     print("PASS: native observation isolation and selection/history cancellation, late failure and cleanup ownership")
 }

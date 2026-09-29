@@ -19,7 +19,19 @@ import os
     weak var dashboardView: NSView?
     var sidebarProjection: SidebarProjection?
     weak var sidebarView: NSView?
+    weak var detailView: NSView?
+    var detailCurrent = false
+    let checkDetailLifecycle = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "detail-lifecycle"
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
+}
+
+struct NativeDetailProbe: NSViewRepresentable {
+    let current: Bool
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        NativeAcceptanceProbe.shared.detailView = view
+        NativeAcceptanceProbe.shared.detailCurrent = current
+    }
 }
 
 struct NativeSidebarProbe: NSViewRepresentable {
@@ -77,6 +89,19 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     private(set) var requests: [String] = []
     private(set) var responseMessages: [Int] = []
     private(set) var responseBytes: [Int] = []
+    var holdSelection = false
+    var failSelection = false
+    private(set) var mutationRequests = 0
+    var pendingSelection: [CheckedContinuation<Void, Never>] = []
+    func response(_ path: String, body: JSONValue?) async throws -> Data {
+        if body != nil { mutationRequests += 1 }
+        let data = try request(path, body: body)
+        if holdSelection, path.hasPrefix("/sessions/"), body == nil {
+            await withCheckedContinuation { pendingSelection.append($0) }
+        }
+        if failSelection, path.hasPrefix("/sessions/"), body == nil { throw URLError(.timedOut) }
+        return data
+    }
     init() throws {
         sessions = (0..<500).map { index -> WorkspaceSession in
             let reference = SessionReference(hostID: Self.host.id, terminalID: "session-\(index)", kind: .omp)
@@ -197,7 +222,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         let fixture = try! NativeAcceptanceFixture()
         self.fixture = fixture
         let connection = NativeAgentConnection(host: NativeAcceptanceFixture.host) { path, body in
-            try fixture.request(path, body: body)
+            try await fixture.response(path, body: body)
         }
         _model = State(initialValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
                                                          sessions: fixture.sessions, native: connection,
@@ -265,6 +290,7 @@ private struct ReferenceComposerFixtureView: View {
             }
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
+            if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
             }
@@ -298,7 +324,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -718,6 +744,115 @@ private struct ReferenceComposerFixtureView: View {
         }
         return ["query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
+    }
+    private func detailLifecycle(_ window: NSWindow) async throws -> [String: Any] {
+        guard let scroll = transcript(in: window), let document = ConversationTranscript.document(in: scroll),
+              let editor = draftEditor(in: window.contentView), let navigator = ConversationTranscript.navigator(in: scroll),
+              window.makeFirstResponder(editor) else { throw WorkbenchError("Missing detail fixture") }
+        navigator.select(80)
+        try await settle(window) { navigator.current == 80 }
+        guard let anchor = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing reading anchor") }
+        editor.insertText("A 已提交", replacementRange: NSRange(location: 0, length: editor.string.utf16.count))
+        try await settle(window) { self.model.native.drafts["session-0"] == "A 已提交" }
+        editor.setMarkedText("zhongwen", selectedRange: NSRange(location: 8, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        guard editor.hasMarkedText() else { throw WorkbenchError("Missing composition") }
+        let oldSend = editor.onSend
+        let oldUndo = editor.undoManager
+        model.native.drafts["session-1"] = "B 独立草稿"
+        fixture.holdSelection = true
+        defer {
+            fixture.holdSelection = false
+            for continuation in fixture.pendingSelection { continuation.resume() }
+            fixture.pendingSelection.removeAll()
+        }
+        model.open(fixture.sessions[1])
+        try await settle(window, "pending selection") {
+            !self.fixture.pendingSelection.isEmpty && !self.probe.detailCurrent && !editor.isEditable
+        }
+        guard model.native.snapshot == nil, model.native.conversation.presentationSnapshot?.id == "session-0",
+              transcript(in: window) === scroll, ConversationTranscript.document(in: scroll) === document else {
+            throw WorkbenchError("Loading replaced the detail host or exposed readiness")
+        }
+        // Read actual native ancestor visibility, not just the state supplied to
+        // the SwiftUI modifier. The retained tree must be visually suppressed.
+        func hidden(_ view: NSView?) -> Bool {
+            guard let view else { return false }
+            if view.isHidden || view.alphaValue == 0 || view.layer?.opacity == 0 { return true }
+            return hidden(view.superview)
+        }
+        guard hidden(probe.detailView) else { throw WorkbenchError("Retained detail is still visible while loading") }
+        // A deferred rail selection or native scroll notification may outlive
+        // the selection transaction. Neither may mutate the suspended reader.
+        let pausedOrigin = scroll.contentView.bounds.origin
+        navigator.select(5)
+        NotificationCenter.default.post(name: NSScrollView.willStartLiveScrollNotification, object: scroll)
+        try await Task.sleep(for: .milliseconds(10))
+        flush(window)
+        guard scroll.contentView.bounds.origin == pausedOrigin else { throw WorkbenchError("Deferred navigation moved the suspended reader") }
+        let requests = fixture.mutationRequests
+        oldSend?()
+        await Task.yield()
+        guard fixture.mutationRequests == requests, model.native.queue.allItems.isEmpty else {
+            throw WorkbenchError("Old composer sent during replacement")
+        }
+        fixture.holdSelection = false
+        fixture.pendingSelection.removeFirst().resume()
+        try await settle(window) {
+            self.hasMountedMessage(window, session: "session-1") && self.probe.detailCurrent &&
+                self.draftEditor(in: window.contentView).map { window.firstResponder === $0 } == true
+        }
+        guard let next = draftEditor(in: window.contentView), next !== editor, !next.hasMarkedText(),
+              next.string == "B 独立草稿", next.undoManager !== oldUndo, next.undoManager?.canUndo == false,
+              transcript(in: window) === scroll, ConversationTranscript.document(in: scroll) === document else {
+            throw WorkbenchError("Detail/composer lifetime isolation failed")
+        }
+        oldSend?()
+        await Task.yield()
+        guard fixture.mutationRequests == requests, model.native.queue.allItems.isEmpty else {
+            throw WorkbenchError("Old composer sent to the loaded replacement")
+        }
+        model.open(fixture.sessions[0])
+        try await settle(window, "return to reading anchor") {
+            guard self.hasMountedMessage(window, session: "session-0"),
+                  let after = ConversationTranscript.readingAnchor(in: scroll) else { return false }
+            return after.entry == anchor.entry && abs(after.offset - anchor.offset) <= 1
+        }
+        guard model.native.drafts["session-1"] == "B 独立草稿" else { throw WorkbenchError("Composition leaked into B") }
+        fixture.failSelection = true
+        model.open(fixture.sessions[1])
+        try await settle(window, "failed selection") { self.model.native.actionError != nil && !self.model.native.conversation.isSelecting }
+        guard model.native.snapshot == nil, !probe.detailCurrent, hidden(probe.detailView),
+              ConversationTranscript.document(in: scroll) === document else { throw WorkbenchError("Failed load exposed the retained detail") }
+        fixture.failSelection = false
+        model.native.select("session-1")
+        try await settle(window, "retry selection") { self.hasMountedMessage(window, session: "session-1") && self.probe.detailCurrent }
+        guard ConversationTranscript.document(in: scroll) === document else { throw WorkbenchError("Retry replaced the renderer") }
+
+        // Preload the same raw session ID on another connection. There is no nil
+        // snapshot between these hosts to accidentally reset the old editor.
+        let otherHost = SSHHost(id: UUID(uuidString: "00000000-0000-0000-0000-000000000024")!, name: "另一隔离环境", destination: "")
+        let other = NativeAgentConnection(host: otherHost) { [fixture] path, body in try await fixture.response(path, body: body) }
+        other.drafts["session-1"] = "另一环境的独立草稿"
+        other.select("session-1")
+        try await settle(window) { other.snapshot?.id == "session-1" }
+        model.registerEnvironment(kimi: KimiConnection(host: otherHost), native: other)
+        let item = WorkspaceSession(reference: SessionReference(hostID: otherHost.id, terminalID: "session-1", kind: .omp),
+            title: "同名会话", directory: "/fixture", hostName: otherHost.name, detail: "就绪", online: true, section: .other, canMarkReviewed: false)
+        model.acceptanceUpdateCatalog([item] + fixture.sessions)
+        guard let outgoing = draftEditor(in: window.contentView) else { throw WorkbenchError("Missing outgoing editor") }
+        outgoing.setMarkedText("host-a", selectedRange: NSRange(location: 6, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        model.open(item)
+        try await settle(window, "same ID on another host") {
+            self.model.native === other && self.draftEditor(in: window.contentView)?.string == "另一环境的独立草稿"
+        }
+        guard let incoming = draftEditor(in: window.contentView), incoming !== outgoing, !incoming.hasMarkedText(),
+              let otherScroll = transcript(in: window), ConversationTranscript.document(in: otherScroll) !== document else {
+            throw WorkbenchError("Another connection reused the old detail/editor")
+        }
+        return ["detail_host_preserved": true, "loading_hides_native_tree": true,
+                "composer_identity_and_undo_isolated": true, "old_send_rejected": true,
+                "marked_text_did_not_cross_session": true, "return_anchor_preserved": true,
+                "focus_restored": true, "failed_load_and_retry": true, "same_id_cross_host_isolated": true]
     }
     private func paging(_ window: NSWindow) async throws -> [String: Any] {
         guard model.native.snapshot?.messages.count == 100, model.native.snapshot?.history?.start == 300,

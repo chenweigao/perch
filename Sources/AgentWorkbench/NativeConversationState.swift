@@ -7,7 +7,13 @@ import WorkbenchCore
 @MainActor @Observable
 final class NativeConversationState {
     private(set) var selectedID: String?
-    var snapshot: NativeAgentSnapshot?
+    var snapshot: NativeAgentSnapshot? {
+        didSet { if let snapshot { presentationSnapshot = snapshot } }
+    }
+    /// One last loaded value keeps the detail tree alive during selection reads.
+    /// It is presentation-only: hidden and disabled unless `snapshot` is current.
+    /// Transport, commands and readiness must continue to use `snapshot`.
+    private(set) var presentationSnapshot: NativeAgentSnapshot?
     var actionError: String?
     private(set) var loadingOlder = false
     @ObservationIgnored private(set) var generation = UUID()
@@ -18,6 +24,7 @@ final class NativeConversationState {
     func select(_ id: String?) {
         cancelLoads()
         selectedID = id; snapshot = nil; actionError = nil
+        if id == nil { presentationSnapshot = nil }
     }
 
     func cancelLoads() {

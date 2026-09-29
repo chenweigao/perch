@@ -67,6 +67,40 @@ are stable; adoption needs evidence that composition/testing saves more code tha
 it adds. SwiftData is a separate storage decision requiring a migration and
 recovery design. Neither is introduced by this change.
 
+## Native detail renderer lifetime
+
+`NativeConversationState.snapshot` remains the authoritative selected response.
+Selection clears it immediately and existing cancellation/generation checks protect
+its publication. `presentationSnapshot` holds just the last loaded value so the
+detail tree can survive a pending selection. It is not a response cache and must
+never be used for command routing, readiness or connection decisions. Removing the
+selection clears both; a completed read replaces the presentation value.
+
+`NativeAgentView` hides, disables and removes the retained detail from accessibility
+until the authoritative snapshot matches the selected session. Loading and failure
+UI appear above that same container. The transcript explicitly suspends its AppKit
+document: save the reading position, hide the native subtree, reserve geometry and
+skip content/appearance reconciliation, measurement and navigation. Resuming supplies
+current content and appearance before restoring position. This avoids propagating a
+temporary disabled appearance through all outgoing rows merely to show a spinner.
+
+The scroll view and transcript document retain identity across selection, error and
+retry within one connection. The detail root is keyed by connection identity, so
+two hosts with identical raw session IDs cannot share input or renderer state.
+Displayed-result callbacks capture their originating connection's host. The
+composer, activity bar, pending-message editor and interaction state stay
+keyed by session; composer text input and undo state therefore remain independent.
+Send/stop callbacks also validate the selected snapshot at invocation. This does not
+retain a UI tree for each tab or expand the shared presentation model cache.
+
+The native `detail-lifecycle` functional scenario delays a read and verifies actual
+native ancestor visibility, renderer identity, composer replacement, focus, marked
+text/undo isolation, old send rejection, suspended navigation, reading-position
+return, failure and retry. Connection checks separately cover late A-B-A replies and
+selection removal. A preloaded second host with the same raw session ID also has a
+mounted composition-isolation check. Kimi retains its existing detail lifecycle in
+this change.
+
 ## Verification boundary
 
 Observation tracking tests establish invalidation behavior; deterministic async

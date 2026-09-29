@@ -589,6 +589,8 @@ struct ConnectionChecks {
         fixture.pendingSnapshots[1].0.resume(returning: fixture.pendingSnapshots[1].1)
         await settle { fixture.returnedSnapshots == 3 }
         precondition(client.snapshot?.id == "a" && client.snapshot?.revision == 3)
+        precondition(client.conversation.presentationSnapshot?.id == "a" && client.conversation.presentationSnapshot?.revision == 3,
+                     "late replies must not replace the retained presentation")
         precondition(client.actionError == nil)
         client.select("b")
         await settle { fixture.pendingSnapshots.count == 4 }

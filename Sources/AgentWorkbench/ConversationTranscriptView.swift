@@ -143,6 +143,7 @@ struct ConversationTranscript: View {
     var allowsActivitySummaries = false
     var followsLatest = true
     var historyEpoch: String?
+    var isSuspended = false
     @Environment(\.conversationPresentations) private var presentations
     @State private var presentation = ConversationPresentationHandle()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
@@ -170,7 +171,7 @@ struct ConversationTranscript: View {
         ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
-                                 layout: documentLayout) { height in
+                                 layout: documentLayout, suspended: isSuspended) { height in
             measured = (sessionId, height)
         }.frame(height: measured?.session == sessionId ? measured?.height : nil)
             .onGeometryChange(for: CGFloat.self) {
@@ -213,6 +214,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     let appearance: ConversationEntryAppearance
     let viewport: ConversationViewport?
     let layout: ConversationDocumentLayout
+    var suspended = false
     let heightChanged: (CGFloat) -> Void
     func makeCoordinator() -> ConversationDocumentLayout { layout }
     func makeNSView(context: Context) -> ConversationDocumentView {
@@ -221,12 +223,14 @@ private struct ConversationDocumentHost: NSViewRepresentable {
         return document
     }
     func updateNSView(_ view: ConversationDocumentView, context: Context) {
+        guard !suspended else { view.suspend(); return }
         view.heightChanged = heightChanged
         view.configure(contents, contentIdentity: contentIdentity, navigation: navigation, sessionId: sessionId, appearance: appearance,
                        viewport: viewport, contentOriginY: layout.originY)
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ConversationDocumentView, context: Context) -> CGSize? {
-        nsView.measure(width: proposal.width)
+        if suspended { nsView.suspend() }
+        return nsView.measure(width: proposal.width)
     }
     static func dismantleNSView(_ view: ConversationDocumentView, coordinator: ConversationDocumentLayout) {
         if coordinator.document === view { coordinator.document = nil }
@@ -238,6 +242,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
 /// Actual measurements replace estimates as rows are read. Only nearby controllers
 /// survive detachment; disclosure state lives in ConversationReadingMemory.
 private final class ConversationDocumentView: NSView {
+    private var suspended = false
     private var contents: [ConversationEntryView] = []
     private var contentIdentity: ConversationContentIdentity?
     private var indices: [String: Int] = [:]
@@ -360,6 +365,7 @@ private final class ConversationDocumentView: NSView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
+        guard !suspended else { return }
         revealEntry(target.hit.entryID)
         let intent = readingIntent
         DispatchQueue.main.async { [weak self] in
@@ -387,7 +393,7 @@ private final class ConversationDocumentView: NSView {
         }
     }
     private func revealEntry(_ id: String, highlight: Bool = false) {
-        guard let index = indices[id], let clip = observedClip else { return }
+        guard !suspended, let index = indices[id], let clip = observedClip else { return }
         cancelPendingRestoration()
         ConversationReadingMemory.shared.following[sessionId] = false
         viewport?.pauseFollowing?()
@@ -429,6 +435,21 @@ private final class ConversationDocumentView: NSView {
     var heightChanged: (CGFloat) -> Void = { _ in }
     override var isFlipped: Bool { true }
 
+    /// Loading is a renderer lifecycle transition, not new empty content or a
+    /// disabled appearance for every row. Preserve the outgoing reading anchor
+    /// before hiding; delayed geometry callbacks cannot overwrite it meanwhile.
+    func suspend() {
+        guard !suspended else { return }
+        saveReadingPosition()
+        saveReadingHeights()
+        readingIntent += 1 // Invalidate queued find/resize callbacks from the outgoing reader.
+        if ConversationReadingMemory.shared.following[sessionId] == false {
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+        }
+        suspended = true
+        isHidden = true
+    }
+
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
                    contentOriginY: CGFloat) {
@@ -453,6 +474,8 @@ private final class ConversationDocumentView: NSView {
             self.navigation = navigation
             turnRows = navigation.compactMap { indices[$0.id] }
         }
+        suspended = false
+        isHidden = false
         self.contentOriginY = contentOriginY
         observeScroll()
         restoreReadingPosition()
@@ -572,6 +595,7 @@ private final class ConversationDocumentView: NSView {
 
     func measure(width: CGFloat?) -> CGSize {
         let nextWidth = max(1, width?.isFinite == true ? width! : ReplyStyle.readingWidth)
+        guard !suspended else { return CGSize(width: nextWidth, height: totalHeight) }
         if columnWidth != nextWidth {
             // AppKit can adjust the clip origin when wrapping changes, even if
             // no row above the reader changes height. Capture before measuring.
@@ -617,7 +641,7 @@ private final class ConversationDocumentView: NSView {
         return CGRect(x: 0, y: 0, width: columnWidth, height: viewport?.view?.bounds.height ?? 600)
     }
     func refreshVisibleRows() {
-        guard !refreshing, let appearance = rowAppearance, !contents.isEmpty else { return }
+        guard !suspended, !refreshing, let appearance = rowAppearance, !contents.isEmpty else { return }
         refreshing = true
         defer { refreshing = false }
         let visible = viewportRect
@@ -716,6 +740,7 @@ private final class ConversationDocumentView: NSView {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.publicationScheduled = false
+            guard !self.suspended else { return }
             guard self.publishedHeight != self.totalHeight else { return }
             self.publishedHeight = self.totalHeight
             self.invalidateIntrinsicContentSize()
@@ -752,7 +777,7 @@ private final class ConversationDocumentView: NSView {
         }.min() ?? geometry.readingRow(at: max(0, visible.minY))
     }
     private func saveReadingPosition() {
-        guard restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
+        guard !suspended, restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
               let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
         ConversationReadingMemory.shared.savePosition(.init(entry: contents[index].entry.id,
@@ -763,10 +788,12 @@ private final class ConversationDocumentView: NSView {
         ConversationReadingMemory.shared.saveHeights(Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights)), for: sessionId)
     }
     fileprivate func cancelPendingRestoration() {
+        guard !suspended else { return }
         readingIntent += 1
         restoreTarget = nil
     }
     private func restoreReadingPosition() {
+        guard !suspended else { return }
         // Return to latest can run before the queued height publication.
         if ConversationReadingMemory.shared.following[sessionId] == true {
             restoreTarget = nil
@@ -809,6 +836,10 @@ private final class ConversationDocumentView: NSView {
 
 #if TRANSCRIPT_CHECKS
 extension ConversationTranscript {
+    static func document(in root: NSView) -> NSView? {
+        if root is ConversationDocumentView { return root }
+        return root.subviews.lazy.compactMap { document(in: $0) }.first
+    }
     static func checkReconciliation(in root: NSView) throws -> [String: Any]? {
         if let document = root as? ConversationDocumentView { return try document.checkReconciliation() }
         for child in root.subviews {

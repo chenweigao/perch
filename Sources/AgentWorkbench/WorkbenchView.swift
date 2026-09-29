@@ -192,7 +192,9 @@ private struct WorkbenchDetail: View {
                 else if model.showKimi {
                     KimiSelectionContent(model: model, connection: model.kimi)
                 } else if model.showNative {
-                    NativeAgentView(connection: model.native, onResultDisplayed: { model.reviewDisplayed($0, on: model.native.host.id) })
+                    let connection = model.native
+                    NativeAgentView(connection: connection, onResultDisplayed: { model.reviewDisplayed($0, on: connection.host.id) })
+                        .id(ObjectIdentifier(connection))
                 }
                 else if model.selectedTerminal == nil { unavailableSession }
                 ForEach(model.terminals) { terminal in
