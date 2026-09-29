@@ -48,9 +48,22 @@ struct SessionRowChrome<Indicator: View>: View {
                     indicator.frame(width: 17, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
+                        #if PERCH_ACCEPTANCE
+                        if NativeAcceptanceProbe.shared.persistentSubtitle {
+                            Text(subtitle ?? "").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                                .frame(height: subtitle == nil ? 0 : nil).clipped()
+                                .padding(.top, subtitle == nil ? -3 : 0)
+                                .accessibilityHidden(subtitle == nil)
+                        } else {
                         if let subtitle {
                             Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                         }
+                        }
+                        #else
+                        if let subtitle {
+                            Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }.padding(.leading, 10).padding(.trailing, 4)
                     .frame(height: rowHeight).contentShape(Rectangle())

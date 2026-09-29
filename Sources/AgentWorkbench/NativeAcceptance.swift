@@ -19,9 +19,17 @@ import os
     weak var dashboardView: NSView?
     let checkSidebarInvalidation: Bool = {
         let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? ""
-        return mode == "sidebar-invalidation" || mode.hasPrefix("sidebar-layout-")
+        return ["sidebar-invalidation", "sidebar-structure"].contains(mode) || (mode.hasPrefix("sidebar-layout-") && !mode.hasSuffix("-unprobed"))
     }()
     let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
+    let sidebarVariant = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] ?? "flat"
+    var flatSidebar: Bool { sidebarVariant == "flat" }
+    var keepSidebarHeader: Bool { sidebarVariant == "keep-header" }
+    var persistentSubtitle: Bool { sidebarVariant == "persistent-subtitle" }
+    @Published var showEmptySidebarHeader = false
+    @Published var sidebarFilter: SidebarRecentFilter?
+    var sidebarRowCreates = 0
+    var sidebarRowDismantles = 0
     var sidebarBodyEvaluations = 0
     var sidebarRowEvaluations: [String: Int] = [:]
     let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
@@ -43,6 +51,7 @@ struct NativeDetailProbe: NSViewRepresentable {
 }
 
 @MainActor final class NativeSidebarRowProbeView: NSView {
+    let identity = UUID()
     var value: NativeSidebarRowProbe?
 }
 struct NativeSidebarRowProbe: NSViewRepresentable {
@@ -55,9 +64,13 @@ struct NativeSidebarRowProbe: NSViewRepresentable {
     func makeNSView(context: Context) -> NativeSidebarRowProbeView {
         let view = NativeSidebarRowProbeView()
         NativeAcceptanceProbe.shared.sidebarRows.add(view)
+        NativeAcceptanceProbe.shared.sidebarRowCreates += 1
         return view
     }
     func updateNSView(_ view: NativeSidebarRowProbeView, context: Context) { view.value = self }
+    static func dismantleNSView(_ view: NativeSidebarRowProbeView, coordinator: ()) {
+        NativeAcceptanceProbe.shared.sidebarRowDismantles += 1
+    }
 }
 
 struct NativeSidebarProbe: NSViewRepresentable {
@@ -317,6 +330,7 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
             if mode.hasPrefix("sidebar-layout-") { report.merge(try await sidebarLayout(window, mode: mode)) { _, new in new } }
+            if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
             if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
             if mode == "joint" {
@@ -352,7 +366,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -784,9 +798,10 @@ private struct ReferenceComposerFixtureView: View {
     /// Independent directory mutations with mounted data, order and row-height
     /// readiness. Fixed height is an acceptance-only ablation, never a UI policy.
     private func sidebarLayout(_ window: NSWindow, mode: String) async throws -> [String: Any] {
-        let kind = String(mode.dropFirst("sidebar-layout-".count))
+        let unprobed = mode.hasSuffix("-unprobed")
+        let kind = String(mode.dropFirst("sidebar-layout-".count)).replacingOccurrences(of: "-unprobed", with: "")
         let changesHeight = kind == "height" || kind == "height-fixed"
-        let base = fixture.sessions.map { item in
+        let base = (kind == "pins-fixed-members" ? Array(fixture.sessions.prefix(20)) : fixture.sessions).map { item in
             WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
                 hostName: item.hostName, detail: "固定待处理内容", online: true,
                 section: changesHeight ? .attention : .review, canMarkReviewed: false,
@@ -806,6 +821,7 @@ private struct ReferenceComposerFixtureView: View {
             guard let rendered = probe.sidebarProjection, probe.sidebarView?.window === window,
                   rendered.favorites == expected.favorites, rendered.recent == expected.recent,
                   rendered.attentionCount == expected.attentionCount else { return false }
+            if unprobed { return true }
             let actual = mounted(), items = expected.favorites + expected.recent
             guard actual.count == items.count else { return false }
             return zip(actual, items).allSatisfy { row, item in
@@ -817,6 +833,13 @@ private struct ReferenceComposerFixtureView: View {
         let initial = SidebarProjection(sessions: base, starred: [])
         try await settle(window, "sidebar layout initial geometry") { ready(initial) }
         try await Task.sleep(for: .milliseconds(200))
+        func identities() -> [String: UUID] {
+            Dictionary(uniqueKeysWithValues: probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap { view in
+                view.value.map { ($0.item.id, view.identity) }
+            })
+        }
+        var previousIdentities = identities(), retainedIdentities = 0, replacedIdentities = 0
+        probe.sidebarRowCreates = 0; probe.sidebarRowDismantles = 0
         var durations: [Double] = [], samples: [[String: Any]] = []
         var changedHeights = 0, movedRows = 0, insertedRows = 0, removedRows = 0
         var previous = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
@@ -838,7 +861,9 @@ private struct ReferenceComposerFixtureView: View {
             case "order":
                 let offset = (step + 1) % 20
                 next = Array(base[offset..<20] + base[..<offset] + base[20...])
-            case "pins": pins = step % 2 == 0 ? Array(base.prefix(4).map(\.reference)) : []
+            case "pins", "pins-fixed-members": pins = step % 2 == 0 ? Array(base.prefix(4).map(\.reference)) : []
+            case "membership":
+                if step % 2 == 0 { next = Array(base[20..<24] + base[4..<20] + base[..<4] + base[24...]) }
             case "height", "height-fixed":
                 next = base.enumerated().map { index, item in
                     guard index < 20 else { return item }
@@ -850,10 +875,18 @@ private struct ReferenceComposerFixtureView: View {
             }
             let expected = SidebarProjection(sessions: next, starred: pins)
             let start = CACurrentMediaTime()
-            if kind == "pins" { model.workspace.starred = pins }
+            if kind == "pins" || kind == "pins-fixed-members" { model.workspace.starred = pins }
+            if kind == "header" { probe.showEmptySidebarHeader = step % 2 == 0 }
             model.acceptanceUpdateCatalog(next)
             try await settle(window, "\(mode) step \(step)") { ready(expected) }
             durations.append((CACurrentMediaTime() - start) * 1000)
+            let currentIdentities = identities()
+            for (id, identity) in currentIdentities {
+                if let old = previousIdentities[id] {
+                    if old == identity { retainedIdentities += 1 } else { replacedIdentities += 1 }
+                }
+            }
+            previousIdentities = currentIdentities
             // Detailed geometry accounting is outside each response sample.
             let current = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
             for (id, rect) in current {
@@ -874,15 +907,80 @@ private struct ReferenceComposerFixtureView: View {
         }
         if changesHeight && !probe.fixedSidebarHeight && changedHeights != 1600 { throw WorkbenchError("Missing dynamic row-height changes") }
         if (!changesHeight || probe.fixedSidebarHeight) && changedHeights != 0 { throw WorkbenchError("Fixed-height control changed row sizes") }
-        return ["layout_kind": kind, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
+        let crossesSections = kind == "pins" || kind == "pins-fixed-members"
+        let expectedReplacements = crossesSections && !probe.flatSidebar && !unprobed ? 320 : 0
+        guard replacedIdentities == expectedReplacements,
+              probe.sidebarRowCreates == insertedRows + expectedReplacements,
+              probe.sidebarRowDismantles == removedRows + expectedReplacements else {
+            throw WorkbenchError("Unexpected sidebar row-marker lifecycle")
+        }
+        if kind == "header" && !probe.keepSidebarHeader && movedRows != 1600 {
+            throw WorkbenchError("Header control did not move the existing rows")
+        }
+        return ["sidebar_variant": probe.sidebarVariant, "row_probes_enabled": !unprobed,
+                "native_row_lifecycle": ["created": probe.sidebarRowCreates, "dismantled": probe.sidebarRowDismantles,
+                                         "retained_common_ids": retainedIdentities, "replaced_common_ids": replacedIdentities],
+                "layout_kind": kind, "layout_catalog_sessions": base.count, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
                 "layout_process_cpu_seconds": cpuSeconds,
                 "sidebar_body_evaluations": probe.sidebarBodyEvaluations,
                 "sidebar_row_body_evaluations": probe.sidebarRowEvaluations.values.reduce(0, +),
                 "geometry": ["height_changes": changedHeights, "moved_rows": movedRows,
                              "inserted_rows": insertedRows, "removed_rows": removedRows], "initial_geometry_samples": samples,
                 "render_stages": NavigationRenderMetrics.report,
-                "layout_contract": "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
+                "layout_contract": unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
                 "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
+    }
+    private func sidebarStructure(_ window: NSWindow) async throws -> [String: Any] {
+        let defaults = UserDefaults.standard
+        let keys = ["sidebar.favorites.expanded", "sidebar.recent.expanded"]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer { for (key, value) in zip(keys, saved) { defaults.set(value, forKey: key) }; probe.sidebarFilter = nil }
+        for key in keys { defaults.set(true, forKey: key) }
+        model.workspace.groups = []
+        let pins = Array(fixture.sessions.prefix(2).map(\.reference))
+        model.workspace.starred = pins
+        func rows() -> [NativeSidebarRowProbe] {
+            guard let root = probe.sidebarView else { return [] }
+            return probe.sidebarRows.allObjects.filter { $0.window === window }.sorted {
+                let a = $0.convert($0.bounds, to: root), b = $1.convert($1.bounds, to: root)
+                return root.isFlipped ? a.minY < b.minY : a.maxY > b.maxY
+            }.compactMap(\.value)
+        }
+        let all = SidebarProjection(sessions: fixture.sessions, starred: pins)
+        try await settle(window, "expanded sections") { rows().map { $0.item.id } == (all.favorites + all.recent).map(\.id) }
+        defaults.set(false, forKey: keys[0])
+        try await settle(window, "collapsed favorites") { rows().map { $0.item.id } == all.recent.map(\.id) }
+        defaults.set(false, forKey: keys[1])
+        try await settle(window, "collapsed both") { rows().isEmpty }
+        // Updates while hidden must appear on expansion, including per-row busy state.
+        let catalog = fixture.sessions.enumerated().map { index, item in
+            WorkspaceSession(reference: item.reference, title: "结构验收 " + item.title, directory: item.directory,
+                hostName: item.hostName, detail: item.detail, online: true,
+                section: index < 5 ? .running : .review, canMarkReviewed: false, archived: item.archived, updatedAt: item.updatedAt)
+        }
+        model.acceptanceUpdateCatalog(catalog)
+        model.managing.insert(catalog[0].id)
+        defaults.set(true, forKey: keys[0])
+        try await settle(window, "expand updated favorites") {
+            rows().map(\.item) == Array(catalog.prefix(2)) && rows().first?.busy == true
+        }
+        probe.sidebarFilter = .running
+        defaults.set(true, forKey: keys[1])
+        let running = SidebarProjection(sessions: catalog, starred: pins, filter: .running)
+        try await settle(window, "filtered recent, unfiltered favorites") {
+            rows().map(\.item) == running.favorites + running.recent && rows().filter(\.selected).map { $0.item.id } == [catalog[0].id]
+        }
+        model.workspace.starred = []
+        let unpinned = SidebarProjection(sessions: catalog, starred: [], filter: .running)
+        try await settle(window, "remove last favorites header") { rows().map(\.item) == unpinned.recent }
+        model.managing.remove(catalog[0].id)
+        probe.sidebarFilter = .all
+        model.acceptanceUpdateCatalog(fixture.sessions)
+        try await settle(window, "restore all sessions") {
+            rows().map(\.item) == SidebarProjection(sessions: self.fixture.sessions, starred: []).recent
+        }
+        return ["collapse_expand_and_hidden_updates": true, "filter_and_last_pin_removal": true,
+                "structure_contract": "real AppStorage/local filter state, mounted values and physical order; no mouse/keyboard delivery claim"]
     }
     private func sidebarInvalidation(_ window: NSWindow) async throws -> [String: Any] {
         func rows() -> [NativeSidebarRowProbe] {

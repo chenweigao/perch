@@ -246,3 +246,22 @@ separate and do not establish hardware-input latency or frame rate.
 
 See [the layout diagnosis](../performance/2026-09-29-sidebar-layout/REPORT.md) before
 changing section identity, row density or the underlying list control.
+
+## Sidebar identity across sections
+
+Pinned and recent sessions use one eager `ForEach` whose entries include section
+headers and the existing task-group block. A session's identity is its session ID;
+its current section is not part of that identity. Both positions use the same
+`Entry.session` branch and `SessionSidebarRow`, so pinning does not replace the
+row's structural parent. Headers retain their existing AppStorage expansion keys,
+filter actions and native styling. Collapsing a section removes its rows; this is
+not a cache of hidden sessions or a change to the recent-session limit.
+
+Keep content changes, geometry changes, visible membership and identity changes
+separate when investigating rendering. Acceptance-only variants compare the old
+section parents, persistent empty headers and persistent subtitle nodes. Native
+row markers validate identity alongside mounted values/order/height; marker-free
+runs check that measuring row lifetime did not create the observed benefit.
+The accepted scope is cross-section movement, not a claim that conversation
+switching or all workbench rendering became faster. See the
+[experiment report](../performance/2026-09-29-sidebar-sweep/REPORT.md).

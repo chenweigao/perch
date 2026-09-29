@@ -1,0 +1,349 @@
+diff --git a/Sources/AgentWorkbench/NativeAcceptance.swift b/Sources/AgentWorkbench/NativeAcceptance.swift
+index 4afcbcb..e030c62 100644
+--- a/Sources/AgentWorkbench/NativeAcceptance.swift
++++ b/Sources/AgentWorkbench/NativeAcceptance.swift
+@@ -22,6 +22,13 @@ import os
+         return mode == "sidebar-invalidation" || mode.hasPrefix("sidebar-layout-")
+     }()
+     let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
++    let sidebarVariant = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] ?? "baseline"
++    var flatSidebar: Bool { sidebarVariant == "flat" }
++    var keepSidebarHeader: Bool { sidebarVariant == "keep-header" }
++    var persistentSubtitle: Bool { sidebarVariant == "persistent-subtitle" }
++    @Published var showEmptySidebarHeader = false
++    var sidebarRowCreates = 0
++    var sidebarRowDismantles = 0
+     var sidebarBodyEvaluations = 0
+     var sidebarRowEvaluations: [String: Int] = [:]
+     let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
+@@ -43,6 +50,7 @@ struct NativeDetailProbe: NSViewRepresentable {
+ }
+
+ @MainActor final class NativeSidebarRowProbeView: NSView {
++    let identity = UUID()
+     var value: NativeSidebarRowProbe?
+ }
+ struct NativeSidebarRowProbe: NSViewRepresentable {
+@@ -55,9 +63,13 @@ struct NativeSidebarRowProbe: NSViewRepresentable {
+     func makeNSView(context: Context) -> NativeSidebarRowProbeView {
+         let view = NativeSidebarRowProbeView()
+         NativeAcceptanceProbe.shared.sidebarRows.add(view)
++        NativeAcceptanceProbe.shared.sidebarRowCreates += 1
+         return view
+     }
+     func updateNSView(_ view: NativeSidebarRowProbeView, context: Context) { view.value = self }
++    static func dismantleNSView(_ view: NativeSidebarRowProbeView, coordinator: ()) {
++        NativeAcceptanceProbe.shared.sidebarRowDismantles += 1
++    }
+ }
+
+ struct NativeSidebarProbe: NSViewRepresentable {
+@@ -786,7 +798,7 @@ private struct ReferenceComposerFixtureView: View {
+     private func sidebarLayout(_ window: NSWindow, mode: String) async throws -> [String: Any] {
+         let kind = String(mode.dropFirst("sidebar-layout-".count))
+         let changesHeight = kind == "height" || kind == "height-fixed"
+-        let base = fixture.sessions.map { item in
++        let base = (kind == "pins-fixed-members" ? Array(fixture.sessions.prefix(20)) : fixture.sessions).map { item in
+             WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                 hostName: item.hostName, detail: "固定待处理内容", online: true,
+                 section: changesHeight ? .attention : .review, canMarkReviewed: false,
+@@ -817,6 +829,13 @@ private struct ReferenceComposerFixtureView: View {
+         let initial = SidebarProjection(sessions: base, starred: [])
+         try await settle(window, "sidebar layout initial geometry") { ready(initial) }
+         try await Task.sleep(for: .milliseconds(200))
++        func identities() -> [String: UUID] {
++            Dictionary(uniqueKeysWithValues: probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap { view in
++                view.value.map { ($0.item.id, view.identity) }
++            })
++        }
++        var previousIdentities = identities(), retainedIdentities = 0, replacedIdentities = 0
++        probe.sidebarRowCreates = 0; probe.sidebarRowDismantles = 0
+         var durations: [Double] = [], samples: [[String: Any]] = []
+         var changedHeights = 0, movedRows = 0, insertedRows = 0, removedRows = 0
+         var previous = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
+@@ -838,7 +857,9 @@ private struct ReferenceComposerFixtureView: View {
+             case "order":
+                 let offset = (step + 1) % 20
+                 next = Array(base[offset..<20] + base[..<offset] + base[20...])
+-            case "pins": pins = step % 2 == 0 ? Array(base.prefix(4).map(\.reference)) : []
++            case "pins", "pins-fixed-members": pins = step % 2 == 0 ? Array(base.prefix(4).map(\.reference)) : []
++            case "membership":
++                if step % 2 == 0 { next = Array(base[20..<24] + base[4..<20] + base[..<4] + base[24...]) }
+             case "height", "height-fixed":
+                 next = base.enumerated().map { index, item in
+                     guard index < 20 else { return item }
+@@ -850,10 +871,18 @@ private struct ReferenceComposerFixtureView: View {
+             }
+             let expected = SidebarProjection(sessions: next, starred: pins)
+             let start = CACurrentMediaTime()
+-            if kind == "pins" { model.workspace.starred = pins }
++            if kind == "pins" || kind == "pins-fixed-members" { model.workspace.starred = pins }
++            if kind == "header" { probe.showEmptySidebarHeader = step % 2 == 0 }
+             model.acceptanceUpdateCatalog(next)
+             try await settle(window, "\(mode) step \(step)") { ready(expected) }
+             durations.append((CACurrentMediaTime() - start) * 1000)
++            let currentIdentities = identities()
++            for (id, identity) in currentIdentities {
++                if let old = previousIdentities[id] {
++                    if old == identity { retainedIdentities += 1 } else { replacedIdentities += 1 }
++                }
++            }
++            previousIdentities = currentIdentities
+             // Detailed geometry accounting is outside each response sample.
+             let current = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
+             for (id, rect) in current {
+@@ -874,7 +903,10 @@ private struct ReferenceComposerFixtureView: View {
+         }
+         if changesHeight && !probe.fixedSidebarHeight && changedHeights != 1600 { throw WorkbenchError("Missing dynamic row-height changes") }
+         if (!changesHeight || probe.fixedSidebarHeight) && changedHeights != 0 { throw WorkbenchError("Fixed-height control changed row sizes") }
+-        return ["layout_kind": kind, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
++        return ["sidebar_variant": probe.sidebarVariant,
++                "native_row_lifecycle": ["created": probe.sidebarRowCreates, "dismantled": probe.sidebarRowDismantles,
++                                         "retained_common_ids": retainedIdentities, "replaced_common_ids": replacedIdentities],
++                "layout_kind": kind, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
+                 "layout_process_cpu_seconds": cpuSeconds,
+                 "sidebar_body_evaluations": probe.sidebarBodyEvaluations,
+                 "sidebar_row_body_evaluations": probe.sidebarRowEvaluations.values.reduce(0, +),
+diff --git a/Sources/AgentWorkbench/SessionRowChrome.swift b/Sources/AgentWorkbench/SessionRowChrome.swift
+index 341355c..9242fed 100644
+--- a/Sources/AgentWorkbench/SessionRowChrome.swift
++++ b/Sources/AgentWorkbench/SessionRowChrome.swift
+@@ -48,9 +48,22 @@ struct SessionRowChrome<Indicator: View>: View {
+                     indicator.frame(width: 17, height: 16).accessibilityHidden(true)
+                     VStack(alignment: .leading, spacing: 3) {
+                         Text(title).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
++                        #if PERCH_ACCEPTANCE
++                        if NativeAcceptanceProbe.shared.persistentSubtitle {
++                            Text(subtitle ?? "").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
++                                .frame(height: subtitle == nil ? 0 : nil).clipped()
++                                .padding(.top, subtitle == nil ? -3 : 0)
++                                .accessibilityHidden(subtitle == nil)
++                        } else {
+                         if let subtitle {
+                             Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                         }
++                        }
++                        #else
++                        if let subtitle {
++                            Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
++                        }
++                        #endif
+                     }.frame(maxWidth: .infinity, alignment: .leading)
+                 }.padding(.leading, 10).padding(.trailing, 4)
+                     .frame(height: rowHeight).contentShape(Rectangle())
+diff --git a/Sources/AgentWorkbench/SessionSidebar.swift b/Sources/AgentWorkbench/SessionSidebar.swift
+index 1978e7d..f508733 100644
+--- a/Sources/AgentWorkbench/SessionSidebar.swift
++++ b/Sources/AgentWorkbench/SessionSidebar.swift
+@@ -24,7 +24,11 @@ struct WorkbenchSidebar: View {
+                               onNew: { model.startNewTask() },
+                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
+                               onArchive: { model.showArchive() }) {
+-            if !projection.favorites.isEmpty {
++            #if PERCH_ACCEPTANCE
++            if experiment.flatSidebar {
++                flatRows(projection, index: index)
++            } else {
++            if showsFavorites(projection) {
+                 SidebarSection("置顶", id: "favorites") {
+                     ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
+                 }
+@@ -78,6 +82,63 @@ struct WorkbenchSidebar: View {
+                 }
+                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
+             }
++            }
++            #else
++            if showsFavorites(projection) {
++                SidebarSection("置顶", id: "favorites") {
++                    ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
++                }
++            }
++            SidebarSection("常用任务组", id: "groups") {
++                ForEach(model.groupShortcuts) { summary in
++                    let group = summary.group
++                    Button { model.showHome(groupID: group.id) } label: {
++                        HStack(spacing: WorkbenchChrome.labelSpacing) {
++                            Image(systemName: group.isPinned ? "pin" : "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
++                                .frame(width: WorkbenchChrome.sidebarSymbolWidth)
++                            Text(group.name).lineLimit(1); Spacer(minLength: 4)
++                            if summary.attentionCount > 0 {
++                                Text("\(summary.attentionCount)").font(.system(size: 11)).foregroundStyle(.orange)
++                            }
++                        }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
++                    }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
++                        .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
++                        .contextMenu {
++                            Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }
++                            Button("编辑任务组") { model.editGroup(group) }
++                        }
++                }
++                Button("全部任务组") {
++                    model.clearScope(); model.showHome(); model.showAllTaskGroups = true
++                }.buttonStyle(.plain).foregroundStyle(.secondary)
++                    .padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 8)
++            } actions: {
++                Button { model.editGroup() } label: {
++                    Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
++                }.buttonStyle(.plain).help("新建任务组")
++            }
++            SidebarSection("最近会话", id: "recent") {
++                ForEach(projection.recent) { item in sessionRow(item, groups: index[item.id]) }
++                if projection.recent.isEmpty {
++                    Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
++                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
++                }
++                Button { model.showAllSessions() } label: {
++                    HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
++                        .padding(.leading, 26).padding(10).contentShape(Rectangle())
++                }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
++            } actions: {
++                Menu {
++                    Picker("筛选最近会话", selection: $filter) {
++                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
++                    }
++                } label: {
++                    Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
++                        .frame(width: 24, height: 24).contentShape(Rectangle())
++                }
++                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
++            }
++            #endif
+         } environments: {
+             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
+         }
+@@ -85,6 +146,100 @@ struct WorkbenchSidebar: View {
+         .background(NativeSidebarProbe(projection: projection))
+         #endif
+     }
++    private func showsFavorites(_ projection: SidebarProjection) -> Bool {
++        #if PERCH_ACCEPTANCE
++        if experiment.keepSidebarHeader || experiment.showEmptySidebarHeader { return true }
++        #endif
++        return !projection.favorites.isEmpty
++    }
++    #if PERCH_ACCEPTANCE
++    @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
++    @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
++    @ObservedObject private var experiment = NativeAcceptanceProbe.shared
++    private enum Entry: Identifiable {
++        case favorites, groups, recent, footer, session(WorkspaceSession)
++        var id: String {
++            switch self {
++            case .favorites: "header-favorites"
++            case .groups: "section-groups"
++            case .recent: "header-recent"
++            case .footer: "footer-recent"
++            case .session(let item): "session-" + item.id
++            }
++        }
++    }
++    private func entries(_ projection: SidebarProjection) -> [Entry] {
++        var result: [Entry] = []
++        if !projection.favorites.isEmpty || experiment.keepSidebarHeader || experiment.showEmptySidebarHeader {
++            result.append(.favorites)
++            if favoritesExpanded { result += projection.favorites.map(Entry.session) }
++        }
++        result += [.groups, .recent]
++        if recentExpanded { result += projection.recent.map(Entry.session); result.append(.footer) }
++        return result
++    }
++    @ViewBuilder private func flatRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
++        ForEach(entries(projection)) { entry in
++            switch entry {
++            case .favorites: SidebarSection("置顶", id: "favorites") { EmptyView() }
++            case .groups:
++            SidebarSection("常用任务组", id: "groups") {
++                ForEach(model.groupShortcuts) { summary in
++                    let group = summary.group
++                    Button { model.showHome(groupID: group.id) } label: {
++                        HStack(spacing: WorkbenchChrome.labelSpacing) {
++                            Image(systemName: group.isPinned ? "pin" : "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
++                                .frame(width: WorkbenchChrome.sidebarSymbolWidth)
++                            Text(group.name).lineLimit(1); Spacer(minLength: 4)
++                            if summary.attentionCount > 0 {
++                                Text("\(summary.attentionCount)").font(.system(size: 11)).foregroundStyle(.orange)
++                            }
++                        }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
++                    }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
++                        .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
++                        .contextMenu {
++                            Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }
++                            Button("编辑任务组") { model.editGroup(group) }
++                        }
++                }
++                Button("全部任务组") {
++                    model.clearScope(); model.showHome(); model.showAllTaskGroups = true
++                }.buttonStyle(.plain).foregroundStyle(.secondary)
++                    .padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 8)
++            } actions: {
++                Button { model.editGroup() } label: {
++                    Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
++                }.buttonStyle(.plain).help("新建任务组")
++            }
++
++            case .recent:
++                SidebarSection("最近会话", id: "recent") { EmptyView() } actions: {
++                Menu {
++                    Picker("筛选最近会话", selection: $filter) {
++                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
++                    }
++                } label: {
++                    Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
++                        .frame(width: 24, height: 24).contentShape(Rectangle())
++                }
++                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
++
++                }
++            case .footer:
++                if projection.recent.isEmpty {
++                    Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
++                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
++                }
++                Button { model.showAllSessions() } label: {
++                    HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
++                        .padding(.leading, 26).padding(10).contentShape(Rectangle())
++                }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
++
++            case .session(let item): sessionRow(item, groups: index[item.id])
++            }
++        }
++    }
++    #endif
+     private func sessionRow(_ item: WorkspaceSession, groups: [String]) -> some View {
+         SessionSidebarRow(model: model, item: item, groups: groups,
+                           selected: !model.showDashboard && item.id == model.tabs.selectedID,
+diff --git a/scripts/run-native-acceptance.py b/scripts/run-native-acceptance.py
+index 59d383b..da50d80 100644
+--- a/scripts/run-native-acceptance.py
++++ b/scripts/run-native-acceptance.py
+@@ -15,9 +15,10 @@ parser.add_argument("--output", type=Path, required=True)
+ parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
+ parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
+ parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
+-parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "sidebar-layout-height-fixed", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
++parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "sidebar-layout-height-fixed", "sidebar-layout-header", "sidebar-layout-membership", "sidebar-layout-pins-fixed-members", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
+ parser.add_argument("--input-positive-control", action="store_true", help="Inject one 80ms delay into the mounted input measurement")
+ parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
++parser.add_argument("--sidebar-variant", choices=["baseline", "flat", "keep-header", "persistent-subtitle"], default="baseline")
+ args = parser.parse_args()
+ if args.input_positive_control and (args.mode not in ["input", "kimi-input"] or args.capture != "none"):
+     parser.error("--input-positive-control requires an uncaptured input or kimi-input run")
+@@ -40,6 +41,8 @@ if manifest["mode"].startswith("kimi-"):
+     manifest["catalog_sessions"] = 1
+     manifest["native_fixture_resident_snapshot_count"] = manifest.pop("resident_snapshot_count", 8)
+ env = dict(os.environ, PERCH_ACCEPTANCE_MODE=manifest["mode"], PERCH_ACCEPTANCE_RESULTS=str(out))
++manifest["sidebar_variant"] = args.sidebar_variant
++env["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] = args.sidebar_variant
+ env["PERCH_ACCEPTANCE_INPUT_STALL"] = "1" if args.input_positive_control else "0"
+ manifest["input_positive_control"] = args.input_positive_control
+ env["PERCH_ACCEPTANCE_KEEP_OPEN"] = "0"
+@@ -53,7 +56,7 @@ if args.capture != "none":
+                "Animation Hitches" if args.capture == "frames" else "Time Profiler",
+                "--instrument", "Points of Interest", "--time-limit", "12s" if args.capture == "frames" else "60s",
+                "--output", str(out / "run.trace")]
+-    for key in ["PERCH_ACCEPTANCE_MODE", "PERCH_ACCEPTANCE_RESULTS", "PERCH_ACCEPTANCE_STALL", "PERCH_ACCEPTANCE_KEEP_OPEN", "PERCH_ACCEPTANCE_JOINT_SECONDS"]:
++    for key in ["PERCH_ACCEPTANCE_SIDEBAR_VARIANT", "PERCH_ACCEPTANCE_MODE", "PERCH_ACCEPTANCE_RESULTS", "PERCH_ACCEPTANCE_STALL", "PERCH_ACCEPTANCE_KEEP_OPEN", "PERCH_ACCEPTANCE_JOINT_SECONDS"]:
+         command += ["--env", f"{key}={env[key]}"]
+     command += ["--launch", "--", str(binary)]
+ started = time.monotonic()
