@@ -19,7 +19,13 @@ parser.add_argument("--scroll-step-points", type=float, default=0,
                     help="Use 1200 small scroll steps instead of the whole-document sweep")
 parser.add_argument("--disclosure-context", action="store_true")
 parser.add_argument("--assert-atomic-disclosure", action="store_true")
+parser.add_argument("--full-content", action="store_true")
+parser.add_argument("--long-output-variant", choices=["inline", "viewport"], default="viewport")
+parser.add_argument("--output-lines", type=int, default=2400)
+parser.add_argument("--output-shape", choices=["lines", "wrapped-line"], default="lines")
 args = parser.parse_args()
+if args.output_lines < 100:
+    parser.error("--output-lines must be at least 100")
 if args.scroll_step_points < 0:
     parser.error("--scroll-step-points must be nonnegative")
 root = Path(__file__).resolve().parent.parent
@@ -33,7 +39,11 @@ environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="2
                    NAVIGATION_SOAK_SECONDS=str(args.seconds),
                    NAVIGATION_RECREATE="1" if args.recreate else "0",
                    NAVIGATION_DISCLOSURE_CONTEXT="1" if args.disclosure_context else "0",
-                   NAVIGATION_ASSERT_ATOMIC_DISCLOSURE="1" if args.assert_atomic_disclosure else "0")
+                   NAVIGATION_ASSERT_ATOMIC_DISCLOSURE="1" if args.assert_atomic_disclosure else "0",
+                   NAVIGATION_FULL_DISCLOSURE="1" if args.full_content else "0",
+                   NAVIGATION_LONG_OUTPUT_VARIANT=args.long_output_variant,
+                   NAVIGATION_OUTPUT_LINES=str(args.output_lines),
+                   NAVIGATION_OUTPUT_SHAPE=args.output_shape)
 environment.pop("NAVIGATION_SCROLL_STEP_POINTS", None)
 if args.scroll_step_points:
     environment["NAVIGATION_SCROLL_STEP_POINTS"] = str(args.scroll_step_points)

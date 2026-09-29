@@ -274,3 +274,30 @@ runs check that measuring row lifetime did not create the observed benefit.
 The accepted scope is cross-section movement, not a claim that conversation
 switching or all workbench rendering became faster. See the
 [experiment report](../performance/2026-09-29-sidebar-sweep/REPORT.md).
+
+## Long output reading boundary
+
+`DisclosureReplyText` keeps short output inline. For output longer than 4,000
+characters, preview and complete reading occupy the same 360pt region, so the
+full-content toggle does not resize the outer transcript. The preview remains
+bounded; the complete source is retained and available for selection and copying.
+
+`LongOutputReader` owns local query/visibility state through Observation. Its
+AppKit scroll view uses an explicitly opted-in TextKit 2 text view, with width
+tracking and no whole-source height measurement in `sizeThatFits`. Search uses
+UTF-16 ranges against the complete source, wraps in both directions and scrolls
+only the inner reader. Avoid accessing the legacy `layoutManager`, which can
+switch the text view back to TextKit 1.
+
+Equal updates do not replace text storage. Same-style prefix extensions append
+only new attributed text and preserve selection/reading position; replacement
+content clears selection and starts at the top. This is a rendering boundary,
+not a storage limit: the full text stays in memory, and a single huge paragraph
+can still require expensive text layout. The existing outer transcript
+virtualization and connection lifetimes are unchanged.
+
+Acceptance compares inline and viewport renderers in one fixed binary and checks
+full Unicode copying, end-of-content search, missing queries, backwards wrapping,
+streaming append, resize, replacement, and stationary outer geometry. See the
+[long output report](../performance/2026-09-29-long-output/REPORT.md) for measured
+scope and the independent-scroll interaction tradeoff.
