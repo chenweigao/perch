@@ -654,6 +654,8 @@ private final class ConversationDocumentView: NSView {
                 addSubview(controller.view)
                 #if TRANSCRIPT_CHECKS
                 NavigationRenderMetrics.record("host_attach", since: attachStart)
+                NavigationRenderMetrics.record(controller.hasAttached ? "host_reattach" : "host_first_attach", since: attachStart)
+                controller.hasAttached = true
                 #endif
             }
             let height = controller.measure(width: columnWidth).height
@@ -893,6 +895,10 @@ private final class ConversationEntryController: NSViewController {
     private var notificationScheduled = false
     private var publishedHeight: CGFloat?
     private var widthMeasurementScheduled = false
+    #if TRANSCRIPT_CHECKS
+    var hasAttached = false
+    private var hasMeasured = false
+    #endif
     var heightChanged: (CGFloat) -> Void
     private let disclosureChanged: () -> Void
 
@@ -978,7 +984,12 @@ private final class ConversationEntryController: NSViewController {
         } else {
             #if TRANSCRIPT_CHECKS
             let start = CACurrentMediaTime()
-            defer { NavigationRenderMetrics.record("host_measure", since: start) }
+            defer {
+                NavigationRenderMetrics.record("host_measure", since: start)
+                NavigationRenderMetrics.record(hasMeasured ? "host_remeasure" : "host_first_measure", since: start)
+                NavigationRenderMetrics.record(content.entry.messages.first?.isUserPrompt == true ? "host_measure_user" : "host_measure_assistant", since: start)
+                hasMeasured = true
+            }
             #endif
             height = ceil(host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
             if sizes.count == 8 { sizes.removeFirst() }

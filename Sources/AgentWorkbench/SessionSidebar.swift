@@ -78,6 +78,9 @@ struct WorkbenchSidebar: View {
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }
+        #if PERCH_ACCEPTANCE
+        .background(NativeSidebarProbe(projection: projection))
+        #endif
     }
     private func sessionRow(_ item: WorkspaceSession, groups: [String]) -> some View {
         SessionSidebarRow(model: model, item: item, groups: groups,

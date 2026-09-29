@@ -1,0 +1,1875 @@
+{
+  "kind": "diagnosis, not an optimization A/B",
+  "baseline_commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+  "artifact_root": ".local/render-isolation",
+  "scenarios": {
+    "switching": {
+      "runs": [
+        {
+          "directory": ".local/render-isolation/switching-r1",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-switching",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 57385,
+            "exit_code": 0,
+            "elapsed_s": 12.203699334000001,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 103.37612504372373,
+            "median": 53.52954170666635,
+            "p95": 60.63783331774175
+          },
+          "process_cpu_seconds": 4.46971,
+          "stages": {
+            "attributed_text": {
+              "count": 1600,
+              "ms": 21.681124286260456
+            },
+            "document_configure": {
+              "count": 240,
+              "ms": 536.148542072624
+            },
+            "document_reconcile": {
+              "count": 80,
+              "ms": 13.60895816469565
+            },
+            "host_attach": {
+              "count": 640,
+              "ms": 19.696624716743827
+            },
+            "host_create": {
+              "count": 320,
+              "ms": 15.50391677301377
+            },
+            "host_first_attach": {
+              "count": 320,
+              "ms": 1.4779166667722166
+            },
+            "host_first_measure": {
+              "count": 320,
+              "ms": 490.15466624405235
+            },
+            "host_measure": {
+              "count": 320,
+              "ms": 490.11916550807655
+            },
+            "host_measure_assistant": {
+              "count": 160,
+              "ms": 400.9498749510385
+            },
+            "host_measure_user": {
+              "count": 160,
+              "ms": 89.4077914999798
+            },
+            "host_reattach": {
+              "count": 320,
+              "ms": 18.27408402459696
+            },
+            "host_view": {
+              "count": 320,
+              "ms": 4.226916760671884
+            },
+            "markdown_parse": {
+              "count": 320,
+              "ms": 48.16412477521226
+            },
+            "row_geometry": {
+              "count": 108,
+              "ms": 0.522708345670253
+            },
+            "text_create": {
+              "count": 1760,
+              "ms": 11.055126902647316
+            },
+            "text_measure": {
+              "count": 1920,
+              "ms": 39.709500095341355
+            },
+            "text_reuse": {
+              "count": 1760,
+              "ms": 0.06091617979109287
+            }
+          },
+          "rss_settled_mb": 218.25
+        },
+        {
+          "directory": ".local/render-isolation/switching-r2",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-switching",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58629,
+            "exit_code": 0,
+            "elapsed_s": 11.604318834,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 105.12037499574944,
+            "median": 52.835666632745415,
+            "p95": 58.46216663485393
+          },
+          "process_cpu_seconds": 4.406361,
+          "stages": {
+            "attributed_text": {
+              "count": 1600,
+              "ms": 21.659708698280156
+            },
+            "document_configure": {
+              "count": 240,
+              "ms": 529.8193328781053
+            },
+            "document_reconcile": {
+              "count": 80,
+              "ms": 13.460708258207887
+            },
+            "host_attach": {
+              "count": 640,
+              "ms": 19.32524936273694
+            },
+            "host_create": {
+              "count": 320,
+              "ms": 15.35954134305939
+            },
+            "host_first_attach": {
+              "count": 320,
+              "ms": 1.4542083372361958
+            },
+            "host_first_measure": {
+              "count": 320,
+              "ms": 484.4332500360906
+            },
+            "host_measure": {
+              "count": 320,
+              "ms": 484.4008748768829
+            },
+            "host_measure_assistant": {
+              "count": 160,
+              "ms": 395.4085830482654
+            },
+            "host_measure_user": {
+              "count": 160,
+              "ms": 89.22612521564588
+            },
+            "host_reattach": {
+              "count": 320,
+              "ms": 17.927166598383337
+            },
+            "host_view": {
+              "count": 320,
+              "ms": 4.131750203669071
+            },
+            "markdown_parse": {
+              "count": 320,
+              "ms": 47.78854304458946
+            },
+            "row_geometry": {
+              "count": 108,
+              "ms": 0.5189584917388856
+            },
+            "text_create": {
+              "count": 1760,
+              "ms": 10.973499738611281
+            },
+            "text_measure": {
+              "count": 1920,
+              "ms": 39.57866854034364
+            },
+            "text_reuse": {
+              "count": 1760,
+              "ms": 0.09541743202134967
+            }
+          },
+          "rss_settled_mb": 217.25
+        },
+        {
+          "directory": ".local/render-isolation/switching-r3",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-switching",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58889,
+            "exit_code": 0,
+            "elapsed_s": 11.682635833,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 102.7896250016056,
+            "median": 52.84408334409818,
+            "p95": 58.98999999044463
+          },
+          "process_cpu_seconds": 4.386627,
+          "stages": {
+            "attributed_text": {
+              "count": 1600,
+              "ms": 21.286705567035824
+            },
+            "document_configure": {
+              "count": 240,
+              "ms": 526.527417008765
+            },
+            "document_reconcile": {
+              "count": 80,
+              "ms": 13.463333016261458
+            },
+            "host_attach": {
+              "count": 640,
+              "ms": 19.34274920495227
+            },
+            "host_create": {
+              "count": 320,
+              "ms": 15.103333513252437
+            },
+            "host_first_attach": {
+              "count": 320,
+              "ms": 1.4475832576863468
+            },
+            "host_first_measure": {
+              "count": 320,
+              "ms": 481.53558355988935
+            },
+            "host_measure": {
+              "count": 320,
+              "ms": 481.4900413621217
+            },
+            "host_measure_assistant": {
+              "count": 160,
+              "ms": 393.72537506278604
+            },
+            "host_measure_user": {
+              "count": 160,
+              "ms": 87.99700008239597
+            },
+            "host_reattach": {
+              "count": 320,
+              "ms": 17.947457497939467
+            },
+            "host_view": {
+              "count": 320,
+              "ms": 4.076833371073008
+            },
+            "markdown_parse": {
+              "count": 320,
+              "ms": 47.70054132677615
+            },
+            "row_geometry": {
+              "count": 108,
+              "ms": 0.5023329285904765
+            },
+            "text_create": {
+              "count": 1760,
+              "ms": 10.941249725874513
+            },
+            "text_measure": {
+              "count": 1920,
+              "ms": 39.15350080933422
+            },
+            "text_reuse": {
+              "count": 1760,
+              "ms": 0.07341679884120822
+            }
+          },
+          "rss_settled_mb": 217.21875
+        }
+      ],
+      "median_of_run_medians_ms": 52.84408334409818,
+      "cpu_profile": {
+        "after_s": 2.962039125,
+        "before_s": 7.422842375,
+        "main_sampled_cpu_ms": 4324.0,
+        "main_stack_context_partition_ms": {
+          "framework_graph_remaining": 1325.0,
+          "other": 988.0,
+          "framework_layout_remaining": 937.0,
+          "row_measure": 481.0,
+          "transcript_other": 304.0,
+          "composer": 244.0,
+          "sidebar": 23.0,
+          "row_create": 22.0
+        },
+        "main_app_inclusive_top": [
+          [
+            "AgentWorkbench_main",
+            1967.0
+          ],
+          [
+            "static NativeAcceptanceApp.$main()",
+            1967.0
+          ],
+          [
+            "NativeAcceptanceRunner.rendering(_:mode:)",
+            1434.0
+          ],
+          [
+            "NativeAcceptanceRunner.settle(_:_:until:)",
+            1424.0
+          ],
+          [
+            "specialized NativeAcceptanceRunner.flush(_:)",
+            1418.0
+          ],
+          [
+            "NativeAcceptanceRunner.flush(_:)",
+            1418.0
+          ],
+          [
+            "NativeAcceptanceRunner.run(_:)",
+            1406.0
+          ],
+          [
+            "closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+            1405.0
+          ],
+          [
+            "partial apply for closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+            1403.0
+          ],
+          [
+            "ConversationDocumentView.refreshVisibleRows()",
+            539.0
+          ],
+          [
+            "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:contentOriginY:)",
+            532.0
+          ],
+          [
+            "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+            532.0
+          ],
+          [
+            "ConversationDocumentHost.updateNSView(_:context:)",
+            532.0
+          ],
+          [
+            "ConversationEntryController.measure(width:)",
+            481.0
+          ],
+          [
+            "partial apply for closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+            187.0
+          ],
+          [
+            "closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+            187.0
+          ],
+          [
+            "partial apply for closure #3 in ConversationScrollView.body.getter",
+            155.0
+          ],
+          [
+            "closure #2 in closure #1 in closure #1 in NativeAgentView.body.getter",
+            155.0
+          ],
+          [
+            "closure #3 in ConversationScrollView.body.getter",
+            155.0
+          ],
+          [
+            "specialized Collection.map<A, B>(_:)",
+            149.0
+          ],
+          [
+            "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+            144.0
+          ],
+          [
+            "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+            144.0
+          ],
+          [
+            "partial apply for closure #2 in static ConversationDocumentView.retire(_:)",
+            138.0
+          ],
+          [
+            "closure #2 in static ConversationDocumentView.retire(_:)",
+            138.0
+          ],
+          [
+            "specialized autoreleasepool<A, B>(invoking:)",
+            137.0
+          ],
+          [
+            "closure #1 in ComposerToolbarLayout.dimensions(_:_:)",
+            126.0
+          ],
+          [
+            "specialized ComposerToolbarLayout.dimensions(_:_:)",
+            126.0
+          ],
+          [
+            "ComposerToolbarLayout.dimensions(_:_:)",
+            126.0
+          ],
+          [
+            "ComposerToolbarLayout.sizeThatFits(proposal:subviews:cache:)",
+            126.0
+          ],
+          [
+            "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ComposerToolbarLayout",
+            126.0
+          ],
+          [
+            "ConversationDocumentView.prepareForRemoval()",
+            90.0
+          ],
+          [
+            "protocol witness for static NSViewRepresentable.dismantleNSView(_:coordinator:) in conformance ConversationDocumentHost",
+            90.0
+          ],
+          [
+            "specialized static ConversationDocumentHost.dismantleNSView(_:coordinator:)",
+            90.0
+          ],
+          [
+            "static ConversationDocumentHost.dismantleNSView(_:coordinator:)",
+            90.0
+          ],
+          [
+            "ReplyTableLayout.measure(width:subviews:cache:)",
+            75.0
+          ]
+        ],
+        "main_inclusive_top": [
+          [
+            "<deduplicated_symbol>",
+            3721.0
+          ],
+          [
+            "AG::Graph::UpdateStack::update()",
+            2110.0
+          ],
+          [
+            "_CFRunLoopRunSpecificWithOptions",
+            2029.0
+          ],
+          [
+            "RunCurrentEventLoopInMode",
+            2026.0
+          ],
+          [
+            "ReceiveNextEventCommon",
+            2024.0
+          ],
+          [
+            "_BlockUntilNextEventMatchingListInMode",
+            2013.0
+          ],
+          [
+            "_DPSBlockUntilNextEventMatchingListInMode",
+            1999.0
+          ],
+          [
+            "_DPSNextEvent",
+            1990.0
+          ],
+          [
+            "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+            1986.0
+          ],
+          [
+            "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+            1985.0
+          ],
+          [
+            "-[NSApplication run]",
+            1982.0
+          ],
+          [
+            "NSApplicationMain",
+            1981.0
+          ],
+          [
+            "specialized runApp(_:)",
+            1978.0
+          ],
+          [
+            "runApp<A>(_:)",
+            1974.0
+          ],
+          [
+            "static App.main()",
+            1972.0
+          ],
+          [
+            "static NativeAcceptanceApp.$main()",
+            1967.0
+          ],
+          [
+            "AgentWorkbench_main",
+            1967.0
+          ],
+          [
+            "start",
+            1965.0
+          ],
+          [
+            "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+            1890.0
+          ],
+          [
+            "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+            1889.0
+          ],
+          [
+            "NSPerformVisuallyAtomicChange",
+            1871.0
+          ],
+          [
+            "0x18d4d420c",
+            1813.0
+          ],
+          [
+            "0x18d4d4234",
+            1811.0
+          ],
+          [
+            "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+            1723.0
+          ],
+          [
+            "-[NSView _layoutSubtreeWithOldSize:]",
+            1718.0
+          ],
+          [
+            "___NSViewLayout_block_invoke",
+            1715.0
+          ],
+          [
+            "_NSViewLayout",
+            1714.0
+          ],
+          [
+            "0x18d584d24",
+            1714.0
+          ],
+          [
+            "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+            1710.0
+          ],
+          [
+            "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+            1710.0
+          ],
+          [
+            "-[NSView layoutSubtreeIfNeeded]",
+            1710.0
+          ],
+          [
+            "0x18d585890",
+            1710.0
+          ],
+          [
+            "AG::Subgraph::update(unsigned int)",
+            1693.0
+          ],
+          [
+            "GraphHost.flushTransactions()",
+            1683.0
+          ],
+          [
+            "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+            1657.0
+          ],
+          [
+            "+[NSAnimationContext runAnimationGroup:]",
+            1649.0
+          ],
+          [
+            "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+            1618.0
+          ],
+          [
+            "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+            1603.0
+          ],
+          [
+            "closure #1 in NSHostingView.layout()",
+            1602.0
+          ],
+          [
+            "NSHostingView.layout()",
+            1598.0
+          ]
+        ],
+        "directory": ".local/render-isolation/switching-cpu",
+        "manifest": {
+          "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+          "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+          "configuration": "release -O",
+          "defines": [
+            "PERCH_ACCEPTANCE",
+            "TRANSCRIPT_CHECKS"
+          ],
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+          "window_points": [
+            1280,
+            820
+          ],
+          "history_turns": 200,
+          "catalog_sessions": 500,
+          "resident_snapshot_count": 8,
+          "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+          "capture": "cpu",
+          "mode": "render-switching",
+          "input_positive_control": false,
+          "positive_control": false,
+          "joint_seconds": null,
+          "supervisor_pid": 59313,
+          "exit_code": 0,
+          "elapsed_s": 17.810072667,
+          "behavior_passed": true,
+          "missing_schemas": [],
+          "trace_exported": true
+        }
+      }
+    },
+    "catalog": {
+      "runs": [
+        {
+          "directory": ".local/render-isolation/catalog-r1",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-catalog",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58029,
+            "exit_code": 0,
+            "elapsed_s": 9.409476249999999,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 43.68904168950394,
+            "median": 25.822208321187645,
+            "p95": 32.04904170706868
+          },
+          "process_cpu_seconds": 2.057443,
+          "stages": {},
+          "rss_settled_mb": 189.609375
+        },
+        {
+          "directory": ".local/render-isolation/catalog-r2",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-catalog",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58617,
+            "exit_code": 0,
+            "elapsed_s": 9.381190958,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 62.091916683129966,
+            "median": 25.40016663260758,
+            "p95": 33.80387503420934
+          },
+          "process_cpu_seconds": 2.029401,
+          "stages": {},
+          "rss_settled_mb": 190.546875
+        },
+        {
+          "directory": ".local/render-isolation/catalog-r3",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-catalog",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58867,
+            "exit_code": 0,
+            "elapsed_s": 9.381988457999999,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 42.60433337185532,
+            "median": 24.723749957047403,
+            "p95": 39.351666695438325
+          },
+          "process_cpu_seconds": 2.002576,
+          "stages": {},
+          "rss_settled_mb": 190.78125
+        }
+      ],
+      "median_of_run_medians_ms": 25.40016663260758,
+      "cpu_profile": {
+        "after_s": 2.947391,
+        "before_s": 4.990871458,
+        "main_sampled_cpu_ms": 2023.0,
+        "main_stack_context_partition_ms": {
+          "framework_graph_remaining": 1015.0,
+          "framework_layout_remaining": 509.0,
+          "other": 340.0,
+          "sidebar": 157.0,
+          "composer": 1.0,
+          "transcript_other": 1.0
+        },
+        "main_app_inclusive_top": [
+          [
+            "static NativeAcceptanceApp.$main()",
+            1816.0
+          ],
+          [
+            "AgentWorkbench_main",
+            1816.0
+          ],
+          [
+            "NativeAcceptanceRunner.run(_:)",
+            181.0
+          ],
+          [
+            "partial apply for closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+            181.0
+          ],
+          [
+            "closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+            181.0
+          ],
+          [
+            "NativeAcceptanceRunner.rendering(_:mode:)",
+            180.0
+          ],
+          [
+            "NativeAcceptanceRunner.settle(_:_:until:)",
+            171.0
+          ],
+          [
+            "specialized NativeAcceptanceRunner.flush(_:)",
+            165.0
+          ],
+          [
+            "NativeAcceptanceRunner.flush(_:)",
+            165.0
+          ],
+          [
+            "SessionRowChrome.body.getter",
+            116.0
+          ],
+          [
+            "closure #1 in SessionRowChrome.body.getter",
+            77.0
+          ],
+          [
+            "closure #5 in closure #1 in SessionRowChrome.body.getter",
+            48.0
+          ],
+          [
+            "specialized _VariadicView.Tree.init(_:content:)",
+            46.0
+          ],
+          [
+            "specialized HStack.init(alignment:spacing:content:)",
+            46.0
+          ],
+          [
+            "specialized closure #1 in HStack.init(alignment:spacing:content:)",
+            46.0
+          ],
+          [
+            "WorkbenchHeader.item.getter",
+            46.0
+          ],
+          [
+            "WorkbenchHeader.body.getter",
+            31.0
+          ],
+          [
+            "L(_:locale:)",
+            29.0
+          ],
+          [
+            "specialized static ViewBuilder.buildBlock<each A>(_:)",
+            29.0
+          ],
+          [
+            "SessionReference.id.getter",
+            28.0
+          ],
+          [
+            "closure #1 in closure #5 in closure #1 in SessionRowChrome.body.getter",
+            27.0
+          ],
+          [
+            "LocalizedUIStrings.callAsFunction(_:)",
+            27.0
+          ],
+          [
+            "specialized DefaultStringInterpolation.appendInterpolation<A>(_:)",
+            26.0
+          ],
+          [
+            "closure #1 in WorkbenchHeader.body.getter",
+            25.0
+          ],
+          [
+            "specialized closure #1 in VStack.init(alignment:spacing:content:)",
+            19.0
+          ],
+          [
+            "specialized VStack.init(alignment:spacing:content:)",
+            19.0
+          ],
+          [
+            "SessionSidebarRow.body.getter",
+            17.0
+          ],
+          [
+            "WorkbenchHeaderActions.body.getter",
+            17.0
+          ],
+          [
+            "closure #1 in WorkbenchHeaderActions.body.getter",
+            17.0
+          ],
+          [
+            "protocol witness for View.body.getter in conformance WorkbenchHeaderActions",
+            17.0
+          ],
+          [
+            "closure #1 in closure #1 in WorkbenchHeader.body.getter",
+            17.0
+          ],
+          [
+            "WorkbenchSidebar.body.getter",
+            14.0
+          ],
+          [
+            "specialized String.write<A>(to:)",
+            14.0
+          ],
+          [
+            "specialized protocol witness for TextOutputStreamable.write<A>(to:) in conformance String",
+            14.0
+          ],
+          [
+            "protocol witness for TextOutputStream.write(_:) in conformance DefaultStringInterpolation",
+            14.0
+          ]
+        ],
+        "main_inclusive_top": [
+          [
+            "<deduplicated_symbol>",
+            1849.0
+          ],
+          [
+            "_CFRunLoopRunSpecificWithOptions",
+            1820.0
+          ],
+          [
+            "ReceiveNextEventCommon",
+            1819.0
+          ],
+          [
+            "RunCurrentEventLoopInMode",
+            1819.0
+          ],
+          [
+            "_DPSBlockUntilNextEventMatchingListInMode",
+            1818.0
+          ],
+          [
+            "runApp<A>(_:)",
+            1818.0
+          ],
+          [
+            "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+            1818.0
+          ],
+          [
+            "_BlockUntilNextEventMatchingListInMode",
+            1818.0
+          ],
+          [
+            "NSApplicationMain",
+            1818.0
+          ],
+          [
+            "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+            1818.0
+          ],
+          [
+            "-[NSApplication run]",
+            1818.0
+          ],
+          [
+            "specialized runApp(_:)",
+            1818.0
+          ],
+          [
+            "_DPSNextEvent",
+            1818.0
+          ],
+          [
+            "static App.main()",
+            1817.0
+          ],
+          [
+            "AgentWorkbench_main",
+            1816.0
+          ],
+          [
+            "static NativeAcceptanceApp.$main()",
+            1816.0
+          ],
+          [
+            "start",
+            1814.0
+          ],
+          [
+            "AG::Graph::UpdateStack::update()",
+            1173.0
+          ],
+          [
+            "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+            964.0
+          ],
+          [
+            "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+            962.0
+          ],
+          [
+            "GraphHost.flushTransactions()",
+            962.0
+          ],
+          [
+            "specialized static NSRunLoop.flushObservers()",
+            961.0
+          ],
+          [
+            "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+            960.0
+          ],
+          [
+            "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+            960.0
+          ],
+          [
+            "__CFRunLoopDoObservers",
+            959.0
+          ],
+          [
+            "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+            959.0
+          ],
+          [
+            "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+            959.0
+          ],
+          [
+            "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+            957.0
+          ],
+          [
+            "AG::Subgraph::update(unsigned int)",
+            933.0
+          ],
+          [
+            "CA::Transaction::flush()",
+            876.0
+          ],
+          [
+            "CA::Transaction::commit()",
+            875.0
+          ],
+          [
+            "__CFRunLoopRun",
+            863.0
+          ],
+          [
+            "UC::DriverCore::continueProcessing()",
+            841.0
+          ],
+          [
+            "__CFRunLoopDoSource0",
+            841.0
+          ],
+          [
+            "__CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__",
+            841.0
+          ],
+          [
+            "__CFRunLoopDoSources0",
+            841.0
+          ],
+          [
+            "stepTransactionFlush",
+            840.0
+          ],
+          [
+            "CA::Transaction::flush_as_runloop_observer(bool)",
+            839.0
+          ],
+          [
+            "NSPerformVisuallyAtomicChange",
+            804.0
+          ],
+          [
+            "0x18d4d4234",
+            790.0
+          ]
+        ],
+        "directory": ".local/render-isolation/catalog-cpu",
+        "manifest": {
+          "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+          "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+          "configuration": "release -O",
+          "defines": [
+            "PERCH_ACCEPTANCE",
+            "TRANSCRIPT_CHECKS"
+          ],
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+          "window_points": [
+            1280,
+            820
+          ],
+          "history_turns": 200,
+          "catalog_sessions": 500,
+          "resident_snapshot_count": 8,
+          "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+          "capture": "cpu",
+          "mode": "render-catalog",
+          "input_positive_control": false,
+          "positive_control": false,
+          "joint_seconds": null,
+          "supervisor_pid": 59616,
+          "exit_code": 0,
+          "elapsed_s": 13.1452845,
+          "behavior_passed": true,
+          "missing_schemas": [],
+          "trace_exported": true
+        }
+      }
+    },
+    "combined": {
+      "runs": [
+        {
+          "directory": ".local/render-isolation/combined-r1",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-combined",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58207,
+            "exit_code": 0,
+            "elapsed_s": 13.194890875,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 109.08808337990195,
+            "median": 73.43845831928775,
+            "p95": 83.23145832400769
+          },
+          "process_cpu_seconds": 6.0693660000000005,
+          "stages": {
+            "attributed_text": {
+              "count": 1600,
+              "ms": 21.375000127591193
+            },
+            "document_configure": {
+              "count": 240,
+              "ms": 529.5139587833546
+            },
+            "document_reconcile": {
+              "count": 80,
+              "ms": 13.64299957640469
+            },
+            "host_attach": {
+              "count": 640,
+              "ms": 19.5937494863756
+            },
+            "host_create": {
+              "count": 320,
+              "ms": 15.250250289682299
+            },
+            "host_first_attach": {
+              "count": 320,
+              "ms": 1.4822082011960447
+            },
+            "host_first_measure": {
+              "count": 320,
+              "ms": 484.24041707767174
+            },
+            "host_measure": {
+              "count": 320,
+              "ms": 484.1898753657006
+            },
+            "host_measure_assistant": {
+              "count": 160,
+              "ms": 395.90904163196683
+            },
+            "host_measure_user": {
+              "count": 160,
+              "ms": 88.52495829341933
+            },
+            "host_reattach": {
+              "count": 320,
+              "ms": 18.183124368079007
+            },
+            "host_view": {
+              "count": 320,
+              "ms": 4.160749958828092
+            },
+            "markdown_parse": {
+              "count": 320,
+              "ms": 47.79299959773198
+            },
+            "row_geometry": {
+              "count": 108,
+              "ms": 0.4980838275514543
+            },
+            "text_create": {
+              "count": 1760,
+              "ms": 10.960457671899348
+            },
+            "text_measure": {
+              "count": 1920,
+              "ms": 39.16583361569792
+            },
+            "text_reuse": {
+              "count": 1760,
+              "ms": 0.058499397709965706
+            }
+          },
+          "rss_settled_mb": 222.578125
+        },
+        {
+          "directory": ".local/render-isolation/combined-r2",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-combined",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58411,
+            "exit_code": 0,
+            "elapsed_s": 13.224252,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 113.6748333228752,
+            "median": 73.77220835769549,
+            "p95": 86.20675001293421
+          },
+          "process_cpu_seconds": 6.097964,
+          "stages": {
+            "attributed_text": {
+              "count": 1600,
+              "ms": 21.793084451928735
+            },
+            "document_configure": {
+              "count": 240,
+              "ms": 533.1436671549454
+            },
+            "document_reconcile": {
+              "count": 80,
+              "ms": 13.609333022031933
+            },
+            "host_attach": {
+              "count": 640,
+              "ms": 19.526290881913155
+            },
+            "host_create": {
+              "count": 320,
+              "ms": 15.512999729253352
+            },
+            "host_first_attach": {
+              "count": 320,
+              "ms": 1.4387082774192095
+            },
+            "host_first_measure": {
+              "count": 320,
+              "ms": 487.5951660797
+            },
+            "host_measure": {
+              "count": 320,
+              "ms": 487.56837501423433
+            },
+            "host_measure_assistant": {
+              "count": 160,
+              "ms": 397.80641649849713
+            },
+            "host_measure_user": {
+              "count": 160,
+              "ms": 89.98450043145567
+            },
+            "host_reattach": {
+              "count": 320,
+              "ms": 18.147374561522156
+            },
+            "host_view": {
+              "count": 320,
+              "ms": 4.110208130441606
+            },
+            "markdown_parse": {
+              "count": 320,
+              "ms": 48.09437511721626
+            },
+            "row_geometry": {
+              "count": 108,
+              "ms": 0.5254998686723411
+            },
+            "text_create": {
+              "count": 1760,
+              "ms": 10.835751658305526
+            },
+            "text_measure": {
+              "count": 1920,
+              "ms": 39.54220801824704
+            },
+            "text_reuse": {
+              "count": 1760,
+              "ms": 0.0649993889965117
+            }
+          },
+          "rss_settled_mb": 222.84375
+        },
+        {
+          "directory": ".local/render-isolation/combined-r3",
+          "manifest": {
+            "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+            "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+            "configuration": "release -O",
+            "defines": [
+              "PERCH_ACCEPTANCE",
+              "TRANSCRIPT_CHECKS"
+            ],
+            "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+            "window_points": [
+              1280,
+              820
+            ],
+            "history_turns": 200,
+            "catalog_sessions": 500,
+            "resident_snapshot_count": 8,
+            "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+            "capture": "none",
+            "mode": "render-combined",
+            "input_positive_control": false,
+            "positive_control": false,
+            "joint_seconds": null,
+            "supervisor_pid": 58896,
+            "exit_code": 0,
+            "elapsed_s": 13.501702209000001,
+            "behavior_passed": true
+          },
+          "latency_ms": {
+            "count": 80,
+            "max": 115.9168750164099,
+            "median": 74.82529169647023,
+            "p95": 89.95633333688602
+          },
+          "process_cpu_seconds": 6.261153999999999,
+          "stages": {
+            "attributed_text": {
+              "count": 1600,
+              "ms": 22.265834209974855
+            },
+            "document_configure": {
+              "count": 240,
+              "ms": 551.6327496734448
+            },
+            "document_reconcile": {
+              "count": 80,
+              "ms": 13.737000175751746
+            },
+            "host_attach": {
+              "count": 640,
+              "ms": 20.136582548730075
+            },
+            "host_create": {
+              "count": 320,
+              "ms": 16.094374761451036
+            },
+            "host_first_attach": {
+              "count": 320,
+              "ms": 1.5002916334196925
+            },
+            "host_first_measure": {
+              "count": 320,
+              "ms": 504.7269997885451
+            },
+            "host_measure": {
+              "count": 320,
+              "ms": 504.6891250531189
+            },
+            "host_measure_assistant": {
+              "count": 160,
+              "ms": 412.04254142940044
+            },
+            "host_measure_user": {
+              "count": 160,
+              "ms": 92.88891707547009
+            },
+            "host_reattach": {
+              "count": 320,
+              "ms": 18.69529066607356
+            },
+            "host_view": {
+              "count": 320,
+              "ms": 4.2753745801746845
+            },
+            "markdown_parse": {
+              "count": 320,
+              "ms": 49.4792087120004
+            },
+            "row_geometry": {
+              "count": 108,
+              "ms": 0.5291246925480664
+            },
+            "text_create": {
+              "count": 1760,
+              "ms": 11.29508315352723
+            },
+            "text_measure": {
+              "count": 1920,
+              "ms": 40.65916681429371
+            },
+            "text_reuse": {
+              "count": 1760,
+              "ms": 0.0647491542622447
+            }
+          },
+          "rss_settled_mb": 221.078125
+        }
+      ],
+      "median_of_run_medians_ms": 73.77220835769549,
+      "cpu_profile": {
+        "after_s": 2.934163708,
+        "before_s": 9.059370625,
+        "main_sampled_cpu_ms": 5990.0,
+        "main_stack_context_partition_ms": {
+          "framework_graph_remaining": 2225.0,
+          "framework_layout_remaining": 1376.0,
+          "other": 1188.0,
+          "row_measure": 480.0,
+          "transcript_other": 308.0,
+          "composer": 249.0,
+          "sidebar": 150.0,
+          "row_create": 14.0
+        },
+        "main_app_inclusive_top": [
+          [
+            "static NativeAcceptanceApp.$main()",
+            3808.0
+          ],
+          [
+            "AgentWorkbench_main",
+            3808.0
+          ],
+          [
+            "NativeAcceptanceRunner.rendering(_:mode:)",
+            1211.0
+          ],
+          [
+            "NativeAcceptanceRunner.settle(_:_:until:)",
+            1201.0
+          ],
+          [
+            "NativeAcceptanceRunner.run(_:)",
+            1194.0
+          ],
+          [
+            "closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+            1194.0
+          ],
+          [
+            "specialized NativeAcceptanceRunner.flush(_:)",
+            1194.0
+          ],
+          [
+            "NativeAcceptanceRunner.flush(_:)",
+            1194.0
+          ],
+          [
+            "partial apply for closure #1 in closure #1 in NativeAcceptanceApp.body.getter",
+            1193.0
+          ],
+          [
+            "ConversationDocumentView.refreshVisibleRows()",
+            523.0
+          ],
+          [
+            "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance ConversationDocumentHost",
+            518.0
+          ],
+          [
+            "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:contentOriginY:)",
+            518.0
+          ],
+          [
+            "ConversationDocumentHost.updateNSView(_:context:)",
+            518.0
+          ],
+          [
+            "ConversationEntryController.measure(width:)",
+            480.0
+          ],
+          [
+            "partial apply for closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+            203.0
+          ],
+          [
+            "closure #12 in closure #1 in closure #1 in NativeAgentView.body.getter",
+            203.0
+          ],
+          [
+            "partial apply for closure #3 in ConversationScrollView.body.getter",
+            155.0
+          ],
+          [
+            "closure #2 in closure #1 in closure #1 in NativeAgentView.body.getter",
+            155.0
+          ],
+          [
+            "closure #3 in ConversationScrollView.body.getter",
+            155.0
+          ],
+          [
+            "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+            154.0
+          ],
+          [
+            "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+            154.0
+          ],
+          [
+            "specialized Collection.map<A, B>(_:)",
+            149.0
+          ],
+          [
+            "partial apply for closure #2 in static ConversationDocumentView.retire(_:)",
+            145.0
+          ],
+          [
+            "specialized autoreleasepool<A, B>(invoking:)",
+            145.0
+          ],
+          [
+            "closure #2 in static ConversationDocumentView.retire(_:)",
+            145.0
+          ],
+          [
+            "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ComposerToolbarLayout",
+            127.0
+          ],
+          [
+            "ComposerToolbarLayout.dimensions(_:_:)",
+            127.0
+          ],
+          [
+            "closure #1 in ComposerToolbarLayout.dimensions(_:_:)",
+            127.0
+          ],
+          [
+            "specialized ComposerToolbarLayout.dimensions(_:_:)",
+            127.0
+          ],
+          [
+            "ComposerToolbarLayout.sizeThatFits(proposal:subviews:cache:)",
+            127.0
+          ],
+          [
+            "SessionRowChrome.body.getter",
+            119.0
+          ],
+          [
+            "specialized _VariadicView.Tree.init(_:content:)",
+            98.0
+          ],
+          [
+            "closure #1 in SessionRowChrome.body.getter",
+            97.0
+          ],
+          [
+            "static ConversationDocumentHost.dismantleNSView(_:coordinator:)",
+            92.0
+          ],
+          [
+            "ConversationDocumentView.prepareForRemoval()",
+            92.0
+          ]
+        ],
+        "main_inclusive_top": [
+          [
+            "<deduplicated_symbol>",
+            5183.0
+          ],
+          [
+            "_CFRunLoopRunSpecificWithOptions",
+            3859.0
+          ],
+          [
+            "RunCurrentEventLoopInMode",
+            3859.0
+          ],
+          [
+            "ReceiveNextEventCommon",
+            3854.0
+          ],
+          [
+            "_BlockUntilNextEventMatchingListInMode",
+            3852.0
+          ],
+          [
+            "_DPSBlockUntilNextEventMatchingListInMode",
+            3839.0
+          ],
+          [
+            "_DPSNextEvent",
+            3833.0
+          ],
+          [
+            "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+            3831.0
+          ],
+          [
+            "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+            3825.0
+          ],
+          [
+            "-[NSApplication run]",
+            3821.0
+          ],
+          [
+            "NSApplicationMain",
+            3820.0
+          ],
+          [
+            "specialized runApp(_:)",
+            3817.0
+          ],
+          [
+            "runApp<A>(_:)",
+            3817.0
+          ],
+          [
+            "static App.main()",
+            3816.0
+          ],
+          [
+            "static NativeAcceptanceApp.$main()",
+            3808.0
+          ],
+          [
+            "AgentWorkbench_main",
+            3808.0
+          ],
+          [
+            "start",
+            3805.0
+          ],
+          [
+            "AG::Graph::UpdateStack::update()",
+            3119.0
+          ],
+          [
+            "NSPerformVisuallyAtomicChange",
+            2548.0
+          ],
+          [
+            "GraphHost.flushTransactions()",
+            2517.0
+          ],
+          [
+            "AG::Subgraph::update(unsigned int)",
+            2505.0
+          ],
+          [
+            "0x18d4d4234",
+            2485.0
+          ],
+          [
+            "0x18d4d420c",
+            2484.0
+          ],
+          [
+            "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+            2392.0
+          ],
+          [
+            "-[NSView _layoutSubtreeWithOldSize:]",
+            2389.0
+          ],
+          [
+            "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+            2383.0
+          ],
+          [
+            "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+            2383.0
+          ],
+          [
+            "___NSViewLayout_block_invoke",
+            2381.0
+          ],
+          [
+            "-[NSView layoutSubtreeIfNeeded]",
+            2380.0
+          ],
+          [
+            "0x18d584d24",
+            2379.0
+          ],
+          [
+            "0x18d585890",
+            2379.0
+          ],
+          [
+            "_NSViewLayout",
+            2377.0
+          ],
+          [
+            "+[NSAnimationContext runAnimationGroup:]",
+            2330.0
+          ],
+          [
+            "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+            2272.0
+          ],
+          [
+            "closure #1 in ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+            2272.0
+          ],
+          [
+            "closure #1 in NSHostingView.layout()",
+            2270.0
+          ],
+          [
+            "NSHostingView.layout()",
+            2264.0
+          ],
+          [
+            "@objc NSHostingView.layout()",
+            2263.0
+          ],
+          [
+            "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+            2237.0
+          ],
+          [
+            "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+            2135.0
+          ]
+        ],
+        "directory": ".local/render-isolation/combined-cpu",
+        "manifest": {
+          "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+          "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+          "configuration": "release -O",
+          "defines": [
+            "PERCH_ACCEPTANCE",
+            "TRANSCRIPT_CHECKS"
+          ],
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+          "window_points": [
+            1280,
+            820
+          ],
+          "history_turns": 200,
+          "catalog_sessions": 500,
+          "resident_snapshot_count": 8,
+          "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+          "capture": "cpu",
+          "mode": "render-combined",
+          "input_positive_control": false,
+          "positive_control": false,
+          "joint_seconds": null,
+          "supervisor_pid": 59837,
+          "exit_code": 0,
+          "elapsed_s": 17.791387125,
+          "behavior_passed": true,
+          "missing_schemas": [],
+          "trace_exported": true
+        }
+      }
+    }
+  },
+  "profile_note": "Mutually exclusive stack contexts conserve main CPU; remaining framework work has no proven feature owner. CPU interval includes fixture generation; per-step wall timer excludes it.",
+  "verification": {
+    "native_all": {
+      "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+      "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+      "capture": "none",
+      "mode": "all",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 60506,
+      "exit_code": 0,
+      "elapsed_s": 9.501439333999999,
+      "behavior_passed": true
+    },
+    "row_reconciliation": {
+      "appearance_invalidation": true,
+      "external_summary_same_snapshot": true,
+      "prepend_and_removal": true,
+      "same_id_offscreen_and_visible_edits": true,
+      "unchanged_geometry_rebuilds": 0,
+      "unchanged_host_measurements": 0,
+      "unchanged_reconciliations": 0,
+      "unchanged_replays": 40
+    },
+    "production_build": "passed: scripts/build.sh",
+    "core_contracts": "passed: swift run --build-system native WorkbenchChecks; live SSH skipped",
+    "performance_tool_tests": "19 passed"
+  }
+}

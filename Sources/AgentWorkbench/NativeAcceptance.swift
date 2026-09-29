@@ -17,7 +17,18 @@ import os
     var dashboardGroupID: UUID?
     var referenceWindow: NSWindow?
     weak var dashboardView: NSView?
+    var sidebarProjection: SidebarProjection?
+    weak var sidebarView: NSView?
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
+}
+
+struct NativeSidebarProbe: NSViewRepresentable {
+    let projection: SidebarProjection
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        NativeAcceptanceProbe.shared.sidebarProjection = projection
+        NativeAcceptanceProbe.shared.sidebarView = view
+    }
 }
 
 /// Report only the mounted dashboard. During destination replacement SwiftUI can
@@ -260,6 +271,9 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "switching" {
                 report.merge(try await switching(window)) { _, new in new }
             }
+            if mode.hasPrefix("render-") {
+                report.merge(try await rendering(window, mode: mode)) { _, new in new }
+            }
             if mode == "dashboard" {
                 report.merge(try await dashboard(window)) { _, new in new }
             }
@@ -284,7 +298,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -587,6 +601,52 @@ private struct ReferenceComposerFixtureView: View {
         model.acceptanceUpdateCatalog(Array(sessions.suffix(20))); try check()
         model.workspace.groups.removeAll(); try check()
         model.acceptanceUpdateCatalog([]); try check()
+    }
+    /// Factor the old combined stress case into independent mutations. All three
+    /// start their clock before mutations and require the mounted sidebar input,
+    /// selected transcript and visible draft before completing a step.
+    private func rendering(_ window: NSWindow, mode: String) async throws -> [String: Any] {
+        let changesCatalog = mode != "render-switching"
+        let changesSelection = mode != "render-catalog"
+        var durations: [Double] = []
+        NavigationRenderMetrics.stages = [:]
+        let cpuStart = processCPU()
+        let span = probe.signposter.beginInterval("RenderIsolation")
+        for step in 0..<80 {
+            let sessions = changesCatalog ? fixture.sessions.enumerated().map { index, item in
+                WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                    hostName: item.hostName, detail: "状态更新 \(step)", online: item.online,
+                    section: (index + step) % 3 == 0 ? .attention : .review,
+                    canMarkReviewed: true, archived: item.archived, updatedAt: item.updatedAt)
+            } : fixture.sessions
+            let item = sessions[changesSelection ? (step + 1) % 8 : 0]
+            let draft = changesSelection ? "切换草稿 \(step)" : "目录刷新保留草稿"
+            let start = CACurrentMediaTime()
+            if changesCatalog {
+                model.workspace.starred = step % 2 == 0 ? Array(sessions.prefix(4).map(\.reference)) : []
+                let offset = step % 20
+                model.acceptanceUpdateCatalog(Array(sessions[offset...] + sessions[..<offset]))
+            }
+            if changesSelection || step == 0 { model.native.drafts[item.reference.terminalID] = draft }
+            if changesSelection { model.open(item) }
+            let expected = model.sidebarProjection(filter: .all)
+            try await settle(window, mode) {
+                guard let rendered = self.probe.sidebarProjection else { return false }
+                return self.probe.sidebarView?.window === window &&
+                    rendered.favorites == expected.favorites && rendered.recent == expected.recent &&
+                    rendered.attentionCount == expected.attentionCount &&
+                    self.model.tabs.selectedID == item.id &&
+                    self.hasMountedMessage(window, session: item.reference.terminalID) &&
+                    self.containsText(draft, in: window.contentView)
+            }
+            durations.append((CACurrentMediaTime() - start) * 1000)
+        }
+        probe.signposter.endInterval("RenderIsolation", span)
+        return ["render_steps": durations.count, "render_step_ms": stats(durations),
+                "render_process_cpu_seconds": processCPU() - cpuStart,
+                "render_stages": NavigationRenderMetrics.report,
+                "mutations": ["catalog": changesCatalog, "selection_and_draft": changesSelection],
+                "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"]
     }
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
         try checkNavigationCaches()
