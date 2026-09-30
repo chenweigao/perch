@@ -1,0 +1,159 @@
+diff --git a/Sources/AgentWorkbench/ConversationTranscriptView.swift b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+index 88aaed1..32094a9 100644
+--- a/Sources/AgentWorkbench/ConversationTranscriptView.swift
++++ b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+@@ -692,7 +692,25 @@ private final class ConversationDocumentView: NSView {
+             nextMounted.insert(id)
+             index += 1
+         }
+-        for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
++        #if TRANSCRIPT_CHECKS
++        let keepNeighbors = ProcessInfo.processInfo.environment["NAVIGATION_MOUNT_VARIANT"] != "baseline"
++        #else
++        let keepNeighbors = true
++        #endif
++        // Preserve already-created neighbors across short direction reversals.
++        // No extra rows are instantiated and the controller retention limit stays unchanged.
++        let nearby = max(0, first - 2)..<min(contents.count, index + 2)
++        for id in mounted.subtracting(nextMounted) {
++            if keepNeighbors, let row = indices[id], nearby.contains(row), let controller = controllers[id] {
++                controller.layout(frame: CGRect(x: 0, y: offsets[row], width: columnWidth, height: heights[row]), contentHeight: heights[row])
++                nextMounted.insert(id)
++            } else {
++                controllers[id]?.view.removeFromSuperview()
++                #if TRANSCRIPT_CHECKS
++                NavigationRenderMetrics.record("host_detach", since: CACurrentMediaTime())
++                #endif
++            }
++        }
+         mounted = nextMounted
+         laidOutRange = first..<index
+         let retained = geometry.retainedRows(around: first..<index)
+diff --git a/Tests/NavigationPreview/App.swift b/Tests/NavigationPreview/App.swift
+index 6c0ccf6..047fde3 100644
+--- a/Tests/NavigationPreview/App.swift
++++ b/Tests/NavigationPreview/App.swift
+@@ -295,6 +295,8 @@ final class NavigationRunner {
+         let visible = scroll.contentView.bounds.height
+         guard document > visible + 10 else { throw NavigationError("content shorter than viewport") }
+         var frames: [Double] = []
++        NavigationRenderMetrics.stages = [:]
++        let reversal = ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_REVERSAL"] == "1"
+         let stepPoints = ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_STEP_POINTS"].flatMap(Double.init)
+         let steps = stepPoints == nil ? 240 : 1200
+         for index in 0..<steps {
+@@ -306,7 +308,8 @@ final class NavigationRunner {
+             if let stepPoints {
+                 // Small continuous deltas exercise repeated layout of the same
+                 // rows; the original triangle makes almost viewport-sized jumps.
+-                let sweep = Double(index < steps / 2 ? index : steps - 1 - index)
++                let sweep = reversal ? Double(index % 120 < 60 ? index % 120 : 120 - index % 120)
++                    : Double(index < steps / 2 ? index : steps - 1 - index)
+                 offset = min(max(0, currentHeight - visible), sweep * stepPoints)
+             } else {
+                 offset = max(0, currentHeight - visible) * progress
+@@ -326,7 +329,7 @@ final class NavigationRunner {
+         result["viewport_height"] = visible
+         result["final_document_height"] = scroll.documentView?.bounds.height ?? 0
+         if let stepPoints { result["step_points"] = stepPoints }
+-        return ["scroll_step_ms": result, "steps": steps,
++        return ["scroll_step_ms": result, "steps": steps, "reversal": reversal, "render_stages": NavigationRenderMetrics.report,
+                 "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate"]
+     }
+ 
+@@ -783,6 +786,46 @@ final class NavigationRunner {
+             throw NavigationError("same-ID update failed to replace mounted text or unnecessarily replaced its row host")
+         }
+         try record("same_id_native_text", ["updated": true, "host_reused": true])
++        // Retained rows must follow content edits and wrapping widths, including
++        // same-ID user messages whose native host remains mounted.
++        let promptQuery = "第 1 轮："
++        guard let promptHit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: promptQuery, running: false).first else {
++            throw NavigationError("missing user bubble target")
++        }
++        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: promptHit, query: promptQuery))
++        try await settle()
++        func promptRow(in view: NSView) -> NSView? {
++            if view.identifier?.rawValue == promptHit.entryID { return view }
++            return view.subviews.lazy.compactMap { promptRow(in: $0) }.first
++        }
++        guard let promptHost = promptRow(in: scroll) else { throw NavigationError("user bubble is not mounted") }
++        let shortHeight = promptHost.frame.height
++        let longPrompt = Array(repeating: "更新后的问题包含中文、English wrapping and Unicode 👩🏽‍💻，需要保持完整内容。", count: 20).joined(separator: " ")
++        func replacePrompt(_ value: String) throws {
++            let updated = try NavigationHistory.conversation(turns: 200, salt: targets[0] + ":", revisedReply: revisedReply, revisedPrompt: value)
++            model.conversation?.reconcile(updated.snapshot)
++        }
++        try replacePrompt(longPrompt)
++        try await settle()
++        let narrowHeight = promptHost.frame.height
++        guard promptRow(in: scroll) === promptHost, contains(longPrompt, in: promptHost), narrowHeight > shortHeight + 100 else {
++            throw NavigationError("User bubble retained short-content geometry")
++        }
++        model.narrow = false
++        try await settle()
++        let wideHeight = promptHost.frame.height
++        guard wideHeight < narrowHeight - 20, contains(longPrompt, in: promptHost) else {
++            throw NavigationError("User bubble retained narrow-width geometry")
++        }
++        try replacePrompt("更新后的短问题")
++        try await settle()
++        guard promptRow(in: scroll) === promptHost, contains("更新后的短问题", in: promptHost), promptHost.frame.height < wideHeight - 100 else {
++            throw NavigationError("User bubble retained long-content geometry")
++        }
++        try record("user_bubble_resize", ["same_host": true, "short_height": shortHeight,
++                                        "long_narrow_height": narrowHeight, "long_wide_height": wideHeight,
++                                        "replacement_short_height": promptHost.frame.height])
++
+         try record("failures", ["checks": failures])
+         guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
+         return report
+diff --git a/Tests/NavigationPreview/History.swift b/Tests/NavigationPreview/History.swift
+index bba01f3..7638f13 100644
+--- a/Tests/NavigationPreview/History.swift
++++ b/Tests/NavigationPreview/History.swift
+@@ -14,7 +14,7 @@ enum NavigationHistory {
+     /// `salt` makes each fixture session a distinct conversation. Without it every
+     /// session shares one set of message IDs, so a switch looks like an edit of the
+     /// same rows rather than a move to different ones.
+-    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil) throws -> KimiConversation {
++    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil, revisedPrompt: String? = nil) throws -> KimiConversation {
+         var messages: [[String: Any]] = []
+         func message(_ suffix: String, _ role: String, _ content: [[String: Any]]) -> [String: Any] {
+             let id = salt + suffix
+@@ -28,7 +28,7 @@ enum NavigationHistory {
+             switch turn % 5 {
+             case 0:
+                 // Rich reply: Chinese prose, a table and a code block.
+-                messages.append(message(id + "a", "user", [["type": "text", "text": "第 \(turn + 1) 轮：请给出可核对的结论。"]]))
++                messages.append(message(id + "a", "user", [["type": "text", "text": turn == 0 ? (revisedPrompt ?? "第 \(turn + 1) 轮：请给出可核对的结论。") : "第 \(turn + 1) 轮：请给出可核对的结论。"]]))
+                 messages.append(message(id + "b", "assistant", [["type": "text", "text": """
+                 ## 第 \(turn + 1) 轮结果
+ 
+diff --git a/scripts/run-navigation-check.py b/scripts/run-navigation-check.py
+index c47a99b..72515a7 100644
+--- a/scripts/run-navigation-check.py
++++ b/scripts/run-navigation-check.py
+@@ -18,8 +18,10 @@ parser.add_argument("--recreate", action="store_true")
+ parser.add_argument("--scroll-step-points", type=float, default=0,
+                     help="Use 1200 small scroll steps instead of the whole-document sweep")
+ parser.add_argument("--disclosure-context", action="store_true")
++parser.add_argument("--scroll-reversal", action="store_true")
+ parser.add_argument("--assert-atomic-disclosure", action="store_true")
+ parser.add_argument("--full-content", action="store_true")
++parser.add_argument("--mount-variant", choices=["baseline", "neighbors"], default="neighbors")
+ parser.add_argument("--long-output-variant", choices=["inline", "viewport"], default="viewport")
+ parser.add_argument("--output-lines", type=int, default=2400)
+ parser.add_argument("--output-shape", choices=["lines", "wrapped-line"], default="lines")
+@@ -38,9 +40,11 @@ environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="2
+                    NAVIGATION_SWITCHES=str(args.switches),
+                    NAVIGATION_SOAK_SECONDS=str(args.seconds),
+                    NAVIGATION_RECREATE="1" if args.recreate else "0",
++                   NAVIGATION_SCROLL_REVERSAL="1" if args.scroll_reversal else "0",
+                    NAVIGATION_DISCLOSURE_CONTEXT="1" if args.disclosure_context else "0",
+                    NAVIGATION_ASSERT_ATOMIC_DISCLOSURE="1" if args.assert_atomic_disclosure else "0",
+                    NAVIGATION_FULL_DISCLOSURE="1" if args.full_content else "0",
++                   NAVIGATION_MOUNT_VARIANT=args.mount_variant,
+                    NAVIGATION_LONG_OUTPUT_VARIANT=args.long_output_variant,
+                    NAVIGATION_OUTPUT_LINES=str(args.output_lines),
+                    NAVIGATION_OUTPUT_SHAPE=args.output_shape)

@@ -14,7 +14,7 @@ enum NavigationHistory {
     /// `salt` makes each fixture session a distinct conversation. Without it every
     /// session shares one set of message IDs, so a switch looks like an edit of the
     /// same rows rather than a move to different ones.
-    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil) throws -> KimiConversation {
+    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil, revisedPrompt: String? = nil) throws -> KimiConversation {
         var messages: [[String: Any]] = []
         func message(_ suffix: String, _ role: String, _ content: [[String: Any]]) -> [String: Any] {
             let id = salt + suffix
@@ -28,7 +28,7 @@ enum NavigationHistory {
             switch turn % 5 {
             case 0:
                 // Rich reply: Chinese prose, a table and a code block.
-                messages.append(message(id + "a", "user", [["type": "text", "text": "第 \(turn + 1) 轮：请给出可核对的结论。"]]))
+                messages.append(message(id + "a", "user", [["type": "text", "text": turn == 0 ? (revisedPrompt ?? "第 \(turn + 1) 轮：请给出可核对的结论。") : "第 \(turn + 1) 轮：请给出可核对的结论。"]]))
                 messages.append(message(id + "b", "assistant", [["type": "text", "text": """
                 ## 第 \(turn + 1) 轮结果
 

@@ -295,6 +295,8 @@ final class NavigationRunner {
         let visible = scroll.contentView.bounds.height
         guard document > visible + 10 else { throw NavigationError("content shorter than viewport") }
         var frames: [Double] = []
+        NavigationRenderMetrics.stages = [:]
+        let reversal = ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_REVERSAL"] == "1"
         let stepPoints = ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_STEP_POINTS"].flatMap(Double.init)
         let steps = stepPoints == nil ? 240 : 1200
         for index in 0..<steps {
@@ -306,7 +308,8 @@ final class NavigationRunner {
             if let stepPoints {
                 // Small continuous deltas exercise repeated layout of the same
                 // rows; the original triangle makes almost viewport-sized jumps.
-                let sweep = Double(index < steps / 2 ? index : steps - 1 - index)
+                let sweep = reversal ? Double(index % 120 < 60 ? index % 120 : 120 - index % 120)
+                    : Double(index < steps / 2 ? index : steps - 1 - index)
                 offset = min(max(0, currentHeight - visible), sweep * stepPoints)
             } else {
                 offset = max(0, currentHeight - visible) * progress
@@ -326,7 +329,7 @@ final class NavigationRunner {
         result["viewport_height"] = visible
         result["final_document_height"] = scroll.documentView?.bounds.height ?? 0
         if let stepPoints { result["step_points"] = stepPoints }
-        return ["scroll_step_ms": result, "steps": steps,
+        return ["scroll_step_ms": result, "steps": steps, "reversal": reversal, "render_stages": NavigationRenderMetrics.report,
                 "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate"]
     }
 
@@ -783,6 +786,46 @@ final class NavigationRunner {
             throw NavigationError("same-ID update failed to replace mounted text or unnecessarily replaced its row host")
         }
         try record("same_id_native_text", ["updated": true, "host_reused": true])
+        // Retained rows must follow content edits and wrapping widths, including
+        // same-ID user messages whose native host remains mounted.
+        let promptQuery = "第 1 轮："
+        guard let promptHit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: promptQuery, running: false).first else {
+            throw NavigationError("missing user bubble target")
+        }
+        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: promptHit, query: promptQuery))
+        try await settle()
+        func promptRow(in view: NSView) -> NSView? {
+            if view.identifier?.rawValue == promptHit.entryID { return view }
+            return view.subviews.lazy.compactMap { promptRow(in: $0) }.first
+        }
+        guard let promptHost = promptRow(in: scroll) else { throw NavigationError("user bubble is not mounted") }
+        let shortHeight = promptHost.frame.height
+        let longPrompt = Array(repeating: "更新后的问题包含中文、English wrapping and Unicode 👩🏽‍💻，需要保持完整内容。", count: 20).joined(separator: " ")
+        func replacePrompt(_ value: String) throws {
+            let updated = try NavigationHistory.conversation(turns: 200, salt: targets[0] + ":", revisedReply: revisedReply, revisedPrompt: value)
+            model.conversation?.reconcile(updated.snapshot)
+        }
+        try replacePrompt(longPrompt)
+        try await settle()
+        let narrowHeight = promptHost.frame.height
+        guard promptRow(in: scroll) === promptHost, contains(longPrompt, in: promptHost), narrowHeight > shortHeight + 100 else {
+            throw NavigationError("User bubble retained short-content geometry")
+        }
+        model.narrow = false
+        try await settle()
+        let wideHeight = promptHost.frame.height
+        guard wideHeight < narrowHeight - 20, contains(longPrompt, in: promptHost) else {
+            throw NavigationError("User bubble retained narrow-width geometry")
+        }
+        try replacePrompt("更新后的短问题")
+        try await settle()
+        guard promptRow(in: scroll) === promptHost, contains("更新后的短问题", in: promptHost), promptHost.frame.height < wideHeight - 100 else {
+            throw NavigationError("User bubble retained long-content geometry")
+        }
+        try record("user_bubble_resize", ["same_host": true, "short_height": shortHeight,
+                                        "long_narrow_height": narrowHeight, "long_wide_height": wideHeight,
+                                        "replacement_short_height": promptHost.frame.height])
+
         try record("failures", ["checks": failures])
         guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
         return report
