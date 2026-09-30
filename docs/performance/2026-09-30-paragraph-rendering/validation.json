@@ -1,0 +1,27 @@
+{
+  "production_source_sha256": "1e297938cfaa22c2046c4d4f106d40782a8a4dfe907300f3c15f66e97adda53a",
+  "matches_final_reading_fixture": true,
+  "production_build": {
+    "command": "WORKBENCH_APP_DIR=\"$PWD/.local/paragraph-experiment/Perch Paragraphs.app\" bash scripts/build.sh",
+    "exit_code": 0,
+    "log": "/tmp/perch-paragraph-production-build.log"
+  },
+  "codesign": {
+    "command": "codesign --verify --deep --strict .local/paragraph-experiment/Perch Paragraphs.app",
+    "exit_code": 0
+  },
+  "core_checks": {
+    "command": "swift run --build-system native -c release --skip-build WorkbenchChecks",
+    "exit_code": 0,
+    "live_ssh": "skipped: WORKBENCH_LIVE_HOST unset",
+    "log": "/tmp/perch-paragraph-core-checks.log"
+  },
+  "performance_tool_tests": {
+    "command": "python3 -m unittest discover -s Tests/Performance",
+    "exit_code": 0,
+    "tests": 22,
+    "log": "/tmp/perch-paragraph-tools-tests.log"
+  },
+  "runtime_switch": false,
+  "pushed": false
+}

@@ -301,3 +301,25 @@ full Unicode copying, end-of-content search, missing queries, backwards wrapping
 streaming append, resize, replacement, and stationary outer geometry. See the
 [long output report](../performance/2026-09-29-long-output/REPORT.md) for measured
 scope and the independent-scroll interaction tradeoff.
+
+## Bounded native paragraph groups
+
+Adjacent Markdown paragraphs share a native text view in groups of at most eight.
+The first source block index identifies the group; equal completed groups retain
+views while streaming changes only the tail group. Headings, code, tables, list
+items, quotes and empty paragraphs preserve their structural boundaries. Lists and
+quotes may group their own adjacent paragraphs with compact spacing.
+
+TextKit paragraph spacing replaces SwiftUI padding within a group, preserving
+hard breaks and inheriting the preceding run's font at the separator. Per-paragraph
+rounding is no longer applied, so small cumulative glyph-position differences are
+expected. Prefix-preserving updates retain selection; replacements use normal text
+storage semantics. The full Markdown source and existing link/file routing remain
+authoritative. A group is bounded by paragraph count, not characters: giant single
+paragraphs and whole-document parsing are still separate performance limits.
+
+The native `paragraphs` check covers wrapping, glyph positions, links, Unicode
+copying, empty alt text, streaming identity/selection and replacement. Full reading,
+search, resizing, session return and prepend checks cover transcript composition.
+See the [experiment](../performance/2026-09-30-paragraph-rendering/REPORT.md) for
+fixed-binary results; these are application layout timings, not measured FPS.

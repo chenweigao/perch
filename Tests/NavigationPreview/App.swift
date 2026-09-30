@@ -1139,7 +1139,8 @@ struct NavigationPreviewApp: App {
                 report["build"] = try JSONSerialization.jsonObject(with: Data(contentsOf: buildURL))
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
-            if mode == "disclosure" { report.merge(try await runner.disclosures()) { a, _ in a } }
+            if mode == "paragraphs" { report.merge(try await runner.paragraphExperiment()) { a, _ in a } }
+            else if mode == "disclosure" { report.merge(try await runner.disclosures()) { a, _ in a } }
             else if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
             else if mode == "image" { report.merge(try await runner.imageDecoding()) { a, _ in a } }
             else if mode == "turns" { report.merge(try await runner.turnNavigation()) { a, _ in a } }

@@ -1,0 +1,61 @@
+{
+  "supervisor": {
+    "status": "exited",
+    "mode": "anchor",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_GROUP_PARAGRAPHS": "1",
+      "NAVIGATION_AUTORUN": "anchor",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_RESULTS": ".local/paragraph-experiment/anchor-final",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+      "source_sha256": "64ddbd1b2ed14e7d9024ab2e7c5de145e7eb6bb9e5688ae01eb802722bcb5df1",
+      "fixture_sha256": "5889138fe821a5270db44199d22b472a24d30d29e9d998ed74b3fa2ade3231ff",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "0c5f43b03e66ab7fef1470b18304f812c292fad5c1d3834e0874091336218bcf",
+    "pid": 24933,
+    "exit_code": 0,
+    "elapsed_s": 4.398248583,
+    "passed": true
+  },
+  "result": {
+    "added_messages": 20,
+    "after_entry": "thinking:53B0798A-C29F-41F8-AEFC-82268D38E861:omp:session-1:0003b:0",
+    "after_offset": 74,
+    "before_entry": "thinking:53B0798A-C29F-41F8-AEFC-82268D38E861:omp:session-1:0003b:0",
+    "before_offset": 74,
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "fixture_sha256": "5889138fe821a5270db44199d22b472a24d30d29e9d998ed74b3fa2ade3231ff",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+      "source_sha256": "64ddbd1b2ed14e7d9024ab2e7c5de145e7eb6bb9e5688ae01eb802722bcb5df1"
+    },
+    "commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+    "history_source": "navigation-mixed",
+    "history_turns": 200,
+    "macos": "Version 27.0 (Build 26A428)",
+    "message_count": 540,
+    "mode": "anchor",
+    "preserved": true,
+    "recreates_timeline": false,
+    "sessions": 500,
+    "status": "passed",
+    "timestamp": "2026-09-30T13:29:56Z"
+  }
+}

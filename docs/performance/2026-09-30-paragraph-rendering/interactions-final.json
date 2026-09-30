@@ -1,0 +1,113 @@
+{
+  "supervisor": {
+    "status": "exited",
+    "mode": "interactions",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_GROUP_PARAGRAPHS": "1",
+      "NAVIGATION_AUTORUN": "interactions",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_RESULTS": ".local/paragraph-experiment/interactions-final",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+      "source_sha256": "64ddbd1b2ed14e7d9024ab2e7c5de145e7eb6bb9e5688ae01eb802722bcb5df1",
+      "fixture_sha256": "5889138fe821a5270db44199d22b472a24d30d29e9d998ed74b3fa2ade3231ff",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "0c5f43b03e66ab7fef1470b18304f812c292fad5c1d3834e0874091336218bcf",
+    "pid": 24896,
+    "exit_code": 0,
+    "elapsed_s": 8.973045,
+    "passed": true
+  },
+  "result": {
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "fixture_sha256": "5889138fe821a5270db44199d22b472a24d30d29e9d998ed74b3fa2ade3231ff",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+      "source_sha256": "64ddbd1b2ed14e7d9024ab2e7c5de145e7eb6bb9e5688ae01eb802722bcb5df1"
+    },
+    "commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+    "failures": {
+      "checks": []
+    },
+    "fixture-195": {
+      "entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0195b:0",
+      "mounted_rows": [
+        "thinking:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0196b:0",
+        "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0196a:0",
+        "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0195b:0"
+      ],
+      "selected": [
+        "fixture-195"
+      ]
+    },
+    "history_source": "navigation-mixed",
+    "history_turns": 200,
+    "macos": "Version 27.0 (Build 26A428)",
+    "mode": "interactions",
+    "recreates_timeline": false,
+    "resize": {
+      "after_entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0004a:0",
+      "after_offset": 28,
+      "before_entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0004a:0",
+      "before_offset": 28
+    },
+    "same_id_native_text": {
+      "host_reused": true,
+      "updated": true
+    },
+    "session_return": {
+      "after_entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0004a:0",
+      "after_offset": 28,
+      "before_entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0004a:0",
+      "before_offset": 28
+    },
+    "sessions": 500,
+    "status": "passed",
+    "timestamp": "2026-09-30T13:29:47Z",
+    "user_bubble_resize": {
+      "long_narrow_height": 804,
+      "long_wide_height": 485,
+      "replacement_short_height": 53,
+      "same_host": true,
+      "short_height": 53
+    },
+    "中文换行": {
+      "entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0000b:0",
+      "mounted_rows": [
+        "thinking:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0001b:0",
+        "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0001a:0",
+        "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0000b:0"
+      ],
+      "selected": [
+        "中文换行"
+      ]
+    },
+    "第 6 轮结果": {
+      "entry": "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0005b:0",
+      "mounted_rows": [
+        "thinking:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0006b:0",
+        "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0006a:0",
+        "text:86DB2CEF-7B8E-40E8-9E1E-F8076A17E6ED:omp:session-1:0005b:0"
+      ],
+      "selected": [
+        "第 6 轮结果"
+      ]
+    }
+  }
+}

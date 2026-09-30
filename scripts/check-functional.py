@@ -50,7 +50,7 @@ def main():
         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
             "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
-        for mode in ["reading", "interactions", "roundtrip"]:
+        for mode in ["reading", "interactions", "paragraphs", "roundtrip"]:
             commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
                 mode, "--output", str(out / ("navigation-" + mode))], 150))
     report = {"suite": args.suite, "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
