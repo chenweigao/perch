@@ -453,7 +453,7 @@ struct KimiSelectionContent: View {
     var body: some View {
         if connection.conversation?.snapshot.session.id == model.selectedReference?.terminalID {
             KimiWorkspaceView(connection: connection, onNew: { model.startNewTask() }, onInput: {},
-                              onResultDisplayed: { model.reviewDisplayed($0, on: connection.host.id) }).id(model.selectedReference?.id)
+                              onResultDisplayed: { model.reviewDisplayed($0, on: connection.host.id) }).id(ObjectIdentifier(connection))
         } else {
             VStack(spacing: 14) {
                 if connection.loading { ProgressView() }

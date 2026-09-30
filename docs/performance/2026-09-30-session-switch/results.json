@@ -1,0 +1,2477 @@
+{
+  "boundary": "Native layout samples; not display frames or hardware pointer latency",
+  "runs": {
+    "baseline": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "1e4fad60e4ff0292b8548e590b269d67d535bfc1ff78338b0c457d27d6aaf2e5",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 1,
+        "binary_sha256": "45e554d13c58bc609de6dd969dae80d4112bbed976478f90447523dfd09cd646",
+        "capture": "none",
+        "mode": "kimi-switching",
+        "native_fixture_resident_snapshot_count": 8,
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 42334,
+        "exit_code": 0,
+        "elapsed_s": 4.080495333,
+        "behavior_passed": true
+      },
+      "result": {
+        "boundary": "native layout samples, not display frames",
+        "mode": "kimi-switching",
+        "status": "passed",
+        "switches": [
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "ms": 25.710999965667725,
+                "ready": false,
+                "session": "none"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71246,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 78.9371666032821,
+                "origin": 70496,
+                "ready": true,
+                "rows": [
+                  "text:b-assistant-198:0",
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71246,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 89.89079168532044,
+                "origin": 70636,
+                "ready": true,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "bottom_gap": 70686,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 89.58808332681656,
+                "origin": 0,
+                "ready": false,
+                "rows": [
+                  "text:a-user-1:0",
+                  "text:a-assistant-1:0",
+                  "text:a-user-2:0",
+                  "text:a-assistant-2:0"
+                ],
+                "scroll_reused": false,
+                "session": "a"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 106.60812491551042,
+                "origin": 70674,
+                "ready": false,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "a"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 117.00866662431508,
+                "origin": 70674,
+                "ready": true,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "a"
+              }
+            ]
+          },
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "bottom_gap": 70686,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 89.69675004482269,
+                "origin": 0,
+                "ready": false,
+                "rows": [
+                  "text:b-user-1:0",
+                  "text:b-assistant-1:0",
+                  "text:b-user-2:0",
+                  "text:b-assistant-2:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 106.60287505015731,
+                "origin": 70674,
+                "ready": false,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 115.1408749865368,
+                "origin": 70674,
+                "ready": true,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "bottom_gap": 70686,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 96.94883332122117,
+                "origin": 0,
+                "ready": false,
+                "rows": [
+                  "text:a-user-1:0",
+                  "text:a-assistant-1:0",
+                  "text:a-user-2:0",
+                  "text:a-assistant-2:0"
+                ],
+                "scroll_reused": false,
+                "session": "a"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 116.37729161884636,
+                "origin": 70674,
+                "ready": false,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "a"
+              },
+              {
+                "bottom_gap": 12,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 126.49854156188667,
+                "origin": 70674,
+                "ready": true,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": false,
+                "session": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "raw_result_sha256": "12a6b714f970393158ae7fb4860dd46e28c97b24349414cfe2f6872fa004fb4d"
+    },
+    "verified": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "17dfab2b5035da6c3895455d090a6168d8495c131eeade3a4a8eacfc7d637448",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 2,
+        "binary_sha256": "420804fc19721364bf3f077b63d40f4d0d94d3af22f4e05ab5ec4c1d49c83f7e",
+        "capture": "none",
+        "mode": "kimi-switching",
+        "native_fixture_resident_snapshot_count": 8,
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 47486,
+        "exit_code": 0,
+        "elapsed_s": 5.473036,
+        "behavior_passed": true
+      },
+      "result": {
+        "boundary": "native layout samples, not display frames",
+        "mode": "kimi-switching",
+        "saved_anchor_restored_before_display": true,
+        "status": "passed",
+        "switches": [
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "ms": 25.716666714288294,
+                "ready": false,
+                "session": "none"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": true,
+                "document_reused": false,
+                "ms": 72.71870831027627,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-200:0",
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 82.9934166977182,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-200:0",
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 66.54358340892941,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              },
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 84.56129173282534,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              }
+            ]
+          },
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 69.22541675157845,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 85.12237505055964,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 67.71137507166713,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              },
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 84.29404173512012,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              }
+            ]
+          },
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:b-user-81:0",
+                "anchor_offset": 0,
+                "bottom_gap": 42054,
+                "document_height": 71144,
+                "document_hidden": true,
+                "document_reused": true,
+                "ms": 51.7434166977182,
+                "origin": 28492,
+                "ready": false,
+                "rows": [],
+                "scroll_reused": true,
+                "session": "b"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 70.05108334124088,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:a-user-81:0",
+                "anchor_offset": 0,
+                "bottom_gap": 42194,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 79.51174990739673,
+                "origin": 28492,
+                "ready": false,
+                "rows": [
+                  "text:a-user-81:0",
+                  "text:a-assistant-81:0",
+                  "text:a-user-82:0",
+                  "text:a-assistant-82:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              },
+              {
+                "anchor_entry": "text:a-user-81:0",
+                "anchor_offset": 0,
+                "bottom_gap": 42194,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 95.90870828833431,
+                "origin": 28492,
+                "ready": true,
+                "rows": [
+                  "text:a-user-81:0",
+                  "text:a-assistant-81:0",
+                  "text:a-user-82:0",
+                  "text:a-assistant-82:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "raw_result_sha256": "121d997d337387b9238d7ee16a09b48be6776f5e2b985454e023e9b5c5907fa8"
+    },
+    "detail-lifecycle": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "17dfab2b5035da6c3895455d090a6168d8495c131eeade3a4a8eacfc7d637448",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "420804fc19721364bf3f077b63d40f4d0d94d3af22f4e05ab5ec4c1d49c83f7e",
+        "capture": "none",
+        "mode": "detail-lifecycle",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 47797,
+        "exit_code": 0,
+        "elapsed_s": 7.865943209,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "composer_identity_and_undo_isolated": true,
+        "detail_host_preserved": true,
+        "failed_load_and_retry": true,
+        "focus_restored": true,
+        "history_turns": 200,
+        "host_counts": [
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 3
+          },
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 5,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 5,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 5,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 5,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 5,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 7,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 7,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 7,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 7,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 7,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 7,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 9,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 9,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 9,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 9,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 9,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 10,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 11,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 11,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 11,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 11,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 11,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 12,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 2
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 7
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 8
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 12,
+            "retired": 10
+          },
+          {
+            "mounted": 4,
+            "retained": 13,
+            "retired": 7
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          }
+        ],
+        "intentional_stall_ms": 0,
+        "loading_hides_native_tree": true,
+        "main_actor_lateness": {
+          "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+          "max_ms": 73.15124990418553,
+          "over_16ms": 9,
+          "over_50ms": 2,
+          "p50_ms": 16.188499983400106,
+          "p95_ms": 63.72466660104692,
+          "p99_ms": 63.72466660104692,
+          "sample_count": 17
+        },
+        "marked_text_did_not_cross_session": true,
+        "mode": "detail-lifecycle",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "old_send_rejected": true,
+        "requests": [
+          "/sessions/session-0?turns=50",
+          "/models",
+          "/sessions/session-1?turns=50",
+          "/models",
+          "/sessions/session-0?turns=50",
+          "/models",
+          "/sessions/session-1?turns=50",
+          "/sessions/session-1?turns=50",
+          "/models",
+          "/sessions/session-1?turns=50",
+          "/models"
+        ],
+        "responsiveness_control_detected": false,
+        "return_anchor_preserved": true,
+        "rss_after_mb": 185.828125,
+        "rss_before_mb": 169.15625,
+        "rss_settled_mb": 185.84375,
+        "same_id_cross_host_isolated": true,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 27.89291669614613,
+          "median": 3.407416632398963,
+          "p95": 23.762791650369763
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ]
+      },
+      "raw_result_sha256": "f800b86a86123a5c5b1820b43d36c956aa00f3aaa50832f5e39ab6a91e676aaf"
+    },
+    "kimi-invalidation": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "17dfab2b5035da6c3895455d090a6168d8495c131eeade3a4a8eacfc7d637448",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 1,
+        "binary_sha256": "420804fc19721364bf3f077b63d40f4d0d94d3af22f4e05ab5ec4c1d49c83f7e",
+        "capture": "none",
+        "mode": "kimi-invalidation",
+        "native_fixture_resident_snapshot_count": 8,
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 47900,
+        "exit_code": 0,
+        "elapsed_s": 2.216919708,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions_during_measurement": 1,
+        "draft_mutations": 40,
+        "history_turns": 200,
+        "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+        "mode": "kimi-invalidation",
+        "reading_body_evaluations_during_drafts": 0,
+        "selection_draft_roundtrip": true,
+        "status": "passed",
+        "stream_positive_control": true
+      },
+      "raw_result_sha256": "fca5699078267cdc61cf01cf0cf8960f7dff0a54182c0c8f5ebf50ad09b89461"
+    },
+    "paging": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "17dfab2b5035da6c3895455d090a6168d8495c131eeade3a4a8eacfc7d637448",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "420804fc19721364bf3f077b63d40f4d0d94d3af22f4e05ab5ec4c1d49c83f7e",
+        "capture": "none",
+        "mode": "paging",
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 47907,
+        "exit_code": 0,
+        "elapsed_s": 7.620830207999999,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "host_counts": [
+          {
+            "mounted": 3,
+            "retained": 3,
+            "retired": 3
+          },
+          {
+            "mounted": 4,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 4,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 5,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 6,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 8,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 9,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 10,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 10,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 10,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 10,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 10,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 11,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 12,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 12,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 12,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 12,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 12,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 13,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 14,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 1
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 2
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 5,
+            "retained": 17,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 1
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 3,
+            "retained": 15,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          },
+          {
+            "mounted": 4,
+            "retained": 16,
+            "retired": 0
+          }
+        ],
+        "intentional_stall_ms": 0,
+        "main_actor_lateness": {
+          "boundary": "lateness after 10ms main-actor Task.sleep; includes OS scheduling; not frame or hardware input latency",
+          "max_ms": 51.5906666405499,
+          "over_16ms": 9,
+          "over_50ms": 2,
+          "p50_ms": 22.999833337962627,
+          "p95_ms": 51.18420836515725,
+          "p99_ms": 51.18420836515725,
+          "sample_count": 15
+        },
+        "mode": "paging",
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "paging_anchor_preserved": true,
+        "paging_delta_messages": 1,
+        "paging_final_turns": 200,
+        "paging_initial_turns": 50,
+        "paging_response_bytes": [
+          41033,
+          41033,
+          488,
+          41033,
+          81282,
+          40640,
+          40558
+        ],
+        "paging_response_messages": [
+          100,
+          100,
+          1,
+          100,
+          200,
+          100,
+          100
+        ],
+        "paging_search_and_navigation": "passed",
+        "requests": [
+          "/sessions/session-0?turns=50",
+          "/models",
+          "/sessions/session-0?before=300&epoch=fixture&turns=50",
+          "/sessions/session-0?start=200&epoch=fixture&revision=1",
+          "/sessions/session-1?turns=50",
+          "/models",
+          "/sessions/session-0?start=200&epoch=fixture&turns=50",
+          "/models",
+          "/sessions/session-0?before=200&epoch=fixture&turns=50",
+          "/sessions/session-0?before=100&epoch=fixture&turns=50"
+        ],
+        "responsiveness_control_detected": false,
+        "rss_after_mb": 187.109375,
+        "rss_before_mb": 168.046875,
+        "rss_settled_mb": 187.125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 47.59112501051277,
+          "median": 2.952916664071381,
+          "p95": 18.22037494275719
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ]
+      },
+      "raw_result_sha256": "bef128f69de49422aa0c95828a7b2a0ab7ad50df798807cbba9b116257d71080"
+    },
+    "navigation-reading": {
+      "supervisor": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "reading",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": ".local/switch-flicker/navigation-reading",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+          "source_sha256": "a66116365e97b270fcddcae3c58219eb49f6bd487b54531743e3290e36cd8ecf",
+          "fixture_sha256": "561ffb528d263d67de4c987cf2816c38395788595ca34953451bba907113f232",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "ed41508bdb71cafd113392220ec3b7d284bf0e1b1816e3370e8b77e4764e28c5",
+        "pid": 48671,
+        "exit_code": 0,
+        "elapsed_s": 16.067788584,
+        "passed": true
+      },
+      "result": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "document_height_after_reading": 99785,
+        "history_source": "navigation-mixed",
+        "history_turns": 200,
+        "macos": "Version 27.0 (Build 26A428)",
+        "mode": "reading",
+        "recreates_timeline": false,
+        "resident_mb_after_downward": 166.0625,
+        "resident_mb_after_upward": 167.875,
+        "resident_mb_before_reading": 140.6875,
+        "sessions": 500,
+        "status": "passed",
+        "tail_found": true,
+        "timestamp": "2026-09-30T13:59:15Z"
+      },
+      "raw_result_sha256": "0aa035ee02d843b95c8f9e54b610c861551329b44e35ca2c0085fe2c74263c2f"
+    },
+    "navigation-interactions": {
+      "supervisor": {
+        "status": "exited",
+        "mode": "interactions",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "interactions",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": ".local/switch-flicker/navigation-interactions",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+          "source_sha256": "a66116365e97b270fcddcae3c58219eb49f6bd487b54531743e3290e36cd8ecf",
+          "fixture_sha256": "561ffb528d263d67de4c987cf2816c38395788595ca34953451bba907113f232",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "ed41508bdb71cafd113392220ec3b7d284bf0e1b1816e3370e8b77e4764e28c5",
+        "pid": 48925,
+        "exit_code": 0,
+        "elapsed_s": 8.6955535,
+        "passed": true
+      },
+      "result": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "history_source": "navigation-mixed",
+        "history_turns": 200,
+        "macos": "Version 27.0 (Build 26A428)",
+        "mode": "interactions",
+        "recreates_timeline": false,
+        "sessions": 500,
+        "status": "passed",
+        "timestamp": "2026-09-30T13:59:31Z"
+      },
+      "raw_result_sha256": "44f46ce401be16eed3c4cc8e86b94dc859b6509f0c3df5de8b7f8290025ad893"
+    },
+    "navigation-anchor": {
+      "supervisor": {
+        "status": "exited",
+        "mode": "anchor",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "anchor",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": ".local/switch-flicker/navigation-anchor",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+          "source_sha256": "a66116365e97b270fcddcae3c58219eb49f6bd487b54531743e3290e36cd8ecf",
+          "fixture_sha256": "561ffb528d263d67de4c987cf2816c38395788595ca34953451bba907113f232",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "ed41508bdb71cafd113392220ec3b7d284bf0e1b1816e3370e8b77e4764e28c5",
+        "pid": 49176,
+        "exit_code": 0,
+        "elapsed_s": 4.289658458,
+        "passed": true
+      },
+      "result": {
+        "added_messages": 20,
+        "after_entry": "thinking:57F4EE41-93BE-41AB-9715-928A1868AE16:omp:session-1:0003b:0",
+        "after_offset": 74,
+        "before_entry": "thinking:57F4EE41-93BE-41AB-9715-928A1868AE16:omp:session-1:0003b:0",
+        "before_offset": 74,
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "history_source": "navigation-mixed",
+        "history_turns": 200,
+        "macos": "Version 27.0 (Build 26A428)",
+        "message_count": 540,
+        "mode": "anchor",
+        "preserved": true,
+        "recreates_timeline": false,
+        "sessions": 500,
+        "status": "passed",
+        "timestamp": "2026-09-30T13:59:40Z"
+      },
+      "raw_result_sha256": "d8b7f48a9f0946b71382001021c8d89b52dcea115f578d2bbdc746c73fa96baa"
+    },
+    "final-kimi-switching": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "8332ddb2ae0c3277b62d31725108a16e51d4092c94f6837d7eb1c7796575106c",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 2,
+        "binary_sha256": "4682a56596217c31c00b9fc086cae1ed08a7aee095c9295a7b3c7d25fba20ab9",
+        "capture": "none",
+        "mode": "kimi-switching",
+        "native_fixture_resident_snapshot_count": 8,
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 51880,
+        "exit_code": 0,
+        "elapsed_s": 5.147153,
+        "behavior_passed": true
+      },
+      "result": {
+        "boundary": "native layout samples, not display frames",
+        "mode": "kimi-switching",
+        "saved_anchor_restored_before_display": true,
+        "status": "passed",
+        "switches": [
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "ms": 26.990041718818247,
+                "ready": false,
+                "session": "none"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": false,
+                "ms": 75.53120842203498,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-200:0",
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0"
+                ],
+                "scroll_reused": false,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 36.29925008863211,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              },
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 52.25254164543003,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              }
+            ]
+          },
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 33.89783343300223,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 48.60258335247636,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 51.22070841025561,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              },
+              {
+                "anchor_entry": "text:a-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 69.39704169053584,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:a-user-199:0",
+                  "text:a-assistant-199:0",
+                  "text:a-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              }
+            ]
+          },
+          {
+            "target": "b",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:b-user-81:0",
+                "anchor_offset": 0,
+                "bottom_gap": 42054,
+                "document_height": 71144,
+                "document_hidden": true,
+                "document_reused": true,
+                "ms": 50.8860417176038,
+                "origin": 28492,
+                "ready": false,
+                "rows": [],
+                "scroll_reused": true,
+                "session": "b"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 65.21166674792767,
+                "origin": 70534,
+                "ready": false,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              },
+              {
+                "anchor_entry": "text:b-assistant-198:0",
+                "anchor_offset": 212,
+                "bottom_gap": 12,
+                "document_height": 71144,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 76.49358338676393,
+                "origin": 70534,
+                "ready": true,
+                "rows": [
+                  "text:b-user-199:0",
+                  "text:b-assistant-199:0",
+                  "text:b-user-200:0"
+                ],
+                "scroll_reused": true,
+                "session": "b"
+              }
+            ]
+          },
+          {
+            "target": "a",
+            "sample_count": 60,
+            "samples_at_changes": [
+              {
+                "anchor_entry": "text:a-user-81:0",
+                "anchor_offset": 0,
+                "bottom_gap": 42194,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 82.66650000587106,
+                "origin": 28492,
+                "ready": false,
+                "rows": [
+                  "text:a-user-81:0",
+                  "text:a-assistant-81:0",
+                  "text:a-user-82:0",
+                  "text:a-assistant-82:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              },
+              {
+                "anchor_entry": "text:a-user-81:0",
+                "anchor_offset": 0,
+                "bottom_gap": 42194,
+                "document_height": 71284,
+                "document_hidden": false,
+                "document_reused": true,
+                "ms": 102.17645834200084,
+                "origin": 28492,
+                "ready": true,
+                "rows": [
+                  "text:a-user-81:0",
+                  "text:a-assistant-81:0",
+                  "text:a-user-82:0",
+                  "text:a-assistant-82:0"
+                ],
+                "scroll_reused": true,
+                "session": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "raw_result_sha256": "61f7ca11a78d6d89a909da35e23cad5862735cb1d1168acd6aef08c09b2db210"
+    },
+    "final-kimi-invalidation": {
+      "manifest": {
+        "commit": "45e4be96d024c764be6bdb87e260b47176db30d9",
+        "source_sha256": "8332ddb2ae0c3277b62d31725108a16e51d4092c94f6837d7eb1c7796575106c",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 1,
+        "binary_sha256": "4682a56596217c31c00b9fc086cae1ed08a7aee095c9295a7b3c7d25fba20ab9",
+        "capture": "none",
+        "mode": "kimi-invalidation",
+        "native_fixture_resident_snapshot_count": 8,
+        "sidebar_variant": "flat",
+        "responsiveness_control": false,
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 52048,
+        "exit_code": 0,
+        "elapsed_s": 2.3181015840000003,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions_during_measurement": 1,
+        "draft_mutations": 40,
+        "history_turns": 200,
+        "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+        "mode": "kimi-invalidation",
+        "reading_body_evaluations_during_drafts": 0,
+        "selection_draft_roundtrip": true,
+        "status": "passed",
+        "stream_positive_control": true
+      },
+      "raw_result_sha256": "fca5699078267cdc61cf01cf0cf8960f7dff0a54182c0c8f5ebf50ad09b89461"
+    }
+  },
+  "other_checks": {
+    "WorkbenchChecks": "passed; optional live SSH skipped",
+    "performance_tool_tests": 22
+  }
+}

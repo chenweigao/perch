@@ -76,7 +76,7 @@ struct NativeAgentView: View {
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
-                                           isSuspended: !isCurrent(s))
+                                           isSuspended: !isCurrent(s), waitsForInitialPosition: true)
                     NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
