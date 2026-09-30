@@ -1,0 +1,216 @@
+{
+  "checks": [
+    {
+      "name": "final-acceptance-build",
+      "command": [
+        "bash",
+        "scripts/build-native-acceptance.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 64.667826
+    },
+    {
+      "name": "check-flat-all",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "all",
+        "--sidebar-variant",
+        "flat",
+        "--output",
+        ".local/sidebar-renderer/check-flat-all"
+      ],
+      "exit_code": 0,
+      "seconds": 10.766089957999995
+    },
+    {
+      "name": "check-flat-detail-lifecycle",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "detail-lifecycle",
+        "--sidebar-variant",
+        "flat",
+        "--output",
+        ".local/sidebar-renderer/check-flat-detail-lifecycle"
+      ],
+      "exit_code": 0,
+      "seconds": 8.329734291999998
+    },
+    {
+      "name": "check-flat-kimi-input",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "kimi-input",
+        "--sidebar-variant",
+        "flat",
+        "--output",
+        ".local/sidebar-renderer/check-flat-kimi-input"
+      ],
+      "exit_code": 0,
+      "seconds": 4.678076666999999
+    },
+    {
+      "name": "check-table-all",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "all",
+        "--sidebar-variant",
+        "table",
+        "--output",
+        ".local/sidebar-renderer/check-table-all"
+      ],
+      "exit_code": 0,
+      "seconds": 9.990089957999999
+    },
+    {
+      "name": "check-table-detail-lifecycle",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "detail-lifecycle",
+        "--sidebar-variant",
+        "table",
+        "--output",
+        ".local/sidebar-renderer/check-table-detail-lifecycle"
+      ],
+      "exit_code": 0,
+      "seconds": 8.120465999999993
+    },
+    {
+      "name": "check-table-kimi-input",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "kimi-input",
+        "--sidebar-variant",
+        "table",
+        "--output",
+        ".local/sidebar-renderer/check-table-kimi-input"
+      ],
+      "exit_code": 0,
+      "seconds": 4.70599591700001
+    },
+    {
+      "name": "input-control",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "input",
+        "--input-positive-control",
+        "--output",
+        ".local/sidebar-renderer/input-control"
+      ],
+      "exit_code": 0,
+      "seconds": 9.810076291000001
+    },
+    {
+      "name": "production-build",
+      "command": [
+        "bash",
+        "scripts/build.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 50.23229966700001
+    },
+    {
+      "name": "signature",
+      "command": [
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "build/Perch.app"
+      ],
+      "exit_code": 0,
+      "seconds": 0.043623249999996005
+    },
+    {
+      "name": "WorkbenchChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "WorkbenchChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 9.963312624999986
+    },
+    {
+      "name": "ConnectionChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "ConnectionChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 0.8694003329999873
+    },
+    {
+      "name": "performance-tools",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Tests/Performance",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "seconds": 3.3801873750000198
+    },
+    {
+      "name": "localization",
+      "command": [
+        "python3",
+        "scripts/check-localization.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.08584324999998216
+    },
+    {
+      "name": "scroll-following",
+      "command": [
+        "python3",
+        "scripts/check-scroll-following.py"
+      ],
+      "exit_code": 0,
+      "seconds": 6.715498124999982
+    }
+  ],
+  "note": "Final-source functional validation includes the transcript top-alignment fix; the timed matrix retains its own earlier fixed binary identity. Real SSH skipped; display frames and UI parity unverified."
+}

@@ -111,5 +111,6 @@ struct ConversationFindTarget {
 enum ConversationDisclosureFixture {
     static var enabled = false
     static var bindings: [String: Binding<Bool>] = [:]
+    static var fullBindings: [String: Binding<Bool>] = [:]
 }
 #endif

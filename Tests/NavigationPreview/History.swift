@@ -14,7 +14,7 @@ enum NavigationHistory {
     /// `salt` makes each fixture session a distinct conversation. Without it every
     /// session shares one set of message IDs, so a switch looks like an edit of the
     /// same rows rather than a move to different ones.
-    static func conversation(turns: Int, salt: String = "", streaming: Bool = false) throws -> KimiConversation {
+    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil) throws -> KimiConversation {
         var messages: [[String: Any]] = []
         func message(_ suffix: String, _ role: String, _ content: [[String: Any]]) -> [String: Any] {
             let id = salt + suffix
@@ -90,6 +90,9 @@ enum NavigationHistory {
                 """]]))
             }
         }
+        if let revisedReply {
+            messages[messages.count - 1]["content"] = [["type": "text", "text": revisedReply]]
+        }
         // Exercise actual attachment decoding without a remote service or user files.
         if let path = ProcessInfo.processInfo.environment["NAVIGATION_IMAGE_FIXTURE"] {
             let encoded = try Data(contentsOf: URL(fileURLWithPath: path)).base64EncodedString()
@@ -101,7 +104,7 @@ enum NavigationHistory {
             "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/deterministic"]
         ]
         var snapshot: [String: Any] = [
-            "as_of_seq": 1, "epoch": "navigation-epoch", "session": session,
+            "as_of_seq": revisedReply == nil ? 1 : 2, "epoch": "navigation-epoch", "session": session,
             "messages": ["items": messages, "has_more": false],
             "pending_approvals": [], "pending_questions": []
         ]

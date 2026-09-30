@@ -7,7 +7,7 @@ import WorkbenchCore
 struct KimiSubagentTranscriptSheet: View {
     let agentId: String
     let subject: KimiTask
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     @Environment(\.dismiss) private var dismiss
     @State private var visibleRow: String?
 

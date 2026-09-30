@@ -132,7 +132,7 @@ private final class SelectionProtocol: URLProtocol {
 }
 
 @MainActor
-private func selectionClient() -> KimiConnection {
+func selectionClient() -> KimiConnection {
     SelectionProtocol.reset()
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [SelectionProtocol.self]

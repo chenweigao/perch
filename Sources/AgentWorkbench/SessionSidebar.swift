@@ -4,8 +4,11 @@ import WorkbenchCore
 
 struct WorkbenchSidebar: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
+    @Environment(\.locale) private var locale
     @State private var filter = SidebarRecentFilter.all
+    @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
+    @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
     private var page: SidebarPage {
         guard model.showDashboard else { return .other }
         if model.showArchived { return .archive }
@@ -13,6 +16,9 @@ struct WorkbenchSidebar: View {
         return model.selectedGroupID == nil && !model.showSessionDirectory ? .home : .other
     }
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = { if NativeAcceptanceProbe.shared.checkSidebarInvalidation { NativeAcceptanceProbe.shared.sidebarBodyEvaluations += 1 } }()
+        #endif
         let projection = model.sidebarProjection(filter: filter)
         let index = model.groupIndex
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
@@ -20,65 +26,174 @@ struct WorkbenchSidebar: View {
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
-                              onArchive: { model.showArchive() }) {
-            if !projection.favorites.isEmpty {
-                SidebarSection("置顶", id: "favorites") {
-                    ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
-                }
-            }
-            SidebarSection("常用任务组", id: "groups") {
-                ForEach(model.groupShortcuts) { summary in
-                    let group = summary.group
-                    Button { model.showHome(groupID: group.id) } label: {
-                        HStack(spacing: WorkbenchChrome.labelSpacing) {
-                            Image(systemName: group.isPinned ? "pin" : "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
-                                .frame(width: WorkbenchChrome.sidebarSymbolWidth)
-                            Text(group.name).lineLimit(1); Spacer(minLength: 4)
-                            if summary.attentionCount > 0 {
-                                Text("\(summary.attentionCount)").font(.system(size: 11)).foregroundStyle(.orange)
-                            }
-                        }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
-                    }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
-                        .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
-                        .contextMenu {
-                            Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }
-                            Button("编辑任务组") { model.editGroup(group) }
-                        }
-                }
-                Button("全部任务组") {
-                    model.clearScope(); model.showHome(); model.showAllTaskGroups = true
-                }.buttonStyle(.plain).foregroundStyle(.secondary)
-                    .padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 8)
-            } actions: {
-                Button { model.editGroup() } label: {
-                    Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
-                }.buttonStyle(.plain).help("新建任务组")
-            }
-            SidebarSection("最近会话", id: "recent") {
-                ForEach(projection.recent) { item in sessionRow(item, groups: index[item.id]) }
-                if projection.recent.isEmpty {
-                    Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
-                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
-                }
-                Button { model.showAllSessions() } label: {
-                    HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
-                        .padding(.leading, 26).padding(10).contentShape(Rectangle())
-                }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
-            } actions: {
-                Menu {
-                    Picker("筛选最近会话", selection: $filter) {
-                        ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
-                    }
-                } label: {
-                    Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
-                        .frame(width: 24, height: 24).contentShape(Rectangle())
-                }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
-            }
+                              onArchive: { model.showArchive() }, scrollRows: !usesTable) {
+            #if PERCH_ACCEPTANCE
+            if usesTable { tableRows(projection, index: index) }
+            else if experiment.flatSidebar { flatRows(projection, index: index) }
+            else { sectionRows(projection, index: index) }
+            #else
+            flatRows(projection, index: index)
+            #endif
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }
+        #if PERCH_ACCEPTANCE
+        .background(NativeSidebarProbe(projection: projection))
+        .onReceive(experiment.$sidebarFilter) { if let value = $0 { filter = value } }
+        #endif
     }
+    private var usesTable: Bool {
+        #if PERCH_ACCEPTANCE
+        return experiment.sidebarVariant == "table"
+        #else
+        return false
+        #endif
+    }
+    #if PERCH_ACCEPTANCE
+    @AppStorage("sidebar.groups.expanded") private var groupsExpanded = true
+    private func tableRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
+        let _ = model.tabs.selectedID
+        let _ = model.managing
+        let items = entries(projection).map { entry -> AcceptanceSidebarTable.Item in
+            let height: CGFloat
+            let view: AnyView
+            var session: WorkspaceSession?
+            switch entry {
+            case .favorites:
+                height = 47; view = AnyView(SidebarSection("置顶", id: "favorites") { EmptyView() })
+            case .recent:
+                height = 47; view = AnyView(SidebarSection("最近会话", id: "recent") { EmptyView() } actions: { recentActions })
+            case .groups:
+                height = groupsExpanded ? CGFloat(82 + model.groupShortcuts.count * 37) : 47
+                view = AnyView(groupSection)
+            case .footer:
+                height = projection.recent.isEmpty ? 72 : 36; view = AnyView(recentFooter(projection))
+            case .session(let item):
+                session = item
+                height = experiment.fixedSidebarHeight || (!item.archived && (!item.online || item.section == .attention)) ? 48 : 34
+                view = AnyView(sessionRow(item, groups: index[item.id]))
+            }
+            return .init(id: entry.id, session: session, height: height,
+                         content: AnyView(view.id(entry.id).font(.system(size: 13)).environment(\.locale, locale)))
+        }
+        return AcceptanceSidebarTable(items: items)
+    }
+    #endif
+    private func showsFavorites(_ projection: SidebarProjection) -> Bool {
+        #if PERCH_ACCEPTANCE
+        if experiment.keepSidebarHeader || experiment.showEmptySidebarHeader { return true }
+        #endif
+        return !projection.favorites.isEmpty
+    }
+    #if PERCH_ACCEPTANCE
+    @ObservedObject private var experiment = NativeAcceptanceProbe.shared
+    #endif
+    // A session keeps one ForEach identity when moving between recent and pinned.
+    // Headers are entries; section membership is not part of a session identity.
+    private enum Entry: Identifiable {
+        case favorites, groups, recent, footer, session(WorkspaceSession)
+        var id: String {
+            switch self {
+            case .favorites: "header-favorites"
+            case .groups: "section-groups"
+            case .recent: "header-recent"
+            case .footer: "footer-recent"
+            case .session(let item): "session-" + item.id
+            }
+        }
+    }
+    private func entries(_ projection: SidebarProjection) -> [Entry] {
+        var result: [Entry] = []
+        if showsFavorites(projection) {
+            result.append(.favorites)
+            if favoritesExpanded { result += projection.favorites.map(Entry.session) }
+        }
+        result += [.groups, .recent]
+        if recentExpanded { result += projection.recent.map(Entry.session); result.append(.footer) }
+        return result
+    }
+    @ViewBuilder private func flatRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
+        ForEach(entries(projection)) { entry in
+            switch entry {
+            case .favorites: SidebarSection("置顶", id: "favorites") { EmptyView() }
+            case .groups: groupSection
+            case .recent:
+                SidebarSection("最近会话", id: "recent") { EmptyView() } actions: {
+                    recentActions
+                }
+            case .footer: recentFooter(projection)
+            case .session(let item): sessionRow(item, groups: index[item.id])
+            }
+        }
+    }
+    private var groupSection: some View {
+        SidebarSection("常用任务组", id: "groups") {
+            ForEach(model.groupShortcuts) { summary in
+                let group = summary.group
+                Button { model.showHome(groupID: group.id) } label: {
+                    HStack(spacing: WorkbenchChrome.labelSpacing) {
+                        Image(systemName: group.isPinned ? "pin" : "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
+                        Text(group.name).lineLimit(1); Spacer(minLength: 4)
+                        if summary.attentionCount > 0 {
+                            Text("\(summary.attentionCount)").font(.system(size: 11)).foregroundStyle(.orange)
+                        }
+                    }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
+                    .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
+                    .contextMenu {
+                        Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }
+                        Button("编辑任务组") { model.editGroup(group) }
+                    }
+            }
+            Button("全部任务组") {
+                model.clearScope(); model.showHome(); model.showAllTaskGroups = true
+            }.buttonStyle(.plain).foregroundStyle(.secondary)
+                .padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 8)
+        } actions: {
+            Button { model.editGroup() } label: {
+                Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
+            }.buttonStyle(.plain).help("新建任务组")
+        }
+    }
+    @ViewBuilder private func recentFooter(_ projection: SidebarProjection) -> some View {
+        if projection.recent.isEmpty {
+            Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
+                .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
+        }
+        Button { model.showAllSessions() } label: {
+            HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
+                .padding(.leading, 26).padding(10).contentShape(Rectangle())
+        }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
+    }
+    private var recentActions: some View {
+        Menu {
+            Picker("筛选最近会话", selection: $filter) {
+                ForEach(SidebarRecentFilter.allCases, id: \.self) { Text(L(key: $0.rawValue)).tag($0) }
+            }
+        } label: {
+            Image(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                .frame(width: 24, height: 24).contentShape(Rectangle())
+        }
+            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
+    }
+    #if PERCH_ACCEPTANCE
+    // Original structural parents retained only as an experiment control.
+    @ViewBuilder private func sectionRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
+        if showsFavorites(projection) {
+            SidebarSection("置顶", id: "favorites") {
+                ForEach(projection.favorites) { item in sessionRow(item, groups: index[item.id]) }
+            }
+        }
+        groupSection
+        SidebarSection("最近会话", id: "recent") {
+            ForEach(projection.recent) { item in sessionRow(item, groups: index[item.id]) }
+            recentFooter(projection)
+        } actions: {
+            recentActions
+        }
+    }
+    #endif
     private func sessionRow(_ item: WorkspaceSession, groups: [String]) -> some View {
         SessionSidebarRow(model: model, item: item, groups: groups,
                           selected: !model.showDashboard && item.id == model.tabs.selectedID,
@@ -88,7 +203,7 @@ struct WorkbenchSidebar: View {
 
 struct SessionDirectoryView: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var isSearchSheet = false
     @State private var query = ""
     @State private var selection: String?
@@ -172,6 +287,9 @@ private struct SessionSidebarRow: View {
         return item.section == .attention ? item.detail : nil
     }
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = recordBody()
+        #endif
         SessionRowChrome(title: item.title, subtitle: subtitle,
                          hostName: item.hostName, hostID: item.reference.hostID,
                          directory: item.directory, detail: item.detail,
@@ -186,12 +304,27 @@ private struct SessionSidebarRow: View {
             SessionStatusIndicator(item: item)
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
+            #if PERCH_ACCEPTANCE
+            .background {
+                if NativeAcceptanceProbe.shared.checkSidebarInvalidation {
+                    NativeSidebarRowProbe(item: item, groups: groups, selected: selected,
+                        starred: model.workspace.starred.contains(item.reference), busy: model.managing.contains(item.id),
+                        canQuickArchive: model.canArchive(item) && (item.archived || item.section != .running))
+                }
+            }
+            #endif
     }
+    #if PERCH_ACCEPTANCE
+    private func recordBody() {
+        let probe = NativeAcceptanceProbe.shared
+        if probe.checkSidebarInvalidation { probe.sidebarRowEvaluations[item.id, default: 0] += 1 }
+    }
+    #endif
 }
 
 struct SessionActionsMenu: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
     var body: some View {
@@ -228,7 +361,7 @@ struct SessionActionsMenu: View {
 }
 
 struct ArchivedSessionsView: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var body: some View {
         let sessions = model.scopedSessions
         let index = model.groupIndex
@@ -247,9 +380,9 @@ struct ArchivedSessionsView: View {
 
 private struct ConnectionControls: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: WorkbenchModel
-    @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    @Bindable var model: WorkbenchModel
+    let kimi: KimiConnection
+    let native: NativeAgentConnection
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
@@ -315,8 +448,8 @@ private struct ConnectionControls: View {
 
 struct KimiSelectionContent: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
-    @ObservedObject var connection: KimiConnection
+    @Bindable var model: WorkbenchModel
+    let connection: KimiConnection
     var body: some View {
         if connection.conversation?.snapshot.session.id == model.selectedReference?.terminalID {
             KimiWorkspaceView(connection: connection, onNew: { model.startNewTask() }, onInput: {},

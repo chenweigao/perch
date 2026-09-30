@@ -1,0 +1,4636 @@
+{
+  "boundary": "Offline local fixture. Timings end at layout/display/CA flush, not FPS. Disclosure source is 2400 lines but production initially displays its 4000-character preview; full-content button is not exercised. Nested stage durations overlap.",
+  "runs": [
+    {
+      "name": "baseline-disclosure-r1",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/baseline-disclosure-r1",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "c23ebc4e5255599ee83228303d2bed22af3dd2f523446ede858e52d3470523d7",
+          "fixture_sha256": "0593ec3ce225137eac6b1d430f31f69f7c7e5fc24252e5ebe033c4a6dfe01c22",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "a8403c75f8224a490eb36076bf464282cf5e41e5d0ed3a6c0b53a8a3a32ff928",
+        "pid": 91482,
+        "exit_code": 1,
+        "elapsed_s": 4.398527458,
+        "passed": false
+      },
+      "status": "failed",
+      "error": "Bash disclosure header moved during toggle: [-949.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
+    },
+    {
+      "name": "baseline-disclosure-r2",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/baseline-disclosure-r2",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "c23ebc4e5255599ee83228303d2bed22af3dd2f523446ede858e52d3470523d7",
+          "fixture_sha256": "0593ec3ce225137eac6b1d430f31f69f7c7e5fc24252e5ebe033c4a6dfe01c22",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "a8403c75f8224a490eb36076bf464282cf5e41e5d0ed3a6c0b53a8a3a32ff928",
+        "pid": 92611,
+        "exit_code": 1,
+        "elapsed_s": 4.276274,
+        "passed": false
+      },
+      "status": "failed",
+      "error": "Bash disclosure header moved during toggle: [-949.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
+    },
+    {
+      "name": "baseline-reading-r1",
+      "supervisor": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "reading",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/baseline-reading-r1",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "c23ebc4e5255599ee83228303d2bed22af3dd2f523446ede858e52d3470523d7",
+          "fixture_sha256": "0593ec3ce225137eac6b1d430f31f69f7c7e5fc24252e5ebe033c4a6dfe01c22",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "a8403c75f8224a490eb36076bf464282cf5e41e5d0ed3a6c0b53a8a3a32ff928",
+        "pid": 91948,
+        "exit_code": 0,
+        "elapsed_s": 16.795497334,
+        "passed": true
+      },
+      "status": "passed",
+      "reading_step_ms": {
+        "count": 335,
+        "max_ms": 21.196249988861382,
+        "median_ms": 9.42170835332945,
+        "over_16_7ms": 38,
+        "over_100ms": 0,
+        "p95_ms": 19.05929163331166
+      },
+      "upward_reading_step_ms": {
+        "count": 334,
+        "max_ms": 17.038166639395058,
+        "median_ms": 6.034374993760139,
+        "over_16_7ms": 2,
+        "over_100ms": 0,
+        "p95_ms": 14.120208332315087
+      },
+      "resident_mb_before_reading": 140.28125,
+      "resident_mb_after_downward": 166.671875,
+      "resident_mb_after_upward": 168.65625,
+      "cleanup_main_actor_delay_ms": {
+        "count": 170,
+        "max_ms": 3.369791669305414,
+        "median_ms": 2.100125016644597,
+        "over_16_7ms": 0,
+        "over_100ms": 0,
+        "p95_ms": 2.160083331167698
+      },
+      "observed_turn_count": 200,
+      "tail_found": true,
+      "max_hosts": {
+        "mounted": 8,
+        "retained": 20
+      },
+      "downward_nested_stage_totals": {
+        "attributed_text": {
+          "count": 2184,
+          "ms": 42.128375614993274
+        },
+        "document_configure": {
+          "count": 233,
+          "ms": 0.5583749734796584
+        },
+        "host_attach": {
+          "count": 477,
+          "ms": 31.367666961159557
+        },
+        "host_create": {
+          "count": 477,
+          "ms": 25.285125127993524
+        },
+        "host_first_attach": {
+          "count": 477,
+          "ms": 31.442666600923985
+        },
+        "host_first_measure": {
+          "count": 477,
+          "ms": 721.8166671227664
+        },
+        "host_measure": {
+          "count": 477,
+          "ms": 721.761042426806
+        },
+        "host_measure_assistant": {
+          "count": 279,
+          "ms": 420.88437522761524
+        },
+        "host_view": {
+          "count": 477,
+          "ms": 6.558666937053204
+        },
+        "markdown_parse": {
+          "count": 463,
+          "ms": 114.95454149553552
+        },
+        "row_geometry": {
+          "count": 477,
+          "ms": 5.092333885841072
+        },
+        "text_create": {
+          "count": 2279,
+          "ms": 23.208708211313933
+        },
+        "text_measure": {
+          "count": 5017,
+          "ms": 206.9821254699491
+        },
+        "text_reuse": {
+          "count": 2217,
+          "ms": 0.08895882638171315
+        },
+        "host_measure_user": {
+          "count": 198,
+          "ms": 301.260375068523
+        }
+      }
+    },
+    {
+      "name": "probe-disclosure",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/probe-disclosure",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "c23ebc4e5255599ee83228303d2bed22af3dd2f523446ede858e52d3470523d7",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "93d4a9fe55a667bbca5ac7e0ebbb2db2bf66885150f97cc96c0ac41c857ef21e",
+        "pid": 93671,
+        "exit_code": 1,
+        "elapsed_s": 4.396598915999999,
+        "passed": false
+      },
+      "status": "failed",
+      "error": "Bash disclosure header moved during toggle: [-949.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]",
+      "disclosures": [
+        {
+          "kind": "Bash",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 61.1947916331701,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 61.1947916331701,
+            "median_ms": 10.199166717939079,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.780874988995492
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006916641723364592
+            },
+            "host_measure": {
+              "count": 2,
+              "ms": 0.006666639819741249
+            },
+            "host_measure_assistant": {
+              "count": 2,
+              "ms": 0.012500036973506212
+            },
+            "host_remeasure": {
+              "count": 2,
+              "ms": 0.00783335417509079
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.00220834044739604
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 1.1311250273138285
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.135833307169378
+            }
+          },
+          "max_header_drift_points": 949,
+          "first_header_offsets": [
+            -949,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -1532,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "top-anchor",
+      "supervisor": {
+        "status": "exited",
+        "mode": "anchor",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "anchor",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-anchor",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95675,
+        "exit_code": 0,
+        "elapsed_s": 4.222234792,
+        "passed": true
+      },
+      "status": "passed"
+    },
+    {
+      "name": "top-disclosure-boundary",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-disclosure-boundary",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95138,
+        "exit_code": 0,
+        "elapsed_s": 10.257566042,
+        "passed": true
+      },
+      "status": "passed",
+      "disclosures": [
+        {
+          "kind": "Bash",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 60.8323750202544,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 60.8323750202544,
+            "median_ms": 10.231916676275432,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.584416682831943
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006999995093792677
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003041699528694153
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0072499969974160194
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0032500247471034527
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0017916318029165268
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 1.5573750133626163
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.6298332852311432
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2077
+            },
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2077
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 16.7322083725594,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 16.7322083725594,
+            "median_ms": 10.093708347994834,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.710416652727872
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.012416625395417213
+            },
+            "host_attach": {
+              "count": 1,
+              "ms": 0.6898750434629619
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0037500285543501377
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.00783335417509079
+            },
+            "host_reattach": {
+              "count": 1,
+              "ms": 0.6902500172145665
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005541718564927578
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.001833366695791483
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 52.81445832224563,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 48,
+            "max_ms": 52.81445832224563,
+            "median_ms": 9.681083320174366,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.644583380781114
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0024999608285725117
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0025833724066615105
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008000002708286047
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005333335138857365
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0013333046808838844
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.14820840442553163
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.1140416976995766
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0011666561476886272
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2077
+            },
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2077
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 14.333166647702456,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 51,
+            "max_ms": 14.333166647702456,
+            "median_ms": 9.796458296477795,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.715166688896716
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.012291711755096912
+            },
+            "host_attach": {
+              "count": 1,
+              "ms": 0.7039166521281004
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0031666713766753674
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.006208312697708607
+            },
+            "host_reattach": {
+              "count": 1,
+              "ms": 0.7044583326205611
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004375004209578037
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0010833609849214554
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 53.125541657209396,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 53.125541657209396,
+            "median_ms": 10.233249980956316,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.746833344455808
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.007958326023072004
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0033333199098706245
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.006499991286545992
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.00483333133161068
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0014166580513119698
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.17925002612173557
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 2.790041675325483
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0010833609849214554
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2077
+            },
+            {
+              "document_height": 2034,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2077
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 14.355666644405574,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 14.355666644405574,
+            "median_ms": 10.351374978199601,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.760083328932524
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.010833318810909986
+            },
+            "host_attach": {
+              "count": 1,
+              "ms": 0.4895416786894202
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0039583537727594376
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008208327926695347
+            },
+            "host_reattach": {
+              "count": 1,
+              "ms": 0.4898333572782576
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.00562501372769475
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0013333046808838844
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            },
+            {
+              "document_height": 135,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 178
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 64.7588333231397,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 64.7588333231397,
+            "median_ms": 10.165291663724929,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.643416666425765
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005583337042480707
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003374996595084667
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007583352271467447
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0050416565500199795
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0018749851733446121
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.10804168414324522
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 5.370458355173469
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.000500003807246685
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2205
+            },
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2205
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 13.774041668511927,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 52,
+            "max_ms": 13.774041668511927,
+            "median_ms": 9.631875029299408,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.7879166607745
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.016166712157428265
+            },
+            "host_attach": {
+              "count": 1,
+              "ms": 0.6483750184997916
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0038333237171173096
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.010416668374091387
+            },
+            "host_reattach": {
+              "count": 1,
+              "ms": 0.6488750223070383
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0065416679717600346
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002083310391753912
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 57.49154166551307,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 45,
+            "max_ms": 57.49154166551307,
+            "median_ms": 10.26545831700787,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.80208335770294
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0036666751839220524
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003583321813493967
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.011041644029319286
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.009083305485546589
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0019166618585586548
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.08908333256840706
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 4.6797500108368695
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.0007916823960840702
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2205
+            },
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2205
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 15.112166642211378,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 15.112166642211378,
+            "median_ms": 10.297375032678246,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.779791628010571
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006749993190169334
+            },
+            "host_attach": {
+              "count": 1,
+              "ms": 0.7194583304226398
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003374996595084667
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007083348464220762
+            },
+            "host_reattach": {
+              "count": 1,
+              "ms": 0.7209583418443799
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004749977961182594
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0014166580513119698
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 66.74545834539458,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 66.74545834539458,
+            "median_ms": 10.02137502655387,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.743333317805082
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004749977961182594
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003500026650726795
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.006958318408578634
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005125009920448065
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0014166580513119698
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.10950001887977123
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 4.2316666804254055
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.0004166504368185997
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2205
+            },
+            {
+              "document_height": 2162,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 2205
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 15.113624976947904,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 15.113624976947904,
+            "median_ms": 10.365958325564861,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.788374987896532
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.008083297871053219
+            },
+            "host_attach": {
+              "count": 1,
+              "ms": 0.618958321865648
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0036666751839220524
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008750008419156075
+            },
+            "host_reattach": {
+              "count": 1,
+              "ms": 0.6192500004544854
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005500041879713535
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0019583385437726974
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            },
+            {
+              "document_height": 105,
+              "document_origin_in_host": 12,
+              "row_y": 0,
+              "scroll_document_height": 148
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "top-disclosure-r1",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-disclosure-r1",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 94537,
+        "exit_code": 0,
+        "elapsed_s": 10.4706085,
+        "passed": true
+      },
+      "status": "passed",
+      "disclosures": [
+        {
+          "kind": "Bash",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 61.919458326883614,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 45,
+            "max_ms": 61.919458326883614,
+            "median_ms": 10.26974996784702,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.792374960146844
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005749985575675964
+            },
+            "host_measure": {
+              "count": 2,
+              "ms": 0.007208320312201977
+            },
+            "host_measure_assistant": {
+              "count": 2,
+              "ms": 0.013958313502371311
+            },
+            "host_remeasure": {
+              "count": 2,
+              "ms": 0.007916707545518875
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0017500133253633976
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 1.4335000305436552
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.2514166668988764
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 16.76416670670733,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 49,
+            "max_ms": 16.76416670670733,
+            "median_ms": 10.319916706066579,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.781458346173167
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.010124989785254002
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.7221249979920685
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0038750004023313522
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007166643626987934
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.7227916503325105
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004958361387252808
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0021249870769679546
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 52.434374985750765,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 52.434374985750765,
+            "median_ms": 10.231500025838614,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.800124960951507
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0052917166613042355
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003041699528694153
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.006458314601331949
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004749977961182594
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0019166618585586548
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.1376666477881372
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.0184166389517486
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0011249794624745846
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 16.608416626695544,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 49,
+            "max_ms": 16.608416626695544,
+            "median_ms": 10.386583337094635,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.799249983392656
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.011791649740189314
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.9020833531394601
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.004458357580006123
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.009166658855974674
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.9032083326019347
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0061666942201554775
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002333370503038168
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 53.45166666666046,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 47,
+            "max_ms": 53.45166666666046,
+            "median_ms": 10.219958319794387,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.771541681606323
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005083333235234022
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0028333161026239395
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0065416679717600346
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004375004209578037
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0018333084881305695
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.12904172763228416
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 2.8499166946858168
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0007083290256559849
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 17.970208369661123,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 49,
+            "max_ms": 17.970208369661123,
+            "median_ms": 10.330708289984614,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.782375000417233
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.009624985978007317
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 1.0660416446626186
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.004333327524363995
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008375034667551517
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 1.0671666241250932
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005708367098122835
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0031249946914613247
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 66.07829168206081,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 45,
+            "max_ms": 66.07829168206081,
+            "median_ms": 10.235416644718498,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.74737502494827
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004875008016824722
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.002916669473052025
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007166701834648848
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.00483333133161068
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0023333122953772545
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.17004169058054686
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 5.5524583440274
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.0008749775588512421
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 14.729291666299105,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 49,
+            "max_ms": 14.729291666299105,
+            "median_ms": 10.473041678778827,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.798375005833805
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.011291704140603542
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.8370416471734643
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0033750548027455807
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007083348464220762
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8380415965802968
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004583387635648251
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0021666637621819973
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 57.90804169373587,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 47,
+            "max_ms": 57.90804169373587,
+            "median_ms": 10.134833340998739,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.714333388023078
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004875008016824722
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0029999646358191967
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008083297871053219
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005958310794085264
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002083310391753912
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.11687498772516847
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 4.5436666696332395
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.000125030055642128
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 16.08129171654582,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 51,
+            "max_ms": 16.08129171654582,
+            "median_ms": 10.134749987628311,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.708749992772937
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005583337042480707
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.828208343591541
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003583321813493967
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008166651241481304
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8292500278912485
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004999979864805937
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0026666675694286823
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 56.0735416947864,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 47,
+            "max_ms": 56.0735416947864,
+            "median_ms": 9.98974998947233,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.634333360940218
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004250032361596823
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003958295565098524
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.006874965038150549
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005374953616410494
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0016666599549353123
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.06954168202355504
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 4.197333299089223
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.0002916785888373852
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 15.991291671525687,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 15.991291671525687,
+            "median_ms": 10.447083332110196,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.89312497060746
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006416637916117907
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.8275833097286522
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003791647031903267
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008958333637565374
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8284583454951644
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0055416603572666645
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002583314199000597
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "top-disclosure-r2",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-disclosure-r2",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 94949,
+        "exit_code": 0,
+        "elapsed_s": 10.78932075,
+        "passed": true
+      },
+      "status": "passed",
+      "disclosures": [
+        {
+          "kind": "Bash",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 60.74945838190615,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 60.74945838190615,
+            "median_ms": 10.265874967444688,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.632625024300069
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.00562501372769475
+            },
+            "host_measure": {
+              "count": 2,
+              "ms": 0.007166643626987934
+            },
+            "host_measure_assistant": {
+              "count": 2,
+              "ms": 0.012375006917864084
+            },
+            "host_remeasure": {
+              "count": 2,
+              "ms": 0.007583352271467447
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0017916900105774403
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 1.2645000242628157
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.1464583589695394
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 16.83379168389365,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 16.83379168389365,
+            "median_ms": 10.17591665731743,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.779499949421734
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.012166681699454784
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.8282916969619691
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.005499983672052622
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.009916664566844702
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8291250560432673
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.007374968845397234
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0027500209398567677
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 52.49091668520123,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 52.49091668520123,
+            "median_ms": 10.249416634906083,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.807249986100942
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005333335138857365
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0028333161026239395
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007958326023072004
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005375011824071407
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0022500171326100826
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.11679163435474038
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.2818749896250665
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0007916823960840702
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 15.865333320107311,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 15.865333320107311,
+            "median_ms": 10.208583320491016,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.794166650157422
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006333342753350735
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.6693333853036165
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0036666751839220524
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007208320312201977
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.6698750075884163
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005083333235234022
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.001708336640149355
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 51.95908329915255,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 47,
+            "max_ms": 51.95908329915255,
+            "median_ms": 10.212458320893347,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.80175000242889
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005791662260890007
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0032500247471034527
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008500006515532732
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.00500003807246685
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0018333084881305695
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.12545828940346837
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 2.908749971538782
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0008750357665121555
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 16.69362495886162,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 16.69362495886162,
+            "median_ms": 9.975749999284744,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.774999973364174
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.00683334656059742
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.8917083032429218
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0036249984987080097
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0072499969974160194
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8926666923798621
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004958303179591894
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0016666599549353123
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 66.84466666774824,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 45,
+            "max_ms": 66.84466666774824,
+            "median_ms": 10.218958370387554,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.713166673667729
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.005291658453643322
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.00341667328029871
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007916649337857962
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0056666904129087925
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.001625041477382183
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.08104165317490697
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 5.096041655633599
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.0003750319592654705
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 16.445874993223697,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 16.445874993223697,
+            "median_ms": 10.361624998040497,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.845791664905846
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0110417022369802
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 1.2670416617766023
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.004666624590754509
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.010583316907286644
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 1.2680000509135425
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.00704167177900672
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002916669473052025
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 58.60654165735468,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 47,
+            "max_ms": 58.60654165735468,
+            "median_ms": 10.162291640881449,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.75199997285381
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.00441668089479208
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0031249946914613247
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007458322215825319
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0055416603572666645
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0015833647921681404
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.11854164768010378
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 4.697791708167642
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 8.335337042808533e-05
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 15.323750034440309,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 51,
+            "max_ms": 15.323750034440309,
+            "median_ms": 9.715708321891725,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.858041699975729
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0050416565500199795
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.7249583140946925
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0032917014323174953
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007458322215825319
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.7254999945871532
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004708359483629465
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0021666637621819973
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 56.791124981828034,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 56.791124981828034,
+            "median_ms": 10.218208306469023,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.721916682086885
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0036666751839220524
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003583321813493967
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.006666639819741249
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004958303179591894
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0013750395737588406
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.11275004362687469
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 4.5486666494980454
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 8.335337042808533e-05
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 15.903000021353364,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 15.903000021353364,
+            "median_ms": 10.377124999649823,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.736749973148108
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006458372808992863
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.5951666389591992
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0031666713766753674
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0066666980274021626
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.5958332912996411
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004458357580006123
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0017499551177024841
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "top-disclosure-r3",
+      "supervisor": {
+        "status": "exited",
+        "mode": "disclosure",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "disclosure",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-disclosure-r3",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "1",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "1"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 94959,
+        "exit_code": 0,
+        "elapsed_s": 10.297612125,
+        "passed": true
+      },
+      "status": "passed",
+      "disclosures": [
+        {
+          "kind": "Bash",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 60.33250002656132,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 60.33250002656132,
+            "median_ms": 10.018125001806766,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.872166662011296
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.007791677489876747
+            },
+            "host_measure": {
+              "count": 2,
+              "ms": 0.006958318408578634
+            },
+            "host_measure_assistant": {
+              "count": 2,
+              "ms": 0.01679162960499525
+            },
+            "host_remeasure": {
+              "count": 2,
+              "ms": 0.007458322215825319
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.001708336640149355
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 1.2007083278149366
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.4092499990947545
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 17.884791712276638,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 49,
+            "max_ms": 17.884791712276638,
+            "median_ms": 10.45216666534543,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.802166652865708
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006333342753350735
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.9759583044797182
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.004916684702038765
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008958333637565374
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.9767916053533554
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.006333342753350735
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002916669473052025
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 53.420208336319774,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 53.420208336319774,
+            "median_ms": 10.272708314005286,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.765791637822986
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0060416641645133495
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.003916677087545395
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.009333307389169931
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.006666639819741249
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002874992787837982
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.11954165529459715
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.2172499923035502
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0006666523404419422
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 18.154500052332878,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 18.154500052332878,
+            "median_ms": 10.237166658043861,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.764833306893706
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.010791642125695944
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.8673333213664591
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.004041648935526609
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.008374976459890604
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8682083571329713
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005374953616410494
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0025416375137865543
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 34.124041674658656,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 49,
+            "max_ms": 34.124041674658656,
+            "median_ms": 10.140750033315271,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.707749985158443
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.00200001522898674
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0026249908842146397
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0059166341088712215
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.004291650839149952
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0019166618585586548
+            },
+            "text_create": {
+              "count": 2,
+              "ms": 0.07541663944721222
+            },
+            "text_measure": {
+              "count": 2,
+              "ms": 3.226291621103883
+            },
+            "text_reuse": {
+              "count": 2,
+              "ms": 0.0004166504368185997
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            },
+            {
+              "document_height": 3625,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 3668
+            }
+          ]
+        },
+        {
+          "kind": "Bash",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 15.8498749951832,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 51,
+            "max_ms": 15.8498749951832,
+            "median_ms": 9.743291651830077,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.851041646674275
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.009083305485546589
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 1.009874977171421
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0034583499655127525
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007541675586253405
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 1.0107916314154863
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005208305083215237
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0023333122953772545
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -583,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 0,
+          "expanded": true,
+          "settled_ms": 66.1265833186917,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 46,
+            "max_ms": 66.1265833186917,
+            "median_ms": 10.163458355236799,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.426583350636065
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004874949809163809
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.004041707143187523
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.007375027053058147
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.005875015631318092
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0018749851733446121
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.11758337495848536
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 5.0048333359882236
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.00033335527405142784
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 1,
+          "expanded": false,
+          "settled_ms": 10.118708363734186,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 51,
+            "max_ms": 10.486416693311185,
+            "median_ms": 10.142749990336597,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.246791644021869
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004041707143187523
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.2670416724868119
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.0010416260920464993
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0024999608285725117
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.2672499977052212
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0014583347365260124
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0007083290256559849
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 2,
+          "expanded": true,
+          "settled_ms": 45.37720832740888,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 48,
+            "max_ms": 45.37720832740888,
+            "median_ms": 10.138291690964252,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.263041651342064
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.0028333161026239395
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.002125045284628868
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.004250032361596823
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.003041699528694153
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0012916279956698418
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.034374999813735485
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 3.5886249970644712
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.0002500019036233425
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 3,
+          "expanded": false,
+          "settled_ms": 9.834708354901522,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 52,
+            "max_ms": 10.366458329372108,
+            "median_ms": 10.138291690964252,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.267583362292498
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.004375004209578037
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.2580833970569074
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.001083302777260542
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.002583314199000597
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.25833339896053076
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.0016249832697212696
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0007916823960840702
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 4,
+          "expanded": true,
+          "settled_ms": 41.96158330887556,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 47,
+            "max_ms": 41.96158330887556,
+            "median_ms": 10.223541699815542,
+            "over_16_7ms": 1,
+            "over_100ms": 0,
+            "p95_ms": 10.711166658438742
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.00341667328029871
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.001125037670135498
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.0025833724066615105
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.001708336640149355
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.0007083290256559849
+            },
+            "text_create": {
+              "count": 1,
+              "ms": 0.05037500523030758
+            },
+            "text_measure": {
+              "count": 1,
+              "ms": 2.365624997764826
+            },
+            "text_reuse": {
+              "count": 1,
+              "ms": 0.00016670674085617065
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            },
+            {
+              "document_height": 3783,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 3826
+            }
+          ]
+        },
+        {
+          "kind": "Thoughts",
+          "iteration": 5,
+          "expanded": false,
+          "settled_ms": 16.34179166285321,
+          "mismatched_frames": 0,
+          "main_loop_gaps": {
+            "count": 50,
+            "max_ms": 16.34179166285321,
+            "median_ms": 10.330624994821846,
+            "over_16_7ms": 0,
+            "over_100ms": 0,
+            "p95_ms": 10.75758330989629
+          },
+          "render_stages": {
+            "document_configure": {
+              "count": 1,
+              "ms": 0.006499991286545992
+            },
+            "host_attach": {
+              "count": 2,
+              "ms": 0.818125088699162
+            },
+            "host_measure": {
+              "count": 1,
+              "ms": 0.00420835567638278
+            },
+            "host_measure_assistant": {
+              "count": 1,
+              "ms": 0.009916664566844702
+            },
+            "host_reattach": {
+              "count": 2,
+              "ms": 0.8185834158211946
+            },
+            "host_remeasure": {
+              "count": 1,
+              "ms": 0.006333342753350735
+            },
+            "row_geometry": {
+              "count": 1,
+              "ms": 0.002791639417409897
+            }
+          },
+          "max_header_drift_points": 0,
+          "first_header_offsets": [
+            0,
+            0,
+            0
+          ],
+          "first_geometry": [
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            },
+            {
+              "document_height": 1726,
+              "document_origin_in_host": -393,
+              "row_y": 663,
+              "scroll_document_height": 1769
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "top-image",
+      "supervisor": {
+        "status": "exited",
+        "mode": "image",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "image",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-image",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95886,
+        "exit_code": 0,
+        "elapsed_s": 3.4024184999999996,
+        "passed": true
+      },
+      "status": "passed"
+    },
+    {
+      "name": "top-interactions",
+      "supervisor": {
+        "status": "exited",
+        "mode": "interactions",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "interactions",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-interactions",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95682,
+        "exit_code": 0,
+        "elapsed_s": 7.27230475,
+        "passed": true
+      },
+      "status": "passed"
+    },
+    {
+      "name": "top-reading-r1",
+      "supervisor": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "reading",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-reading-r1",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95161,
+        "exit_code": 0,
+        "elapsed_s": 16.758741917000002,
+        "passed": true
+      },
+      "status": "passed",
+      "reading_step_ms": {
+        "count": 335,
+        "max_ms": 20.604083314538002,
+        "median_ms": 9.381125040818006,
+        "over_16_7ms": 36,
+        "over_100ms": 0,
+        "p95_ms": 18.405749986413866
+      },
+      "upward_reading_step_ms": {
+        "count": 334,
+        "max_ms": 19.303750013932586,
+        "median_ms": 6.664249987807125,
+        "over_16_7ms": 3,
+        "over_100ms": 0,
+        "p95_ms": 14.85695835435763
+      },
+      "resident_mb_before_reading": 140.171875,
+      "resident_mb_after_downward": 165.765625,
+      "resident_mb_after_upward": 167.734375,
+      "cleanup_main_actor_delay_ms": {
+        "count": 172,
+        "max_ms": 3.9830416822806,
+        "median_ms": 1.9594583460129797,
+        "over_16_7ms": 0,
+        "over_100ms": 0,
+        "p95_ms": 2.1532916612923145
+      },
+      "observed_turn_count": 200,
+      "tail_found": true,
+      "max_hosts": {
+        "mounted": 8,
+        "retained": 20
+      },
+      "downward_nested_stage_totals": {
+        "attributed_text": {
+          "count": 2222,
+          "ms": 42.093333264347166
+        },
+        "document_configure": {
+          "count": 233,
+          "ms": 0.5183330504223704
+        },
+        "host_attach": {
+          "count": 477,
+          "ms": 31.08879190403968
+        },
+        "host_create": {
+          "count": 477,
+          "ms": 25.056166341528296
+        },
+        "host_first_attach": {
+          "count": 477,
+          "ms": 31.1601665453054
+        },
+        "host_first_measure": {
+          "count": 477,
+          "ms": 707.1407078183256
+        },
+        "host_measure": {
+          "count": 477,
+          "ms": 707.0870416937396
+        },
+        "host_measure_assistant": {
+          "count": 279,
+          "ms": 411.95362503640354
+        },
+        "host_view": {
+          "count": 477,
+          "ms": 6.582291913218796
+        },
+        "markdown_parse": {
+          "count": 473,
+          "ms": 114.58662390941754
+        },
+        "row_geometry": {
+          "count": 477,
+          "ms": 4.980374127626419
+        },
+        "text_create": {
+          "count": 2320,
+          "ms": 22.832749935332686
+        },
+        "text_measure": {
+          "count": 5134,
+          "ms": 208.23954418301582
+        },
+        "text_reuse": {
+          "count": 2258,
+          "ms": 0.09341706754639745
+        },
+        "host_measure_user": {
+          "count": 198,
+          "ms": 295.4983321833424
+        }
+      }
+    },
+    {
+      "name": "top-reading-r2",
+      "supervisor": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "reading",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-reading-r2",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95311,
+        "exit_code": 0,
+        "elapsed_s": 16.758484959,
+        "passed": true
+      },
+      "status": "passed",
+      "reading_step_ms": {
+        "count": 335,
+        "max_ms": 20.737083337735385,
+        "median_ms": 9.478374966420233,
+        "over_16_7ms": 34,
+        "over_100ms": 0,
+        "p95_ms": 18.39237503008917
+      },
+      "upward_reading_step_ms": {
+        "count": 334,
+        "max_ms": 18.642958311829716,
+        "median_ms": 6.49904168676585,
+        "over_16_7ms": 6,
+        "over_100ms": 0,
+        "p95_ms": 15.020625025499612
+      },
+      "resident_mb_before_reading": 139.875,
+      "resident_mb_after_downward": 166.015625,
+      "resident_mb_after_upward": 168.359375,
+      "cleanup_main_actor_delay_ms": {
+        "count": 170,
+        "max_ms": 5.077291632536799,
+        "median_ms": 2.072000006213784,
+        "over_16_7ms": 0,
+        "over_100ms": 0,
+        "p95_ms": 2.165291636250913
+      },
+      "observed_turn_count": 200,
+      "tail_found": true,
+      "max_hosts": {
+        "mounted": 8,
+        "retained": 20
+      },
+      "downward_nested_stage_totals": {
+        "attributed_text": {
+          "count": 2185,
+          "ms": 40.76587449526414
+        },
+        "document_configure": {
+          "count": 233,
+          "ms": 0.5582913872785866
+        },
+        "host_attach": {
+          "count": 477,
+          "ms": 31.50433412520215
+        },
+        "host_create": {
+          "count": 477,
+          "ms": 24.993458937387913
+        },
+        "host_first_attach": {
+          "count": 477,
+          "ms": 31.575833971146494
+        },
+        "host_first_measure": {
+          "count": 477,
+          "ms": 707.0993747329339
+        },
+        "host_measure": {
+          "count": 477,
+          "ms": 707.0423337281682
+        },
+        "host_measure_assistant": {
+          "count": 279,
+          "ms": 412.6261251512915
+        },
+        "host_view": {
+          "count": 477,
+          "ms": 6.517624773550779
+        },
+        "markdown_parse": {
+          "count": 461,
+          "ms": 112.59820801205933
+        },
+        "row_geometry": {
+          "count": 477,
+          "ms": 5.104375944938511
+        },
+        "text_create": {
+          "count": 2284,
+          "ms": 22.950749844312668
+        },
+        "text_measure": {
+          "count": 5019,
+          "ms": 203.79033347126096
+        },
+        "text_reuse": {
+          "count": 2222,
+          "ms": 0.08766603423282504
+        },
+        "host_measure_user": {
+          "count": 198,
+          "ms": 294.7788331657648
+        }
+      }
+    },
+    {
+      "name": "top-reading-r3",
+      "supervisor": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "reading",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-reading-r3",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95476,
+        "exit_code": 0,
+        "elapsed_s": 16.681306416,
+        "passed": true
+      },
+      "status": "passed",
+      "reading_step_ms": {
+        "count": 335,
+        "max_ms": 22.809583344496787,
+        "median_ms": 9.512791701126844,
+        "over_16_7ms": 35,
+        "over_100ms": 0,
+        "p95_ms": 18.145666690543294
+      },
+      "upward_reading_step_ms": {
+        "count": 334,
+        "max_ms": 19.0433333045803,
+        "median_ms": 6.372749980073422,
+        "over_16_7ms": 3,
+        "over_100ms": 0,
+        "p95_ms": 14.337458298541605
+      },
+      "resident_mb_before_reading": 139.859375,
+      "resident_mb_after_downward": 165.546875,
+      "resident_mb_after_upward": 167.921875,
+      "cleanup_main_actor_delay_ms": {
+        "count": 171,
+        "max_ms": 3.4245416787452996,
+        "median_ms": 2.0662499624304473,
+        "over_16_7ms": 0,
+        "over_100ms": 0,
+        "p95_ms": 2.1589583517052233
+      },
+      "observed_turn_count": 200,
+      "tail_found": true,
+      "max_hosts": {
+        "mounted": 8,
+        "retained": 20
+      },
+      "downward_nested_stage_totals": {
+        "attributed_text": {
+          "count": 2129,
+          "ms": 41.179543593898416
+        },
+        "document_configure": {
+          "count": 233,
+          "ms": 0.5992500809952617
+        },
+        "host_attach": {
+          "count": 477,
+          "ms": 32.440875249449164
+        },
+        "host_create": {
+          "count": 477,
+          "ms": 26.19125001365319
+        },
+        "host_first_attach": {
+          "count": 477,
+          "ms": 32.51429146621376
+        },
+        "host_first_measure": {
+          "count": 477,
+          "ms": 734.277791401837
+        },
+        "host_measure": {
+          "count": 477,
+          "ms": 734.2141666449606
+        },
+        "host_measure_assistant": {
+          "count": 279,
+          "ms": 425.77058356255293
+        },
+        "host_view": {
+          "count": 477,
+          "ms": 6.735208677127957
+        },
+        "markdown_parse": {
+          "count": 455,
+          "ms": 112.42145783035085
+        },
+        "row_geometry": {
+          "count": 477,
+          "ms": 5.081708543002605
+        },
+        "text_create": {
+          "count": 2222,
+          "ms": 24.06395715661347
+        },
+        "text_measure": {
+          "count": 4817,
+          "ms": 199.08287603175268
+        },
+        "text_reuse": {
+          "count": 2160,
+          "ms": 0.08933217031881213
+        },
+        "host_measure_user": {
+          "count": 198,
+          "ms": 308.8613333529793
+        }
+      }
+    },
+    {
+      "name": "top-roundtrip",
+      "supervisor": {
+        "status": "exited",
+        "mode": "roundtrip",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "roundtrip",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-roundtrip",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95702,
+        "exit_code": 0,
+        "elapsed_s": 7.197207375,
+        "passed": true
+      },
+      "status": "passed"
+    },
+    {
+      "name": "top-search",
+      "supervisor": {
+        "status": "exited",
+        "mode": "search",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "search",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-search",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95694,
+        "exit_code": 0,
+        "elapsed_s": 4.843087291000001,
+        "passed": true
+      },
+      "status": "passed"
+    },
+    {
+      "name": "top-small-scroll-r1",
+      "supervisor": {
+        "status": "exited",
+        "mode": "scroll",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "scroll",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-small-scroll-r1",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_SCROLL_STEP_POINTS": "8.0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95305,
+        "exit_code": 0,
+        "elapsed_s": 4.674829375,
+        "passed": true
+      },
+      "status": "passed",
+      "scroll_step_ms": {
+        "count": 1200,
+        "document_height": 85578,
+        "final_document_height": 86417,
+        "max_ms": 21.71320834895596,
+        "median_ms": 0.4557500360533595,
+        "over_16_7ms": 16,
+        "over_100ms": 0,
+        "p95_ms": 1.5008749905973673,
+        "step_points": 8,
+        "viewport_height": 600
+      }
+    },
+    {
+      "name": "top-small-scroll-r2",
+      "supervisor": {
+        "status": "exited",
+        "mode": "scroll",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "scroll",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-small-scroll-r2",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_SCROLL_STEP_POINTS": "8.0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95470,
+        "exit_code": 0,
+        "elapsed_s": 4.413204791,
+        "passed": true
+      },
+      "status": "passed",
+      "scroll_step_ms": {
+        "count": 1200,
+        "document_height": 85578,
+        "final_document_height": 86417,
+        "max_ms": 21.52266667690128,
+        "median_ms": 0.46241667587310076,
+        "over_16_7ms": 9,
+        "over_100ms": 0,
+        "p95_ms": 1.3669999898411334,
+        "step_points": 8,
+        "viewport_height": 600
+      }
+    },
+    {
+      "name": "top-small-scroll-r3",
+      "supervisor": {
+        "status": "exited",
+        "mode": "scroll",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "scroll",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-small-scroll-r3",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_SCROLL_STEP_POINTS": "8.0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95668,
+        "exit_code": 0,
+        "elapsed_s": 4.594463709,
+        "passed": true
+      },
+      "status": "passed",
+      "scroll_step_ms": {
+        "count": 1200,
+        "document_height": 85578,
+        "final_document_height": 86417,
+        "max_ms": 22.624708304647356,
+        "median_ms": 0.4679583362303674,
+        "over_16_7ms": 16,
+        "over_100ms": 0,
+        "p95_ms": 1.8189583788625896,
+        "step_points": 8,
+        "viewport_height": 600
+      }
+    },
+    {
+      "name": "top-turns",
+      "supervisor": {
+        "status": "exited",
+        "mode": "turns",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "turns",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "<worktree>/.local/transcript-next/top-turns",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0"
+        },
+        "build": {
+          "source_commit": "3a9805bc966deb9c530f2c4b606b4a7f8dd2a5eb",
+          "source_sha256": "1bbabef133f93987c4a49652c2956cb13ef7e6a7e1b923002471314482821265",
+          "fixture_sha256": "eb0e25b8685532f6a5fd69b43e9ab98181cc51ee603950b1ceaa3b0ab8932107",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "812d3f412b18966179f0433f0e59eb74f67f7e9e875b5c1931f159fd915b24f9",
+        "pid": 95878,
+        "exit_code": 0,
+        "elapsed_s": 7.255147708,
+        "passed": true
+      },
+      "status": "passed"
+    }
+  ]
+}

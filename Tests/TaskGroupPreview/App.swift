@@ -1,26 +1,27 @@
 import AppKit
 import SwiftUI
+import Observation
 import WorkbenchCore
 
 // Layout fixture: production group page/editor/projections; an in-memory model
 // replaces remote connections and persistence. No real workspace is loaded.
-@MainActor final class WorkbenchModel: ObservableObject {
-    @Published var allSessions: [WorkspaceSession] = []
-    @Published var workspace = LocalWorkspace()
-    @Published var workspaceError: String?
-    @Published var isArchiving = false
-    @Published var archiveResult: BatchArchiveRun?
-    @Published var showNewKimi = false
-    @Published var editingGroup: WorkItemGroup?
-    @Published var editingGroupSessionsOnly = false
-    @Published var showGroupEditor = false
-    @Published var notice: String?
-    @Published var managing = Set<String>()
-    @Published var groupingSession: WorkspaceSession?
-    @Published var selectedGroupID: UUID?
-    @Published var showAllTaskGroups = false
-    @Published var search = ""
-    @Published var onlyAttention = false
+@MainActor @Observable final class WorkbenchModel {
+    var allSessions: [WorkspaceSession] = []
+    var workspace = LocalWorkspace()
+    var workspaceError: String?
+    var isArchiving = false
+    var archiveResult: BatchArchiveRun?
+    var showNewKimi = false
+    var editingGroup: WorkItemGroup?
+    var editingGroupSessionsOnly = false
+    var showGroupEditor = false
+    var notice: String?
+    var managing = Set<String>()
+    var groupingSession: WorkspaceSession?
+    var selectedGroupID: UUID?
+    var showAllTaskGroups = false
+    var search = ""
+    var onlyAttention = false
     var scopeHost: SSHHost? { nil }
     var selectedGroup: WorkItemGroup? { workspace.groups.first { $0.id == selectedGroupID } }
     var groupResumeSession: WorkspaceSession? { allSessions.first { $0.id == workspace.lastSessionByGroup[selectedGroupID?.uuidString ?? ""] } }
@@ -133,7 +134,7 @@ struct SessionActionsMenu: View {
     }
 }
 private struct GroupPreview: View {
-    @StateObject private var model = WorkbenchModel()
+    @State private var model = WorkbenchModel()
     @State private var scenario = "归属检查"
     var body: some View {
         VStack(spacing: 0) {

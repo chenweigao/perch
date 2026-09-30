@@ -2,10 +2,10 @@ import AppKit
 import Foundation
 import WorkbenchCore
 
-/// Real WorkbenchModel checks in an isolated app domain. All phases stay on
-/// the main actor without yielding; queued connection tasks never launch SSH.
+/// Real WorkbenchModel checks in an isolated app domain. Host phases do not
+/// yield; architecture checks await only injected operations with no configured hosts.
 @main struct HostLifecycleChecks {
-    @MainActor static func main() throws {
+    @MainActor static func main() async throws {
         _ = NSApplication.shared
         let domain = Bundle.main.bundleIdentifier!
         precondition(domain.hasPrefix("dev.agentworkbench.hostqa."))
@@ -14,6 +14,10 @@ import WorkbenchCore
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
         switch CommandLine.arguments[1] {
+        case "architecture":
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+            try await checkStateArchitecture()
+
         case "seed":
             let empty = WorkbenchModel()
             precondition(!empty.configuredEnvironment && empty.connections.isEmpty && empty.selectedConnection == nil)
@@ -87,14 +91,22 @@ import WorkbenchCore
             let model = WorkbenchModel()
             precondition(model.configuredEnvironment && model.connections.map(\.host) == [a, b, c])
             precondition(model.kimi.host.id == a.id && model.selectedConnection?.id == c.id)
+            for host in [a, b, c] {
+                _ = ConversationPresentationHandle().update(key: "\(host.id):native:fixture",
+                    input: .init(messages: [], language: "en"), cache: model.conversationPresentations)
+            }
+            precondition(model.conversationPresentations.count == 3)
             model.removeHost(a)
+            precondition(model.conversationPresentations.count == 2)
             precondition(model.selectedReference == terminal && model.selectedConnection?.id == c.id,
                          "removing A must not redirect C's terminal actions to B")
             precondition(model.kimi.host.id == c.id && model.native.host.id == c.id)
             model.removeHost(c)
+            precondition(model.conversationPresentations.count == 1)
             precondition(model.selectedReference == nil && model.selectedConnection?.id == b.id)
             precondition(model.showDashboard && model.openedSessions.isEmpty)
             model.removeHost(b)
+            precondition(model.conversationPresentations.count == 0)
             precondition(model.connections.isEmpty && !model.configuredEnvironment && model.selectedConnection == nil)
             let persisted = try JSONDecoder().decode([SSHHost].self, from: UserDefaults.standard.data(forKey: "hosts")!)
             precondition(persisted.isEmpty)

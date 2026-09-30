@@ -2,7 +2,7 @@
 # Standalone native visual fixture. No hosts, workspace state, or remote agents are loaded.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-bin_dir="$(swift build -c release --show-bin-path)"
+bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 app_dir="$PWD/build/Workflow Preview.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 objects=()
@@ -12,8 +12,8 @@ done
 swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
-    Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift \
+    Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
+    Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift Sources/AgentWorkbench/UILocalization.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/RemoteFileView.swift Tests/WorkflowPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkflowPreview"

@@ -1,0 +1,3891 @@
+{
+  "environment": "Apple M4, 16 GiB, macOS 27, Swift 6.4, release -O, 1280x820",
+  "parent_commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+  "source_digest_verified": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+  "method": "Three paired rounds; round 1 and 3 switching/catalog/combined baseline then candidate, round 2 combined/catalog/switching candidate then baseline. No concurrent task compiler/profiler; unrelated desktop activity uncontrolled. RSS after 80 render steps, 120 scroll steps and settling. Nested stages cannot be added. No event-to-photon, FPS, hardware IME or SSH claim.",
+  "aggregate": {
+    "switching": {
+      "baseline": {
+        "median_ms": 54.19741664081812,
+        "median_range_ms": [
+          53.08050004532561,
+          55.61116663739085
+        ],
+        "p95_range_ms": [
+          59.23179170349613,
+          65.19308331189677
+        ],
+        "cpu_median_seconds": 4.494109,
+        "rss_median_mib": 218.6875,
+        "rss_range_mib": [
+          218.296875,
+          221.09375
+        ]
+      },
+      "candidate": {
+        "median_ms": 53.0094166751951,
+        "median_range_ms": [
+          52.53058334346861,
+          54.8676666803658
+        ],
+        "p95_range_ms": [
+          58.13808331731707,
+          63.00808337982744
+        ],
+        "cpu_median_seconds": 4.526241000000001,
+        "rss_median_mib": 198.453125,
+        "rss_range_mib": [
+          198.03125,
+          198.578125
+        ]
+      },
+      "delta": {
+        "median_percent": -2.19198633303177,
+        "cpu_percent": 0.7149804332738929,
+        "rss_mib": -20.234375
+      }
+    },
+    "catalog": {
+      "baseline": {
+        "median_ms": 25.34245833521709,
+        "median_range_ms": [
+          25.236250017769635,
+          25.514333334285766
+        ],
+        "p95_range_ms": [
+          30.860125028993934,
+          31.479624973144382
+        ],
+        "cpu_median_seconds": 2.018764,
+        "rss_median_mib": 191.046875,
+        "rss_range_mib": [
+          190.140625,
+          191.8125
+        ]
+      },
+      "candidate": {
+        "median_ms": 25.072833348531276,
+        "median_range_ms": [
+          24.905500002205372,
+          25.712499977089465
+        ],
+        "p95_range_ms": [
+          30.566333327442408,
+          33.52395829278976
+        ],
+        "cpu_median_seconds": 2.01352,
+        "rss_median_mib": 190.640625,
+        "rss_range_mib": [
+          190.40625,
+          191.0625
+        ]
+      },
+      "delta": {
+        "median_percent": -1.0639259345693763,
+        "cpu_percent": -0.2597629044306271,
+        "rss_mib": -0.40625
+      }
+    },
+    "combined": {
+      "baseline": {
+        "median_ms": 73.22041667066514,
+        "median_range_ms": [
+          72.10575003409758,
+          74.06620832625777
+        ],
+        "p95_range_ms": [
+          80.16179170226678,
+          88.1612499943003
+        ],
+        "cpu_median_seconds": 6.0533150000000004,
+        "rss_median_mib": 223.046875,
+        "rss_range_mib": [
+          222.125,
+          223.484375
+        ]
+      },
+      "candidate": {
+        "median_ms": 74.1310833254829,
+        "median_range_ms": [
+          73.66629171883687,
+          74.52141668181866
+        ],
+        "p95_range_ms": [
+          81.64291665889323,
+          88.86020834324881
+        ],
+        "cpu_median_seconds": 6.156702,
+        "rss_median_mib": 203.25,
+        "rss_range_mib": [
+          203.171875,
+          203.625
+        ]
+      },
+      "delta": {
+        "median_percent": 1.243733232103561,
+        "cpu_percent": 1.7079401947527773,
+        "rss_mib": -19.796875
+      }
+    }
+  },
+  "render_runs": [
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-switching-r1",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 79274,
+        "exit_code": 0,
+        "elapsed_s": 11.964108417,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.650283,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1600,
+            "ms": 22.419583750888705
+          },
+          "document_configure": {
+            "count": 240,
+            "ms": 559.2883749050088
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 13.765999756287783
+          },
+          "host_attach": {
+            "count": 640,
+            "ms": 20.261958241462708
+          },
+          "host_create": {
+            "count": 320,
+            "ms": 16.251791326794773
+          },
+          "host_first_attach": {
+            "count": 320,
+            "ms": 1.5037917182780802
+          },
+          "host_first_measure": {
+            "count": 320,
+            "ms": 511.9285832042806
+          },
+          "host_measure": {
+            "count": 320,
+            "ms": 511.89020863967016
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 418.36825013160706
+          },
+          "host_measure_user": {
+            "count": 160,
+            "ms": 93.77412497997284
+          },
+          "host_reattach": {
+            "count": 320,
+            "ms": 18.81683256942779
+          },
+          "host_view": {
+            "count": 320,
+            "ms": 4.2962507577613
+          },
+          "markdown_parse": {
+            "count": 320,
+            "ms": 50.06149999098852
+          },
+          "row_geometry": {
+            "count": 108,
+            "ms": 0.5499165854416788
+          },
+          "text_create": {
+            "count": 1760,
+            "ms": 11.331499845255166
+          },
+          "text_measure": {
+            "count": 1920,
+            "ms": 41.38904274441302
+          },
+          "text_reuse": {
+            "count": 1760,
+            "ms": 0.06833299994468689
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 105.5082916864194,
+          "median": 55.61116663739085,
+          "p95": 65.19308331189677
+        },
+        "render_steps": 80,
+        "rss_after_mb": 221.46875,
+        "rss_before_mb": 170.8125,
+        "rss_settled_mb": 221.09375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 28.027333319187164,
+          "median": 5.028999992646277,
+          "p95": 23.987875028979033
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-switching-r1",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 79468,
+        "exit_code": 0,
+        "elapsed_s": 11.779673583,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.6412759999999995,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 21.126333391293883
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 629.9340419354849
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 107.7954166685231
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 16.190000635106117
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 13.835832884069532
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 16.2135420832783
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 482.1049582096748
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 482.07029153127223
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 438.01820831140503
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 44.22299982979894
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.4955001901835203
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 48.222666897345334
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5612080567516387
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 11.044207611121237
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 34.0298754745163
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.07149711018428206
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 72.25666666636243,
+          "median": 54.8676666803658,
+          "p95": 63.00808337982744
+        },
+        "render_steps": 80,
+        "rss_after_mb": 198.8125,
+        "rss_before_mb": 170.984375,
+        "rss_settled_mb": 198.453125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.831624981947243,
+          "median": 4.703791637439281,
+          "p95": 23.095166659913957
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-catalog-r1",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 79654,
+        "exit_code": 0,
+        "elapsed_s": 9.240155458,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.01961,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 60.3891666396521,
+          "median": 25.514333334285766,
+          "p95": 30.931666668038815
+        },
+        "render_steps": 80,
+        "rss_after_mb": 191.71875,
+        "rss_before_mb": 170.625,
+        "rss_settled_mb": 191.8125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.61162499478087,
+          "median": 2.544666698668152,
+          "p95": 22.51974999671802
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 11
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-catalog-r1",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 79752,
+        "exit_code": 0,
+        "elapsed_s": 9.301254167,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.013014,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 61.13070831634104,
+          "median": 25.072833348531276,
+          "p95": 33.52395829278976
+        },
+        "render_steps": 80,
+        "rss_after_mb": 191.046875,
+        "rss_before_mb": 171.03125,
+        "rss_settled_mb": 191.0625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.657250022049993,
+          "median": 4.26870834780857,
+          "p95": 22.11341669317335
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-combined-r1",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 79798,
+        "exit_code": 0,
+        "elapsed_s": 13.305040625,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.0533150000000004,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1600,
+            "ms": 21.925627370364964
+          },
+          "document_configure": {
+            "count": 240,
+            "ms": 533.892834035214
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 13.67049990221858
+          },
+          "host_attach": {
+            "count": 640,
+            "ms": 19.6158341714181
+          },
+          "host_create": {
+            "count": 320,
+            "ms": 15.369874890893698
+          },
+          "host_first_attach": {
+            "count": 320,
+            "ms": 1.4649169752374291
+          },
+          "host_first_measure": {
+            "count": 320,
+            "ms": 488.40158339589834
+          },
+          "host_measure": {
+            "count": 320,
+            "ms": 488.37037483463064
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 398.80641672061756
+          },
+          "host_measure_user": {
+            "count": 160,
+            "ms": 89.791041566059
+          },
+          "host_reattach": {
+            "count": 320,
+            "ms": 18.2117082295008
+          },
+          "host_view": {
+            "count": 320,
+            "ms": 4.1740002343431115
+          },
+          "markdown_parse": {
+            "count": 320,
+            "ms": 48.22062439052388
+          },
+          "row_geometry": {
+            "count": 108,
+            "ms": 0.5173333920538425
+          },
+          "text_create": {
+            "count": 1760,
+            "ms": 10.904624592512846
+          },
+          "text_measure": {
+            "count": 1920,
+            "ms": 39.74691458279267
+          },
+          "text_reuse": {
+            "count": 1760,
+            "ms": 0.0645421096123755
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 101.52666666544974,
+          "median": 73.22041667066514,
+          "p95": 86.48595830891281
+        },
+        "render_steps": 80,
+        "rss_after_mb": 223.484375,
+        "rss_before_mb": 170.734375,
+        "rss_settled_mb": 223.484375,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.535791694186628,
+          "median": 3.718166670296341,
+          "p95": 23.697666649241
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-combined-r1",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80056,
+        "exit_code": 0,
+        "elapsed_s": 13.33775325,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.156702,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.35975066246465
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 596.7570000793785
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 102.66500007128343
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.283874818123877
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.697749771177769
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.306582790799439
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 456.655083457008
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 456.63012482691556
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 415.0880415108986
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.69762512901798
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3589161466807127
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.83475015917793
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5304997321218252
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.682624182663858
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.08879265002906
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.04645908484235406
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 118.07729169959202,
+          "median": 74.1310833254829,
+          "p95": 83.93954165512696
+        },
+        "render_steps": 80,
+        "rss_after_mb": 203.234375,
+        "rss_before_mb": 171.125,
+        "rss_settled_mb": 203.25,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.949375005438924,
+          "median": 4.2468333267606795,
+          "p95": 22.976416628807783
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-switching-r2",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80746,
+        "exit_code": 0,
+        "elapsed_s": 11.668137666000002,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.420003,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1600,
+            "ms": 21.295998943969607
+          },
+          "document_configure": {
+            "count": 240,
+            "ms": 527.0247082225978
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 13.60512524843216
+          },
+          "host_attach": {
+            "count": 640,
+            "ms": 19.556708459276706
+          },
+          "host_create": {
+            "count": 320,
+            "ms": 15.262874192558229
+          },
+          "host_first_attach": {
+            "count": 320,
+            "ms": 1.4508335734717548
+          },
+          "host_first_measure": {
+            "count": 320,
+            "ms": 481.6175411106087
+          },
+          "host_measure": {
+            "count": 320,
+            "ms": 481.58224899088964
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 393.03737494628876
+          },
+          "host_measure_user": {
+            "count": 160,
+            "ms": 88.77858275081962
+          },
+          "host_reattach": {
+            "count": 320,
+            "ms": 18.16583308391273
+          },
+          "host_view": {
+            "count": 320,
+            "ms": 4.089041205588728
+          },
+          "markdown_parse": {
+            "count": 320,
+            "ms": 47.43479157332331
+          },
+          "row_geometry": {
+            "count": 108,
+            "ms": 0.5016255890950561
+          },
+          "text_create": {
+            "count": 1760,
+            "ms": 10.946333641186357
+          },
+          "text_measure": {
+            "count": 1920,
+            "ms": 38.95075124455616
+          },
+          "text_reuse": {
+            "count": 1760,
+            "ms": 0.0625422690063715
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 104.11645832937211,
+          "median": 53.08050004532561,
+          "p95": 59.70654165139422
+        },
+        "render_steps": 80,
+        "rss_after_mb": 219.0625,
+        "rss_before_mb": 170.671875,
+        "rss_settled_mb": 218.6875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 34.51645834138617,
+          "median": 4.222125047817826,
+          "p95": 22.939999995287508
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-switching-r2",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80435,
+        "exit_code": 0,
+        "elapsed_s": 11.479297833,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.526241000000001,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.684833987616003
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 607.3931251885369
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 104.04137487057596
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.63295820960775
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 13.241958804428577
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.659459168091416
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 464.68058350728825
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 464.65383376926184
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 422.4947080947459
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 42.3148752306588
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.4075832809321582
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.95895820623264
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5442501278594136
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.763748432509601
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.56108349887654
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.047540932428091764
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 106.83574998984113,
+          "median": 53.0094166751951,
+          "p95": 59.275208332110196
+        },
+        "render_steps": 80,
+        "rss_after_mb": 198.390625,
+        "rss_before_mb": 171.15625,
+        "rss_settled_mb": 198.03125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 28.22116669267416,
+          "median": 2.646000008098781,
+          "p95": 20.55999997537583
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-catalog-r2",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80425,
+        "exit_code": 0,
+        "elapsed_s": 9.339922708,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.008165,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 61.25495833111927,
+          "median": 25.236250017769635,
+          "p95": 30.860125028993934
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.109375,
+        "rss_before_mb": 170.484375,
+        "rss_settled_mb": 190.140625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.56154165742919,
+          "median": 4.911541647743434,
+          "p95": 22.346208337694407
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-catalog-r2",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80397,
+        "exit_code": 0,
+        "elapsed_s": 9.380625208000001,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.026745,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 59.461041644681245,
+          "median": 25.712499977089465,
+          "p95": 30.566333327442408
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.390625,
+        "rss_before_mb": 170.921875,
+        "rss_settled_mb": 190.40625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 25.70524998009205,
+          "median": 4.485625016968697,
+          "p95": 22.49508333625272
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-combined-r2",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80246,
+        "exit_code": 0,
+        "elapsed_s": 13.4824215,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.2074609999999995,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1600,
+            "ms": 22.43295992957428
+          },
+          "document_configure": {
+            "count": 240,
+            "ms": 555.7202501804568
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 14.028208330273628
+          },
+          "host_attach": {
+            "count": 640,
+            "ms": 20.044916367623955
+          },
+          "host_create": {
+            "count": 320,
+            "ms": 16.25470950966701
+          },
+          "host_first_attach": {
+            "count": 320,
+            "ms": 1.5151665429584682
+          },
+          "host_first_measure": {
+            "count": 320,
+            "ms": 508.2254584413022
+          },
+          "host_measure": {
+            "count": 320,
+            "ms": 508.1752093974501
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 414.315250585787
+          },
+          "host_measure_user": {
+            "count": 160,
+            "ms": 94.1247918526642
+          },
+          "host_reattach": {
+            "count": 320,
+            "ms": 18.590832478366792
+          },
+          "host_view": {
+            "count": 320,
+            "ms": 4.329166898969561
+          },
+          "markdown_parse": {
+            "count": 320,
+            "ms": 49.53187552746385
+          },
+          "row_geometry": {
+            "count": 108,
+            "ms": 0.5267084343358874
+          },
+          "text_create": {
+            "count": 1760,
+            "ms": 11.295291769783944
+          },
+          "text_measure": {
+            "count": 1920,
+            "ms": 41.29895818186924
+          },
+          "text_reuse": {
+            "count": 1760,
+            "ms": 0.06895745173096657
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 114.5003333222121,
+          "median": 74.06620832625777,
+          "p95": 88.1612499943003
+        },
+        "render_steps": 80,
+        "rss_after_mb": 223.015625,
+        "rss_before_mb": 170.875,
+        "rss_settled_mb": 223.046875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 39.66258332366124,
+          "median": 5.097583343740553,
+          "p95": 23.266916687134653
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-combined-r2",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80080,
+        "exit_code": 0,
+        "elapsed_s": 13.301379625,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.15634,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.893959910608828
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 606.4066668623127
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 103.80433360114694
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.576166333630681
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 13.194666302297264
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.60324989259243
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 464.3797079916112
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 464.3420834909193
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 422.4331250297837
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 42.08645806647837
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3838333329185843
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 47.277708421461284
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.581000407692045
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.82829263759777
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.47841674601659
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.0524159986525774
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 93.81425002356991,
+          "median": 73.66629171883687,
+          "p95": 88.86020834324881
+        },
+        "render_steps": 80,
+        "rss_after_mb": 203.609375,
+        "rss_before_mb": 171.078125,
+        "rss_settled_mb": 203.625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.00329165579751,
+          "median": 4.415250034071505,
+          "p95": 23.083583335392177
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-switching-r3",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80777,
+        "exit_code": 0,
+        "elapsed_s": 11.610826542,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.494109,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1600,
+            "ms": 21.369415044318885
+          },
+          "document_configure": {
+            "count": 240,
+            "ms": 539.6697497344576
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 13.762207934632897
+          },
+          "host_attach": {
+            "count": 640,
+            "ms": 19.909292575903237
+          },
+          "host_create": {
+            "count": 320,
+            "ms": 15.787791518960148
+          },
+          "host_first_attach": {
+            "count": 320,
+            "ms": 1.4801666256971657
+          },
+          "host_first_measure": {
+            "count": 320,
+            "ms": 493.17270825849846
+          },
+          "host_measure": {
+            "count": 320,
+            "ms": 493.1286245700903
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 402.3896664730273
+          },
+          "host_measure_user": {
+            "count": 160,
+            "ms": 90.98258311860263
+          },
+          "host_reattach": {
+            "count": 320,
+            "ms": 18.486250250134617
+          },
+          "host_view": {
+            "count": 320,
+            "ms": 4.255875130183995
+          },
+          "markdown_parse": {
+            "count": 320,
+            "ms": 48.61208301736042
+          },
+          "row_geometry": {
+            "count": 108,
+            "ms": 0.5074585205875337
+          },
+          "text_create": {
+            "count": 1760,
+            "ms": 11.052124726120383
+          },
+          "text_measure": {
+            "count": 1920,
+            "ms": 39.607500773854554
+          },
+          "text_reuse": {
+            "count": 1760,
+            "ms": 0.06783258868381381
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 100.19783332245424,
+          "median": 54.19741664081812,
+          "p95": 59.23179170349613
+        },
+        "render_steps": 80,
+        "rss_after_mb": 218.640625,
+        "rss_before_mb": 169.46875,
+        "rss_settled_mb": 218.296875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 32.14187500998378,
+          "median": 2.6894999900832772,
+          "p95": 23.091499984730035
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-switching-r3",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-switching",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80955,
+        "exit_code": 0,
+        "elapsed_s": 11.629061875,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-switching",
+        "mutations": {
+          "catalog": false,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 4.472567000000001,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.472915202844888
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 595.8916663657874
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 101.87704185955226
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.323791420087218
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.825542129576206
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.35016653360799
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 456.16395835531875
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 456.13549975678325
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 415.1415412197821
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 41.150250064674765
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3392090699635446
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 46.41141643514857
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5246669752523303
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.721125174313784
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.0074594928883
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.06979313911870122
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 106.3504166668281,
+          "median": 52.53058334346861,
+          "p95": 58.13808331731707
+        },
+        "render_steps": 80,
+        "rss_after_mb": 198.9375,
+        "rss_before_mb": 171.140625,
+        "rss_settled_mb": 198.578125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.535083365160972,
+          "median": 4.459041636437178,
+          "p95": 22.70012500230223
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-catalog-r3",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80964,
+        "exit_code": 0,
+        "elapsed_s": 9.353522709,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.018764,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 60.288708365987986,
+          "median": 25.34245833521709,
+          "p95": 31.479624973144382
+        },
+        "render_steps": 80,
+        "rss_after_mb": 191.046875,
+        "rss_before_mb": 170.875,
+        "rss_settled_mb": 191.046875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.54408337548375,
+          "median": 4.27708332426846,
+          "p95": 22.34687499003485
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 11
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-catalog-r3",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-catalog",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80991,
+        "exit_code": 0,
+        "elapsed_s": 9.370914083,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-catalog",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": false
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 2.01352,
+        "render_stages": {},
+        "render_step_ms": {
+          "count": 80,
+          "max": 59.72458334872499,
+          "median": 24.905500002205372,
+          "p95": 32.88999997312203
+        },
+        "render_steps": 80,
+        "rss_after_mb": 190.625,
+        "rss_before_mb": 171.125,
+        "rss_settled_mb": 190.640625,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 29.300666705239564,
+          "median": 4.41241665976122,
+          "p95": 22.58591668214649
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/baseline-combined-r3",
+      "manifest": {
+        "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+        "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 80998,
+        "exit_code": 0,
+        "elapsed_s": 13.490470292,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.019245000000001,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1600,
+            "ms": 21.483457821886986
+          },
+          "document_configure": {
+            "count": 240,
+            "ms": 528.6685418104753
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 13.506666233297437
+          },
+          "host_attach": {
+            "count": 640,
+            "ms": 19.38083255663514
+          },
+          "host_create": {
+            "count": 320,
+            "ms": 15.459499845746905
+          },
+          "host_first_attach": {
+            "count": 320,
+            "ms": 1.4665412600152194
+          },
+          "host_first_measure": {
+            "count": 320,
+            "ms": 483.3842912921682
+          },
+          "host_measure": {
+            "count": 320,
+            "ms": 483.34437486482784
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 394.8117913096212
+          },
+          "host_measure_user": {
+            "count": 160,
+            "ms": 88.7529164319858
+          },
+          "host_reattach": {
+            "count": 320,
+            "ms": 17.972958099562675
+          },
+          "host_view": {
+            "count": 320,
+            "ms": 4.152208683080971
+          },
+          "markdown_parse": {
+            "count": 320,
+            "ms": 47.78487456496805
+          },
+          "row_geometry": {
+            "count": 108,
+            "ms": 0.5312913563102484
+          },
+          "text_create": {
+            "count": 1760,
+            "ms": 10.94958308385685
+          },
+          "text_measure": {
+            "count": 1920,
+            "ms": 39.031375490594655
+          },
+          "text_reuse": {
+            "count": 1760,
+            "ms": 0.07362448377534747
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 119.85650000860915,
+          "median": 72.10575003409758,
+          "p95": 80.16179170226678
+        },
+        "render_steps": 80,
+        "rss_after_mb": 222.125,
+        "rss_before_mb": 170.671875,
+        "rss_settled_mb": 222.125,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 32.16787503333762,
+          "median": 4.940749960951507,
+          "p95": 23.115833348128945
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    },
+    {
+      "artifact": ".local/stable-detail/delivery/candidate-combined-r3",
+      "manifest": {
+        "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+        "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+        "configuration": "release -O",
+        "defines": [
+          "PERCH_ACCEPTANCE",
+          "TRANSCRIPT_CHECKS"
+        ],
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+        "window_points": [
+          1280,
+          820
+        ],
+        "history_turns": 200,
+        "catalog_sessions": 500,
+        "resident_snapshot_count": 8,
+        "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+        "capture": "none",
+        "mode": "render-combined",
+        "input_positive_control": false,
+        "positive_control": false,
+        "joint_seconds": null,
+        "supervisor_pid": 81007,
+        "exit_code": 0,
+        "elapsed_s": 13.375048916999999,
+        "behavior_passed": true
+      },
+      "result": {
+        "catalog_sessions": 500,
+        "history_turns": 200,
+        "intentional_stall_ms": 0,
+        "mode": "render-combined",
+        "mutations": {
+          "catalog": true,
+          "selection_and_draft": true
+        },
+        "native_transport": "fixed in-memory JSON; real decode/select",
+        "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded",
+        "render_process_cpu_seconds": 6.194209,
+        "render_stages": {
+          "attributed_text": {
+            "count": 1540,
+            "ms": 20.55329061113298
+          },
+          "document_configure": {
+            "count": 160,
+            "ms": 602.8569585760124
+          },
+          "document_reconcile": {
+            "count": 80,
+            "ms": 103.4986250451766
+          },
+          "host_attach": {
+            "count": 250,
+            "ms": 15.451249724719673
+          },
+          "host_create": {
+            "count": 250,
+            "ms": 12.945749680511653
+          },
+          "host_first_attach": {
+            "count": 250,
+            "ms": 15.476666972972453
+          },
+          "host_first_measure": {
+            "count": 250,
+            "ms": 461.4069171366282
+          },
+          "host_measure": {
+            "count": 250,
+            "ms": 461.37116668978706
+          },
+          "host_measure_assistant": {
+            "count": 160,
+            "ms": 419.224374985788
+          },
+          "host_measure_user": {
+            "count": 90,
+            "ms": 42.31204162351787
+          },
+          "host_view": {
+            "count": 250,
+            "ms": 3.3842913107946515
+          },
+          "markdown_parse": {
+            "count": 252,
+            "ms": 47.039625176694244
+          },
+          "row_geometry": {
+            "count": 101,
+            "ms": 0.5201669409871101
+          },
+          "text_create": {
+            "count": 1701,
+            "ms": 10.737208358477801
+          },
+          "text_measure": {
+            "count": 1792,
+            "ms": 32.32554020360112
+          },
+          "text_reuse": {
+            "count": 1701,
+            "ms": 0.07087650010362267
+          }
+        },
+        "render_step_ms": {
+          "count": 80,
+          "max": 120.79120834823698,
+          "median": 74.52141668181866,
+          "p95": 81.64291665889323
+        },
+        "render_steps": 80,
+        "rss_after_mb": 203.15625,
+        "rss_before_mb": 171.234375,
+        "rss_settled_mb": 203.171875,
+        "scroll_step_ms": {
+          "count": 120,
+          "max": 26.77537500858307,
+          "median": 4.714916693046689,
+          "p95": 22.348625003360212
+        },
+        "status": "passed",
+        "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+        "window_points": [
+          1280,
+          820
+        ],
+        "host_counts_max": {
+          "mounted": 5,
+          "retained": 17,
+          "retired": 10
+        }
+      }
+    }
+  ],
+  "lifecycle": {
+    "artifact": ".local/stable-detail/delivery/lifecycle",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "detail-lifecycle",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 78501,
+      "exit_code": 0,
+      "elapsed_s": 8.401708333,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "composer_identity_and_undo_isolated": true,
+      "detail_host_preserved": true,
+      "failed_load_and_retry": true,
+      "focus_restored": true,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "loading_hides_native_tree": true,
+      "marked_text_did_not_cross_session": true,
+      "mode": "detail-lifecycle",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "old_send_rejected": true,
+      "return_anchor_preserved": true,
+      "rss_after_mb": 186.40625,
+      "rss_before_mb": 171.25,
+      "rss_settled_mb": 186.421875,
+      "same_id_cross_host_isolated": true,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 26.935333327855915,
+        "median": 4.6066250069998205,
+        "p95": 22.88820833200589
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "baseline-joint",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "joint",
+        "--seconds",
+        "60",
+        "--app",
+        ".local/render-isolation/Diagnostic.app",
+        "--output",
+        ".local/stable-detail/delivery/baseline-joint"
+      ],
+      "exit_code": 0,
+      "seconds": 67.56034100000001
+    },
+    {
+      "name": "candidate-joint",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "joint",
+        "--seconds",
+        "60",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/candidate-joint"
+      ],
+      "exit_code": 0,
+      "seconds": 67.553731542
+    },
+    {
+      "name": "native-all",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "all",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/native-all"
+      ],
+      "exit_code": 0,
+      "seconds": 9.684951542000022
+    },
+    {
+      "name": "native-switching",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "switching",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/native-switching"
+      ],
+      "exit_code": 0,
+      "seconds": 15.416123792000008
+    },
+    {
+      "name": "native-paging",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "paging",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/native-paging"
+      ],
+      "exit_code": 0,
+      "seconds": 7.958935125000011
+    },
+    {
+      "name": "native-invalidation",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "invalidation",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/native-invalidation"
+      ],
+      "exit_code": 0,
+      "seconds": 8.727526291999993
+    },
+    {
+      "name": "native-input",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "input",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/native-input"
+      ],
+      "exit_code": 0,
+      "seconds": 9.731357040999995
+    },
+    {
+      "name": "native-kimi-input",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "kimi-input",
+        "--app",
+        ".local/stable-detail/delivery/Candidate.app",
+        "--output",
+        ".local/stable-detail/delivery/native-kimi-input"
+      ],
+      "exit_code": 0,
+      "seconds": 4.417734083999989
+    },
+    {
+      "name": "production-build",
+      "command": [
+        "bash",
+        "scripts/build.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 53.23448854099999
+    },
+    {
+      "name": "signature",
+      "command": [
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "build/Perch.app"
+      ],
+      "exit_code": 0,
+      "seconds": 0.037245041000005585
+    },
+    {
+      "name": "WorkbenchChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "WorkbenchChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 14.451490792000016
+    },
+    {
+      "name": "ConnectionChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "ConnectionChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 1.696738790999973
+    },
+    {
+      "name": "performance-tools",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Tests/Performance",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "seconds": 4.683529625000006
+    },
+    {
+      "name": "host-lifecycle",
+      "command": [
+        "python3",
+        "scripts/check-host-lifecycle.py"
+      ],
+      "exit_code": 0,
+      "seconds": 41.345096125
+    },
+    {
+      "name": "composer",
+      "command": [
+        "bash",
+        "scripts/check-composer.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 2.5881772920000117
+    },
+    {
+      "name": "scroll-following",
+      "command": [
+        "python3",
+        "scripts/check-scroll-following.py"
+      ],
+      "exit_code": 0,
+      "seconds": 7.970752125000047
+    },
+    {
+      "name": "navigation-build",
+      "command": [
+        "bash",
+        "scripts/build-navigation-preview.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 23.94590445900002
+    },
+    {
+      "name": "navigation-reading",
+      "command": [
+        "python3",
+        "scripts/run-navigation-check.py",
+        "reading",
+        "--output",
+        ".local/stable-detail/delivery/navigation-reading"
+      ],
+      "exit_code": 0,
+      "seconds": 16.35988500000002
+    },
+    {
+      "name": "navigation-interactions",
+      "command": [
+        "python3",
+        "scripts/run-navigation-check.py",
+        "interactions",
+        "--output",
+        ".local/stable-detail/delivery/navigation-interactions"
+      ],
+      "exit_code": 0,
+      "seconds": 7.2387288749999925
+    },
+    {
+      "name": "navigation-roundtrip",
+      "command": [
+        "python3",
+        "scripts/run-navigation-check.py",
+        "roundtrip",
+        "--output",
+        ".local/stable-detail/delivery/navigation-roundtrip"
+      ],
+      "exit_code": 0,
+      "seconds": 7.187851332999969
+    },
+    {
+      "name": "navigation-anchor",
+      "command": [
+        "python3",
+        "scripts/run-navigation-check.py",
+        "anchor",
+        "--output",
+        ".local/stable-detail/delivery/navigation-anchor"
+      ],
+      "exit_code": 0,
+      "seconds": 4.318220125000039
+    }
+  ],
+  "baseline_joint": {
+    "artifact": ".local/stable-detail/delivery/baseline-joint",
+    "manifest": {
+      "commit": "21f31dc088be31152d9dd4edd701f3d1b34d9320",
+      "source_sha256": "599cab92f25b6ed5285e9892d9a7f4191fe7ff04678ba3e24b9f4198f422c607",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "49420d3465fac38bce4f8befcb56772f12c156b41780290adcc77fd79f305df6",
+      "capture": "none",
+      "mode": "joint",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": 60,
+      "supervisor_pid": 81158,
+      "exit_code": 0,
+      "elapsed_s": 67.471375375,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "joint_cpu_seconds": 5.848478999999999,
+      "joint_duration_s": 60.08936816663481,
+      "joint_input_to_layout_ms": {
+        "count": 148,
+        "max": 10.328208329156041,
+        "median": 6.8218333180993795,
+        "p95": 8.815458335448056
+      },
+      "joint_note": "Real workbench; fixed full-history JSON updates, local draft binding, anchor and return checks at 2.5Hz. Excludes hardware keyboard/IME and network; CPU includes fixture serialization.",
+      "joint_samples": [
+        {
+          "cpu_seconds": 0.03946000000000005,
+          "elapsed_s": 0.03373662498779595,
+          "mounted": 3,
+          "recycled_text_views": 44,
+          "retained": 4,
+          "retired": 0,
+          "rss_mb": 174.21875,
+          "updates": 1
+        },
+        {
+          "cpu_seconds": 2.85996,
+          "elapsed_s": 30.058900541625917,
+          "mounted": 3,
+          "recycled_text_views": 32,
+          "retained": 5,
+          "retired": 0,
+          "rss_mb": 187.390625,
+          "updates": 75
+        }
+      ],
+      "joint_switches": 8,
+      "joint_update_to_layout_ms": {
+        "count": 148,
+        "max": 28.461541631259024,
+        "median": 25.43608332052827,
+        "p95": 27.461874997243285
+      },
+      "joint_updates": 148,
+      "mode": "joint",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "rss_after_mb": 191.71875,
+      "rss_before_mb": 170.421875,
+      "rss_settled_mb": 191.71875,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 60.98679167916998,
+        "median": 4.3778750114142895,
+        "p95": 27.112708310596645
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 6
+      }
+    }
+  },
+  "candidate_joint": {
+    "artifact": ".local/stable-detail/delivery/candidate-joint",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "joint",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": 60,
+      "supervisor_pid": 81708,
+      "exit_code": 0,
+      "elapsed_s": 67.360111167,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "joint_cpu_seconds": 5.58296,
+      "joint_duration_s": 60.084319583373144,
+      "joint_input_to_layout_ms": {
+        "count": 148,
+        "max": 9.54095833003521,
+        "median": 7.116833352483809,
+        "p95": 8.90429166611284
+      },
+      "joint_note": "Real workbench; fixed full-history JSON updates, local draft binding, anchor and return checks at 2.5Hz. Excludes hardware keyboard/IME and network; CPU includes fixture serialization.",
+      "joint_samples": [
+        {
+          "cpu_seconds": 0.04142099999999993,
+          "elapsed_s": 0.03761575004318729,
+          "mounted": 3,
+          "recycled_text_views": 44,
+          "retained": 4,
+          "retired": 0,
+          "rss_mb": 174.828125,
+          "updates": 1
+        },
+        {
+          "cpu_seconds": 3.1192209999999996,
+          "elapsed_s": 30.042216833331622,
+          "mounted": 3,
+          "recycled_text_views": 34,
+          "retained": 5,
+          "retired": 0,
+          "rss_mb": 185.375,
+          "updates": 75
+        }
+      ],
+      "joint_switches": 8,
+      "joint_update_to_layout_ms": {
+        "count": 148,
+        "max": 30.208791664335877,
+        "median": 25.513666681945324,
+        "p95": 27.877333341166377
+      },
+      "joint_updates": 148,
+      "mode": "joint",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "rss_after_mb": 192.6875,
+      "rss_before_mb": 170.9375,
+      "rss_settled_mb": 192.703125,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 62.09741666680202,
+        "median": 3.30754165770486,
+        "p95": 26.95812500314787
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 6
+      }
+    }
+  },
+  "native_all": {
+    "artifact": ".local/stable-detail/delivery/native-all",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "all",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 82355,
+      "exit_code": 0,
+      "elapsed_s": 9.540909542,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "all",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "row_reconciliation": {
+        "appearance_invalidation": true,
+        "external_summary_same_snapshot": true,
+        "prepend_and_removal": true,
+        "same_id_offscreen_and_visible_edits": true,
+        "unchanged_geometry_rebuilds": 0,
+        "unchanged_host_measurements": 0,
+        "unchanged_reconciliations": 0,
+        "unchanged_replays": 40
+      },
+      "rss_after_mb": 231.578125,
+      "rss_before_mb": 169.625,
+      "rss_settled_mb": 231.59375,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 26.12616668920964,
+        "median": 4.761291667819023,
+        "p95": 22.685708361677825
+      },
+      "search_sheet": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 43.60195837216452,
+          "median": 34.30595831014216,
+          "p95": 34.583124972414225
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_directory": {
+        "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+        "query_to_layout_ms": {
+          "count": 6,
+          "max": 99.46062497328967,
+          "median": 48.465708328876644,
+          "p95": 50.79812498297542
+        },
+        "states": [
+          {
+            "query": "验收",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "0002",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+          },
+          {
+            "query": "不存在的验收会话",
+            "selection": "none"
+          },
+          {
+            "query": "English",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          },
+          {
+            "query": "project-3",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+          },
+          {
+            "query": "",
+            "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+          }
+        ]
+      },
+      "session_switch_ms": {
+        "count": 16,
+        "max": 94.59024999523535,
+        "median": 52.98720835708082,
+        "p95": 58.83445835206658
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      }
+    }
+  },
+  "native_switching": {
+    "artifact": ".local/stable-detail/delivery/native-switching",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "switching",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 82380,
+      "exit_code": 0,
+      "elapsed_s": 15.323860125,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_session_switches": 80,
+      "catalog_sessions": 500,
+      "catalog_switch_ms": {
+        "count": 80,
+        "max": 90.98754165461287,
+        "median": 73.11624998692423,
+        "p95": 81.32825000211596
+      },
+      "history_turns": 200,
+      "idle_cpu_seconds_over_2s": 0.04470699999999983,
+      "intentional_stall_ms": 0,
+      "mode": "switching",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "navigation_cache_invalidation": true,
+      "presentation_cache": {
+        "models": 8,
+        "payload_cost": 1860288,
+        "preparations": 8,
+        "restorations": 72
+      },
+      "render_stages": {
+        "attributed_text": {
+          "count": 1520,
+          "ms": 20.286917104385793
+        },
+        "document_configure": {
+          "count": 158,
+          "ms": 590.0020421249792
+        },
+        "document_reconcile": {
+          "count": 79,
+          "ms": 101.2649170588702
+        },
+        "host_attach": {
+          "count": 246,
+          "ms": 15.239666448906064
+        },
+        "host_create": {
+          "count": 246,
+          "ms": 12.830999563448131
+        },
+        "host_first_attach": {
+          "count": 246,
+          "ms": 15.266416361555457
+        },
+        "host_first_measure": {
+          "count": 246,
+          "ms": 451.10345853026956
+        },
+        "host_measure": {
+          "count": 246,
+          "ms": 451.07191673014313
+        },
+        "host_measure_assistant": {
+          "count": 158,
+          "ms": 410.75879154959694
+        },
+        "host_measure_user": {
+          "count": 88,
+          "ms": 40.486291341949254
+        },
+        "host_view": {
+          "count": 246,
+          "ms": 3.356165951117873
+        },
+        "markdown_parse": {
+          "count": 248,
+          "ms": 46.218082832638174
+        },
+        "row_geometry": {
+          "count": 100,
+          "ms": 0.5184583715163171
+        },
+        "text_create": {
+          "count": 1679,
+          "ms": 10.561708302702755
+        },
+        "text_measure": {
+          "count": 1768,
+          "ms": 31.693291501142085
+        },
+        "text_reuse": {
+          "count": 1679,
+          "ms": 0.05387666169553995
+        }
+      },
+      "rss_after_mb": 203.296875,
+      "rss_before_mb": 169.890625,
+      "rss_settled_mb": 203.3125,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 30.992874992080033,
+        "median": 5.082666641101241,
+        "p95": 23.39516661595553
+      },
+      "status": "passed",
+      "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 10
+      }
+    }
+  },
+  "native_paging": {
+    "artifact": ".local/stable-detail/delivery/native-paging",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "paging",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 82407,
+      "exit_code": 0,
+      "elapsed_s": 7.854425125000001,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "mode": "paging",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "paging_anchor_preserved": true,
+      "paging_delta_messages": 1,
+      "paging_final_turns": 200,
+      "paging_initial_turns": 50,
+      "paging_response_bytes": [
+        41033,
+        41033,
+        488,
+        41033,
+        81282,
+        40640,
+        40558
+      ],
+      "paging_response_messages": [
+        100,
+        100,
+        1,
+        100,
+        200,
+        100,
+        100
+      ],
+      "paging_search_and_navigation": "passed",
+      "rss_after_mb": 187.328125,
+      "rss_before_mb": 170.5,
+      "rss_settled_mb": 187.34375,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 39.84437498729676,
+        "median": 4.092749964911491,
+        "p95": 26.00895834621042
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 4
+      }
+    }
+  },
+  "native_invalidation": {
+    "artifact": ".local/stable-detail/delivery/native-invalidation",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "invalidation",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 82423,
+      "exit_code": 0,
+      "elapsed_s": 8.62444875,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "draft_mutations": 40,
+      "history_turns": 200,
+      "intentional_stall_ms": 0,
+      "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+      "mode": "invalidation",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "reading_body_evaluations_during_drafts": 0,
+      "rss_after_mb": 189.546875,
+      "rss_before_mb": 169.875,
+      "rss_settled_mb": 189.5625,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 25.852458318695426,
+        "median": 3.523249994032085,
+        "p95": 21.317791659384966
+      },
+      "snapshot_positive_control": true,
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 11
+      }
+    }
+  },
+  "native_input": {
+    "artifact": ".local/stable-detail/delivery/native-input",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "input",
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 82575,
+      "exit_code": 0,
+      "elapsed_s": 9.600084375,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions": 500,
+      "history_turns": 200,
+      "input_boundary": "Mounted NSTextInputClient insertText/setMarkedText through production delegate and layout flush. Layout samples include a >=1ms async readiness wait; streaming samples include a 10ms UI settle. Excludes hardware events, actual IME candidate UI, compositor/display latency, network and FPS.",
+      "input_composition_cycles": 24,
+      "input_marked_text_preserved": true,
+      "input_max_anchor_drift_points": 0,
+      "input_metrics": {
+        "commit_dispatch_ms": {
+          "count": 24,
+          "max": 0.9158333414234221,
+          "median": 0.7030416745692492,
+          "p95": 0.7850416586734354
+        },
+        "commit_layout_ms": {
+          "count": 24,
+          "max": 8.21775000076741,
+          "median": 3.3483333536423743,
+          "p95": 3.8647916517220438
+        },
+        "marked_layout_ms": {
+          "count": 24,
+          "max": 4.097541619557887,
+          "median": 2.1582916961051524,
+          "p95": 2.923874999396503
+        },
+        "plain_dispatch_ms": {
+          "count": 24,
+          "max": 1.9767083576880395,
+          "median": 0.9743333212099969,
+          "p95": 1.2341666733846068
+        },
+        "plain_layout_ms": {
+          "count": 24,
+          "max": 8.298458356875926,
+          "median": 3.7539166514761746,
+          "p95": 4.695041687227786
+        },
+        "stream_layout_ms": {
+          "count": 24,
+          "max": 42.13091667043045,
+          "median": 17.737958347424865,
+          "p95": 19.964791659731418
+        }
+      },
+      "input_positive_control": false,
+      "input_positive_control_detected": false,
+      "input_samples": [
+        {
+          "commit_dispatch_ms": 0.4209583275951445,
+          "commit_layout_ms": 5.734833364840597,
+          "commit_reader_evaluations": 0,
+          "index": 0,
+          "marked_layout_ms": 4.097541619557887,
+          "plain_dispatch_ms": 1.9767083576880395,
+          "plain_layout_ms": 8.298458356875926,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 42.13091667043045
+        },
+        {
+          "commit_dispatch_ms": 0.35212503280490637,
+          "commit_layout_ms": 3.091041697189212,
+          "commit_reader_evaluations": 0,
+          "index": 1,
+          "marked_layout_ms": 1.1194582912139595,
+          "plain_dispatch_ms": 0.5672916304320097,
+          "plain_layout_ms": 2.6252499665133655,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 16.75529166823253
+        },
+        {
+          "commit_dispatch_ms": 0.6028333446010947,
+          "commit_layout_ms": 2.85874999826774,
+          "commit_reader_evaluations": 0,
+          "index": 2,
+          "marked_layout_ms": 1.5143750351853669,
+          "plain_dispatch_ms": 0.6313750054687262,
+          "plain_layout_ms": 3.4868333605118096,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 19.964791659731418
+        },
+        {
+          "commit_dispatch_ms": 0.48254168359562755,
+          "commit_layout_ms": 3.2741250470280647,
+          "commit_reader_evaluations": 0,
+          "index": 3,
+          "marked_layout_ms": 1.6051666461862624,
+          "plain_dispatch_ms": 0.7309583015739918,
+          "plain_layout_ms": 3.3815833157859743,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.749041668139398
+        },
+        {
+          "commit_dispatch_ms": 0.5315417074598372,
+          "commit_layout_ms": 3.4077083691954613,
+          "commit_reader_evaluations": 0,
+          "index": 4,
+          "marked_layout_ms": 1.6897500026971102,
+          "plain_dispatch_ms": 0.8419167133979499,
+          "plain_layout_ms": 3.8864583475515246,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 16.996833379380405
+        },
+        {
+          "commit_dispatch_ms": 0.5216666613705456,
+          "commit_layout_ms": 2.4377499939873815,
+          "commit_reader_evaluations": 0,
+          "index": 5,
+          "marked_layout_ms": 1.8348749727010727,
+          "plain_dispatch_ms": 0.7686666795052588,
+          "plain_layout_ms": 3.4202083479613066,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.105333332438022
+        },
+        {
+          "commit_dispatch_ms": 0.5348333506844938,
+          "commit_layout_ms": 3.3477083197794855,
+          "commit_reader_evaluations": 0,
+          "index": 6,
+          "marked_layout_ms": 1.7477916553616524,
+          "plain_dispatch_ms": 0.7525833789259195,
+          "plain_layout_ms": 3.4145417157560587,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.74520834442228
+        },
+        {
+          "commit_dispatch_ms": 0.537833315320313,
+          "commit_layout_ms": 3.398041648324579,
+          "commit_reader_evaluations": 0,
+          "index": 7,
+          "marked_layout_ms": 1.8767499714158475,
+          "plain_dispatch_ms": 0.7797916769050062,
+          "plain_layout_ms": 3.4832916571758687,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.917458317242563
+        },
+        {
+          "commit_dispatch_ms": 0.5152083467692137,
+          "commit_layout_ms": 3.3483333536423743,
+          "commit_reader_evaluations": 0,
+          "index": 8,
+          "marked_layout_ms": 2.011083299294114,
+          "plain_dispatch_ms": 0.9162083733826876,
+          "plain_layout_ms": 3.6465416778810322,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.937291704583913
+        },
+        {
+          "commit_dispatch_ms": 0.7640832918696105,
+          "commit_layout_ms": 2.8900416218675673,
+          "commit_reader_evaluations": 0,
+          "index": 9,
+          "marked_layout_ms": 2.11087497882545,
+          "plain_dispatch_ms": 0.7895416929386556,
+          "plain_layout_ms": 3.368333331309259,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.287458351347595
+        },
+        {
+          "commit_dispatch_ms": 0.7089166319929063,
+          "commit_layout_ms": 3.663083305582404,
+          "commit_reader_evaluations": 0,
+          "index": 10,
+          "marked_layout_ms": 2.1523750037886202,
+          "plain_dispatch_ms": 1.0028749820776284,
+          "plain_layout_ms": 3.8066666456870735,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.933874973095953
+        },
+        {
+          "commit_dispatch_ms": 0.7315833354368806,
+          "commit_layout_ms": 3.5563749843277037,
+          "commit_reader_evaluations": 0,
+          "index": 11,
+          "marked_layout_ms": 2.212333318311721,
+          "plain_dispatch_ms": 0.8669166709296405,
+          "plain_layout_ms": 3.401583293452859,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 18.120166670996696
+        },
+        {
+          "commit_dispatch_ms": 0.7093333406373858,
+          "commit_layout_ms": 3.621000039856881,
+          "commit_reader_evaluations": 0,
+          "index": 12,
+          "marked_layout_ms": 2.386666659731418,
+          "plain_dispatch_ms": 0.9775416692718863,
+          "plain_layout_ms": 3.9573750109411776,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.815499973949045
+        },
+        {
+          "commit_dispatch_ms": 0.7030416745692492,
+          "commit_layout_ms": 2.7736250194720924,
+          "commit_reader_evaluations": 0,
+          "index": 13,
+          "marked_layout_ms": 2.3597083636559546,
+          "plain_dispatch_ms": 0.9743333212099969,
+          "plain_layout_ms": 3.7539166514761746,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.737958347424865
+        },
+        {
+          "commit_dispatch_ms": 0.7461666245944798,
+          "commit_layout_ms": 8.21775000076741,
+          "commit_reader_evaluations": 0,
+          "index": 14,
+          "marked_layout_ms": 2.923874999396503,
+          "plain_dispatch_ms": 0.8054583449847996,
+          "plain_layout_ms": 3.715875034686178,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 19.54720838693902
+        },
+        {
+          "commit_dispatch_ms": 0.6427916814573109,
+          "commit_layout_ms": 2.4984999909065664,
+          "commit_reader_evaluations": 0,
+          "index": 15,
+          "marked_layout_ms": 3.1835833797231317,
+          "plain_dispatch_ms": 1.0700416751205921,
+          "plain_layout_ms": 3.8892083102837205,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 20.208916685078293
+        },
+        {
+          "commit_dispatch_ms": 0.5786666297353804,
+          "commit_layout_ms": 2.412041649222374,
+          "commit_reader_evaluations": 0,
+          "index": 16,
+          "marked_layout_ms": 2.338125021196902,
+          "plain_dispatch_ms": 0.9414583328180015,
+          "plain_layout_ms": 3.4333750372752547,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 15.952749992720783
+        },
+        {
+          "commit_dispatch_ms": 0.7593750488013029,
+          "commit_layout_ms": 3.7547916872426867,
+          "commit_reader_evaluations": 0,
+          "index": 17,
+          "marked_layout_ms": 2.468416641931981,
+          "plain_dispatch_ms": 1.1516666854731739,
+          "plain_layout_ms": 3.9803333347663283,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.443458375055343
+        },
+        {
+          "commit_dispatch_ms": 0.7329166983254254,
+          "commit_layout_ms": 3.6620833561755717,
+          "commit_reader_evaluations": 0,
+          "index": 18,
+          "marked_layout_ms": 2.63933336827904,
+          "plain_dispatch_ms": 1.0117082856595516,
+          "plain_layout_ms": 3.8747916696593165,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.71604164969176
+        },
+        {
+          "commit_dispatch_ms": 0.6476249545812607,
+          "commit_layout_ms": 2.964458311907947,
+          "commit_reader_evaluations": 0,
+          "index": 19,
+          "marked_layout_ms": 2.2244583815336227,
+          "plain_dispatch_ms": 1.2341666733846068,
+          "plain_layout_ms": 4.695041687227786,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 15.967208368238062
+        },
+        {
+          "commit_dispatch_ms": 0.9158333414234221,
+          "commit_layout_ms": 3.683999995701015,
+          "commit_reader_evaluations": 0,
+          "index": 20,
+          "marked_layout_ms": 2.3017916246317327,
+          "plain_dispatch_ms": 1.100291614420712,
+          "plain_layout_ms": 3.7862916360609233,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 16.315625049173832
+        },
+        {
+          "commit_dispatch_ms": 0.8286249940283597,
+          "commit_layout_ms": 3.8647916517220438,
+          "commit_reader_evaluations": 0,
+          "index": 21,
+          "marked_layout_ms": 2.076333330478519,
+          "plain_dispatch_ms": 1.090250036213547,
+          "plain_layout_ms": 3.8480000221170485,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 15.612208342645317
+        },
+        {
+          "commit_dispatch_ms": 0.7453750004060566,
+          "commit_layout_ms": 2.873166638892144,
+          "commit_reader_evaluations": 0,
+          "index": 22,
+          "marked_layout_ms": 1.956791675183922,
+          "plain_dispatch_ms": 1.0143333347514272,
+          "plain_layout_ms": 3.361208364367485,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 15.767999982926995
+        },
+        {
+          "commit_dispatch_ms": 0.7850416586734354,
+          "commit_layout_ms": 2.918791666161269,
+          "commit_reader_evaluations": 0,
+          "index": 23,
+          "marked_layout_ms": 2.1582916961051524,
+          "plain_dispatch_ms": 1.633208361454308,
+          "plain_layout_ms": 4.735124995931983,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 15.651791705749929
+        }
+      ],
+      "intentional_stall_ms": 0,
+      "mode": "input",
+      "native_transport": "fixed in-memory JSON; real decode/select",
+      "rss_after_mb": 186.609375,
+      "rss_before_mb": 171.421875,
+      "rss_settled_mb": 186.625,
+      "scroll_step_ms": {
+        "count": 120,
+        "max": 30.362333345692605,
+        "median": 4.12029167637229,
+        "p95": 26.005499996244907
+      },
+      "status": "passed",
+      "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS",
+      "window_points": [
+        1280,
+        820
+      ],
+      "host_counts_max": {
+        "mounted": 5,
+        "retained": 17,
+        "retired": 4
+      }
+    }
+  },
+  "native_kimi-input": {
+    "artifact": ".local/stable-detail/delivery/native-kimi-input",
+    "manifest": {
+      "commit": "21fbf7aa4781f24a6edc71f8675a75a829f133e1",
+      "source_sha256": "4821d7e52ac31f77825fec1aae7a9f2187eedb58e55d526ae79947ecee9690fc",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 1,
+      "binary_sha256": "ef2ce2a67fe25f7ceb776714bc838fc340d4c36f2ea97d49694bb92de809ec72",
+      "capture": "none",
+      "mode": "kimi-input",
+      "native_fixture_resident_snapshot_count": 8,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 82600,
+      "exit_code": 0,
+      "elapsed_s": 4.287866125000001,
+      "behavior_passed": true
+    },
+    "result": {
+      "catalog_sessions_during_measurement": 1,
+      "draft_mutations": 40,
+      "history_turns": 200,
+      "input_boundary": "Mounted NSTextInputClient insertText/setMarkedText through production delegate and layout flush. Layout samples include a >=1ms async readiness wait; streaming samples include a 10ms UI settle. Excludes hardware events, actual IME candidate UI, compositor/display latency, network and FPS.",
+      "input_composition_cycles": 24,
+      "input_marked_text_preserved": true,
+      "input_max_anchor_drift_points": 0,
+      "input_metrics": {
+        "commit_dispatch_ms": {
+          "count": 24,
+          "max": 0.7537083583883941,
+          "median": 0.519041670486331,
+          "p95": 0.7125833071768284
+        },
+        "commit_layout_ms": {
+          "count": 24,
+          "max": 6.2571666785515845,
+          "median": 3.356041677761823,
+          "p95": 4.314291698392481
+        },
+        "marked_layout_ms": {
+          "count": 24,
+          "max": 3.4724583383649588,
+          "median": 1.4817083138041198,
+          "p95": 1.9579583313316107
+        },
+        "plain_dispatch_ms": {
+          "count": 24,
+          "max": 1.6392500256188214,
+          "median": 0.7567083230242133,
+          "p95": 0.9165416704490781
+        },
+        "plain_layout_ms": {
+          "count": 24,
+          "max": 8.546125027351081,
+          "median": 3.603708290029317,
+          "p95": 4.866291710641235
+        },
+        "stream_layout_ms": {
+          "count": 24,
+          "max": 19.40062502399087,
+          "median": 12.216916657052934,
+          "p95": 14.702083368320018
+        }
+      },
+      "input_positive_control": false,
+      "input_positive_control_detected": false,
+      "input_samples": [
+        {
+          "commit_dispatch_ms": 0.7537083583883941,
+          "commit_layout_ms": 4.314291698392481,
+          "commit_reader_evaluations": 0,
+          "index": 0,
+          "marked_layout_ms": 3.4724583383649588,
+          "plain_dispatch_ms": 1.6392500256188214,
+          "plain_layout_ms": 8.546125027351081,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 19.40062502399087
+        },
+        {
+          "commit_dispatch_ms": 0.49070833483710885,
+          "commit_layout_ms": 3.277166630141437,
+          "commit_reader_evaluations": 0,
+          "index": 1,
+          "marked_layout_ms": 1.4238750445656478,
+          "plain_dispatch_ms": 0.6763749988749623,
+          "plain_layout_ms": 4.342458327300847,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.431166658643633
+        },
+        {
+          "commit_dispatch_ms": 0.43291668407619,
+          "commit_layout_ms": 3.3245833474211395,
+          "commit_reader_evaluations": 0,
+          "index": 2,
+          "marked_layout_ms": 1.398541673552245,
+          "plain_dispatch_ms": 0.7713750237599015,
+          "plain_layout_ms": 4.866291710641235,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.308416655287147
+        },
+        {
+          "commit_dispatch_ms": 0.5186250200495124,
+          "commit_layout_ms": 3.6273750010877848,
+          "commit_reader_evaluations": 0,
+          "index": 3,
+          "marked_layout_ms": 1.7920000245794654,
+          "plain_dispatch_ms": 0.738416681997478,
+          "plain_layout_ms": 4.6725000138394535,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.318791646976024
+        },
+        {
+          "commit_dispatch_ms": 0.5302916979417205,
+          "commit_layout_ms": 3.437749983277172,
+          "commit_reader_evaluations": 0,
+          "index": 4,
+          "marked_layout_ms": 1.6327499761246145,
+          "plain_dispatch_ms": 0.7567083230242133,
+          "plain_layout_ms": 4.780624993145466,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.331916659604758
+        },
+        {
+          "commit_dispatch_ms": 0.6169583066366613,
+          "commit_layout_ms": 4.022833309136331,
+          "commit_reader_evaluations": 0,
+          "index": 5,
+          "marked_layout_ms": 1.8124166526831686,
+          "plain_dispatch_ms": 0.9165416704490781,
+          "plain_layout_ms": 4.838166642002761,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.315541680436581
+        },
+        {
+          "commit_dispatch_ms": 0.5802916712127626,
+          "commit_layout_ms": 3.4293750068172812,
+          "commit_reader_evaluations": 0,
+          "index": 6,
+          "marked_layout_ms": 1.8457917030900717,
+          "plain_dispatch_ms": 0.879625033121556,
+          "plain_layout_ms": 4.825624986551702,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.355666665825993
+        },
+        {
+          "commit_dispatch_ms": 0.726166705135256,
+          "commit_layout_ms": 4.519916663412005,
+          "commit_reader_evaluations": 0,
+          "index": 7,
+          "marked_layout_ms": 1.9579583313316107,
+          "plain_dispatch_ms": 1.0081666405312717,
+          "plain_layout_ms": 5.418583343271166,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.34212500276044
+        },
+        {
+          "commit_dispatch_ms": 0.42708334513008595,
+          "commit_layout_ms": 2.7314999606460333,
+          "commit_reader_evaluations": 0,
+          "index": 8,
+          "marked_layout_ms": 1.2240416835993528,
+          "plain_dispatch_ms": 0.6883749738335609,
+          "plain_layout_ms": 3.6381250247359276,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.201041681692004
+        },
+        {
+          "commit_dispatch_ms": 0.37316663656383753,
+          "commit_layout_ms": 3.1651249737478793,
+          "commit_reader_evaluations": 0,
+          "index": 9,
+          "marked_layout_ms": 0.9827917092479765,
+          "plain_dispatch_ms": 0.567625043913722,
+          "plain_layout_ms": 2.875291684176773,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.146541674155742
+        },
+        {
+          "commit_dispatch_ms": 0.38483337266370654,
+          "commit_layout_ms": 3.03987500956282,
+          "commit_reader_evaluations": 0,
+          "index": 10,
+          "marked_layout_ms": 1.132250006776303,
+          "plain_dispatch_ms": 0.5881249671801925,
+          "plain_layout_ms": 3.017375012859702,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.174375005997717
+        },
+        {
+          "commit_dispatch_ms": 0.6191250286065042,
+          "commit_layout_ms": 3.395875042770058,
+          "commit_reader_evaluations": 0,
+          "index": 11,
+          "marked_layout_ms": 1.127083320170641,
+          "plain_dispatch_ms": 0.6072499672882259,
+          "plain_layout_ms": 4.153166664764285,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.19854166265577
+        },
+        {
+          "commit_dispatch_ms": 0.4282500012777746,
+          "commit_layout_ms": 3.234416653867811,
+          "commit_reader_evaluations": 0,
+          "index": 12,
+          "marked_layout_ms": 1.141666667535901,
+          "plain_dispatch_ms": 0.6003750022500753,
+          "plain_layout_ms": 3.025958314538002,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.216916657052934
+        },
+        {
+          "commit_dispatch_ms": 0.46862498857080936,
+          "commit_layout_ms": 3.199749975465238,
+          "commit_reader_evaluations": 0,
+          "index": 13,
+          "marked_layout_ms": 1.1007083812728524,
+          "plain_dispatch_ms": 0.5658333539031446,
+          "plain_layout_ms": 3.3651250414550304,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.251916690729558
+        },
+        {
+          "commit_dispatch_ms": 0.4901666543446481,
+          "commit_layout_ms": 6.2571666785515845,
+          "commit_reader_evaluations": 0,
+          "index": 14,
+          "marked_layout_ms": 2.0702500478364527,
+          "plain_dispatch_ms": 0.6534582935273647,
+          "plain_layout_ms": 3.603708290029317,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 14.702083368320018
+        },
+        {
+          "commit_dispatch_ms": 0.4943750100210309,
+          "commit_layout_ms": 2.493166655767709,
+          "commit_reader_evaluations": 0,
+          "index": 15,
+          "marked_layout_ms": 1.7477916553616524,
+          "plain_dispatch_ms": 0.5998749984428287,
+          "plain_layout_ms": 2.9915416380390525,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 17.32749998336658
+        },
+        {
+          "commit_dispatch_ms": 0.4671250353567302,
+          "commit_layout_ms": 2.6092500193044543,
+          "commit_reader_evaluations": 0,
+          "index": 16,
+          "marked_layout_ms": 1.2522083125077188,
+          "plain_dispatch_ms": 0.666708336211741,
+          "plain_layout_ms": 2.933124953415245,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.163624982349575
+        },
+        {
+          "commit_dispatch_ms": 0.508208351675421,
+          "commit_layout_ms": 3.356041677761823,
+          "commit_reader_evaluations": 0,
+          "index": 17,
+          "marked_layout_ms": 1.331208331976086,
+          "plain_dispatch_ms": 0.7855416624806821,
+          "plain_layout_ms": 3.361041657626629,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.168958317488432
+        },
+        {
+          "commit_dispatch_ms": 0.5430833552964032,
+          "commit_layout_ms": 2.4607499944977462,
+          "commit_reader_evaluations": 0,
+          "index": 18,
+          "marked_layout_ms": 1.3292083167470992,
+          "plain_dispatch_ms": 0.7633333443664014,
+          "plain_layout_ms": 3.207583329640329,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.104666675440967
+        },
+        {
+          "commit_dispatch_ms": 0.519041670486331,
+          "commit_layout_ms": 2.5704166619107127,
+          "commit_reader_evaluations": 0,
+          "index": 19,
+          "marked_layout_ms": 1.3687500031664968,
+          "plain_dispatch_ms": 0.7394583662971854,
+          "plain_layout_ms": 3.160000022035092,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 11.683208285830915
+        },
+        {
+          "commit_dispatch_ms": 0.6282083340920508,
+          "commit_layout_ms": 3.6400416865944862,
+          "commit_reader_evaluations": 0,
+          "index": 20,
+          "marked_layout_ms": 1.6246666200459003,
+          "plain_dispatch_ms": 0.8430000161752105,
+          "plain_layout_ms": 3.811416681855917,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.19929166836664
+        },
+        {
+          "commit_dispatch_ms": 0.6798750255256891,
+          "commit_layout_ms": 3.241750004235655,
+          "commit_reader_evaluations": 0,
+          "index": 21,
+          "marked_layout_ms": 1.5262916567735374,
+          "plain_dispatch_ms": 0.822416681330651,
+          "plain_layout_ms": 3.5135833313688636,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.188416672870517
+        },
+        {
+          "commit_dispatch_ms": 0.5734583246521652,
+          "commit_layout_ms": 3.386541677173227,
+          "commit_reader_evaluations": 0,
+          "index": 22,
+          "marked_layout_ms": 1.4817083138041198,
+          "plain_dispatch_ms": 0.8521666750311852,
+          "plain_layout_ms": 3.411166660953313,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 11.427291668951511
+        },
+        {
+          "commit_dispatch_ms": 0.7125833071768284,
+          "commit_layout_ms": 3.8654999807476997,
+          "commit_reader_evaluations": 0,
+          "index": 23,
+          "marked_layout_ms": 1.5553333214484155,
+          "plain_dispatch_ms": 0.8060417021624744,
+          "plain_layout_ms": 3.4962500212714076,
+          "plain_reader_evaluations": 0,
+          "stream_layout_ms": 12.177791679278016
+        }
+      ],
+      "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency",
+      "mode": "kimi-input",
+      "reading_body_evaluations_during_drafts": 0,
+      "selection_draft_roundtrip": true,
+      "status": "passed",
+      "stream_positive_control": true
+    }
+  },
+  "command_path_base": "Repository worktree root; absolute local paths normalized for publication. Raw receipts remain in .local/stable-detail/delivery/checks.json."
+}

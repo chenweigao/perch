@@ -1,51 +1,60 @@
 import Foundation
-import Combine
+import Observation
 import WorkbenchCore
 
-@MainActor
-final class NativeAgentConnection: ObservableObject {
+@MainActor @Observable
+final class NativeAgentConnection {
+    let conversation = NativeConversationState()
     private(set) var host: SSHHost
-    @Published private(set) var sessions: [NativeAgentSession] = []
-    @Published private(set) var snapshot: NativeAgentSnapshot?
-    @Published private(set) var selectedID: String?
-    @Published private(set) var timings = ConversationTimings()
-    @Published private(set) var online = false
-    @Published private(set) var wantsConnection = false
-    @Published var error: String?
-    @Published var actionError: String?
-    @Published var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
-    @Published private var sendingSessions: Set<String> = []
+    private(set) var sessions: [NativeAgentSession] = []
+    private(set) var snapshot: NativeAgentSnapshot? {
+        get { conversation.snapshot }
+        set { conversation.snapshot = newValue; onSnapshotChanged?(newValue) }
+    }
+    var selectedID: String? { conversation.selectedID }
+    private(set) var timings = ConversationTimings()
+    private(set) var online = false {
+        didSet { if online != oldValue { onOnlineChanged?() } }
+    }
+    private(set) var wantsConnection = false
+    var error: String?
+    var actionError: String? {
+        get { conversation.actionError }
+        set { conversation.actionError = newValue }
+    }
+    var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
+    private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
-    @Published var queue = OutboundQueue() { didSet { persistDrafts() } }
-    @Published var stops = StopController()
+    var queue = OutboundQueue() { didSet { persistDrafts() } }
+    var stops = StopController()
     /// The bridge's combined catalog: OMP answers `omp models`, Codex answers
     /// `model/list`, and dsh contributes its ACP config options after each handshake.
     /// Qoder keeps an empty list rather than being offered models it cannot switch to.
-    @Published private(set) var models: [AgentModel] = []
+    private(set) var models: [AgentModel] = []
     /// Reading the catalog is asked for by the conversation header and by the
     /// new-task sheet, so its failure belongs to whichever control is showing a
     /// model list rather than to the whole session.
-    @Published private(set) var modelsError: String?
+    private(set) var modelsError: String?
     /// The bridge process actually serving this connection: its source digest and
     /// start time, not the files currently deployed on the host.
-    @Published private(set) var runtime = RunningRuntime.unknown
-    var onSessionsChanged: (() -> Void)?
-    private var api: KimiAPI?
-    private var tunnel: Process?
-    private var directory: URL?
-    private var task: Task<Void, Never>?
-    private var selectionTask: Task<Void, Never>?
-    private var historyTask: Task<Void, Never>?
-    @Published private(set) var loadingOlder = false
-    private var historyWindows: [String: (start: Int, epoch: String)] = [:]
-    private var nextCatalogRefresh = Date.distantPast
-    private var nextIdleSnapshotRefresh = Date.distantPast
-    private var selectionGeneration = UUID()
-    private var generation = UUID()
+    private(set) var runtime = RunningRuntime.unknown
+    @ObservationIgnored var onOnlineChanged: (() -> Void)?
+    @ObservationIgnored var onSnapshotChanged: ((NativeAgentSnapshot?) -> Void)?
+    @ObservationIgnored var onSessionsChanged: (() -> Void)?
+    @ObservationIgnored private var api: KimiAPI?
+    @ObservationIgnored private var tunnel: Process?
+    @ObservationIgnored private var directory: URL?
+    @ObservationIgnored private var task: Task<Void, Never>?
+    var loadingOlder: Bool { conversation.loadingOlder }
+    @ObservationIgnored private var historyWindows: [String: (start: Int, epoch: String)] = [:]
+    @ObservationIgnored private var nextCatalogRefresh = Date.distantPast
+    @ObservationIgnored private var nextIdleSnapshotRefresh = Date.distantPast
+    private var selectionGeneration: UUID { conversation.generation }
+    @ObservationIgnored private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
-    private var draftFile: DraftFile?
-    private var draftLoadError: String?
-    @Published private(set) var draftSaveError: String?
+    @ObservationIgnored private var draftFile: DraftFile?
+    @ObservationIgnored private var draftLoadError: String?
+    private(set) var draftSaveError: String?
     private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "native-\(host.id)")
@@ -102,9 +111,8 @@ final class NativeAgentConnection: ObservableObject {
         }
     }
     func disconnect() {
-        generation = UUID(); selectionGeneration = UUID()
-        task?.cancel(); task = nil; selectionTask?.cancel(); selectionTask = nil
-        historyTask?.cancel(); historyTask = nil; loadingOlder = false
+        generation = UUID(); conversation.cancelLoads()
+        task?.cancel(); task = nil
         nextCatalogRefresh = .distantPast
         nextIdleSnapshotRefresh = .distantPast
         online = false; wantsConnection = false; error = nil; closeTunnel()
@@ -204,7 +212,7 @@ final class NativeAgentConnection: ObservableObject {
                 case .failed, .stoppedBeforeDelivery, .delivered: return false
                 }
             }
-        if selectionTask == nil && (active || now >= nextIdleSnapshotRefresh) {
+        if !conversation.isSelecting && (active || now >= nextIdleSnapshotRefresh) {
             nextIdleSnapshotRefresh = now.addingTimeInterval(2)
             try await refreshSelected()
         }
@@ -222,7 +230,7 @@ final class NativeAgentConnection: ObservableObject {
                            running: session.busy, waiting: session.pending > 0)
         }
         if clocks != timings { timings = clocks }
-        if let id = selectedID, !next.contains(where: { $0.id == id }) { selectedID = nil; snapshot = nil }
+        if let id = selectedID, !next.contains(where: { $0.id == id }) { conversation.select(nil) }
         if next != sessions {
             sessions = next
             onSessionsChanged?()
@@ -272,19 +280,12 @@ final class NativeAgentConnection: ObservableObject {
         return full.messages
     }
     func select(_ id: String) {
-        guard selectedID != id || (snapshot == nil && selectionTask == nil) else { return }
+        guard selectedID != id || (snapshot == nil && !conversation.isSelecting) else { return }
         if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }
-        selectedID = id; snapshot = nil; actionError = nil; nextIdleSnapshotRefresh = .distantPast
-        historyTask?.cancel(); historyTask = nil; loadingOlder = false
-        selectionTask?.cancel()
-        selectionGeneration = UUID(); let token = selectionGeneration
-        guard online else { selectionTask = nil; return }
-        selectionTask = Task { [weak self] in
-            guard let self else { return }
-            defer { if selectionGeneration == token { selectionTask = nil } }
-            do { try await refreshSelected() }
-            catch is CancellationError {}
-            catch { if selectionGeneration == token { actionError = error.localizedDescription } }
+        conversation.select(id); nextIdleSnapshotRefresh = .distantPast
+        guard online else { return }
+        conversation.loadSelection { [weak self] in
+            try await self?.refreshSelected()
         }
     }
     #if PERCH_ACCEPTANCE
@@ -324,22 +325,16 @@ final class NativeAgentConnection: ObservableObject {
     private func loadHistory(all: Bool) {
         guard online, !loadingOlder, snapshot?.hasOlder == true, let id = selectedID else { return }
         let token = selectionGeneration, connectionToken = generation
-        loadingOlder = true
-        historyTask = Task {
-            defer { if token == selectionGeneration { loadingOlder = false; historyTask = nil } }
-            do {
-                repeat {
-                    guard let current = snapshot, let window = current.history, current.hasOlder else { return }
-                    let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
-                    try Task.checkCancellation()
-                    guard token == selectionGeneration, connectionToken == generation, id == selectedID,
-                          let latest = snapshot else { return }
-                    snapshot = try latest.prepending(page)
-                    if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
-                } while all
-            } catch is CancellationError {} catch {
-                if token == selectionGeneration { actionError = error.localizedDescription }
-            }
+        conversation.loadHistory { [self] in
+            repeat {
+                guard let current = snapshot, let window = current.history, current.hasOlder else { return }
+                let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+                try Task.checkCancellation()
+                guard token == selectionGeneration, connectionToken == generation, id == selectedID,
+                      let latest = snapshot else { return }
+                snapshot = try latest.prepending(page)
+                if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
+            } while all
         }
     }
 
@@ -377,7 +372,7 @@ final class NativeAgentConnection: ObservableObject {
     func model(for snapshot: NativeAgentSnapshot) -> AgentModel? {
         ModelSelectionCatalog.model(snapshot.model, in: models(for: snapshot.provider))
     }
-    @Published private(set) var configuringSessions: Set<String> = []
+    private(set) var configuringSessions: Set<String> = []
 
     /// Switching models can leave the current effort unsupported, so the level is
     /// resolved against the target model and re-sent rather than carried over.
@@ -602,7 +597,7 @@ final class NativeAgentConnection: ObservableObject {
     }
     func action(_ id: String, _ action: String, _ body: [String: JSONValue] = [:]) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/\(action)", body: .object(body))
-        if action == "delete", selectedID == id { selectedID = nil; snapshot = nil }
+        if action == "delete", selectedID == id { conversation.select(nil) }
         // A successful mutation stays successful if only the following read fails.
         do { try await refresh() } catch { self.actionError = "操作已受理，同步失败：\(error.localizedDescription)" }
     }

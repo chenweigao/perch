@@ -1108,3 +1108,10 @@
 "请切换到 Kimi 或移除附件后再开始。" = "Choose Kimi or remove attachments to start.";
 "输入任务内容后发送，也可仅创建空会话。" = "Enter a task to send, or create an empty session.";
 "Return 发送，Shift Return 换行" = "Return to send, Shift Return for a new line";
+
+"查找完整内容" = "Find in full text";
+"完整内容" = "Full text";
+"未找到" = "No matches";
+"上一个匹配" = "Previous match";
+"下一个匹配" = "Next match";
+"关闭查找" = "Close find";

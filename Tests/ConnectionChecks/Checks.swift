@@ -211,11 +211,13 @@ struct ConnectionChecks {
     static func main() async throws {
         try await checkIdleSnapshotPolling()
         try await checkNativeLoading()
+        try await checkNativeObservation()
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
         try await checkKimiPendingSettle()
         try await checkKimiPromptHistory()
         try await checkKimiSelectionIsolation()
+        try await checkKimiObservation()
         try await checkSendFailureIsolation()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
@@ -587,6 +589,8 @@ struct ConnectionChecks {
         fixture.pendingSnapshots[1].0.resume(returning: fixture.pendingSnapshots[1].1)
         await settle { fixture.returnedSnapshots == 3 }
         precondition(client.snapshot?.id == "a" && client.snapshot?.revision == 3)
+        precondition(client.conversation.presentationSnapshot?.id == "a" && client.conversation.presentationSnapshot?.revision == 3,
+                     "late replies must not replace the retained presentation")
         precondition(client.actionError == nil)
         client.select("b")
         await settle { fixture.pendingSnapshots.count == 4 }

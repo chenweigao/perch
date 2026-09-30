@@ -25,7 +25,7 @@ repo_root="$PWD"
 snapshot_root="$PWD/.local/performance-sources/$label"
 module_dir="$snapshot_root/Modules"
 app_dir="$PWD/build/Performance $title.app"
-bin_dir="$(swift build -c release --show-bin-path)"
+bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 mkdir -p "$module_dir" "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift
@@ -41,6 +41,10 @@ theme_ref="$source_ref"
 if [[ "$variant" == baseline ]]; then theme_ref="$baseline_ref"; fi
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/WorkbenchTheme.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/WorkbenchTheme.swift)
+fi
+# Older revisions predate the workbench presentation cache environment.
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/ConversationPresentationEnvironment.swift" 2>/dev/null; then
+    app_files+=(Sources/AgentWorkbench/ConversationPresentationEnvironment.swift)
 fi
 # The historical baseline predates the extracted tool component.
 if [[ "$variant" == current ]]; then

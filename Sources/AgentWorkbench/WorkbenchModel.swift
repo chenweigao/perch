@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Observation
 import GhosttyTerminal
 import os
 import SwiftUI
@@ -11,126 +12,160 @@ import WorkbenchCore
 let namingLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac", category: "session-naming")
 
 @MainActor
-final class WorkbenchModel: ObservableObject {
-    @Published var kimi: KimiConnection
-    @Published var native: NativeAgentConnection
-    private var kimiEnvironments: [UUID: KimiConnection] = [:]
-    private var nativeEnvironments: [UUID: NativeAgentConnection] = [:]
-    @Published var connections: [HostConnection]
+@Observable
+final class WorkbenchModel {
+    let navigationState = WorkbenchNavigationState()
+    let catalog = SessionCatalogState()
+    let conversationPresentations = ConversationPresentationCache()
+    var kimi: KimiConnection
+    var native: NativeAgentConnection
+    @ObservationIgnored private var kimiEnvironments: [UUID: KimiConnection] = [:]
+    @ObservationIgnored private var nativeEnvironments: [UUID: NativeAgentConnection] = [:]
+    var connections: [HostConnection]
     /// Whether the user has configured a machine list. Persisting the built-in
     /// machine's identity alone does not dismiss first-run setup.
-    @Published private(set) var configuredEnvironment: Bool
-    @Published var pendingHostRemoval: SSHHost?
-    @Published var selectedHostID: UUID
-    @Published private(set) var tabs = TerminalTabs()
-    @Published private(set) var openedSessions: [SavedTerminal] = []
-    @Published private(set) var terminals: [AttachedTerminal] = []
-    @Published var showDashboard = true
-    @Published var showAllTaskGroups = false
-    @Published var selectedGroupID: UUID?
+    private(set) var configuredEnvironment: Bool
+    var pendingHostRemoval: SSHHost?
+    var selectedHostID: UUID
+    private(set) var tabs: TerminalTabs {
+        get { navigationState.tabs }
+        set { navigationState.tabs = newValue }
+    }
+    private(set) var openedSessions: [SavedTerminal] = []
+    private(set) var terminals: [AttachedTerminal] = []
+    var showDashboard: Bool {
+        get { navigationState.showDashboard }
+        set { navigationState.showDashboard = newValue }
+    }
+    var showAllTaskGroups: Bool {
+        get { navigationState.showAllTaskGroups }
+        set { navigationState.showAllTaskGroups = newValue }
+    }
+    var selectedGroupID: UUID? {
+        get { navigationState.selectedGroupID }
+        set { navigationState.selectedGroupID = newValue }
+    }
     /// Narrows the workbench queue without leaving it. Deliberately not persisted:
     /// a filter is a question about right now, and restoring one would hide sessions
     /// on the first screen after launch.
-    @Published var scopeHostID: UUID?
-    @Published var workspace = LocalWorkspace() {
+    var scopeHostID: UUID? {
+        get { navigationState.scopeHostID }
+        set { navigationState.scopeHostID = newValue }
+    }
+    var workspace = LocalWorkspace() {
         didSet {
             if workspace.groups != oldValue.groups {
-                cachedGroupIndex = nil
-                cachedGroupShortcuts = nil
+                cachedGroupIndex = nil; cachedGroupShortcuts = nil
             }
             if workspace.starred != oldValue.starred { cachedSidebar = nil }
         }
     }
-    @Published var workspaceError: String?
-    @Published private(set) var allSessions: [WorkspaceSession] = [] {
-        didSet { cachedSidebar = nil; cachedGroupShortcuts = nil }
+    @ObservationIgnored private var cachedGroupIndex: SessionGroupIndex?
+    @ObservationIgnored private var cachedGroupShortcuts: (catalogRevision: Int, selectedID: UUID?, summaries: [TaskGroupSummary])?
+    @ObservationIgnored private var cachedSidebar: (catalogRevision: Int, filter: SidebarRecentFilter, projection: SidebarProjection)?
+    var workspaceError: String?
+    private(set) var allSessions: [WorkspaceSession] {
+        get { catalog.sessions }
+        set { catalog.replace(newValue) }
     }
-    private var cachedGroupIndex: SessionGroupIndex?
-    private var cachedGroupShortcuts: (selectedID: UUID?, summaries: [TaskGroupSummary])?
-    private var cachedSidebar: (filter: SidebarRecentFilter, projection: SidebarProjection)?
-    @Published var showArchived = false
-    @Published var showSessionDirectory = false
-    @Published var pendingDeletion: WorkspaceSession?
-    @Published var renamingSession: WorkspaceSession?
-    @Published var managementError: String?
-    @Published var managing = Set<String>()
+    var showArchived: Bool {
+        get { navigationState.showArchived }
+        set { navigationState.showArchived = newValue }
+    }
+    var showSessionDirectory: Bool {
+        get { navigationState.showSessionDirectory }
+        set { navigationState.showSessionDirectory = newValue }
+    }
+    var pendingDeletion: WorkspaceSession?
+    var renamingSession: WorkspaceSession?
+    var managementError: String?
+    var managing = Set<String>()
     /// Optimistic archive state applied before the server confirms, so the row
     /// leaves or returns in the same animation as the click. Cleared once the
     /// refreshed remote list agrees, or reverted on failure.
-    private var archiveOverrides: [String: Bool] = [:]
-    @Published var isArchiving = false
-    @Published var archiveResult: BatchArchiveRun?
-    @Published var showLocalSetup = false
-    @Published var localAgents: [SessionKind: DiscoveryState] = [:]
-    @Published var localAgentPaths: [String: String] = [:]
-    @Published var probingLocal = false
-    @Published var groupingSession: WorkspaceSession?
-    @Published var inspectingSession: WorkspaceSession?
-    @Published var showGroupSuggestions = false
-    @Published var groupingUndo: GroupingUndo?
-    private var inspectionOrder = ActionQueueOrder()
-    @Published var search = ""
-    @Published var onlyAttention = false
-    @Published var showAddHost = false
-    @Published var setupHost: SSHHost?
-    @Published var launchAfterSetup: TaskLaunchDefaults?
-    @Published var pendingSetupLaunch = false
-    @Published var showNewTerminal = false
+    @ObservationIgnored private var archiveOverrides: [String: Bool] = [:]
+    var isArchiving = false
+    var archiveResult: BatchArchiveRun?
+    var showLocalSetup = false
+    var localAgents: [SessionKind: DiscoveryState] = [:]
+    var localAgentPaths: [String: String] = [:]
+    var probingLocal = false
+    var groupingSession: WorkspaceSession?
+    var inspectingSession: WorkspaceSession?
+    var showGroupSuggestions = false
+    var groupingUndo: GroupingUndo?
+    @ObservationIgnored private var inspectionOrder = ActionQueueOrder()
+    var search: String {
+        get { navigationState.search }
+        set { navigationState.search = newValue }
+    }
+    var onlyAttention: Bool {
+        get { navigationState.onlyAttention }
+        set { navigationState.onlyAttention = newValue }
+    }
+    var showAddHost = false
+    var setupHost: SSHHost?
+    var launchAfterSetup: TaskLaunchDefaults?
+    var pendingSetupLaunch = false
+    var showNewTerminal = false
     /// Inline new-task draft covering the detail area; selection underneath is kept.
-    @Published var draftingNewTask = false {
+    var draftingNewTask = false {
         didSet { updateVisibility() }
     }
-    @Published var showRenderReport = false
-    @Published var renderReport = ""
-    @Published var showGroupEditor = false
-    @Published var editingGroup: WorkItemGroup?
-    @Published var editingGroupSessionsOnly = false
-    @Published var taskNotice: TaskNotice?
-    @Published var notificationError: String?
-    @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "task.notifications") {
+    var showRenderReport = false
+    var renderReport = ""
+    var showGroupEditor = false
+    var editingGroup: WorkItemGroup?
+    var editingGroupSessionsOnly = false
+    var taskNotice: TaskNotice?
+    var notificationError: String?
+    var notificationsEnabled = UserDefaults.standard.bool(forKey: "task.notifications") {
         didSet {
             UserDefaults.standard.set(notificationsEnabled, forKey: "task.notifications")
             notifications.cancelPendingCompletions()
             if notificationsEnabled { notifications.requestPermission { [weak self] error in self?.notificationError = error } }
         }
     }
-    @Published var notifyAttentionOnly = UserDefaults.standard.bool(forKey: "task.notifications.attentionOnly") {
+    var notifyAttentionOnly = UserDefaults.standard.bool(forKey: "task.notifications.attentionOnly") {
         didSet {
             UserDefaults.standard.set(notifyAttentionOnly, forKey: "task.notifications.attentionOnly")
             notifications.cancelPendingCompletions()
         }
     }
-    @Published private(set) var mutedTasks = Set(UserDefaults.standard.stringArray(forKey: "task.notifications.muted") ?? [])
+    private(set) var mutedTasks = Set(UserDefaults.standard.stringArray(forKey: "task.notifications.muted") ?? [])
     func toggleTaskNotifications(_ id: String) {
         if mutedTasks.contains(id) { mutedTasks.remove(id) } else { mutedTasks.insert(id) }
         UserDefaults.standard.set(Array(mutedTasks), forKey: "task.notifications.muted")
         notifications.cancelPendingCompletions(for: id)
     }
     private let notifications = TaskNotifications()
-    private var taskEvents = TaskEventTracker()
-    private var pendingNotificationID: String?
-    @Published var showConversationFind = false
-    @Published var showSessionSearch = false
-    @Published private(set) var navigation = SessionNavigation()
-    private var navigatingHistory = false
-    @Published var showFileViewer = false
+    @ObservationIgnored private var taskEvents = TaskEventTracker()
+    @ObservationIgnored private var pendingNotificationID: String?
+    var showConversationFind = false
+    var showSessionSearch = false
+    private(set) var navigation: SessionNavigation {
+        get { navigationState.navigation }
+        set { navigationState.navigation = newValue }
+    }
+    @ObservationIgnored private var navigatingHistory = false
+    var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac")
         .appendingPathComponent("workspace.json")
     private let workspaceURL = WorkbenchModel.workspaceFileURL
-    private lazy var workspaceWriter = WorkspaceWriter(url: workspaceURL)
-    private var canSaveWorkspace = true
-    private var started = false
-    private var observers: [NSObjectProtocol] = []
-    private var subscriptions = Set<AnyCancellable>()
+    @ObservationIgnored private lazy var workspaceWriter = WorkspaceWriter(url: workspaceURL)
+    @ObservationIgnored private var canSaveWorkspace = true
+    @ObservationIgnored private var started = false
+    @ObservationIgnored private var observers: [NSObjectProtocol] = []
+    @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
     /// Session id → settings revision of the one naming attempt. A saved
     /// configuration change allows exactly one retry per session.
-    private var namingAttempts: [String: Int] = [:]
-    @Published private(set) var namingInProgress: Set<String> = []
-    @Published private(set) var namingErrors: [String: String] = [:]
+    @ObservationIgnored private var namingAttempts: [String: Int] = [:]
+    private(set) var namingInProgress: Set<String> = []
+    private(set) var namingErrors: [String: String] = [:]
     /// The request boundary is replaceable by isolated lifecycle checks.
-    var sessionNamer: (ActivitySummaryConfiguration, String, String) async throws -> String = { configuration, excerpt, language in
+    @ObservationIgnored var sessionNamer: (ActivitySummaryConfiguration, String, String) async throws -> String = { configuration, excerpt, language in
         let settings = ActivitySummarySettings.shared
         let key = try await settings.apiKey()
         try Task.checkCancellation()
@@ -203,15 +238,15 @@ final class WorkbenchModel: ObservableObject {
     #if PERCH_ACCEPTANCE
     /// Full production views with an in-memory native transport. No restoration,
     /// persistence, connection startup, notifications or user workspace observers.
-    init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection) {
-        kimi = KimiConnection(setupHost: host)
+    init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection, kimi: KimiConnection? = nil) {
+        self.kimi = kimi ?? KimiConnection(setupHost: host)
         self.native = native
         connections = []
         configuredEnvironment = true
         selectedHostID = host.id
         canSaveWorkspace = false
         allSessions = sessions
-        kimiEnvironments[host.id] = kimi; nativeEnvironments[host.id] = native
+        kimiEnvironments[host.id] = self.kimi; nativeEnvironments[host.id] = native
         workspace.starred = Array(sessions.prefix(4).map(\.reference))
         workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
                                           sessions: Array(sessions.prefix(12).map(\.reference)))]
@@ -223,9 +258,11 @@ final class WorkbenchModel: ObservableObject {
         kimiEnvironments[kimi.host.id] = kimi; nativeEnvironments[native.host.id] = native
         native.onSessionsChanged = { [weak self] in self?.catalogChanged() }
         kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
-        native.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
-        kimi.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
-        kimi.$conversation.sink { [weak self, weak kimi] conversation in
+        native.onOnlineChanged = { [weak self] in Task { @MainActor in self?.catalogChanged() } }
+        native.onOnlineChanged?()
+        kimi.onOnlineChanged = { [weak self] in Task { @MainActor in self?.catalogChanged() } }
+        kimi.onOnlineChanged?()
+        kimi.onConversationChanged = { [weak self, weak kimi] conversation in
             Task { @MainActor in
                 guard let self, let kimi, let conversation else { return }
                 let session = conversation.snapshot.session
@@ -233,15 +270,17 @@ final class WorkbenchModel: ObservableObject {
                                     remoteTitle: session.title, messages: conversation.messages,
                                     busy: session.busy, turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
             }
-        }.store(in: &subscriptions)
-        native.$snapshot.sink { [weak self, weak native] snapshot in
+        }
+        kimi.onConversationChanged?(kimi.conversation)
+        native.onSnapshotChanged = { [weak self, weak native] snapshot in
             Task { @MainActor in
                 guard let self, let native, let snapshot else { return }
                 self.considerNaming(reference: SessionReference(hostID: native.host.id, terminalID: snapshot.id, kind: snapshot.provider),
                                     remoteTitle: snapshot.title, messages: snapshot.messages,
                                     busy: snapshot.busy, turnCompleted: false, hasOlder: snapshot.hasOlder)
             }
-        }.store(in: &subscriptions)
+        }
+        native.onSnapshotChanged?(native.snapshot)
     }
     func activateAgentEnvironment(_ hostID: UUID) {
         guard let nextKimi = kimiEnvironments[hostID], let nextNative = nativeEnvironments[hostID] else { return }
@@ -362,15 +401,19 @@ final class WorkbenchModel: ObservableObject {
     /// Navigation/selection changes do not change membership. Rebuild only when
     /// saved groups change, not once per view pass or streamed catalog update.
     var groupIndex: SessionGroupIndex {
+        // Read observable inputs even on cache hits; the cache itself is not UI state.
+        let groups = workspace.groups
         if let cachedGroupIndex { return cachedGroupIndex }
-        let index = SessionGroupIndex(groups: workspace.groups)
+        let index = SessionGroupIndex(groups: groups)
         cachedGroupIndex = index
         return index
     }
     func sidebarProjection(filter: SidebarRecentFilter) -> SidebarProjection {
-        if let cachedSidebar, cachedSidebar.filter == filter { return cachedSidebar.projection }
-        let projection = SidebarProjection(sessions: allSessions, starred: workspace.starred, filter: filter)
-        cachedSidebar = (filter, projection)
+        let revision = catalog.revision
+        let starred = workspace.starred
+        if let cachedSidebar, cachedSidebar.catalogRevision == revision, cachedSidebar.filter == filter { return cachedSidebar.projection }
+        let projection = SidebarProjection(sessions: allSessions, starred: starred, filter: filter)
+        cachedSidebar = (revision, filter, projection)
         return projection
     }
     func setScope(groupID: UUID?) {
@@ -440,7 +483,7 @@ final class WorkbenchModel: ObservableObject {
         }
         }
         let next = ((conversations + agents) + terminalSessions).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
-        if next != allSessions { allSessions = next }
+        allSessions = next
     }
     /// User-triggered list mutations (pin, archive) animate the row move;
     /// streamed catalog updates stay instant. Honors system Reduce Motion.
@@ -462,6 +505,7 @@ final class WorkbenchModel: ObservableObject {
     }
     func removeHost(_ host: SSHHost) {
         guard let index = connections.firstIndex(where: { $0.id == host.id }) else { return }
+        conversationPresentations.remove(prefix: host.id.uuidString + ":")
         connections[index].disconnect()
         kimiEnvironments[host.id]?.disconnect(); nativeEnvironments[host.id]?.disconnect()
         kimiEnvironments.removeValue(forKey: host.id); nativeEnvironments.removeValue(forKey: host.id)
@@ -688,9 +732,12 @@ final class WorkbenchModel: ObservableObject {
         TaskGroupSummary.ordered(groups: workspace.groups, sessions: allSessions, hostID: scopeHost?.id)
     }
     var groupShortcuts: [TaskGroupSummary] {
-        if let cachedGroupShortcuts, cachedGroupShortcuts.selectedID == selectedGroupID { return cachedGroupShortcuts.summaries }
-        let summaries = TaskGroupSummary.shortcuts(groups: workspace.groups, sessions: allSessions, selectedID: selectedGroupID)
-        cachedGroupShortcuts = (selectedGroupID, summaries)
+        let revision = catalog.revision
+        let groups = workspace.groups
+        let selected = selectedGroupID
+        if let cachedGroupShortcuts, cachedGroupShortcuts.catalogRevision == revision, cachedGroupShortcuts.selectedID == selected { return cachedGroupShortcuts.summaries }
+        let summaries = TaskGroupSummary.shortcuts(groups: groups, sessions: allSessions, selectedID: selected)
+        cachedGroupShortcuts = (revision, selected, summaries)
         return summaries
     }
     func markReviewed(_ item: WorkspaceSession) {
@@ -1111,6 +1158,7 @@ final class WorkbenchModel: ObservableObject {
                 if tabs.ids.contains(item.id) { close(item.id) }
                 workspace.removeSession(item.reference)
                 let kind = item.reference.kind == .kimi ? "kimi" : "native"
+                conversationPresentations.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 ConversationReadingMemory.shared.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 rebuildCatalog(); saveWorkspace()
             } catch { managementError = error.localizedDescription }
@@ -1242,6 +1290,7 @@ final class WorkbenchModel: ObservableObject {
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        conversationPresentations.removeAll()
         try? flushDrafts()
         saveWorkspace()
         if canSaveWorkspace { do { try workspaceWriter.flush(workspace) } catch { workspaceError = error.localizedDescription } }

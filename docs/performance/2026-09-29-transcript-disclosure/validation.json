@@ -1,0 +1,300 @@
+{
+  "checks": [
+    {
+      "name": "final-acceptance-build",
+      "command": [
+        "bash",
+        "scripts/build-native-acceptance.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 64.667826
+    },
+    {
+      "name": "check-flat-all",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "all",
+        "--sidebar-variant",
+        "flat",
+        "--output",
+        ".local/sidebar-renderer/check-flat-all"
+      ],
+      "exit_code": 0,
+      "seconds": 10.766089957999995
+    },
+    {
+      "name": "check-flat-detail-lifecycle",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "detail-lifecycle",
+        "--sidebar-variant",
+        "flat",
+        "--output",
+        ".local/sidebar-renderer/check-flat-detail-lifecycle"
+      ],
+      "exit_code": 0,
+      "seconds": 8.329734291999998
+    },
+    {
+      "name": "check-flat-kimi-input",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "kimi-input",
+        "--sidebar-variant",
+        "flat",
+        "--output",
+        ".local/sidebar-renderer/check-flat-kimi-input"
+      ],
+      "exit_code": 0,
+      "seconds": 4.678076666999999
+    },
+    {
+      "name": "check-table-all",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "all",
+        "--sidebar-variant",
+        "table",
+        "--output",
+        ".local/sidebar-renderer/check-table-all"
+      ],
+      "exit_code": 0,
+      "seconds": 9.990089957999999
+    },
+    {
+      "name": "check-table-detail-lifecycle",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "detail-lifecycle",
+        "--sidebar-variant",
+        "table",
+        "--output",
+        ".local/sidebar-renderer/check-table-detail-lifecycle"
+      ],
+      "exit_code": 0,
+      "seconds": 8.120465999999993
+    },
+    {
+      "name": "check-table-kimi-input",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "kimi-input",
+        "--sidebar-variant",
+        "table",
+        "--output",
+        ".local/sidebar-renderer/check-table-kimi-input"
+      ],
+      "exit_code": 0,
+      "seconds": 4.70599591700001
+    },
+    {
+      "name": "input-control",
+      "command": [
+        "python3",
+        "scripts/run-native-acceptance.py",
+        "--app",
+        "build/Perch Acceptance.app",
+        "--mode",
+        "input",
+        "--input-positive-control",
+        "--output",
+        ".local/sidebar-renderer/input-control"
+      ],
+      "exit_code": 0,
+      "seconds": 9.810076291000001
+    },
+    {
+      "name": "production-build",
+      "command": [
+        "bash",
+        "scripts/build.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 50.23229966700001
+    },
+    {
+      "name": "signature",
+      "command": [
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "build/Perch.app"
+      ],
+      "exit_code": 0,
+      "seconds": 0.043623249999996005
+    },
+    {
+      "name": "WorkbenchChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "WorkbenchChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 9.963312624999986
+    },
+    {
+      "name": "ConnectionChecks",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "ConnectionChecks"
+      ],
+      "exit_code": 0,
+      "seconds": 0.8694003329999873
+    },
+    {
+      "name": "performance-tools",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "Tests/Performance",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "seconds": 3.3801873750000198
+    },
+    {
+      "name": "localization",
+      "command": [
+        "python3",
+        "scripts/check-localization.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.08584324999998216
+    },
+    {
+      "name": "scroll-following",
+      "command": [
+        "python3",
+        "scripts/check-scroll-following.py"
+      ],
+      "exit_code": 0,
+      "seconds": 6.715498124999982
+    }
+  ],
+  "navigation_checks": [
+    {
+      "name": "top-disclosure-r2",
+      "exit_code": 0,
+      "seconds": 10.883629958
+    },
+    {
+      "name": "top-disclosure-r3",
+      "exit_code": 0,
+      "seconds": 10.361081667
+    },
+    {
+      "name": "top-disclosure-boundary",
+      "exit_code": 0,
+      "seconds": 10.348306957999998
+    },
+    {
+      "name": "top-reading-r1",
+      "exit_code": 0,
+      "seconds": 16.827364499999998
+    },
+    {
+      "name": "top-small-scroll-r1",
+      "exit_code": 0,
+      "seconds": 4.769621833000002
+    },
+    {
+      "name": "top-reading-r2",
+      "exit_code": 0,
+      "seconds": 16.828605084000003
+    },
+    {
+      "name": "top-small-scroll-r2",
+      "exit_code": 0,
+      "seconds": 4.4837992079999935
+    },
+    {
+      "name": "top-reading-r3",
+      "exit_code": 0,
+      "seconds": 16.731051957999995
+    },
+    {
+      "name": "top-small-scroll-r3",
+      "exit_code": 0,
+      "seconds": 4.656525083999995
+    },
+    {
+      "name": "top-anchor",
+      "exit_code": 0,
+      "seconds": 4.272721292
+    },
+    {
+      "name": "top-interactions",
+      "exit_code": 0,
+      "seconds": 7.349534333999998
+    },
+    {
+      "name": "top-search",
+      "exit_code": 0,
+      "seconds": 4.928701832999991
+    },
+    {
+      "name": "top-roundtrip",
+      "exit_code": 0,
+      "seconds": 7.2892753750000026
+    },
+    {
+      "name": "top-turns",
+      "exit_code": 0,
+      "seconds": 7.3302407500000015
+    },
+    {
+      "name": "top-image",
+      "exit_code": 0,
+      "seconds": 3.492667499999996
+    }
+  ],
+  "production_diagnostic_symbol_matches": 0,
+  "production_binary_sha256": "68370f670cff2d47faf1f614e15d4361854d5a6becd7f66dcf52060ab8b66afa",
+  "real_ssh": "skipped: WORKBENCH_LIVE_HOST unset",
+  "real_private_disclosure": "User explicitly authorized; read-only expand/collapse and scroll observation completed on running build 306, not the candidate. See LIVE-OBSERVATION.md.",
+  "display_frames": "unverified",
+  "pushed": false,
+  "deployed": false,
+  "live_cpu_capture": "45 seconds; 819 main-thread samples; 406ms inclusive accessibility entry-point weight. Observer overhead prevents natural-interaction performance conclusions."
+}

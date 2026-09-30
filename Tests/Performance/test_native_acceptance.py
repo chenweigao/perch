@@ -77,3 +77,30 @@ class FrameAcceptanceTests(unittest.TestCase):
 
     def test_frame_data_does_not_hide_behavior_failure(self):
         self.assertEqual(self.run_capture(behavior=False)[0], 1)
+
+
+class InputControlTests(unittest.TestCase):
+    def test_control_requires_explicit_detection_even_when_behavior_passes(self):
+        for detected in [False, True]:
+            with self.subTest(detected=detected), tempfile.TemporaryDirectory() as temporary:
+                folder = Path(temporary)
+                app = folder / "Fixture.app"
+                (app / "Contents/MacOS").mkdir(parents=True)
+                (app / "Contents/Resources").mkdir()
+                (app / "Contents/MacOS/NativeAcceptance").write_bytes(b"fixture")
+                (app / "Contents/Resources/build.json").write_text("{}")
+                out = folder / "result"
+
+                def launch(*args, **kwargs):
+                    (out / "result.json").write_text(json.dumps({"status": "passed",
+                        "input_positive_control": True, "input_positive_control_detected": detected}))
+                    process = unittest.mock.Mock(pid=123)
+                    process.wait.return_value = 0
+                    return process
+
+                argv = ["run-native-acceptance.py", "--app", str(app), "--output", str(out),
+                        "--mode", "input", "--input-positive-control"]
+                with patch.object(sys, "argv", argv), patch("subprocess.Popen", side_effect=launch), \
+                     patch("builtins.print"), self.assertRaises(SystemExit) as exited:
+                    runpy.run_path(str(ROOT / "scripts/run-native-acceptance.py"), run_name="__main__")
+                self.assertEqual(exited.exception.code, 0 if detected else 1)

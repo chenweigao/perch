@@ -3,7 +3,7 @@ import WorkbenchCore
 
 struct WorkItemGroupEditor: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     var sessionsOnly = false
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""

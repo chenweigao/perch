@@ -6,7 +6,7 @@ import WorkbenchCore
 @main
 struct WorkbenchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var model = WorkbenchModel()
+    @State private var model = WorkbenchModel()
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: appLanguage.resolvedLocale) }

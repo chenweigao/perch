@@ -6,7 +6,7 @@ import WorkbenchCore
 /// The simulated-ready control uses in-process transports; auto-connect is off.
 @main struct NewTaskPreviewApp: App {
     @NSApplicationDelegateAdaptor(NewTaskPreviewDelegate.self) private var delegate
-    @StateObject private var model: WorkbenchModel
+    @State private var model: WorkbenchModel
     @Environment(\.openWindow) private var openWindow
     @State private var showPreviewControls = true
     @State private var selectedDirectory = "/opt/demo/perch"
@@ -22,7 +22,7 @@ import WorkbenchCore
         UserDefaults.standard.set("把登录页改成两栏布局，左侧放品牌插画", forKey: "new.task.prompt")
         let model = WorkbenchModel()
         model.kimi.models = previewModels
-        _model = StateObject(wrappedValue: model)
+        _model = State(initialValue: model)
     }
 
     var body: some Scene {

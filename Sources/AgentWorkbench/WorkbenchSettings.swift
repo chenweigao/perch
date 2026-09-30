@@ -2,7 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct WorkbenchSettings: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @State private var showLocal = false
     @State private var showSSH = false
     @State private var showSummary = false
@@ -186,10 +186,10 @@ private struct HostSettingsRow: View {
 }
 
 private struct HostConnectionControls: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @ObservedObject var connection: HostConnection
-    @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    let kimi: KimiConnection
+    let native: NativeAgentConnection
 
     private var sshRequested: Bool { kimi.connecting || native.wantsConnection }
     private var sshOnline: Bool {

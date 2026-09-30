@@ -1,0 +1,306 @@
+diff --git a/Sources/AgentWorkbench/NativeAcceptance.swift b/Sources/AgentWorkbench/NativeAcceptance.swift
+index 011ada1..8932032 100644
+--- a/Sources/AgentWorkbench/NativeAcceptance.swift
++++ b/Sources/AgentWorkbench/NativeAcceptance.swift
+@@ -17,6 +17,10 @@ import os
+     var dashboardGroupID: UUID?
+     var referenceWindow: NSWindow?
+     weak var dashboardView: NSView?
++    let checkSidebarInvalidation = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-invalidation"
++    var sidebarBodyEvaluations = 0
++    var sidebarRowEvaluations: [String: Int] = [:]
++    let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
+     var sidebarProjection: SidebarProjection?
+     weak var sidebarView: NSView?
+     weak var detailView: NSView?
+@@ -34,6 +38,24 @@ struct NativeDetailProbe: NSViewRepresentable {
+     }
+ }
+
++@MainActor final class NativeSidebarRowProbeView: NSView {
++    var value: NativeSidebarRowProbe?
++}
++struct NativeSidebarRowProbe: NSViewRepresentable {
++    let item: WorkspaceSession
++    let groups: [String]
++    let selected: Bool
++    let starred: Bool
++    let busy: Bool
++    let canQuickArchive: Bool
++    func makeNSView(context: Context) -> NativeSidebarRowProbeView {
++        let view = NativeSidebarRowProbeView()
++        NativeAcceptanceProbe.shared.sidebarRows.add(view)
++        return view
++    }
++    func updateNSView(_ view: NativeSidebarRowProbeView, context: Context) { view.value = self }
++}
++
+ struct NativeSidebarProbe: NSViewRepresentable {
+     let projection: SidebarProjection
+     func makeNSView(context: Context) -> NSView { NSView() }
+@@ -290,6 +312,7 @@ private struct ReferenceComposerFixtureView: View {
+             }
+             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
+             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
++            if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
+             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
+             if mode == "joint" {
+                 report.merge(try await joint(window)) { _, new in new }
+@@ -324,7 +347,7 @@ private struct ReferenceComposerFixtureView: View {
+                 report["session_directory"] = try await search(window, sheet: false)
+                 model.open(fixture.sessions[0])
+                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
+-            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
++            } else if !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
+             var steps: [Double] = [], hosts: [[String: Int]] = []
+             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
+@@ -357,6 +380,14 @@ private struct ReferenceComposerFixtureView: View {
+             report["rss_settled_mb"] = residentMB(); report["status"] = "passed"
+         } catch {
+             report["status"] = "failed"; report["error"] = error.localizedDescription
++            if probe.checkSidebarInvalidation {
++                report["sidebar_diagnostic"] = [
++                    "recent": probe.sidebarProjection?.recent.map(\.id) ?? [],
++                    "favorites": probe.sidebarProjection?.favorites.map(\.id) ?? [],
++                    "rows": probe.sidebarRows.allObjects.filter { $0.window != nil }.compactMap { $0.value }.map {
++                        ["id": $0.item.id, "title": $0.item.title, "starred": String($0.starred)]
++                    }, "evaluations": probe.sidebarRowEvaluations]
++            }
+             report["dashboard_diagnostic"] = ["expected_group": model.selectedGroupID?.uuidString ?? "global",
+                 "rendered_group": probe.dashboardGroupID?.uuidString ?? "global",
+                 "projection_matches": probe.dashboardProjection == model.dashboardProjection,
+@@ -745,6 +776,66 @@ private struct ReferenceComposerFixtureView: View {
+         return ["query_to_layout_ms": stats(samples), "states": states,
+                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
+     }
++    private func sidebarInvalidation(_ window: NSWindow) async throws -> [String: Any] {
++        func rows() -> [NativeSidebarRowProbe] {
++            probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap(\.value)
++        }
++        func counts() -> [String: Int] { probe.sidebarRowEvaluations }
++        func changed(_ before: [String: Int]) -> Set<String> {
++            Set(probe.sidebarRowEvaluations.filter { $0.value > before[$0.key, default: 0] }.map(\.key))
++        }
++        model.workspace.starred = []
++        model.workspace.groups = []
++        try await settle(window, "sidebar initial rows") { rows().count == 20 }
++        let beforeSelection = counts(), rootBefore = probe.sidebarBodyEvaluations
++        model.open(fixture.sessions[1])
++        try await settle(window, "sidebar selection") {
++            rows().filter(\.selected).map { $0.item.id } == [self.fixture.sessions[1].id] &&
++                self.hasMountedMessage(window, session: "session-1")
++        }
++        let selectionRoots = probe.sidebarBodyEvaluations - rootBefore
++        let selectionRows = changed(beforeSelection)
++        guard selectionRows == Set(fixture.sessions.prefix(2).map(\.id)), probe.sidebarBodyEvaluations == rootBefore else {
++            throw WorkbenchError("Selection invalidated unrelated sidebar content: \(selectionRows.count) rows, \(probe.sidebarBodyEvaluations - rootBefore) roots")
++        }
++        var sessions = fixture.sessions
++        let old = sessions[4]
++        sessions[4] = WorkspaceSession(reference: old.reference, title: "新的行标题", directory: old.directory,
++            hostName: old.hostName, detail: "新的待处理状态", online: old.online, section: .attention,
++            canMarkReviewed: old.canMarkReviewed, archived: old.archived, updatedAt: old.updatedAt + 1)
++        let beforeItem = counts()
++        model.acceptanceUpdateCatalog(sessions)
++        try await settle(window, "sidebar single row") { rows().contains { $0.item == sessions[4] } }
++        guard changed(beforeItem) == [old.id] else { throw WorkbenchError("Single catalog edit invalidated unrelated rows") }
++        // Operational state must penetrate the equality boundary without a catalog edit.
++        let beforeBusy = counts()
++        model.managing.insert(old.id)
++        try await settle(window, "sidebar busy") { rows().contains { $0.item.id == old.id && $0.busy } }
++        guard changed(beforeBusy) == [old.id] else { throw WorkbenchError("Busy state invalidated unrelated rows") }
++        model.managing.remove(old.id)
++        try await settle(window, "sidebar busy reset") { rows().contains { $0.item.id == old.id && !$0.busy } }
++        let beforeGroups = counts()
++        model.workspace.groups = [WorkItemGroup(name: "新的任务组", goal: "", nextStep: "", sessions: [old.reference])]
++        try await settle(window, "sidebar group membership") { rows().contains { $0.item.id == old.id && $0.groups == ["新的任务组"] } }
++        guard changed(beforeGroups) == [old.id] else { throw WorkbenchError("Group membership invalidated unrelated rows") }
++        model.workspace.groups = []
++        try await settle(window, "sidebar group reset") { rows().contains { $0.item.id == old.id && $0.groups.isEmpty } }
++        model.workspace.starred = [old.reference]
++        try await settle(window, "sidebar pin") {
++            self.probe.sidebarProjection?.favorites.map(\.id) == [old.id] && rows().contains { $0.item.id == old.id && $0.starred }
++        }
++        model.workspace.starred = []
++        model.acceptanceUpdateCatalog(Array(sessions[1...] + sessions[..<1]))
++        try await settle(window, "sidebar order") {
++            self.probe.sidebarProjection?.recent.map(\.id) == Array(sessions.dropFirst().filter { !$0.archived }.prefix(20).map(\.id)) &&
++                rows().contains { $0.item == sessions[4] && !$0.starred }
++        }
++        model.acceptanceUpdateCatalog(fixture.sessions)
++        try await settle(window, "sidebar content restore") { rows().contains { $0.item == old } }
++        return ["selection_changed_rows": selectionRows.count, "selection_sidebar_body_evaluations": selectionRoots,
++                "single_row_edit_isolated": true, "busy_state_isolated": true, "group_membership_isolated": true, "pin_order_and_content_refresh": true,
++                "boundary": "mounted row probes and body counts; no timing or hardware event claim"]
++    }
+     private func detailLifecycle(_ window: NSWindow) async throws -> [String: Any] {
+         guard let scroll = transcript(in: window), let document = ConversationTranscript.document(in: scroll),
+               let editor = draftEditor(in: window.contentView), let navigator = ConversationTranscript.navigator(in: scroll),
+diff --git a/Sources/AgentWorkbench/SessionSidebar.swift b/Sources/AgentWorkbench/SessionSidebar.swift
+index 194445b..a508c4f 100644
+--- a/Sources/AgentWorkbench/SessionSidebar.swift
++++ b/Sources/AgentWorkbench/SessionSidebar.swift
+@@ -13,6 +13,9 @@ struct WorkbenchSidebar: View {
+         return model.selectedGroupID == nil && !model.showSessionDirectory ? .home : .other
+     }
+     var body: some View {
++        #if PERCH_ACCEPTANCE
++        let _ = { if NativeAcceptanceProbe.shared.checkSidebarInvalidation { NativeAcceptanceProbe.shared.sidebarBodyEvaluations += 1 } }()
++        #endif
+         let projection = model.sidebarProjection(filter: filter)
+         let index = model.groupIndex
+         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
+@@ -83,9 +86,7 @@ struct WorkbenchSidebar: View {
+         #endif
+     }
+     private func sessionRow(_ item: WorkspaceSession, groups: [String]) -> some View {
+-        SessionSidebarRow(model: model, item: item, groups: groups,
+-                          selected: !model.showDashboard && item.id == model.tabs.selectedID,
+-                          onOpen: { model.open(item) })
++        SidebarSessionLink(model: model, item: item, groups: groups).equatable()
+     }
+ }
+
+@@ -157,39 +158,104 @@ struct SessionDirectoryView: View {
+     }
+ }
+
+-/// The enclosing sidebar already observes the workspace model. An `@ObservedObject`
+-/// here would register one observer per visible row, so a single search keystroke or
+-/// streamed catalog update invalidates every row body instead of just the list.
+-private struct SessionSidebarRow: View {
+-    @UILocalization private var L
++/// Catalog values enter through the parent; selection and operational state are
++/// read here. Equal catalog inputs do not rebuild every row's observation scope.
++private struct SidebarSessionLink: View, Equatable {
++    let model: WorkbenchModel
++    let item: WorkspaceSession
++    let groups: [String]
++    static func == (lhs: Self, rhs: Self) -> Bool {
++        lhs.model === rhs.model && lhs.item == rhs.item && lhs.groups == rhs.groups
++    }
++    var body: some View {
++        SidebarSessionContent(model: model, presentation: SessionSidebarRowPresentation(
++            model: model, item: item, groups: groups,
++            selected: !model.showDashboard && item.id == model.tabs.selectedID)).equatable()
++    }
++}
++
++/// Compare complete rendered inputs, not action closures. Actions are constructed
++/// inside this boundary from the same model and item, so they cannot become stale.
++private struct SidebarSessionContent: View, Equatable {
+     let model: WorkbenchModel
++    let presentation: SessionSidebarRowPresentation
++    static func == (lhs: Self, rhs: Self) -> Bool {
++        lhs.model === rhs.model && lhs.presentation == rhs.presentation
++    }
++    var body: some View {
++        SessionSidebarRow(model: model, presentation: presentation,
++                          onOpen: { model.open(presentation.item) })
++    }
++}
++
++private struct SessionSidebarRowPresentation: Equatable {
+     let item: WorkspaceSession
+-    /// Task groups this session belongs to. The subtitle is already spoken for by
+-    /// attention and offline states, so membership stays in the hover preview.
+-    var groups: [String] = []
++    let groups: [String]
+     let selected: Bool
++    let starred: Bool
++    let canQuickArchive: Bool
++    let busy: Bool
++    @MainActor init(model: WorkbenchModel, item: WorkspaceSession, groups: [String], selected: Bool) {
++        self.item = item; self.groups = groups; self.selected = selected
++        starred = model.workspace.starred.contains(item.reference)
++        canQuickArchive = model.canArchive(item) && (item.archived || item.section != .running)
++        busy = model.managing.contains(item.id)
++    }
++}
++
++private struct SessionSidebarRow: View {
++    @UILocalization private var L
++    let model: WorkbenchModel
++    let presentation: SessionSidebarRowPresentation
+     let onOpen: () -> Void
++    private var item: WorkspaceSession { presentation.item }
++    private var groups: [String] { presentation.groups }
++    private var selected: Bool { presentation.selected }
++
++    init(model: WorkbenchModel, item: WorkspaceSession, groups: [String] = [], selected: Bool, onOpen: @escaping () -> Void) {
++        self.init(model: model, presentation: SessionSidebarRowPresentation(model: model, item: item, groups: groups, selected: selected), onOpen: onOpen)
++    }
++    init(model: WorkbenchModel, presentation: SessionSidebarRowPresentation, onOpen: @escaping () -> Void) {
++        self.model = model; self.presentation = presentation; self.onOpen = onOpen
++    }
+     private var subtitle: String? {
+         if item.archived { return nil }
+         if !item.online { return L("离线 · 状态未同步") }
+         return item.section == .attention ? item.detail : nil
+     }
+     var body: some View {
++        #if PERCH_ACCEPTANCE
++        let _ = recordBody()
++        #endif
+         SessionRowChrome(title: item.title, subtitle: subtitle,
+                          hostName: item.hostName, hostID: item.reference.hostID,
+                          directory: item.directory, detail: item.detail,
+                          groups: groups, updatedAt: item.updatedAt,
+                          selected: selected,
+-                         starred: model.workspace.starred.contains(item.reference), archived: item.archived,
++                         starred: presentation.starred, archived: item.archived,
+                          canOpen: item.online && !item.archived,
+-                         canQuickArchive: model.canArchive(item) && (item.archived || item.section != .running),
+-                         busy: model.managing.contains(item.id), onOpen: onOpen,
++                         canQuickArchive: presentation.canQuickArchive,
++                         busy: presentation.busy, onOpen: onOpen,
+                          onPin: { model.toggleStar(item.reference) },
+                          onArchive: { model.setArchived(item, archived: !item.archived) }) {
+             SessionStatusIndicator(item: item)
+         }.opacity(item.online || item.archived ? 1 : 0.65)
+             .contextMenu { SessionActionsMenu(model: model, item: item) }
++            #if PERCH_ACCEPTANCE
++            .background {
++                if NativeAcceptanceProbe.shared.checkSidebarInvalidation {
++                    NativeSidebarRowProbe(item: item, groups: groups, selected: selected,
++                        starred: presentation.starred, busy: presentation.busy, canQuickArchive: presentation.canQuickArchive)
++                }
++            }
++            #endif
++    }
++    #if PERCH_ACCEPTANCE
++    private func recordBody() {
++        let probe = NativeAcceptanceProbe.shared
++        if probe.checkSidebarInvalidation { probe.sidebarRowEvaluations[item.id, default: 0] += 1 }
+     }
++    #endif
+ }
+
+ struct SessionActionsMenu: View {
+diff --git a/scripts/check-functional.py b/scripts/check-functional.py
+index f47180d..49e08bb 100644
+--- a/scripts/check-functional.py
++++ b/scripts/check-functional.py
+@@ -44,7 +44,7 @@ def main():
+             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
+             ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
+         ]
+-        for mode in ["all", "switching", "detail-lifecycle", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "kimi-invalidation", "input", "kimi-input"]:
++        for mode in ["all", "switching", "detail-lifecycle", "sidebar-invalidation", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "kimi-invalidation", "input", "kimi-input"]:
+             commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
+                 "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
+         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
+diff --git a/scripts/run-native-acceptance.py b/scripts/run-native-acceptance.py
+index 30f343c..259dfdf 100644
+--- a/scripts/run-native-acceptance.py
++++ b/scripts/run-native-acceptance.py
+@@ -15,7 +15,7 @@ parser.add_argument("--output", type=Path, required=True)
+ parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
+ parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
+ parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
+-parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
++parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
+ parser.add_argument("--input-positive-control", action="store_true", help="Inject one 80ms delay into the mounted input measurement")
+ parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
+ args = parser.parse_args()

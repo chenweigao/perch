@@ -2,7 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct RenameSessionSheet: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     @State private var title = ""
     @State private var suggestion: String?

@@ -7,9 +7,9 @@ import WorkbenchCore
 /// a sheet. The underlying selection stays intact; sending or picking another
 /// session clears `draftingNewTask`.
 struct NewTaskView: View {
-    @ObservedObject var model: WorkbenchModel
-    @ObservedObject var native: NativeAgentConnection
-    @ObservedObject var kimi: KimiConnection
+    @Bindable var model: WorkbenchModel
+    let native: NativeAgentConnection
+    let kimi: KimiConnection
     @StateObject var projectFiles = ProjectFileSuggestions()
     @StateObject var referenceBrowser = RemoteFileBrowser()
     @AppStorage("new.task.prompt") private var prompt = ""

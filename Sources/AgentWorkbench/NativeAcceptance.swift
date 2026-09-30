@@ -8,6 +8,8 @@ import os
 @MainActor final class NativeAcceptanceProbe: ObservableObject {
     static let shared = NativeAcceptanceProbe()
     @Published var query: String?
+    var nativeBodyEvaluations = 0
+    var kimiBodyEvaluations = 0
     var renderedQuery: String?
     var selection: String?
     var dashboardProjection: DashboardProjection?
@@ -15,7 +17,70 @@ import os
     var dashboardGroupID: UUID?
     var referenceWindow: NSWindow?
     weak var dashboardView: NSView?
+    let checkSidebarInvalidation: Bool = {
+        let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? ""
+        return ["sidebar-invalidation", "sidebar-structure"].contains(mode) || (mode.hasPrefix("sidebar-layout-") && !mode.hasSuffix("-unprobed"))
+    }()
+    let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
+    let sidebarVariant = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] ?? "flat"
+    var flatSidebar: Bool { sidebarVariant == "flat" || sidebarVariant == "table" }
+    weak var sidebarTable: AcceptanceSidebarTable.Coordinator?
+    var keepSidebarHeader: Bool { sidebarVariant == "keep-header" }
+    var persistentSubtitle: Bool { sidebarVariant == "persistent-subtitle" }
+    @Published var showEmptySidebarHeader = false
+    @Published var sidebarFilter: SidebarRecentFilter?
+    var sidebarRowCreates = 0
+    var sidebarRowDismantles = 0
+    var sidebarBodyEvaluations = 0
+    var sidebarRowEvaluations: [String: Int] = [:]
+    let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
+    var sidebarProjection: SidebarProjection?
+    weak var sidebarView: NSView?
+    weak var detailView: NSView?
+    var detailCurrent = false
+    let checkDetailLifecycle = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "detail-lifecycle"
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
+}
+
+struct NativeDetailProbe: NSViewRepresentable {
+    let current: Bool
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        NativeAcceptanceProbe.shared.detailView = view
+        NativeAcceptanceProbe.shared.detailCurrent = current
+    }
+}
+
+@MainActor final class NativeSidebarRowProbeView: NSView {
+    let identity = UUID()
+    var value: NativeSidebarRowProbe?
+}
+struct NativeSidebarRowProbe: NSViewRepresentable {
+    let item: WorkspaceSession
+    let groups: [String]
+    let selected: Bool
+    let starred: Bool
+    let busy: Bool
+    let canQuickArchive: Bool
+    func makeNSView(context: Context) -> NativeSidebarRowProbeView {
+        let view = NativeSidebarRowProbeView()
+        NativeAcceptanceProbe.shared.sidebarRows.add(view)
+        NativeAcceptanceProbe.shared.sidebarRowCreates += 1
+        return view
+    }
+    func updateNSView(_ view: NativeSidebarRowProbeView, context: Context) { view.value = self }
+    static func dismantleNSView(_ view: NativeSidebarRowProbeView, coordinator: ()) {
+        NativeAcceptanceProbe.shared.sidebarRowDismantles += 1
+    }
+}
+
+struct NativeSidebarProbe: NSViewRepresentable {
+    let projection: SidebarProjection
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        NativeAcceptanceProbe.shared.sidebarProjection = projection
+        NativeAcceptanceProbe.shared.sidebarView = view
+    }
 }
 
 /// Report only the mounted dashboard. During destination replacement SwiftUI can
@@ -64,6 +129,19 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     private(set) var requests: [String] = []
     private(set) var responseMessages: [Int] = []
     private(set) var responseBytes: [Int] = []
+    var holdSelection = false
+    var failSelection = false
+    private(set) var mutationRequests = 0
+    var pendingSelection: [CheckedContinuation<Void, Never>] = []
+    func response(_ path: String, body: JSONValue?) async throws -> Data {
+        if body != nil { mutationRequests += 1 }
+        let data = try request(path, body: body)
+        if holdSelection, path.hasPrefix("/sessions/"), body == nil {
+            await withCheckedContinuation { pendingSelection.append($0) }
+        }
+        if failSelection, path.hasPrefix("/sessions/"), body == nil { throw URLError(.timedOut) }
+        return data
+    }
     init() throws {
         sessions = (0..<500).map { index -> WorkspaceSession in
             let reference = SessionReference(hostID: Self.host.id, terminalID: "session-\(index)", kind: .omp)
@@ -176,7 +254,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
 
 @main struct NativeAcceptanceApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var model: WorkbenchModel
+    @State private var model: WorkbenchModel
     private let fixture: NativeAcceptanceFixture
     init() {
         precondition(Bundle.main.bundleIdentifier == "dev.perch.nativeacceptance")
@@ -184,10 +262,12 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         let fixture = try! NativeAcceptanceFixture()
         self.fixture = fixture
         let connection = NativeAgentConnection(host: NativeAcceptanceFixture.host) { path, body in
-            try fixture.request(path, body: body)
+            try await fixture.response(path, body: body)
         }
-        _model = StateObject(wrappedValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
-                                                         sessions: fixture.sessions, native: connection))
+        _model = State(initialValue: WorkbenchModel(acceptanceHost: NativeAcceptanceFixture.host,
+                                                         sessions: fixture.sessions, native: connection,
+                                                         kimi: ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"]?.hasPrefix("kimi-") == true
+                                                            ? KimiAcceptanceProtocol.connection(host: NativeAcceptanceFixture.host) : nil))
     }
     var body: some Scene {
         WindowGroup("Perch · 隔离性能验收") {
@@ -226,9 +306,12 @@ private struct ReferenceComposerFixtureView: View {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
+        if mode.hasPrefix("kimi-") { await kimiInvalidation(input: mode == "kimi-input"); return }
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
         if mode == "branch-review" { await reviewWorkflow(branch: true); return }
+        let responsiveness = AcceptanceResponsiveness()
+        defer { _ = responsiveness.finish() }
         var report: [String: Any] = ["mode": mode, "history_turns": 200, "catalog_sessions": 500,
                                    "window_points": [1280, 820], "native_transport": "fixed in-memory JSON; real decode/select",
                                    "timing_boundary": "local state change through layout/display/CA flush, not event-to-photon or FPS"]
@@ -239,17 +322,43 @@ private struct ReferenceComposerFixtureView: View {
             }
             try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             report["rss_before_mb"] = residentMB()
+            responsiveness.start()
+            try await Task.sleep(for: .milliseconds(30))
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1" {
+                usleep(80_000)
+                try await Task.sleep(for: .milliseconds(30))
+            }
+            if mode == "input" {
+                report.merge(try await InputAcceptance.run(window: window,
+                    draft: { self.model.native.drafts["session-0"] ?? "" },
+                    readerEvaluations: { self.probe.nativeBodyEvaluations }, stream: { step in
+                        try self.fixture.advanceStream(step)
+                        try await self.model.native.acceptanceRefreshSelected()
+                    })) { _, new in new }
+            }
+            if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
+            if mode.hasPrefix("sidebar-layout-") { report.merge(try await sidebarLayout(window, mode: mode)) { _, new in new } }
+            if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
+            if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
+            if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
             }
             if mode == "switching" {
                 report.merge(try await switching(window)) { _, new in new }
             }
+            if mode.hasPrefix("render-") {
+                report.merge(try await rendering(window, mode: mode)) { _, new in new }
+            }
             if mode == "dashboard" {
                 report.merge(try await dashboard(window)) { _, new in new }
             }
             if mode == "all" {
+                guard let root = window.contentView, let checks = try ConversationTranscript.checkReconciliation(in: root) else {
+                    throw WorkbenchError("Missing mounted row reconciliation fixture")
+                }
+                report["row_reconciliation"] = checks
                 var switches: [Double] = []
                 for index in 1...16 {
                     let item = fixture.sessions[index % 8]
@@ -266,7 +375,13 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !["frames", "joint", "switching", "paging", "dashboard"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            let responsivenessReport = responsiveness.finish()
+            report["main_actor_lateness"] = responsivenessReport
+            let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
+            let detected = (responsivenessReport["max_ms"] as? Double ?? 0) >= 70
+            report["responsiveness_control_detected"] = control && detected
+            if control && !detected { throw WorkbenchError("Main-actor delay positive control was not detected") }
             guard let scroll = transcript(in: window) else { throw WorkbenchError("No transcript scroll view") }
             var steps: [Double] = [], hosts: [[String: Int]] = []
             let positiveControl = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_STALL"] == "1"
@@ -299,6 +414,14 @@ private struct ReferenceComposerFixtureView: View {
             report["rss_settled_mb"] = residentMB(); report["status"] = "passed"
         } catch {
             report["status"] = "failed"; report["error"] = error.localizedDescription
+            if probe.checkSidebarInvalidation {
+                report["sidebar_diagnostic"] = [
+                    "recent": probe.sidebarProjection?.recent.map(\.id) ?? [],
+                    "favorites": probe.sidebarProjection?.favorites.map(\.id) ?? [],
+                    "rows": probe.sidebarRows.allObjects.filter { $0.window != nil }.compactMap { $0.value }.map {
+                        ["id": $0.item.id, "title": $0.item.title, "starred": String($0.starred)]
+                    }, "evaluations": probe.sidebarRowEvaluations]
+            }
             report["dashboard_diagnostic"] = ["expected_group": model.selectedGroupID?.uuidString ?? "global",
                 "rendered_group": probe.dashboardGroupID?.uuidString ?? "global",
                 "projection_matches": probe.dashboardProjection == model.dashboardProjection,
@@ -317,6 +440,97 @@ private struct ReferenceComposerFixtureView: View {
             if report["status"] as? String != "passed" { exit(1) }
             NSApp.terminate(nil)
         }
+    }
+    private func kimiInvalidation(input: Bool = false) async {
+        var report: [String: Any] = ["mode": input ? "kimi-input" : "kimi-invalidation", "history_turns": 200, "catalog_sessions_during_measurement": 1,
+            "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency"]
+        do {
+            let reference = SessionReference(hostID: model.kimi.host.id, terminalID: "a", kind: .kimi)
+            let item = WorkspaceSession(reference: reference, title: "Kimi 输入隔离", directory: "/fixture", hostName: "离线验收",
+                                        detail: "Kimi", online: true, section: .other, canMarkReviewed: false)
+            model.acceptanceUpdateCatalog([item]); model.open(item)
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else {
+                throw WorkbenchError("Missing acceptance window")
+            }
+            try await settle(window, "Kimi snapshot") { self.model.kimi.snapshotReady && self.transcript(in: window) != nil }
+            try await Task.sleep(for: .milliseconds(500)); flush(window)
+            if input {
+                report.merge(try await InputAcceptance.run(window: window,
+                    draft: { self.model.kimi.drafts["a"] ?? "" },
+                    readerEvaluations: { self.probe.kimiBodyEvaluations }, stream: { _ in
+                        let offset = self.model.kimi.conversation?.live?.assistantText.utf16.count ?? 0
+                        let frame: [String: Any] = ["type": "assistant.delta", "session_id": "a", "epoch": "fixture",
+                            "seq": 11, "volatile": true, "offset": offset,
+                            "payload": ["agentId": "main", "turnId": 201, "delta": "流式增量 "]]
+                        try await self.model.kimi.acceptanceReceive(JSONSerialization.data(withJSONObject: frame))
+                    })) { _, new in new }
+            }
+            let before = probe.kimiBodyEvaluations
+            for index in 0..<40 {
+                let draft = "Kimi 输入隔离 fixture \(index)"
+                model.kimi.drafts["a"] = draft
+                try await settle(window, "Kimi draft \(index)") { self.containsText(draft, in: window.contentView) }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let evaluations = probe.kimiBodyEvaluations - before
+            report["draft_mutations"] = 40; report["reading_body_evaluations_during_drafts"] = evaluations
+            let streamBefore = probe.kimiBodyEvaluations
+            let controlFrame: [String: Any] = ["type": "assistant.delta", "session_id": "a", "epoch": "fixture",
+                "seq": 11, "volatile": true, "offset": model.kimi.conversation?.live?.assistantText.utf16.count ?? 0,
+                "payload": ["agentId": "main", "turnId": 201, "delta": "流式正文 positive control"]]
+            try await model.kimi.acceptanceReceive(JSONSerialization.data(withJSONObject: controlFrame))
+            try await settle(window, "Kimi stream positive control") {
+                self.probe.kimiBodyEvaluations > streamBefore && self.model.kimi.conversation?.live?.assistantText.hasSuffix("流式正文 positive control") == true
+            }
+            report["stream_positive_control"] = true
+            let second = WorkspaceSession(reference: SessionReference(hostID: model.kimi.host.id, terminalID: "b", kind: .kimi),
+                title: "Kimi B", directory: "/fixture", hostName: "离线验收", detail: "Kimi", online: true, section: .other, canMarkReviewed: false)
+            model.acceptanceUpdateCatalog([item, second]); model.open(second)
+            try await settle(window, "Kimi B selection") { self.model.kimi.snapshotReady && self.model.kimi.conversation?.snapshot.session.id == "b" }
+            model.kimi.drafts["b"] = "B 独立草稿"
+            try await settle(window, "Kimi B draft") { self.containsText("B 独立草稿", in: window.contentView) }
+            model.open(item)
+            try await settle(window, "Kimi A draft restored") {
+                self.model.kimi.snapshotReady && self.model.kimi.conversation?.snapshot.session.id == "a" &&
+                self.containsText("Kimi 输入隔离 fixture 39", in: window.contentView)
+            }
+            report["selection_draft_roundtrip"] = true
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_ALLOW_INVALIDATION"] != "1", evaluations != 0 {
+                throw WorkbenchError("Kimi drafts invalidated reading body \(evaluations) times")
+            }
+            report["status"] = "passed"
+        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        do { try writeReport(report, name: "result.json") }
+        catch { fputs("Kimi acceptance result write failed: \(error)\n", stderr); exit(1) }
+        if report["status"] as? String != "passed" { exit(1) }
+        NSApp.terminate(nil)
+    }
+    private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
+        // Allow initial tasks/layout to settle before measuring unrelated writes.
+        try await Task.sleep(for: .milliseconds(200))
+        flush(window)
+        let before = probe.nativeBodyEvaluations
+        for index in 0..<40 {
+            let draft = "输入隔离 fixture \(index)"
+            model.native.drafts["session-0"] = draft
+            try await settle(window, "composer draft \(index)") { self.containsText(draft, in: window.contentView) }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let draftEvaluations = probe.nativeBodyEvaluations - before
+        let snapshotBefore = probe.nativeBodyEvaluations
+        try fixture.advanceStream(0)
+        try await model.native.acceptanceRefreshSelected()
+        try await settle(window, "stream positive control") {
+            self.probe.nativeBodyEvaluations > snapshotBefore && self.model.native.snapshot?.revision == 2
+        }
+        let report: [String: Any] = ["draft_mutations": 40, "reading_body_evaluations_during_drafts": draftEvaluations,
+            "snapshot_positive_control": true,
+            "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency"]
+        try writeReport(report, name: "invalidation.json")
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_ALLOW_INVALIDATION"] != "1", draftEvaluations != 0 {
+            throw WorkbenchError("Draft writes invalidated reading body \(draftEvaluations) times")
+        }
+        return report
     }
     private func dashboard(_ window: NSWindow) async throws -> [String: Any] {
         let unified = try await unifiedWorkbench(window)
@@ -479,9 +693,57 @@ private struct ReferenceComposerFixtureView: View {
         model.workspace.groups.removeAll(); try check()
         model.acceptanceUpdateCatalog([]); try check()
     }
+    /// Factor the old combined stress case into independent mutations. All three
+    /// start their clock before mutations and require the mounted sidebar input,
+    /// selected transcript and visible draft before completing a step.
+    private func rendering(_ window: NSWindow, mode: String) async throws -> [String: Any] {
+        let changesCatalog = mode != "render-switching"
+        let changesSelection = mode != "render-catalog"
+        var durations: [Double] = []
+        NavigationRenderMetrics.stages = [:]
+        let cpuStart = processCPU()
+        let span = probe.signposter.beginInterval("RenderIsolation")
+        for step in 0..<80 {
+            let sessions = changesCatalog ? fixture.sessions.enumerated().map { index, item in
+                WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                    hostName: item.hostName, detail: "状态更新 \(step)", online: item.online,
+                    section: (index + step) % 3 == 0 ? .attention : .review,
+                    canMarkReviewed: true, archived: item.archived, updatedAt: item.updatedAt)
+            } : fixture.sessions
+            let item = sessions[changesSelection ? (step + 1) % 8 : 0]
+            let draft = changesSelection ? "切换草稿 \(step)" : "目录刷新保留草稿"
+            let start = CACurrentMediaTime()
+            if changesCatalog {
+                model.workspace.starred = step % 2 == 0 ? Array(sessions.prefix(4).map(\.reference)) : []
+                let offset = step % 20
+                model.acceptanceUpdateCatalog(Array(sessions[offset...] + sessions[..<offset]))
+            }
+            if changesSelection || step == 0 { model.native.drafts[item.reference.terminalID] = draft }
+            if changesSelection { model.open(item) }
+            let expected = model.sidebarProjection(filter: .all)
+            try await settle(window, mode) {
+                guard let rendered = self.probe.sidebarProjection else { return false }
+                return self.probe.sidebarView?.window === window &&
+                    rendered.favorites == expected.favorites && rendered.recent == expected.recent &&
+                    rendered.attentionCount == expected.attentionCount &&
+                    self.model.tabs.selectedID == item.id &&
+                    self.hasMountedMessage(window, session: item.reference.terminalID) &&
+                    self.containsText(draft, in: window.contentView)
+            }
+            durations.append((CACurrentMediaTime() - start) * 1000)
+        }
+        probe.signposter.endInterval("RenderIsolation", span)
+        return ["render_steps": durations.count, "render_step_ms": stats(durations),
+                "render_process_cpu_seconds": processCPU() - cpuStart,
+                "render_stages": NavigationRenderMetrics.report,
+                "mutations": ["catalog": changesCatalog, "selection_and_draft": changesSelection],
+                "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"]
+    }
     private func switching(_ window: NSWindow) async throws -> [String: Any] {
         try checkNavigationCaches()
         var durations: [Double] = []
+        NavigationRenderMetrics.stages = [:]
+        let switchingSpan = probe.signposter.beginInterval("CatalogSwitching")
         for step in 0..<80 {
             // Switch while catalog refreshes change row heights, order and the
             // presence of the favorites section in the real sidebar.
@@ -506,11 +768,19 @@ private struct ReferenceComposerFixtureView: View {
             }
             durations.append((CACurrentMediaTime() - start) * 1000)
         }
+        probe.signposter.endInterval("CatalogSwitching", switchingSpan)
+        let renderStages = NavigationRenderMetrics.report
+        let presentations = model.conversationPresentations
+        guard presentations.count == 8, presentations.restorationCount >= 64 else {
+            throw WorkbenchError("Mounted conversations did not restore shared presentations: \(presentations.count) models, \(presentations.restorationCount) restorations")
+        }
         let cpu = processCPU()
         try await Task.sleep(for: .seconds(2))
         let idleCPU = processCPU() - cpu
         guard idleCPU < 1 else { throw WorkbenchError("UI kept consuming CPU after session switches: \(idleCPU)s / 2s") }
-        return ["navigation_cache_invalidation": true, "catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
+        return ["render_stages": renderStages, "presentation_cache": ["models": presentations.count, "restorations": presentations.restorationCount,
+                    "preparations": presentations.retainedPreparationCount, "payload_cost": presentations.retainedPayloadCost],
+                "navigation_cache_invalidation": true, "catalog_session_switches": durations.count, "catalog_switch_ms": stats(durations),
                 "idle_cpu_seconds_over_2s": idleCPU,
                 "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }
@@ -539,6 +809,394 @@ private struct ReferenceComposerFixtureView: View {
         }
         return ["query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
+    }
+    /// Independent directory mutations with mounted data, order and row-height
+    /// readiness. Fixed height is an acceptance-only ablation, never a UI policy.
+    private func sidebarLayout(_ window: NSWindow, mode: String) async throws -> [String: Any] {
+        let unprobed = mode.hasSuffix("-unprobed")
+        let kind = String(mode.dropFirst("sidebar-layout-".count)).replacingOccurrences(of: "-unprobed", with: "")
+        let changesHeight = kind == "height" || kind == "height-fixed"
+        let base = (kind == "pins-fixed-members" ? Array(fixture.sessions.prefix(20)) : fixture.sessions).map { item in
+            WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                hostName: item.hostName, detail: "固定待处理内容", online: true,
+                section: changesHeight ? .attention : .review, canMarkReviewed: false,
+                archived: false, updatedAt: item.updatedAt)
+        }
+        model.workspace.starred = []; model.workspace.groups = []
+        model.native.drafts["session-0"] = "目录布局独立场景"
+        model.acceptanceUpdateCatalog(base)
+        func mounted() -> [(NativeSidebarRowProbe, CGRect)] {
+            guard let root = probe.sidebarView else { return [] }
+            return probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap { view in
+                guard let value = view.value else { return nil }
+                return (value, view.convert(view.bounds, to: root))
+            }.sorted { probe.sidebarView?.isFlipped == true ? $0.1.minY < $1.1.minY : $0.1.minY > $1.1.minY }
+        }
+        func ready(_ expected: SidebarProjection) -> Bool {
+            guard let rendered = probe.sidebarProjection, probe.sidebarView?.window === window,
+                  rendered.favorites == expected.favorites, rendered.recent == expected.recent,
+                  rendered.attentionCount == expected.attentionCount else { return false }
+            if unprobed { return true }
+            if let table = probe.sidebarTable {
+                let sessions = table.items.compactMap(\.session)
+                guard sessions == expected.favorites + expected.recent else { return false }
+                let visible = table.visibleSessions
+                let actual = mounted().filter { row in visible.contains(where: { $0.id == row.0.item.id }) }
+                return actual.map { $0.0.item } == visible && actual.allSatisfy { row in
+                    abs(row.1.height - (probe.fixedSidebarHeight || row.0.item.section == .attention ? 48 : 34)) <= 0.5
+                }
+            }
+            let actual = mounted(), items = expected.favorites + expected.recent
+            guard actual.count == items.count else { return false }
+            return zip(actual, items).allSatisfy { row, item in
+                let height: CGFloat = probe.fixedSidebarHeight || item.section == .attention ? 48 : 34
+                return row.0.item == item && row.0.starred == expected.favorites.contains(where: { $0.id == item.id }) &&
+                    row.0.selected == (item.id == base[0].id) && abs(row.1.height - height) <= 0.5
+            }
+        }
+        let initial = SidebarProjection(sessions: base, starred: [])
+        try await settle(window, "sidebar layout initial geometry") { ready(initial) }
+        try await Task.sleep(for: .milliseconds(200))
+        func identities() -> [String: UUID] {
+            Dictionary(uniqueKeysWithValues: probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap { view in
+                view.value.map { ($0.item.id, view.identity) }
+            })
+        }
+        var previousIdentities = identities(), retainedIdentities = 0, replacedIdentities = 0
+        probe.sidebarRowCreates = 0; probe.sidebarRowDismantles = 0
+        var durations: [Double] = [], samples: [[String: Any]] = []
+        var changedHeights = 0, movedRows = 0, insertedRows = 0, removedRows = 0
+        var previous = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
+        probe.sidebarBodyEvaluations = 0; probe.sidebarRowEvaluations = [:]
+        NavigationRenderMetrics.stages = [:]
+        let tableCreates = probe.sidebarTable?.created ?? 0, tableReuses = probe.sidebarTable?.reused ?? 0
+        let cpuStart = processCPU()
+        let span = probe.signposter.beginInterval("SidebarLayout")
+        for step in 0..<80 {
+            var next = base
+            var pins: [SessionReference] = []
+            switch kind {
+            case "content":
+                next = base.enumerated().map { index, item in
+                    guard index < 20 else { return item }
+                    return WorkspaceSession(reference: item.reference, title: String(format: "状态 %04d · 中文 English", step),
+                        directory: item.directory, hostName: item.hostName, detail: item.detail, online: item.online,
+                        section: item.section, canMarkReviewed: false, updatedAt: item.updatedAt)
+                }
+            case "order":
+                let offset = (step + 1) % 20
+                next = Array(base[offset..<20] + base[..<offset] + base[20...])
+            case "pins", "pins-fixed-members": pins = step % 2 == 0 ? Array(base.prefix(4).map(\.reference)) : []
+            case "membership":
+                if step % 2 == 0 { next = Array(base[20..<24] + base[4..<20] + base[..<4] + base[24...]) }
+            case "height", "height-fixed":
+                next = base.enumerated().map { index, item in
+                    guard index < 20 else { return item }
+                    return WorkspaceSession(reference: item.reference, title: item.title, directory: item.directory,
+                        hostName: item.hostName, detail: item.detail, online: item.online,
+                        section: step % 2 == 0 ? .review : .attention, canMarkReviewed: false, updatedAt: item.updatedAt)
+                }
+            default: break // no-op measures the same flush/readiness floor.
+            }
+            let expected = SidebarProjection(sessions: next, starred: pins)
+            let start = CACurrentMediaTime()
+            if kind == "pins" || kind == "pins-fixed-members" { model.workspace.starred = pins }
+            if kind == "header" { probe.showEmptySidebarHeader = step % 2 == 0 }
+            model.acceptanceUpdateCatalog(next)
+            try await settle(window, "\(mode) step \(step)") { ready(expected) }
+            durations.append((CACurrentMediaTime() - start) * 1000)
+            let currentIdentities = identities()
+            for (id, identity) in currentIdentities {
+                if let old = previousIdentities[id] {
+                    if old == identity { retainedIdentities += 1 } else { replacedIdentities += 1 }
+                }
+            }
+            previousIdentities = currentIdentities
+            // Detailed geometry accounting is outside each response sample.
+            let current = Dictionary(uniqueKeysWithValues: mounted().map { ($0.0.item.id, $0.1) })
+            for (id, rect) in current {
+                if let old = previous[id] {
+                    if abs(old.height - rect.height) > 0.5 { changedHeights += 1 }
+                    let delta = probe.sidebarView?.isFlipped == true ? old.minY - rect.minY : old.maxY - rect.maxY
+                    if abs(delta) > 0.5 { movedRows += 1 }
+                } else { insertedRows += 1 }
+            }
+            removedRows += previous.keys.filter { current[$0] == nil }.count
+            if step < 2 { samples.append(["step": step, "rows": current.count, "height_sum": current.values.reduce(0) { $0 + $1.height }]) }
+            previous = current
+        }
+        probe.signposter.endInterval("SidebarLayout", span)
+        let cpuSeconds = processCPU() - cpuStart
+        guard hasMountedMessage(window, session: "session-0"), containsText("目录布局独立场景", in: window.contentView) else {
+            throw WorkbenchError("Directory mutation changed the active conversation or draft")
+        }
+        if probe.sidebarTable == nil && changesHeight && !probe.fixedSidebarHeight && changedHeights != 1600 { throw WorkbenchError("Missing dynamic row-height changes") }
+        if (!changesHeight || probe.fixedSidebarHeight) && changedHeights != 0 { throw WorkbenchError("Fixed-height control changed row sizes") }
+        let crossesSections = kind == "pins" || kind == "pins-fixed-members"
+        let expectedReplacements = crossesSections && !probe.flatSidebar && !unprobed ? 320 : 0
+        guard probe.sidebarTable != nil || (replacedIdentities == expectedReplacements &&
+              probe.sidebarRowCreates == insertedRows + expectedReplacements &&
+              probe.sidebarRowDismantles == removedRows + expectedReplacements) else {
+            throw WorkbenchError("Unexpected sidebar row-marker lifecycle")
+        }
+        if kind == "header" && !probe.keepSidebarHeader && movedRows != 1600 {
+            throw WorkbenchError("Header control did not move the existing rows")
+        }
+        return ["sidebar_variant": probe.sidebarVariant, "row_probes_enabled": !unprobed,
+                "virtualized_table": probe.sidebarTable != nil,
+                "table_cell_creates": (probe.sidebarTable?.created ?? 0) - tableCreates,
+                "table_cell_reuses": (probe.sidebarTable?.reused ?? 0) - tableReuses,
+                "native_row_lifecycle": ["created": probe.sidebarRowCreates, "dismantled": probe.sidebarRowDismantles,
+                                         "retained_common_ids": retainedIdentities, "replaced_common_ids": replacedIdentities],
+                "layout_kind": kind, "layout_catalog_sessions": base.count, "layout_step_ms": stats(durations), "layout_samples_ms": durations,
+                "layout_process_cpu_seconds": cpuSeconds,
+                "sidebar_body_evaluations": probe.sidebarBodyEvaluations,
+                "sidebar_row_body_evaluations": probe.sidebarRowEvaluations.values.reduce(0, +),
+                "geometry": ["height_changes": changedHeights, "moved_rows": movedRows,
+                             "inserted_rows": insertedRows, "removed_rows": removedRows], "initial_geometry_samples": samples,
+                "render_stages": NavigationRenderMetrics.report,
+                "layout_contract": probe.sidebarTable != nil ? "full native table data and visible row values/order/heights; offscreen rows unmounted; geometry counts cover mounted markers only" : unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
+                "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
+    }
+    private func sidebarStructure(_ window: NSWindow) async throws -> [String: Any] {
+        let defaults = UserDefaults.standard
+        let keys = ["sidebar.favorites.expanded", "sidebar.recent.expanded"]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer { for (key, value) in zip(keys, saved) { defaults.set(value, forKey: key) }; probe.sidebarFilter = nil }
+        for key in keys { defaults.set(true, forKey: key) }
+        model.workspace.groups = []
+        let pins = Array(fixture.sessions.prefix(2).map(\.reference))
+        model.workspace.starred = pins
+        func rows() -> [NativeSidebarRowProbe] {
+            guard let root = probe.sidebarView else { return [] }
+            return probe.sidebarRows.allObjects.filter { $0.window === window }.sorted {
+                let a = $0.convert($0.bounds, to: root), b = $1.convert($1.bounds, to: root)
+                return root.isFlipped ? a.minY < b.minY : a.maxY > b.maxY
+            }.compactMap(\.value)
+        }
+        func matches(_ expected: [WorkspaceSession]) -> Bool {
+            if let table = probe.sidebarTable {
+                guard table.items.compactMap(\.session) == expected else { return false }
+                let visible = table.visibleSessions
+                return rows().filter { row in visible.contains(where: { $0.id == row.item.id }) }.map(\.item) == visible
+            }
+            return rows().map(\.item) == expected
+        }
+        let all = SidebarProjection(sessions: fixture.sessions, starred: pins)
+        try await settle(window, "expanded sections") { matches(all.favorites + all.recent) }
+        defaults.set(false, forKey: keys[0])
+        try await settle(window, "collapsed favorites") { matches(all.recent) }
+        defaults.set(false, forKey: keys[1])
+        try await settle(window, "collapsed both") { rows().isEmpty }
+        // Updates while hidden must appear on expansion, including per-row busy state.
+        let catalog = fixture.sessions.enumerated().map { index, item in
+            WorkspaceSession(reference: item.reference, title: "结构验收 " + item.title, directory: item.directory,
+                hostName: item.hostName, detail: item.detail, online: true,
+                section: index < 5 ? .running : .review, canMarkReviewed: false, archived: item.archived, updatedAt: item.updatedAt)
+        }
+        model.acceptanceUpdateCatalog(catalog)
+        model.managing.insert(catalog[0].id)
+        defaults.set(true, forKey: keys[0])
+        try await settle(window, "expand updated favorites") {
+            rows().map(\.item) == Array(catalog.prefix(2)) && rows().first?.busy == true
+        }
+        probe.sidebarFilter = .running
+        defaults.set(true, forKey: keys[1])
+        let running = SidebarProjection(sessions: catalog, starred: pins, filter: .running)
+        try await settle(window, "filtered recent, unfiltered favorites") {
+            rows().map(\.item) == running.favorites + running.recent && rows().filter(\.selected).map { $0.item.id } == [catalog[0].id]
+        }
+        model.workspace.starred = []
+        let unpinned = SidebarProjection(sessions: catalog, starred: [], filter: .running)
+        try await settle(window, "remove last favorites header") { rows().map(\.item) == unpinned.recent }
+        model.managing.remove(catalog[0].id)
+        probe.sidebarFilter = .all
+        model.acceptanceUpdateCatalog(fixture.sessions)
+        try await settle(window, "restore all sessions") {
+            matches(SidebarProjection(sessions: self.fixture.sessions, starred: []).recent)
+        }
+        if let table = probe.sidebarTable {
+            table.table.scrollRowToVisible(table.items.count - 1)
+            try await settle(window, "virtualized bottom rows") {
+                table.visibleSessions.contains(where: { $0.id == table.items.compactMap(\.session).last?.id }) &&
+                    matches(SidebarProjection(sessions: self.fixture.sessions, starred: []).recent)
+            }
+            table.table.scrollRowToVisible(0)
+            try await settle(window, "virtualized top rows") {
+                table.visibleSessions.first?.id == self.fixture.sessions[0].id &&
+                    matches(SidebarProjection(sessions: self.fixture.sessions, starred: []).recent)
+            }
+        }
+        return ["virtualized_scroll_values": probe.sidebarTable != nil, "collapse_expand_and_hidden_updates": true, "filter_and_last_pin_removal": true,
+                "structure_contract": "real AppStorage/local filter state, mounted values and physical order; no mouse/keyboard delivery claim"]
+    }
+    private func sidebarInvalidation(_ window: NSWindow) async throws -> [String: Any] {
+        func rows() -> [NativeSidebarRowProbe] {
+            probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap(\.value)
+        }
+        func counts() -> [String: Int] { probe.sidebarRowEvaluations }
+        func changed(_ before: [String: Int]) -> Set<String> {
+            Set(probe.sidebarRowEvaluations.filter { $0.value > before[$0.key, default: 0] }.map(\.key))
+        }
+        model.workspace.starred = []
+        model.workspace.groups = []
+        try await settle(window, "sidebar initial rows") { rows().count == 20 }
+        let beforeSelection = counts(), rootBefore = probe.sidebarBodyEvaluations
+        model.open(fixture.sessions[1])
+        try await settle(window, "sidebar selection") {
+            rows().filter(\.selected).map { $0.item.id } == [self.fixture.sessions[1].id] &&
+                self.hasMountedMessage(window, session: "session-1")
+        }
+        let selectionRoots = probe.sidebarBodyEvaluations - rootBefore
+        let selectionRows = changed(beforeSelection)
+        var sessions = fixture.sessions
+        let old = sessions[4]
+        sessions[4] = WorkspaceSession(reference: old.reference, title: "新的行标题", directory: old.directory,
+            hostName: old.hostName, detail: "新的待处理状态", online: old.online, section: .attention,
+            canMarkReviewed: old.canMarkReviewed, archived: old.archived, updatedAt: old.updatedAt + 1)
+        let beforeItem = counts()
+        model.acceptanceUpdateCatalog(sessions)
+        try await settle(window, "sidebar single row") { rows().contains { $0.item == sessions[4] } }
+        let itemRows = changed(beforeItem).count
+        // Operational state must refresh without relying on a catalog edit.
+        let beforeBusy = counts()
+        model.managing.insert(old.id)
+        try await settle(window, "sidebar busy") { rows().contains { $0.item.id == old.id && $0.busy } }
+        let busyRows = changed(beforeBusy).count
+        model.managing.remove(old.id)
+        try await settle(window, "sidebar busy reset") { rows().contains { $0.item.id == old.id && !$0.busy } }
+        let beforeGroups = counts()
+        model.workspace.groups = [WorkItemGroup(name: "新的任务组", goal: "", nextStep: "", sessions: [old.reference])]
+        try await settle(window, "sidebar group membership") { rows().contains { $0.item.id == old.id && $0.groups == ["新的任务组"] } }
+        let groupRows = changed(beforeGroups).count
+        model.workspace.groups = []
+        try await settle(window, "sidebar group reset") { rows().contains { $0.item.id == old.id && $0.groups.isEmpty } }
+        model.workspace.starred = [old.reference]
+        try await settle(window, "sidebar pin") {
+            self.probe.sidebarProjection?.favorites.map(\.id) == [old.id] && rows().contains { $0.item.id == old.id && $0.starred }
+        }
+        model.workspace.starred = []
+        model.acceptanceUpdateCatalog(Array(sessions[1...] + sessions[..<1]))
+        try await settle(window, "sidebar order") {
+            self.probe.sidebarProjection?.recent.map(\.id) == Array(sessions.dropFirst().filter { !$0.archived }.prefix(20).map(\.id)) &&
+                rows().contains { $0.item == sessions[4] && !$0.starred }
+        }
+        model.acceptanceUpdateCatalog(fixture.sessions)
+        try await settle(window, "sidebar content restore") { rows().contains { $0.item == old } }
+        return ["selection_changed_rows": selectionRows.count, "selection_sidebar_body_evaluations": selectionRoots,
+                "single_row_changed_rows": itemRows, "busy_changed_rows": busyRows, "group_changed_rows": groupRows,
+                "single_row_content_refresh": true, "busy_state_refresh": true, "group_membership_refresh": true,
+                "pin_order_and_content_refresh": true,
+                "boundary": "mounted row probes and body counts; no timing or hardware event claim"]
+    }
+    private func detailLifecycle(_ window: NSWindow) async throws -> [String: Any] {
+        guard let scroll = transcript(in: window), let document = ConversationTranscript.document(in: scroll),
+              let editor = draftEditor(in: window.contentView), let navigator = ConversationTranscript.navigator(in: scroll),
+              window.makeFirstResponder(editor) else { throw WorkbenchError("Missing detail fixture") }
+        navigator.select(80)
+        try await settle(window) { navigator.current == 80 }
+        guard let anchor = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing reading anchor") }
+        editor.insertText("A 已提交", replacementRange: NSRange(location: 0, length: editor.string.utf16.count))
+        try await settle(window) { self.model.native.drafts["session-0"] == "A 已提交" }
+        editor.setMarkedText("zhongwen", selectedRange: NSRange(location: 8, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        guard editor.hasMarkedText() else { throw WorkbenchError("Missing composition") }
+        let oldSend = editor.onSend
+        let oldUndo = editor.undoManager
+        model.native.drafts["session-1"] = "B 独立草稿"
+        fixture.holdSelection = true
+        defer {
+            fixture.holdSelection = false
+            for continuation in fixture.pendingSelection { continuation.resume() }
+            fixture.pendingSelection.removeAll()
+        }
+        model.open(fixture.sessions[1])
+        try await settle(window, "pending selection") {
+            !self.fixture.pendingSelection.isEmpty && !self.probe.detailCurrent && !editor.isEditable
+        }
+        guard model.native.snapshot == nil, model.native.conversation.presentationSnapshot?.id == "session-0",
+              transcript(in: window) === scroll, ConversationTranscript.document(in: scroll) === document else {
+            throw WorkbenchError("Loading replaced the detail host or exposed readiness")
+        }
+        // Read actual native ancestor visibility, not just the state supplied to
+        // the SwiftUI modifier. The retained tree must be visually suppressed.
+        func hidden(_ view: NSView?) -> Bool {
+            guard let view else { return false }
+            if view.isHidden || view.alphaValue == 0 || view.layer?.opacity == 0 { return true }
+            return hidden(view.superview)
+        }
+        guard hidden(probe.detailView) else { throw WorkbenchError("Retained detail is still visible while loading") }
+        // A deferred rail selection or native scroll notification may outlive
+        // the selection transaction. Neither may mutate the suspended reader.
+        let pausedOrigin = scroll.contentView.bounds.origin
+        navigator.select(5)
+        NotificationCenter.default.post(name: NSScrollView.willStartLiveScrollNotification, object: scroll)
+        try await Task.sleep(for: .milliseconds(10))
+        flush(window)
+        guard scroll.contentView.bounds.origin == pausedOrigin else { throw WorkbenchError("Deferred navigation moved the suspended reader") }
+        let requests = fixture.mutationRequests
+        oldSend?()
+        await Task.yield()
+        guard fixture.mutationRequests == requests, model.native.queue.allItems.isEmpty else {
+            throw WorkbenchError("Old composer sent during replacement")
+        }
+        fixture.holdSelection = false
+        fixture.pendingSelection.removeFirst().resume()
+        try await settle(window) {
+            self.hasMountedMessage(window, session: "session-1") && self.probe.detailCurrent &&
+                self.draftEditor(in: window.contentView).map { window.firstResponder === $0 } == true
+        }
+        guard let next = draftEditor(in: window.contentView), next !== editor, !next.hasMarkedText(),
+              next.string == "B 独立草稿", next.undoManager !== oldUndo, next.undoManager?.canUndo == false,
+              transcript(in: window) === scroll, ConversationTranscript.document(in: scroll) === document else {
+            throw WorkbenchError("Detail/composer lifetime isolation failed")
+        }
+        oldSend?()
+        await Task.yield()
+        guard fixture.mutationRequests == requests, model.native.queue.allItems.isEmpty else {
+            throw WorkbenchError("Old composer sent to the loaded replacement")
+        }
+        model.open(fixture.sessions[0])
+        try await settle(window, "return to reading anchor") {
+            guard self.hasMountedMessage(window, session: "session-0"),
+                  let after = ConversationTranscript.readingAnchor(in: scroll) else { return false }
+            return after.entry == anchor.entry && abs(after.offset - anchor.offset) <= 1
+        }
+        guard model.native.drafts["session-1"] == "B 独立草稿" else { throw WorkbenchError("Composition leaked into B") }
+        fixture.failSelection = true
+        model.open(fixture.sessions[1])
+        try await settle(window, "failed selection") { self.model.native.actionError != nil && !self.model.native.conversation.isSelecting }
+        guard model.native.snapshot == nil, !probe.detailCurrent, hidden(probe.detailView),
+              ConversationTranscript.document(in: scroll) === document else { throw WorkbenchError("Failed load exposed the retained detail") }
+        fixture.failSelection = false
+        model.native.select("session-1")
+        try await settle(window, "retry selection") { self.hasMountedMessage(window, session: "session-1") && self.probe.detailCurrent }
+        guard ConversationTranscript.document(in: scroll) === document else { throw WorkbenchError("Retry replaced the renderer") }
+
+        // Preload the same raw session ID on another connection. There is no nil
+        // snapshot between these hosts to accidentally reset the old editor.
+        let otherHost = SSHHost(id: UUID(uuidString: "00000000-0000-0000-0000-000000000024")!, name: "另一隔离环境", destination: "")
+        let other = NativeAgentConnection(host: otherHost) { [fixture] path, body in try await fixture.response(path, body: body) }
+        other.drafts["session-1"] = "另一环境的独立草稿"
+        other.select("session-1")
+        try await settle(window) { other.snapshot?.id == "session-1" }
+        model.registerEnvironment(kimi: KimiConnection(host: otherHost), native: other)
+        let item = WorkspaceSession(reference: SessionReference(hostID: otherHost.id, terminalID: "session-1", kind: .omp),
+            title: "同名会话", directory: "/fixture", hostName: otherHost.name, detail: "就绪", online: true, section: .other, canMarkReviewed: false)
+        model.acceptanceUpdateCatalog([item] + fixture.sessions)
+        guard let outgoing = draftEditor(in: window.contentView) else { throw WorkbenchError("Missing outgoing editor") }
+        outgoing.setMarkedText("host-a", selectedRange: NSRange(location: 6, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        model.open(item)
+        try await settle(window, "same ID on another host") {
+            self.model.native === other && self.draftEditor(in: window.contentView)?.string == "另一环境的独立草稿"
+        }
+        guard let incoming = draftEditor(in: window.contentView), incoming !== outgoing, !incoming.hasMarkedText(),
+              let otherScroll = transcript(in: window), ConversationTranscript.document(in: otherScroll) !== document else {
+            throw WorkbenchError("Another connection reused the old detail/editor")
+        }
+        return ["detail_host_preserved": true, "loading_hides_native_tree": true,
+                "composer_identity_and_undo_isolated": true, "old_send_rejected": true,
+                "marked_text_did_not_cross_session": true, "return_anchor_preserved": true,
+                "focus_restored": true, "failed_load_and_retry": true, "same_id_cross_host_isolated": true]
     }
     private func paging(_ window: NSWindow) async throws -> [String: Any] {
         guard model.native.snapshot?.messages.count == 100, model.native.snapshot?.history?.start == 300,

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Observation
 import WorkbenchCore
 
 /// Shared reading metrics keep Kimi, OMP and Qoder aligned with their composers.
@@ -321,26 +322,188 @@ struct DisclosureReplyText: View {
     let text: String
     var attributes: [NSAttributedString.Key: Any]? = nil
     @State private var showingAll = false
+    @State private var reader = LongOutputReaderHandle()
+    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+
+    private var expansion: Binding<Bool> {
+        Binding(get: { showingAll }, set: { value in
+            disclosureWillChange()
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { showingAll = value }
+        })
+    }
+    private var usesViewport: Bool {
+        #if TRANSCRIPT_CHECKS
+        return ProcessInfo.processInfo.environment["NAVIGATION_LONG_OUTPUT_VARIANT"] != "inline"
+        #else
+        return true
+        #endif
+    }
 
     var body: some View {
         let prefix = text.prefix(4_000)
         let isLong = prefix.endIndex != text.endIndex
         let visible = showingAll || !isLong ? text : String(prefix)
+        #if TRANSCRIPT_CHECKS
+        let _ = { if ConversationDisclosureFixture.enabled && isLong {
+            ConversationDisclosureFixture.fullBindings[text] = expansion
+        } }()
+        #endif
         VStack(alignment: .leading, spacing: 8) {
-            if let attributes {
-                SelectableReplyText(attributed: NSAttributedString(string: visible, attributes: attributes))
+            if showingAll && isLong && usesViewport {
+                LongOutputReader(text: text, attributes: attributes, handle: reader)
+                    .frame(height: 360)
             } else {
-                SelectableReplyText(visible)
+                Group {
+                    if let attributes {
+                        SelectableReplyText(attributed: NSAttributedString(string: visible, attributes: attributes))
+                    } else {
+                        SelectableReplyText(visible)
+                    }
+                }.frame(height: isLong && usesViewport ? 360 : nil, alignment: .top).clipped()
             }
             if isLong {
                 HStack(spacing: 12) {
                     if !showingAll { Text("…").foregroundStyle(.secondary) }
-                    Button(showingAll ? "收起长内容" : "显示完整内容") { showingAll.toggle() }
+                    Button(showingAll ? "收起长内容" : "显示完整内容") { expansion.wrappedValue.toggle() }
                         .buttonStyle(.plain).foregroundStyle(.secondary)
+                    if showingAll && usesViewport {
+                        Button("查找完整内容") { reader.showFindBar() }
+                            .buttonStyle(.plain).foregroundStyle(.secondary)
+                    }
                     ReplyCopyButton(text: text, label: "复制完整内容")
                 }.font(.system(size: 11))
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Complete text has its own viewport. The transcript measures only this fixed
+/// viewport, never the full text height. TextKit owns selection and text layout.
+@MainActor @Observable final class LongOutputReaderHandle {
+    @ObservationIgnored weak var textView: NSTextView?
+    var searchVisible = false
+    var query = ""
+    var found: Bool?
+    func showFindBar() { searchVisible = true }
+    func find(backwards: Bool = false) {
+        guard let textView, !query.isEmpty else { found = nil; return }
+        let source = textView.string as NSString
+        let selection = textView.selectedRange()
+        let start = min(source.length, backwards ? selection.location : NSMaxRange(selection))
+        let range = backwards ? NSRange(location: 0, length: start) : NSRange(location: start, length: source.length - start)
+        var options: NSString.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+        if backwards { options.insert(.backwards) }
+        var hit = source.range(of: query, options: options, range: range)
+        if hit.location == NSNotFound { hit = source.range(of: query, options: options) }
+        found = hit.location != NSNotFound
+        if found == true {
+            textView.setSelectedRange(hit)
+            textView.scrollRangeToVisible(hit)
+        }
+    }
+}
+
+struct LongOutputReader: View {
+    let text: String
+    let attributes: [NSAttributedString.Key: Any]?
+    @Bindable var handle: LongOutputReaderHandle
+    @FocusState private var searchFocused: Bool
+    var body: some View {
+        VStack(spacing: 6) {
+            if handle.searchVisible {
+                HStack(spacing: 8) {
+                    TextField("查找完整内容", text: $handle.query)
+                        .textFieldStyle(.roundedBorder).focused($searchFocused)
+                        .onSubmit { handle.find() }
+                    if handle.found == false { Text("未找到").foregroundStyle(.secondary) }
+                    Button { handle.find(backwards: true) } label: { Image(systemName: "chevron.up") }.help("上一个匹配")
+                    Button { handle.find() } label: { Image(systemName: "chevron.down") }.help("下一个匹配")
+                    Button { handle.searchVisible = false } label: { Image(systemName: "xmark") }.help("关闭查找")
+                }.font(.system(size: 11)).frame(height: 28)
+            }
+            LongOutputViewport(text: text, attributes: attributes, handle: handle)
+                .frame(height: handle.searchVisible ? 326 : 360)
+        }.frame(height: 360)
+            .onChange(of: handle.searchVisible) { _, visible in searchFocused = visible }
+            .onChange(of: handle.query) { _, _ in handle.found = nil }
+    }
+}
+
+private final class LongOutputTextView: NSTextView {
+    var find: (() -> Void)?
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if window?.firstResponder === self,
+           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           event.charactersIgnoringModifiers == "f" { find?(); return true }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+private struct LongOutputViewport: NSViewRepresentable {
+    let text: String
+    let attributes: [NSAttributedString.Key: Any]?
+    let handle: LongOutputReaderHandle
+
+    final class Coordinator {
+        var text: String?
+        var attributes: NSDictionary?
+    }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSScrollView()
+        scroll.identifier = .init("perch-long-output")
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.borderType = .noBorder
+        let view = LongOutputTextView(usingTextLayoutManager: true)
+        view.frame = NSRect(x: 0, y: 0, width: 600, height: 360)
+        view.minSize = NSSize(width: 0, height: 360)
+        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        view.isEditable = false
+        view.isSelectable = true
+        view.isRichText = false
+        view.drawsBackground = false
+        view.isVerticallyResizable = true
+        view.isHorizontallyResizable = false
+        view.autoresizingMask = [.width]
+        view.textContainerInset = NSSize(width: 4, height: 4)
+        view.textContainer?.widthTracksTextView = true
+        view.textContainer?.containerSize = NSSize(width: 600, height: CGFloat.greatestFiniteMagnitude)
+        view.enabledTextCheckingTypes = 0
+        view.find = { [weak handle] in handle?.showFindBar() }
+        view.setAccessibilityLabel(NSLocalizedString("完整内容", comment: "Full output reader"))
+        scroll.documentView = view
+        handle.textView = view
+        return scroll
+    }
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let view = scroll.documentView as? NSTextView else { return }
+        handle.textView = view
+        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 4
+        let style = attributes ?? [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                                   .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph]
+        let dictionary = style as NSDictionary
+        guard context.coordinator.text != text || context.coordinator.attributes != dictionary else { return }
+        let previous = context.coordinator.text
+        let appending = context.coordinator.attributes == dictionary && previous.map { text.hasPrefix($0) } == true
+        let sourceChanged = context.coordinator.text != text
+        context.coordinator.text = text
+        context.coordinator.attributes = dictionary
+        if appending, let previous {
+            let suffix = (text as NSString).substring(from: previous.utf16.count)
+            view.textStorage?.append(NSAttributedString(string: suffix, attributes: style))
+        } else {
+            view.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: style))
+        }
+        if sourceChanged && !appending {
+            view.setSelectedRange(NSRange(location: 0, length: 0))
+            scroll.contentView.scroll(to: .zero)
+        }
+    }
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
+        CGSize(width: proposal.width ?? ReplyStyle.readingWidth, height: proposal.height ?? 360)
     }
 }
 

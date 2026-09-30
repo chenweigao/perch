@@ -2,9 +2,9 @@ import SwiftUI
 import WorkbenchCore
 
 struct ConversationFindBar: View {
-    @ObservedObject var model: WorkbenchModel
-    @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    @Bindable var model: WorkbenchModel
+    let kimi: KimiConnection
+    let native: NativeAgentConnection
     @State private var query = ""
     @State private var index = 0
     @State private var hits: [ConversationSearchHit] = []

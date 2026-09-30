@@ -2,7 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct SessionGroupsSheet: View {
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     @State private var selected = Set<UUID>()
     @State private var newGroupName = ""

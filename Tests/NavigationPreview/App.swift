@@ -758,6 +758,31 @@ final class NavigationRunner {
         try record("session_return", ["before_entry": narrow.entry, "after_entry": restored.entry,
                                       "before_offset": narrow.offset, "after_offset": restored.offset])
         if narrow.entry != restored.entry || abs(narrow.offset - restored.offset) > 1 { failures.append("session return anchor") }
+        // Verify the hosted native text, not just the provider snapshot/marker.
+        let oldReply = "远端任务不受本地测试影响"
+        guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: oldReply, running: false).last else {
+            throw NavigationError("missing same-ID replacement target")
+        }
+        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: hit, query: oldReply))
+        try await settle()
+        func row(in view: NSView) -> NSView? {
+            if view.identifier?.rawValue == hit.entryID { return view }
+            return view.subviews.lazy.compactMap { row(in: $0) }.first
+        }
+        func contains(_ text: String, in view: NSView) -> Bool {
+            if let reply = view as? ReplyTextView, reply.string.contains(text) { return true }
+            return view.subviews.contains { contains(text, in: $0) }
+        }
+        guard let oldHost = row(in: scroll), contains(oldReply, in: oldHost) else { throw NavigationError("replacement target is not mounted") }
+        let revisedReply = "同 ID 正文替换已到达原生行 · hosted replacement verified"
+        let revised = try NavigationHistory.conversation(turns: 200, salt: targets[0] + ":", revisedReply: revisedReply)
+        model.conversation?.reconcile(revised.snapshot)
+        try await settle()
+        guard let newHost = row(in: scroll), newHost === oldHost,
+              contains(revisedReply, in: newHost), !contains(oldReply, in: newHost) else {
+            throw NavigationError("same-ID update failed to replace mounted text or unnecessarily replaced its row host")
+        }
+        try record("same_id_native_text", ["updated": true, "host_reused": true])
         try record("failures", ["checks": failures])
         guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
         return report
@@ -1037,7 +1062,7 @@ struct NavigationPreviewApp: App {
     @StateObject private var model = NavigationModel()
     @State private var status = "点击响应与滚动长帧验收 fixture"
     var body: some Scene {
-        WindowGroup("导航与滚动验收") {
+        WindowGroup(Bundle.main.object(forInfoDictionaryKey: "PerchLongOutputDemo") as? Bool == true ? "Perch · 长输出试用" : "导航与滚动验收") {
             if ProcessInfo.processInfo.environment["NAVIGATION_JOINT"] == "1" {
                 JointInteractionPreview()
             } else {
@@ -1050,7 +1075,8 @@ struct NavigationPreviewApp: App {
         }.defaultSize(width: 1240, height: 800)
     }
     private func run() async {
-        guard let mode = ProcessInfo.processInfo.environment["NAVIGATION_AUTORUN"] else { return }
+        let demo = Bundle.main.object(forInfoDictionaryKey: "PerchLongOutputDemo") as? Bool == true
+        guard let mode = ProcessInfo.processInfo.environment["NAVIGATION_AUTORUN"] ?? (demo ? "disclosure" : nil) else { return }
         while model.host?.window?.isVisible != true { try? await Task.sleep(for: .milliseconds(100)) }
         try? await Task.sleep(for: .seconds(3))
         let runner = NavigationRunner(model: model)
@@ -1088,6 +1114,7 @@ struct NavigationPreviewApp: App {
                 report.merge(try await runner.resourceComparison(seconds: seconds)) { a, _ in a }
             }
             else { report.merge(try await runner.clickLatency()) { a, _ in a } }
+            if demo { status = "长输出试用：在正文内滚动、选择复制或点击“查找完整内容”；收起后保留对话位置。"; return }
             report["status"] = "passed"
             let file = "\(mode)-\(model.all.count)-\(Int(Date().timeIntervalSince1970)).json"
             try writeNavigationArtifact(file, report)
@@ -1141,6 +1168,7 @@ extension NavigationRunner {
         defer {
             ConversationDisclosureFixture.enabled = false
             ConversationDisclosureFixture.bindings.removeAll()
+            ConversationDisclosureFixture.fullBindings.removeAll()
         }
         guard let host = model.host else { throw NavigationError("missing host") }
         var targetRowID = ""
@@ -1158,13 +1186,19 @@ extension NavigationRunner {
             }
             return result.sorted { $0.frame.minY < $1.frame.minY }
         }
-        let withContext = ProcessInfo.processInfo.environment["NAVIGATION_DISCLOSURE_CONTEXT"] == "1"
+        let demo = Bundle.main.object(forInfoDictionaryKey: "PerchLongOutputDemo") as? Bool == true
+        let withContext = demo || ProcessInfo.processInfo.environment["NAVIGATION_DISCLOSURE_CONTEXT"] == "1"
+        let full = demo || ProcessInfo.processInfo.environment["NAVIGATION_FULL_DISCLOSURE"] == "1"
+        let viewport = ProcessInfo.processInfo.environment["NAVIGATION_LONG_OUTPUT_VARIANT"] != "inline"
+        let lineCount = Int(ProcessInfo.processInfo.environment["NAVIGATION_OUTPUT_LINES"] ?? "2400")!
+        let wrappedLine = ProcessInfo.processInfo.environment["NAVIGATION_OUTPUT_SHAPE"] == "wrapped-line"
         var samples: [[String: Any]] = []
         for kind in ["Bash", "Thoughts"] {
             let session = "disclosure-" + kind
             ConversationReadingMemory.shared.remove(session)
             ConversationDisclosureFixture.bindings.removeAll()
-            let payload = (0..<2400).map { "Line \($0): 检查中文和 English 输出，保留完整内容用于选择复制。" }.joined(separator: "\n")
+            ConversationDisclosureFixture.fullBindings.removeAll()
+            let payload = (0..<lineCount).map { "Line \($0): 检查中文和 English 输出，保留完整内容用于选择复制。" }.joined(separator: wrappedLine ? "\\n" : "\n")
             let content: [[String: Any]] = kind == "Bash"
                 ? [["type": "tool_use", "tool_call_id": "bash", "tool_name": "Bash", "input": ["command": "swift run"]]]
                 : [["type": "thinking", "thinking": payload]]
@@ -1204,14 +1238,32 @@ extension NavigationRunner {
                   let scroll = findScrollView(host) else { throw NavigationError("missing \(kind) disclosure") }
             scroll.contentView.scroll(to: NSPoint(x: 0, y: withContext ? max(0, scroll.contentView.bounds.minY - 80) : 0))
             try await Task.sleep(for: .milliseconds(350))
+            var fullSource: String?
+            if full {
+                binding(for: kind)!.wrappedValue = true
+                guard await flushAndWait(host, until: { !ConversationDisclosureFixture.fullBindings.isEmpty }) != nil else {
+                    throw NavigationError("full-content control did not mount")
+                }
+                fullSource = ConversationDisclosureFixture.fullBindings.keys.max { $0.count < $1.count }
+                try await Task.sleep(for: .milliseconds(350))
+            }
+            if demo, let fullSource {
+                ConversationDisclosureFixture.fullBindings[fullSource]!.wrappedValue = true
+                guard await flushAndWait(host, until: { rows().first?.frame.height ?? 3_000 < 3_000 }) != nil else {
+                    throw NavigationError("Demo viewport did not mount")
+                }
+                ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
+                return ["demo": true]
+            }
             let collapsed = rows().first?.frame.height ?? 0
             for iteration in 0..<6 {
-                guard let control = binding(for: kind) else { throw NavigationError("lost disclosure") }
+                guard let control = fullSource.flatMap({ ConversationDisclosureFixture.fullBindings[$0] }) ?? binding(for: kind) else { throw NavigationError("lost disclosure") }
                 NavigationRenderMetrics.stages = [:]
                 let headerY = rows().first?.convert(.zero, to: host).y ?? 0
                 let start = CACurrentMediaTime()
                 control.wrappedValue.toggle()
                 var heights: [CGFloat] = [], gaps: [Double] = [], contentHeights: [CGFloat] = [], scrollOffsets: [CGFloat] = [], headerOffsets: [CGFloat] = []
+                var geometry: [[String: CGFloat]] = []
                 var previous = start, lastChange = start
                 repeat {
                     try await Task.sleep(for: .milliseconds(8))
@@ -1224,27 +1276,146 @@ extension NavigationRunner {
                     contentHeights.append(rows().first?.subviews.first?.frame.height ?? 0)
                     scrollOffsets.append(scroll.contentView.bounds.minY)
                     headerOffsets.append((rows().first?.convert(.zero, to: host).y ?? 0) - headerY)
+                    if let document = ConversationTranscript.document(in: host), let row = rows().first {
+                        geometry.append(["document_height": document.bounds.height,
+                            "document_origin_in_host": document.convert(.zero, to: host).y,
+                            "row_y": row.frame.minY,
+                            "scroll_document_height": scroll.documentView?.bounds.height ?? 0])
+                    }
                 } while CACurrentMediaTime() - start < 0.5
                 let expanded = iteration % 2 == 0
                 let finalHeight = heights.last ?? 0
-                guard expanded ? finalHeight > collapsed + 500 : abs(finalHeight - collapsed) < 1 else {
+                let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count
+                samples.append(["kind": kind, "iteration": iteration, "expanded": expanded, "header_offsets": headerOffsets,
+                    "mismatched_frames": mismatches, "content_heights": contentHeights, "scroll_offsets": scrollOffsets,
+                    "settled_ms": (lastChange - start) * 1_000, "main_loop_gaps": statistics(gaps),
+                    "heights": heights, "geometry": geometry, "render_stages": NavigationRenderMetrics.report])
+                // Preserve the failing sample too; assertions must not erase the
+                // geometry needed to distinguish stale row height from scroll drift.
+                try writeNavigationArtifact("disclosure-samples.json", ["disclosures": samples])
+                let correctHeight = expanded && full && viewport ? finalHeight < 3_000 : finalHeight > collapsed + (viewport ? 200 : 500)
+                guard expanded ? correctHeight : abs(finalHeight - collapsed) < 1 else {
                     try writeNavigationArtifact("disclosure-failure.json", ["kind": kind, "iteration": iteration,
                         "heights": heights, "keys": Array(ConversationDisclosureFixture.bindings.keys)])
                     throw NavigationError("wrong final \(kind) height: \(finalHeight), collapsed \(collapsed)")
                 }
-                let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count
                 if ProcessInfo.processInfo.environment["NAVIGATION_ASSERT_ATOMIC_DISCLOSURE"] == "1" {
                     guard mismatches == 0 else { throw NavigationError("\(kind) had \(mismatches) frames with mismatched content and row heights") }
                 }
                 if withContext && headerOffsets.contains(where: { abs($0) > 1 }) {
                     throw NavigationError("\(kind) disclosure header moved during toggle: \(headerOffsets)")
                 }
-                samples.append(["kind": kind, "expanded": expanded, "header_offsets": headerOffsets,
-                    "mismatched_frames": mismatches, "content_heights": contentHeights, "scroll_offsets": scrollOffsets,
-                    "settled_ms": (lastChange - start) * 1_000, "main_loop_gaps": statistics(gaps),
-                    "heights": heights, "render_stages": NavigationRenderMetrics.report])
+                if full, expanded, let fullSource {
+                    var pending = rows(), textViews: [NSTextView] = []
+                    while let view = pending.popLast() {
+                        if let text = view as? NSTextView { textViews.append(text) }
+                        pending.append(contentsOf: view.subviews)
+                    }
+                    guard let text = textViews.first(where: { $0.string == fullSource }) else {
+                        throw NavigationError("Full output was truncated or missing")
+                    }
+                    let pasteboard = NSPasteboard.withUniqueName()
+                    defer { pasteboard.releaseGlobally() }
+                    text.window?.makeFirstResponder(text)
+                    text.setSelectedRange(NSRange(location: 0, length: (fullSource as NSString).length))
+                    let types = text.writablePasteboardTypes
+                    guard let stringType = types.first(where: { $0 == .string || $0.rawValue == "NSStringPboardType" }),
+                          text.writeSelection(to: pasteboard, types: types), pasteboard.string(forType: stringType) == fullSource else {
+                        throw NavigationError("Full Unicode selection/copy lost content: selected=\(text.selectedRange()), copied=\(pasteboard.string(forType: .string)?.utf16.count ?? -1), expected=\(fullSource.utf16.count), types=\(text.writablePasteboardTypes)")
+                    }
+                    text.setSelectedRange(NSRange(location: 0, length: 0))
+                    if viewport {
+                        guard text.textLayoutManager != nil, let inner = text.enclosingScrollView,
+                              inner.identifier?.rawValue == "perch-long-output", abs(inner.bounds.height - 360) < 1 else {
+                            throw NavigationError("Missing bounded TextKit 2 viewport")
+                        }
+                        let outerOffset = scroll.contentView.bounds.minY
+                        let handle = LongOutputReaderHandle(); handle.textView = text
+                        let needle = "Line \(lineCount - 1):"
+                        handle.query = needle
+                        handle.find()
+                        guard await flushAndWait(host, until: {
+                            let selection = text.selectedRange()
+                            return selection.length > 0 && (text.string as NSString).substring(with: selection) == needle
+                        }) != nil else { throw NavigationError("Find did not select the final line") }
+                        guard abs(scroll.contentView.bounds.minY - outerOffset) < 1 else {
+                            throw NavigationError("Inner find moved the conversation")
+                        }
+                        let matched = text.selectedRange()
+                        handle.find(backwards: true)
+                        guard text.selectedRange() == matched else { throw NavigationError("Backward find failed to wrap") }
+                        handle.query = "absent-output-fixture-token"
+                        handle.find()
+                        guard handle.found == false, text.selectedRange() == matched else {
+                            throw NavigationError("Missing query changed the selection")
+                        }
+                        text.setSelectedRange(NSRange(location: 0, length: 0))
+                        handle.query = "中文"
+                        handle.find()
+                        guard (text.string as NSString).substring(with: text.selectedRange()) == "中文" else {
+                            throw NavigationError("Unicode find selected the wrong UTF-16 range")
+                        }
+                        text.scrollRangeToVisible(NSRange(location: 0, length: 1))
+                        host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+                        guard text.textLayoutManager != nil else { throw NavigationError("Find forced TextKit 1 fallback") }
+                    }
+                }
             }
         }
-        return ["disclosures": samples]
+        if full && viewport { try await longOutputLifecycle() }
+        return ["lifecycle_checked": full && viewport, "disclosures": samples, "full_content": full, "output_lines": lineCount, "output_shape": wrappedLine ? "wrapped-line" : "lines", "variant": viewport ? "viewport" : "inline", "rss_final_mb": residentMB()]
+    }
+}
+
+
+extension NavigationRunner {
+    /// Mounted lifecycle checks use the production representable and update path.
+    private func longOutputLifecycle() async throws {
+        let handle = LongOutputReaderHandle()
+        let source = (0..<1000).map { "Live output \($0) 中文 emoji 👩🏽‍💻 é" }.joined(separator: "\n")
+        let root = NSHostingView(rootView: LongOutputReader(text: source, attributes: nil, handle: handle))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 360),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = root
+        window.orderFront(nil)
+        defer { window.close() }
+        guard await flushAndWait(root, until: { handle.textView?.string == source }) != nil,
+              let text = handle.textView, let scroll = text.enclosingScrollView else {
+            throw NavigationError("Lifecycle reader did not mount")
+        }
+        text.scrollRangeToVisible((source as NSString).range(of: "Live output 100"))
+        window.makeFirstResponder(text)
+        let selection = (source as NSString).range(of: "中文 emoji 👩🏽‍💻 é")
+        text.setSelectedRange(selection)
+        root.layoutSubtreeIfNeeded(); root.displayIfNeeded(); CATransaction.flush()
+        let offset = scroll.contentView.bounds.minY
+        if let findKey = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command,
+                                         timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                                         characters: "f", charactersIgnoringModifiers: "f", isARepeat: false, keyCode: 3) {
+            guard text.performKeyEquivalent(with: findKey), handle.searchVisible else {
+                throw NavigationError("Focused output did not handle local find")
+            }
+            handle.searchVisible = false
+            window.makeFirstResponder(nil)
+            _ = text.performKeyEquivalent(with: findKey)
+            guard !handle.searchVisible else { throw NavigationError("Unfocused output intercepted find") }
+            window.makeFirstResponder(text)
+        } else { throw NavigationError("Could not construct local find event") }
+        let appended = source + "\nA newly streamed line"
+        root.rootView = LongOutputReader(text: appended, attributes: nil, handle: handle)
+        guard await flushAndWait(root, until: { text.string == appended }) != nil,
+              handle.textView === text, text.selectedRange() == selection,
+              abs(scroll.contentView.bounds.minY - offset) <= 1 else {
+            throw NavigationError("Streaming append reset selection or reading position")
+        }
+        window.setContentSize(NSSize(width: 420, height: 360))
+        guard await flushAndWait(root, until: { abs(text.frame.width - scroll.contentView.bounds.width) < 1 }) != nil,
+              text.string == appended else { throw NavigationError("Resizing lost width tracking or content") }
+        root.rootView = LongOutputReader(text: "Replacement output", attributes: nil, handle: handle)
+        guard await flushAndWait(root, until: { text.string == "Replacement output" }) != nil,
+              text.selectedRange().length == 0, scroll.contentView.bounds.minY <= 1 else {
+            throw NavigationError("Replacement output retained old selection or offset")
+        }
     }
 }

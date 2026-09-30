@@ -1,0 +1,180 @@
+[
+  {
+    "name": "final-lines",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-navigation-check.py",
+      "disclosure",
+      "--full-content",
+      "--long-output-variant",
+      "viewport",
+      "--output-shape",
+      "lines",
+      "--disclosure-context",
+      "--assert-atomic-disclosure",
+      "--output",
+      ".local/long-output/validation/final-lines"
+    ]
+  },
+  {
+    "name": "final-wrapped-line",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-navigation-check.py",
+      "disclosure",
+      "--full-content",
+      "--long-output-variant",
+      "viewport",
+      "--output-shape",
+      "wrapped-line",
+      "--disclosure-context",
+      "--assert-atomic-disclosure",
+      "--output",
+      ".local/long-output/validation/final-wrapped-line"
+    ]
+  },
+  {
+    "name": "native-build",
+    "exit_code": 0,
+    "command": [
+      "bash",
+      "scripts/build-native-acceptance.sh"
+    ]
+  },
+  {
+    "name": "native-all",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-native-acceptance.py",
+      "--mode",
+      "all",
+      "--output",
+      ".local/long-output/validation/native-all"
+    ]
+  },
+  {
+    "name": "native-detail-lifecycle",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-native-acceptance.py",
+      "--mode",
+      "detail-lifecycle",
+      "--output",
+      ".local/long-output/validation/native-detail-lifecycle"
+    ]
+  },
+  {
+    "name": "native-kimi-input",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-native-acceptance.py",
+      "--mode",
+      "kimi-input",
+      "--output",
+      ".local/long-output/validation/native-kimi-input"
+    ]
+  },
+  {
+    "name": "native-input",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-native-acceptance.py",
+      "--mode",
+      "input",
+      "--output",
+      ".local/long-output/validation/native-input"
+    ]
+  },
+  {
+    "name": "production-build",
+    "exit_code": 0,
+    "command": [
+      "bash",
+      "scripts/build.sh"
+    ]
+  },
+  {
+    "name": "signature",
+    "exit_code": 0,
+    "command": [
+      "codesign",
+      "--verify",
+      "--deep",
+      "--strict",
+      "build/Perch.app"
+    ]
+  },
+  {
+    "name": "WorkbenchChecks",
+    "exit_code": 0,
+    "command": [
+      "swift",
+      "run",
+      "--build-system",
+      "native",
+      "-c",
+      "release",
+      "--skip-build",
+      "WorkbenchChecks"
+    ]
+  },
+  {
+    "name": "ConnectionChecks",
+    "exit_code": 0,
+    "command": [
+      "swift",
+      "run",
+      "--build-system",
+      "native",
+      "-c",
+      "release",
+      "--skip-build",
+      "ConnectionChecks"
+    ]
+  },
+  {
+    "name": "scroll-following",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/check-scroll-following.py"
+    ]
+  },
+  {
+    "name": "performance-tools",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Tests/Performance",
+      "-p",
+      "test_*.py"
+    ]
+  },
+  {
+    "name": "localization",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/check-localization.py"
+    ]
+  },
+  {
+    "name": "diff-check",
+    "exit_code": 0,
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ]
+  }
+]

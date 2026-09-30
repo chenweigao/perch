@@ -32,6 +32,12 @@ struct SessionRowChrome<Indicator: View>: View {
     private var showActions: Bool { hovered || focus != nil }
     private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 28 : 0 }
     private var trailingWidth: CGFloat { max(actionWidth, hostName == nil ? 0 : 28) }
+    private var rowHeight: CGFloat {
+        #if PERCH_ACCEPTANCE
+        if NativeAcceptanceProbe.shared.fixedSidebarHeight { return 48 }
+        #endif
+        return subtitle == nil ? 34 : 48
+    }
     var body: some View {
         HStack(spacing: 0) {
             Button {
@@ -42,12 +48,25 @@ struct SessionRowChrome<Indicator: View>: View {
                     indicator.frame(width: 17, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
+                        #if PERCH_ACCEPTANCE
+                        if NativeAcceptanceProbe.shared.persistentSubtitle {
+                            Text(subtitle ?? "").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                                .frame(height: subtitle == nil ? 0 : nil).clipped()
+                                .padding(.top, subtitle == nil ? -3 : 0)
+                                .accessibilityHidden(subtitle == nil)
+                        } else {
                         if let subtitle {
                             Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                         }
+                        }
+                        #else
+                        if let subtitle {
+                            Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }.padding(.leading, 10).padding(.trailing, 4)
-                    .frame(height: subtitle == nil ? 34 : 48).contentShape(Rectangle())
+                    .frame(height: rowHeight).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
                 .accessibilityLabel(title)
                 .accessibilityValue(([hostName, directory, detail].compactMap { $0 } + groups).joined(separator: " · "))
@@ -81,7 +100,7 @@ struct SessionRowChrome<Indicator: View>: View {
                     .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: showActions)
             }.frame(width: trailingWidth, alignment: .trailing)
-        }.padding(.trailing, 5).frame(height: subtitle == nil ? 34 : 48)
+        }.padding(.trailing, 5).frame(height: rowHeight)
             .background {
                 RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(selected ? 0.065 : hovered ? 0.03 : 0))
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: selected)

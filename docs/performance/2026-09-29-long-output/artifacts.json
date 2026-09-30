@@ -1,0 +1,39 @@
+{
+  "production": {
+    "path": "build/Perch.app",
+    "binary_sha256": "cbfbd3a77670821c4ca663053e6ff319f51e6b78b4cd115a2eb9729ae343dd2c",
+    "bundle_id": "dev.agentworkbench.mac",
+    "source_revision": "v0.1.0-209-gbe3f80b-dirty"
+  },
+  "preview": {
+    "path": "build/Perch Long Output Preview.app",
+    "binary_sha256": "4078ce8c6035c258ed287c5f0a9b4ef765c20f6622d120d94d71c2862e0dfd7d",
+    "bundle_id": "dev.perch.longoutputpreview",
+    "source_revision": "be3f80bd8a0ed1a07f4e2d7a8e252d62937e19b8"
+  },
+  "final-lines": {
+    "passed": true,
+    "build": {
+      "source_commit": "be3f80bd8a0ed1a07f4e2d7a8e252d62937e19b8",
+      "source_sha256": "3de2db7119af80bc5d64de9e36cfb3115a9ecd9fa52750a1ee2c1fa354036dcf",
+      "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "38c267bb2c0575378a5c967d18138a29545b53329af30a7cc0102a3f21916218",
+    "elapsed_s": 11.815857792
+  },
+  "final-wrapped-line": {
+    "passed": true,
+    "build": {
+      "source_commit": "be3f80bd8a0ed1a07f4e2d7a8e252d62937e19b8",
+      "source_sha256": "3de2db7119af80bc5d64de9e36cfb3115a9ecd9fa52750a1ee2c1fa354036dcf",
+      "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "38c267bb2c0575378a5c967d18138a29545b53329af30a7cc0102a3f21916218",
+    "elapsed_s": 12.125663874999999
+  },
+  "production_fixture_symbols_absent": true
+}

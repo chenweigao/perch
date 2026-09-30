@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 THEME = Path("Sources/AgentWorkbench/WorkbenchTheme.swift")
+PRESENTATION = Path("Sources/AgentWorkbench/ConversationPresentationEnvironment.swift")
 
 
 class PreviewSourceTests(unittest.TestCase):
@@ -41,6 +42,7 @@ class PreviewSourceTests(unittest.TestCase):
         self.git("commit", "-qm", "Add theme")
         self.after = self.git("rev-parse", "HEAD")
         (self.repo / THEME).write_text("// working tree theme\n")
+        (self.repo / PRESENTATION).write_text("// presentation environment\n")
         stubs = self.repo / "stubs"
         stubs.mkdir()
         # Stop immediately after source export, before metadata or compilation.
@@ -53,7 +55,7 @@ class PreviewSourceTests(unittest.TestCase):
     def git(self, *args):
         return subprocess.check_output(["git", *args], cwd=self.repo, text=True).strip()
 
-    def check_export(self, variant, ref=None, baseline=None, theme=None):
+    def check_export(self, variant, ref=None, baseline=None, theme=None, presentation=None):
         command = ["bash", "scripts/build-performance-preview.sh", variant]
         if ref:
             command.append(ref)
@@ -61,6 +63,9 @@ class PreviewSourceTests(unittest.TestCase):
         result = subprocess.run(command, cwd=self.repo, env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 97, result.stdout + result.stderr)
         snapshot = self.repo / ".local/performance-sources" / variant
+        self.assertEqual((snapshot / PRESENTATION).exists(), presentation is not None)
+        if presentation is not None:
+            self.assertEqual((snapshot / PRESENTATION).read_text(), presentation)
         self.assertEqual((snapshot / THEME).exists(), theme is not None)
         if theme is not None:
             self.assertEqual((snapshot / THEME).read_text(), theme)
@@ -79,4 +84,10 @@ class PreviewSourceTests(unittest.TestCase):
         self.check_export("current", ref=self.after, theme="// committed theme\n")
 
     def test_current_working_tree(self):
-        self.check_export("current", theme="// working tree theme\n")
+        self.check_export("current", theme="// working tree theme\n", presentation="// presentation environment\n")
+
+    def test_current_ref_with_presentation(self):
+        self.git("add", str(PRESENTATION))
+        self.git("commit", "-qm", "Add presentation environment")
+        self.check_export("current", ref=self.git("rev-parse", "HEAD"),
+                          theme="// committed theme\n", presentation="// presentation environment\n")

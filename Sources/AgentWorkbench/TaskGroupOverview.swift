@@ -3,7 +3,7 @@ import WorkbenchCore
 
 struct TaskGroupOverview: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     @State private var query = ""
     var body: some View {
         if model.selectedGroup == nil {

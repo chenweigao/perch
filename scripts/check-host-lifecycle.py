@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     subprocess.run([
         "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library",
         "-target", platform.machine() + "-apple-macosx14.0", *includes,
-        *map(str, sources), str(ROOT / "Tests/HostLifecycleChecks/App.swift"),
+        *map(str, sources), *map(str, sorted((ROOT / "Tests/HostLifecycleChecks").glob("*.swift"))),
         *map(str, objects), str(ghostty / "libghostty.a"), "-lc++",
         "-framework", "Carbon", "-framework", "Metal", "-framework", "QuartzCore",
         "-o", str(compiled),
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     shutil.copy2(compiled, executable)
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
     try:
-        for phase in ["seed", "restart", "removal", "connection-controls", "connection-restart"]:
+        for phase in ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture"]:
             subprocess.run([str(executable), phase], check=True, timeout=30)
     finally:
         subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)

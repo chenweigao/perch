@@ -4,12 +4,11 @@ import UniformTypeIdentifiers
 import WorkbenchCore
 
 struct NativeAgentView: View {
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let onResultDisplayed: (NativeAgentSnapshot) -> Void
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     @State private var activityReview = 0
-    @State private var palette = CommandPaletteState()
     private var displayedResultKey: String? {
         guard appActive, follow, connection.online,
               let snapshot = connection.snapshot, snapshot.id == connection.selectedID,
@@ -19,151 +18,198 @@ struct NativeAgentView: View {
         return "\(key):\(snapshot.completed)"
     }
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = NativeAcceptanceProbe.shared.nativeBodyEvaluations += 1
+        #endif
         VStack(spacing: 0) {
-            if let s = connection.snapshot {
-                let readingKey = "\(connection.host.id):native:\(s.id)"
-                ScrollViewReader { proxy in
-                    ConversationScrollView(showsScrollIndicator: !follow, hasOlderHistory: s.hasOlder, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
-                        if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                    }, onNearTop: {
-                        if s.hasOlder { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
-                    }) {
-                        if s.hasOlder {
-                            HStack {
-                                Button(connection.loadingOlder ? "加载中…" : "加载更早消息") {
-                                    follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
-                                }
-                            }.disabled(connection.loadingOlder || !connection.online).frame(maxWidth: .infinity)
-                        }
-                        ConversationTranscript(messages: s.messages, sessionId: s.id,
-                                               running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
-                                               isRunning: s.busy, online: connection.online, memoryKey: readingKey,
-                                               allowsActivitySummaries: true, followsLatest: follow)
-                        NativeRunControls(connection: connection, sessionID: s.id)
-                        Color.clear.frame(height: 1).id("pending-interactions")
-                        ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request) }
-                        Color.clear.frame(height: 1).id("bottom")
-                    }
-                        .overlay(alignment: .topTrailing) {
-                            if s.hasOlder {
-                                Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
-                                    follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
-                                }.font(.caption).buttonStyle(.bordered)
-                                    .disabled(connection.loadingOlder || !connection.online).padding(8)
-                            }
-                        }
-                        .overlay(alignment: .bottom) {
-                            ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                        .onChange(of: s.revision) { _, _ in
-                            if #unavailable(macOS 15) {
-                                if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                            }
-                        }
-                        .onChange(of: connection.queue.allItems.filter { $0.session.terminalID == s.id }) { _, _ in
-                            if #unavailable(macOS 15) {
-                                if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                            }
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
-                            if (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
-                        }
-                        .onChange(of: activityReview) { _, _ in
-                            follow = false; ConversationReadingMemory.shared.following[readingKey] = false; proxy.scrollTo("pending-interactions", anchor: .top)
-                        }
-                        .task(id: s.id) {
-                            follow = ConversationReadingMemory.shared.following[readingKey] ?? true
-                            await Task.yield()
-                            if !Task.isCancelled && follow { proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                }
-                .task(id: displayedResultKey) {
-                    if displayedResultKey != nil { onResultDisplayed(s) }
-                }
-                let recapKey = s.taskRecapRevision.map { "\(readingKey):\($0)" }
-                ConversationActivityBar(activity: ConversationActivity(
-                    messages: s.messages, isRunning: s.busy,
-                    running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
-                    online: connection.online,
-                    isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
-                    isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                    pendingCount: s.interactions.count, isStopping: connection.isStopping),
-                    isRunning: s.busy,
-                    timing: connection.timings.turns[s.id],
-                    online: connection.online, pendingCount: s.interactions.count,
-                    narrativeSession: readingKey,
-                    recapKey: recapKey,
-                    recapMessages: { try await connection.recapMessages(for: s.id) },
-                    onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
-                    .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
-                    .frame(maxWidth: .infinity).padding(.vertical, 6)
-                if let error = connection.actionError ?? s.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled).padding(10) }
-                if let command = s.commandResult {
-                    HStack(spacing: 6) {
-                        if command.status == "running" { ProgressView().controlSize(.small) }
-                        Text(command.status == "running" ? "正在压缩上下文…" : command.error ?? "上下文压缩完成")
-                            .font(.caption).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
-                    }.padding(6)
-                }
-                VStack(spacing: 8) {
-                    if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
-                        CommandPalette(completion: completion, selection: palette.selection) { command in
-                            apply(command, completion, to: s.id)
+            if let s = connection.conversation.presentationSnapshot {
+                content(s)
+                    #if PERCH_ACCEPTANCE
+                    .background {
+                        if NativeAcceptanceProbe.shared.checkDetailLifecycle {
+                            NativeDetailProbe(current: isCurrent(s))
                         }
                     }
-                    VStack(spacing: 8) {
-                        ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
-                                                      set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
-                                        host: connection.host, cwd: s.cwd,
-                                        placeholder: L("继续此任务…"),
-                                        accessibilityLabel: "Message \(s.provider.label)",
-                                        canSend: canSend(s),
-                                        onSend: { connection.send(mode: defaultMode(s)) },
-                                        onKey: { key in handle(key, for: s) }).id(s.id)
-                        ComposerToolbarLayout {
-                            ComposerAddButton(supportsFiles: false)
-                            NativeModelControls(connection: connection, snapshot: s)
-                            PermissionPicker(
-                                provider: s.provider,
-                                capability: connection.sessions.first { $0.id == s.id }?.permission
-                                    ?? s.permission
-                                    ?? PermissionCatalog.capability(for: s.provider),
-                                disabled: !connection.online,
-                                allowsSelection: [.qoder, .claude].contains(s.provider)
-                            ) { mode in
-                                connection.setPermission(mode, for: s.id)
-                            }
-                            ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
-                                         reportedAt: s.context?.reportedAt, isStale: !connection.online)
-                            ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
-                                                 canSend: canSend(s), canStop: connection.canStop,
-                                                 queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
-                                                 onSend: { connection.send(mode: defaultMode(s)) },
-                                                 onStop: { connection.stop() },
-                                                 onQueue: defaultMode(s) == .steer ? { connection.send(mode: .nextTurn) } : nil)
-                        }
-                    }.padding(12).workbenchControlSurface()
-                    ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
-                }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
-            } else if connection.online && connection.selectedID == nil {
-                Text("此会话已移除，请从侧栏选择其他会话。").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let error = connection.actionError, let id = connection.selectedID {
-                VStack(spacing: 14) {
-                    Text(error).foregroundStyle(.secondary).textSelection(.enabled)
-                    Button("Retry") { connection.select(id) }.disabled(!connection.online)
-                }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else { ProgressView("正在读取对话…").frame(maxWidth: .infinity, maxHeight: .infinity) }
+                    #endif
+                    .opacity(isCurrent(s) ? 1 : 0)
+                    .disabled(!isCurrent(s))
+                    .allowsHitTesting(isCurrent(s))
+                    .accessibilityHidden(!isCurrent(s))
+                    .overlay { if !isCurrent(s) { selectionPlaceholder } }
+            } else { selectionPlaceholder }
             if !connection.online { HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10) }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
-        .onChange(of: connection.selectedID) { _, _ in palette = CommandPaletteState() }
 
+    }
+    private func isCurrent(_ snapshot: NativeAgentSnapshot) -> Bool {
+        connection.selectedID == snapshot.id && connection.snapshot?.id == snapshot.id
+    }
+    @ViewBuilder private var selectionPlaceholder: some View {
+        if connection.online && connection.selectedID == nil {
+            Text("此会话已移除，请从侧栏选择其他会话。").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = connection.actionError, let id = connection.selectedID {
+            VStack(spacing: 14) {
+                Text(error).foregroundStyle(.secondary).textSelection(.enabled)
+                Button("Retry") { connection.select(id) }.disabled(!connection.online)
+            }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else { ProgressView("正在读取对话…").frame(maxWidth: .infinity, maxHeight: .infinity) }
+    }
+    private func content(_ s: NativeAgentSnapshot) -> some View {
+        VStack(spacing: 0) {
+            let readingKey = "\(connection.host.id):native:\(s.id)"
+            ScrollViewReader { proxy in
+                ConversationScrollView(showsScrollIndicator: !follow, hasOlderHistory: s.hasOlder, onScroll: { guard isCurrent(s) else { return }; if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
+                    if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                }, onNearTop: {
+                    if isCurrent(s), s.hasOlder { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
+                }) {
+                    if s.hasOlder {
+                        HStack {
+                            Button(connection.loadingOlder ? "加载中…" : "加载更早消息") {
+                                follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
+                            }
+                        }.disabled(connection.loadingOlder || !connection.online).frame(maxWidth: .infinity)
+                    }
+                    ConversationTranscript(messages: s.messages, sessionId: s.id,
+                                           running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
+                                           isRunning: s.busy, online: connection.online, memoryKey: readingKey,
+                                           allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
+                                           isSuspended: !isCurrent(s))
+                    NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
+                    Color.clear.frame(height: 1).id("pending-interactions")
+                    ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
+                    Color.clear.frame(height: 1).id("bottom")
+                }
+                    .overlay(alignment: .topTrailing) {
+                        if s.hasOlder {
+                            Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
+                                follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
+                            }.font(.caption).buttonStyle(.bordered)
+                                .disabled(connection.loadingOlder || !connection.online).padding(8)
+                        }
+                    }
+                    .overlay(alignment: .bottom) {
+                        ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
+                    .onChange(of: s.revision) { _, _ in
+                        if #unavailable(macOS 15) {
+                            if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
+                    }
+                    .onChange(of: connection.queue.allItems.filter { $0.session.terminalID == s.id }) { _, _ in
+                        if #unavailable(macOS 15) {
+                            if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
+                        if isCurrent(s), (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
+                    }
+                    .onChange(of: activityReview) { _, _ in
+                        guard isCurrent(s) else { return }
+                        follow = false; ConversationReadingMemory.shared.following[readingKey] = false; proxy.scrollTo("pending-interactions", anchor: .top)
+                    }
+                    .task(id: isCurrent(s) ? s.id : nil) {
+                        guard isCurrent(s) else { return }
+                        follow = ConversationReadingMemory.shared.following[readingKey] ?? true
+                        await Task.yield()
+                        if !Task.isCancelled && isCurrent(s) && follow { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
+            }
+            .task(id: displayedResultKey) {
+                if displayedResultKey != nil { onResultDisplayed(s) }
+            }
+            let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
+            ConversationActivityBar(activity: ConversationActivity(
+                messages: s.messages, isRunning: s.busy,
+                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
+                online: connection.online,
+                isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
+                isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
+                pendingCount: s.interactions.count, isStopping: connection.isStopping),
+                isRunning: s.busy,
+                timing: connection.timings.turns[s.id],
+                online: connection.online, pendingCount: s.interactions.count,
+                narrativeSession: readingKey,
+                recapKey: recapKey,
+                recapMessages: {
+                    guard isCurrent(s) else { throw CancellationError() }
+                    return try await connection.recapMessages(for: s.id)
+                },
+                onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
+                .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
+                .frame(maxWidth: .infinity).padding(.vertical, 6)
+            if let error = connection.actionError ?? s.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled).padding(10) }
+            if let command = s.commandResult {
+                HStack(spacing: 6) {
+                    if command.status == "running" { ProgressView().controlSize(.small) }
+                    Text(command.status == "running" ? "正在压缩上下文…" : command.error ?? "上下文压缩完成")
+                        .font(.caption).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
+                }.padding(6)
+            }
+            NativeComposerView(connection: connection, s: s).id(s.id)
+        }
+    }
+
+}
+
+/// Draft and palette updates are local to the input area, not the long transcript.
+private struct NativeComposerView: View {
+    let connection: NativeAgentConnection
+    let s: NativeAgentSnapshot
+    @State private var palette = CommandPaletteState()
+    var body: some View {
+        VStack(spacing: 8) {
+            if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
+                CommandPalette(completion: completion, selection: palette.selection) { command in
+                    apply(command, completion, to: s.id)
+                }
+            }
+            VStack(spacing: 8) {
+                ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
+                                              set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
+                                host: connection.host, cwd: s.cwd,
+                                placeholder: L("继续此任务…"),
+                                accessibilityLabel: "Message \(s.provider.label)",
+                                canSend: canSend(s),
+                                onSend: { send(defaultMode(s)) },
+                                onKey: { key in handle(key, for: s) }).id(s.id)
+                ComposerToolbarLayout {
+                    ComposerAddButton(supportsFiles: false)
+                    NativeModelControls(connection: connection, snapshot: s)
+                    PermissionPicker(
+                        provider: s.provider,
+                        capability: connection.sessions.first { $0.id == s.id }?.permission
+                            ?? s.permission
+                            ?? PermissionCatalog.capability(for: s.provider),
+                        disabled: !connection.online,
+                        allowsSelection: [.qoder, .claude].contains(s.provider)
+                    ) { mode in
+                        connection.setPermission(mode, for: s.id)
+                    }
+                    ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
+                                 reportedAt: s.context?.reportedAt, isStale: !connection.online)
+                    ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
+                                         canSend: canSend(s), canStop: connection.canStop,
+                                         queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
+                                         onSend: { send(defaultMode(s)) },
+                                         onStop: { if isCurrent { connection.stop() } },
+                                         onQueue: defaultMode(s) == .steer ? { send(.nextTurn) } : nil)
+                }
+            }.padding(12).workbenchControlSurface()
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
+        }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
+    }
+    private var isCurrent: Bool { connection.selectedID == s.id && connection.snapshot?.id == s.id }
+    private func send(_ mode: DeliveryMode) {
+        guard isCurrent else { return }
+        connection.send(mode: mode)
     }
     /// A running session may still accept text when the adapter can queue it, so the
     /// composer is not disabled just because a turn is in progress.
     private func canSend(_ s: NativeAgentSnapshot) -> Bool {
-        guard connection.online, !connection.sending, !connection.isStopping else { return false }
+        guard isCurrent, connection.online, !connection.sending, !connection.isStopping else { return false }
         guard !(connection.drafts[s.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         return !connection.modes(for: s.id).isEmpty
     }
@@ -197,7 +243,7 @@ struct NativeAgentView: View {
 
 struct NativeModelControls: View {
     @UILocalization private var L
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
     private var editable: Bool { [.omp, .dsh, .codex].contains(snapshot.provider) }
@@ -226,7 +272,7 @@ struct NativeModelControls: View {
 /// connection's controllers, so the label always reflects protocol evidence rather
 /// than the fact that a request was sent.
 struct NativeRunControls: View {
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let sessionID: String
     @State private var editingMessage: OutboundMessage?
 
@@ -242,7 +288,12 @@ struct NativeRunControls: View {
                         if !phase.isSettled { ProgressView().controlSize(.small) }
                         Text(phase.label).font(.caption)
                             .foregroundStyle(phase.canRetry ? .orange : .secondary).textSelection(.enabled)
-                        if phase.canRetry { Button("Retry stop") { connection.stop() }.font(.caption) }
+                        if phase.canRetry {
+                            Button("Retry stop") {
+                                guard connection.selectedID == sessionID, connection.snapshot?.id == sessionID else { return }
+                                connection.stop()
+                            }.font(.caption)
+                        }
                     }
                 }
                 if connection.queue.isPaused(reference) {
@@ -310,7 +361,7 @@ private struct PendingMessageEditor: View {
 }
 
 struct NativeInteractionView: View {
-    @ObservedObject var connection: NativeAgentConnection
+    let connection: NativeAgentConnection
     let request: JSONValue
     var sessionID: String? = nil
     @State private var text = ""

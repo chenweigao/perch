@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 build_root="${WORKBENCH_PREVIEW_BUILD_ROOT:-$PWD}"
-bin_dir="$(swift build --package-path "$build_root" -c release --show-bin-path)"
+bin_dir="$(swift build --build-system native --package-path "$build_root" -c release --show-bin-path)"
 app_dir="$PWD/build/Perch Demo.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 objects=()
@@ -13,8 +13,8 @@ done
 swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
-    Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
+    Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
     Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionRowChrome.swift Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/CommandPalette.swift Tests/PublicDemo/App.swift \

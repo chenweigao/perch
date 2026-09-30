@@ -2,6 +2,32 @@ import AppKit
 import Foundation
 import WorkbenchCore
 
+private final class KimiNamingProtocol: URLProtocol {
+    static let prompt = "Fix the login redirect loop in the sample app"
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func stopLoading() {}
+    override func startLoading() {
+        let path = request.url!.path
+        let id = String(path.split(separator: "/")[3])
+        let value: Any
+        if path.hasSuffix("/snapshot") {
+            value = ["epoch": "fixture", "as_of_seq": 10,
+                "session": ["id": id, "title": Self.prompt, "updated_at": "fixture", "busy": false,
+                            "last_turn_reason": "completed", "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/model"]],
+                "messages": ["items": [["id": "user-" + id, "role": "user", "created_at": "",
+                                        "content": [["type": "text", "text": Self.prompt]]]], "has_more": false],
+                "pending_approvals": [], "pending_questions": []] as [String: Any]
+        } else if path.hasSuffix("/prompts") { value = ["active": NSNull(), "queued": []] }
+        else if path.hasSuffix("/tasks") { value = ["items": []] }
+        else if path.hasSuffix("/goal") { value = NSNull() }
+        else { client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL)); return }
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: try! JSONSerialization.data(withJSONObject: ["code": 0, "data": value]))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+}
+
 @main struct NamingLifecycleChecks {
     @MainActor static func until(_ condition: () -> Bool) async throws {
         for _ in 0..<200 {
@@ -48,6 +74,20 @@ import WorkbenchCore
         precondition(calls == 1 && model.workspace.sessionTitles[reference("first").id] == "修复登录跳转")
         precondition(!model.namingInProgress.contains(reference("first").id))
         print("PASS: enabling naming rechecks the loaded session and saves its generated local title")
+
+        let kimiConfiguration = URLSessionConfiguration.ephemeral
+        kimiConfiguration.protocolClasses = [KimiNamingProtocol.self]
+        let kimi = KimiConnection(host: host, api: KimiAPI(baseURL: URL(string: "http://fixture.invalid")!, token: "fixture", configuration: kimiConfiguration))
+        kimi.select("kimi-loaded")
+        try await until { kimi.snapshotReady && !kimi.loading }
+        model.registerEnvironment(kimi: kimi, native: native)
+        func kimiReference(_ id: String) -> SessionReference { SessionReference(hostID: host.id, terminalID: id, kind: .kimi) }
+        try await until { model.workspace.autoNamedSessions.contains(kimiReference("kimi-loaded").id) }
+        kimi.select("kimi-next")
+        try await until { model.workspace.autoNamedSessions.contains(kimiReference("kimi-next").id) }
+        precondition(model.workspace.sessionTitles[kimiReference("kimi-loaded").id] == "修复登录跳转")
+        precondition(model.workspace.sessionTitles[kimiReference("kimi-next").id] == "修复登录跳转")
+        print("PASS: Kimi naming bridge catches up a loaded conversation and receives later snapshots")
 
         var pending: CheckedContinuation<String, Error>?
         model.sessionNamer = { _, _, _ in

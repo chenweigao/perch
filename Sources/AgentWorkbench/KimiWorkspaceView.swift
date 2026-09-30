@@ -8,15 +8,16 @@ private let kimiReadingWidth: CGFloat = ReplyStyle.readingWidth
 
 struct KimiWorkspaceView: View {
     @UILocalization private var L
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     let onNew: () -> Void
     let onInput: () -> Void
     let onResultDisplayed: (KimiSession) -> Void
-    @State private var chooseFiles = false
     @State private var activityReview = 0
-    @State private var palette = CommandPaletteState()
     @State private var transcriptSubject: KimiTask?
     var body: some View {
+        #if PERCH_ACCEPTANCE
+        let _ = { NativeAcceptanceProbe.shared.kimiBodyEvaluations += 1 }()
+        #endif
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
@@ -48,7 +49,8 @@ struct KimiWorkspaceView: View {
                     onOpenTranscript: { transcriptSubject = $0 })
                     .id(conversation.snapshot.session.id)
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
-                composer(sessionID: conversation.snapshot.session.id).id(conversation.snapshot.session.id)
+                KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
+                    .id(conversation.snapshot.session.id)
             } else if let id = connection.selectedId {
                 VStack(spacing: 14) {
                     if connection.loading { ProgressView("正在读取会话…") }
@@ -69,16 +71,7 @@ struct KimiWorkspaceView: View {
             if let problem = connection.error { errorBanner("连接中断，显示的是最近同步的内容。\n" + problem) }
             if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
-            .onChange(of: connection.selectedId) { _, _ in palette = CommandPaletteState() }
             .tint(kimiAccent)
-            .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
-                do {
-                    let urls = try result.get()
-                    if let id = connection.selectedId {
-                        addAttachments(urls, to: id)
-                    }
-                } catch { connection.actionError = error.localizedDescription }
-            }
             .sheet(item: $transcriptSubject) { task in
                 KimiSubagentTranscriptSheet(agentId: task.transcriptAgentId ?? task.id, subject: task,
                                             connection: connection)
@@ -86,7 +79,36 @@ struct KimiWorkspaceView: View {
 
     }
 
-    private func composer(sessionID: String) -> some View {
+    private func errorBanner(_ text: String, canRetry: Bool = false) -> some View {
+        HStack(alignment: .top) {
+            Image(systemName: "exclamationmark.circle")
+            Text(text).textSelection(.enabled)
+            Spacer()
+            if canRetry {
+                Button("Retry") { connection.reloadSelected() }.disabled(!connection.online || connection.loading)
+            }
+        }.font(.system(size: 12)).foregroundStyle(.orange).padding(12).background(.orange.opacity(0.06)).padding(.horizontal, 28)
+    }
+    /// An upgraded package with an older service still running. Informational: the
+    /// session keeps working, and restarting that service stays the user's call.
+    private func runtimeNotice(_ text: String) -> some View {
+        HStack(alignment: .top) {
+            Image(systemName: "info.circle")
+            Text(text).textSelection(.enabled)
+            Spacer()
+        }.font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
+            .background(Color.secondary.opacity(0.06)).padding(.horizontal, 28)
+    }
+}
+
+private struct KimiComposerView: View {
+    @UILocalization private var L
+    let connection: KimiConnection
+    let sessionID: String
+    let onInput: () -> Void
+    @State private var chooseFiles = false
+    @State private var palette = CommandPaletteState()
+    var body: some View {
         VStack(spacing: 10) {
             if let goal = connection.goal {
                 HStack(spacing: 8) {
@@ -166,6 +188,13 @@ struct KimiWorkspaceView: View {
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
         }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
+            .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+                do {
+                    let urls = try result.get()
+                    addAttachments(urls, to: sessionID)
+                } catch { connection.actionError = error.localizedDescription }
+            }
+
     }
     private func handle(_ key: ComposerKey, for id: String) -> Bool {
         let draft = connection.drafts[id] ?? ""
@@ -203,30 +232,10 @@ struct KimiWorkspaceView: View {
         (!(connection.drafts[connection.selectedId ?? ""] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
          !(connection.attachments[connection.selectedId ?? ""] ?? []).isEmpty))
     }
-    private func errorBanner(_ text: String, canRetry: Bool = false) -> some View {
-        HStack(alignment: .top) {
-            Image(systemName: "exclamationmark.circle")
-            Text(text).textSelection(.enabled)
-            Spacer()
-            if canRetry {
-                Button("Retry") { connection.reloadSelected() }.disabled(!connection.online || connection.loading)
-            }
-        }.font(.system(size: 12)).foregroundStyle(.orange).padding(12).background(.orange.opacity(0.06)).padding(.horizontal, 28)
-    }
-    /// An upgraded package with an older service still running. Informational: the
-    /// session keeps working, and restarting that service stays the user's call.
-    private func runtimeNotice(_ text: String) -> some View {
-        HStack(alignment: .top) {
-            Image(systemName: "info.circle")
-            Text(text).textSelection(.enabled)
-            Spacer()
-        }.font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
-            .background(Color.secondary.opacity(0.06)).padding(.horizontal, 28)
-    }
 }
 
 private struct KimiTimeline: View {
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     var activityReview: Int
     let onResultDisplayed: (KimiSession) -> Void
     @State private var appActive = NSApp.isActive
@@ -257,7 +266,7 @@ private struct KimiTimeline: View {
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.busy,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
-                                           allowsActivitySummaries: true, followsLatest: follow)
+                                           allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch)
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         VStack(alignment: .leading, spacing: 8) {
                             PendingMessageContent(text: prompt.text, status: prompt.label)
@@ -326,7 +335,7 @@ private struct KimiTimeline: View {
 struct KimiQuestionView: View {
     let question: KimiQuestion
     var sessionID: String? = nil
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     @State private var choices: [String: Set<String>] = [:]
     @State private var other: [String: String] = [:]
     private var answers: [String: JSONValue] {
@@ -378,7 +387,7 @@ struct KimiQuestionView: View {
 }
 
 struct KimiNewSession: View {
-    @ObservedObject var connection: KimiConnection
+    let connection: KimiConnection
     let onCreated: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""

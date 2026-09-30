@@ -4,7 +4,7 @@ import WorkbenchCore
 /// Title changes follow workspace selection, independently of streaming state.
 struct WorkbenchHeader: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
+    @Bindable var model: WorkbenchModel
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var title: String {
         if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? L("工作台") }
@@ -36,9 +36,9 @@ struct WorkbenchHeader: View {
 /// Only toolbar status observes the active stream; title and sidebar do not.
 struct WorkbenchHeaderActions: View {
     @UILocalization private var L
-    @ObservedObject var model: WorkbenchModel
-    @ObservedObject var kimi: KimiConnection
-    @ObservedObject var native: NativeAgentConnection
+    @Bindable var model: WorkbenchModel
+    let kimi: KimiConnection
+    let native: NativeAgentConnection
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var status: String? {
         if model.showDashboard { return nil }
