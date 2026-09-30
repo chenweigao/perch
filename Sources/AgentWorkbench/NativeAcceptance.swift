@@ -306,6 +306,7 @@ private struct ReferenceComposerFixtureView: View {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
+        if mode == "kimi-switching" { await kimiSwitching(); return }
         if mode.hasPrefix("kimi-") { await kimiInvalidation(input: mode == "kimi-input"); return }
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
@@ -441,6 +442,84 @@ private struct ReferenceComposerFixtureView: View {
             NSApp.terminate(nil)
         }
     }
+    private func kimiSwitching() async {
+        var report: [String: Any] = ["mode": "kimi-switching", "boundary": "native layout samples, not display frames"]
+        do {
+            let items = ["a", "b"].map { id in
+                WorkspaceSession(reference: SessionReference(hostID: model.kimi.host.id, terminalID: id, kind: .kimi),
+                    title: "Kimi switch \(id)", directory: "/fixture", hostName: "fixture", detail: "Kimi", online: true, section: .other, canMarkReviewed: false)
+            }
+            model.acceptanceUpdateCatalog(items); model.open(items[0])
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("Missing window") }
+            try await settle(window) { self.model.kimi.snapshotReady && self.transcript(in: window) != nil }
+            try await Task.sleep(for: .milliseconds(300)); flush(window)
+            var switches: [[String: Any]] = []
+            var savedAnchor: (entry: String, offset: CGFloat)?
+            for (step, index) in [1, 0, 1, 0, 1, 0].enumerated() {
+                if step == 4 {
+                    guard let scroll = transcript(in: window), let navigator = ConversationTranscript.navigator(in: scroll) else { throw WorkbenchError("Missing reader navigation") }
+                    navigator.select(80)
+                    try await settle(window) { navigator.current == 80 }
+                    savedAnchor = ConversationTranscript.readingAnchor(in: scroll)
+                    guard savedAnchor != nil else { throw WorkbenchError("Missing saved reading position") }
+                }
+                let oldScroll = transcript(in: window)
+                let oldDocument = oldScroll.flatMap { ConversationTranscript.document(in: $0) }
+                let start = CACurrentMediaTime()
+                model.open(items[index])
+                var samples: [[String: Any]] = []
+                for _ in 0..<60 {
+                    await Task.yield(); flush(window)
+                    var sample: [String: Any] = ["ms": (CACurrentMediaTime() - start) * 1000,
+                        "ready": model.kimi.snapshotReady,
+                        "session": model.kimi.conversation?.snapshot.session.id ?? "none"]
+                    if let scroll = transcript(in: window), let document = ConversationTranscript.document(in: scroll) {
+                        let visible = document.convert(scroll.contentView.bounds, from: scroll.contentView)
+                        let rows = document.subviews.filter { !$0.subviews.isEmpty && $0.frame.intersects(visible) }
+                        sample["rows"] = rows.compactMap { $0.identifier?.rawValue }
+                        sample["bottom_gap"] = (scroll.documentView?.bounds.maxY ?? 0) - scroll.contentView.bounds.maxY
+                        sample["origin"] = scroll.contentView.bounds.minY
+                        sample["document_height"] = document.bounds.height
+                        sample["document_hidden"] = document.isHidden
+                        sample["scroll_reused"] = scroll === oldScroll
+                        sample["document_reused"] = document === oldDocument
+                        if let anchor = ConversationTranscript.readingAnchor(in: scroll) {
+                            sample["anchor_entry"] = anchor.entry; sample["anchor_offset"] = anchor.offset
+                        }
+                    }
+                    samples.append(sample)
+                    try await Task.sleep(for: .milliseconds(8))
+                }
+                let target = items[index].reference.terminalID
+                switches.append(["target": target, "samples": samples])
+                report["switches"] = switches
+                let visible = samples.filter { $0["document_hidden"] as? Bool == false && !($0["rows"] as? [String] ?? []).isEmpty }
+                guard !visible.isEmpty, visible.allSatisfy({ ($0["session"] as? String) == target &&
+                    ($0["rows"] as? [String] ?? []).allSatisfy { $0.contains(":" + target + "-") } }) else {
+                    throw WorkbenchError("Switch exposed stale or missing rows")
+                }
+                guard step == 0 || visible.allSatisfy({ $0["scroll_reused"] as? Bool == true && $0["document_reused"] as? Bool == true }) else {
+                    throw WorkbenchError("Cached switch recreated the reader")
+                }
+                if step == 5, let savedAnchor {
+                    guard visible.allSatisfy({ $0["anchor_entry"] as? String == savedAnchor.entry && abs(($0["anchor_offset"] as? CGFloat ?? -999) - savedAnchor.offset) <= 1 }) else {
+                        throw WorkbenchError("Visible layout samples jumped before restoring the reading anchor")
+                    }
+                } else {
+                    guard visible.allSatisfy({ ($0["bottom_gap"] as? CGFloat ?? 999) <= 13 }) else {
+                        throw WorkbenchError("Visible layout samples jumped before arriving at the latest reply")
+                    }
+                }
+            }
+            report["saved_anchor_restored_before_display"] = true
+            report["switches"] = switches
+            report["status"] = "passed"
+        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        do { try writeReport(report, name: "result.json") } catch { exit(1) }
+        if report["status"] as? String != "passed" { exit(1) }
+        NSApp.terminate(nil)
+    }
+
     private func kimiInvalidation(input: Bool = false) async {
         var report: [String: Any] = ["mode": input ? "kimi-input" : "kimi-invalidation", "history_turns": 200, "catalog_sessions_during_measurement": 1,
             "invalidation_boundary": "production state writes and mounted composer text; excludes keyboard/IME latency"]

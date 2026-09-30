@@ -1,0 +1,141 @@
+diff --git a/Sources/AgentWorkbench/ConversationTranscriptView.swift b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+index 88aaed1..01ffb89 100644
+--- a/Sources/AgentWorkbench/ConversationTranscriptView.swift
++++ b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+@@ -99,16 +99,37 @@ struct KimiMessageView: View {
+ }
+ 
+ private struct UserMessageLayout: Layout {
+-    private func measure(width: CGFloat, subview: LayoutSubview) -> CGSize {
++    struct Measurement {
++        let width: CGFloat
++        let size: CGSize
++    }
++    func makeCache(subviews: Subviews) -> [Measurement] { [] }
++    func updateCache(_ cache: inout [Measurement], subviews: Subviews) { cache.removeAll(keepingCapacity: true) }
++    private func measure(width: CGFloat, subview: LayoutSubview, cache: inout [Measurement]) -> CGSize {
++        #if TRANSCRIPT_CHECKS
++        let baseline = ProcessInfo.processInfo.environment["NAVIGATION_USER_LAYOUT_VARIANT"] == "baseline"
++        #else
++        let baseline = false
++        #endif
++        if !baseline, let cached = cache.first(where: { $0.width == width }) { return cached.size }
++        #if TRANSCRIPT_CHECKS
++        let start = CACurrentMediaTime()
++        defer { NavigationRenderMetrics.record("user_bubble_measure", since: start) }
++        #endif
+         let idealWidth = subview.sizeThatFits(.unspecified).width
+-        return subview.sizeThatFits(ProposedViewSize(width: min(idealWidth, width * 0.85), height: nil))
++        let size = subview.sizeThatFits(ProposedViewSize(width: min(idealWidth, width * 0.85), height: nil))
++        if !baseline {
++            if cache.count == 4 { cache.removeFirst() }
++            cache.append(Measurement(width: width, size: size))
++        }
++        return size
+     }
+-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
++    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout [Measurement]) -> CGSize {
+         let width = max(1, proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? ReplyStyle.readingWidth)
+-        return CGSize(width: width, height: measure(width: width, subview: subviews[0]).height)
++        return CGSize(width: width, height: measure(width: width, subview: subviews[0], cache: &cache).height)
+     }
+-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+-        let size = measure(width: bounds.width, subview: subviews[0])
++    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout [Measurement]) {
++        let size = measure(width: bounds.width, subview: subviews[0], cache: &cache)
+         subviews[0].place(at: CGPoint(x: bounds.maxX, y: bounds.minY), anchor: .topTrailing,
+                           proposal: ProposedViewSize(size))
+     }
+diff --git a/Tests/NavigationPreview/App.swift b/Tests/NavigationPreview/App.swift
+index 6c0ccf6..12335c8 100644
+--- a/Tests/NavigationPreview/App.swift
++++ b/Tests/NavigationPreview/App.swift
+@@ -783,6 +783,46 @@ final class NavigationRunner {
+             throw NavigationError("same-ID update failed to replace mounted text or unnecessarily replaced its row host")
+         }
+         try record("same_id_native_text", ["updated": true, "host_reused": true])
++        // A Layout cache must follow content edits and wrapping widths, including
++        // same-ID user messages whose native host remains mounted.
++        let promptQuery = "第 1 轮："
++        guard let promptHit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: promptQuery, running: false).first else {
++            throw NavigationError("missing user bubble target")
++        }
++        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: promptHit, query: promptQuery))
++        try await settle()
++        func promptRow(in view: NSView) -> NSView? {
++            if view.identifier?.rawValue == promptHit.entryID { return view }
++            return view.subviews.lazy.compactMap { promptRow(in: $0) }.first
++        }
++        guard let promptHost = promptRow(in: scroll) else { throw NavigationError("user bubble is not mounted") }
++        let shortHeight = promptHost.frame.height
++        let longPrompt = Array(repeating: "更新后的问题包含中文、English wrapping and Unicode 👩🏽‍💻，需要保持完整内容。", count: 20).joined(separator: " ")
++        func replacePrompt(_ value: String) throws {
++            let updated = try NavigationHistory.conversation(turns: 200, salt: targets[0] + ":", revisedReply: revisedReply, revisedPrompt: value)
++            model.conversation?.reconcile(updated.snapshot)
++        }
++        try replacePrompt(longPrompt)
++        try await settle()
++        let narrowHeight = promptHost.frame.height
++        guard promptRow(in: scroll) === promptHost, contains(longPrompt, in: promptHost), narrowHeight > shortHeight + 100 else {
++            throw NavigationError("User bubble cache retained short-content geometry")
++        }
++        model.narrow = false
++        try await settle()
++        let wideHeight = promptHost.frame.height
++        guard wideHeight < narrowHeight - 20, contains(longPrompt, in: promptHost) else {
++            throw NavigationError("User bubble cache retained narrow-width geometry")
++        }
++        try replacePrompt("更新后的短问题")
++        try await settle()
++        guard promptRow(in: scroll) === promptHost, contains("更新后的短问题", in: promptHost), promptHost.frame.height < wideHeight - 100 else {
++            throw NavigationError("User bubble cache retained long-content geometry")
++        }
++        try record("user_bubble_cache", ["same_host": true, "short_height": shortHeight,
++                                        "long_narrow_height": narrowHeight, "long_wide_height": wideHeight,
++                                        "replacement_short_height": promptHost.frame.height])
++
+         try record("failures", ["checks": failures])
+         guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
+         return report
+diff --git a/Tests/NavigationPreview/History.swift b/Tests/NavigationPreview/History.swift
+index bba01f3..7638f13 100644
+--- a/Tests/NavigationPreview/History.swift
++++ b/Tests/NavigationPreview/History.swift
+@@ -14,7 +14,7 @@ enum NavigationHistory {
+     /// `salt` makes each fixture session a distinct conversation. Without it every
+     /// session shares one set of message IDs, so a switch looks like an edit of the
+     /// same rows rather than a move to different ones.
+-    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil) throws -> KimiConversation {
++    static func conversation(turns: Int, salt: String = "", streaming: Bool = false, revisedReply: String? = nil, revisedPrompt: String? = nil) throws -> KimiConversation {
+         var messages: [[String: Any]] = []
+         func message(_ suffix: String, _ role: String, _ content: [[String: Any]]) -> [String: Any] {
+             let id = salt + suffix
+@@ -28,7 +28,7 @@ enum NavigationHistory {
+             switch turn % 5 {
+             case 0:
+                 // Rich reply: Chinese prose, a table and a code block.
+-                messages.append(message(id + "a", "user", [["type": "text", "text": "第 \(turn + 1) 轮：请给出可核对的结论。"]]))
++                messages.append(message(id + "a", "user", [["type": "text", "text": turn == 0 ? (revisedPrompt ?? "第 \(turn + 1) 轮：请给出可核对的结论。") : "第 \(turn + 1) 轮：请给出可核对的结论。"]]))
+                 messages.append(message(id + "b", "assistant", [["type": "text", "text": """
+                 ## 第 \(turn + 1) 轮结果
+ 
+diff --git a/scripts/run-navigation-check.py b/scripts/run-navigation-check.py
+index c47a99b..4a64834 100644
+--- a/scripts/run-navigation-check.py
++++ b/scripts/run-navigation-check.py
+@@ -20,6 +20,7 @@ parser.add_argument("--scroll-step-points", type=float, default=0,
+ parser.add_argument("--disclosure-context", action="store_true")
+ parser.add_argument("--assert-atomic-disclosure", action="store_true")
+ parser.add_argument("--full-content", action="store_true")
++parser.add_argument("--user-layout-variant", choices=["baseline", "cached"], default="cached")
+ parser.add_argument("--long-output-variant", choices=["inline", "viewport"], default="viewport")
+ parser.add_argument("--output-lines", type=int, default=2400)
+ parser.add_argument("--output-shape", choices=["lines", "wrapped-line"], default="lines")
+@@ -41,6 +42,7 @@ environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="2
+                    NAVIGATION_DISCLOSURE_CONTEXT="1" if args.disclosure_context else "0",
+                    NAVIGATION_ASSERT_ATOMIC_DISCLOSURE="1" if args.assert_atomic_disclosure else "0",
+                    NAVIGATION_FULL_DISCLOSURE="1" if args.full_content else "0",
++                   NAVIGATION_USER_LAYOUT_VARIANT=args.user_layout_variant,
+                    NAVIGATION_LONG_OUTPUT_VARIANT=args.long_output_variant,
+                    NAVIGATION_OUTPUT_LINES=str(args.output_lines),
+                    NAVIGATION_OUTPUT_SHAPE=args.output_shape)

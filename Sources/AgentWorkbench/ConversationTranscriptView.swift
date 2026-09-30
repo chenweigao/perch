@@ -144,6 +144,8 @@ struct ConversationTranscript: View {
     var followsLatest = true
     var historyEpoch: String?
     var isSuspended = false
+    /// The owner restores its initial scroll position before this document is exposed.
+    var waitsForInitialPosition = false
     @Environment(\.conversationPresentations) private var presentations
     @State private var presentation = ConversationPresentationHandle()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
@@ -171,7 +173,7 @@ struct ConversationTranscript: View {
         ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
-                                 layout: documentLayout, suspended: isSuspended) { height in
+                                 layout: documentLayout, suspended: isSuspended, waitsForInitialPosition: waitsForInitialPosition) { height in
             measured = (sessionId, height)
         // Native rows can report their new height one layout pass before the
         // outer SwiftUI frame receives it. Keep the document's top fixed during
@@ -218,6 +220,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     let viewport: ConversationViewport?
     let layout: ConversationDocumentLayout
     var suspended = false
+    var waitsForInitialPosition = false
     let heightChanged: (CGFloat) -> Void
     func makeCoordinator() -> ConversationDocumentLayout { layout }
     func makeNSView(context: Context) -> ConversationDocumentView {
@@ -229,7 +232,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
         guard !suspended else { view.suspend(); return }
         view.heightChanged = heightChanged
         view.configure(contents, contentIdentity: contentIdentity, navigation: navigation, sessionId: sessionId, appearance: appearance,
-                       viewport: viewport, contentOriginY: layout.originY)
+                       viewport: viewport, contentOriginY: layout.originY, waitsForInitialPosition: waitsForInitialPosition)
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ConversationDocumentView, context: Context) -> CGSize? {
         if suspended { nsView.suspend() }
@@ -246,6 +249,8 @@ private struct ConversationDocumentHost: NSViewRepresentable {
 /// survive detachment; disclosure state lives in ConversationReadingMemory.
 private final class ConversationDocumentView: NSView {
     private var suspended = false
+    private var preparingInitialViewport = false
+    private var waitsForInitialPosition = false
     private var contents: [ConversationEntryView] = []
     private var contentIdentity: ConversationContentIdentity?
     private var indices: [String: Int] = [:]
@@ -455,7 +460,8 @@ private final class ConversationDocumentView: NSView {
 
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
-                   contentOriginY: CGFloat) {
+                   contentOriginY: CGFloat, waitsForInitialPosition: Bool = false) {
+        self.waitsForInitialPosition = waitsForInitialPosition
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("document_configure", since: start) }
@@ -478,7 +484,7 @@ private final class ConversationDocumentView: NSView {
             turnRows = navigation.compactMap { indices[$0.id] }
         }
         suspended = false
-        isHidden = false
+        isHidden = preparingInitialViewport
         self.contentOriginY = contentOriginY
         observeScroll()
         restoreReadingPosition()
@@ -526,6 +532,8 @@ private final class ConversationDocumentView: NSView {
             heights.removeAll()
             contents.removeAll()
             publishedHeight = nil
+            preparingInitialViewport = waitsForInitialPosition
+            isHidden = preparingInitialViewport
             self.sessionId = sessionId
         }
         let structureChanged = changedSession || contents.count != next.count || !zip(contents, next).allSatisfy {
@@ -646,8 +654,13 @@ private final class ConversationDocumentView: NSView {
     func refreshVisibleRows() {
         guard !suspended, !refreshing, let appearance = rowAppearance, !contents.isEmpty else { return }
         refreshing = true
-        defer { refreshing = false }
-        let visible = viewportRect
+        defer { refreshing = false; revealInitialViewportIfReady() }
+        var visible = viewportRect
+        if preparingInitialViewport, ConversationReadingMemory.shared.following[sessionId] != false {
+            // Lay out the incoming tail directly, not the outgoing clip position
+            // or the top of a newly created scroll view. Keep estimates hidden.
+            visible.origin.y = max(0, totalHeight - visible.height)
+        }
         var index = min(geometry.firstIntersecting(max(0, visible.minY)), contents.count - 1)
         let first = index
         let end = max(first, geometry.end(before: visible.maxY))
@@ -704,6 +717,15 @@ private final class ConversationDocumentView: NSView {
         Self.retire(retired)
         publishHeight()
     }
+    private func revealInitialViewportIfReady() {
+        guard preparingInitialViewport, !suspended, observedClip != nil,
+              abs(bounds.height - totalHeight) < 1, restoreTarget == nil else { return }
+        if !contents.isEmpty, ConversationReadingMemory.shared.following[sessionId] != false,
+           viewportRect.maxY < totalHeight - 1 { return }
+        preparingInitialViewport = false
+        isHidden = false
+    }
+
     private func beginDisclosureChange(_ id: String) {
         measuredSizes.removeValue(forKey: id)
         laidOutRange = nil
@@ -768,6 +790,7 @@ private final class ConversationDocumentView: NSView {
     override func layout() {
         super.layout()
         restoreReadingPosition()
+        revealInitialViewportIfReady()
     }
     private func readingRowForAnchor() -> Int? {
         // During upward scrolling, a cold estimated row can enter above rows
@@ -780,7 +803,7 @@ private final class ConversationDocumentView: NSView {
         }.min() ?? geometry.readingRow(at: max(0, visible.minY))
     }
     private func saveReadingPosition() {
-        guard !suspended, restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
+        guard !suspended, !preparingInitialViewport, restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
               let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
         ConversationReadingMemory.shared.savePosition(.init(entry: contents[index].entry.id,
@@ -792,6 +815,8 @@ private final class ConversationDocumentView: NSView {
     }
     fileprivate func cancelPendingRestoration() {
         guard !suspended else { return }
+        preparingInitialViewport = false
+        isHidden = false
         readingIntent += 1
         restoreTarget = nil
     }

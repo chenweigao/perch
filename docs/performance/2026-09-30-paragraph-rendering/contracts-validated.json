@@ -1,0 +1,297 @@
+{
+  "supervisor": {
+    "status": "exited",
+    "mode": "paragraphs",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_GROUP_PARAGRAPHS": "1",
+      "NAVIGATION_AUTORUN": "paragraphs",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_RESULTS": ".local/paragraph-experiment/contracts-validated",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+      "source_sha256": "1e297938cfaa22c2046c4d4f106d40782a8a4dfe907300f3c15f66e97adda53a",
+      "fixture_sha256": "561ffb528d263d67de4c987cf2816c38395788595ca34953451bba907113f232",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "63b54337be818ea2a80e274843db98fc7e186d1a0bf0719807f86f3cb4f85711",
+    "pid": 26014,
+    "exit_code": 0,
+    "elapsed_s": 4.818208166000001,
+    "passed": true
+  },
+  "result": {
+    "build": {
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "fixture_sha256": "561ffb528d263d67de4c987cf2816c38395788595ca34953451bba907113f232",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "source_commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+      "source_sha256": "1e297938cfaa22c2046c4d4f106d40782a8a4dfe907300f3c15f66e97adda53a"
+    },
+    "commit": "ee6dc1ac987dcc27d1f4bf8c925ce1df8473a3d6",
+    "history_source": "navigation-mixed",
+    "history_turns": 200,
+    "macos": "Version 27.0 (Build 26A428)",
+    "mode": "paragraphs",
+    "paragraph_samples": [
+      {
+        "glyph_y": {
+          "AfterCode": 402,
+          "AfterEmpty": 463,
+          "AfterInlineCode": 533,
+          "Alpha": 31,
+          "Beta": 66,
+          "CodeMarker": 360,
+          "CodeOnlyMarker": 498,
+          "Gamma": 124,
+          "HardLine": 88.75,
+          "Heading marker": 0,
+          "ListAlpha": 239,
+          "ListBeta": 270,
+          "QuoteAlpha": 166,
+          "QuoteBeta": 197
+        },
+        "grouped": false,
+        "host_width": 700,
+        "links": true,
+        "native_content_bottom": 402,
+        "native_text_views": 14,
+        "text_widths": [
+          106,
+          257,
+          400,
+          423,
+          199,
+          204,
+          164,
+          188,
+          217,
+          172,
+          0,
+          147,
+          113,
+          175
+        ],
+        "unicode_copy": false,
+        "width": 700
+      },
+      {
+        "glyph_y": {
+          "AfterCode": 401,
+          "AfterEmpty": 462,
+          "AfterInlineCode": 531.5,
+          "Alpha": 31,
+          "Beta": 65.75,
+          "CodeMarker": 359,
+          "CodeOnlyMarker": 496.75,
+          "Gamma": 123.25,
+          "HardLine": 88.5,
+          "Heading marker": 0,
+          "ListAlpha": 238,
+          "ListBeta": 268.75,
+          "QuoteAlpha": 165,
+          "QuoteBeta": 195.75
+        },
+        "grouped": true,
+        "host_width": 700,
+        "links": true,
+        "native_content_bottom": 401,
+        "native_text_views": 8,
+        "text_widths": [
+          106,
+          423,
+          204,
+          188,
+          217,
+          172,
+          0,
+          175
+        ],
+        "unicode_copy": true,
+        "width": 700
+      },
+      {
+        "glyph_deltas": {
+          "AfterCode": 1,
+          "AfterEmpty": 1,
+          "AfterInlineCode": 1.5,
+          "Alpha": 0,
+          "Beta": 0.25,
+          "CodeMarker": 1,
+          "CodeOnlyMarker": 1.25,
+          "Gamma": 0.75,
+          "HardLine": 0.25,
+          "Heading marker": 0,
+          "ListAlpha": 1,
+          "ListBeta": 1.25,
+          "QuoteAlpha": 1,
+          "QuoteBeta": 1.25
+        },
+        "max_glyph_delta": 1.5,
+        "width": 700
+      },
+      {
+        "glyph_y": {
+          "AfterCode": 448,
+          "AfterEmpty": 509,
+          "AfterInlineCode": 579,
+          "Alpha": 31,
+          "Beta": 66,
+          "CodeMarker": 406,
+          "CodeOnlyMarker": 544,
+          "Gamma": 147,
+          "HardLine": 88.75,
+          "Heading marker": 0,
+          "ListAlpha": 285,
+          "ListBeta": 316,
+          "QuoteAlpha": 212,
+          "QuoteBeta": 243
+        },
+        "grouped": false,
+        "host_width": 340,
+        "links": true,
+        "native_content_bottom": 448,
+        "native_text_views": 14,
+        "text_widths": [
+          106,
+          257,
+          275,
+          310,
+          199,
+          204,
+          164,
+          188,
+          217,
+          172,
+          0,
+          147,
+          113,
+          175
+        ],
+        "unicode_copy": false,
+        "width": 340
+      },
+      {
+        "glyph_y": {
+          "AfterCode": 447,
+          "AfterEmpty": 508,
+          "AfterInlineCode": 577.5,
+          "Alpha": 31,
+          "Beta": 65.75,
+          "CodeMarker": 405,
+          "CodeOnlyMarker": 542.75,
+          "Gamma": 146,
+          "HardLine": 88.5,
+          "Heading marker": 0,
+          "ListAlpha": 284,
+          "ListBeta": 314.75,
+          "QuoteAlpha": 211,
+          "QuoteBeta": 241.75
+        },
+        "grouped": true,
+        "host_width": 340,
+        "links": true,
+        "native_content_bottom": 447,
+        "native_text_views": 8,
+        "text_widths": [
+          106,
+          310,
+          204,
+          188,
+          217,
+          172,
+          0,
+          175
+        ],
+        "unicode_copy": true,
+        "width": 340
+      },
+      {
+        "glyph_deltas": {
+          "AfterCode": 1,
+          "AfterEmpty": 1,
+          "AfterInlineCode": 1.5,
+          "Alpha": 0,
+          "Beta": 0.25,
+          "CodeMarker": 1,
+          "CodeOnlyMarker": 1.25,
+          "Gamma": 1,
+          "HardLine": 0.25,
+          "Heading marker": 0,
+          "ListAlpha": 1,
+          "ListBeta": 1.25,
+          "QuoteAlpha": 1,
+          "QuoteBeta": 1.25
+        },
+        "max_glyph_delta": 1.5,
+        "width": 340
+      }
+    ],
+    "recreates_timeline": false,
+    "replacement": true,
+    "sessions": 500,
+    "status": "passed",
+    "streaming_identity": true,
+    "streaming_samples": [
+      {
+        "grouped": false,
+        "identity_preserved": true,
+        "median_ms": 5.799291655421257,
+        "native_text_views": 128,
+        "p95_ms": 7.655916619114578,
+        "paragraphs": 128,
+        "render_stages": {
+          "attributed_text": {
+            "count": 40,
+            "ms": 1.2218329356983304
+          },
+          "markdown_parse": {
+            "count": 40,
+            "ms": 132.92158325202763
+          },
+          "text_measure": {
+            "count": 40,
+            "ms": 4.338958184234798
+          }
+        }
+      },
+      {
+        "grouped": true,
+        "identity_preserved": true,
+        "median_ms": 5.328833358362317,
+        "native_text_views": 16,
+        "p95_ms": 7.227791706100106,
+        "paragraphs": 128,
+        "render_stages": {
+          "attributed_text": {
+            "count": 40,
+            "ms": 3.7726665614172816
+          },
+          "markdown_parse": {
+            "count": 40,
+            "ms": 132.04374979250133
+          },
+          "text_measure": {
+            "count": 40,
+            "ms": 9.955167071893811
+          }
+        }
+      }
+    ],
+    "streaming_selection": true,
+    "timestamp": "2026-09-30T13:31:28Z"
+  }
+}

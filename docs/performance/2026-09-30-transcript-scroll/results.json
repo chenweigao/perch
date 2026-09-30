@@ -1,0 +1,1456 @@
+{
+  "runs": [
+    {
+      "experiment": "cache-matrix",
+      "run": "baseline-1",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "af5e1795e3714143ca780ab91d04f7cf52c911e19510226f52681cc341ebca73",
+        "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "04f04fa934c1d1eb87c1f04642ad3ab980e8cd350c6a3de0dbe9310f71c6e6ab",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 22.26679166778922,
+          "median_ms": 9.436125052161515,
+          "over_16_7ms": 38,
+          "over_100ms": 0,
+          "p95_ms": 18.250041757710278
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 16.818041680380702,
+          "median_ms": 6.2116667395457625,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 14.300333335995674
+        },
+        "resident_mb_before_reading": 139.203125,
+        "resident_mb_after_downward": 165.28125,
+        "resident_mb_after_upward": 167.453125,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 24.552833288908005,
+            "median_ms": 16.69833331834525,
+            "over_16_7ms": 119,
+            "over_100ms": 0,
+            "p95_ms": 21.73070830758661,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "cache-matrix",
+      "run": "baseline-2",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "af5e1795e3714143ca780ab91d04f7cf52c911e19510226f52681cc341ebca73",
+        "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "04f04fa934c1d1eb87c1f04642ad3ab980e8cd350c6a3de0dbe9310f71c6e6ab",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 22.140625049360096,
+          "median_ms": 9.212208329699934,
+          "over_16_7ms": 37,
+          "over_100ms": 0,
+          "p95_ms": 17.874583369120955
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 16.7999166296795,
+          "median_ms": 5.626750062219799,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 13.730541686527431
+        },
+        "resident_mb_before_reading": 139.8125,
+        "resident_mb_after_downward": 166.203125,
+        "resident_mb_after_upward": 168.078125,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 23.658458259887993,
+            "median_ms": 16.52191672474146,
+            "over_16_7ms": 117,
+            "over_100ms": 0,
+            "p95_ms": 20.575666683726013,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "cache-matrix",
+      "run": "baseline-3",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "af5e1795e3714143ca780ab91d04f7cf52c911e19510226f52681cc341ebca73",
+        "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "04f04fa934c1d1eb87c1f04642ad3ab980e8cd350c6a3de0dbe9310f71c6e6ab",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 21.74720831681043,
+          "median_ms": 9.678749949671328,
+          "over_16_7ms": 40,
+          "over_100ms": 0,
+          "p95_ms": 18.796291667968035
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.673833343200386,
+          "median_ms": 6.3252917025238276,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 14.433208387345076
+        },
+        "resident_mb_before_reading": 140.234375,
+        "resident_mb_after_downward": 166.34375,
+        "resident_mb_after_upward": 167.984375,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 22.20833336468786,
+            "median_ms": 15.713458298705518,
+            "over_16_7ms": 101,
+            "over_100ms": 0,
+            "p95_ms": 19.947166671045125,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "cache-matrix",
+      "run": "cached-1",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "af5e1795e3714143ca780ab91d04f7cf52c911e19510226f52681cc341ebca73",
+        "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "04f04fa934c1d1eb87c1f04642ad3ab980e8cd350c6a3de0dbe9310f71c6e6ab",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 20.96554171293974,
+          "median_ms": 9.55608335789293,
+          "over_16_7ms": 34,
+          "over_100ms": 0,
+          "p95_ms": 18.154041725210845
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.447458394803107,
+          "median_ms": 5.706333322450519,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 13.761833310127258
+        },
+        "resident_mb_before_reading": 140.078125,
+        "resident_mb_after_downward": 165.703125,
+        "resident_mb_after_upward": 167.921875,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 21.527749951928854,
+            "median_ms": 15.379166696220636,
+            "over_16_7ms": 90,
+            "over_100ms": 0,
+            "p95_ms": 19.288333249278367,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "cache-matrix",
+      "run": "cached-2",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "af5e1795e3714143ca780ab91d04f7cf52c911e19510226f52681cc341ebca73",
+        "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "04f04fa934c1d1eb87c1f04642ad3ab980e8cd350c6a3de0dbe9310f71c6e6ab",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 19.95366672053933,
+          "median_ms": 8.9082500198856,
+          "over_16_7ms": 32,
+          "over_100ms": 0,
+          "p95_ms": 17.827749950811267
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 17.842333298176527,
+          "median_ms": 6.355041638016701,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 14.639250002801418
+        },
+        "resident_mb_before_reading": 139.765625,
+        "resident_mb_after_downward": 165.625,
+        "resident_mb_after_upward": 167.875,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 24.32112500537187,
+            "median_ms": 16.151916584931314,
+            "over_16_7ms": 113,
+            "over_100ms": 0,
+            "p95_ms": 22.057208348996937,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "cache-matrix",
+      "run": "cached-3",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "af5e1795e3714143ca780ab91d04f7cf52c911e19510226f52681cc341ebca73",
+        "fixture_sha256": "d61f3b2a66f7d7776cbf0ae9fbe452fc646b23e2163654c4eea30120186284bd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "04f04fa934c1d1eb87c1f04642ad3ab980e8cd350c6a3de0dbe9310f71c6e6ab",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 21.23258332721889,
+          "median_ms": 10.01291663851589,
+          "over_16_7ms": 32,
+          "over_100ms": 0,
+          "p95_ms": 19.155791611410677
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.982333363965154,
+          "median_ms": 6.066375062800944,
+          "over_16_7ms": 4,
+          "over_100ms": 0,
+          "p95_ms": 14.060750021599233
+        },
+        "resident_mb_before_reading": 139.671875,
+        "resident_mb_after_downward": 165.75,
+        "resident_mb_after_upward": 168.578125,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 22.283124970272183,
+            "median_ms": 15.691124950535595,
+            "over_16_7ms": 91,
+            "over_100ms": 0,
+            "p95_ms": 19.244416616857052,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "baseline-reading-1",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 20.479916711337864,
+          "median_ms": 9.215458296239376,
+          "over_16_7ms": 26,
+          "over_100ms": 0,
+          "p95_ms": 17.539666732773185
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.587208352982998,
+          "median_ms": 5.928250029683113,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 13.98104161489755
+        },
+        "resident_mb_before_reading": 139.484375,
+        "resident_mb_after_downward": 166.21875,
+        "resident_mb_after_upward": 168.765625,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "render_stages": {
+            "attributed_text": {
+              "count": 2796,
+              "ms": 47.32866806443781
+            },
+            "host_attach": {
+              "count": 825,
+              "ms": 41.805875953286886
+            },
+            "host_create": {
+              "count": 806,
+              "ms": 29.311666963621974
+            },
+            "host_detach": {
+              "count": 825,
+              "ms": 0.07420615293085575
+            },
+            "host_first_attach": {
+              "count": 806,
+              "ms": 39.76299928035587
+            },
+            "host_reattach": {
+              "count": 19,
+              "ms": 2.13404162786901
+            },
+            "host_view": {
+              "count": 806,
+              "ms": 8.668334339745343
+            },
+            "markdown_parse": {
+              "count": 525,
+              "ms": 130.403540446423
+            },
+            "text_create": {
+              "count": 2951,
+              "ms": 19.256536732427776
+            },
+            "text_measure": {
+              "count": 5955,
+              "ms": 250.1550818560645
+            },
+            "text_reuse": {
+              "count": 2946,
+              "ms": 0.11337501928210258
+            }
+          },
+          "reversal": false,
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 21.1637084139511,
+            "median_ms": 15.171083272434771,
+            "over_16_7ms": 77,
+            "over_100ms": 0,
+            "p95_ms": 19.109666696749628,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "baseline-reading-2",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 20.013750065118074,
+          "median_ms": 9.26287507172674,
+          "over_16_7ms": 26,
+          "over_100ms": 0,
+          "p95_ms": 18.05620826780796
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.6704583466053,
+          "median_ms": 5.8669166173785925,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 14.240208314731717
+        },
+        "resident_mb_before_reading": 139.25,
+        "resident_mb_after_downward": 165.765625,
+        "resident_mb_after_upward": 168.78125,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "render_stages": {
+            "attributed_text": {
+              "count": 2796,
+              "ms": 47.68287995830178
+            },
+            "host_attach": {
+              "count": 825,
+              "ms": 41.819165693596005
+            },
+            "host_create": {
+              "count": 806,
+              "ms": 29.410417075268924
+            },
+            "host_detach": {
+              "count": 825,
+              "ms": 0.0710849417373538
+            },
+            "host_first_attach": {
+              "count": 806,
+              "ms": 39.69420783687383
+            },
+            "host_reattach": {
+              "count": 19,
+              "ms": 2.2058753529563546
+            },
+            "host_view": {
+              "count": 806,
+              "ms": 8.707543718628585
+            },
+            "markdown_parse": {
+              "count": 525,
+              "ms": 130.2782482234761
+            },
+            "text_create": {
+              "count": 2951,
+              "ms": 19.39687377307564
+            },
+            "text_measure": {
+              "count": 5955,
+              "ms": 252.26941308937967
+            },
+            "text_reuse": {
+              "count": 2946,
+              "ms": 0.13237458188086748
+            }
+          },
+          "reversal": false,
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 22.70858339034021,
+            "median_ms": 15.154291642829776,
+            "over_16_7ms": 82,
+            "over_100ms": 0,
+            "p95_ms": 19.163166638463736,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "baseline-reading-3",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 19.536791718564928,
+          "median_ms": 9.319208329543471,
+          "over_16_7ms": 26,
+          "over_100ms": 0,
+          "p95_ms": 17.307416652329266
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.654625047929585,
+          "median_ms": 6.083250045776367,
+          "over_16_7ms": 3,
+          "over_100ms": 0,
+          "p95_ms": 13.779458357021213
+        },
+        "resident_mb_before_reading": 139.96875,
+        "resident_mb_after_downward": 166.171875,
+        "resident_mb_after_upward": 168.78125,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "render_stages": {
+            "attributed_text": {
+              "count": 2796,
+              "ms": 47.71974706090987
+            },
+            "host_attach": {
+              "count": 825,
+              "ms": 41.67675122153014
+            },
+            "host_create": {
+              "count": 806,
+              "ms": 28.992668609134853
+            },
+            "host_detach": {
+              "count": 825,
+              "ms": 0.07541500963270664
+            },
+            "host_first_attach": {
+              "count": 806,
+              "ms": 39.52908481005579
+            },
+            "host_reattach": {
+              "count": 19,
+              "ms": 2.2232085466384888
+            },
+            "host_view": {
+              "count": 806,
+              "ms": 8.645835216157138
+            },
+            "markdown_parse": {
+              "count": 525,
+              "ms": 129.48395824059844
+            },
+            "text_create": {
+              "count": 2951,
+              "ms": 19.812290905974805
+            },
+            "text_measure": {
+              "count": 5955,
+              "ms": 251.61962676793337
+            },
+            "text_reuse": {
+              "count": 2941,
+              "ms": 0.14224834740161896
+            }
+          },
+          "reversal": false,
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 20.488708396442235,
+            "median_ms": 15.138708404265344,
+            "over_16_7ms": 82,
+            "over_100ms": 0,
+            "p95_ms": 19.22520832158625,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "baseline-reversal-1",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "scroll_step_ms": {
+          "count": 1200,
+          "document_height": 85578,
+          "final_document_height": 85242,
+          "max_ms": 16.51187497191131,
+          "median_ms": 0.4420001059770584,
+          "over_16_7ms": 0,
+          "over_100ms": 0,
+          "p95_ms": 1.1574584059417248,
+          "step_points": 16,
+          "viewport_height": 600
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 12,
+            "ms": 0.270125106908381
+          },
+          "document_configure": {
+            "count": 7,
+            "ms": 0.01225003506988287
+          },
+          "host_attach": {
+            "count": 120,
+            "ms": 12.76129181496799
+          },
+          "host_create": {
+            "count": 7,
+            "ms": 0.4611664917320013
+          },
+          "host_detach": {
+            "count": 120,
+            "ms": 0.013166922144591808
+          },
+          "host_first_attach": {
+            "count": 7,
+            "ms": 0.5788749549537897
+          },
+          "host_first_measure": {
+            "count": 7,
+            "ms": 12.631458230316639
+          },
+          "host_measure": {
+            "count": 7,
+            "ms": 12.630750075913966
+          },
+          "host_measure_assistant": {
+            "count": 5,
+            "ms": 10.892708436585963
+          },
+          "host_measure_user": {
+            "count": 2,
+            "ms": 1.7425833502784371
+          },
+          "host_reattach": {
+            "count": 113,
+            "ms": 12.19387468881905
+          },
+          "host_view": {
+            "count": 7,
+            "ms": 0.14887505676597357
+          },
+          "markdown_parse": {
+            "count": 6,
+            "ms": 0.8031667675822973
+          },
+          "row_geometry": {
+            "count": 7,
+            "ms": 0.0950834946706891
+          },
+          "text_create": {
+            "count": 14,
+            "ms": 1.2640415225178003
+          },
+          "text_measure": {
+            "count": 37,
+            "ms": 8.049500291235745
+          },
+          "text_reuse": {
+            "count": 7,
+            "ms": 0.0007915077731013298
+          }
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "baseline-reversal-2",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "scroll_step_ms": {
+          "count": 1200,
+          "document_height": 85578,
+          "final_document_height": 85242,
+          "max_ms": 16.11399999819696,
+          "median_ms": 0.4412916023284197,
+          "over_16_7ms": 0,
+          "over_100ms": 0,
+          "p95_ms": 1.1098749237135053,
+          "step_points": 16,
+          "viewport_height": 600
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 12,
+            "ms": 0.2655833959579468
+          },
+          "document_configure": {
+            "count": 7,
+            "ms": 0.01362490002065897
+          },
+          "host_attach": {
+            "count": 120,
+            "ms": 12.297332985326648
+          },
+          "host_create": {
+            "count": 7,
+            "ms": 0.5393750034272671
+          },
+          "host_detach": {
+            "count": 120,
+            "ms": 0.015250639989972115
+          },
+          "host_first_attach": {
+            "count": 7,
+            "ms": 0.605375156737864
+          },
+          "host_first_measure": {
+            "count": 7,
+            "ms": 12.585833319462836
+          },
+          "host_measure": {
+            "count": 7,
+            "ms": 12.585208169184625
+          },
+          "host_measure_assistant": {
+            "count": 5,
+            "ms": 10.865208227187395
+          },
+          "host_measure_user": {
+            "count": 2,
+            "ms": 1.724458415992558
+          },
+          "host_reattach": {
+            "count": 113,
+            "ms": 11.70741708483547
+          },
+          "host_view": {
+            "count": 7,
+            "ms": 0.15237473417073488
+          },
+          "markdown_parse": {
+            "count": 6,
+            "ms": 0.7759166182950139
+          },
+          "row_geometry": {
+            "count": 7,
+            "ms": 0.1002082135528326
+          },
+          "text_create": {
+            "count": 14,
+            "ms": 1.2303749099373817
+          },
+          "text_measure": {
+            "count": 37,
+            "ms": 8.03483312483877
+          },
+          "text_reuse": {
+            "count": 7,
+            "ms": 0.0005417969077825546
+          }
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "baseline-reversal-3",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "scroll_step_ms": {
+          "count": 1200,
+          "document_height": 85578,
+          "final_document_height": 85242,
+          "max_ms": 17.461583367548883,
+          "median_ms": 0.43937494046986103,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 1.1417083442211151,
+          "step_points": 16,
+          "viewport_height": 600
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 12,
+            "ms": 0.2772081643342972
+          },
+          "document_configure": {
+            "count": 7,
+            "ms": 0.013166805729269981
+          },
+          "host_attach": {
+            "count": 120,
+            "ms": 12.657042010687292
+          },
+          "host_create": {
+            "count": 7,
+            "ms": 0.47037482727319
+          },
+          "host_detach": {
+            "count": 120,
+            "ms": 0.014292076230049133
+          },
+          "host_first_attach": {
+            "count": 7,
+            "ms": 0.5966251483187079
+          },
+          "host_first_measure": {
+            "count": 7,
+            "ms": 12.623291579075158
+          },
+          "host_measure": {
+            "count": 7,
+            "ms": 12.622624868527055
+          },
+          "host_measure_assistant": {
+            "count": 5,
+            "ms": 11.02099975105375
+          },
+          "host_measure_user": {
+            "count": 2,
+            "ms": 1.606291625648737
+          },
+          "host_reattach": {
+            "count": 113,
+            "ms": 12.074374360963702
+          },
+          "host_view": {
+            "count": 7,
+            "ms": 0.14720833860337734
+          },
+          "markdown_parse": {
+            "count": 6,
+            "ms": 0.818125088699162
+          },
+          "row_geometry": {
+            "count": 7,
+            "ms": 0.08641672320663929
+          },
+          "text_create": {
+            "count": 14,
+            "ms": 1.3267499161884189
+          },
+          "text_measure": {
+            "count": 37,
+            "ms": 8.031916338950396
+          },
+          "text_reuse": {
+            "count": 7,
+            "ms": 0.000625033862888813
+          }
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "neighbors-reading-1",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 21.723541663959622,
+          "median_ms": 9.680125047452748,
+          "over_16_7ms": 40,
+          "over_100ms": 0,
+          "p95_ms": 19.063958316110075
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 20.12837491929531,
+          "median_ms": 6.444375030696392,
+          "over_16_7ms": 3,
+          "over_100ms": 0,
+          "p95_ms": 14.419458340853453
+        },
+        "resident_mb_before_reading": 139.484375,
+        "resident_mb_after_downward": 165.546875,
+        "resident_mb_after_upward": 167.609375,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "render_stages": {
+            "attributed_text": {
+              "count": 2796,
+              "ms": 47.90733277332038
+            },
+            "host_attach": {
+              "count": 822,
+              "ms": 41.926211095415056
+            },
+            "host_create": {
+              "count": 806,
+              "ms": 29.463586630299687
+            },
+            "host_detach": {
+              "count": 823,
+              "ms": 0.07574877236038446
+            },
+            "host_first_attach": {
+              "count": 806,
+              "ms": 39.99704495072365
+            },
+            "host_reattach": {
+              "count": 16,
+              "ms": 2.0082081900909543
+            },
+            "host_view": {
+              "count": 806,
+              "ms": 8.74983484391123
+            },
+            "markdown_parse": {
+              "count": 525,
+              "ms": 130.3185838041827
+            },
+            "text_create": {
+              "count": 2951,
+              "ms": 22.545791929587722
+            },
+            "text_measure": {
+              "count": 5953,
+              "ms": 251.1001209495589
+            },
+            "text_reuse": {
+              "count": 2922,
+              "ms": 0.11983281001448631
+            }
+          },
+          "reversal": false,
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 20.95245837699622,
+            "median_ms": 15.57041669730097,
+            "over_16_7ms": 80,
+            "over_100ms": 0,
+            "p95_ms": 19.19795828871429,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "neighbors-reading-2",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 21.99491672217846,
+          "median_ms": 9.739749948494136,
+          "over_16_7ms": 47,
+          "over_100ms": 0,
+          "p95_ms": 19.203583244234324
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 19.014208344742656,
+          "median_ms": 6.119250087067485,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 14.242500066757202
+        },
+        "resident_mb_before_reading": 139.59375,
+        "resident_mb_after_downward": 165.71875,
+        "resident_mb_after_upward": 167.8125,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "render_stages": {
+            "attributed_text": {
+              "count": 2796,
+              "ms": 48.401376814581454
+            },
+            "host_attach": {
+              "count": 822,
+              "ms": 43.538206606172025
+            },
+            "host_create": {
+              "count": 806,
+              "ms": 30.314916628412902
+            },
+            "host_detach": {
+              "count": 823,
+              "ms": 0.08449843153357506
+            },
+            "host_first_attach": {
+              "count": 806,
+              "ms": 41.57999937888235
+            },
+            "host_reattach": {
+              "count": 16,
+              "ms": 2.049541799351573
+            },
+            "host_view": {
+              "count": 806,
+              "ms": 8.945499313995242
+            },
+            "markdown_parse": {
+              "count": 525,
+              "ms": 132.31379142962396
+            },
+            "text_create": {
+              "count": 2951,
+              "ms": 22.930501960217953
+            },
+            "text_measure": {
+              "count": 5953,
+              "ms": 256.0780852800235
+            },
+            "text_reuse": {
+              "count": 2922,
+              "ms": 0.11787610128521919
+            }
+          },
+          "reversal": false,
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 24.791291682049632,
+            "median_ms": 15.653958427719772,
+            "over_16_7ms": 87,
+            "over_100ms": 0,
+            "p95_ms": 19.43279174156487,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "neighbors-reading-3",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "reading_step_ms": {
+          "count": 335,
+          "max_ms": 22.82879175618291,
+          "median_ms": 9.528500027954578,
+          "over_16_7ms": 41,
+          "over_100ms": 0,
+          "p95_ms": 18.41770834289491
+        },
+        "upward_reading_step_ms": {
+          "count": 334,
+          "max_ms": 17.472208361141384,
+          "median_ms": 6.261333357542753,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 14.199208351783454
+        },
+        "resident_mb_before_reading": 139.53125,
+        "resident_mb_after_downward": 165.4375,
+        "resident_mb_after_upward": 167.265625,
+        "warm_scroll": {
+          "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate",
+          "render_stages": {
+            "attributed_text": {
+              "count": 2796,
+              "ms": 48.384168883785605
+            },
+            "host_attach": {
+              "count": 822,
+              "ms": 42.4212496727705
+            },
+            "host_create": {
+              "count": 806,
+              "ms": 29.88596144132316
+            },
+            "host_detach": {
+              "count": 823,
+              "ms": 0.07791654206812382
+            },
+            "host_first_attach": {
+              "count": 806,
+              "ms": 40.52295791916549
+            },
+            "host_reattach": {
+              "count": 16,
+              "ms": 1.9935418386012316
+            },
+            "host_view": {
+              "count": 806,
+              "ms": 8.907291572540998
+            },
+            "markdown_parse": {
+              "count": 525,
+              "ms": 130.94654132146388
+            },
+            "text_create": {
+              "count": 2951,
+              "ms": 23.960295831784606
+            },
+            "text_measure": {
+              "count": 5953,
+              "ms": 253.75362089835107
+            },
+            "text_reuse": {
+              "count": 2915,
+              "ms": 0.11270889081060886
+            }
+          },
+          "reversal": false,
+          "scroll_step_ms": {
+            "count": 240,
+            "document_height": 100105,
+            "final_document_height": 100105,
+            "max_ms": 21.55216666869819,
+            "median_ms": 15.798458247445524,
+            "over_16_7ms": 88,
+            "over_100ms": 0,
+            "p95_ms": 19.471791689284146,
+            "viewport_height": 600
+          },
+          "steps": 240
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "neighbors-reversal-1",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "scroll_step_ms": {
+          "count": 1200,
+          "document_height": 85578,
+          "final_document_height": 85242,
+          "max_ms": 11.119041591882706,
+          "median_ms": 0.41666661854833364,
+          "over_16_7ms": 0,
+          "over_100ms": 0,
+          "p95_ms": 1.1494166683405638,
+          "step_points": 16,
+          "viewport_height": 600
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 12,
+            "ms": 0.27975020930171013
+          },
+          "document_configure": {
+            "count": 7,
+            "ms": 0.01279159914702177
+          },
+          "host_attach": {
+            "count": 82,
+            "ms": 9.106208104640245
+          },
+          "host_create": {
+            "count": 7,
+            "ms": 0.4898334154859185
+          },
+          "host_detach": {
+            "count": 80,
+            "ms": 0.009999959729611874
+          },
+          "host_first_attach": {
+            "count": 7,
+            "ms": 0.6480000447481871
+          },
+          "host_first_measure": {
+            "count": 7,
+            "ms": 12.492291862145066
+          },
+          "host_measure": {
+            "count": 7,
+            "ms": 12.491291970945895
+          },
+          "host_measure_assistant": {
+            "count": 5,
+            "ms": 10.874541942030191
+          },
+          "host_measure_user": {
+            "count": 2,
+            "ms": 1.6217500669881701
+          },
+          "host_reattach": {
+            "count": 75,
+            "ms": 8.465624414384365
+          },
+          "host_view": {
+            "count": 7,
+            "ms": 0.14637492131441832
+          },
+          "markdown_parse": {
+            "count": 6,
+            "ms": 0.8022082038223743
+          },
+          "row_geometry": {
+            "count": 7,
+            "ms": 0.09270827285945415
+          },
+          "text_create": {
+            "count": 14,
+            "ms": 1.2586669763550162
+          },
+          "text_measure": {
+            "count": 37,
+            "ms": 8.226542151533067
+          },
+          "text_reuse": {
+            "count": 7,
+            "ms": 0.0005414476618170738
+          }
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "neighbors-reversal-2",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "scroll_step_ms": {
+          "count": 1200,
+          "document_height": 85578,
+          "final_document_height": 85242,
+          "max_ms": 9.996374952606857,
+          "median_ms": 0.42574992403388023,
+          "over_16_7ms": 0,
+          "over_100ms": 0,
+          "p95_ms": 1.132916659116745,
+          "step_points": 16,
+          "viewport_height": 600
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 12,
+            "ms": 0.2900419058278203
+          },
+          "document_configure": {
+            "count": 7,
+            "ms": 0.012333272024989128
+          },
+          "host_attach": {
+            "count": 82,
+            "ms": 9.688250254839659
+          },
+          "host_create": {
+            "count": 7,
+            "ms": 0.48829137813299894
+          },
+          "host_detach": {
+            "count": 80,
+            "ms": 0.010375166311860085
+          },
+          "host_first_attach": {
+            "count": 7,
+            "ms": 0.6319166859611869
+          },
+          "host_first_measure": {
+            "count": 7,
+            "ms": 12.680916814133525
+          },
+          "host_measure": {
+            "count": 7,
+            "ms": 12.680333340540528
+          },
+          "host_measure_assistant": {
+            "count": 5,
+            "ms": 10.850250022485852
+          },
+          "host_measure_user": {
+            "count": 2,
+            "ms": 1.8356665968894958
+          },
+          "host_reattach": {
+            "count": 75,
+            "ms": 9.067000588402152
+          },
+          "host_view": {
+            "count": 7,
+            "ms": 0.14579168055206537
+          },
+          "markdown_parse": {
+            "count": 6,
+            "ms": 0.8148750057443976
+          },
+          "row_geometry": {
+            "count": 7,
+            "ms": 0.09241653606295586
+          },
+          "text_create": {
+            "count": 14,
+            "ms": 1.3151253806427121
+          },
+          "text_measure": {
+            "count": 37,
+            "ms": 8.002125541679561
+          },
+          "text_reuse": {
+            "count": 7,
+            "ms": 0.0006664777174592018
+          }
+        }
+      }
+    },
+    {
+      "experiment": "mount-matrix",
+      "run": "neighbors-reversal-3",
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "10bd4ebc86eb4a487c4308310af9257ee15a7239fa060bd0947a30e4fb301919",
+        "fixture_sha256": "2c18c234f817bd2403c1480b096fd6bb444e1d12ba838b931bc3578678489ebd",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "4154e12f992ecc921060f1625098519c7f04b08258b60d89615af8aff4200390",
+      "result": {
+        "scroll_step_ms": {
+          "count": 1200,
+          "document_height": 85578,
+          "final_document_height": 85242,
+          "max_ms": 15.301916748285294,
+          "median_ms": 0.424874946475029,
+          "over_16_7ms": 0,
+          "over_100ms": 0,
+          "p95_ms": 1.190083334222436,
+          "step_points": 16,
+          "viewport_height": 600
+        },
+        "render_stages": {
+          "attributed_text": {
+            "count": 12,
+            "ms": 0.26304181665182114
+          },
+          "document_configure": {
+            "count": 7,
+            "ms": 0.012750038877129555
+          },
+          "host_attach": {
+            "count": 82,
+            "ms": 9.230792173184454
+          },
+          "host_create": {
+            "count": 7,
+            "ms": 0.45099982526153326
+          },
+          "host_detach": {
+            "count": 80,
+            "ms": 0.011499854736030102
+          },
+          "host_first_attach": {
+            "count": 7,
+            "ms": 0.608291826210916
+          },
+          "host_first_measure": {
+            "count": 7,
+            "ms": 12.446333304978907
+          },
+          "host_measure": {
+            "count": 7,
+            "ms": 12.445541680790484
+          },
+          "host_measure_assistant": {
+            "count": 5,
+            "ms": 10.864791925996542
+          },
+          "host_measure_user": {
+            "count": 2,
+            "ms": 1.5857915859669447
+          },
+          "host_reattach": {
+            "count": 75,
+            "ms": 8.632750599645078
+          },
+          "host_view": {
+            "count": 7,
+            "ms": 0.14508306048810482
+          },
+          "markdown_parse": {
+            "count": 6,
+            "ms": 0.7640833500772715
+          },
+          "row_geometry": {
+            "count": 7,
+            "ms": 0.08479179814457893
+          },
+          "text_create": {
+            "count": 14,
+            "ms": 1.2121254112571478
+          },
+          "text_measure": {
+            "count": 37,
+            "ms": 8.01720842719078
+          },
+          "text_reuse": {
+            "count": 7,
+            "ms": 0.000875093974173069
+          }
+        }
+      }
+    }
+  ]
+}

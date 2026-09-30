@@ -23,14 +23,26 @@ enum ReplyStyle {
     static let tableGeometry = ReplyTableGeometry(fontSize: tableCellSize)
 }
 
+enum ReplyParagraphLayout {
+    static let enabled: Bool = {
+        #if TRANSCRIPT_CHECKS
+        return ProcessInfo.processInfo.environment["NAVIGATION_GROUP_PARAGRAPHS"] != "0"
+        #else
+        return true
+        #endif
+    }()
+}
+
 struct KimiMarkdown: View {
     let text: String
-    var body: some View { ReplyContent(text: text).equatable() }
+    var coalescesParagraphs = ReplyParagraphLayout.enabled
+    var body: some View { ReplyContent(text: text, coalescesParagraphs: coalescesParagraphs).equatable() }
 }
 
 /// Static history is not reparsed when the surrounding conversation streams updates.
 private struct ReplyContent: View, Equatable {
     let text: String
+    let coalescesParagraphs: Bool
     private var blocks: [ReplyBlock] {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
@@ -39,7 +51,7 @@ private struct ReplyContent: View, Equatable {
         return ReplyDocument.parse(text)
     }
     var body: some View {
-        ReplyBlocks(blocks: blocks)
+        ReplyBlocks(blocks: blocks, coalescesParagraphs: coalescesParagraphs)
             .foregroundStyle(ReplyStyle.ink)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -48,12 +60,46 @@ private struct ReplyContent: View, Equatable {
 private struct ReplyBlocks: View {
     let blocks: [ReplyBlock]
     var compact = false
+    var coalescesParagraphs = ReplyParagraphLayout.enabled
+    private struct Group: Identifiable, Equatable {
+        let id: Int
+        let block: ReplyBlock
+        var following: [[ReplyInline]] = []
+    }
+    // Bound streaming invalidation: only the final group of at most eight
+    // paragraphs changes when the tail grows; completed groups remain equal.
+    private var groups: [Group] {
+        var result: [Group] = []
+        for (index, block) in blocks.enumerated() {
+            if coalescesParagraphs, case .paragraph(let runs) = block, runs.contains(where: { !$0.text.isEmpty }),
+               let last = result.last, last.following.count < 7,
+               case .paragraph(let first) = last.block, first.contains(where: { !$0.text.isEmpty }) {
+                result[result.count - 1].following.append(runs)
+            } else {
+                result.append(Group(id: index, block: block))
+            }
+        }
+        return result
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
-                ReplyBlockContent(block: block).equatable().padding(.top, index == 0 ? 0 : spacing(before: block, after: index > 0 ? blocks[index - 1] : nil))
+            ForEach(groups) { group in
+                GroupContent(group: group, compact: compact, coalescesParagraphs: coalescesParagraphs).equatable()
+                    .padding(.top, group.id == 0 ? 0 : spacing(before: group.block, after: blocks[group.id - 1]))
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+    private struct GroupContent: View, Equatable {
+        let group: Group
+        let compact: Bool
+        let coalescesParagraphs: Bool
+        @ViewBuilder var body: some View {
+            if case .paragraph(let runs) = group.block {
+                ReplyText(runs: runs, followingParagraphs: group.following, paragraphSpacing: compact ? 8 : 12, preservesSelectionOnAppend: coalescesParagraphs)
+            } else {
+                ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs).equatable()
+            }
+        }
     }
 
     private func spacing(before block: ReplyBlock, after previous: ReplyBlock?) -> CGFloat {
@@ -73,6 +119,7 @@ private struct ReplyBlocks: View {
 /// Completed Markdown blocks preserve their view tree while the tail streams.
 private struct ReplyBlockContent: View, Equatable {
     let block: ReplyBlock
+    var coalescesParagraphs = ReplyParagraphLayout.enabled
     @ViewBuilder var body: some View {
         switch block {
         case .paragraph(let runs): ReplyText(runs: runs)
@@ -87,12 +134,12 @@ private struct ReplyBlockContent: View, Equatable {
                         Text(item.marker).font(.system(size: ReplyStyle.bodySize)).foregroundStyle(ReplyStyle.ink)
                             .frame(minWidth: 18, alignment: .trailing)
                         // Type erasure breaks the recursive SwiftUI view type, not the document hierarchy.
-                        AnyView(ReplyBlocks(blocks: item.blocks, compact: true))
+                        AnyView(ReplyBlocks(blocks: item.blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
                     }
                 }
             }
         case .quote(let blocks):
-            AnyView(ReplyBlocks(blocks: blocks, compact: true))
+            AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
                 .padding(.leading, 21).padding(.vertical, 7)
                 .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(0.16)).frame(width: 2) }
         case .table(let headers, let rows, let alignments):
@@ -164,6 +211,9 @@ private struct ReplyText: View {
     var weight: NSFont.Weight = .regular
     var alignment: TextAlignment = .leading
     var lineHeight: CGFloat? = nil
+    var followingParagraphs: [[ReplyInline]] = []
+    var paragraphSpacing: CGFloat = 12
+    var preservesSelectionOnAppend = false
     private var attributed: NSAttributedString {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
@@ -175,17 +225,29 @@ private struct ReplyText: View {
         // Wrap oversized paths/URLs in TextKit without altering selectable text.
         paragraph.lineBreakMode = .byWordWrapping
         paragraph.alignment = alignment == .trailing ? .right : alignment == .center ? .center : .left
-        for run in runs {
-            let runWeight: NSFont.Weight = run.strong ? .medium : weight
-            var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
-                                : NSFont.systemFont(ofSize: size, weight: runWeight)
-            if run.emphasis { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
-            var attributes: [NSAttributedString.Key: Any] = [
-                .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
-            ]
-            if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
-            if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
-            result.append(NSAttributedString(string: run.text, attributes: attributes))
+        for (index, paragraphRuns) in ([runs] + followingParagraphs).enumerated() {
+            if index > 0 {
+                // Space only the paragraph boundary, preserving Markdown hard breaks.
+                let previous = (result.string as NSString).paragraphRange(for: NSRange(location: result.length - 1, length: 1))
+                let separated = paragraph.mutableCopy() as! NSMutableParagraphStyle
+                separated.paragraphSpacing = paragraphSpacing
+                result.addAttribute(.paragraphStyle, value: separated, range: previous)
+                var separator = result.attributes(at: result.length - 1, effectiveRange: nil)
+                separator.removeValue(forKey: .link)
+                result.append(NSAttributedString(string: "\n", attributes: separator))
+            }
+            for run in paragraphRuns {
+                let runWeight: NSFont.Weight = run.strong ? .medium : weight
+                var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
+                                    : NSFont.systemFont(ofSize: size, weight: runWeight)
+                if run.emphasis { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
+                var attributes: [NSAttributedString.Key: Any] = [
+                    .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
+                ]
+                if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
+                if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
+                result.append(NSAttributedString(string: run.text, attributes: attributes))
+            }
         }
         for (range, reference) in ConversationFileReference.matches(in: result.string) {
             if result.attribute(.link, at: range.location, effectiveRange: nil) == nil {
@@ -195,7 +257,7 @@ private struct ReplyText: View {
         return result
     }
     var body: some View {
-        SelectableReplyText(attributed: attributed)
+        SelectableReplyText(attributed: attributed, preservesSelectionOnAppend: preservesSelectionOnAppend)
             .alignmentGuide(.firstTextBaseline) { _ in
                 let font = NSFont.systemFont(ofSize: size)
                 let naturalHeight = ceil(font.ascender - font.descender + font.leading)
@@ -219,7 +281,11 @@ extension EnvironmentValues {
 struct SelectableReplyText: NSViewRepresentable {
     @Environment(\.isConversationBodyText) private var isConversationBodyText
     let attributed: NSAttributedString
-    init(attributed: NSAttributedString) { self.attributed = attributed }
+    var preservesSelectionOnAppend = false
+    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false) {
+        self.attributed = attributed
+        self.preservesSelectionOnAppend = preservesSelectionOnAppend
+    }
     init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4) {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = lineSpacing
         attributed = NSAttributedString(string: text, attributes: [
@@ -279,7 +345,7 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }
-    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.update(attributed) }
+    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ReplyTextView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
     }
@@ -290,9 +356,11 @@ final class ReplyTextView: NSTextView {
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
     private var measurements: [(width: CGFloat, size: CGSize)] = []
-    func update(_ value: NSAttributedString) {
+    func update(_ value: NSAttributedString, preservingSelectionOnAppend: Bool = false) {
         guard let storage = textStorage, !storage.isEqual(to: value) else { return }
+        let retainedSelection = preservingSelectionOnAppend && value.string.hasPrefix(storage.string) ? selectedRange() : nil
         storage.setAttributedString(value)
+        if let retainedSelection { setSelectedRange(retainedSelection) }
         measurements.removeAll(keepingCapacity: true)
     }
     func measure(width proposed: CGFloat?) -> CGSize {

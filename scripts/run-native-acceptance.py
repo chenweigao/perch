@@ -15,7 +15,7 @@ parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
 parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
 parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
-parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-pins-unprobed", "sidebar-layout-height", "sidebar-layout-height-fixed", "sidebar-layout-header", "sidebar-layout-membership", "sidebar-layout-pins-fixed-members", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "input", "kimi-input"], default="all")
+parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-pins-unprobed", "sidebar-layout-height", "sidebar-layout-height-fixed", "sidebar-layout-header", "sidebar-layout-membership", "sidebar-layout-pins-fixed-members", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "kimi-switching", "input", "kimi-input"], default="all")
 parser.add_argument("--input-positive-control", action="store_true", help="Inject one 80ms delay into the mounted input measurement")
 parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
 parser.add_argument("--sidebar-variant", choices=["baseline", "flat", "keep-header", "persistent-subtitle", "table"], default="flat")
@@ -39,7 +39,7 @@ manifest.update(binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(), c
                 mode="frames" if args.capture == "frames" else args.mode)
 if manifest["mode"].startswith("kimi-"):
     # Kimi replaces the displayed catalog; native fixture responses remain resident.
-    manifest["catalog_sessions"] = 1
+    manifest["catalog_sessions"] = 2 if manifest["mode"] == "kimi-switching" else 1
     manifest["native_fixture_resident_snapshot_count"] = manifest.pop("resident_snapshot_count", 8)
 env = dict(os.environ, PERCH_ACCEPTANCE_MODE=manifest["mode"], PERCH_ACCEPTANCE_RESULTS=str(out))
 manifest["sidebar_variant"] = args.sidebar_variant

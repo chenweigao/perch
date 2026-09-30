@@ -1,0 +1,52 @@
+[
+  {
+    "name": "interactions",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-navigation-check.py",
+      "interactions",
+      "--output",
+      ".local/transcript-scroll/final/interactions"
+    ]
+  },
+  {
+    "name": "reading",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-navigation-check.py",
+      "reading",
+      "--output",
+      ".local/transcript-scroll/final/reading"
+    ]
+  },
+  {
+    "name": "reversal",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "scripts/run-navigation-check.py",
+      "scroll",
+      "--scroll-step-points",
+      "16",
+      "--scroll-reversal",
+      "--output",
+      ".local/transcript-scroll/final/reversal"
+    ]
+  },
+  {
+    "name": "tools",
+    "exit_code": 0,
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Tests/Performance",
+      "-p",
+      "test_*.py"
+    ]
+  }
+]

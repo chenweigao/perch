@@ -1,0 +1,47 @@
+{
+  "user_bubble_resize": {
+    "long_narrow_height": 804,
+    "long_wide_height": 485,
+    "replacement_short_height": 53,
+    "same_host": true,
+    "short_height": 53
+  },
+  "runs": {
+    "interactions": {
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "5ae0b0046bb321d831635b28ab825d96709e3648bfe65c0cbb07491fe911f50a",
+        "fixture_sha256": "5bbd33694f30565388d0eadb4734a95cb90b6b85f930787d2ab38e57d9203004",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "fa875a14c51b36b771de3877b3a51c95213a6e8e148ca875014eee5b0aa6353b",
+      "elapsed_s": 8.922800917
+    },
+    "reading": {
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "5ae0b0046bb321d831635b28ab825d96709e3648bfe65c0cbb07491fe911f50a",
+        "fixture_sha256": "5bbd33694f30565388d0eadb4734a95cb90b6b85f930787d2ab38e57d9203004",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "fa875a14c51b36b771de3877b3a51c95213a6e8e148ca875014eee5b0aa6353b",
+      "elapsed_s": 16.296686750000003
+    },
+    "reversal": {
+      "passed": true,
+      "build": {
+        "source_commit": "3e7aa29dd6c5afc4216ebe77509e46baf58638ac",
+        "source_sha256": "5ae0b0046bb321d831635b28ab825d96709e3648bfe65c0cbb07491fe911f50a",
+        "fixture_sha256": "5bbd33694f30565388d0eadb4734a95cb90b6b85f930787d2ab38e57d9203004",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "fa875a14c51b36b771de3877b3a51c95213a6e8e148ca875014eee5b0aa6353b",
+      "elapsed_s": 4.202769083000001
+    }
+  }
+}

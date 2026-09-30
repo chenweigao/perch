@@ -72,6 +72,9 @@ struct KimiWorkspaceView: View {
             if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
             .tint(kimiAccent)
+            .onChange(of: connection.selectedId) { _, _ in
+                transcriptSubject = nil
+            }
             .sheet(item: $transcriptSubject) { task in
                 KimiSubagentTranscriptSheet(agentId: task.transcriptAgentId ?? task.id, subject: task,
                                             connection: connection)
@@ -266,7 +269,8 @@ private struct KimiTimeline: View {
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.busy,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
-                                           allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch)
+                                           allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
+                                           waitsForInitialPosition: true)
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         VStack(alignment: .leading, spacing: 8) {
                             PendingMessageContent(text: prompt.text, status: prompt.label)
@@ -290,7 +294,7 @@ private struct KimiTimeline: View {
                             }.disabled(!connection.online || !connection.snapshotReady || connection.resolving.contains(approval.id))
                         }.padding(16).background(.orange.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
                     }
-                    ForEach(c.snapshot.pendingQuestions) { question in KimiQuestionView(question: question, connection: connection) }
+                    ForEach(c.snapshot.pendingQuestions) { question in KimiQuestionView(question: question, connection: connection) }.id(c.snapshot.session.id)
                 }
                 Color.clear.frame(height: 1).id("bottom")
             }
