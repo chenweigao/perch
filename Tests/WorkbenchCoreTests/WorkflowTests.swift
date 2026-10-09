@@ -80,6 +80,13 @@ func checkWorkflow() throws {
     precondition(runs.first?.link?.scheme == "perch-file")
     let matches = ConversationFileReference.matches(in: "See `src/foo.swift:42`, then /tmp/other.py#L9. https://host/file.swift:3")
     precondition(matches.count == 2 && matches[1].1.line == 9)
+    precondition(ConversationFileReference.matches(in: String(repeating: "a.", count: 10_000)).isEmpty,
+                 "Long tokens without line suffixes are not inline file references")
+    let unicodeReferences = "👋 中文 src/main.swift:12:3 和 ../test.py#L8"
+    let unicodeMatches = ConversationFileReference.matches(in: unicodeReferences)
+    precondition(unicodeMatches.map { $0.1.line } == [12, 8])
+    precondition(unicodeMatches.map { (unicodeReferences as NSString).substring(with: $0.0) }
+                 == ["src/main.swift:12:3", "../test.py#L8"], "File links preserve UTF-16 ranges")
 
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**Match** one. MATCH two."},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
     let search = ConversationSearch()
