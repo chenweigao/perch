@@ -60,17 +60,21 @@ public struct ActiveScope: Equatable, Sendable {
 }
 
 /// What the workbench shows above the queue: saved references that could not be
-/// reattached, and a local-storage failure. These states explain the queue, so they
-/// travel beside the projection rather than being read from the live model by the view.
+/// reattached, the resolved outcomes of sessions that were mid-turn when the
+/// connection was lost, and a local-storage failure. These states explain the
+/// queue, so they travel beside the projection rather than being read from the
+/// live model by the view.
 /// The task group's own page presents the group, its next step and what to resume.
 public struct DashboardContext: Equatable, Sendable {
     public let pendingRestoration: [SavedTerminal]
+    public let restoreReport: [RestoredSession]
     public let storageError: String?
     public let scope: ActiveScope
 
-    public init(pendingRestoration: [SavedTerminal] = [], storageError: String? = nil,
-                scope: ActiveScope = ActiveScope()) {
-        self.pendingRestoration = pendingRestoration; self.storageError = storageError; self.scope = scope
+    public init(pendingRestoration: [SavedTerminal] = [], restoreReport: [RestoredSession] = [],
+                storageError: String? = nil, scope: ActiveScope = ActiveScope()) {
+        self.pendingRestoration = pendingRestoration; self.restoreReport = restoreReport
+        self.storageError = storageError; self.scope = scope
     }
 }
 

@@ -41,6 +41,7 @@ struct ProtocolTests {
         try checkRuntimeFreshness()
         try await checkRemoteSetup()
         try checkDashboard()
+        try checkRestoreReport()
         checkTaskGroup()
         try checkUnifiedWorkbench()
         checkSidebar()
