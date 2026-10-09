@@ -627,6 +627,7 @@ final class NavigationRunner {
         let originalHosts = ConversationTranscript.retainedHosts(in: scroll)
         let railHeight = max(1, scroll.contentView.bounds.height - 32)
         let plain = ConversationTurnRailGeometry(count: 200, height: railHeight)
+        navigator.hover.reset()
         navigator.hover.move(y: plain.y(for: 100), count: 200, height: railHeight)
         guard navigator.hover.previewY == nil else { throw NavigationError("preview opened without dwell") }
         try await Task.sleep(for: .milliseconds(160))
