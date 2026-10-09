@@ -16,7 +16,7 @@ struct GroupProgressView: View {
                     .fixedSize()
             }
             if group.criteria.isEmpty {
-                Button("添加完成标准") { model.editGroup(group) }.buttonStyle(.link)
+                Button("添加完成标准") { model.editGroup(group) }.buttonStyle(QuietLinkStyle())
             }
             ForEach(group.criteria) { criterion in
                 Toggle(criterion.title, isOn: Binding(get: { criterion.completed }, set: { checked in
@@ -34,7 +34,7 @@ struct GroupProgressView: View {
             HStack {
                 Text("成果与决策").font(.system(size: 13, weight: .medium))
                 Spacer()
-                Button("添加成果") { addingOutcome = true }.buttonStyle(.link)
+                Button("添加成果") { addingOutcome = true }.buttonStyle(QuietLinkStyle())
             }
             if group.outcomes.isEmpty {
                 Text("固定结论、PR 或报告，并保留来源会话。").foregroundStyle(.secondary)
@@ -55,7 +55,7 @@ struct GroupProgressView: View {
                     else if !outcome.link.isEmpty { Text(outcome.link).textSelection(.enabled).foregroundStyle(.secondary) }
                     if let source = outcome.source {
                         if let session = model.allSessions.first(where: { $0.reference == source }) {
-                            Button("来源：\(session.title)") { model.open(session) }.buttonStyle(.link).disabled(!session.online || session.archived)
+                            Button("来源：\(session.title)") { model.open(session) }.buttonStyle(QuietLinkStyle()).disabled(!session.online || session.archived)
                         } else { Text("来源会话尚未同步").foregroundStyle(.secondary) }
                     }
                 }.padding(.vertical, 6)

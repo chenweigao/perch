@@ -67,3 +67,14 @@ struct WorkbenchDisclosureButtonStyle: ButtonStyle {
         }
     }
 }
+
+/// Inline links stay in the quiet palette; only hover asks for attention.
+struct QuietLinkStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(hovered || configuration.isPressed ? Color.primary : Color.secondary)
+            .underline(hovered)
+            .onHover { hovered = $0 }
+    }
+}

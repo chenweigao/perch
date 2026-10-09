@@ -135,7 +135,10 @@ struct SessionActionsMenu: View {
 }
 private struct GroupPreview: View {
     @State private var model = WorkbenchModel()
-    @State private var scenario = "归属检查"
+    @State private var scenario: String = {
+        guard let index = CommandLine.arguments.firstIndex(of: "-scenario"), index + 1 < CommandLine.arguments.count else { return "归属检查" }
+        return CommandLine.arguments[index + 1]
+    }()
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -162,6 +165,7 @@ private struct GroupPreview: View {
                 onShowHome: { model.onlyAttention = false }, onClearScope: { _ in model.showHome() },
                 onClearAllScopes: { model.showHome(); model.search = "" })
         }.onAppear { model.seed(scenario) }.onChange(of: scenario) { _, value in model.seed(value) }
+            .tint(WorkbenchTheme.accent)
             .sheet(item: $model.groupingSession) { SessionGroupsSheet(model: model, item: $0) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .alert("预览操作", isPresented: Binding(get: { model.notice != nil || model.showNewKimi }, set: { if !$0 { model.notice = nil; model.showNewKimi = false } })) {

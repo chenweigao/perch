@@ -451,17 +451,6 @@ struct QueueRow<Actions: View>: View {
 
 }
 
-/// Inline links stay in the quiet palette; only hover asks for attention.
-private struct QuietLinkStyle: ButtonStyle {
-    @State private var hovered = false
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(hovered || configuration.isPressed ? Color.primary : Color.secondary)
-            .underline(hovered)
-            .onHover { hovered = $0 }
-    }
-}
-
 /// The one actionable stat is a button; the capsule only deepens on hover.
 private struct SummaryStatStyle: ButtonStyle {
     @State private var hovered = false
