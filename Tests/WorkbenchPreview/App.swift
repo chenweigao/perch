@@ -129,7 +129,7 @@ private struct DashboardPreview: View {
                     if facet.kind == .group { scope.groupID = nil } else { scope.hostID = nil }
                 },
                 onClearAllScopes: { scope = DashboardScope() })
-                .background(.white).tint(WorkbenchTheme.accent)
+                .background(WorkbenchTheme.contentBackground).tint(WorkbenchTheme.accent)
         }.alert("预览操作", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("好") { notice = nil }
         } message: { Text(notice ?? "") }

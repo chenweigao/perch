@@ -1132,3 +1132,7 @@
 "通用设置" = "General Settings";
 
 "环境需要处理" = "Environment Needs Attention";
+"全部处理完了" = "All Caught Up";
+"没有等待确认、回答或处理的事项；查看结果请到工作台。" = "Nothing is waiting for confirmation, an answer, or a fix. Results are in the workbench.";
+"共 %lld 项 · 确认、回答或处理错误；查看结果请到工作台。" = "%lld pending · approvals, questions, and errors appear here. Results are in the workbench.";
+"打开会话" = "Open Session";

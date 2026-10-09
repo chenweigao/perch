@@ -77,11 +77,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     if !projection.running.isEmpty { section(projection.running, limit: 5) }
                     if !projection.recent.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
-                            HStack {
+                            HStack(spacing: 7) {
+                                Image(systemName: "clock").foregroundStyle(.tertiary)
                                 Text("最近会话").accessibilityAddTraits(.isHeader)
                                 Spacer()
                                 if group == nil { Button("查看全部", action: onShowAll).buttonStyle(QuietLinkStyle()) }
-                            }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
+                            }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
                             ForEach(projection.recent) { row($0, in: .other) }
                             if group != nil && projection.other.count > projection.recent.count {
                                 DisclosureGroup("全部关联会话") {
@@ -443,6 +444,7 @@ struct QueueRow<Actions: View>: View {
                 .opacity(hovered ? 1 : 0)
         } else {
             Text("未归组").foregroundStyle(.tertiary)
+            Text("·").foregroundStyle(.quaternary)
             Button("关联任务组", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
         }
     }
