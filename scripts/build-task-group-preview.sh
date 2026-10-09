@@ -14,6 +14,7 @@ swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \
+    Sources/AgentWorkbench/WorkbenchTheme.swift \
     Sources/AgentWorkbench/SessionStatusIndicator.swift Sources/AgentWorkbench/ConversationActivityBar.swift \
     Sources/AgentWorkbench/ActivitySummaryController.swift Sources/AgentWorkbench/ActivitySummarySettings.swift \
     Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionGroupsSheet.swift \

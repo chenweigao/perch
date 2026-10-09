@@ -51,11 +51,14 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 introduction
                 if attentionOnly {
                     if projection.attention.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label("暂时没有需要你处理的事项", systemImage: "checkmark.circle")
-                                .foregroundStyle(.secondary)
-                            Button("返回工作台", action: onShowHome).buttonStyle(.link)
-                        }.padding(.vertical, 12)
+                        VStack(spacing: 10) {
+                            Image(systemName: "checkmark.circle").font(.system(size: 34, weight: .light))
+                                .foregroundStyle(.green)
+                            Text("全部处理完了").font(.system(size: 15, weight: .medium))
+                            Text("没有等待确认、回答或处理的事项；查看结果请到工作台。")
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                            Button("返回工作台", action: onShowHome).padding(.top, 4)
+                        }.frame(maxWidth: .infinity).padding(.vertical, 56)
                     } else {
                         let byID = Dictionary(uniqueKeysWithValues: projection.attention.items.map { ($0.id, $0) })
                         let ordered = queueOrder.ids.compactMap { byID[$0] }
@@ -67,18 +70,19 @@ struct WorkbenchDashboard<RowActions: View>: View {
                        group == nil || hasSessionSearch || context.scope.facets.contains(where: { $0.kind == .host }) { emptyState(empty) }
                     if !projection.attention.isEmpty { section(projection.attention, limit: 3) }
                     groupOverview
-                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
+                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(QuietLinkStyle()) }
                     if !changes.isEmpty { changeSummary }
                     groupProgress
                     if !projection.review.isEmpty { section(projection.review, limit: 5) }
                     if !projection.running.isEmpty { section(projection.running, limit: 5) }
                     if !projection.recent.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
-                            HStack {
+                            HStack(spacing: 7) {
+                                Image(systemName: "clock").foregroundStyle(.tertiary)
                                 Text("最近会话").accessibilityAddTraits(.isHeader)
                                 Spacer()
-                                if group == nil { Button("查看全部", action: onShowAll).buttonStyle(.link) }
-                            }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
+                                if group == nil { Button("查看全部", action: onShowAll).buttonStyle(QuietLinkStyle()) }
+                            }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
                             ForEach(projection.recent) { row($0, in: .other) }
                             if group != nil && projection.other.count > projection.recent.count {
                                 DisclosureGroup("全部关联会话") {
@@ -104,12 +108,14 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 // Connectivity is not an actionable request. Keep stale records separate,
                 // including on the inbox, without counting them as live work.
                 if !projection.offline.isEmpty {
-                    DisclosureGroup("状态未同步 · \(projection.offline.count)") {
+                    DisclosureGroup {
                         VStack(alignment: .leading, spacing: 0) {
                             Text("连接后才能确认这些会话的当前状态。")
                                 .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
                             ForEach(projection.offline) { row($0, in: .other) }
                         }
+                    } label: {
+                        Label("状态未同步 · \(projection.offline.count)", systemImage: "wifi.slash")
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
@@ -129,9 +135,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
     private var changeSummary: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("新进展 · \(changes.count)").font(.system(size: 13, weight: .medium))
+                Label("新进展 · \(changes.count)", systemImage: "sparkle")
+                    .font(.system(size: 12, weight: .medium))
                 Spacer()
-                if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(.link) }
+                if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(QuietLinkStyle()) }
             }
             Text("自上次确认后新增或变化的请求与结果；首次使用会包含当前事项。")
                 .font(.caption).foregroundStyle(.secondary)
@@ -142,10 +149,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         Spacer()
                         Text(LocalizedStringKey(item.section.rawValue)).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(ChangeRowStyle())
             }
             if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.caption).foregroundStyle(.secondary) }
         }.font(.system(size: 12))
+            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private var title: LocalizedStringKey {
@@ -159,15 +168,15 @@ struct WorkbenchDashboard<RowActions: View>: View {
         VStack(alignment: .leading, spacing: 9) {
             if let group, !attentionOnly {
                 if let facet = context.scope.facets.first(where: { $0.kind == .group }) {
-                    Button("工作台") { onClearScope(facet) }.buttonStyle(.link).font(.system(size: 12))
+                    Button("工作台") { onClearScope(facet) }.buttonStyle(QuietLinkStyle()).font(.system(size: 12))
                 }
                 Text(group.name).font(.system(size: 25, weight: .semibold)).textSelection(.enabled)
             } else { Text(title).font(.system(size: 25, weight: .semibold)) }
             if !visibleFacets.isEmpty { scopeChips }
-            if attentionOnly {
-                Text("确认、回答或处理错误；查看结果请到工作台。")
+            if attentionOnly && !projection.attention.isEmpty {
+                Text("共 \(projection.attention.items.count) 项 · 确认、回答或处理错误；查看结果请到工作台。")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
-            } else if group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending {
+            } else if !attentionOnly && (group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 14) { summary }
                     VStack(alignment: .leading, spacing: 5) { summary }
@@ -198,34 +207,60 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
             if visibleFacets.count > 1 {
-                Button("全部清除", action: onClearAllScopes).buttonStyle(.link).font(.system(size: 11))
+                Button("全部清除", action: onClearAllScopes).buttonStyle(QuietLinkStyle()).font(.system(size: 11))
             }
         }
     }
 
     @ViewBuilder private var summary: some View {
         if projection.sections.isEmpty && projection.other.isEmpty && !projection.offline.isEmpty {
-            Text("连接后查看最新进展")
+            HStack(spacing: 5) {
+                Image(systemName: "wifi.slash").foregroundStyle(.tertiary)
+                Text("连接后查看最新进展")
+            }
         } else if projection.attention.isEmpty {
-            Text("当前没有待处理事项")
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark.circle").foregroundStyle(.green)
+                Text("当前没有待处理事项")
+            }
         } else {
-            Button(action: onShowInbox) { Text("\(projection.attention.items.count) 项等你处理") }
-                .buttonStyle(.plain).foregroundStyle(.orange)
+            Button(action: onShowInbox) {
+                summaryChip("exclamationmark.circle.fill", tint: .orange,
+                            text: "\(projection.attention.items.count) 项等你处理", active: true)
+            }.buttonStyle(SummaryStatStyle())
         }
-        if !projection.review.isEmpty { Text("\(projection.review.items.count) 项结果待查看") }
-        if !projection.running.isEmpty { Text("\(projection.running.items.count) 项运行中") }
+        if !projection.review.isEmpty {
+            summaryChip("circlebadge.fill", tint: .blue,
+                        text: "\(projection.review.items.count) 项结果待查看", active: false)
+        }
+        if !projection.running.isEmpty {
+            summaryChip("circle.dotted", tint: Color(.tertiaryLabelColor),
+                        text: "\(projection.running.items.count) 项运行中", active: false)
+        }
+    }
+
+    private func summaryChip(_ symbol: String, tint: Color, text: LocalizedStringKey, active: Bool) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).foregroundStyle(tint)
+            Text(text).foregroundStyle(.primary)
+        }.padding(.horizontal, 8).padding(.vertical, 3)
+            .background(tint.opacity(active ? 0.09 : 0.06), in: Capsule())
     }
 
     private func section(_ value: DashboardSection, limit: Int) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 7) {
-                Text(LocalizedStringKey(value.section.rawValue)).accessibilityAddTraits(.isHeader)
-                Text("\(value.items.count)").foregroundStyle(.tertiary)
-                Spacer()
-                if value.section == .attention && !attentionOnly {
-                    Button("进入待处理", action: onShowInbox).buttonStyle(.link)
-                }
-            }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
+            // The inbox intro already names the queue; repeat only the count there.
+            if !attentionOnly {
+                HStack(spacing: 7) {
+                    QueueSectionMark(section: value.section)
+                    Text(LocalizedStringKey(value.section.rawValue)).accessibilityAddTraits(.isHeader)
+                    Text("\(value.items.count)").foregroundStyle(.tertiary)
+                    Spacer()
+                    if value.section == .attention {
+                        Button("进入待处理", action: onShowInbox).buttonStyle(QuietLinkStyle())
+                    }
+                }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
+            }
             ForEach(value.items.prefix(limit)) { row($0, in: value.section) }
             if value.items.count > limit && value.section != .attention {
                 DisclosureGroup("展开其余 \(value.items.count - limit) 个会话") {
@@ -237,23 +272,29 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
 
     private func emptyState(_ state: DashboardEmptyState) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 10) {
+            Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
+                .foregroundStyle(.secondary)
             Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
                 HStack(spacing: 10) {
                     Button("连接远程机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
+                        .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
                     Button("检测本机 Agent…", action: onStartLocal)
-                }
+                }.padding(.top, 4)
                 Text("远程 Agent 沿用你的 SSH 配置；本机可连接已安装的 Kimi 和 Codex。")
                     .font(.caption).foregroundStyle(.secondary)
             } else if state == .noMatches {
                 // Nothing is wrong with the workspace; the filter is hiding everything.
                 // Starting a session would not fix that and would bury the reason.
                 Button("清除筛选", action: onClearSessionFilters ?? onClearAllScopes).buttonStyle(.borderedProminent)
+                    .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
+                    .padding(.top, 4)
             } else {
                 Button("新建会话", action: onNewTask).buttonStyle(.borderedProminent)
+                    .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph).padding(.top, 4)
             }
-        }.padding(.vertical, 12)
+        }.frame(maxWidth: .infinity).padding(.vertical, 44)
     }
 
     /// What became of the sessions that were mid-turn when the workbench lost
@@ -285,7 +326,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
 
     private var restoration: some View {
-        DisclosureGroup("等待恢复 · \(context.pendingRestoration.count) 个会话") {
+        DisclosureGroup {
             VStack(alignment: .leading, spacing: 10) {
                 Text("连接后接回原会话；未找到的会话保留在这里，确认后可以移除。")
                     .font(.caption).foregroundStyle(.secondary)
@@ -293,10 +334,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     HStack {
                         Label(saved.title, systemImage: saved.session.kind.symbol).lineLimit(1)
                         Spacer()
-                        Button("不再恢复") { onForgetRestoration(saved) }
+                        Button("不再恢复") { onForgetRestoration(saved) }.buttonStyle(QuietLinkStyle())
                     }
                 }
             }.padding(.top, 10)
+        } label: {
+            Label("等待恢复 · \(context.pendingRestoration.count) 个会话", systemImage: "clock.arrow.circlepath")
         }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
             .font(.system(size: 12)).foregroundStyle(.secondary)
     }
@@ -316,6 +359,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
         let ordered = memberships.filter { $0.id == group?.id } + memberships.filter { $0.id != group?.id }
         return QueueRow(item: item,
                         time: SessionTime.label(since: item.updatedAt, waiting: section == .attention && item.online),
+                        waiting: section == .attention && item.online,
                         metadata: parts.joined(separator: " · "),
                         groups: ordered,
                         onOpenGroup: onOpenGroup, onManageGroups: { onManageGroups(item) },
@@ -328,6 +372,7 @@ struct QueueRow<Actions: View>: View {
     @UILocalization private var L
     let item: WorkspaceSession
     let time: String?
+    var waiting = false
     let metadata: String
     let groups: [SessionGroupIndex.Membership]
     let onOpenGroup: (UUID) -> Void
@@ -350,59 +395,121 @@ struct QueueRow<Actions: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 0) {
-                Button(action: onOpen) {
-                    HStack(spacing: 14) {
-                        SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                            Text(metadata).font(.system(size: 11)).foregroundStyle(.secondary)
-                                .lineLimit(1).truncationMode(.middle)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                        if let time {
-                            Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
-                        }
-                    }.padding(.horizontal, 8).padding(.top, 13).padding(.bottom, 7).frame(minHeight: 58).contentShape(Rectangle())
-                }.buttonStyle(.plain).disabled(!item.online)
-                    .accessibilityLabel([item.title, groupBadge, metadata, time].compactMap { $0 }.joined(separator: "，"))
-                if item.canMarkReviewed && item.online {
-                    Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
-                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
-                }
-            }.opacity(item.online ? 1 : 0.55)
-            membershipControls.padding(.leading, 39).padding(.trailing, 8).padding(.bottom, 12)
-        }.background(hovered && item.online ? Color.primary.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
+        HStack(alignment: .top, spacing: 12) {
+            SessionStatusIndicator(item: item).frame(width: 17, height: 16).padding(.top, 2).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                HStack(spacing: 6) {
+                    Text(metadata).lineLimit(1).truncationMode(.middle).layoutPriority(-1)
+                    membershipControls
+                }.font(.system(size: 11)).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            if let time {
+                Text(time).font(.system(size: 11)).monospacedDigit()
+                    .foregroundStyle(waiting ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                    .fixedSize()
+                    .padding(.top, 2)
+                    .opacity(hovered && showsHoverAction ? 0 : 1)
+            }
+            if showsHoverAction {
+                Button("已查看", action: onMarkReviewed)
+                    .font(.system(size: 11))
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(Color.primary.opacity(0.06), in: Capsule())
+                    .padding(.top, 1).fixedSize()
+                    .opacity(hovered ? 1 : 0)
+            }
+        }.padding(.horizontal, 10).padding(.vertical, 11)
+            .opacity(item.online ? 1 : 0.55)
+            .contentShape(Rectangle())
+            .onTapGesture { if item.online { onOpen() } }
+            .background(hovered && item.online ? Color.primary.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 8))
             .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
             .onHover { hovered = $0 }
             .contextMenu { actions }
             .help(tooltip)
+            .accessibilityElement(children: .contain)
+            .accessibilityAction(named: Text("打开会话")) { if item.online { onOpen() } }
     }
 
-    private var membershipControls: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder").foregroundStyle(.secondary).accessibilityHidden(true)
-            if let first = groups.first {
-                Text("任务组").foregroundStyle(.secondary)
-                Button { onOpenGroup(first.id) } label: {
-                    Text(first.name).lineLimit(1).truncationMode(.middle)
-                }.buttonStyle(.link).help(first.name)
-                    .accessibilityLabel("打开任务组：\(first.name)")
-                if groups.count > 1 {
-                    Menu {
-                        ForEach(groups.dropFirst()) { group in
-                            Button(group.name) { onOpenGroup(group.id) }
-                        }
-                    } label: { Text("另 \(groups.count - 1) 组") }
-                        .menuStyle(.borderlessButton).fixedSize()
+    private var showsHoverAction: Bool { item.canMarkReviewed && item.online }
+
+    /// Group membership rides the metadata line instead of a full-width third row;
+    /// every row still states its group, and ungrouped rows keep a visible action.
+    @ViewBuilder private var membershipControls: some View {
+        if let first = groups.first {
+            Button { onOpenGroup(first.id) } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "folder").font(.system(size: 9)).accessibilityHidden(true)
+                    Text(first.name).lineLimit(1).truncationMode(.middle).frame(maxWidth: 140)
                 }
-                Button("管理归属", action: onManageGroups).buttonStyle(.link).foregroundStyle(.secondary).fixedSize()
-            } else {
-                Text("未归组").foregroundStyle(.secondary)
-                Button("关联任务组", action: onManageGroups).buttonStyle(.link)
+            }.buttonStyle(QuietLinkStyle()).fixedSize().help(first.name)
+                .accessibilityLabel("打开任务组：\(first.name)")
+            if groups.count > 1 {
+                Menu {
+                    ForEach(groups.dropFirst()) { group in
+                        Button(group.name) { onOpenGroup(group.id) }
+                    }
+                } label: { Text("另 \(groups.count - 1) 组") }
+                    .menuStyle(.borderlessButton).fixedSize()
             }
-            Spacer(minLength: 0)
-        }.font(.system(size: 11))
+            Button("管理归属", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
+                .opacity(hovered ? 1 : 0)
+        } else {
+            Text("未归组").foregroundStyle(.tertiary)
+            Text("·").foregroundStyle(.quaternary)
+            Button("关联任务组", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
+        }
     }
 
+}
+
+/// The one actionable stat is a button; the capsule only deepens on hover.
+private struct SummaryStatStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .brightness(hovered || configuration.isPressed ? -0.04 : 0)
+            .onHover { hovered = $0 }
+    }
+}
+
+/// Section titles share the status palette with the row indicators.
+private struct QueueSectionMark: View {
+    let section: WorkQueueSection
+    var body: some View {
+        switch section {
+        case .attention:
+            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+        case .review:
+            Image(systemName: "circlebadge.fill").foregroundStyle(.blue)
+        case .running:
+            Image(systemName: "circle.dotted").foregroundStyle(.tertiary)
+        case .other:
+            Image(systemName: "tray").foregroundStyle(.tertiary)
+        }
+    }
+}
+
+private extension DashboardEmptyState {
+    var symbol: String {
+        switch self {
+        case .noEnvironment: return "server.rack"
+        case .noSessions: return "plus.message"
+        case .nothingPending: return "checkmark.circle"
+        case .noMatches: return "line.3.horizontal.decrease.circle"
+        }
+    }
+}
+
+/// Rows inside the change card light up on hover instead of staying flat.
+private struct ChangeRowStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.07 : hovered ? 0.04 : 0),
+                        in: RoundedRectangle(cornerRadius: 6))
+            .onHover { hovered = $0 }
+    }
 }

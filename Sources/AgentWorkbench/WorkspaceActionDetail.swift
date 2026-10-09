@@ -7,9 +7,12 @@ struct WorkspaceActionDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(item.title).font(.title3.weight(.medium)).textSelection(.enabled)
-                    Text("\(item.hostName) · \(item.directory)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                HStack(alignment: .top, spacing: 10) {
+                    SessionStatusIndicator(item: item).frame(width: 17, height: 16).padding(.top, 3)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(item.title).font(.title3.weight(.medium)).textSelection(.enabled)
+                        Text("\(item.hostName) · \(item.directory)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
                 }
                 Spacer()
                 Button("关闭") { model.inspectingSession = nil }.keyboardShortcut(.cancelAction)
@@ -35,6 +38,9 @@ struct WorkspaceActionDetail: View {
                 if item.section == .attention {
                     Text("处理完成后进入下一项").font(.caption).foregroundStyle(.secondary)
                     Button("下一项") { model.inspectNext(after: item) }
+                        .buttonStyle(.borderedProminent)
+                        .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
+                        .keyboardShortcut(.defaultAction)
                 }
             }
         }.padding(24).frame(width: 640, height: 620)
