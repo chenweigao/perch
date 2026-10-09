@@ -46,8 +46,21 @@ func checkRemoteSetup() async throws {
     defer { try? FileManager.default.removeItem(at: folder) }
     let child = folder.appendingPathComponent("a folder's $literal")
     try FileManager.default.createDirectory(at: child, withIntermediateDirectories: false)
-    let listing = try await SetupCommandRunner.run("/bin/sh", ["-c", RemoteSetup.directoryListCommand(folder.path)])
-    precondition(listing.split(separator: 0).map { String(decoding: $0, as: UTF8.self) } == [child.path])
+    for shell in ["/bin/sh", "/bin/zsh"] {
+        let listing = try await SetupCommandRunner.run(shell, ["-c", RemoteSetup.directoryListCommand(folder.path)])
+        precondition(listing.split(separator: 0).map { String(decoding: $0, as: UTF8.self) } == [child.path])
+    }
+    let hidden = folder.appendingPathComponent(".hidden")
+    let doubleDot = folder.appendingPathComponent("..hidden")
+    try FileManager.default.createDirectory(at: hidden, withIntermediateDirectories: false)
+    try FileManager.default.createDirectory(at: doubleDot, withIntermediateDirectories: false)
+    let hiddenListing = try await SetupCommandRunner.run("/bin/zsh", ["-c", RemoteSetup.directoryListCommand(folder.path)])
+    precondition(Set(hiddenListing.split(separator: 0).map { String(decoding: $0, as: UTF8.self) }) == Set([child.path, hidden.path, doubleDot.path]))
+    for directory in [child.path, hidden.path, doubleDot.path] {
+        try FileManager.default.removeItem(atPath: directory)
+    }
+    let emptyListing = try await SetupCommandRunner.run("/bin/zsh", ["-c", RemoteSetup.directoryListCommand(folder.path)])
+    precondition(emptyListing.isEmpty)
 
     let runtimeRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: runtimeRoot, withIntermediateDirectories: false)
