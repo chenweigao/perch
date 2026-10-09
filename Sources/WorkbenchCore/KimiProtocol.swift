@@ -98,6 +98,9 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
     public let updatedAt: String
     public let busy: Bool
     public let mainTurnActive: Bool?
+    /// `busy` also includes background tasks such as preview servers. Only the
+    /// main turn controls reply presentation, the composer and turn timing.
+    public var isTurnRunning: Bool { mainTurnActive ?? busy }
     public let pendingInteraction: String?
     public let archived: Bool?
     public let lastTurnReason: String?

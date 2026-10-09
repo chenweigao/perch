@@ -339,7 +339,7 @@ final class KimiConnection {
         guard token == generation else { throw CancellationError() }
         var clocks = timings
         for session in all {
-            clocks.observe(sessionID: session.id, running: session.busy,
+            clocks.observe(sessionID: session.id, running: session.isTurnRunning,
                            waiting: ["approval", "question"].contains(session.pendingInteraction ?? ""))
         }
         if clocks != timings { timings = clocks }
@@ -361,7 +361,7 @@ final class KimiConnection {
     }
     func recapMessages(for id: String) async throws -> [KimiMessage] {
         guard id == selectedId, var full = conversation,
-              full.snapshot.session.id == id, !full.snapshot.session.busy,
+              full.snapshot.session.id == id, !full.snapshot.session.isTurnRunning,
               full.snapshot.session.lastTurnReason == "completed",
               full.snapshot.pendingApprovals.isEmpty, full.snapshot.pendingQuestions.isEmpty else {
             throw WorkbenchError(L("任务尚未完成，暂时不能生成 Recap。"))
@@ -377,7 +377,7 @@ final class KimiConnection {
             try Task.checkCancellation()
             guard selectionToken == selectionGeneration, id == selectedId,
                   let current = conversation, current.snapshot.session.id == id,
-                  !current.snapshot.session.busy, current.snapshot.session.lastTurnReason == "completed",
+                  !current.snapshot.session.isTurnRunning, current.snapshot.session.lastTurnReason == "completed",
                   current.snapshot.session.updatedAt == completion,
                   current.snapshot.pendingApprovals.isEmpty, current.snapshot.pendingQuestions.isEmpty else {
                 throw CancellationError()
@@ -421,7 +421,7 @@ final class KimiConnection {
         pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [],
                                                 remote: prompts.queued + (prompts.active.map { [$0] } ?? []),
                                                 messages: retained + value.messages.items,
-                                                settled: !value.session.busy)
+                                                settled: !value.session.isTurnRunning)
         if let current = conversation, value.epoch == current.snapshot.epoch, value.asOfSeq < current.lastSeq {
             // Keep newer events from this same server epoch, but settle the read.
             // Otherwise a refresh can leave the cached conversation unsendable.
@@ -430,7 +430,7 @@ final class KimiConnection {
         }
         if conversation != nil { conversation?.reconcile(value) } else { conversation = KimiConversation(value) }
         timings.observe(sessionID: id, turnID: value.inFlightTurn.map { String($0.turnId) },
-                        requestID: value.inFlightTurn?.currentPromptId, running: value.session.busy,
+                        requestID: value.inFlightTurn?.currentPromptId, running: value.session.isTurnRunning,
                         waiting: !value.pendingApprovals.isEmpty || !value.pendingQuestions.isEmpty)
         // Catalog observers may select another session synchronously. Publish this
         // snapshot's state before notifying them, never after their new selection.
@@ -894,7 +894,7 @@ final class KimiConnection {
     var isStopping: Bool { selectedId.map { aborting.contains($0) } ?? false }
     var canStop: Bool {
         online && snapshotReady && !loading && !isStopping
-            && conversation?.snapshot.session.busy == true
+            && conversation?.snapshot.session.isTurnRunning == true
     }
     func abort() {
         guard canStop, let api, let id = selectedId else { return }
