@@ -63,14 +63,22 @@ struct NativeAgentView: View {
                 ConversationScrollView(showsScrollIndicator: !follow, hasOlderHistory: s.hasOlder, onScroll: { guard isCurrent(s) else { return }; if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
                     if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
                 }, onNearTop: {
-                    if isCurrent(s), s.hasOlder { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
+                    // Load earlier pages only for a reader who scrolled up; an
+                    // open session following the tail must not fetch eagerly.
+                    if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] == false { connection.loadOlder() }
                 }) {
                     if s.hasOlder {
-                        HStack {
-                            Button(connection.loadingOlder ? "加载中…" : "加载更早消息") {
-                                follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
+                        HStack(spacing: 6) {
+                            if connection.loadingOlder {
+                                ProgressView().controlSize(.small)
+                                Text("正在加载更早消息…")
+                            } else {
+                                // Approaching the top already loads; this stays for keyboard and VoiceOver.
+                                Button("加载更早消息") {
+                                    follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
+                                }.buttonStyle(.borderless).disabled(!connection.online)
                             }
-                        }.disabled(connection.loadingOlder || !connection.online).frame(maxWidth: .infinity)
+                        }.font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
                     ConversationTranscript(messages: s.messages, sessionId: s.id,
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
@@ -90,8 +98,9 @@ struct NativeAgentView: View {
                                 .disabled(connection.loadingOlder || !connection.online).padding(8)
                         }
                     }
-                    .overlay(alignment: .bottom) {
+                    .overlay(alignment: .bottomTrailing) {
                         ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
+                            .padding(.trailing, 40).padding(.bottom, 10)
                     }
                     .onChange(of: s.revision) { _, _ in
                         if #unavailable(macOS 15) {

@@ -142,6 +142,8 @@ private struct ReadingPreview: View {
             ScrollViewReader { proxy in
             ConversationScrollView(showsScrollIndicator: !follow, onScroll: { follow = $0 }, onContentSizeChange: {
                 if follow { proxy.scrollTo("bottom", anchor: .bottom) }
+            }, onNearTop: {
+                if !follow, historyPages < 2, scenario == 7 || scenario == 8 { historyPages += 1 }
             }) {
                     if scenario == 0 {
                         KimiMarkdown(text: streaming ? String(source.prefix(prefixLength)) : source)
@@ -150,8 +152,10 @@ private struct ReadingPreview: View {
                     } else if scenario == 9, let replay {
                         ConversationTranscript(messages: replay.displayMessages, sessionId: "offline-replay", isRunning: replay.snapshot.session.busy)
                     } else if scenario == 7 || scenario == 8 {
-                        Button(historyPages < 2 ? "加载更早消息" : "已加载全部 60 轮") { follow = false; historyPages += 1 }
-                            .disabled(historyPages >= 2).frame(maxWidth: .infinity)
+                        if historyPages < 2 {
+                            Text("上滑自动加载更早消息").font(.system(size: 11)).foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity).padding(.vertical, 2)
+                        }
                         ConversationTranscript(messages: historyMessages, sessionId: "history-fixture")
                     } else {
                         if scenario == 3 {
@@ -162,8 +166,9 @@ private struct ReadingPreview: View {
                     Color.clear.frame(height: 1).id("bottom")
             }.frame(maxWidth: narrow ? 492 : .infinity)
                 .task(id: scenario) { await Task.yield(); proxy.scrollTo("bottom", anchor: .bottom) }
-                .overlay(alignment: .bottom) {
+                .overlay(alignment: .bottomTrailing) {
                     ReturnToLatestButton(isVisible: !follow) { follow = true; proxy.scrollTo("bottom", anchor: .bottom) }
+                        .padding(.trailing, 40).padding(.bottom, 10)
                 }
             }
             ConversationActivityBar(activity: ConversationActivity(

@@ -259,11 +259,21 @@ private struct KimiTimeline: View {
         ScrollViewReader { proxy in
             ConversationScrollView(showsScrollIndicator: !follow, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
                 if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
+            }, onNearTop: {
+                if ConversationReadingMemory.shared.following[readingKey] == false { connection.loadOlder() }
             }) {
                 if let c = connection.conversation {
                     if c.hasOlder {
-                        Button(connection.loadingOlder ? "加载中…" : "加载更早消息") { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
-                            .disabled(connection.loadingOlder || !connection.online || !connection.snapshotReady).frame(maxWidth: .infinity)
+                        HStack(spacing: 6) {
+                            if connection.loadingOlder {
+                                ProgressView().controlSize(.small)
+                                Text("正在加载更早消息…")
+                            } else {
+                                // Approaching the top already loads; this stays for keyboard and VoiceOver.
+                                Button("加载更早消息") { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
+                                    .buttonStyle(.borderless).disabled(!connection.online || !connection.snapshotReady)
+                            }
+                        }.font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
@@ -298,8 +308,9 @@ private struct KimiTimeline: View {
                 }
                 Color.clear.frame(height: 1).id("bottom")
             }
-            .overlay(alignment: .bottom) {
+            .overlay(alignment: .bottomTrailing) {
                 ReturnToLatestButton(isVisible: !follow, hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) }
+                    .padding(.trailing, 40).padding(.bottom, 10)
             }
             .task(id: displayedResult.map { "\($0.id):\($0.updatedAt)" }) {
                 // Reviewing changes the shared catalog and sidebar. Publish
