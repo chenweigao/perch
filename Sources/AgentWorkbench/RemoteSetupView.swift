@@ -118,9 +118,14 @@ struct AddHostSheet: View {
                 VStack(alignment: .leading, spacing: 14) { ForEach(setup.checks) { checkRow($0) } }
             }
             HStack {
+                if setup.checks.contains(where: \.needsManualRestart) {
+                    Button("打开远端终端") { setup.openTerminal() }.disabled(setup.busy)
+                }
                 Button(setup.checkAgentTitle) { setup.checkAgent() }.disabled(setup.busy)
                 Spacer()
-                Link("安装说明", destination: setup.installURL)
+                if !setup.checks.contains(where: \.needsManualRestart) {
+                    Link("安装说明", destination: setup.installURL)
+                }
             }
             if !setup.ready && !setup.busy && setup.failedCheck != nil { repairs }
         }
@@ -139,8 +144,20 @@ struct AddHostSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(check.title).font(.callout.weight(.medium))
                 if !check.detail.isEmpty { Text(check.detail).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
+                if check.needsManualRestart {
+                    DisclosureGroup("重启步骤") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("1. 等待这台机器上该 Kimi Web 服务中的会话和后台任务结束。")
+                            Text("2. 在远端按原来的启动方式停止并重新启动 Kimi Web。前台运行时，在原终端按 Control-C 后重新运行原命令；后台或托管服务请通过原来的服务管理方式重启。")
+                            Text("沿用原来的端口（\(String(setup.host.kimiPort))）、令牌路径（\(setup.tokenPath)）与环境配置。")
+                            Text("3. 返回 Perch 点击“重新检查”。运行版本与安装版本一致后，此提示会消失。")
+                            Text("“重新检查”只核对状态；重开 Perch 不会重启远端 Kimi Web。")
+                                .foregroundStyle(.secondary)
+                        }.textSelection(.enabled).padding(.top, 6)
+                    }.font(.caption).padding(.top, 4)
+                }
             }
-        }.accessibilityElement(children: .combine)
+        }.accessibilityElement(children: check.needsManualRestart ? .contain : .combine)
     }
     private var repairs: some View {
         VStack(alignment: .leading, spacing: 10) {

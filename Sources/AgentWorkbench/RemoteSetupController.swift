@@ -11,6 +11,7 @@ final class RemoteSetupController: ObservableObject {
         var title: String
         var status: Status = .waiting
         var detail = ""
+        var needsManualRestart = false
     }
     @Published var step = Step.machine
     @Published var destination: String
@@ -232,15 +233,17 @@ final class RemoteSetupController: ObservableObject {
     /// stop someone else's running service.
     private func reportKimiProcess(running: RunningRuntime) {
         checks.removeAll { $0.id == "process" }
+        let freshness = RuntimeVersion.compare(installed: kimiInstalledVersion, running: running.version)
         let detail: String
-        switch RuntimeVersion.compare(installed: kimiInstalledVersion, running: running.version) {
+        switch freshness {
         case .stale(let onDisk, let serving):
             detail = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
         case .current, .unknown:
             detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
         }
         guard !detail.isEmpty else { return }
-        checks.append(Check(id: "process", title: L("运行进程"), status: .information, detail: detail))
+        checks.append(Check(id: "process", title: freshness.isStale ? L("Kimi 更新待生效") : L("运行进程"),
+                            status: .information, detail: detail, needsManualRestart: freshness.isStale))
     }
     /// The bridge process serving this check. `--ensure` already replaces an idle
     /// service whose source differs, so this row only makes the running one visible;
