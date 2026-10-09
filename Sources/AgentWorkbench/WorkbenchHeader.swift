@@ -42,7 +42,7 @@ struct WorkbenchHeaderActions: View {
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var status: String? {
         if model.showDashboard { return nil }
-        if model.showKimi, let session = kimi.conversation?.snapshot.session, session.busy { return session.status }
+        if model.showKimi, let session = kimi.conversation?.snapshot.session, session.isTurnRunning { return session.status }
         if model.showNative, let session = native.snapshot {
             if !session.interactions.isEmpty { return L("等你处理") }
             if session.busy { return L("运行中") }
