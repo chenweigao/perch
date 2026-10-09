@@ -204,17 +204,12 @@ private extension EnvironmentValues {
     }
 }
 
-private struct ReplyText: View {
-    @Environment(\.replyInk) private var ink
-    let runs: [ReplyInline]
-    var size: CGFloat = ReplyStyle.bodySize
-    var weight: NSFont.Weight = .regular
-    var alignment: TextAlignment = .leading
-    var lineHeight: CGFloat? = nil
-    var followingParagraphs: [[ReplyInline]] = []
-    var paragraphSpacing: CGFloat = 12
-    var preservesSelectionOnAppend = false
-    private var attributed: NSAttributedString {
+/// Both native user rows and SwiftUI Markdown share exact text attributes.
+enum ReplyTextAttributes {
+    static func paragraphs(_ paragraphs: [[ReplyInline]], size: CGFloat = ReplyStyle.bodySize,
+                           weight: NSFont.Weight = .regular, alignment: TextAlignment = .leading,
+                           lineHeight: CGFloat? = nil, paragraphSpacing: CGFloat = 12,
+                           ink: NSColor = ReplyStyle.nativeInk) -> NSAttributedString {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("attributed_text", since: start) }
@@ -225,7 +220,7 @@ private struct ReplyText: View {
         // Wrap oversized paths/URLs in TextKit without altering selectable text.
         paragraph.lineBreakMode = .byWordWrapping
         paragraph.alignment = alignment == .trailing ? .right : alignment == .center ? .center : .left
-        for (index, paragraphRuns) in ([runs] + followingParagraphs).enumerated() {
+        for (index, paragraphRuns) in paragraphs.enumerated() {
             if index > 0 {
                 // Space only the paragraph boundary, preserving Markdown hard breaks.
                 let previous = (result.string as NSString).paragraphRange(for: NSRange(location: result.length - 1, length: 1))
@@ -255,6 +250,23 @@ private struct ReplyText: View {
             }
         }
         return result
+    }
+}
+
+private struct ReplyText: View {
+    @Environment(\.replyInk) private var ink
+    let runs: [ReplyInline]
+    var size: CGFloat = ReplyStyle.bodySize
+    var weight: NSFont.Weight = .regular
+    var alignment: TextAlignment = .leading
+    var lineHeight: CGFloat? = nil
+    var followingParagraphs: [[ReplyInline]] = []
+    var paragraphSpacing: CGFloat = 12
+    var preservesSelectionOnAppend = false
+    private var attributed: NSAttributedString {
+        ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: size, weight: weight,
+                                      alignment: alignment, lineHeight: lineHeight,
+                                      paragraphSpacing: paragraphSpacing, ink: ink)
     }
     var body: some View {
         SelectableReplyText(attributed: attributed, preservesSelectionOnAppend: preservesSelectionOnAppend)
@@ -305,7 +317,8 @@ struct SelectableReplyText: NSViewRepresentable {
     #if TRANSCRIPT_CHECKS
     static var recycledCount: Int { recycled.count }
     #endif
-    static func dismantleNSView(_ view: ReplyTextView, coordinator: Coordinator) {
+    static func dismantleNSView(_ view: ReplyTextView, coordinator: Coordinator) { recycle(view) }
+    static func recycle(_ view: ReplyTextView) {
         view.delegate = nil
         view.setSelectedRange(NSRange(location: 0, length: 0))
         view.update(NSAttributedString(string: ""))
@@ -313,7 +326,8 @@ struct SelectableReplyText: NSViewRepresentable {
         if recycled.count < 64 { recycled.append(view) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> ReplyTextView {
+    func makeNSView(context: Context) -> ReplyTextView { Self.acquire(delegate: context.coordinator) }
+    static func acquire(delegate: NSTextViewDelegate) -> ReplyTextView {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("text_create", since: start) }
@@ -332,7 +346,7 @@ struct SelectableReplyText: NSViewRepresentable {
             view = ReplyTextView(usingTextLayoutManager: false)
         }
         view.isEditable = false
-        view.delegate = context.coordinator
+        view.delegate = delegate
         view.enabledTextCheckingTypes = 0
         view.isSelectable = true
         view.drawsBackground = false
@@ -348,6 +362,78 @@ struct SelectableReplyText: NSViewRepresentable {
     func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ReplyTextView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
+    }
+}
+
+/// Plain-paragraph user messages need text selection and a right-aligned bubble,
+/// but no SwiftUI state graph. Complex Markdown/attachments keep their existing row.
+final class NativeUserMessageView: NSView {
+    private static var recycled: [NativeUserMessageView] = []
+    private var texts: [ReplyTextView] = []
+    private let links = SelectableReplyText.Coordinator()
+    private var bubble = CGRect.zero
+    override var isFlipped: Bool { true }
+
+    static func content(_ source: String) -> [NSAttributedString]? {
+        let blocks = ReplyDocument.parse(source)
+        var paragraphs: [[ReplyInline]] = []
+        for block in blocks {
+            guard case .paragraph(let runs) = block, runs.contains(where: { !$0.text.isEmpty }) else { return nil }
+            paragraphs.append(runs)
+        }
+        guard !paragraphs.isEmpty else { return nil }
+        return stride(from: 0, to: paragraphs.count, by: 8).map {
+            ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]))
+        }
+    }
+    static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
+    static func recycle(_ view: NativeUserMessageView) {
+        view.removeFromSuperview()
+        for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
+        // A giant prompt must not leave an unbounded number of text containers
+        // in the row pool after it is no longer visible.
+        while view.texts.count > 8 {
+            let text = view.texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
+        }
+        if recycled.count < 16 { recycled.append(view) }
+    }
+    func update(_ content: [NSAttributedString], dark: Bool) {
+        appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        while texts.count > content.count {
+            let text = texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
+        }
+        while texts.count < content.count {
+            let text = SelectableReplyText.acquire(delegate: links)
+            text.isConversationBodyText = true
+            texts.append(text); addSubview(text)
+        }
+        for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
+        needsDisplay = true
+    }
+    private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
+        let ideal = (texts.map { $0.measure(width: nil).width }.max() ?? 0) + 28
+        let bubbleWidth = min(ideal, width * 0.85)
+        return (bubbleWidth, texts.map { $0.measure(width: max(1, bubbleWidth - 28)) })
+    }
+    func measure(width: CGFloat) -> CGSize {
+        let sizes = measurements(width: width).sizes
+        return CGSize(width: width, height: sizes.reduce(30) { $0 + $1.height } + CGFloat(max(0, sizes.count - 1)) * 12)
+    }
+    func place(width: CGFloat) {
+        let layout = measurements(width: width)
+        let x = width - layout.bubbleWidth
+        var y: CGFloat = 20
+        for (text, size) in zip(texts, layout.sizes) {
+            let frame = CGRect(x: x + 14, y: y, width: max(1, layout.bubbleWidth - 28), height: size.height)
+            if text.frame != frame { text.frame = frame }
+            y += size.height + 12
+        }
+        let next = CGRect(x: x, y: 10, width: layout.bubbleWidth, height: measure(width: width).height - 10)
+        if next != bubble { bubble = next; needsDisplay = true }
+    }
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.labelColor.withAlphaComponent(0.035).setFill()
+        NSBezierPath(roundedRect: bubble, xRadius: 12, yRadius: 12).fill()
     }
 }
 

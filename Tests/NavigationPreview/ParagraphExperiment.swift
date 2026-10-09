@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import QuartzCore
+import WorkbenchCore
 
 extension NavigationRunner {
     /// Compare mounted native glyph positions, links, copying and streaming identity.
@@ -137,5 +138,76 @@ extension NavigationRunner {
         }
         return ["streaming_samples": streaming, "paragraph_samples": samples, "streaming_identity": stableIdentity, "streaming_selection": stableSelection,
                 "replacement": true]
+    }
+}
+
+extension NavigationRunner {
+    /// Compare the direct native bubble with the previous SwiftUI layout using
+    /// actual glyphs, links and selection, including reuse across message shapes.
+    func nativeUserRows() async throws -> [String: Any] {
+        func texts(_ view: NSView) -> [ReplyTextView] {
+            (view as? ReplyTextView).map { [$0] } ?? view.subviews.flatMap(texts)
+        }
+        let cases = [
+            ("短问题 中文 👩🏽‍💻", ["短问题"]),
+            ("Alpha **bold** *italic* ~~strike~~ `inline` [link](https://example.com/path).\n\nBeta 中文 👩🏽‍💻 é.\n\nGamma 结尾。", ["Alpha", "Beta", "Gamma"]),
+            ((0..<12).map { "段落编号\($0)结束：中英文 mixed wrapping " + String(repeating: "较长的文本。", count: 8) }.joined(separator: "\n\n"), (0..<12).map { "段落编号\($0)结束" }),
+            ("LongStart " + String(repeating: "English 中文 👩🏽‍💻 é line wrapping. ", count: 80) + " LongEnd", ["LongStart", "LongEnd"])
+        ]
+        var observations: [[String: Any]] = []
+        for width in [CGFloat(700), 340] {
+            for dark in [false, true] {
+                for (source, markers) in cases {
+                    let raw: [String: Any] = ["id": "native-user-parity", "role": "user", "created_at": "fixture",
+                        "content": [["type": "text", "text": source]]]
+                    let message = try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: raw))
+                    let original = NSHostingController(rootView: KimiMessageView(message: message, tools: [:], api: nil, sessionId: "parity")
+                        .frame(width: width).environment(\.colorScheme, dark ? .dark : .light))
+                    original.sizingOptions = []; original.safeAreaRegions = []
+                    guard let attributed = NativeUserMessageView.content(source) else { throw NavigationError("Native user fixture rejected prose") }
+                    let native = NativeUserMessageView.acquire()
+                    native.update(attributed, dark: dark)
+                    defer { NativeUserMessageView.recycle(native) }
+                    var glyphs: [[String: CGPoint]] = [], heights: [CGFloat] = []
+                    for isNative in [false, true] {
+                        let view: NSView = isNative ? native : original.view
+                        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 500), styleMask: [.titled], backing: .buffered, defer: false)
+                        window.isReleasedWhenClosed = false
+                        window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+                        window.contentView = view; window.orderFront(nil)
+                        defer { window.close() }
+                        let size = isNative ? native.measure(width: width) : original.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+                        window.setContentSize(size)
+                        if isNative { native.place(width: width) }
+                        for _ in 0..<5 {
+                            await withCheckedContinuation { c in DispatchQueue.main.async { c.resume() } }
+                            view.layoutSubtreeIfNeeded(); view.displayIfNeeded(); CATransaction.flush()
+                        }
+                        heights.append(size.height)
+                        var positions: [String: CGPoint] = [:]
+                        for marker in markers {
+                            guard let text = texts(view).first(where: { $0.string.contains(marker) }), let manager = text.layoutManager, let container = text.textContainer else { throw NavigationError("Native user lost marker: \(marker)") }
+                            let range = manager.glyphRange(forCharacterRange: (text.string as NSString).range(of: marker), actualCharacterRange: nil)
+                            positions[marker] = text.convert(manager.boundingRect(forGlyphRange: range, in: container), to: view).origin
+                        }
+                        glyphs.append(positions)
+                        if source.contains("Alpha"), let text = texts(view).first(where: { $0.string.contains("Alpha") && $0.string.contains("Gamma") }) {
+                            let link = (text.string as NSString).range(of: "link")
+                            guard (text.textStorage?.attribute(.link, at: link.location, effectiveRange: nil) as? URL)?.absoluteString == "https://example.com/path" else { throw NavigationError("Native user lost link") }
+                            text.setSelectedRange(NSRange(location: 0, length: (text.string as NSString).length))
+                            let board = NSPasteboard.withUniqueName(); defer { board.releaseGlobally() }
+                            guard let type = text.writablePasteboardTypes.first(where: { $0 == .string || $0.rawValue == "NSStringPboardType" }), text.writeSelection(to: board, types: [type]), board.string(forType: type) == text.string else { throw NavigationError("Native user Unicode copy failed") }
+                        }
+                    }
+                    let drift = markers.map { max(abs(glyphs[0][$0]!.x - glyphs[1][$0]!.x), abs(glyphs[0][$0]!.y - glyphs[1][$0]!.y)) }.max() ?? 0
+                    observations.append(["width": width, "dark": dark, "paragraphs": attributed.count, "heights": heights, "max_glyph_drift": drift])
+                    let output = URL(fileURLWithPath: ProcessInfo.processInfo.environment["NAVIGATION_RESULTS"]!)
+                    try JSONSerialization.data(withJSONObject: ["cases": observations], options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("native-user-parity.json"))
+                    guard abs(heights[0] - heights[1]) <= 1, drift <= 1 else { throw NavigationError("Native user layout differs from SwiftUI: heights \(heights), drift \(drift)") }
+                }
+            }
+        }
+        guard NativeUserMessageView.content("# Heading") == nil, NativeUserMessageView.content("```swift\nlet a = 1\n```") == nil else { throw NavigationError("Complex content did not keep its existing renderer") }
+        return ["cases": observations, "complex_markdown_retains_swiftui": true, "links_and_unicode_copy": true]
     }
 }

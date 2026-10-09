@@ -882,6 +882,14 @@ final class NavigationRunner {
         guard promptRow(in: scroll) === promptHost, contains("更新后的短问题", in: promptHost), promptHost.frame.height < wideHeight - 100 else {
             throw NavigationError("User bubble retained long-content geometry")
         }
+        // Same-ID edits can enter and leave the native prose path without
+        // replacing the outer row or keeping stale text/selection.
+        try replacePrompt("```swift\nlet fallbackMarker = 1\n```")
+        try await settle()
+        guard promptRow(in: scroll) === promptHost, contains("fallbackMarker", in: promptHost) else { throw NavigationError("Native user failed to switch to complex Markdown") }
+        try replacePrompt("恢复普通文本 native-again")
+        try await settle()
+        guard promptRow(in: scroll) === promptHost, contains("native-again", in: promptHost), !contains("fallbackMarker", in: promptHost) else { throw NavigationError("User row kept obsolete complex content") }
         try record("user_bubble_resize", ["same_host": true, "short_height": shortHeight,
                                         "long_narrow_height": narrowHeight, "long_wide_height": wideHeight,
                                         "replacement_short_height": promptHost.frame.height])
@@ -1199,7 +1207,8 @@ struct NavigationPreviewApp: App {
                 report["build"] = try JSONSerialization.jsonObject(with: Data(contentsOf: buildURL))
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
-            if mode == "paragraphs" { report.merge(try await runner.paragraphExperiment()) { a, _ in a } }
+            if mode == "user-rows" { report.merge(try await runner.nativeUserRows()) { a, _ in a } }
+            else if mode == "paragraphs" { report.merge(try await runner.paragraphExperiment()) { a, _ in a } }
             else if mode == "disclosure" { report.merge(try await runner.disclosures()) { a, _ in a } }
             else if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }
             else if mode == "image" { report.merge(try await runner.imageDecoding()) { a, _ in a } }
@@ -1291,6 +1300,21 @@ extension NavigationRunner {
             }
             return result.sorted { $0.frame.minY < $1.frame.minY }
         }
+        var revealTrace: [[String: Any]] = []
+        func recordReveal(_ stage: String) throws {
+            let scroll = findScrollView(host)
+            let document = ConversationTranscript.document(in: host)
+            let anchor = ConversationTranscript.readingAnchor(in: host)
+            revealTrace.append(["stage": stage, "session": model.selected, "target": targetRowID,
+                "navigator_session": ConversationTranscript.navigator(in: host)?.snapshot.session ?? "none",
+                "origin": scroll?.contentView.bounds.minY ?? -1,
+                "document_height": document?.bounds.height ?? -1,
+                "scroll_height": scroll?.documentView?.bounds.height ?? -1,
+                "rows": document?.subviews.compactMap { $0.identifier?.rawValue } ?? [],
+                "target_y": rows().first?.frame.minY ?? -1,
+                "anchor": anchor?.entry ?? "none", "anchor_offset": anchor?.offset ?? -1])
+            try writeNavigationArtifact("disclosure-reveal.json", ["samples": revealTrace])
+        }
         let demo = Bundle.main.object(forInfoDictionaryKey: "PerchLongOutputDemo") as? Bool == true
         let withContext = demo || ProcessInfo.processInfo.environment["NAVIGATION_DISCLOSURE_CONTEXT"] == "1"
         let full = demo || ProcessInfo.processInfo.environment["NAVIGATION_FULL_DISCLOSURE"] == "1"
@@ -1334,10 +1358,15 @@ extension NavigationRunner {
                 $0.messages.flatMap(\.content).contains { $0.type == "tool_use" || $0.type == "thinking" }
             }!.id
             if withContext {
-                guard await flushAndWait(host, until: { self.model.marker.contentToken == NavigationModel.token(self.model.conversation) }) != nil else {
-                    throw NavigationError("context transcript did not mount")
+                guard await flushAndWait(host, until: {
+                    self.model.marker.contentToken == NavigationModel.token(self.model.conversation)
+                        && ConversationTranscript.navigator(in: host)?.snapshot.session == session
+                }) != nil else {
+                    throw NavigationError("context transcript navigator did not mount")
                 }
+                try recordReveal("before reveal")
                 ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
+                try recordReveal("after reveal")
             }
             guard await flushAndWait(host, until: { binding(for: kind) != nil }) != nil,
                   let scroll = findScrollView(host) else { throw NavigationError("missing \(kind) disclosure") }
@@ -1360,7 +1389,10 @@ extension NavigationRunner {
                 ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
                 return ["demo": true]
             }
-            let collapsed = rows().first?.frame.height ?? 0
+            try recordReveal("before toggle")
+            guard let collapsed = rows().first?.frame.height, collapsed > 0 else {
+                throw NavigationError("Disclosure target was not mounted before toggling")
+            }
             for iteration in 0..<6 {
                 guard let control = fullSource.flatMap({ ConversationDisclosureFixture.fullBindings[$0] }) ?? binding(for: kind) else { throw NavigationError("lost disclosure") }
                 NavigationRenderMetrics.stages = [:]

@@ -50,9 +50,12 @@ def main():
         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
             "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
-        for mode in ["reading", "interactions", "paragraphs", "roundtrip"]:
+        for mode in ["reading", "interactions", "paragraphs", "user-rows", "fast-scroll", "turns", "roundtrip"]:
             commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
                 mode, "--output", str(out / ("navigation-" + mode))], 150))
+        for label, extra in [("disclosure", []), ("disclosure-full", ["--full-content"])]:
+            commands.append(("navigation-" + label, [python, "scripts/run-navigation-check.py", "disclosure",
+                "--disclosure-context", "--assert-atomic-disclosure", "--output", str(out / ("navigation-" + label))] + extra, 150))
     report = {"suite": args.suite, "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
               "dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT)), "checks": []}
