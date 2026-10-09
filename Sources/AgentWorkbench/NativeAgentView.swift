@@ -171,6 +171,8 @@ private struct NativeComposerView: View {
     let s: NativeAgentSnapshot
     @State private var palette = CommandPaletteState()
     @State private var recall = ComposerRecall()
+    @State private var chooseFiles = false
+    private var supportsAttachments: Bool { s.provider == .claude }
     var body: some View {
         VStack(spacing: 8) {
             if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
@@ -178,7 +180,16 @@ private struct NativeComposerView: View {
                     apply(command, completion, to: s.id)
                 }
             }
-            VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
+                if let files = connection.attachments[s.id], !files.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(files, id: \.self) { file in
+                                ComposerAttachment(file: file) { connection.attachments[s.id]?.removeAll { $0 == file } }
+                            }
+                        }
+                    }
+                }
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                               set: { connection.drafts[s.id] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: s.cwd,
@@ -186,10 +197,12 @@ private struct NativeComposerView: View {
                                 accessibilityLabel: "Message \(s.provider.label)",
                                 canSend: canSend(s),
                                 onSend: { send(defaultMode(s)) },
+                                onFiles: supportsAttachments ? { addAttachments($0) } : nil,
+                                onError: { connection.actionError = $0 },
                                 onKey: { key in handle(key, for: s) },
                                 pastes: connection.pastes).id(s.id)
                 ComposerToolbarLayout {
-                    ComposerAddButton(supportsFiles: false)
+                    ComposerAddButton(supportsFiles: supportsAttachments, disabled: connection.sending) { chooseFiles = true }
                     NativeModelControls(connection: connection, snapshot: s)
                     PermissionPicker(
                         provider: s.provider,
@@ -219,6 +232,14 @@ private struct NativeComposerView: View {
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[s.id] ?? "").count)
         }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
+        .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            do { addAttachments(try result.get()) } catch { connection.actionError = error.localizedDescription }
+        }
+    }
+    private func addAttachments(_ files: [URL]) {
+        for file in files where !(connection.attachments[s.id] ?? []).contains(file) {
+            connection.attachments[s.id, default: []].append(file)
+        }
     }
     private var isCurrent: Bool { connection.selectedID == s.id && connection.snapshot?.id == s.id }
     private func send(_ mode: DeliveryMode) {
@@ -229,7 +250,8 @@ private struct NativeComposerView: View {
     /// composer is not disabled just because a turn is in progress.
     private func canSend(_ s: NativeAgentSnapshot) -> Bool {
         guard isCurrent, connection.online, !connection.sending, !connection.isStopping else { return false }
-        guard !(connection.drafts[s.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        guard !(connection.drafts[s.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || (supportsAttachments && !(connection.attachments[s.id] ?? []).isEmpty) else { return false }
         return !connection.modes(for: s.id).isEmpty
     }
     private func defaultMode(_ s: NativeAgentSnapshot) -> DeliveryMode {

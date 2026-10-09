@@ -50,8 +50,9 @@ struct NewTaskView: View {
     private var modelCatalogID: String {
         availableModels.map { "\($0.provider):\($0.id):\($0.thinking.map(\.rawValue).joined(separator: ","))" }.joined(separator: "|")
     }
+    private var supportsAttachments: Bool { [.kimi, .claude].contains(provider) }
     private var hasInitialContent: Bool {
-        !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (provider == .kimi && !attachments.isEmpty)
+        !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (supportsAttachments && !attachments.isEmpty)
     }
     private var creationBlocker: String? {
         if creating { return L("正在启动…") }
@@ -59,7 +60,7 @@ struct NewTaskView: View {
         if !isConnected { return L(isConnecting ? "正在连接所选 Agent…" : "尚未连接所选 Agent。") }
         if !cwd.hasPrefix("/") { return L("请选择项目目录后再开始。") }
         if provider == .codex && selectedAgentModel == nil { return L("请选择可用的 Codex 模型后再开始。") }
-        if provider != .kimi && !attachments.isEmpty { return L("请切换到 Kimi 或移除附件后再开始。") }
+        if !supportsAttachments && !attachments.isEmpty { return L("当前 Agent 不支持附件，请切换 Agent 或移除附件后再开始。") }
         return nil
     }
     private var sendHint: String? {
@@ -161,7 +162,7 @@ struct NewTaskView: View {
                     ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
                                     accessibilityLabel: L("任务描述"),
                                     canSend: canStart, onSend: start,
-                                    onFiles: provider == .kimi ? addAttachments : nil,
+                                    onFiles: supportsAttachments ? addAttachments : nil,
                                     onError: { error = $0 }, onOpenReference: { path in
                                         referenceBrowser.configure(host: kimi.host, cwd: cwd)
                                         referenceBrowser.open(path)
@@ -177,7 +178,7 @@ struct NewTaskView: View {
                         }
                     }
                     HStack(spacing: 12) {
-                        ComposerAddButton(supportsFiles: provider == .kimi, disabled: creating) { chooseFiles = true }
+                        ComposerAddButton(supportsFiles: supportsAttachments, disabled: creating) { chooseFiles = true }
                         agentMenu
                         modelControl
                         Spacer(minLength: 0)
@@ -449,7 +450,10 @@ struct NewTaskView: View {
                 } else {
                     let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel,
                                                           thinking: selectedThinking, permissionMode: selectedPermission)
-                    if sendInitialPrompt { native.drafts[session.id] = text }
+                    if sendInitialPrompt {
+                        native.drafts[session.id] = text
+                        if !files.isEmpty { native.attachments[session.id] = files }
+                    }
                     model.newNativeCreated(session)
                     if sendInitialPrompt { native.send() }
                 }

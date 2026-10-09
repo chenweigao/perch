@@ -11,6 +11,7 @@ private final class TransportFixture {
     var promoteSteer = false
     var promptReceiptStatus = "accepted"
     var prompts: [String] = []
+    var promptAttachments: [String: [[String: String]]] = [:]
     var steers: [String] = []
     var creates: [(SessionKind, String, String, String?)] = []
     var permissionChanges: [(String, String)] = []
@@ -118,6 +119,13 @@ private final class TransportFixture {
             switch parts[2] {
             case "prompt":
                 let key = body!["requestId"].string!
+                let items = body!["attachments"].array
+                if !items.isEmpty {
+                    promptAttachments[key] = items.map {
+                        ["name": $0["name"].string ?? "", "mediaType": $0["mediaType"].string ?? "",
+                         "data": $0["data"].string ?? ""]
+                    }
+                }
                 if receipts[key] == nil {
                     let turn = sessions[id]?["provider"] as? String == SessionKind.codex.rawValue ? "runtime-\(key)" : key
                     promptReceivedAt[key] = Date()
@@ -365,6 +373,7 @@ struct ConnectionChecks {
         try await checkCodexConnection()
         try await checkQoderPermission()
         try await checkClaudePermission()
+        try await checkClaudeAttachments()
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
     }
 
@@ -575,6 +584,36 @@ struct ConnectionChecks {
         precondition(client.actionError != nil && fixture.permissionChanges.count == 1)
         client.disconnect()
         print("PASS: Claude permission selection applies to the next turn while busy")
+    }
+
+    @MainActor
+    static func checkClaudeAttachments() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Claude", destination: "fixture"), transport: fixture.request)
+        let session = try await client.create(provider: .claude, cwd: "/fixture", model: "", permissionMode: "default")
+        let bytes = Data([0x89, 0x50, 0x4E, 0x47])
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("perch-check-\(UUID().uuidString.prefix(8)).png")
+        try bytes.write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        client.attachments[session.id] = [file]
+        client.send()
+        await settle { !client.sending && fixture.promptAttachments.count == 1 }
+        let sent = fixture.promptAttachments.values.first
+        precondition(sent?.count == 1 && sent?[0]["name"] == file.lastPathComponent
+                     && sent?[0]["mediaType"] == "image/png"
+                     && sent?[0]["data"] == bytes.base64EncodedString(),
+                     "The bridge must receive attachment names, media types and bytes")
+        precondition(client.attachments[session.id] == nil, "Staged attachments clear once the message is queued")
+        // Other native runtimes still refuse attachments before anything is sent.
+        try await client.refresh()
+        client.attachments["a"] = [file]
+        client.drafts["a"] = "not for omp"
+        client.select("a")
+        client.send()
+        precondition(client.actionError != nil && !fixture.prompts.contains("a"),
+                     "Non-Claude runtimes must refuse attachments")
+        client.disconnect()
+        print("PASS: Claude attachments reach the bridge with bytes and stay Claude-only")
     }
 
     @MainActor

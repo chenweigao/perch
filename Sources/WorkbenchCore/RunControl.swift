@@ -176,6 +176,17 @@ public enum OutboundState: Codable, Equatable, Sendable {
     }
 }
 
+/// File bytes captured at enqueue time, so a moved or deleted local file cannot
+/// change what a queued message delivers.
+public struct OutboundAttachment: Codable, Equatable, Sendable {
+    public var name: String
+    public var mediaType: String
+    public var data: Data
+    public init(name: String, mediaType: String, data: Data) {
+        self.name = name; self.mediaType = mediaType; self.data = data
+    }
+}
+
 public struct OutboundMessage: Codable, Identifiable, Equatable, Sendable {
     /// Doubles as the runtime idempotency key: a retry reuses it so a reconnect
     /// cannot run the same instruction twice.
@@ -184,6 +195,23 @@ public struct OutboundMessage: Codable, Identifiable, Equatable, Sendable {
     public var text: String
     public var mode: DeliveryMode
     public var state: OutboundState
+    public var attachments: [OutboundAttachment]
+
+    public init(id: String, session: SessionReference, text: String, mode: DeliveryMode,
+                state: OutboundState, attachments: [OutboundAttachment] = []) {
+        self.id = id; self.session = session; self.text = text; self.mode = mode
+        self.state = state; self.attachments = attachments
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        session = try c.decode(SessionReference.self, forKey: .session)
+        text = try c.decode(String.self, forKey: .text)
+        mode = try c.decode(DeliveryMode.self, forKey: .mode)
+        state = try c.decode(OutboundState.self, forKey: .state)
+        attachments = try c.decodeIfPresent([OutboundAttachment].self, forKey: .attachments) ?? []
+    }
 }
 
 /// Pending messages scoped to host + session. Every accessor takes a
@@ -201,10 +229,12 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
 
     @discardableResult
     public mutating func enqueue(_ text: String, for session: SessionReference, mode: DeliveryMode,
+                                attachments: [OutboundAttachment] = [],
                                 id: String = UUID().uuidString) -> OutboundMessage? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        let message = OutboundMessage(id: id, session: session, text: text, mode: mode, state: .draftQueued)
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return nil }
+        let message = OutboundMessage(id: id, session: session, text: text, mode: mode, state: .draftQueued,
+                                      attachments: attachments)
         messages.append(message)
         return message
     }

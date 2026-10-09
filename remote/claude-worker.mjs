@@ -1,4 +1,5 @@
 import {query} from '@anthropic-ai/claude-agent-sdk';
+import {readFileSync} from 'node:fs';
 import readline from 'node:readline';
 const cfg = JSON.parse(process.argv[2]);
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
@@ -19,7 +20,23 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
     if (cmd.type !== 'prompt' || active) throw new Error('会话正在运行');
     activeTurn = cmd.id;
     const permissionMode = cmd.permissionMode ?? 'default';
-    active = query({prompt: cmd.message, options: {
+    const attachments = Array.isArray(cmd.attachments) ? cmd.attachments : [];
+    let prompt = cmd.message;
+    if (attachments.length) {
+      const content = [];
+      let note = '';
+      for (const a of attachments) {
+        if (/^image\/(png|jpeg|gif|webp)$/.test(a.mediaType || ''))
+          content.push({type:'image', source:{type:'base64', media_type:a.mediaType, data:readFileSync(a.path).toString('base64')}});
+        else note += `\n[Attached file ${a.name} is saved at ${a.path}; inspect it with the Read tool.]`;
+      }
+      content.push({type:'text', text: cmd.message + note});
+      // Image blocks only travel through streaming input. The CLI replays the
+      // streamed message as a user event; the loop below drops replays because
+      // the bridge already recorded the prompt with its attachment names.
+      prompt = (async function* () { yield {type:'user', message:{role:'user', content}, parent_tool_use_id:null}; })();
+    }
+    active = query({prompt, options: {
       pathToClaudeCodeExecutable: cfg.binary, cwd: cfg.cwd,
       permissionMode, includePartialMessages: true, resume,
       ...(permissionMode === 'bypassPermissions' ? {allowDangerouslySkipPermissions: true} : {}),
@@ -38,6 +55,7 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
     emit({type:'agent_start'});
     try {
       for await (const message of active) {
+        if (message.isReplay) continue;
         if (message.session_id) resume = message.session_id;
         emit(message);
       }

@@ -371,6 +371,7 @@ def normalize(message, identity):
             parts.append(part)
         elif kind in ('toolCall','tool_use'): parts.append({'type':'tool_use','tool_call_id':p.get('id'),'tool_name':p.get('name'),'input':p.get('arguments',p.get('input',{}))})
         elif kind == 'tool_result': parts.append({'type':kind,'tool_call_id':p.get('tool_use_id'),'output':p.get('content'),'is_error':p.get('is_error',False)})
+        elif kind == 'image': parts.append({'type':'text','text':'[图片]'})
     return {'id':identity,'role':role,'content':parts,'created_at':str(message.get('timestamp',''))}
 
 def is_user_prompt(message):
@@ -456,25 +457,56 @@ class Session:
         if receipt:
             receipt['status']=status
             receipt['error']=self.state.get('error')
+    def decode_attachments(self, value):
+        if not value: return []
+        if self.state['provider'] != 'claude': raise ValueError('当前 Agent 不支持发送附件')
+        if not isinstance(value, list) or len(value) > 5: raise ValueError('附件一次最多 5 个')
+        result = []
+        for item in value:
+            if not isinstance(item, dict): raise ValueError('附件格式无效')
+            name = os.path.basename(str(item.get('name') or 'attachment')).replace('\x00', '') or 'attachment'
+            media = str(item.get('mediaType') or 'application/octet-stream')
+            try: data = base64.b64decode(str(item.get('data') or ''), validate=True)
+            except Exception: raise ValueError('附件内容编码无效')
+            if not data or len(data) > 10485760: raise ValueError('附件为空或超过 10MB：' + name)
+            result.append({'name': name, 'mediaType': media, 'data': data})
+        return result
+    def store_attachments(self, request_id, attachments):
+        folder = ROOT / 'attachments' / self.state['id'] / request_id
+        folder.mkdir(parents=True, exist_ok=True); folder.chmod(0o700)
+        stored = []
+        for i, item in enumerate(attachments):
+            path = folder / ('%02d-' % i + item['name'])
+            path.write_bytes(item['data']); path.chmod(0o600)
+            stored.append({'name': item['name'], 'mediaType': item['mediaType'], 'path': str(path)})
+        return stored
     def prompt(self, body):
         s=self.state; request_id=body.get('requestId')
         if not isinstance(request_id,str) or not request_id: raise ValueError('缺少 requestId，请更新客户端')
-        text=body['text']; digest=hashlib.sha256(text.encode()).hexdigest()
+        text=body['text']; attachments=self.decode_attachments(body.get('attachments'))
+        digest=hashlib.sha256(text.encode()).hexdigest()
+        for item in attachments:
+            digest+=':'+hashlib.sha256(item['name'].encode()+item['mediaType'].encode()+item['data']).hexdigest()
         receipts=s.setdefault('requests',{})
         if request_id in receipts:
             receipt=receipts[request_id]
             if receipt['digest']!=digest: raise ValueError('requestId 已用于另一条消息')
             return copy.deepcopy(receipt)
         if s['busy'] or s['archived']: raise ValueError('会话正在运行或已归档')
-        if not text.strip(): raise ValueError('消息不能为空')
+        if not text.strip() and not attachments: raise ValueError('消息不能为空')
         if s['provider']=='codex': self.codex_ensure(True)
         elif not self.process or self.process.poll() is not None: self.launch()
+        stored=self.store_attachments(request_id,attachments) if attachments else []
         receipt={'id':request_id,'digest':digest,'text':text,'status':'submitting'}
         receipts[request_id]=receipt
         s.update(busy=True,error=None,cancelled=False,stopRequested=False,stopAcknowledged=False,
                  updated=time.time(),turnId=request_id,turnState='submitting')
-        if not s['messages']: s['title']=text[:60]
-        if s['provider'] in ('qoder','qoderintl','dsh','codex','claude'): self.upsert({'role':'user','content':text},request_id)
+        content=text
+        if stored:
+            marks=['[图片: %s]'%a['name'] if a['mediaType'].startswith('image/') else '[附件: %s]'%a['name'] for a in stored]
+            content=(text+'\n' if text.strip() else '')+'\n'.join(marks)
+        if not s['messages']: s['title']=content[:60]
+        if s['provider'] in ('qoder','qoderintl','dsh','codex','claude'): self.upsert({'role':'user','content':content},request_id)
         if s['provider']=='dsh':
             self.pending_prompt=(request_id,text)
             try:
@@ -497,6 +529,7 @@ class Session:
             else:
                 message={'type':'prompt','id':request_id,'message':text}
                 if s['provider'] in ('qoder','qoderintl','claude'): message['permissionMode']=s['permissionMode']
+                if stored: message['attachments']=stored
                 self.send(message)
                 receipt['status']='submitted'; s['turnState']='submitted'
         except Exception as e:
@@ -1522,6 +1555,7 @@ class Handler(BaseHTTPRequestHandler):
                             if s.codex: s.codex.close()
                             if s.process and s.process.poll() is None: s.process.stdin.close()
                             s.path.unlink(missing_ok=True); del SESSIONS[s.state['id']]
+                            shutil.rmtree(ROOT/'attachments'/s.state['id'], ignore_errors=True)
                         else: raise ValueError('未知操作')
                         if action not in ('prompt','steer','permission'): result={'ok':True}
                 else: raise ValueError('未知路径')

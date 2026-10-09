@@ -1,4 +1,4 @@
-import importlib.util, io, json, os, pathlib, subprocess, sys, tempfile, threading, time, unittest
+import importlib.util, base64, io, json, os, pathlib, subprocess, sys, tempfile, threading, time, unittest
 from unittest.mock import patch
 
 def setUpModule():
@@ -253,6 +253,46 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(s.summary()['permission'],{'selected':'acceptEdits',
             'options':['default','acceptEdits','plan','bypassPermissions'],'scope':'next-turn'})
         self.assertEqual(s.snapshot()['permission'],s.summary()['permission'])
+    def test_claude_prompt_stores_and_forwards_attachments(self):
+        s=self.session('claude'); s.state['permissionMode']='default'
+        sent=[]; s.send=lambda value:sent.append(value)
+        s.process=type('Process',(),{'poll':lambda self:None})()
+        data=base64.b64encode(b'png-bytes').decode()
+        receipt=s.prompt({'text':'描述这张图','requestId':'claude-attachment','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':data}]})
+        message=sent[-1]
+        self.assertEqual(message['type'],'prompt')
+        stored=message['attachments'][0]
+        self.assertEqual(stored['name'],'shot.png')
+        self.assertEqual(stored['mediaType'],'image/png')
+        self.assertEqual(pathlib.Path(stored['path']).read_bytes(),b'png-bytes')
+        self.assertIn('[图片: shot.png]',s.state['messages'][0]['content'][0]['text'])
+        # The same requestId replays the receipt without resending; a different
+        # payload under that id is rejected by the digest.
+        again=s.prompt({'text':'描述这张图','requestId':'claude-attachment','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':data}]})
+        self.assertEqual(again,receipt)
+        self.assertEqual(len([m for m in sent if m.get('id')=='claude-attachment']),1)
+        with self.assertRaises(ValueError):
+            s.prompt({'text':'别的','requestId':'claude-attachment'})
+    def test_claude_prompt_allows_attachment_only_message(self):
+        s=self.session('claude')
+        sent=[]; s.send=lambda value:sent.append(value)
+        s.process=type('Process',(),{'poll':lambda self:None})()
+        s.prompt({'text':'','requestId':'claude-image-only','attachments':[
+            {'name':'notes.txt','mediaType':'text/plain','data':base64.b64encode(b'notes').decode()}]})
+        self.assertIn('[附件: notes.txt]',s.state['messages'][0]['content'][0]['text'])
+        self.assertEqual(s.state['title'],'[附件: notes.txt]')
+    def test_attachments_rejected_for_other_providers(self):
+        s=self.session('qoder')
+        s.process=type('Process',(),{'poll':lambda self:None})()
+        with self.assertRaises(ValueError):
+            s.prompt({'text':'hi','requestId':'qoder-attachment','attachments':[
+                {'name':'a.png','mediaType':'image/png','data':base64.b64encode(b'x').decode()}]})
+    def test_normalize_marks_image_blocks(self):
+        message=broker.normalize({'role':'user','content':[
+            {'type':'image','source':{'type':'base64','media_type':'image/png','data':'x'}}]},'img')
+        self.assertEqual(message['content'],[{'type':'text','text':'[图片]'}])
     def test_claude_tool_link_and_stream(self):
         s=self.session('claude')
         s.event({'type':'stream_event','event':{'type':'message_start'}})
