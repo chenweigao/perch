@@ -2,6 +2,7 @@ import Foundation
 import WorkbenchCore
 
 func checkNativeAgents() throws {
+    try checkClaudeTurnBoundaries()
     let unchanged = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"unchanged":true}"#.utf8))
     precondition(unchanged.snapshot == nil)
     let snapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"a","provider":"omp","title":"A","cwd":"/tmp","busy":false,"revision":2,"completed":0,"model":"m","permission":{"selected":"write","options":["always-ask","write","yolo"],"scope":"new-session"},"messages":[{"id":"m","role":"assistant","created_at":"now","content":[{"type":"text","text":"中文"}]}],"interactions":[],"error":"runtime failed"}"#.utf8))
@@ -78,4 +79,38 @@ func checkNativeAgents() throws {
     PermissionDefaults.restoreSafeDefault(for: .kimi, defaults: defaults)
     precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "manual")
     print("PASS: chronological tool summaries, native identity, permission catalogs, wire decoding and default migration")
+}
+
+/// Claude uses user-role messages for tool results and injected skill text.
+/// Those messages must stay with the actual prompt in pagination and navigation.
+private func checkClaudeTurnBoundaries() throws {
+    var raw: [[String: Any]] = []
+    func append(_ id: String, _ role: String, _ content: [[String: Any]]) {
+        raw.append(["id": id, "role": role, "created_at": "", "content": content])
+    }
+    for turn in 0..<4 {
+        append("prompt-\(turn)", "user", [["type": "text", "text": "真实问题 \(turn)"]])
+        for tool in 0..<26 {
+            let id = "tool-\(turn)-\(tool)"
+            append(id, "assistant", [["type": "tool_use", "tool_call_id": id, "tool_name": "Read", "input": ["path": "/fixture/file"]]])
+            append("result-" + id, "user", [["type": "tool_result", "tool_call_id": id, "output": "done", "is_error": false]])
+        }
+        if turn == 1 {
+            append("skill", "user", [["type": "text", "text": "Base directory for this skill: /fixture/skill\n\n" + String(repeating: "private instructions\n", count: 6000)]])
+            append("synthetic", "user", [["type": "text", "text": "injected context", "source": ["kind": "runtime_context", "provider": "claude"]]])
+        }
+        append("reply-\(turn)", "assistant", [["type": "text", "text": "回答 \(turn)"]])
+    }
+    let messages = try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
+    precondition(messages.filter(\.isUserPrompt).count == 4)
+    let projection = ConversationProjection().update(messages, isRunning: false)
+    precondition(projection.navigation.map(\.prompt) == (0..<4).map { "真实问题 \($0)" })
+    precondition(projection.navigation.map(\.reply) == (0..<4).map { "回答 \($0)" })
+    precondition(projection.results.count == 104)
+    precondition(projection.entries.filter { $0.messages.contains { $0.id == "skill" || $0.id == "synthetic" } }.allSatisfy(\.activity))
+    precondition(messages.first { $0.id == "skill" }?.content.first?.visibleText == nil)
+    let activity = ConversationActivity(messages: messages, isRunning: false)
+    precondition(activity.tools.count == 26 && activity.attentionTools.isEmpty,
+                 "Tool results must not clear the current turn's activity history")
+    print("PASS: Claude user-role tool results, skill context, four navigation turns and 104 linked results")
 }

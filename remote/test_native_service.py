@@ -166,6 +166,62 @@ class ProtocolTests(unittest.TestCase):
         source={'kind':'activity_summary','provider':'codex','summaryParts':['Inspecting']}
         thought=broker.normalize({'role':'assistant','content':[{'type':'thinking','thinking':'raw','source':source}]},'thought')
         self.assertEqual(thought['content'][0]['source'],source)
+    def test_claude_user_role_results_and_skills_do_not_open_turns(self):
+        s = self.session('claude')
+        s.upsert({'role':'user','content':'inspect'}, 'prompt')
+        s.event({'type':'assistant','uuid':'call','message':{'role':'assistant','content':[
+            {'type':'tool_use','id':'skill','name':'Skill','input':{'skill':'example'}}]}})
+        for i in range(104):
+            s.event({'type':'user','uuid':f'result-{i}','message':{'role':'user','content':[
+                {'type':'tool_result','tool_use_id':'skill','content':'done'}]}})
+        s.event({'type':'user','uuid':'old-skill','message':{'role':'user','content':
+            'Base directory for this skill: /fixture/skill\n\n' + 'private instructions\n' * 6000}})
+        s.event({'type':'user','uuid':'new-context','isSynthetic':True,'message':
+            {'role':'user','content':'runtime context without a textual envelope'}})
+        self.assertEqual(s.prompt_indices, [0])
+        self.assertEqual(s.snapshot(turns='1')['messages'][0]['id'], 'prompt')
+        context = s.state['messages'][-1]['content'][0]
+        self.assertEqual(context['source'], {'kind':'runtime_context','provider':'claude'})
+        # A real mixed prompt/result or attachment still starts a user turn.
+        self.assertTrue(broker.is_user_prompt(broker.normalize({'role':'user','content':[
+            {'type':'tool_result','tool_use_id':'skill','content':'done'}, {'type':'text','text':'continue'}]}, 'mixed')))
+        restored = broker.Session(json.loads(json.dumps(s.state)))
+        self.assertEqual(restored.prompt_indices, [0])
+
+    def test_claude_subagent_messages_do_not_replace_main_stream(self):
+        s = self.session('claude')
+        s.event({'type':'stream_event','event':{'type':'content_block_start','index':0,
+            'content_block':{'type':'text','text':'main'}}})
+        before = s.snapshot(); revision = s.state['revision']
+        for kind in ['assistant', 'user', 'stream_event']:
+            s.event({'type':kind,'parent_tool_use_id':'agent-tool','uuid':'child',
+                'message':{'role':kind,'content':'child'},'event':{'type':'message_start'}})
+        self.assertEqual(s.state['revision'], revision)
+        self.assertEqual(s.snapshot(), before)
+        # Parent tool results and approvals still reach the main client.
+        s.event({'type':'user','uuid':'parent-result','parent_tool_use_id':None,
+            'message':{'role':'user','content':[{'type':'tool_result','tool_use_id':'agent-tool','content':'report'}]}})
+        self.assertEqual(s.state['messages'][0]['content'][0]['output'], 'report')
+        self.assertEqual(s.state['partial']['content'][0]['text'], 'main')
+        s.event({'type':'interaction','id':'child-approval','name':'Bash','input':{}})
+        self.assertEqual(s.state['interactions'][0]['id'], 'child-approval')
+
+    def test_claude_stream_indices_survive_per_block_completion(self):
+        s = self.session('claude')
+        def stream(event): s.event({'type':'stream_event','event':event})
+        stream({'type':'message_start'})
+        for i, kind, text in [(0,'thinking','plan'), (1,'text','first'), (2,'text','second')]:
+            stream({'type':'content_block_start','index':i,'content_block':{'type':kind,kind:''}})
+            stream({'type':'content_block_delta','index':i,'delta':{'type':kind+'_delta',kind:text}})
+            self.assertEqual(s.snapshot()['messages'][-1]['content'][0][kind], text)
+            s.event({'type':'assistant','uuid':f'block-{i}','message':{
+                'id':'same-api-message','role':'assistant','content':[{'type':kind,kind:text}]}})
+            stream({'type':'content_block_stop','index':i})
+            self.assertNotIn('partial', s.state)
+        stream({'type':'message_stop'})
+        self.assertEqual([m['id'] for m in s.state['messages']], ['block-0','block-1','block-2'])
+        self.assertEqual([m['content'][0].get('text') for m in s.state['messages'][1:]], ['first','second'])
+
     def test_claude_launch_uses_claude_worker_and_binary(self):
         s=self.session('claude'); s.state['permissionMode']='default'
         process=type('Process',(),{})()
