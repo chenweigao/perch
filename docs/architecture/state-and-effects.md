@@ -323,3 +323,13 @@ copying, empty alt text, streaming identity/selection and replacement. Full read
 search, resizing, session return and prepend checks cover transcript composition.
 See the [experiment](../performance/2026-09-30-paragraph-rendering/REPORT.md) for
 fixed-binary results; these are application layout timings, not measured FPS.
+
+## Visible rows at draw time
+
+Viewport notifications coalesce ordinary scrolling work, but they are not a
+presentation barrier. After content shrinks, AppKit can clamp the clip origin
+before that queued pass runs. The native document reconciles the visible range
+in `viewWillDraw` as well, preserving complete rows at the draw boundary. Keep
+the existing same-range fast return. Initial-position readiness alone does not
+cover subsequent snapshot changes; `kimi-refresh` checks continuous coverage
+across delayed, height-changing snapshots and preserved reading anchors.

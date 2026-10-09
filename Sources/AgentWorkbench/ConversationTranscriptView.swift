@@ -282,6 +282,14 @@ private final class ConversationDocumentView: NSView {
     var totalHeight: CGFloat { geometry.totalHeight }
     private var findObserver: NSObjectProtocol?
     #if TRANSCRIPT_CHECKS
+    fileprivate var missingVisibleRows: [String] {
+        let visible = viewportRect
+        return contents.indices.compactMap { index in
+            guard offsets[index] < visible.maxY, offsets[index] + heights[index] > visible.minY else { return nil }
+            let id = contents[index].entry.id
+            return controllers[id]?.view.superview === self ? nil : id
+        }
+    }
     fileprivate func checkReconciliation() throws -> [String: Any] {
         guard let appearance = rowAppearance, let identity = contentIdentity, !mounted.isEmpty,
               let offscreen = contents.indices.first(where: { !mounted.contains(contents[$0].entry.id) && contents[$0].entry.messages.first?.isUserPrompt == true }),
@@ -787,6 +795,13 @@ private final class ConversationDocumentView: NSView {
         super.setFrameOrigin(point)
         if changed { viewport?.refresh() }
     }
+    override func viewWillDraw() {
+        // AppKit may clamp the clip origin after a height change, before the
+        // coalesced viewport callback runs. Populate that visible range before
+        // drawing, so a cached reply cannot disappear for one display pass.
+        refreshVisibleRows()
+        super.viewWillDraw()
+    }
     override func layout() {
         super.layout()
         restoreReadingPosition()
@@ -874,6 +889,10 @@ extension ConversationTranscript {
             if let result = try checkReconciliation(in: child) { return result }
         }
         return nil
+    }
+    static func missingVisibleRows(in root: NSView) -> [String] {
+        if let document = root as? ConversationDocumentView { return document.missingVisibleRows }
+        return root.subviews.flatMap { missingVisibleRows(in: $0) }
     }
     static func navigator(in root: NSView) -> ConversationTurnNavigation? {
         if let document = root as? ConversationDocumentView { return document.navigator }

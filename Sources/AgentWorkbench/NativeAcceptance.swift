@@ -306,7 +306,7 @@ private struct ReferenceComposerFixtureView: View {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
-        if mode == "kimi-switching" { await kimiSwitching(); return }
+        if ["kimi-switching", "kimi-refresh"].contains(mode) { await kimiSwitching(); return }
         if mode.hasPrefix("kimi-") { await kimiInvalidation(input: mode == "kimi-input"); return }
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
@@ -443,7 +443,8 @@ private struct ReferenceComposerFixtureView: View {
         }
     }
     private func kimiSwitching() async {
-        var report: [String: Any] = ["mode": "kimi-switching", "boundary": "native layout samples, not display frames"]
+        let refresh = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-refresh"
+        var report: [String: Any] = ["mode": ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? "kimi-switching", "boundary": "native layout samples, not display frames"]
         do {
             let items = ["a", "b"].map { id in
                 WorkspaceSession(reference: SessionReference(hostID: model.kimi.host.id, terminalID: id, kind: .kimi),
@@ -477,9 +478,11 @@ private struct ReferenceComposerFixtureView: View {
                         let visible = document.convert(scroll.contentView.bounds, from: scroll.contentView)
                         let rows = document.subviews.filter { !$0.subviews.isEmpty && $0.frame.intersects(visible) }
                         sample["rows"] = rows.compactMap { $0.identifier?.rawValue }
+                        sample["missing_visible_rows"] = ConversationTranscript.missingVisibleRows(in: document)
                         sample["bottom_gap"] = (scroll.documentView?.bounds.maxY ?? 0) - scroll.contentView.bounds.maxY
                         sample["origin"] = scroll.contentView.bounds.minY
                         sample["document_height"] = document.bounds.height
+                        sample["revision"] = model.kimi.conversation?.snapshot.asOfSeq
                         sample["document_hidden"] = document.isHidden
                         sample["scroll_reused"] = scroll === oldScroll
                         sample["document_reused"] = document === oldDocument
@@ -493,10 +496,24 @@ private struct ReferenceComposerFixtureView: View {
                 let target = items[index].reference.terminalID
                 switches.append(["target": target, "samples": samples])
                 report["switches"] = switches
+                if refresh, (1...4).contains(step) {
+                    guard Set(samples.compactMap { $0["revision"] as? Int }).count == 2,
+                          Set(samples.compactMap { $0["document_height"] as? CGFloat }).count >= 2 else {
+                        throw WorkbenchError("Refresh fixture did not change the displayed snapshot and height")
+                    }
+                }
+                if let firstShown = samples.firstIndex(where: { $0["document_hidden"] as? Bool == false && !($0["rows"] as? [String] ?? []).isEmpty }) {
+                    guard samples[firstShown...].allSatisfy({ $0["document_hidden"] as? Bool == false && !($0["rows"] as? [String] ?? []).isEmpty }) else {
+                        throw WorkbenchError("Transcript became blank after first display")
+                    }
+                }
                 let visible = samples.filter { $0["document_hidden"] as? Bool == false && !($0["rows"] as? [String] ?? []).isEmpty }
                 guard !visible.isEmpty, visible.allSatisfy({ ($0["session"] as? String) == target &&
                     ($0["rows"] as? [String] ?? []).allSatisfy { $0.contains(":" + target + "-") } }) else {
                     throw WorkbenchError("Switch exposed stale or missing rows")
+                }
+                guard visible.allSatisfy({ ($0["missing_visible_rows"] as? [String] ?? []).isEmpty }) else {
+                    throw WorkbenchError("Visible transcript rows disappeared during refresh")
                 }
                 guard step == 0 || visible.allSatisfy({ $0["scroll_reused"] as? Bool == true && $0["document_reused"] as? Bool == true }) else {
                     throw WorkbenchError("Cached switch recreated the reader")
@@ -506,7 +523,10 @@ private struct ReferenceComposerFixtureView: View {
                         throw WorkbenchError("Visible layout samples jumped before restoring the reading anchor")
                     }
                 } else {
-                    guard visible.allSatisfy({ ($0["bottom_gap"] as? CGFloat ?? 999) <= 13 }) else {
+                    // Changed content can move the tail; require complete rows
+                    // throughout and arrival at the new tail when settled.
+                    let tailSamples = refresh ? Array(visible.suffix(1)) : visible
+                    guard tailSamples.allSatisfy({ ($0["bottom_gap"] as? CGFloat ?? 999) <= 13 }) else {
                         throw WorkbenchError("Visible layout samples jumped before arriving at the latest reply")
                     }
                 }
