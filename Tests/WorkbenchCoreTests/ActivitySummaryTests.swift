@@ -67,6 +67,14 @@ func checkActivitySummaries() throws {
     let setupOnly = try shellNarrative("cd /project")
     precondition(setupOnly.headline == L("准备命令环境"))
 
+    let exitProbe = VisibleTool(id: "probe", name: "Bash", input: .object(["command": .string("python3")]),
+        output: .string("xcrun: error: unable to find utility\nCommand failed with exit code: 1."), status: .failed)
+    let probeEntries = try timeline([user(), call("probe", name: "Bash", input: ["command": "python3"])])
+    let probeNarrative = ActivityNarrativeProjection.make(
+        entries: probeEntries, tools: ["probe": exitProbe], isRunning: true).current
+    precondition(exitProbe.exitCodeReport == 1 && probeNarrative?.phase != .blocked,
+                 "A self-reported exit code must not mark the stage blocked")
+
     let completeProgress = "Both foreign changes check out. " + String(repeating: "Keep the complete explanation visible. ", count: 12) + "END_OF_PROGRESS"
     let fullEntries = try timeline([user(), progress("long-progress", completeProgress), call("read0")])
     let fullNarrative = ActivityNarrativeProjection.make(entries: fullEntries, tools: [read0.id: read0], isRunning: true).current!

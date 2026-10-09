@@ -9,7 +9,16 @@ public struct VisibleTool: Identifiable, Equatable {
     public let progress: JSONValue?
     public let status: Status
     public let hasCall: Bool
-    public var staysVisible: Bool { status != .succeeded && status != .returned || !hasCall }
+    /// A shell result that reports its own non-zero exit in the output text is an
+    /// observed outcome the agent reads and continues from, not a tool failure.
+    public var exitCodeReport: Int? {
+        guard status == .failed, let text = output?.display,
+              let marker = text.range(of: "Command failed with exit code: ", options: .literal)
+        else { return nil }
+        let digits = text[marker.upperBound...].prefix(while: { $0.isNumber })
+        return digits.isEmpty ? nil : Int(digits)
+    }
+    public var staysVisible: Bool { (status != .succeeded && status != .returned && exitCodeReport == nil) || !hasCall }
 
     public init(id: String, name: String, input: JSONValue?, output: JSONValue? = nil,
                 progress: JSONValue? = nil, status: Status, hasCall: Bool = true) {

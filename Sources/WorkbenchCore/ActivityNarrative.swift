@@ -203,7 +203,7 @@ public enum ActivityNarrativeProjection {
         }
 
         func toolPhase(_ tool: VisibleTool) -> ActivityNarrativePhase {
-            if [.failed, .missingResult, .disconnected].contains(tool.status) { return .blocked }
+            if [.failed, .missingResult, .disconnected].contains(tool.status), tool.exitCodeReport == nil { return .blocked }
             let name = tool.name.lowercased()
             if ToolPresentation.isExploration(name) || ["fetch", "web_search", "view_image"].contains(name) { return .exploring }
             if ["edit", "write", "edit_file", "write_file", "apply_patch", "filechange"].contains(name) { return .editing }
