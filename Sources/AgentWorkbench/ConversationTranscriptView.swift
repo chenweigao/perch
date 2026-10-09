@@ -66,9 +66,11 @@ struct KimiMessageView: View {
     var body: some View {
         if isUserMessage {
             UserMessageLayout {
-                content.padding(.horizontal, 14).padding(.vertical, 10)
-                    .background(kimiPaper, in: RoundedRectangle(cornerRadius: 12))
-            }.padding(.top, 10)
+                content.environment(\.replyLineHeight, UserMessageStyle.lineHeight)
+                    .padding(.horizontal, UserMessageStyle.horizontalPadding)
+                    .padding(.vertical, UserMessageStyle.verticalPadding)
+                    .background(kimiPaper, in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
+            }.padding(.top, UserMessageStyle.topSpacing)
         } else {
             content.frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -101,7 +103,7 @@ struct KimiMessageView: View {
 private struct UserMessageLayout: Layout {
     private func measure(width: CGFloat, subview: LayoutSubview) -> CGSize {
         let idealWidth = subview.sizeThatFits(.unspecified).width
-        return subview.sizeThatFits(ProposedViewSize(width: min(idealWidth, width * 0.85), height: nil))
+        return subview.sizeThatFits(ProposedViewSize(width: min(idealWidth, width * UserMessageStyle.maxWidthRatio), height: nil))
     }
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = max(1, proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? ReplyStyle.readingWidth)
