@@ -326,7 +326,8 @@ final class RemoteSetupController: ObservableObject {
             }
             mark("models", .information, L("已检测到远端凭据；模型目录在首次 ACP 会话握手时读取，鉴权在发送时验证。"))
         case .codex:
-            guard status["credentialCheck"].string == "present" else {
+            let credentials = status["credentialCheck"].string ?? ""
+            guard ["present", "provider-managed"].contains(credentials) else {
                 throw WorkbenchError(L("Codex CLI 尚未登录。请在远端运行 codex login 后重试。"))
             }
             models = status["models"].array.compactMap { entry in
@@ -335,7 +336,10 @@ final class RemoteSetupController: ObservableObject {
             }
             guard !models.isEmpty else { throw WorkbenchError(L("Codex app-server 未返回模型。请检查远端 Codex 安装与登录。")) }
             if !models.contains(where: { $0.id == modelID }) { modelID = models.first?.id ?? "" }
-            mark("models", .passed, L("已确认 Codex 登录并读取 app-server 模型目录；检查未发送任务。"))
+            let detail = credentials == "provider-managed"
+                ? L("模型列表已读取；实际模型鉴权将在首条消息时验证。")
+                : L("已确认 Codex 登录并读取 app-server 模型目录；检查未发送任务。")
+            mark("models", .passed, detail)
         default: break
         }
         hint = ""
