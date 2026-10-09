@@ -44,7 +44,7 @@ def main():
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
             ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
         ]
-        for mode in ["all", "switching", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "kimi-invalidation", "kimi-switching", "input", "kimi-input"]:
+        for mode in ["all", "switching", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input"]:
             commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
                 "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
