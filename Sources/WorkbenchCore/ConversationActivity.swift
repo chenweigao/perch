@@ -59,7 +59,9 @@ public struct ConversationActivity {
         case .running: return "Running"
         case .succeeded: return "Completed"
         case .returned: return "Returned"
-        case .failed: return "Failed"
+        case .failed:
+            if let code = tool.exitCodeReport { return "Exit code \(code)" }
+            return "Failed"
         case .missingResult: return "Result missing"
         case .disconnected: return "Status unknown"
         case .awaitingApproval: return "Awaiting approval"

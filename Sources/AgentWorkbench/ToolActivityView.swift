@@ -93,7 +93,9 @@ struct KimiToolCard: View {
         case .running: return "Running"
         case .succeeded: return "Completed"
         case .returned: return "Returned"
-        case .failed: return "Failed"
+        case .failed:
+            if let code = tool.exitCodeReport { return "Exit code \(code)" }
+            return "Failed"
         case .missingResult: return "Result not received"
         case .disconnected: return "Disconnected · Status unknown"
         case .awaitingApproval: return "Needs approval"
@@ -104,13 +106,13 @@ struct KimiToolCard: View {
         case .running: return "circle.dotted"
         case .succeeded: return "checkmark"
         case .returned: return "tray"
-        case .failed: return "exclamationmark.circle"
+        case .failed: return tool.exitCodeReport != nil ? "apple.terminal" : "exclamationmark.circle"
         case .missingResult, .disconnected: return "questionmark.circle"
         case .awaitingApproval: return "hand.raised"
         }
     }
     private var attention: Bool {
-        [.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) || !tool.hasCall
+        ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) && tool.exitCodeReport == nil) || !tool.hasCall
     }
     private var statusLabel: String { tool.hasCall ? label : "\(label) · Call record missing" }
     var body: some View {
@@ -132,7 +134,7 @@ struct KimiToolCard: View {
                 Text(ToolPresentation.action(tool.name)).font(.system(size: 12)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
                 Spacer(minLength: 0)
-                if attention || tool.status == .running {
+                if attention || tool.status == .running || tool.exitCodeReport != nil {
                     Image(systemName: symbol).font(.system(size: 11)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: 11)).fixedSize()
                 }
