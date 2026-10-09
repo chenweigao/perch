@@ -5,6 +5,10 @@ import WorkbenchCore
 struct ProtocolTests {
     static func main() async throws {
         setbuf(stdout, nil)
+        if ProcessInfo.processInfo.environment["WORKBENCH_BENCH"] == "1" {
+            try benchPresentationUpdate()
+            return
+        }
         try checkConversationPresentation()
         try checkConversationPresentationModel()
         checkCompactionSummaryDisplay()
