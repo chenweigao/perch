@@ -11,6 +11,30 @@ import WorkbenchCore
 // workload so the streaming fixture hash — and therefore every recorded
 // throughput comparison — stays unchanged.
 enum NavigationHistory {
+    static func claudeConversation() throws -> KimiConversation {
+        var messages: [[String: Any]] = []
+        func add(_ id: String, _ role: String, _ parts: [[String: Any]]) {
+            messages.append(["id": id, "role": role, "created_at": "", "content": parts])
+        }
+        for turn in 0..<4 {
+            add("claude-prompt-\(turn)", "user", [["type": "text", "text": "Claude 测试问题 \(turn)"]])
+            for tool in 0..<26 {
+                let id = "claude-tool-\(turn)-\(tool)"
+                add(id, "assistant", [["type": "tool_use", "tool_call_id": id, "tool_name": "Read", "input": ["path": "/fixture/file"]]])
+                add("result-" + id, "user", [["type": "tool_result", "tool_call_id": id, "output": "done", "is_error": false]])
+            }
+            if turn == 1 {
+                add("claude-skill", "user", [["type": "text", "text": "Base directory for this skill: /fixture/skill\n\n" + String(repeating: "HIDDEN_SKILL_CONTEXT instructions\n", count: 4000)]])
+            }
+            add("claude-answer-\(turn)", "assistant", [["type": "text", "text": "Claude 测试回复 \(turn)\n\n" + String(repeating: "正文内容保持可阅读。\n\n", count: 15)]])
+        }
+        let snapshot: [String: Any] = ["as_of_seq": 1, "epoch": "claude-fixture",
+            "session": ["id": "claude-fixture", "title": "Claude fixture", "updated_at": "", "busy": false,
+                        "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture"]],
+            "messages": ["items": messages, "has_more": false], "pending_approvals": [], "pending_questions": []]
+        return KimiConversation(try KimiWire.decoder().decode(KimiSnapshot.self, from: JSONSerialization.data(withJSONObject: snapshot)))
+    }
+
     /// `salt` makes each fixture session a distinct conversation. Without it every
     /// session shares one set of message IDs, so a switch looks like an edit of the
     /// same rows rather than a move to different ones.

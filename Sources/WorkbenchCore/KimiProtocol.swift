@@ -132,7 +132,11 @@ public struct KimiPart: Decodable, Equatable, Sendable {
     public var isRuntimeContext: Bool {
         guard type == "text", let text else { return false }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.hasPrefix("<system-reminder>")
+        // The prefix also recognizes historical Claude snapshots whose bridge
+        // discarded the SDK synthetic marker. Keep them folded on reopen.
+        return source?["kind"].string == "runtime_context"
+            || (value.hasPrefix("Base directory for this skill: ") && value.contains("\n"))
+            || value.hasPrefix("<system-reminder>")
             || (value.hasPrefix("<notification ") && value.hasSuffix("</notification>"))
             || (value.hasPrefix("<skill-loaded ") && value.hasSuffix("</skill-loaded>"))
             || (value.hasPrefix("<system>") && value.hasSuffix("</system>"))
@@ -193,10 +197,11 @@ public struct KimiMessage: Decodable, Identifiable, Equatable, Sendable {
     public var isCompactionSummary: Bool {
         metadata?["origin"]["kind"].string == "compaction_summary"
     }
-    /// Turns the person actually opened. Runtime-context injections and compaction
-    /// summaries share the user role but never start or anchor one.
+    /// Turns the person actually opened. Claude tool results, runtime-context
+    /// injections and compaction summaries also use the user role, but never
+    /// start or anchor a turn.
     public var isUserPrompt: Bool {
-        role == "user" && !isCompactionSummary && !content.allSatisfy(\.isRuntimeContext)
+        role == "user" && !isCompactionSummary && !content.allSatisfy { $0.isRuntimeContext || $0.type == "tool_result" }
     }
 }
 public struct KimiLiveTool: Decodable, Identifiable, Equatable, Sendable {

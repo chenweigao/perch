@@ -351,6 +351,9 @@ def is_user_prompt(message):
     def context(part):
         if part.get('type') != 'text': return False
         value = part.get('text', '').strip()
+        if part.get('source', {}).get('kind') == 'runtime_context': return True
+        # Older Claude snapshots lost the SDK's synthetic-message marker.
+        if value.startswith('Base directory for this skill: ') and '\n' in value: return True
         if value.startswith('<system-reminder>'): return True
         if any(value.startswith(a) and value.endswith(b) for a,b in (
             ('<notification ', '</notification>'), ('<skill-loaded ', '</skill-loaded>'), ('<system>', '</system>'))): return True
@@ -358,7 +361,7 @@ def is_user_prompt(message):
             block = value.split('\n', 1)[1].lstrip()
             return block.startswith('<skill-loaded ') and 'trigger="model-tool"' in block.split('>', 1)[0]
         return False
-    return message['role'] == 'user' and message.get('metadata', {}).get('origin', {}).get('kind') != 'compaction_summary' and not all(context(p) for p in message['content'])
+    return message['role'] == 'user' and message.get('metadata', {}).get('origin', {}).get('kind') != 'compaction_summary' and not all(p.get('type') == 'tool_result' or context(p) for p in message['content'])
 
 def codex_permission_params(mode, turn=False):
     mode = permission_mode('codex', mode)
@@ -382,6 +385,7 @@ class Session:
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
+        self.sdk_block_index = None
         self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
         self.acp_blocks = {}; self.permission_options = {}
         self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
@@ -1004,6 +1008,10 @@ class Session:
 
     def event(self,e):
         s = self.state; t = e.get('type'); provider = s['provider']; durable = False
+        # Child messages belong to the Agent tool, whose result remains visible.
+        # They must not create main-session turns or replace its streaming tail.
+        if provider == 'claude' and t in ('assistant', 'user', 'stream_event') and e.get('parent_tool_use_id'):
+            return
         if t == 'ready':
             self.ready.set()
             if provider == 'omp':
@@ -1100,18 +1108,44 @@ class Session:
         elif provider in ('qoder','claude') and t == 'interaction': s['interactions'].append(e); durable=True
         elif provider in ('qoder','claude') and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
         elif provider in ('qoder','claude') and t in ('assistant','user'):
-            self.upsert(e['message'], e.get('uuid') or e['message'].get('id') or str(uuid.uuid4())); s.pop('partial',None); durable=True
+            message = e['message']
+            if provider == 'claude' and t == 'user' and e.get('isSynthetic'):
+                message = copy.deepcopy(message)
+                message['content'] = text_parts(message.get('content'))
+                for part in message['content']:
+                    if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
+            self.upsert(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))
+            if t == 'assistant' or provider == 'qoder': s.pop('partial',None)
+            durable=True
         elif provider in ('qoder','claude') and t == 'stream_event':
             ev=e['event']; et=ev['type']
-            if et=='message_start': s['partial']={'role':'assistant','content':[]}
-            elif et=='content_block_start':
-                s.setdefault('partial',{'role':'assistant','content':[]})['content'].append(ev['content_block'])
-            elif et=='content_block_delta' and s.get('partial'):
-                idx=ev['index']; delta=ev['delta']; parts=s['partial']['content']
-                if idx<len(parts):
-                    if delta['type']=='text_delta': parts[idx]['text']=parts[idx].get('text','')+delta['text']
-                    elif delta['type']=='thinking_delta': parts[idx]['thinking']=parts[idx].get('thinking','')+delta['thinking']
-            else: return
+            if provider == 'claude':
+                # Claude emits a complete assistant message for EACH block,
+                # before content_block_stop. API indices keep increasing after
+                # that block has been committed, so they are not list offsets.
+                if et == 'message_start':
+                    s.pop('partial', None); self.sdk_block_index = None
+                elif et == 'content_block_start':
+                    self.sdk_block_index = ev.get('index', 0)
+                    s['partial'] = {'role':'assistant','content':[copy.deepcopy(ev['content_block'])]}
+                elif et == 'content_block_delta' and s.get('partial') and ev['index'] == self.sdk_block_index:
+                    delta = ev['delta']; part = s['partial']['content'][0]
+                    if delta['type'] == 'text_delta': part['text'] = part.get('text','') + delta['text']
+                    elif delta['type'] == 'thinking_delta': part['thinking'] = part.get('thinking','') + delta['thinking']
+                    else: return
+                elif et == 'message_stop':
+                    s.pop('partial', None); self.sdk_block_index = None
+                else: return
+            else:
+                if et=='message_start': s['partial']={'role':'assistant','content':[]}
+                elif et=='content_block_start':
+                    s.setdefault('partial',{'role':'assistant','content':[]})['content'].append(ev['content_block'])
+                elif et=='content_block_delta' and s.get('partial'):
+                    idx=ev['index']; delta=ev['delta']; parts=s['partial']['content']
+                    if idx<len(parts):
+                        if delta['type']=='text_delta': parts[idx]['text']=parts[idx].get('text','')+delta['text']
+                        elif delta['type']=='thinking_delta': parts[idx]['thinking']=parts[idx].get('thinking','')+delta['thinking']
+                else: return
         elif provider in ('qoder','claude') and t == 'result':
             s['resume']=e.get('session_id',s.get('resume')); durable=True
             if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider=='qoder' else 'Claude')+' 执行失败')
