@@ -45,7 +45,11 @@ bash scripts/build-navigation-preview.sh
 python3 scripts/run-navigation-check.py assistant-rows --output .local/assistant-rows
 ```
 
-A/B 原始运行位于本机 `.local/blocks-ab/`。
+A/B 原始运行位于本机 `.local/blocks-ab/`（测量于 `adc45c7`）。随后 rebase 到
+main `2b53207`（并入 #86/#88/#89，仅触碰用户行气泡背景与 Claude/Codex 连接，
+不进入助手行路径），`assistant-rows`/`user-rows`/`interactions` 重跑通过；
+A/B 因机器上持续存在并行编译未能在无干扰条件下重跑，两臂共享同一基线的
+对比结论不受影响。
 
 ## 边界
 
