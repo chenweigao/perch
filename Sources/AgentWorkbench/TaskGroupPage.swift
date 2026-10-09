@@ -8,7 +8,7 @@ struct GroupWorkbenchHeader: View {
         if let group = model.selectedGroup {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("目标与下一步").foregroundStyle(.secondary)
+                    Label("目标与下一步", systemImage: "target").foregroundStyle(.secondary)
                     Spacer()
                     Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }.buttonStyle(QuietLinkStyle())
                     Button("编辑目标") { model.editGroup(group) }.buttonStyle(QuietLinkStyle())
@@ -28,6 +28,8 @@ struct GroupWorkbenchHeader: View {
                         Button("继续上次会话") { model.open(resume) }.disabled(!resume.online)
                     }
                     Button("新建会话") { model.startNewTask() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
                     Button("关联已有会话") { model.editGroup(group, sessionsOnly: true) }.buttonStyle(QuietLinkStyle())
                     Spacer()
                 }
@@ -63,7 +65,7 @@ struct GroupWorkbenchHistory: View {
                             HStack {
                                 Text(item.title).lineLimit(2)
                                 Spacer()
-                                Button("恢复") { model.setArchived(item, archived: false) }.disabled(!item.online && item.reference.kind != .terminal)
+                                Button("恢复") { model.setArchived(item, archived: false) }.buttonStyle(QuietLinkStyle()).disabled(!item.online && item.reference.kind != .terminal)
                             }.padding(.vertical, 8)
                         }
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))

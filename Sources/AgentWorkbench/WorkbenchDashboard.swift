@@ -406,8 +406,11 @@ struct QueueRow<Actions: View>: View {
                     .opacity(hovered && showsHoverAction ? 0 : 1)
             }
             if showsHoverAction {
-                Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
-                    .font(.system(size: 11)).padding(.top, 2).fixedSize()
+                Button("已查看", action: onMarkReviewed)
+                    .font(.system(size: 11))
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(Color.primary.opacity(0.06), in: Capsule())
+                    .padding(.top, 1).fixedSize()
                     .opacity(hovered ? 1 : 0)
             }
         }.padding(.horizontal, 10).padding(.vertical, 11)
