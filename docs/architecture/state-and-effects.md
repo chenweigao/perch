@@ -385,3 +385,24 @@ children were unavailable through the fixture's in-process tree inspection.
 `NAVIGATION_NATIVE_ASSISTANT_ROWS=0` selects the prior renderer only in acceptance
 builds for fixed-binary A/B measurements. Functional checks and reduced host counts
 alone do not establish a performance improvement.
+
+## Native completed assistant rich blocks
+
+The native assistant row also admits headings, code cards, rules, paragraph-only
+quotes and paragraph/list items (nested lists to depth four). Tables, attachments
+and deeper nesting keep the SwiftUI renderer. `NativeAssistantContent.make` parses
+once and builds attributed strings up front; `NativeAssistantStackView` lays out
+block views with the exact `ReplyBlocks` spacing rules (compact variants inside
+quotes and list items) and reuses same-type block views by position. Code cards are
+plain AppKit: an overlay-scrolling `NSScrollView` with an unwrapped text container,
+a language label and a hosted `ReplyCopyButton` whose copy state survives source
+edits, matching the SwiftUI card. List markers align by the same first-baseline
+constant the SwiftUI alignment guide uses. Recycling tears down all block
+containers and returns cleared text views to the shared pool; shells retain no
+conversation content.
+
+`assistant-rows` parity covers mixed blocks at both column widths and appearances,
+including glyph positions inside code scroll views. Contracts cover admitted-block
+transitions, table/attachment fallback, code-card copy and horizontal overflow.
+`NAVIGATION_NATIVE_ASSISTANT_BLOCKS=0` limits acceptance builds to prose rows for
+stacked A/B measurements.

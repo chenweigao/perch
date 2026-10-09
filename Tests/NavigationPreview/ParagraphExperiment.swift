@@ -148,12 +148,22 @@ extension NavigationRunner {
             (view as? ReplyTextView).map { [$0] } ?? view.subviews.flatMap(texts)
         }
         let role = assistant ? "assistant" : "user"
-        let cases = [
+        var cases = [
             ("短问题 中文 👩🏽‍💻", ["短问题"]),
             ("Alpha **bold** *italic* ~~strike~~ `inline` [link](https://example.com/path).\n\nBeta 中文 👩🏽‍💻 é.  \nHardLine 保持换行。\n\nGamma /tmp/fixture.swift:42 结尾。", ["Alpha", "Beta", "HardLine", "Gamma"]),
             ((0..<12).map { "段落编号\($0)结束：中英文 mixed wrapping " + String(repeating: "较长的文本。", count: 8) }.joined(separator: "\n\n"), (0..<12).map { "段落编号\($0)结束" }),
             ("LongStart " + String(repeating: "English 中文 👩🏽‍💻 é line wrapping. ", count: 80) + " LongEnd", ["LongStart", "LongEnd"])
         ]
+        if assistant {
+            // Rich blocks admitted natively: headings, code cards, rules, quotes, lists.
+            cases += [
+                ("## 结论标题\n\n先看这一段说明文字。\n\n```swift\nlet markerCode = \"代码块\"\nprint(markerCode)\n```\n\n结尾段落。", ["结论标题", "说明文字", "markerCode", "结尾段落"]),
+                ("引用前导。\n\n> 引用里的内容保持紧凑。\n\n---\n\n分隔之后。", ["引用前导", "引用里的内容", "分隔之后"]),
+                ("- 第一项内容\n- 第二项内容\n  - 嵌套项对齐检查\n- 第三项内容", ["第一项内容", "嵌套项对齐检查", "第三项内容"]),
+                ("1. 有序甲\n2. 有序乙\n\n正文跟随列表之后。", ["有序甲", "有序乙", "正文跟随列表之后"]),
+                ("短行代码不换行：\n\n```\nlet veryLongLine = \"这是一段故意超长不会被换行的代码行，用来覆盖横向滚动的宽度计算路径 abcdefghijklmnopqrstuvwxyz0123456789\"\n```", ["短行代码", "abcdefghijklmnop"])
+            ]
+        }
         var observations: [[String: Any]] = []
         for width in [CGFloat(700), 340] {
             for dark in [false, true] {
@@ -166,11 +176,13 @@ extension NavigationRunner {
                         if assistant { ReplyCopyButton(text: source) }
                     }.frame(width: width).environment(\.colorScheme, dark ? .dark : .light))
                     original.sizingOptions = []; original.safeAreaRegions = []
-                    guard let attributed = NativeParagraphContent.make(source) else { throw NavigationError("Native \(role) fixture rejected prose") }
+                    let attributed = assistant ? nil : NativeParagraphContent.make(source)
+                    let blocks = assistant ? NativeAssistantContent.make(source) : nil
+                    guard attributed != nil || blocks != nil else { throw NavigationError("Native \(role) fixture rejected admitted content") }
                     let userView = assistant ? nil : NativeUserMessageView.acquire()
                     let assistantView = assistant ? NativeAssistantMessageView.acquire() : nil
-                    userView?.update(attributed, dark: dark)
-                    assistantView?.update(attributed, source: source, dark: dark)
+                    if let attributed { userView?.update(attributed, dark: dark) }
+                    if let blocks { assistantView?.update(blocks, source: source, dark: dark) }
                     let native: NSView = assistant ? assistantView! : userView!
                     defer {
                         if let userView { NativeUserMessageView.recycle(userView) }
@@ -220,7 +232,8 @@ extension NavigationRunner {
                         }
                     }
                     let drift = markers.map { max(abs(glyphs[0][$0]!.x - glyphs[1][$0]!.x), abs(glyphs[0][$0]!.y - glyphs[1][$0]!.y)) }.max() ?? 0
-                    observations.append(["width": width, "dark": dark, "paragraphs": attributed.count, "heights": heights, "max_glyph_drift": drift])
+                    observations.append(["width": width, "dark": dark, "blocks": blocks?.count ?? attributed!.count, "heights": heights, "max_glyph_drift": drift,
+                                         "swiftui_glyphs": glyphs[0].mapValues { [$0.x, $0.y] }, "native_glyphs": glyphs[1].mapValues { [$0.x, $0.y] }])
                     let output = URL(fileURLWithPath: ProcessInfo.processInfo.environment["NAVIGATION_RESULTS"]!)
                     try JSONSerialization.data(withJSONObject: ["cases": observations], options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("native-\(role)-parity.json"))
                     guard abs(heights[0] - heights[1]) <= 1, drift <= 1 else { throw NavigationError("Native \(role) layout differs from SwiftUI: heights \(heights), drift \(drift)") }
@@ -228,6 +241,13 @@ extension NavigationRunner {
             }
         }
         guard NativeParagraphContent.make("# Heading") == nil, NativeParagraphContent.make("```swift\nlet a = 1\n```") == nil else { throw NavigationError("Complex content did not keep its existing renderer") }
+        if assistant {
+            guard NativeAssistantContent.make("| A | B |\n| --- | --- |\n| 1 | 2 |") == nil else { throw NavigationError("Assistant table escaped to the native renderer") }
+            guard NativeAssistantContent.make("# Heading", allowsRichBlocks: false) == nil,
+                  NativeAssistantContent.make("```swift\nlet a = 1\n```", allowsRichBlocks: false) == nil else {
+                throw NavigationError("Rich blocks were admitted with the A/B switch off")
+            }
+        }
         return ["cases": observations, "complex_markdown_retains_swiftui": true, "links_and_unicode_copy": true]
     }
 
@@ -286,7 +306,13 @@ extension NavigationRunner {
         try await settle()
         guard nativeRows().count == 1, let completedRow = nativeRows()[0].superview,
               completedRow.identifier == row.identifier else { throw NavigationError("Completed stream failed to restore its row identity") }
-        for complex in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "- List item", "> Quote", "| A | B |\n| --- | --- |\n| 1 | 2 |", "![](https://example.com/alt.png)"] {
+        // Rich-but-admitted blocks join the native path; tables and attachments keep SwiftUI.
+        for admitted in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "- List item", "> Quote"] {
+            host.rootView = root([try message(admitted)])
+            try await settle()
+            guard nativeRows().count == 1, nativeRows()[0].superview === completedRow else { throw NavigationError("Admitted assistant block lost the native row: \(admitted)") }
+        }
+        for complex in ["| A | B |\n| --- | --- |\n| 1 | 2 |", "![](https://example.com/alt.png)", "- 列表项里的代码：\n  ```swift\n  let nested = 1\n  ```"] {
             host.rootView = root([try message(complex)])
             try await settle()
             guard nativeRows().isEmpty, descendants(host).contains(where: { $0 === completedRow }) else { throw NavigationError("Complex assistant lost its existing renderer or outer row: \(complex)") }
@@ -297,12 +323,12 @@ extension NavigationRunner {
         host.rootView = root([try message(source)])
         try await settle()
         guard let restored = nativeRows().first, restored.superview === completedRow else { throw NavigationError("Plain assistant failed to return to native row") }
-        guard let actions = restored.subviews.first(where: { !($0 is ReplyTextView) }),
+        guard let actions = restored.subviews.first(where: { !($0 is NativeAssistantStackView) }),
               actions.frame.width == 24, actions.frame.height == 24 else { throw NavigationError("Assistant copy button lost its hit target") }
         window.makeKeyAndOrderFront(nil)
         try await settle()
-        func clickCopy() throws {
-            let location = actions.convert(NSPoint(x: 12, y: 12), to: nil)
+        func click(_ view: NSView) throws {
+            let location = view.convert(NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
             let time = ProcessInfo.processInfo.systemUptime
             guard let down = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: time, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1),
                   let up = NSEvent.mouseEvent(with: .leftMouseUp, location: location, modifierFlags: [], timestamp: time + 0.01, windowNumber: window.windowNumber, context: nil, eventNumber: 2, clickCount: 1, pressure: 0) else { throw NavigationError("Cannot create copy-button mouse events") }
@@ -318,7 +344,7 @@ extension NavigationRunner {
         var ownChange = board.changeCount
         defer { if board.changeCount == ownChange { board.clearContents(); board.writeObjects(savedItems) } }
         let idleImage = try buttonImage(actions)
-        try clickCopy()
+        try click(actions)
         try await settle()
         ownChange = board.changeCount
         guard board.string(forType: .string) == source else { throw NavigationError("Assistant copy button did not copy full Markdown source") }
@@ -327,10 +353,25 @@ extension NavigationRunner {
         host.rootView = root([try message("Different reply")])
         try await settle()
         guard try buttonImage(actions) == idleImage else { throw NavigationError("Assistant replacement retained copied feedback") }
-        try clickCopy()
+        try click(actions)
         try await settle()
         ownChange = board.changeCount
         guard board.string(forType: .string) == "Different reply" else { throw NavigationError("Assistant copy action retained previous reply") }
+        // Code cards copy their own source and scroll long lines horizontally.
+        let longLine = "let codeMarker = \"" + String(repeating: "超长代码行", count: 40) + "\""
+        let codeSource = "```python\nprint(\"codeMarker\")\n\(longLine)\n```"
+        host.rootView = root([try message("前文段落。\n\n" + codeSource)])
+        try await settle()
+        guard let codeRow = nativeRows().first else { throw NavigationError("Code assistant did not enter the native path") }
+        guard let cardScroll = descendants(codeRow).compactMap({ $0 as? NSScrollView }).first,
+              let document = cardScroll.documentView else { throw NavigationError("Code card lost its horizontal scroll view") }
+        guard document.frame.width > cardScroll.frame.width else { throw NavigationError("Long code line did not overflow horizontally") }
+        guard let codeCopy = descendants(codeRow).compactMap({ $0 as? NSHostingView<ReplyCopyButton> }).first(where: { $0 !== actions }) else { throw NavigationError("Code card lost its copy button") }
+        let codeSourceText = "print(\"codeMarker\")\n\(longLine)"
+        try click(codeCopy)
+        try await settle()
+        ownChange = board.changeCount
+        guard board.string(forType: .string) == codeSourceText else { throw NavigationError("Code copy button did not copy the code source") }
         for excluded in [try message(source, metadata: ["origin": ["kind": "compaction_summary"]]),
                          try message("<system-reminder>Runtime</system-reminder>"),
                          try message("Skill summary\n<skill-loaded trigger=\"user-slash\">Context</skill-loaded>")] {
@@ -340,12 +381,13 @@ extension NavigationRunner {
         }
         host.rootView = root([])
         try await settle()
-        let giant = (0..<80).map { "Paragraph \($0)" }.joined(separator: "\n\n")
-        guard let content = NativeParagraphContent.make(giant) else { throw NavigationError("Pool fixture is not prose") }
+        // Recycled shells hold no block content; text views return to the shared pool cleared.
+        guard let prose = NativeAssistantContent.make((0..<80).map { "Paragraph \($0)" }.joined(separator: "\n\n")),
+              let rich = NativeAssistantContent.make("标题前。\n\n## 章节\n\n> 引用内容。\n\n```swift\nlet pooled = true\n```\n\n- 列表甲\n- 列表乙") else { throw NavigationError("Pool fixtures are not admissible") }
         var held: [NativeAssistantMessageView] = []
-        for _ in 0..<20 {
+        for index in 0..<20 {
             let view = NativeAssistantMessageView.acquire()
-            view.update(content, source: giant, dark: false)
+            view.update(index % 2 == 0 ? prose : rich, source: "pool-\(index)", dark: false)
             guard let first = descendants(view).compactMap({ $0 as? ReplyTextView }).first else { throw NavigationError("Pool row missing text") }
             first.setSelectedRange(NSRange(location: 0, length: 3))
             held.append(view)
@@ -353,8 +395,8 @@ extension NavigationRunner {
         for view in held { NativeAssistantMessageView.recycle(view) }
         held.removeAll()
         let pool = NativeAssistantMessageView.poolState
-        guard pool["rows"] as? Int == 16, pool["texts"] as? Int == 8, pool["cleared"] as? Bool == true else { throw NavigationError("Assistant row pool exceeded its budget or kept private state") }
+        guard pool["rows"] as? Int == 16, pool["cleared"] as? Bool == true else { throw NavigationError("Assistant row pool exceeded its budget or kept private state") }
         return ["production_lifecycle": true, "streaming_retains_swiftui": true, "same_id_shape_changes": true,
-                "copy_button_source_and_feedback": true, "pool": pool]
+                "copy_button_source_and_feedback": true, "code_card_copy_and_scroll": true, "pool": pool]
     }
 }

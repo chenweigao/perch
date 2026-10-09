@@ -1,0 +1,1272 @@
+{
+  "fast_scroll": {
+    "a": [
+      {
+        "run": 1,
+        "phases": [
+          {
+            "phase": "cold-down",
+            "work_ms": {
+              "count": 168,
+              "max_ms": 23.088333331543254,
+              "median_ms": 10.589500001515262,
+              "over_16_7ms": 6,
+              "over_100ms": 0,
+              "p95_ms": 15.968250001606066
+            },
+            "over_budget": 140,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 907,
+                "ms": 23.815499946067575
+              },
+              "document_configure": {
+                "count": 157,
+                "ms": 0.39616666981601156
+              },
+              "host_attach": {
+                "count": 477,
+                "ms": 22.89224999913131
+              },
+              "host_create": {
+                "count": 477,
+                "ms": 183.14562494197162
+              },
+              "host_first_attach": {
+                "count": 477,
+                "ms": 22.938833386433544
+              },
+              "host_first_measure": {
+                "count": 477,
+                "ms": 316.3916666635487
+              },
+              "host_measure": {
+                "count": 477,
+                "ms": 316.3577916457143
+              },
+              "host_measure_assistant": {
+                "count": 279,
+                "ms": 316.35133333838894
+              },
+              "host_measure_user": {
+                "count": 198,
+                "ms": 0.3210000286344439
+              },
+              "host_view": {
+                "count": 477,
+                "ms": 137.365291651804
+              },
+              "markdown_parse": {
+                "count": 79,
+                "ms": 13.90174998959992
+              },
+              "native_assistant_create": {
+                "count": 3,
+                "ms": 0.0005416659405454993
+              },
+              "native_assistant_reuse": {
+                "count": 37,
+                "ms": 0.005208341463003308
+              },
+              "native_assistant_update": {
+                "count": 40,
+                "ms": 0.0027083588065579534
+              },
+              "native_user_update": {
+                "count": 198,
+                "ms": 0.02066662273136899
+              },
+              "row_geometry": {
+                "count": 477,
+                "ms": 3.888458297296893
+              },
+              "text_create": {
+                "count": 789,
+                "ms": 11.162583348777844
+              },
+              "text_measure": {
+                "count": 1264,
+                "ms": 82.60870853700908
+              },
+              "text_reuse": {
+                "count": 741,
+                "ms": 0.03770833427552134
+              }
+            }
+          },
+          {
+            "phase": "revisit-up",
+            "work_ms": {
+              "count": 166,
+              "max_ms": 20.991541663534008,
+              "median_ms": 9.599166667612735,
+              "over_16_7ms": 18,
+              "over_100ms": 0,
+              "p95_ms": 18.388124997727573
+            },
+            "over_budget": 100,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 890,
+                "ms": 22.891333283041604
+              },
+              "host_attach": {
+                "count": 478,
+                "ms": 22.943625026528025
+              },
+              "host_create": {
+                "count": 466,
+                "ms": 236.81979170942213
+              },
+              "host_first_attach": {
+                "count": 466,
+                "ms": 21.875041675230023
+              },
+              "host_reattach": {
+                "count": 12,
+                "ms": 1.1221250097150914
+              },
+              "host_view": {
+                "count": 466,
+                "ms": 133.2485416533018
+              },
+              "markdown_parse": {
+                "count": 77,
+                "ms": 15.29437501449138
+              },
+              "native_assistant_reuse": {
+                "count": 39,
+                "ms": 0.004833334969589487
+              },
+              "native_assistant_update": {
+                "count": 39,
+                "ms": 0.002916680386988446
+              },
+              "native_user_update": {
+                "count": 194,
+                "ms": 0.021166662918403745
+              },
+              "text_create": {
+                "count": 766,
+                "ms": 5.246624969004188
+              },
+              "text_measure": {
+                "count": 1241,
+                "ms": 79.13541667949175
+              },
+              "text_reuse": {
+                "count": 766,
+                "ms": 0.03437506893533282
+              }
+            }
+          },
+          {
+            "phase": "hot-local",
+            "work_ms": {
+              "count": 240,
+              "max_ms": 11.450958332716255,
+              "median_ms": 4.214291664538905,
+              "over_16_7ms": 0,
+              "over_100ms": 0,
+              "p95_ms": 9.159499997622333
+            },
+            "over_budget": 21,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "host_attach": {
+                "count": 30,
+                "ms": 15.02141666423995
+              },
+              "host_reattach": {
+                "count": 30,
+                "ms": 15.040708334709052
+              }
+            }
+          }
+        ]
+      },
+      {
+        "run": 2,
+        "phases": [
+          {
+            "phase": "cold-down",
+            "work_ms": {
+              "count": 168,
+              "max_ms": 23.3985416671203,
+              "median_ms": 10.873916668060701,
+              "over_16_7ms": 10,
+              "over_100ms": 0,
+              "p95_ms": 16.92525000180467
+            },
+            "over_budget": 145,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 907,
+                "ms": 24.08387505056453
+              },
+              "document_configure": {
+                "count": 157,
+                "ms": 0.42016664883703925
+              },
+              "host_attach": {
+                "count": 477,
+                "ms": 23.028041629004292
+              },
+              "host_create": {
+                "count": 477,
+                "ms": 202.09220828473917
+              },
+              "host_first_attach": {
+                "count": 477,
+                "ms": 23.077541602106066
+              },
+              "host_first_measure": {
+                "count": 477,
+                "ms": 320.0707083560701
+              },
+              "host_measure": {
+                "count": 477,
+                "ms": 320.0328333696234
+              },
+              "host_measure_assistant": {
+                "count": 279,
+                "ms": 320.0204166896583
+              },
+              "host_measure_user": {
+                "count": 198,
+                "ms": 0.3412083533476107
+              },
+              "host_view": {
+                "count": 477,
+                "ms": 135.83320833276957
+              },
+              "markdown_parse": {
+                "count": 79,
+                "ms": 14.00241666851798
+              },
+              "native_assistant_create": {
+                "count": 3,
+                "ms": 0.0003749955794773996
+              },
+              "native_assistant_reuse": {
+                "count": 37,
+                "ms": 0.004750007065013051
+              },
+              "native_assistant_update": {
+                "count": 40,
+                "ms": 0.0027916648832615465
+              },
+              "native_user_update": {
+                "count": 198,
+                "ms": 0.023583386791869998
+              },
+              "row_geometry": {
+                "count": 477,
+                "ms": 4.019208336103475
+              },
+              "text_create": {
+                "count": 792,
+                "ms": 11.936875042010797
+              },
+              "text_measure": {
+                "count": 1264,
+                "ms": 84.3373749848979
+              },
+              "text_reuse": {
+                "count": 743,
+                "ms": 0.02929170659626834
+              }
+            }
+          },
+          {
+            "phase": "revisit-up",
+            "work_ms": {
+              "count": 166,
+              "max_ms": 19.26570833165897,
+              "median_ms": 10.249999999359716,
+              "over_16_7ms": 15,
+              "over_100ms": 0,
+              "p95_ms": 17.339833331789123
+            },
+            "over_budget": 106,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 890,
+                "ms": 23.35024998319568
+              },
+              "host_attach": {
+                "count": 478,
+                "ms": 23.979500041605206
+              },
+              "host_create": {
+                "count": 466,
+                "ms": 232.83091673874878
+              },
+              "host_first_attach": {
+                "count": 466,
+                "ms": 22.769125000195345
+              },
+              "host_reattach": {
+                "count": 12,
+                "ms": 1.261291661649011
+              },
+              "host_view": {
+                "count": 466,
+                "ms": 139.02887502626982
+              },
+              "markdown_parse": {
+                "count": 77,
+                "ms": 15.763041676109424
+              },
+              "native_assistant_reuse": {
+                "count": 39,
+                "ms": 0.004666664608521387
+              },
+              "native_assistant_update": {
+                "count": 39,
+                "ms": 0.0036249984987080097
+              },
+              "native_user_update": {
+                "count": 194,
+                "ms": 0.019833310943795368
+              },
+              "text_create": {
+                "count": 765,
+                "ms": 5.335083365935134
+              },
+              "text_measure": {
+                "count": 1241,
+                "ms": 82.15458338600001
+              },
+              "text_reuse": {
+                "count": 765,
+                "ms": 0.030208288080757484
+              }
+            }
+          },
+          {
+            "phase": "hot-local",
+            "work_ms": {
+              "count": 240,
+              "max_ms": 12.135500001022592,
+              "median_ms": 4.455333335499745,
+              "over_16_7ms": 0,
+              "over_100ms": 0,
+              "p95_ms": 9.536124998703599
+            },
+            "over_budget": 26,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "host_attach": {
+                "count": 30,
+                "ms": 17.36091669590678
+              },
+              "host_reattach": {
+                "count": 30,
+                "ms": 17.38062502045068
+              }
+            }
+          }
+        ]
+      },
+      {
+        "run": 3,
+        "phases": [
+          {
+            "phase": "cold-down",
+            "work_ms": {
+              "count": 168,
+              "max_ms": 22.456041668192483,
+              "median_ms": 10.688999998819781,
+              "over_16_7ms": 6,
+              "over_100ms": 0,
+              "p95_ms": 15.970583332091337
+            },
+            "over_budget": 142,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 907,
+                "ms": 23.600999968039105
+              },
+              "document_configure": {
+                "count": 157,
+                "ms": 0.4100833430129569
+              },
+              "host_attach": {
+                "count": 477,
+                "ms": 23.113083305361215
+              },
+              "host_create": {
+                "count": 477,
+                "ms": 194.76549998580595
+              },
+              "host_first_attach": {
+                "count": 477,
+                "ms": 23.156833311077207
+              },
+              "host_first_measure": {
+                "count": 477,
+                "ms": 318.49274997148314
+              },
+              "host_measure": {
+                "count": 477,
+                "ms": 318.46399999267305
+              },
+              "host_measure_assistant": {
+                "count": 279,
+                "ms": 318.455874981737
+              },
+              "host_measure_user": {
+                "count": 198,
+                "ms": 0.3292083347332664
+              },
+              "host_view": {
+                "count": 477,
+                "ms": 98.16808343384764
+              },
+              "markdown_parse": {
+                "count": 79,
+                "ms": 14.022749986907002
+              },
+              "native_assistant_create": {
+                "count": 3,
+                "ms": 0.00020833249436691403
+              },
+              "native_assistant_reuse": {
+                "count": 37,
+                "ms": 0.003749995812540874
+              },
+              "native_assistant_update": {
+                "count": 40,
+                "ms": 0.0023750071704853326
+              },
+              "native_user_update": {
+                "count": 198,
+                "ms": 0.01887501639430411
+              },
+              "row_geometry": {
+                "count": 477,
+                "ms": 3.914083310519345
+              },
+              "text_create": {
+                "count": 791,
+                "ms": 11.917416679352755
+              },
+              "text_measure": {
+                "count": 1264,
+                "ms": 82.87970839228365
+              },
+              "text_reuse": {
+                "count": 740,
+                "ms": 0.031208321161102504
+              }
+            }
+          },
+          {
+            "phase": "revisit-up",
+            "work_ms": {
+              "count": 166,
+              "max_ms": 39.31229166846606,
+              "median_ms": 11.092041666415753,
+              "over_16_7ms": 22,
+              "over_100ms": 0,
+              "p95_ms": 20.989416669181082
+            },
+            "over_budget": 128,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 890,
+                "ms": 25.55912494790391
+              },
+              "host_attach": {
+                "count": 478,
+                "ms": 27.65870830626227
+              },
+              "host_create": {
+                "count": 466,
+                "ms": 231.02891666712821
+              },
+              "host_first_attach": {
+                "count": 466,
+                "ms": 26.60058333640336
+              },
+              "host_reattach": {
+                "count": 12,
+                "ms": 1.1057083393097855
+              },
+              "host_view": {
+                "count": 466,
+                "ms": 101.26966664392967
+              },
+              "markdown_parse": {
+                "count": 77,
+                "ms": 18.690041655645473
+              },
+              "native_assistant_reuse": {
+                "count": 39,
+                "ms": 0.0053333278628997505
+              },
+              "native_assistant_update": {
+                "count": 39,
+                "ms": 0.008875013008946553
+              },
+              "native_user_update": {
+                "count": 194,
+                "ms": 0.03129167453153059
+              },
+              "text_create": {
+                "count": 768,
+                "ms": 6.279666700720554
+              },
+              "text_measure": {
+                "count": 1244,
+                "ms": 87.86537501509883
+              },
+              "text_reuse": {
+                "count": 768,
+                "ms": 0.035666653275256976
+              }
+            }
+          },
+          {
+            "phase": "hot-local",
+            "work_ms": {
+              "count": 240,
+              "max_ms": 11.320875000819797,
+              "median_ms": 4.415916668222053,
+              "over_16_7ms": 0,
+              "over_100ms": 0,
+              "p95_ms": 9.673083332017995
+            },
+            "over_budget": 30,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "host_attach": {
+                "count": 30,
+                "ms": 18.672625003091525
+              },
+              "host_reattach": {
+                "count": 30,
+                "ms": 18.6992083399673
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "b": [
+      {
+        "run": 1,
+        "phases": [
+          {
+            "phase": "cold-down",
+            "work_ms": {
+              "count": 168,
+              "max_ms": 21.76737500121817,
+              "median_ms": 10.924250000243774,
+              "over_16_7ms": 16,
+              "over_100ms": 0,
+              "p95_ms": 17.579875002411427
+            },
+            "over_budget": 140,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 946,
+                "ms": 24.11987493178458
+              },
+              "document_configure": {
+                "count": 157,
+                "ms": 0.4028333496535197
+              },
+              "host_attach": {
+                "count": 477,
+                "ms": 29.79874997618026
+              },
+              "host_create": {
+                "count": 477,
+                "ms": 240.15850001160288
+              },
+              "host_first_attach": {
+                "count": 477,
+                "ms": 29.850541657651775
+              },
+              "host_first_measure": {
+                "count": 477,
+                "ms": 244.46533332229592
+              },
+              "host_measure": {
+                "count": 477,
+                "ms": 244.43095834794804
+              },
+              "host_measure_assistant": {
+                "count": 279,
+                "ms": 244.42366668881732
+              },
+              "host_measure_user": {
+                "count": 198,
+                "ms": 0.3385833515494596
+              },
+              "host_view": {
+                "count": 477,
+                "ms": 139.36374996774248
+              },
+              "markdown_parse": {
+                "count": 39,
+                "ms": 10.240166666335426
+              },
+              "native_assistant_create": {
+                "count": 5,
+                "ms": 0.0005416623025666922
+              },
+              "native_assistant_reuse": {
+                "count": 75,
+                "ms": 0.0111666668090038
+              },
+              "native_assistant_update": {
+                "count": 80,
+                "ms": 0.006458332791225985
+              },
+              "native_user_update": {
+                "count": 198,
+                "ms": 0.02850002420018427
+              },
+              "row_geometry": {
+                "count": 477,
+                "ms": 3.9868750391178764
+              },
+              "text_create": {
+                "count": 790,
+                "ms": 11.456458341854159
+              },
+              "text_measure": {
+                "count": 1264,
+                "ms": 82.23470831580926
+              },
+              "text_reuse": {
+                "count": 738,
+                "ms": 0.031874998967396095
+              }
+            }
+          },
+          {
+            "phase": "revisit-up",
+            "work_ms": {
+              "count": 166,
+              "max_ms": 20.61462499841582,
+              "median_ms": 10.37341666597058,
+              "over_16_7ms": 10,
+              "over_100ms": 0,
+              "p95_ms": 17.458124999393476
+            },
+            "over_budget": 113,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 929,
+                "ms": 23.369208400254138
+              },
+              "host_attach": {
+                "count": 478,
+                "ms": 31.01899998364388
+              },
+              "host_create": {
+                "count": 466,
+                "ms": 260.2244166773744
+              },
+              "host_first_attach": {
+                "count": 466,
+                "ms": 29.380999993009027
+              },
+              "host_reattach": {
+                "count": 12,
+                "ms": 1.6849583371367771
+              },
+              "host_view": {
+                "count": 466,
+                "ms": 102.18220836031833
+              },
+              "markdown_parse": {
+                "count": 39,
+                "ms": 11.655416667053942
+              },
+              "native_assistant_reuse": {
+                "count": 77,
+                "ms": 0.010166662832489237
+              },
+              "native_assistant_update": {
+                "count": 77,
+                "ms": 0.006875005055917427
+              },
+              "native_user_update": {
+                "count": 194,
+                "ms": 0.019499999325489625
+              },
+              "text_create": {
+                "count": 769,
+                "ms": 5.162750032468466
+              },
+              "text_measure": {
+                "count": 1241,
+                "ms": 80.37587495346088
+              },
+              "text_reuse": {
+                "count": 769,
+                "ms": 0.03658338755485602
+              }
+            }
+          },
+          {
+            "phase": "hot-local",
+            "work_ms": {
+              "count": 240,
+              "max_ms": 11.442416667705402,
+              "median_ms": 4.084416665136814,
+              "over_16_7ms": 0,
+              "over_100ms": 0,
+              "p95_ms": 9.615875002054963
+            },
+            "over_budget": 21,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "host_attach": {
+                "count": 30,
+                "ms": 14.768291679502
+              },
+              "host_reattach": {
+                "count": 30,
+                "ms": 14.789916669542436
+              }
+            }
+          }
+        ]
+      },
+      {
+        "run": 2,
+        "phases": [
+          {
+            "phase": "cold-down",
+            "work_ms": {
+              "count": 168,
+              "max_ms": 23.840041663788725,
+              "median_ms": 11.088374998507788,
+              "over_16_7ms": 18,
+              "over_100ms": 0,
+              "p95_ms": 17.963791666261386
+            },
+            "over_budget": 144,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 946,
+                "ms": 24.230541646829806
+              },
+              "document_configure": {
+                "count": 157,
+                "ms": 0.4097500022908207
+              },
+              "host_attach": {
+                "count": 477,
+                "ms": 30.65995830547763
+              },
+              "host_create": {
+                "count": 477,
+                "ms": 235.6201250331651
+              },
+              "host_first_attach": {
+                "count": 477,
+                "ms": 30.713749965798343
+              },
+              "host_first_measure": {
+                "count": 477,
+                "ms": 250.59862499983865
+              },
+              "host_measure": {
+                "count": 477,
+                "ms": 250.55533338309033
+              },
+              "host_measure_assistant": {
+                "count": 279,
+                "ms": 250.55608333423152
+              },
+              "host_measure_user": {
+                "count": 198,
+                "ms": 0.3703750408021733
+              },
+              "host_view": {
+                "count": 477,
+                "ms": 120.98187497031176
+              },
+              "markdown_parse": {
+                "count": 39,
+                "ms": 10.363499997765757
+              },
+              "native_assistant_create": {
+                "count": 5,
+                "ms": 0.0007916714821476489
+              },
+              "native_assistant_reuse": {
+                "count": 75,
+                "ms": 0.00787500903243199
+              },
+              "native_assistant_update": {
+                "count": 80,
+                "ms": 0.00983336940407753
+              },
+              "native_user_update": {
+                "count": 198,
+                "ms": 0.02037499871221371
+              },
+              "row_geometry": {
+                "count": 477,
+                "ms": 4.065000015543774
+              },
+              "text_create": {
+                "count": 792,
+                "ms": 12.261333376955008
+              },
+              "text_measure": {
+                "count": 1264,
+                "ms": 83.28391674876912
+              },
+              "text_reuse": {
+                "count": 740,
+                "ms": 0.035958291846327484
+              }
+            }
+          },
+          {
+            "phase": "revisit-up",
+            "work_ms": {
+              "count": 166,
+              "max_ms": 19.996333336166572,
+              "median_ms": 9.934208334016148,
+              "over_16_7ms": 14,
+              "over_100ms": 0,
+              "p95_ms": 17.40050000080373
+            },
+            "over_budget": 105,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 929,
+                "ms": 22.987250009464333
+              },
+              "host_attach": {
+                "count": 478,
+                "ms": 29.777375060803024
+              },
+              "host_create": {
+                "count": 466,
+                "ms": 275.03658323257696
+              },
+              "host_first_attach": {
+                "count": 466,
+                "ms": 28.5920416135923
+              },
+              "host_reattach": {
+                "count": 12,
+                "ms": 1.2388333343551494
+              },
+              "host_view": {
+                "count": 466,
+                "ms": 91.81445832291502
+              },
+              "markdown_parse": {
+                "count": 39,
+                "ms": 11.479208322271006
+              },
+              "native_assistant_reuse": {
+                "count": 77,
+                "ms": 0.009791659977054223
+              },
+              "native_assistant_update": {
+                "count": 77,
+                "ms": 0.007500017090933397
+              },
+              "native_user_update": {
+                "count": 194,
+                "ms": 0.018208356777904555
+              },
+              "text_create": {
+                "count": 769,
+                "ms": 5.036749982537003
+              },
+              "text_measure": {
+                "count": 1241,
+                "ms": 79.42299998467206
+              },
+              "text_reuse": {
+                "count": 769,
+                "ms": 0.036166678910376504
+              }
+            }
+          },
+          {
+            "phase": "hot-local",
+            "work_ms": {
+              "count": 240,
+              "max_ms": 12.259250001079636,
+              "median_ms": 4.546791664324701,
+              "over_16_7ms": 0,
+              "over_100ms": 0,
+              "p95_ms": 10.356041668273974
+            },
+            "over_budget": 25,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "host_attach": {
+                "count": 30,
+                "ms": 17.662124999333173
+              },
+              "host_reattach": {
+                "count": 30,
+                "ms": 17.680958331766305
+              }
+            }
+          }
+        ]
+      },
+      {
+        "run": 3,
+        "phases": [
+          {
+            "phase": "cold-down",
+            "work_ms": {
+              "count": 168,
+              "max_ms": 22.831333331851056,
+              "median_ms": 11.216499999136431,
+              "over_16_7ms": 15,
+              "over_100ms": 0,
+              "p95_ms": 17.307541667832993
+            },
+            "over_budget": 147,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 946,
+                "ms": 23.828541718103224
+              },
+              "document_configure": {
+                "count": 157,
+                "ms": 0.4216666675347369
+              },
+              "host_attach": {
+                "count": 477,
+                "ms": 29.6101249732601
+              },
+              "host_create": {
+                "count": 477,
+                "ms": 234.9127500092436
+              },
+              "host_first_attach": {
+                "count": 477,
+                "ms": 29.659666659426875
+              },
+              "host_first_measure": {
+                "count": 477,
+                "ms": 244.4827500221436
+              },
+              "host_measure": {
+                "count": 477,
+                "ms": 244.45341666796594
+              },
+              "host_measure_assistant": {
+                "count": 279,
+                "ms": 244.4526249455521
+              },
+              "host_measure_user": {
+                "count": 198,
+                "ms": 0.34608337955432944
+              },
+              "host_view": {
+                "count": 477,
+                "ms": 157.0526250070543
+              },
+              "markdown_parse": {
+                "count": 39,
+                "ms": 10.135083339264384
+              },
+              "native_assistant_create": {
+                "count": 5,
+                "ms": 0.0007499984349124134
+              },
+              "native_assistant_reuse": {
+                "count": 75,
+                "ms": 0.012458353012334555
+              },
+              "native_assistant_update": {
+                "count": 80,
+                "ms": 0.007250022463267669
+              },
+              "native_user_update": {
+                "count": 198,
+                "ms": 0.019666684238472953
+              },
+              "row_geometry": {
+                "count": 477,
+                "ms": 3.9115833933465183
+              },
+              "text_create": {
+                "count": 792,
+                "ms": 11.405833352910122
+              },
+              "text_measure": {
+                "count": 1264,
+                "ms": 82.25616680647363
+              },
+              "text_reuse": {
+                "count": 741,
+                "ms": 0.052291652536951005
+              }
+            }
+          },
+          {
+            "phase": "revisit-up",
+            "work_ms": {
+              "count": 166,
+              "max_ms": 25.026333332789363,
+              "median_ms": 9.91095833160216,
+              "over_16_7ms": 12,
+              "over_100ms": 0,
+              "p95_ms": 17.09520833537681
+            },
+            "over_budget": 112,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "attributed_text": {
+                "count": 929,
+                "ms": 23.1728749749891
+              },
+              "host_attach": {
+                "count": 478,
+                "ms": 30.77824998399592
+              },
+              "host_create": {
+                "count": 466,
+                "ms": 268.1031666652416
+              },
+              "host_first_attach": {
+                "count": 466,
+                "ms": 29.559749982581707
+              },
+              "host_reattach": {
+                "count": 12,
+                "ms": 1.2714583208435215
+              },
+              "host_view": {
+                "count": 466,
+                "ms": 111.524416719476
+              },
+              "markdown_parse": {
+                "count": 39,
+                "ms": 11.793708326877095
+              },
+              "native_assistant_reuse": {
+                "count": 77,
+                "ms": 0.00954167262534611
+              },
+              "native_assistant_update": {
+                "count": 77,
+                "ms": 0.008958308171713725
+              },
+              "native_user_update": {
+                "count": 194,
+                "ms": 0.020291630789870396
+              },
+              "text_create": {
+                "count": 768,
+                "ms": 5.161041692190338
+              },
+              "text_measure": {
+                "count": 1241,
+                "ms": 80.64391667721793
+              },
+              "text_reuse": {
+                "count": 768,
+                "ms": 0.03716666469699703
+              }
+            }
+          },
+          {
+            "phase": "hot-local",
+            "work_ms": {
+              "count": 240,
+              "max_ms": 10.717666664277203,
+              "median_ms": 3.824499999609543,
+              "over_16_7ms": 0,
+              "over_100ms": 0,
+              "p95_ms": 8.638541665277444
+            },
+            "over_budget": 17,
+            "missing_visible_row_samples": 0,
+            "position_corrections": 0,
+            "render_stages": {
+              "host_attach": {
+                "count": 30,
+                "ms": 14.83074999487144
+              },
+              "host_reattach": {
+                "count": 30,
+                "ms": 14.847666665446013
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "reading": {
+    "a": [
+      {
+        "run": 1,
+        "reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.949083332699956,
+          "median_ms": 7.810416667780373,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 12.85966666546301
+        },
+        "upward_step_ms": {
+          "count": 333,
+          "max_ms": 16.212791666475823,
+          "median_ms": 5.607666666037403,
+          "over_16_7ms": 0,
+          "over_100ms": 0,
+          "p95_ms": 12.172750000900123
+        },
+        "resident_mb_after_upward": 171.53125
+      },
+      {
+        "run": 2,
+        "reading_step_ms": {
+          "count": 334,
+          "max_ms": 22.654833333945135,
+          "median_ms": 7.730666668066988,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 12.486583334975876
+        },
+        "upward_step_ms": {
+          "count": 333,
+          "max_ms": 20.73687499796506,
+          "median_ms": 6.097958332247799,
+          "over_16_7ms": 3,
+          "over_100ms": 0,
+          "p95_ms": 11.920583332539536
+        },
+        "resident_mb_after_upward": 171.25
+      },
+      {
+        "run": 3,
+        "reading_step_ms": {
+          "count": 334,
+          "max_ms": 18.955958334117895,
+          "median_ms": 7.8649583338119555,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 12.438458332326263
+        },
+        "upward_step_ms": {
+          "count": 333,
+          "max_ms": 17.855750000308035,
+          "median_ms": 5.730583332479,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 11.940541666263016
+        },
+        "resident_mb_after_upward": 171.328125
+      }
+    ],
+    "b": [
+      {
+        "run": 1,
+        "reading_step_ms": {
+          "count": 334,
+          "max_ms": 20.363791663839947,
+          "median_ms": 8.123374998831423,
+          "over_16_7ms": 4,
+          "over_100ms": 0,
+          "p95_ms": 12.78233333141543
+        },
+        "upward_step_ms": {
+          "count": 333,
+          "max_ms": 21.554791666858364,
+          "median_ms": 6.5934166668739635,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 12.731083334074356
+        },
+        "resident_mb_after_upward": 172.328125
+      },
+      {
+        "run": 2,
+        "reading_step_ms": {
+          "count": 334,
+          "max_ms": 17.96637499865028,
+          "median_ms": 8.035750000999542,
+          "over_16_7ms": 3,
+          "over_100ms": 0,
+          "p95_ms": 13.115291665599216
+        },
+        "upward_step_ms": {
+          "count": 333,
+          "max_ms": 19.14020833282848,
+          "median_ms": 6.41150000228663,
+          "over_16_7ms": 1,
+          "over_100ms": 0,
+          "p95_ms": 12.697541664238088
+        },
+        "resident_mb_after_upward": 176.15625
+      },
+      {
+        "run": 3,
+        "reading_step_ms": {
+          "count": 334,
+          "max_ms": 20.97950000097626,
+          "median_ms": 7.8468749998137355,
+          "over_16_7ms": 5,
+          "over_100ms": 0,
+          "p95_ms": 13.335499999811873
+        },
+        "upward_step_ms": {
+          "count": 333,
+          "max_ms": 18.50554166958318,
+          "median_ms": 6.064208333555143,
+          "over_16_7ms": 2,
+          "over_100ms": 0,
+          "p95_ms": 11.940083335503004
+        },
+        "resident_mb_after_upward": 171.734375
+      }
+    ]
+  },
+  "environment": {
+    "macos": "Version 27.0.1 (Build 26A434)",
+    "source_commit": "93f9fea64244b12d309e347870d3ff18f696aafc"
+  }
+}
