@@ -178,7 +178,7 @@ struct ConversationActivityBar: View {
                 Button("查看") { expanded = false; onReview() }.buttonStyle(.bordered).tint(.orange)
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 14) {
                     if let narrative {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(narrative.headline).font(.system(size: 13, weight: .semibold)).textSelection(.enabled)
@@ -456,12 +456,13 @@ struct KimiTaskSections: View {
     var onOpenTranscript: (KimiTask) -> Void = { _ in }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let backgroundTasks = board.backgroundTasks
+        LazyVStack(alignment: .leading, spacing: 14) {
             if !board.subagents.isEmpty {
                 section("子 Agent", tasks: board.subagents, readsOutput: false)
             }
-            if !board.backgroundTasks.isEmpty {
-                section("后台任务", tasks: board.backgroundTasks, readsOutput: true)
+            if !backgroundTasks.isEmpty {
+                section("后台任务", tasks: backgroundTasks, readsOutput: true)
             }
             if let listError {
                 VStack(alignment: .leading, spacing: 5) {
@@ -473,7 +474,7 @@ struct KimiTaskSections: View {
     }
 
     private func section(_ title: LocalizedStringKey, tasks: [KimiTask], readsOutput: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        LazyVStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title).fontWeight(.semibold)
                 Spacer()

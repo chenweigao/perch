@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
+private let stressTaskCount = Int(ProcessInfo.processInfo.environment["ACTIVITY_BAR_TASKS"] ?? "0") ?? 0
+
 @main struct ActivityPreviewApp: App {
     @NSApplicationDelegateAdaptor(ActivityDelegate.self) private var delegate
     var body: some Scene {
@@ -136,11 +138,17 @@ private struct ActivityPreview: View {
          {"id":"agent_03","session_id":"preview","kind":"subagent","description":"Verify keyboard and narrow layouts","status":"failed","created_at":"\(stamp(200))","started_at":"\(stamp(198))","completed_at":"\(stamp(180))","run_in_background":false,"subagent_phase":"failed","subagent_type":"coder","parent_tool_call_id":"agent-call"},
          {"id":"agent_04","session_id":"preview","kind":"subagent","description":"Wait for a permission decision","status":"running","created_at":"\(stamp(60))","started_at":"\(stamp(58))","run_in_background":false,"subagent_phase":"suspended","suspended_reason":"approval","subagent_type":"coder","parent_tool_call_id":"agent-call"}]
         """.utf8))
-        let tasks = try! KimiWire.decoder().decode([KimiTask].self, from: Data("""
+        var tasks = try! KimiWire.decoder().decode([KimiTask].self, from: Data("""
         [{"id":"task_1","session_id":"preview","kind":"bash","description":"Run the fixture test suite","status":"running","command":"swift test --filter FixtureTests","created_at":"\(stamp(125))","started_at":"\(stamp(125))","run_in_background":true},
          {"id":"task_2","session_id":"preview","kind":"subagent","description":"Search the transcript history","status":"completed","created_at":"\(stamp(300))","started_at":"\(stamp(300))","completed_at":"\(stamp(240))","agent_id":"agent_09","subagent_type":"explore","model":"kimi-k2","run_in_background":true,"output_preview":"Test Suite passed\\n12 tests, 0 failures"},
          {"id":"task_3","session_id":"preview","kind":"tool","description":"Wait for the fixture answer","status":"cancelled","created_at":"\(stamp(400))","started_at":"\(stamp(400))","completed_at":"\(stamp(380))","run_in_background":true}]
         """.utf8))
+        tasks += (0..<stressTaskCount).map { index in
+            KimiTask(id: "stress_\(index)", kind: "tool", description: "Completed stress task \(index + 1)",
+                     status: "completed", createdAt: "2026-10-09T08:00:00.000Z",
+                     startedAt: "2026-10-09T08:00:01.000Z", completedAt: "2026-10-09T08:00:02.000Z",
+                     runInBackground: true)
+        }
         var board = KimiTaskBoard(subagents: roster)
         board.reconcile(background: tasks)
         for id in readOutputs { board.store(output: "PASS: fixture suite\n24 tests, 0 failures", for: id) }
