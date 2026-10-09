@@ -10,6 +10,7 @@ private final class SelectionProtocol: URLProtocol {
     private static var counts: [String: Int] = [:]
     private static var bodies: [String: [JSONValue]] = [:]
     private static var sequence = 10
+    private static var mainTurnActive: Bool?
     private static var busy = false
     private static var goalActive = true
     private static var recoveredPromptStatus: String?
@@ -17,13 +18,14 @@ private final class SelectionProtocol: URLProtocol {
 
     static func reset() {
         lock.lock(); defer { lock.unlock() }
-        held = []; failed = []; pending = [:]; counts = [:]; bodies = [:]; sequence = 10; busy = false; goalActive = true; recoveredPromptStatus = nil
+        held = []; failed = []; pending = [:]; counts = [:]; bodies = [:]; sequence = 10; busy = false; mainTurnActive = nil; goalActive = true; recoveredPromptStatus = nil
     }
     static func setRecoveredPrompt(_ status: String) {
         lock.lock(); defer { lock.unlock() }; recoveredPromptStatus = status; busy = true
     }
     static func setSequence(_ value: Int) { lock.lock(); defer { lock.unlock() }; sequence = value }
     static func setBusy(_ value: Bool) { lock.lock(); defer { lock.unlock() }; busy = value; sequence += 1 }
+    static func setMainTurnActive(_ value: Bool) { lock.lock(); defer { lock.unlock() }; mainTurnActive = value; sequence += 1 }
     static func setGoal(_ value: Bool) { lock.lock(); defer { lock.unlock() }; goalActive = value }
     static func hold(_ path: String) { lock.lock(); defer { lock.unlock() }; held.insert(path) }
     static func fail(_ path: String, _ value: Bool) {
@@ -61,11 +63,13 @@ private final class SelectionProtocol: URLProtocol {
     }
     private func respond() {
         let path = request.url!.path
-        Self.lock.lock(); let cancelled = stopped; let fail = Self.failed.contains(path); let sequence = Self.sequence; let busy = Self.busy; let goalOn = Self.goalActive; let promptStatus = Self.recoveredPromptStatus; Self.lock.unlock()
+        Self.lock.lock(); let cancelled = stopped; let fail = Self.failed.contains(path); let sequence = Self.sequence; let busy = Self.busy; let mainTurnActive = Self.mainTurnActive; let goalOn = Self.goalActive; let promptStatus = Self.recoveredPromptStatus; Self.lock.unlock()
         guard !cancelled else { return }
         func session(_ id: String, _ updated: String) -> [String: Any] {
-            ["id": id, "title": id, "updated_at": updated, "busy": busy,
+            var value: [String: Any] = ["id": id, "title": id, "updated_at": updated, "busy": busy,
              "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/model"]]
+            if let mainTurnActive { value["main_turn_active"] = mainTurnActive }
+            return value
         }
         func message(_ id: String) -> [String: Any] {
             ["id": id, "role": "user", "created_at": "1", "content": [["type": "text", "text": id]]]
@@ -143,7 +147,7 @@ func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "task board", "subagent transcript", "disconnect"] {
+    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "task board", "subagent transcript", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -151,6 +155,27 @@ func checkKimiSelectionIsolation() async throws {
         }
         do {
             switch scenario {
+            case "background after completion":
+                SelectionProtocol.setBusy(true)
+                SelectionProtocol.setMainTurnActive(true)
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && !client.loading && client.conversation?.tasks.runningCount == 1 }
+                precondition(client.canStop && client.timings.turns["a"]?.endedAt == nil)
+                SelectionProtocol.setMainTurnActive(false)
+                client.reloadSelected()
+                await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+                precondition(client.conversation?.snapshot.session.busy == true && !client.canStop)
+                precondition(client.timings.turns["a"]?.endedAt != nil, "Background work must not extend the reply clock")
+                try await client.refreshSessions()
+                precondition(client.timings.turns["a"]?.endedAt != nil, "Catalog refresh must not restart the finished turn clock")
+                client.abort()
+                precondition(SelectionProtocol.count("/api/v1/sessions/a:abort") == 0,
+                             "A completed main turn must not offer an ineffective abort")
+                let background = client.conversation!.tasks.backgroundTasks.first { $0.id == "task_1" }!
+                client.cancelTask(background)
+                await ConnectionChecks.settle { client.stoppingTasks.isEmpty }
+                precondition(SelectionProtocol.count("/api/v1/sessions/a/tasks/task_1:cancel") == 1,
+                             "The background task remains independently stoppable")
             case "commands":
                 client.select("a")
                 await ConnectionChecks.settle { client.snapshotReady && !client.loading }

@@ -4,7 +4,7 @@ extension KimiConversation {
     /// Completion identity must not depend on which transcript pages are loaded.
     public var taskRecapRevision: String? {
         let session = snapshot.session
-        guard !session.busy, session.lastTurnReason == "completed", error == nil,
+        guard !session.isTurnRunning, session.lastTurnReason == "completed", error == nil,
               snapshot.pendingApprovals.isEmpty, snapshot.pendingQuestions.isEmpty else { return nil }
         return "completed:\(session.updatedAt)"
     }

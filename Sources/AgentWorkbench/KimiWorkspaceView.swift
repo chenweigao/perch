@@ -27,12 +27,12 @@ struct KimiWorkspaceView: View {
                     "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
                 }
                 ConversationActivityBar(activity: ConversationActivity(
-                    messages: conversation.displayMessages, isRunning: conversation.snapshot.session.busy,
+                    messages: conversation.displayMessages, isRunning: conversation.snapshot.session.isTurnRunning,
                     liveTools: conversation.live?.runningTools ?? [], online: connection.online,
                     isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
                     isResponding: conversation.live?.assistantText.isEmpty == false,
                     pendingCount: pending, isStopping: connection.isStopping),
-                    isRunning: conversation.snapshot.session.busy,
+                    isRunning: conversation.snapshot.session.isTurnRunning,
                     timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, pendingCount: pending,
                     narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
@@ -179,7 +179,7 @@ private struct KimiComposerView: View {
                     }
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget,
                                  isStale: !connection.online || !connection.snapshotReady)
-                    ComposerActionButton(isRunning: connection.conversation?.snapshot.session.busy == true,
+                    ComposerActionButton(isRunning: connection.conversation?.snapshot.session.isTurnRunning == true,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
@@ -251,7 +251,7 @@ private struct KimiTimeline: View {
               connection.online, connection.snapshotReady,
               let conversation = connection.conversation, conversation.error == nil,
               conversation.snapshot.session.id == connection.selectedId,
-              !conversation.snapshot.session.busy, conversation.snapshot.session.lastTurnReason == "completed",
+              !conversation.snapshot.session.isTurnRunning, conversation.snapshot.session.lastTurnReason == "completed",
               conversation.snapshot.pendingApprovals.isEmpty, conversation.snapshot.pendingQuestions.isEmpty else { return nil }
         return conversation.snapshot.session
     }
@@ -267,14 +267,14 @@ private struct KimiTimeline: View {
                     }
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
-                                           running: running, isRunning: c.snapshot.session.busy,
+                                           running: running, isRunning: c.snapshot.session.isTurnRunning,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
                                            allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
                                            waitsForInitialPosition: true)
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         VStack(alignment: .leading, spacing: 8) {
                             PendingMessageContent(text: prompt.text, status: prompt.label)
-                            if ["queued", "blocked"].contains(prompt.status) && c.snapshot.session.busy {
+                            if ["queued", "blocked"].contains(prompt.status) && c.snapshot.session.isTurnRunning {
                                 Button("Steer") {
                                     Task { await connection.steerPrompt(prompt.id, for: c.snapshot.session.id) }
                                 }.font(.caption).disabled(!connection.online || connection.isStopping)

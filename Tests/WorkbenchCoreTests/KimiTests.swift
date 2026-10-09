@@ -6,6 +6,26 @@ func checkKimiProtocol() throws {
     let session = #"{"id":"s1","title":"测试","updated_at":"2026-09-20","busy":true,"pending_interaction":"none","metadata":{"cwd":"/tmp"},"agent_config":{"model":"test/model"}}"#
     let decodedSession = try KimiWire.decode(KimiSession.self, from: Data("{\"code\":0,\"data\":\(session)}".utf8))
     require(decodedSession.updatedAt == "2026-09-20" && decodedSession.model == "test/model")
+    require(decodedSession.isTurnRunning, "Older servers without main_turn_active retain busy semantics")
+    for active in [true, false] {
+        let backgroundSession = session.replacingOccurrences(of: "\"busy\":true", with: "\"busy\":true,\"main_turn_active\":\(active),\"last_turn_reason\":\"completed\"")
+        let snapshot = try KimiWire.decoder().decode(KimiSnapshot.self, from: Data("""
+        {"as_of_seq":434,"epoch":"background","session":\(backgroundSession),"messages":{"items":[
+          {"id":"user","role":"user","created_at":"1","content":[{"type":"text","text":"Where is the result?"}]},
+          {"id":"reply","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"Reasoning"},{"type":"text","text":"The complete reply is here."}]}
+        ],"has_more":false},"in_flight_turn":null,"pending_approvals":[],"pending_questions":[]}
+        """.utf8))
+        let conversation = KimiConversation(snapshot)
+        require(snapshot.session.busy && snapshot.session.isTurnRunning == active,
+                "Background activity must remain independent of the main turn")
+        let presentation = ConversationPresentationModel(key: "background")
+        let rows = presentation.update(.init(messages: conversation.displayMessages,
+            isRunning: snapshot.session.isTurnRunning, language: "en")).displayedRows { _ in nil }
+        let replyVisible = rows.contains { $0.entry.presentation == .message && $0.entry.messages.contains { $0.id == "reply" } }
+        require(replyVisible == !active, "Completed replies must be visible while a preview server stays busy")
+        require((conversation.taskRecapRevision != nil) == !active,
+                "Recap completion follows the main turn, not a background server")
+    }
     let rawValue = try KimiWire.decode(JSONValue.self, from: Data(#"{"code":0,"data":{"raw_key":{"tool_name":"test"}}}"#.utf8))
     require(rawValue["raw_key"]["tool_name"].string == "test", "Untyped payload keys stay unchanged")
     let delta = try KimiWire.decodeEvent(from: Data(#"{"type":"assistant.delta","session_id":"s1","payload":{"delta":"中文","raw_key":1}}"#.utf8))
