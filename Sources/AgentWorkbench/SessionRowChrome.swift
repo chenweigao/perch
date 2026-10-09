@@ -65,11 +65,18 @@ struct SessionRowChrome<Indicator: View>: View {
                         }
                         #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
+                    if updatedAt > 0 {
+                        TimelineView(.periodic(from: .now, by: 60)) { context in
+                            Text(SessionTime.label(since: updatedAt, waiting: false, now: context.date) ?? "")
+                                .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary)
+                                .fixedSize()
+                        }
+                    }
                 }.padding(.leading, 10).padding(.trailing, 4)
                     .frame(height: rowHeight).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
                 .accessibilityLabel(title)
-                .accessibilityValue(([hostName, directory, detail].compactMap { $0 } + groups).joined(separator: " · "))
+                .accessibilityValue(([hostName, directory, detail, updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
                 .onHover { titleHovered = $0 }
             ZStack(alignment: .trailing) {
                 if hostName != nil {
@@ -158,6 +165,15 @@ struct SessionHoverPreview: View {
                     HStack(spacing: 8) {
                         HostIdentityIcon(hostID: hostID).frame(width: 16)
                         Text(hostName).lineLimit(2)
+                    }
+                }
+                if updatedAt > 0 {
+                    Label {
+                        Text(Date(timeIntervalSince1970: updatedAt),
+                             format: Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale))
+                            .lineLimit(1)
+                    } icon: {
+                        Image(systemName: "clock").foregroundStyle(.secondary)
                     }
                 }
                 if !groups.isEmpty {
