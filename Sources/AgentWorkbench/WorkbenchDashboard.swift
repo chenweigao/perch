@@ -108,12 +108,14 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 // Connectivity is not an actionable request. Keep stale records separate,
                 // including on the inbox, without counting them as live work.
                 if !projection.offline.isEmpty {
-                    DisclosureGroup("状态未同步 · \(projection.offline.count)") {
+                    DisclosureGroup {
                         VStack(alignment: .leading, spacing: 0) {
                             Text("连接后才能确认这些会话的当前状态。")
                                 .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
                             ForEach(projection.offline) { row($0, in: .other) }
                         }
+                    } label: {
+                        Label("状态未同步 · \(projection.offline.count)", systemImage: "wifi.slash")
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
@@ -318,7 +320,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
 
     private var restoration: some View {
-        DisclosureGroup("等待恢复 · \(context.pendingRestoration.count) 个会话") {
+        DisclosureGroup {
             VStack(alignment: .leading, spacing: 10) {
                 Text("连接后接回原会话；未找到的会话保留在这里，确认后可以移除。")
                     .font(.caption).foregroundStyle(.secondary)
@@ -326,10 +328,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     HStack {
                         Label(saved.title, systemImage: saved.session.kind.symbol).lineLimit(1)
                         Spacer()
-                        Button("不再恢复") { onForgetRestoration(saved) }
+                        Button("不再恢复") { onForgetRestoration(saved) }.buttonStyle(QuietLinkStyle())
                     }
                 }
             }.padding(.top, 10)
+        } label: {
+            Label("等待恢复 · \(context.pendingRestoration.count) 个会话", systemImage: "clock.arrow.circlepath")
         }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
             .font(.system(size: 12)).foregroundStyle(.secondary)
     }
