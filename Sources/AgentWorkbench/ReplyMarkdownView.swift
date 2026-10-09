@@ -365,16 +365,8 @@ struct SelectableReplyText: NSViewRepresentable {
     }
 }
 
-/// Plain-paragraph user messages need text selection and a right-aligned bubble,
-/// but no SwiftUI state graph. Complex Markdown/attachments keep their existing row.
-final class NativeUserMessageView: NSView {
-    private static var recycled: [NativeUserMessageView] = []
-    private var texts: [ReplyTextView] = []
-    private let links = SelectableReplyText.Coordinator()
-    private var bubble = CGRect.zero
-    override var isFlipped: Bool { true }
-
-    static func content(_ source: String) -> [NSAttributedString]? {
+enum NativeParagraphContent {
+    static func make(_ source: String) -> [NSAttributedString]? {
         let blocks = ReplyDocument.parse(source)
         var paragraphs: [[ReplyInline]] = []
         for block in blocks {
@@ -386,6 +378,18 @@ final class NativeUserMessageView: NSView {
             ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]))
         }
     }
+}
+
+/// Plain-paragraph user messages need text selection and a right-aligned bubble,
+/// but no SwiftUI state graph. Complex Markdown/attachments keep their existing row.
+final class NativeUserMessageView: NSView {
+    private static var recycled: [NativeUserMessageView] = []
+    private var texts: [ReplyTextView] = []
+    private let links = SelectableReplyText.Coordinator()
+    private var bubble = CGRect.zero
+    override var isFlipped: Bool { true }
+
+    static func content(_ source: String) -> [NSAttributedString]? { NativeParagraphContent.make(source) }
     static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
     static func recycle(_ view: NativeUserMessageView) {
         view.removeFromSuperview()
@@ -435,6 +439,82 @@ final class NativeUserMessageView: NSView {
         NSColor.labelColor.withAlphaComponent(0.035).setFill()
         NSBezierPath(roundedRect: bubble, xRadius: 12, yRadius: 12).fill()
     }
+}
+
+private struct NativeAssistantActions: View {
+    var source: String?
+    var enabled = true
+    var body: some View {
+        if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
+    }
+}
+
+final class NativeAssistantMessageView: NSView {
+    private static var recycled: [NativeAssistantMessageView] = []
+    private var texts: [ReplyTextView] = []
+    private let links = SelectableReplyText.Coordinator()
+    private let actions = NSHostingView(rootView: NativeAssistantActions())
+    override var isFlipped: Bool { true }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        actions.sizingOptions = []
+        actions.safeAreaRegions = []
+        addSubview(actions)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    static func acquire() -> NativeAssistantMessageView {
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.record(recycled.isEmpty ? "native_assistant_create" : "native_assistant_reuse", since: CACurrentMediaTime())
+        #endif
+        return recycled.popLast() ?? NativeAssistantMessageView(frame: .zero)
+    }
+    static func recycle(_ view: NativeAssistantMessageView) {
+        view.removeFromSuperview()
+        view.actions.rootView = NativeAssistantActions()
+        for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
+        while view.texts.count > 8 {
+            let text = view.texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
+        }
+        if recycled.count < 16 { recycled.append(view) }
+    }
+    func update(_ content: [NSAttributedString], source: String, dark: Bool, enabled: Bool = true) {
+        appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        while texts.count > content.count {
+            let text = texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
+        }
+        while texts.count < content.count {
+            let text = SelectableReplyText.acquire(delegate: links)
+            text.isConversationBodyText = true
+            texts.append(text); addSubview(text)
+        }
+        for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
+        if actions.rootView.source != source || actions.rootView.enabled != enabled {
+            actions.rootView = NativeAssistantActions(source: source, enabled: enabled)
+        }
+    }
+    func measure(width: CGFloat) -> CGSize {
+        CGSize(width: width, height: texts.reduce(24) { $0 + $1.measure(width: width).height + 12 })
+    }
+    func place(width: CGFloat) {
+        var y: CGFloat = 0
+        for text in texts {
+            let height = text.measure(width: width).height
+            let frame = CGRect(x: 0, y: y, width: width, height: height)
+            if text.frame != frame { text.frame = frame }
+            y += height + 12
+        }
+        let frame = CGRect(x: 0, y: y, width: 24, height: 24)
+        if actions.frame != frame { actions.frame = frame }
+    }
+    #if TRANSCRIPT_CHECKS
+    static var poolState: [String: Any] {
+        ["rows": recycled.count, "texts": recycled.map { $0.texts.count }.max() ?? 0,
+         "cleared": recycled.allSatisfy { view in
+             view.actions.rootView.source == nil && view.texts.allSatisfy { $0.string.isEmpty && $0.selectedRange().length == 0 }
+         }]
+    }
+    #endif
 }
 
 final class ReplyTextView: NSTextView {

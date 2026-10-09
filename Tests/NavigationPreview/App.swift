@@ -1208,6 +1208,10 @@ struct NavigationPreviewApp: App {
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
             if mode == "user-rows" { report.merge(try await runner.nativeUserRows()) { a, _ in a } }
+            else if mode == "assistant-rows" {
+                report.merge(try await runner.nativeUserRows(assistant: true)) { a, _ in a }
+                report.merge(try await runner.nativeAssistantContracts()) { a, _ in a }
+            }
             else if mode == "paragraphs" { report.merge(try await runner.paragraphExperiment()) { a, _ in a } }
             else if mode == "disclosure" { report.merge(try await runner.disclosures()) { a, _ in a } }
             else if mode == "reading" { report.merge(try await runner.readingCoverage()) { a, _ in a } }

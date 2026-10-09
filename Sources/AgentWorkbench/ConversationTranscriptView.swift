@@ -979,6 +979,7 @@ private struct HostedConversationEntry: View {
 private final class ConversationEntryController: NSViewController {
     private var host: NSHostingController<HostedConversationEntry>?
     private var nativeUser: NativeUserMessageView?
+    private var nativeAssistant: NativeAssistantMessageView?
     private var content: ConversationEntryView
     private var appearance: ConversationEntryAppearance
     private var generation = 0
@@ -1020,6 +1021,7 @@ private final class ConversationEntryController: NSViewController {
         container.wantsLayer = true
         container.layer?.masksToBounds = true
         if let nativeUser { container.addSubview(nativeUser) }
+        if let nativeAssistant { container.addSubview(nativeAssistant) }
         if let host { addChild(host); container.addSubview(host.view) }
         container.widthChanged = { [weak self] in self?.committedWidthChanged() }
         // The row already owns its measured frame; its sole child fills it.
@@ -1034,8 +1036,15 @@ private final class ConversationEntryController: NSViewController {
             if nativeUser.frame != hostFrame { nativeUser.frame = hostFrame }
             nativeUser.place(width: frame.width)
         }
+        if let nativeAssistant {
+            if nativeAssistant.frame != hostFrame { nativeAssistant.frame = hostFrame }
+            nativeAssistant.place(width: frame.width)
+        }
     }
-    deinit { if let nativeUser { NativeUserMessageView.recycle(nativeUser) } }
+    deinit {
+        if let nativeUser { NativeUserMessageView.recycle(nativeUser) }
+        if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant) }
+    }
     private func committedWidthChanged() {
         // A detached host cannot report geometry after a window/sidebar resize.
         // Measure the committed width after this layout pass, including offscreen
@@ -1071,8 +1080,21 @@ private final class ConversationEntryController: NSViewController {
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
         return NativeUserMessageView.content(part.text ?? "")
     }
+    private func nativeAssistantContent() -> (source: String, paragraphs: [NSAttributedString])? {
+        #if TRANSCRIPT_CHECKS
+        if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_ROWS"] == "0" { return nil }
+        #endif
+        guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
+              content.entry.presentation == .message, content.entry.messages.count == 1,
+              let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
+              message.content.count == 1, let part = message.content.first,
+              part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
+              let source = part.text, let paragraphs = NativeParagraphContent.make(source) else { return nil }
+        return (source, paragraphs)
+    }
     private func setRoot() {
         if let paragraphs = nativeUserContent() {
+            if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
             if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
             if nativeUser == nil {
                 nativeUser = NativeUserMessageView.acquire()
@@ -1085,6 +1107,20 @@ private final class ConversationEntryController: NSViewController {
             return
         }
         if let nativeUser { NativeUserMessageView.recycle(nativeUser); self.nativeUser = nil }
+        if let content = nativeAssistantContent() {
+            if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
+            if nativeAssistant == nil {
+                nativeAssistant = NativeAssistantMessageView.acquire()
+                if isViewLoaded { view.addSubview(nativeAssistant!) }
+            }
+            nativeAssistant!.update(content.paragraphs, source: content.source,
+                                    dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled)
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
+            #endif
+            return
+        }
+        if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
         let version = generation
         let root = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
@@ -1116,7 +1152,8 @@ private final class ConversationEntryController: NSViewController {
                 hasMeasured = true
             }
             #endif
-            height = ceil(nativeUser?.measure(width: width).height ?? host!.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
+            height = ceil(nativeUser?.measure(width: width).height ?? nativeAssistant?.measure(width: width).height
+                          ?? host!.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
             if sizes.count == 8 { sizes.removeFirst() }
             sizes.append((width, height))
         }

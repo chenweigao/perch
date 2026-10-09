@@ -359,3 +359,29 @@ appearances, links and Unicode copying. `interactions` checks resizing, same-ID
 replacement and transitions to/from complex Markdown. `fast-scroll` separates
 first traversal, full-history revisit and local reversal; its timings do not
 certify compositor frames or physical input responsiveness.
+
+## Native completed assistant prose rows
+
+Completed `.message` assistant text containing only nonempty paragraphs shares
+`NativeParagraphContent` and TextKit rendering with user prose. It retains the
+same eight-paragraph groups, fonts, link routing and selection behavior. The row
+lays out full-width text and a small hosted `ReplyCopyButton`; it does not create
+a SwiftUI graph for the entire message. The source keys the copy control so a
+replacement resets copied feedback, and disabled state crosses the host boundary.
+
+The pool is capped at 16 rows and eight cleared text containers per recycled row.
+Same-ID edits between ordinary and complex Markdown preserve the outer row;
+existing generation checks discard obsolete size callbacks. Streaming progress,
+activity narratives, compaction summaries, runtime/skill context, attachments and
+right-to-left layout retain the previous renderer and projection. Live commentary
+may move to the activity bar and leave the transcript entirely; completion restores
+its entry ID, not a guarantee that an omitted native container remained mounted.
+
+`assistant-rows` checks actual glyph positions, Unicode selection/copying, links,
+renderer transitions, stream completion and pool clearing. Copy verification sends
+mouse events only to the fixture window, compares the button's rendered feedback,
+and restores the clipboard. This does not certify VoiceOver: SwiftUI accessibility
+children were unavailable through the fixture's in-process tree inspection.
+`NAVIGATION_NATIVE_ASSISTANT_ROWS=0` selects the prior renderer only in acceptance
+builds for fixed-binary A/B measurements. Functional checks and reduced host counts
+alone do not establish a performance improvement.
