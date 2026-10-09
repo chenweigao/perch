@@ -1,4 +1,20 @@
+import Dispatch
 import Foundation
+
+public struct ConversationPresentationUpdateMetrics: Equatable {
+    public let cacheHit: Bool
+    public let inputComparisonNanoseconds: UInt64
+    public let stateResetNanoseconds: UInt64
+    public let toolProjectionNanoseconds: UInt64
+    public let turnProjectionNanoseconds: UInt64
+    public let narrativeNanoseconds: UInt64
+    public let rowProjectionNanoseconds: UInt64
+    public let summaryNanoseconds: UInt64
+    public let retainedCostNanoseconds: UInt64
+    public let totalNanoseconds: UInt64
+    public let reusedTurnCount: Int
+    public let rebuiltTurnCount: Int
+}
 
 /// Pure, synchronous presentation work. No provider, view, task or network owner is
 /// retained here. The caller's complete inputs remain the source of truth.
@@ -55,38 +71,94 @@ public final class ConversationPresentationModel {
     public private(set) var preparationCount = 0
     public private(set) var retainedPayloadCost = 0
     public private(set) var messageCount = 0
+    private let metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)?
     private var tools = ToolVisibilityProjection()
     private var turns = ConversationProjection()
     private var previous: Input?
     private var snapshot: Snapshot?
-    public init(key: String) { self.key = key }
+    public init(key: String, metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)? = nil) {
+        self.key = key
+        self.metricsHandler = metricsHandler
+    }
 
     public func update(_ input: Input) -> Snapshot {
-        if previous == input, let snapshot { return snapshot }
+        let updateStarted = timestamp()
+        let comparisonStarted = timestamp()
+        let equal = previous == input
+        let comparisonEnded = timestamp()
+        if equal, let snapshot {
+            let updateEnded = timestamp()
+            metricsHandler?(ConversationPresentationUpdateMetrics(
+                cacheHit: true,
+                inputComparisonNanoseconds: comparisonEnded - comparisonStarted,
+                stateResetNanoseconds: 0,
+                toolProjectionNanoseconds: 0,
+                turnProjectionNanoseconds: 0,
+                narrativeNanoseconds: 0,
+                rowProjectionNanoseconds: 0,
+                summaryNanoseconds: 0,
+                retainedCostNanoseconds: 0,
+                totalNanoseconds: updateEnded - updateStarted,
+                reusedTurnCount: 0,
+                rebuiltTurnCount: 0))
+            return snapshot
+        }
+        let resetStarted = timestamp()
         // Runtime replacement clears live-only evidence; a language change only
         // rebuilds localized excerpts and keeps the same observed tool handoff.
         if let previous, previous.epoch != input.epoch { tools = ToolVisibilityProjection() }
         if let previous, previous.epoch != input.epoch || previous.language != input.language {
             turns = ConversationProjection()
         }
+        let resetEnded = timestamp()
+        let toolsStarted = timestamp()
         let visible = tools.update(input.messages, sessionID: key, live: input.live,
                                    running: input.running, online: input.online)
+        let toolsEnded = timestamp()
+        let turnsStarted = timestamp()
         let timeline = turns.update(visible.messages, isRunning: input.isRunning)
+        let turnsEnded = timestamp()
+        let narrativeStarted = timestamp()
         let narrative = ActivityNarrativeProjection.make(entries: timeline.entries, tools: visible.tools, isRunning: input.isRunning)
+        let narrativeEnded = timestamp()
+        let rowsStarted = timestamp()
         let projected = narrative.rows
         let rows = timeline.entries.map { entry in
             let ids = Set(entry.messages.flatMap(\.content).compactMap(\.toolCallId))
             let rowTools = ids.reduce(into: [String: VisibleTool]()) { if let tool = visible.tools[$1] { $0[$1] = tool } }
             return Row(entry: entry, tools: rowTools, activity: projected[entry.id])
         }
+        let rowsEnded = timestamp()
+        let summaryStarted = timestamp()
         let batch = ActivitySummaryBatch.latest(in: timeline.entries, tools: visible.tools,
             isRunning: input.isRunning, enabled: input.summariesEnabled, includeToolOutput: input.includeToolOutput)
+        let summaryEnded = timestamp()
         let value = Snapshot(rows: rows, navigation: timeline.navigation, narrative: narrative, batch: batch)
         previous = input; snapshot = value; preparationCount += 1
         messageCount = input.messages.count
+        let retainedCostStarted = timestamp()
         retainedPayloadCost = input.messages.reduce(0) { $0 + Self.cost($1) }
             + tools.retainedLiveTools.reduce(0) { $0 + $1.name.utf8.count + $1.id.utf8.count + Self.cost($1.args) + Self.cost($1.lastProgress) }
+        let retainedCostEnded = timestamp()
+        let updateEnded = timestamp()
+        metricsHandler?(ConversationPresentationUpdateMetrics(
+            cacheHit: false,
+            inputComparisonNanoseconds: comparisonEnded - comparisonStarted,
+            stateResetNanoseconds: resetEnded - resetStarted,
+            toolProjectionNanoseconds: toolsEnded - toolsStarted,
+            turnProjectionNanoseconds: turnsEnded - turnsStarted,
+            narrativeNanoseconds: narrativeEnded - narrativeStarted,
+            rowProjectionNanoseconds: rowsEnded - rowsStarted,
+            summaryNanoseconds: summaryEnded - summaryStarted,
+            retainedCostNanoseconds: retainedCostEnded - retainedCostStarted,
+            totalNanoseconds: updateEnded - updateStarted,
+            reusedTurnCount: timeline.reusedTurnCount,
+            rebuiltTurnCount: timeline.rebuiltTurnCount))
         return value
+    }
+
+    private func timestamp() -> UInt64 {
+        metricsHandler == nil ? 0 : DispatchTime.now().uptimeNanoseconds
     }
     // Admission cost counts UTF-8 payload and conservative per-record overhead,
     // including nested tool JSON and remembered live tools. This is not process RSS.

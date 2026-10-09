@@ -99,5 +99,23 @@ func checkConversationPresentationModel() throws {
     do { released = ConversationPresentationHandle().update(key: "release", input: input, cache: cache) }
     precondition(released != nil)
     cache.removeAll(); precondition(released == nil, "Eviction must release prepared data once no view owns it")
-    print("PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU and oversized active state")
+
+    var metrics: [ConversationPresentationUpdateMetrics] = []
+    let measured = Model(key: "metrics", metricsHandler: { metrics.append($0) })
+    let measuredInitial = older + initial
+    _ = measured.update(.init(messages: measuredInitial, isRunning: true, language: "zh"))
+    let measuredChanged = older + (try messages("连续 token"))
+    let measuredSnapshot = measured.update(.init(messages: measuredChanged, isRunning: true, language: "zh"))
+    let oracle = Model(key: "metrics").update(.init(messages: measuredChanged, isRunning: true, language: "zh"))
+    precondition(measuredSnapshot.rows == oracle.rows && measuredSnapshot.navigation == oracle.navigation
+                 && measuredSnapshot.narrative == oracle.narrative && measuredSnapshot.batch == oracle.batch,
+                 "Metrics must not change the complete-recompute result")
+    let changedMetrics = metrics.last!
+    precondition(!changedMetrics.cacheHit && changedMetrics.reusedTurnCount == 1 && changedMetrics.rebuiltTurnCount == 1,
+                 "Turn counters must report the actual cache branches for a same-ID tail replacement")
+    let preparationCount = measured.preparationCount
+    precondition(measured.update(.init(messages: measuredChanged, isRunning: true, language: "zh")) === measuredSnapshot)
+    precondition(metrics.last?.cacheHit == true && measured.preparationCount == preparationCount,
+                 "An equal replay must report a cache hit without preparing another snapshot")
+    print("PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics")
 }

@@ -8,6 +8,8 @@ public final class ConversationProjection {
         public let entries: [ConversationTimelineEntry]
         public let results: [String: KimiPart]
         public let navigation: [ConversationTurnSummary]
+        public let reusedTurnCount: Int
+        public let rebuiltTurnCount: Int
     }
     private struct Turn {
         let messages: [KimiMessage]
@@ -31,12 +33,15 @@ public final class ConversationProjection {
         var entries: [ConversationTimelineEntry] = []
         var results: [String: KimiPart] = [:]
         var navigation: [ConversationTurnSummary] = []
+        var reusedTurnCount = 0
+        var rebuiltTurnCount = 0
         for (index, group) in groups.enumerated() {
             let id = group[0].id
             let running = isRunning && index == groups.count - 1
             let turn: Turn
             if let prior = turns[id], prior.running == running, prior.messages == group {
                 turn = prior
+                reusedTurnCount += 1
             } else {
                 var turnResults: [String: KimiPart] = [:]
                 for message in group {
@@ -47,7 +52,9 @@ public final class ConversationProjection {
                 let timeline = ConversationTimelineEntry.make(group, isRunning: running)
                 let summary = ConversationTurnSummary.make(group, entries: timeline)
                 turn = Turn(messages: group, running: running, snapshot: Snapshot(
-                    entries: timeline, results: turnResults, navigation: summary.map { [$0] } ?? []))
+                    entries: timeline, results: turnResults, navigation: summary.map { [$0] } ?? [],
+                    reusedTurnCount: 0, rebuiltTurnCount: 1))
+                rebuiltTurnCount += 1
             }
             next[id] = turn
             entries.append(contentsOf: turn.snapshot.entries)
@@ -55,7 +62,8 @@ public final class ConversationProjection {
             navigation.append(contentsOf: turn.snapshot.navigation)
         }
         turns = next
-        return Snapshot(entries: entries, results: results, navigation: navigation)
+        return Snapshot(entries: entries, results: results, navigation: navigation,
+                        reusedTurnCount: reusedTurnCount, rebuiltTurnCount: rebuiltTurnCount)
     }
 }
 
