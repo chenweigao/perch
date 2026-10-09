@@ -10,7 +10,8 @@ import Foundation
         let document = FlippedDocument(frame: NSRect(x: 0, y: 0, width: 800, height: 2000))
         scroll.documentView = document
         var following = true
-        let observer = ConversationScrollObserver.ObserverView { following = $0 }
+        var nearTopCalls = 0
+        let observer = ConversationScrollObserver.ObserverView(onScroll: { following = $0 }, onNearTop: { nearTopCalls += 1 })
         document.addSubview(observer)
         func bottom() -> CGFloat { document.bounds.maxY - scroll.contentView.bounds.height }
         func move(_ y: CGFloat) {
@@ -65,7 +66,20 @@ import Foundation
         precondition(!following, "another scroll view must not change this conversation")
         NotificationCenter.default.post(name: NSScrollView.didEndLiveScrollNotification, object: scroll)
         precondition(following)
-        print("PASS: immediate wheel pause, streaming position retention, explicit tail resume, direction reversal and native scroll lifecycle")
+
+        // An upward wheel within the prefetch margin requests the next page;
+        // the same intent below the margin does not.
+        let calls = nearTopCalls
+        move(0)
+        observer.userScrolled(deltaY: 1)
+        await settle()
+        precondition(nearTopCalls == calls + 1, "an upward wheel at the top edge must request earlier history")
+        move(700)
+        observer.userScrolled(deltaY: 1)
+        await settle()
+        precondition(nearTopCalls == calls + 1, "below the prefetch margin no load is requested")
+        precondition(!following)
+        print("PASS: immediate wheel pause, streaming position retention, explicit tail resume, direction reversal, native scroll lifecycle and near-top history loading")
     }
     @MainActor static func settle() async { try? await Task.sleep(for: .milliseconds(20)) }
 }

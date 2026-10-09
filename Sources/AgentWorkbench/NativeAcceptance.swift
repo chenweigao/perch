@@ -1304,13 +1304,23 @@ private struct ReferenceComposerFixtureView: View {
         }
         navigator.select(10)
         try await settle(window, "paged navigation") { navigator.current == 10 }
-        guard let before = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing page anchor") }
+        guard let first = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing page anchor") }
+        var anchor = first
         func sameAnchor() -> Bool {
             guard let scroll = self.transcript(in: window), let after = ConversationTranscript.readingAnchor(in: scroll) else { return false }
-            return before.entry == after.entry && abs(before.offset - after.offset) <= 1
+            return anchor.entry == after.entry && abs(anchor.offset - after.offset) <= 1
         }
-        model.native.loadOlder()
-        try await settle(window, "prepend reading position") { self.model.native.snapshot?.messages.count == 200 && !self.model.native.loadingOlder && sameAnchor() }
+        // Reaching the top edge loads the next page without a click; the row at
+        // the edge stays put while older turns are prepended above it.
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: 200))
+        scroll.reflectScrolledClipView(scroll.contentView)
+        guard let top = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing top anchor") }
+        try await settle(window, "near-top auto-load") {
+            guard self.model.native.snapshot?.messages.count == 200, !self.model.native.loadingOlder,
+                  let current = self.transcript(in: window), let after = ConversationTranscript.readingAnchor(in: current) else { return false }
+            return after.entry == top.entry && abs(after.offset - top.offset) <= 1
+        }
+        anchor = top
         try fixture.advanceStream(0)
         try await model.native.acceptanceRefreshSelected()
         try await settle(window, "delta while reading history") { self.model.native.snapshot?.revision == 2 && sameAnchor() }

@@ -373,7 +373,7 @@ private final class ConversationDocumentView: NSView {
     fileprivate var mountedHostCount: Int { mounted.count }
     fileprivate static var retiredHostCount: Int { retiredControllers.count }
     fileprivate var readingAnchor: (entry: String, offset: CGFloat)? {
-        guard let row = geometry.readingRow(at: viewportRect.minY), contents.indices.contains(row) else { return nil }
+        guard let row = geometry.readingRow(at: max(0, viewportRect.minY)), contents.indices.contains(row) else { return nil }
         return (contents[row].entry.id, viewportRect.minY - offsets[row])
     }
     #endif
@@ -512,6 +512,12 @@ private final class ConversationDocumentView: NSView {
 
     func updateContentOrigin(_ value: CGFloat) {
         guard contentOriginY != value else { return }
+        // The loading row above the document changes height when history
+        // arrives. Pin the anchor so the reader's rows do not drift.
+        if restoreTarget == nil, ConversationReadingMemory.shared.following[sessionId] == false {
+            saveReadingPosition()
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+        }
         contentOriginY = value
         restoreReadingPosition()
         refreshVisibleRows()
@@ -875,7 +881,17 @@ private final class ConversationDocumentView: NSView {
             self?.refreshVisibleRows()
             self?.viewport?.refresh()
             self?.saveReadingPosition()
+            self?.loadEarlierIfNearTop()
         }
+    }
+    /// Wheel, trackpad, keyboard and programmatic moves all flow through this
+    /// bounds stream. Prefetch one viewport before the loaded top edge so the
+    /// page arrives while the reader is still scrolling toward it.
+    private func loadEarlierIfNearTop() {
+        let visible = viewportRect
+        guard observedClip != nil, !suspended, !preparingInitialViewport,
+              visible.minY <= max(480, visible.height) else { return }
+        viewport?.nearTop?()
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -1211,6 +1227,8 @@ private final class ConversationEntryController: NSViewController {
 final class ConversationViewport {
     fileprivate weak var view: NSView?
     var pauseFollowing: (() -> Void)?
+    /// Reaching the loaded history's top edge asks the owner for the next page.
+    var nearTop: (() -> Void)?
     let navigator = ConversationTurnNavigation()
     private let rows = NSHashTable<NSView>.weakObjects()
     private var scheduled = false
@@ -1255,8 +1273,9 @@ extension EnvironmentValues {
 struct ConversationViewportView: NSViewRepresentable {
     let viewport: ConversationViewport
     var onPauseFollowing: () -> Void = {}
-    func makeNSView(context: Context) -> MarkerView { viewport.pauseFollowing = onPauseFollowing; return MarkerView(viewport: viewport) }
-    func updateNSView(_ view: MarkerView, context: Context) { viewport.pauseFollowing = onPauseFollowing; viewport.refresh() }
+    var onNearTop: () -> Void = {}
+    func makeNSView(context: Context) -> MarkerView { viewport.pauseFollowing = onPauseFollowing; viewport.nearTop = onNearTop; return MarkerView(viewport: viewport) }
+    func updateNSView(_ view: MarkerView, context: Context) { viewport.pauseFollowing = onPauseFollowing; viewport.nearTop = onNearTop; viewport.refresh() }
     final class MarkerView: NSView {
         private let viewport: ConversationViewport
         init(viewport: ConversationViewport) {
