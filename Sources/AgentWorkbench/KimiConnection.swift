@@ -746,7 +746,9 @@ final class KimiConnection {
         do {
             if let command = try KimiCommand.parse(text) {
                 guard files.isEmpty else { throw WorkbenchError(L("Remove attachments before running a command.")) }
-                let busy = conversation?.snapshot.session.id == id ? conversation?.snapshot.session.busy : sessions.first { $0.id == id }?.busy
+                // Idle means no active main turn; the server gates these commands on
+                // turn quiescence too, so a lingering background task must not block.
+                let busy = conversation?.snapshot.session.id == id ? conversation?.snapshot.session.isTurnRunning : sessions.first { $0.id == id }?.isTurnRunning
                 guard !command.requiresIdle || busy != true else { throw WorkbenchError(L("Wait for the current task to finish before running this command.")) }
                 if case .goalStart = command {
                     let chosen = modelChoices[id] ?? ""

@@ -167,7 +167,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
 
     public func kimiSection(_ session: KimiSession, on hostID: UUID) -> WorkQueueSection {
         if session.pendingInteraction == "approval" || session.pendingInteraction == "question" { return .attention }
-        if session.busy { return .running }
+        if session.isTurnRunning { return .running }
         if session.lastTurnReason == "failed" { return .attention }
         let ref = SessionReference(hostID: hostID, terminalID: session.id, kind: .kimi)
         if session.lastTurnReason == "completed" && reviewedKimiUpdates[ref.id] != session.updatedAt { return .review }

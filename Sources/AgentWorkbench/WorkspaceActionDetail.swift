@@ -100,7 +100,7 @@ private struct KimiActionDetail: View {
                 }
                 ForEach(c.snapshot.pendingQuestions) { KimiQuestionView(question: $0, sessionID: item.reference.terminalID, connection: connection) }
                 PublicResultPreview(model: model, item: item, messages: c.displayMessages,
-                    completed: !c.snapshot.session.busy && c.snapshot.session.lastTurnReason == "completed" && pending.isEmpty,
+                    completed: !c.snapshot.session.isTurnRunning && c.snapshot.session.lastTurnReason == "completed" && pending.isEmpty,
                     recapSession: "\(connection.host.id):kimi:\(c.snapshot.session.id)", recapRevision: c.taskRecapRevision,
                     loadHistory: { try await connection.recapMessages(for: c.snapshot.session.id) },
                     onReviewed: { model.reviewInspected(c.snapshot.session, on: connection.host.id) })

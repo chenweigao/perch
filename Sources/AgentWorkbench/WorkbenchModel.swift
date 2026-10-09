@@ -268,7 +268,7 @@ final class WorkbenchModel {
                 let session = conversation.snapshot.session
                 self.considerNaming(reference: SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi),
                                     remoteTitle: session.title, messages: conversation.messages,
-                                    busy: session.busy, turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
+                                    busy: session.isTurnRunning, turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
             }
         }
         kimi.onConversationChanged?(kimi.conversation)
@@ -812,7 +812,7 @@ final class WorkbenchModel {
                 return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false)
             }
             return ArchiveSubject(reference: item.reference, fingerprint: session.updatedAt,
-                                  archived: session.archived == true, online: kimi.online, busy: session.busy,
+                                  archived: session.archived == true, online: kimi.online, busy: session.isTurnRunning,
                                   pendingInteraction: session.pendingInteraction != nil,
                                   failed: session.lastTurnReason == "failed", stopped: false, starred: starred,
                                   completedTurns: session.lastTurnReason == "completed" ? 1 : 0,
@@ -1030,7 +1030,7 @@ final class WorkbenchModel {
             guard let conversation = kimi.conversation else { continue }
             let session = conversation.snapshot.session
             considerNaming(reference: SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi),
-                           remoteTitle: session.title, messages: conversation.messages, busy: session.busy,
+                           remoteTitle: session.title, messages: conversation.messages, busy: session.isTurnRunning,
                            turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
         }
         for native in nativeEnvironments.values {

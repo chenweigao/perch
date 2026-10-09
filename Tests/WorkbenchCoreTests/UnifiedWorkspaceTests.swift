@@ -32,10 +32,11 @@ func checkUnifiedWorkspace() throws {
     tabs.close(kimi.id)
     precondition(tabs.ids.contains(terminal.id))
 
-    func session(_ reason: String? = "completed", busy: Bool = false, pending: String = "none", updated: String = "v1") throws -> KimiSession {
+    func session(_ reason: String? = "completed", busy: Bool = false, pending: String = "none", updated: String = "v1", turnActive: Bool? = nil) throws -> KimiSession {
         var value: [String: Any] = ["id":"same", "title":"Test", "updated_at":updated, "busy":busy,
             "pending_interaction":pending, "metadata":["cwd":"/tmp"], "agent_config":["model":"test/model"]]
         if let reason { value["last_turn_reason"] = reason }
+        if let turnActive { value["main_turn_active"] = turnActive }
         return try KimiWire.decoder().decode(KimiSession.self, from: JSONSerialization.data(withJSONObject: value))
     }
     let completed = try session()
@@ -50,7 +51,11 @@ func checkUnifiedWorkspace() throws {
         (try session("future_reason"), .other),
         (try session(busy: true), .running),
         (try session(busy: true, pending: "approval"), .attention),
-        (try session(busy: true, pending: "question"), .attention)
+        (try session(busy: true, pending: "question"), .attention),
+        // A lingering background task keeps `busy` set without an active turn;
+        // only the main turn pins a session to running.
+        (try session(busy: true, updated: "v2", turnActive: false), .review),
+        (try session(busy: true, updated: "v2", turnActive: true), .running)
     ]
     for (session, expected) in cases { precondition(workspace.kimiSection(session, on: host) == expected) }
     precondition(workspace.kimiSection(completed, on: UUID()) == .review)

@@ -99,7 +99,8 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
     public let busy: Bool
     public let mainTurnActive: Bool?
     /// `busy` also includes background tasks such as preview servers. Only the
-    /// main turn controls reply presentation, the composer and turn timing.
+    /// main turn controls reply presentation, the composer, turn timing and the
+    /// running classification in the sidebar, header and archive flow.
     public var isTurnRunning: Bool { mainTurnActive ?? busy }
     public let pendingInteraction: String?
     public let archived: Bool?
@@ -120,7 +121,7 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
     public var status: String {
         if pendingInteraction == "approval" { return L("等待确认") }
         if pendingInteraction == "question" { return L("等待回答") }
-        if busy { return L("运行中") }
+        if isTurnRunning { return L("运行中") }
         if lastTurnReason == "failed" { return L("出错") }
         return L("就绪")
     }

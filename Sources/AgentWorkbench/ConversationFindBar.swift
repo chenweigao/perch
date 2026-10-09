@@ -14,7 +14,7 @@ struct ConversationFindBar: View {
     private var hasOlder: Bool { model.showKimi ? kimi.conversation?.hasOlder == true : native.snapshot?.hasOlder == true }
     private var loadingOlder: Bool { model.showKimi ? kimi.loadingOlder : native.loadingOlder }
     private var canLoadHistory: Bool { model.showKimi ? kimi.online && kimi.snapshotReady : native.online }
-    private var running: Bool { model.showKimi ? kimi.conversation?.snapshot.session.busy == true : native.snapshot?.busy == true }
+    private var running: Bool { model.showKimi ? kimi.conversation?.snapshot.session.isTurnRunning == true : native.snapshot?.busy == true }
     private var readingKey: String {
         model.showKimi ? "\(kimi.host.id):kimi:\(kimi.selectedId ?? "")" : "\(native.host.id):native:\(native.selectedID ?? "")"
     }
