@@ -16,7 +16,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek、Codex
 
 `remote/native-agent-service.py` 是仅监听远端 127.0.0.1 的独立进程，通过系统 SSH 隧道访问；持有 OMP 的 stdin/stdout、Qoder 与 Claude 的 SDK worker、dsh 的 ACP 进程与 Codex app-server。Mac 断线、退出不关闭这些管道，因此 Agent、工具及待审批请求继续存在。远端使用随机访问令牌，目录/文件限定当前用户访问，Mac 只在内存持有令牌。
 
-远端安装位置：`~/.local/share/agent-workbench/native`。会话目录保存工作台转译后的消息、状态和上游 resume 标识；不会保存 OMP get_state 中的模型 headers、认证配置。Codex 身份与凭据仍由远端已登录的 `codex` CLI 管理，桥只保存 thread UUID。SDK 使用独立 npm 目录，不替换全局 CLI。dsh 会话使用独立的 `DSH_HOME`（托管目录下 `dsh-home/`），不读写用户的 `~/.dsh`；遥测显式 `DSH_TELEMETRY_MODE=DISABLED`；模型凭据沿用远端 `DEEPSEEK_API_KEY` 环境变量，桥不接触。
+远端安装位置：`~/.local/share/agent-workbench/native`。会话目录保存工作台转译后的消息、状态和上游 resume 标识；不会保存 OMP get_state 中的模型 headers、认证配置。Codex 身份与凭据由远端 `codex` CLI 管理，支持官方登录和自定义模型供应商；桥保存 thread UUID、所选 HOME 和供应商标识，不保存凭据。SDK 使用独立 npm 目录，不替换全局 CLI。dsh 会话使用独立的 `DSH_HOME`（托管目录下 `dsh-home/`），不读写用户的 `~/.dsh`；遥测显式 `DSH_TELEMETRY_MODE=DISABLED`；模型凭据沿用远端 `DEEPSEEK_API_KEY` 环境变量，桥不接触。
 
 ```sh
 # App 内可直接点击「安装 / 更新桥接组件」，也可显式指定机器与 Agent：
@@ -28,7 +28,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek、Codex
 # 保留旧的全套安装方式：<host> 或 <host> --with-dsh
 ```
 
-所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；Claude Code 使用 Node.js/npm 与已登录的 `claude` CLI；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装且登录可用的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。桥接协议版本由 `remote/native-agent-service.py` 的 `SERVICE_VERSION` 与客户端的 `RemoteSetup.bridgeServiceVersion` 共同声明，两者必须相等（`scripts/check-version.py` 强制校验）。“服务连接”检查读取远端脚本里的该常量，版本过旧提示重新安装桥接组件，版本过新提示升级 Perch，并显示当前生效的版本；连接时再按 `/health` 校验实际运行的服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查会验证协议版本，并只在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
+所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；Claude Code 使用 Node.js/npm 与已登录的 `claude` CLI；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装并完成官方登录或自定义供应商配置的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。桥接协议版本由 `remote/native-agent-service.py` 的 `SERVICE_VERSION` 与客户端的 `RemoteSetup.bridgeServiceVersion` 共同声明，两者必须相等（`scripts/check-version.py` 强制校验）。“服务连接”检查读取远端脚本里的该常量，版本过旧提示重新安装桥接组件，版本过新提示升级 Perch，并显示当前生效的版本；连接时再按 `/health` 校验实际运行的服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查会验证协议版本，并只在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
 
 `/health` 同时上报 `implementation`（运行中服务自身源码的 sha256 前 16 位）与 `startedAt`，`--ensure` 两者都比对：协议号相同但源码不同（改动没有提升 SERVICE_VERSION，或服务早于该字段）同样走空闲替换流程，有活动任务时照旧保留旧服务并提示等待；本机源码读不出来时退回只比协议号，避免每次检查都重启健康服务。向导以「运行进程」信息行显示运行中的源码指纹与启动时间。注意这只覆盖桥自身：Agent CLI 与 SDK worker 在每个会话启动时从磁盘读取，升级后已运行的会话仍是旧版本，从下一个会话生效。
 
@@ -73,9 +73,26 @@ OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选
 不会因为缺少未选 Agent 而报错。检查在会话锁之外执行，不向模型发送消息。
 OMP 每次重新读取模型配置，只返回名称、provider 和 id，不返回 headers 或密钥。
 Qoder 与 Claude 的 SDK 没有独立登录检查接口，首条消息验证鉴权；dsh 只检查桥接进程是否具有
-`DEEPSEEK_API_KEY`，不读取或返回值，模型在首次 ACP 会话握手时读取。Codex 使用
-`codex login status` 检查登录，只返回是否可用；登录后从 app-server `model/list`
-读取脱敏的模型 id 与名称，不发送 turn。
+`DEEPSEEK_API_KEY`，不读取或返回值，模型在首次 ACP 会话握手时读取。Codex 使用所选
+HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已有账号；不要求 OpenAI
+登录的供应商返回 `provider-managed`，界面明确提示实际鉴权在首条消息时验证。随后通过
+`model/list` 读取脱敏的模型 id 与名称，不发送 turn，不返回账号信息或密钥。
+
+### Codex 专用配置目录
+
+默认沿用桥进程原有的 `CODEX_HOME`，未设置时使用 `~/.codex`。如需让 Perch 的新 Codex
+会话使用第三方供应商，可在远端 `~/.local/share/agent-workbench/native/codex-home` 写入
+专用目录的绝对路径（也接受 `~/` 前缀），例如 `~/.codex-provider`。文件只保存路径，不保存
+密钥；在该目录的 `config.toml` 中按 Codex 官方配置供应商、环境变量或认证命令。
+
+创建会话时固定 HOME，目录缓存也按 HOME 隔离。修改或移除路径文件只影响之后的新会话；
+已有会话恢复、模型和思考档位校验仍使用创建时的 HOME。升级前的会话保留原 HOME，不自动
+迁入专用目录。不要重写旧 HOME 的供应商定义，也不要用强行覆盖 HOME 的 CLI wrapper 改变
+已有线程身份。原终端 `codex` 的配置与登录不受路径文件影响。
+
+供应商若只提供标准 OpenAI `/models` 列表而非 Codex 目录，使用 Codex 的
+`model_catalog_json` 指定对应模型的完整目录；能力和思考档位必须有依据，不从模型名称猜测。
+第三方供应商的接入向导需要同步更新 Mac 客户端，以识别 `provider-managed` 状态。
 
 旧服务返回“未知路径”时先更新组件并重新检查；检查会在服务空闲时自动完成重启，
 有活动任务时明确提示等待，安装器本身不会终止旧服务。新建任务中的空模型沿用运行时默认值，不再注入固定的 Qoder 模型。

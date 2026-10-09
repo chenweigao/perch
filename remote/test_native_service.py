@@ -288,6 +288,70 @@ class FakeCodex:
         self.responses.append((request_id,result,error))
     def close(self): self.closed=True
 
+class CodexRuntimeIsolationTests(unittest.TestCase):
+    def test_marker_changes_only_new_runtime_selection(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(broker, 'ROOT', pathlib.Path(directory)), \
+             patch.dict(os.environ, {'CODEX_HOME':'/original/codex-home'}):
+            marker = broker.ROOT/'codex-home'
+            self.assertEqual(broker.codex_home(), '/original/codex-home')
+            marker.write_text('/custom/codex-home\n')
+            self.assertEqual(broker.codex_home(), '/custom/codex-home')
+            self.assertEqual(broker.codex_home(legacy=True), '/original/codex-home')
+            for value in ('', 'relative/home', '/custom\n/other'):
+                marker.write_text(value)
+                with self.subTest(value=value), self.assertRaises(ValueError): broker.codex_home()
+
+    def test_explicit_home_is_scoped_to_the_spawned_codex_process(self):
+        with patch.dict(os.environ, {'CODEX_HOME':'/original/home'}, clear=True), \
+             patch.object(broker.shutil, 'which', return_value='/fixture/codex'), \
+             patch.object(broker, 'proxy_aware_spawn_env', return_value={'PATH':'/usr/bin','CODEX_HOME':'/original/home'}), \
+             patch.object(broker.subprocess, 'Popen') as launch, patch.object(broker.threading.Thread, 'start'):
+            broker.CodexAppServer('/tmp', home='/isolated/home')
+            self.assertEqual(launch.call_args.kwargs['env']['CODEX_HOME'], '/isolated/home')
+            self.assertEqual(os.environ['CODEX_HOME'], '/original/home')
+            self.assertEqual(launch.call_args.args[0], ['/fixture/codex','app-server','--listen','stdio://'])
+
+    def test_account_check_distinguishes_custom_provider_without_exposing_account(self):
+        cases = [({'requiresOpenaiAuth':False,'account':None}, 'provider-managed'),
+                 ({'requiresOpenaiAuth':True,'account':None}, 'missing'),
+                 ({'requiresOpenaiAuth':True,'account':{'email':'PRIVATE'}}, 'present'),
+                 ({}, 'missing')]
+        for account, expected in cases:
+            fake = FakeCodex(); fake.results['account/read'] = account
+            with self.subTest(account=account), patch.object(broker, 'CodexAppServer', return_value=fake) as factory:
+                self.assertEqual(broker.codex_credential_status('/selected/home'), expected)
+                factory.assert_called_once_with(str(broker.ROOT), home='/selected/home')
+                self.assertEqual(fake.calls, [('initialize',{}),('account/read',{'refreshToken':False})])
+                self.assertTrue(fake.closed)
+
+    def test_model_catalog_cache_is_separate_for_each_home(self):
+        homes = []
+        def create(*args, **kwargs):
+            home = kwargs['home']; homes.append(home)
+            fake = FakeCodex()
+            fake.results['model/list'] = {'data':[{'id':home,'model':home,'displayName':home}], 'nextCursor':None}
+            return fake
+        with patch.object(broker, 'CODEX_MODELS', None), patch.object(broker, 'CodexAppServer', side_effect=create):
+            self.assertEqual(broker.codex_catalog('/one')[0]['id'], '/one')
+            self.assertEqual(broker.codex_catalog('/two')[0]['id'], '/two')
+            self.assertEqual(broker.codex_catalog('/one')[0]['id'], '/one')
+            self.assertEqual(homes, ['/one','/two'])
+
+    def test_legacy_and_pinned_sessions_keep_their_original_home_and_provider(self):
+        state = dict(id='isolated',provider='codex',cwd=folder.name,title='Codex',model='gpt-codex',
+                     busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None)
+        with patch.object(broker, 'codex_home', return_value='/original/home') as home:
+            session = broker.Session(state)
+            self.assertEqual(session.state['codexHome'], '/original/home')
+            home.assert_called_once_with(legacy=True)
+        state.update(codexHome='/pinned/home', provider_id='custom-provider')
+        with patch.object(broker, 'codex_home', side_effect=AssertionError('pinned session must not follow new defaults')):
+            session = broker.Session(state)
+            self.assertEqual(session.codex_open_params()['modelProvider'], 'custom-provider')
+            with patch.object(broker, 'CodexAppServer', return_value=FakeCodex()) as factory:
+                session.codex_ensure(False)
+                self.assertEqual(factory.call_args.kwargs['home'], '/pinned/home')
+
 class CodexProtocolTests(unittest.TestCase):
     def setUp(self):
         broker.SESSIONS.clear(); broker.CODEX_MODELS=None
@@ -547,10 +611,38 @@ class CodexHandlerContractTests(unittest.TestCase):
         with patch.object(broker,'codex_catalog',return_value=catalog):
             self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'unknown'})[0],400)
             self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex','thinking':'ultra'})[0],400)
+    def test_create_pins_the_home_used_for_model_discovery(self):
+        broker.SESSIONS.clear(); fake=FakeCodex()
+        catalog=[{'id':'gpt-codex','provider':'codex','thinking':['medium'],'defaultThinking':'medium'}]
+        with tempfile.TemporaryDirectory() as directory, patch.object(broker, 'ROOT', pathlib.Path(directory)):
+            marker=broker.ROOT/'codex-home'; marker.write_text('/first/home')
+            def discover(home):
+                self.assertEqual(home, '/first/home')
+                marker.write_text('/second/home')
+                return catalog
+            with patch.object(broker, 'codex_catalog', side_effect=discover), \
+                 patch.object(broker, 'CodexAppServer', return_value=fake) as factory:
+                code,payload=self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex'})
+                self.assertEqual(code,200)
+                session=broker.SESSIONS[payload['id']]
+                self.assertEqual(session.state['codexHome'],'/first/home')
+                self.assertEqual(json.loads(session.path.read_text())['codexHome'],'/first/home')
+                self.assertEqual(factory.call_args.kwargs['home'],'/first/home')
+
+    def test_model_changes_use_pinned_home_and_preserve_model_provider(self):
+        self.s.state.update(codexHome='/pinned/home',provider_id='custom-provider')
+        catalog=[{'id':'gpt-codex','provider':'codex','thinking':['medium','high'],'defaultThinking':'medium'}]
+        with patch.object(broker, 'codex_catalog', return_value=catalog) as models, \
+             patch.object(broker, 'codex_home', side_effect=AssertionError('must not follow the new default')):
+            self.assertEqual(self.request('/sessions/native-thread/model',{'provider':'codex','model':'gpt-codex'})[0],200)
+            self.assertEqual(self.request('/sessions/native-thread/thinking',{'level':'high'})[0],200)
+        self.assertEqual([call.args for call in models.call_args_list],[('/pinned/home',),('/pinned/home',)])
+        self.assertEqual(self.s.state['provider_id'],'custom-provider')
+
     def test_codex_catalog_discovery_runs_outside_session_lock(self):
         broker.SESSIONS.clear(); fake=FakeCodex(); observed=[]
         catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
-        def discover():
+        def discover(home=None):
             def probe():
                 acquired=broker.LOCK.acquire(blocking=False); observed.append(acquired)
                 if acquired: broker.LOCK.release()
@@ -1207,20 +1299,29 @@ class SetupTests(unittest.TestCase):
             self.assertEqual(status['modelCheck'], 'session-handshake')
             self.assertNotIn('fixture-secret-value', json.dumps(status))
 
-    def test_codex_checks_login_and_returns_only_catalog_identity(self):
+    def test_codex_checks_selected_runtime_and_returns_only_catalog_identity(self):
         catalog = [{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['high'],
                     'apiKey':'PRIVATE','headers':{'Authorization':'PRIVATE'}}]
-        with patch.object(broker.shutil, 'which', return_value='/fixture/codex'), patch.object(broker.subprocess, 'run', side_effect=[self.result('codex-cli 0.155.1'), self.result('Logged in with a private account')]) as run, patch.object(broker, 'codex_catalog', return_value=catalog):
-            status = broker.setup_status('codex')
-        self.assertEqual(status['credentialCheck'], 'present')
-        self.assertEqual(status['modelCheck'], 'configured')
-        self.assertEqual(status['models'], [{'id':'gpt-codex','name':'GPT Codex','provider':'codex'}])
-        self.assertNotIn('PRIVATE', json.dumps(status))
-        self.assertNotIn('private account', json.dumps(status))
-        self.assertEqual(run.call_args_list[1].args[0], ['/fixture/codex','login','status'])
+        for credentials in ('present', 'provider-managed'):
+            with self.subTest(credentials=credentials), patch.object(broker.shutil, 'which', return_value='/fixture/codex'), \
+                 patch.object(broker.subprocess, 'run', return_value=self.result('codex-cli 0.155.1')) as run, \
+                 patch.object(broker, 'codex_home', return_value='/fixture/provider-home'), \
+                 patch.object(broker, 'codex_credential_status', return_value=credentials) as check, \
+                 patch.object(broker, 'codex_catalog', return_value=catalog) as models:
+                status = broker.setup_status('codex')
+                self.assertEqual(status['credentialCheck'], credentials)
+                self.assertEqual(status['modelCheck'], 'configured')
+                self.assertEqual(status['models'], [{'id':'gpt-codex','name':'GPT Codex','provider':'codex'}])
+                self.assertNotIn('PRIVATE', json.dumps(status))
+                check.assert_called_once_with('/fixture/provider-home')
+                models.assert_called_once_with('/fixture/provider-home')
+                run.assert_called_once_with(['/fixture/codex','--version'], capture_output=True, text=True, timeout=10)
 
-    def test_codex_missing_login_does_not_start_app_server(self):
-        with patch.object(broker.shutil, 'which', return_value='/fixture/codex'), patch.object(broker.subprocess, 'run', side_effect=[self.result('codex-cli 0.155.1'), self.result(code=1)]), patch.object(broker, 'codex_catalog', side_effect=AssertionError('login failure must stop before app-server')):
+    def test_codex_missing_login_does_not_fetch_catalog(self):
+        with patch.object(broker.shutil, 'which', return_value='/fixture/codex'), \
+             patch.object(broker.subprocess, 'run', return_value=self.result('codex-cli 0.155.1')), \
+             patch.object(broker, 'codex_credential_status', return_value='missing'), \
+             patch.object(broker, 'codex_catalog', side_effect=AssertionError('missing login must stop before catalog discovery')):
             status = broker.setup_status('codex')
         self.assertEqual(status['credentialCheck'], 'missing')
         self.assertEqual(status['models'], [])
