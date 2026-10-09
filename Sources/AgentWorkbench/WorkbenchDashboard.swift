@@ -51,11 +51,14 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 introduction
                 if attentionOnly {
                     if projection.attention.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label("暂时没有需要你处理的事项", systemImage: "checkmark.circle")
-                                .foregroundStyle(.secondary)
-                            Button("返回工作台", action: onShowHome).buttonStyle(.link)
-                        }.padding(.vertical, 12)
+                        VStack(spacing: 10) {
+                            Image(systemName: "checkmark.circle").font(.system(size: 34, weight: .light))
+                                .foregroundStyle(.green)
+                            Text("全部处理完了").font(.system(size: 15, weight: .medium))
+                            Text("没有等待确认、回答或处理的事项；查看结果请到工作台。")
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                            Button("返回工作台", action: onShowHome).padding(.top, 4)
+                        }.frame(maxWidth: .infinity).padding(.vertical, 56)
                     } else {
                         let byID = Dictionary(uniqueKeysWithValues: projection.attention.items.map { ($0.id, $0) })
                         let ordered = queueOrder.ids.compactMap { byID[$0] }
@@ -257,23 +260,29 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
 
     private func emptyState(_ state: DashboardEmptyState) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 10) {
+            Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
+                .foregroundStyle(.secondary)
             Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
                 HStack(spacing: 10) {
                     Button("连接远程机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
+                        .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
                     Button("检测本机 Agent…", action: onStartLocal)
-                }
+                }.padding(.top, 4)
                 Text("远程 Agent 沿用你的 SSH 配置；本机可连接已安装的 Kimi 和 Codex。")
                     .font(.caption).foregroundStyle(.secondary)
             } else if state == .noMatches {
                 // Nothing is wrong with the workspace; the filter is hiding everything.
                 // Starting a session would not fix that and would bury the reason.
                 Button("清除筛选", action: onClearSessionFilters ?? onClearAllScopes).buttonStyle(.borderedProminent)
+                    .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
+                    .padding(.top, 4)
             } else {
                 Button("新建会话", action: onNewTask).buttonStyle(.borderedProminent)
+                    .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph).padding(.top, 4)
             }
-        }.padding(.vertical, 12)
+        }.frame(maxWidth: .infinity).padding(.vertical, 44)
     }
 
     /// What became of the sessions that were mid-turn when the workbench lost
@@ -471,6 +480,17 @@ private struct QueueSectionMark: View {
             Image(systemName: "circle.dotted").foregroundStyle(.tertiary)
         case .other:
             Image(systemName: "tray").foregroundStyle(.tertiary)
+        }
+    }
+}
+
+private extension DashboardEmptyState {
+    var symbol: String {
+        switch self {
+        case .noEnvironment: return "server.rack"
+        case .noSessions: return "plus.message"
+        case .nothingPending: return "checkmark.circle"
+        case .noMatches: return "line.3.horizontal.decrease.circle"
         }
     }
 }
