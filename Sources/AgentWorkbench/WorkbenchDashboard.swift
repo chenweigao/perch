@@ -29,6 +29,8 @@ struct WorkbenchDashboard<RowActions: View>: View {
     let onOpenGroup: (UUID) -> Void
     let onManageGroups: (WorkspaceSession) -> Void
     let onForgetRestoration: (SavedTerminal) -> Void
+    var onDismissRestoreReport: (() -> Void)? = nil
+    var onOpenRestoreEntry: ((RestoredSession) -> Void)? = nil
     let onUndoArchive: () -> Void
     let onRetryArchive: () -> Void
     let onStartLocal: () -> Void
@@ -112,6 +114,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
                 if !attentionOnly { groupHistory }
+                if !attentionOnly && !context.restoreReport.isEmpty { restoreReportSection }
                 if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
             }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
                 .frame(maxWidth: 944).frame(maxWidth: .infinity)
@@ -251,6 +254,34 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 Button("新建会话", action: onNewTask).buttonStyle(.borderedProminent)
             }
         }.padding(.vertical, 12)
+    }
+
+    /// What became of the sessions that were mid-turn when the workbench lost
+    /// sight of them. Positive outcomes are listed too: "still running" is
+    /// information a reconnect otherwise leaves the user to verify by hand.
+    private var restoreReportSection: some View {
+        DisclosureGroup("断开期间的任务结果 · \(context.restoreReport.count)") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("断开或离开前正在运行的任务，重新连接后的状态：")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(context.restoreReport) { entry in
+                    HStack {
+                        Button { onOpenRestoreEntry?(entry) } label: {
+                            Label(entry.title, systemImage: entry.reference.kind.symbol).lineLimit(1)
+                        }.buttonStyle(.plain).disabled(entry.outcome == .missing)
+                        Text(entry.hostName).font(.caption).foregroundStyle(.tertiary)
+                        Spacer()
+                        Label(entry.outcome.label, systemImage: entry.outcome.symbol)
+                            .foregroundStyle(entry.outcome.needsAttention ? Color.orange : Color.secondary)
+                    }
+                }
+                HStack {
+                    Spacer()
+                    Button("知道了") { onDismissRestoreReport?() }.buttonStyle(.link)
+                }
+            }.padding(.top, 10)
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+            .font(.system(size: 12)).foregroundStyle(.secondary)
     }
 
     private var restoration: some View {

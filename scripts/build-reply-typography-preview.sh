@@ -12,7 +12,7 @@ done
 swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Tests/ReplyTypographyPreview/App.swift \
+    Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Tests/ReplyTypographyPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ReplyTypographyPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

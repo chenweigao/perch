@@ -847,6 +847,9 @@ final class WorkbenchModel {
         DashboardContext(pendingRestoration: pendingRestoration.filter { saved in
             (selectedGroup.map { $0.sessions.contains(saved.session) } ?? true) &&
             (scopeHost.map { saved.session.hostID == $0.id } ?? true)
+        }, restoreReport: restoreReport.filter { entry in
+            (selectedGroup.map { $0.sessions.contains(entry.reference) } ?? true) &&
+            (scopeHost.map { entry.reference.hostID == $0.id } ?? true)
         }, storageError: workspaceError,
                          scope: activeScope)
     }
@@ -1211,6 +1214,7 @@ final class WorkbenchModel {
     private func catalogChanged() {
         rebuildCatalog()
         updateTaskEvents()
+        resolveRestoreReports()
         var baselineChanged = false
         for item in allSessions where item.online && !item.archived && (item.section == .running || item.section == .other) {
             let observation = dashboardObservation(item)
@@ -1222,6 +1226,85 @@ final class WorkbenchModel {
         }
         for item in allSessions where item.archived && tabs.ids.contains(item.id) { close(item.id) }
         restoreAvailableSessions()
+    }
+    /// The resolved outcomes of sessions that were mid-turn the last time each
+    /// source was seen. Reported once per reconnect, dismissed explicitly.
+    private(set) var restoreReport: [RestoredSession] = []
+    /// Sources currently offline (or never connected this launch), keyed
+    /// "kind:hostID". An armed source resolves its report on its first fresh
+    /// catalog after reconnecting.
+    @ObservationIgnored private var restoreArmed: Set<String> = []
+    func dismissRestoreReport() { restoreReport = [] }
+    func openRestoreEntry(_ entry: RestoredSession) {
+        guard let item = allSessions.first(where: { $0.id == entry.id && $0.online && !$0.archived }) else { return }
+        open(item)
+    }
+    /// Runs before the dashboardSeen baseline is updated below, so the comparison
+    /// still sees the state the session had when the connection was lost.
+    private func resolveRestoreReports() {
+        for (hostID, connection) in kimiEnvironments {
+            let key = "kimi:\(hostID)"
+            guard connection.online else { restoreArmed.insert(key); continue }
+            guard restoreArmed.remove(key) != nil else { continue }
+            collectKimiRestoreEntries(connection)
+        }
+        for (hostID, connection) in nativeEnvironments {
+            let key = "native:\(hostID)"
+            guard connection.online else { restoreArmed.insert(key); continue }
+            guard connection.catalogSynced, restoreArmed.remove(key) != nil else { continue }
+            collectNativeRestoreEntries(connection)
+        }
+    }
+    private func collectKimiRestoreEntries(_ connection: KimiConnection) {
+        let hostID = connection.host.id
+        var entries: [RestoredSession] = []
+        for (id, observation) in workspace.dashboardSeen {
+            guard observation.state == "running", let reference = SessionReference(restoreID: id),
+                  reference.hostID == hostID, reference.kind == .kimi else { continue }
+            let session = connection.sessions.first { $0.id == reference.terminalID }
+            let probe = SessionRestoreProbe(exists: session != nil, archived: session?.archived == true,
+                                            busy: session?.busy ?? false,
+                                            pendingInteraction: ["approval", "question"].contains(session?.pendingInteraction ?? ""),
+                                            failed: session?.lastTurnReason == "failed",
+                                            completed: session?.lastTurnReason == "completed")
+            guard let outcome = RestoreResolution.outcome(probe) else { continue }
+            entries.append(RestoredSession(reference: reference, title: restoreTitle(reference, fallback: session?.title ?? ""),
+                                           hostName: connection.host.name, outcome: outcome))
+        }
+        mergeRestoreEntries(entries)
+    }
+    private func collectNativeRestoreEntries(_ connection: NativeAgentConnection) {
+        let hostID = connection.host.id
+        var entries: [RestoredSession] = []
+        for (id, observation) in workspace.dashboardSeen {
+            guard observation.state == "running", let reference = SessionReference(restoreID: id),
+                  reference.hostID == hostID, reference.kind != .kimi else { continue }
+            let session = connection.sessions.first { $0.id == reference.terminalID && $0.provider == reference.kind }
+            // Running baselines record "completed:pending:error" (see dashboardObservation),
+            // so a completion is only claimed when the count provably advanced.
+            let baselineCompleted = observation.revision.split(separator: ":").first.flatMap { Int($0) }
+            let probe = SessionRestoreProbe(exists: session != nil, archived: session?.archived ?? false,
+                                            busy: session?.busy ?? false,
+                                            pendingInteraction: (session?.pending ?? 0) > 0,
+                                            failed: session?.error != nil,
+                                            completed: baselineCompleted.map { (session?.completed ?? 0) > $0 } ?? false)
+            guard let outcome = RestoreResolution.outcome(probe) else { continue }
+            entries.append(RestoredSession(reference: reference, title: restoreTitle(reference, fallback: session?.title ?? ""),
+                                           hostName: connection.host.name, outcome: outcome))
+        }
+        mergeRestoreEntries(entries)
+    }
+    private func restoreTitle(_ reference: SessionReference, fallback: String) -> String {
+        let named = workspace.displayTitle(fallback, for: reference)
+        return named.isEmpty ? (allSessions.first { $0.id == reference.id }?.title ?? reference.terminalID) : named
+    }
+    /// A session re-reported by a later reconnect replaces its earlier entry; the
+    /// report describes the latest known outcome, not a history.
+    private func mergeRestoreEntries(_ entries: [RestoredSession]) {
+        guard !entries.isEmpty else { return }
+        let ids = Set(entries.map(\.id))
+        restoreReport.removeAll { ids.contains($0.id) }
+        restoreReport.append(contentsOf: entries)
     }
     private func updateTaskEvents() {
         for item in allSessions where !item.archived {
