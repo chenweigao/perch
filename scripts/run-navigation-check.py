@@ -10,7 +10,7 @@ import subprocess
 import time
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("mode", choices=["claude", "user-rows", "paragraphs", "fast-scroll", "reading", "click", "scroll", "soak", "anchor", "interactions", "search", "roundtrip", "turns", "image", "disclosure"])
+parser.add_argument("mode", choices=["claude", "assistant-rows", "user-rows", "paragraphs", "fast-scroll", "reading", "click", "scroll", "soak", "anchor", "interactions", "search", "roundtrip", "turns", "image", "disclosure"])
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built A/B fixture app")
 parser.add_argument("--seconds", type=int, default=1260)
