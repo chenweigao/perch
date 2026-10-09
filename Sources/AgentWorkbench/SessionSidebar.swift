@@ -23,6 +23,7 @@ struct WorkbenchSidebar: View {
         let index = model.groupIndex
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个环境"),
+                              environmentNeedsAttention: environmentNeedsAttention,
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
@@ -41,6 +42,12 @@ struct WorkbenchSidebar: View {
         .background(NativeSidebarProbe(projection: projection))
         .onReceive(experiment.$sidebarFilter) { if let value = $0 { filter = value } }
         #endif
+    }
+    private var environmentNeedsAttention: Bool {
+        if model.connections.contains(where: { !$0.online && $0.error != nil }) { return true }
+        guard let host = model.selectedHost else { return false }
+        return (host.enabledAgents.contains(.kimi) && !model.kimi.online && model.kimi.error != nil)
+            || (host.hasNativeAgents && !model.native.online && model.native.error != nil)
     }
     private var usesTable: Bool {
         #if PERCH_ACCEPTANCE
