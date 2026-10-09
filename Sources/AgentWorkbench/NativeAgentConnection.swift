@@ -49,6 +49,9 @@ final class NativeAgentConnection {
     @ObservationIgnored private var historyWindows: [String: (start: Int, epoch: String)] = [:]
     @ObservationIgnored private var nextCatalogRefresh = Date.distantPast
     @ObservationIgnored private var nextIdleSnapshotRefresh = Date.distantPast
+    /// Idle snapshot reads double their interval while nothing changes (2s → 4s → 8s).
+    @ObservationIgnored private var idleSnapshotInterval: TimeInterval = 2
+    @ObservationIgnored private var pendingWake: CheckedContinuation<Void, Never>?
     private var selectionGeneration: UUID { conversation.generation }
     @ObservationIgnored private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
@@ -99,7 +102,7 @@ final class NativeAgentConnection {
                     online = true; error = nil; onSessionsChanged?()
                     while !Task.isCancelled && generation == token {
                         try await poll()
-                        try await Task.sleep(for: .milliseconds(400))
+                        await sleepUntilNextPoll()
                     }
                 } catch is CancellationError { return }
                 catch {
@@ -115,7 +118,45 @@ final class NativeAgentConnection {
         task?.cancel(); task = nil
         nextCatalogRefresh = .distantPast
         nextIdleSnapshotRefresh = .distantPast
+        idleSnapshotInterval = 2
+        wakePolling()
         online = false; wantsConnection = false; error = nil; closeTunnel()
+    }
+    /// User actions that change remote state or force refreshes wake the poll loop
+    /// before its next scheduled deadline.
+    private func wakePolling() {
+        pendingWake?.resume(); pendingWake = nil
+    }
+    private func completeWake() {
+        pendingWake?.resume(); pendingWake = nil
+    }
+    /// Idle connections wait for the next due read instead of waking every 400ms.
+    /// Busy sessions, pending interactions and in-flight sends keep the fast tick.
+    private func sleepUntilNextPoll() async {
+        let now = Date()
+        var due = nextCatalogRefresh
+        if selectedID != nil { due = min(due, nextIdleSnapshotRefresh) }
+        if needsFastTick { due = min(due, now.addingTimeInterval(0.4)) }
+        let delay = due.timeIntervalSince(now)
+        guard delay > 0.05 else { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            pendingWake = continuation
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(delay))
+                self?.completeWake()
+            }
+        }
+    }
+    private var needsFastTick: Bool {
+        if sessions.contains(where: \.busy) { return true }
+        if snapshot?.busy == true || snapshot?.interactions.isEmpty == false { return true }
+        if let selected = sessions.first(where: { $0.id == selectedID }), selected.pending > 0 { return true }
+        return queue.allItems.contains { message in
+            switch message.state {
+            case .submitting, .accepted, .running, .unknown: return true
+            case .draftQueued, .failed, .stoppedBeforeDelivery, .delivered: return false
+            }
+        }
     }
     private func closeTunnel() {
         api?.invalidate(); api = nil
@@ -213,8 +254,20 @@ final class NativeAgentConnection {
                 }
             }
         if !conversation.isSelecting && (active || now >= nextIdleSnapshotRefresh) {
-            nextIdleSnapshotRefresh = now.addingTimeInterval(2)
-            try await refreshSelected()
+            // Schedule before the read so the read itself can override it (an
+            // expanded history window forces an immediate follow-up read).
+            nextIdleSnapshotRefresh = now.addingTimeInterval(active ? 2 : idleSnapshotInterval)
+            let changed = try await refreshSelected()
+            if nextIdleSnapshotRefresh == .distantPast {
+                idleSnapshotInterval = 2
+            } else if !active {
+                if changed {
+                    idleSnapshotInterval = 2
+                    nextIdleSnapshotRefresh = now.addingTimeInterval(2)
+                } else {
+                    idleSnapshotInterval = min(8, idleSnapshotInterval * 2)
+                }
+            }
         }
     }
     func refresh() async throws {
@@ -223,6 +276,7 @@ final class NativeAgentConnection {
         let next = value.sessions.sorted { $0.updated > $1.updated }
         if next.first(where: { $0.id == selectedID }) != sessions.first(where: { $0.id == selectedID }) {
             nextIdleSnapshotRefresh = .distantPast
+            idleSnapshotInterval = 2
         }
         var clocks = timings
         for session in next {
@@ -282,18 +336,22 @@ final class NativeAgentConnection {
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && !conversation.isSelecting) else { return }
         if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }
-        conversation.select(id); nextIdleSnapshotRefresh = .distantPast
+        conversation.select(id); nextIdleSnapshotRefresh = .distantPast; idleSnapshotInterval = 2
+        wakePolling()
         guard online else { return }
         conversation.loadSelection { [weak self] in
-            try await self?.refreshSelected()
+            _ = try await self?.refreshSelected()
         }
     }
     #if PERCH_ACCEPTANCE
-    func acceptanceRefreshSelected() async throws { try await refreshSelected() }
+    func acceptanceRefreshSelected() async throws { _ = try await refreshSelected() }
     #endif
-    private func refreshSelected() async throws {
+    /// Returns true when a snapshot was applied; unchanged reads return false so
+    /// idle polling can back off.
+    @discardableResult
+    private func refreshSelected() async throws -> Bool {
         try Task.checkCancellation()
-        guard let id = selectedID else { return }
+        guard let id = selectedID else { return false }
         let token = selectionGeneration, connectionToken = generation
         let suffix: String
         if let current = snapshot, current.id == id {
@@ -306,19 +364,21 @@ final class NativeAgentConnection {
         let response: NativeSnapshotResponse = try await request("/sessions/\(id)\(suffix)")
         try Task.checkCancellation()
         guard token == selectionGeneration, connectionToken == generation, id == selectedID,
-              let value = response.snapshot else { return }
+              let value = response.snapshot else { return false }
         // A page may have expanded the window while this delta was in flight.
         // It did not cover edits in that newly loaded prefix: leave the revision
         // untouched and let the next normal tick request the expanded window.
         if let window = value.history, window.indices != nil, window.start != snapshot?.history?.start {
             nextIdleSnapshotRefresh = .distantPast
-            return
+            idleSnapshotInterval = 2
+            return true
         }
         let next = try value.applying(to: snapshot)
         if let previous = snapshot, previous.busy != next.busy || previous.completed != next.completed || previous.interactions != next.interactions {
             nextCatalogRefresh = .distantPast
         }
         snapshot = next
+        return true
     }
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
@@ -448,6 +508,7 @@ final class NativeAgentConnection {
         guard let message = queue.nextDelivery(for: reference, isStreaming: busy) else { return }
         sendingSessions.insert(id)
         timings.submitted(message.id)
+        wakePolling()
         Task {
             defer { sendingSessions.remove(id); drainQueues() }
             do {
