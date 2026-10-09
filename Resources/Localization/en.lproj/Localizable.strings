@@ -533,7 +533,14 @@
 "已安装 %@，运行进程仍是 %@" = "%1$@ installed, running process still %2$@";
 "%@ 启动" = "started %@";
 "桥接源码 %@" = "bridge source %@";
-"远端已安装 %@ %@，但正在服务的进程仍是 %@。重启该服务后新版本才会生效；Perch 不会替你终止运行中的服务。" = "%1$@ %2$@ is installed on the remote host, but the process serving this connection is still %3$@. The new version applies only after that service restarts, and Perch never stops a running service for you.";
+"%@ %@ 已安装，当前仍使用 %@，可以继续连接。请等该服务中的会话和后台任务结束后，自行重启远端 %@ Web 服务，让更新生效。" = "%1$@ %2$@ is installed; this connection still uses %3$@ and can continue. Once this service’s sessions and background tasks finish, restart the remote %4$@ Web service yourself to apply the update.";
+"Kimi 更新待生效" = "Kimi update pending restart";
+"重启步骤" = "Restart steps";
+"1. 等待这台机器上该 Kimi Web 服务中的会话和后台任务结束。" = "1. Wait for this Kimi Web service’s sessions and background tasks on the remote machine to finish.";
+"2. 在远端按原来的启动方式停止并重新启动 Kimi Web。前台运行时，在原终端按 Control-C 后重新运行原命令；后台或托管服务请通过原来的服务管理方式重启。" = "2. Stop and start Kimi Web on the remote machine using its original launch method. If it runs in the foreground, press Control-C in its original terminal and run the original command again. For a background or managed service, use its existing service management method.";
+"沿用原来的端口（%@）、令牌路径（%@）与环境配置。" = "Keep the original port (%1$@), token path (%2$@) and environment settings.";
+"3. 返回 Perch 点击“重新检查”。运行版本与安装版本一致后，此提示会消失。" = "3. Return to Perch and click “Check again”. This notice disappears once the running version matches the installed version.";
+"“重新检查”只核对状态；重开 Perch 不会重启远端 Kimi Web。" = "“Check again” only verifies the status; reopening Perch does not restart remote Kimi Web.";
 "模型（留空使用远端默认值）" = "Model (leave empty for the remote default)";
 "此 SSH 地址已添加。请从环境入口配置已有机器。" = "This SSH address is already added. Configure the existing machine from Environments.";
 "此构建缺少安装组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build is missing installer resources. Use Perch.app packaged by scripts/build.sh.";

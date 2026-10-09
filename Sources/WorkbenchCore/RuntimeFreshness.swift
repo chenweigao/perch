@@ -64,7 +64,7 @@ public enum RuntimeVersion {
     /// reports it: stopping someone else's running agent is never implicit.
     public static func staleNotice(agent: String, installed: String, running: String,
                                    locale: Locale = AppLanguage.current.resolvedLocale) -> String {
-        L("远端已安装 \(agent) \(installed)，但正在服务的进程仍是 \(running)。重启该服务后新版本才会生效；Perch 不会替你终止运行中的服务。", locale: locale)
+        L("\(agent) \(installed) 已安装，当前仍使用 \(running)，可以继续连接。请等该服务中的会话和后台任务结束后，自行重启远端 \(agent) Web 服务，让更新生效。", locale: locale)
     }
 
     /// `started_at` rendered in local time, or nil when it is absent or malformed.
