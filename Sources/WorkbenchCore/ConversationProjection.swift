@@ -11,10 +11,15 @@ public final class ConversationProjection {
         public let reusedTurnCount: Int
         public let rebuiltTurnCount: Int
     }
+    private struct TurnSnapshot {
+        let entries: [ConversationTimelineEntry]
+        let results: [String: KimiPart]
+        let navigation: [ConversationTurnSummary]
+    }
     private struct Turn {
         let messages: [KimiMessage]
         let running: Bool
-        let snapshot: Snapshot
+        let snapshot: TurnSnapshot
     }
     private var turns: [String: Turn] = [:]
     public init() {}
@@ -51,9 +56,8 @@ public final class ConversationProjection {
                 }
                 let timeline = ConversationTimelineEntry.make(group, isRunning: running)
                 let summary = ConversationTurnSummary.make(group, entries: timeline)
-                turn = Turn(messages: group, running: running, snapshot: Snapshot(
-                    entries: timeline, results: turnResults, navigation: summary.map { [$0] } ?? [],
-                    reusedTurnCount: 0, rebuiltTurnCount: 1))
+                turn = Turn(messages: group, running: running, snapshot: TurnSnapshot(
+                    entries: timeline, results: turnResults, navigation: summary.map { [$0] } ?? []))
                 rebuiltTurnCount += 1
             }
             next[id] = turn

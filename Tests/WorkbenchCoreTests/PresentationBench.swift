@@ -47,7 +47,7 @@ func benchPresentationUpdate() throws {
         cold.sort(); append.sort()
         let parts = input.reduce(0) { $0 + $1.content.count }
         let payload = input.reduce(0) { $0 + $1.content.reduce(0) { $0 + ($1.text?.utf8.count ?? 0) } }
-        print("source_slots=\(count) actual_messages=\(input.count) actual_parts=\(parts) cold_rows=\(coldRows) appended_rows=\(appendedRows) cold_median_ms=\(String(format: \"%.2f\", cold[2])) cold_max_ms=\(String(format: \"%.2f\", cold[4])) append_median_ms=\(String(format: \"%.2f\", append[2])) text_bytes=\(payload)")
+        print("source_slots=\(count) actual_messages=\(input.count) actual_parts=\(parts) cold_rows=\(coldRows) appended_rows=\(appendedRows) cold_median_ms=\(String(format: "%.2f", cold[2])) cold_max_ms=\(String(format: "%.2f", cold[4])) append_median_ms=\(String(format: "%.2f", append[2])) text_bytes=\(payload)")
     }
 }
 
@@ -140,6 +140,7 @@ func benchPresentationTokenUpdates() throws {
     let data = try JSONSerialization.data(withJSONObject: [
         "schema": 1,
         "benchmark": "presentation-token",
+        "timing_note": "stage intervals do not overlap; total_ms includes timestamp instrumentation but excludes the metrics callback; fixture_tail_replace_ms is outside model.update and must not be added to the stages",
         "results": results
     ], options: [.prettyPrinted, .sortedKeys])
     print(String(decoding: data, as: UTF8.self))
