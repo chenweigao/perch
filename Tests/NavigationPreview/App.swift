@@ -574,6 +574,40 @@ final class NavigationRunner {
 
     /// Exercise the same selection action as the rail against cold, virtualized
     /// rows. No search selection or full-history layout assists these jumps.
+    func claudeNavigation() async throws -> [String: Any] {
+        guard let host = model.host else { throw NavigationError("missing host") }
+        model.selected = "claude-fixture"
+        model.conversation = try NavigationHistory.claudeConversation()
+        guard await flushAndWait(host, until: {
+            ConversationTranscript.navigator(in: host)?.snapshot.session == "claude-fixture"
+        }) != nil, let scroll = findScrollView(host),
+              let navigator = ConversationTranscript.navigator(in: host),
+              navigator.snapshot.turns.count == 4 else { throw NavigationError("Claude rail did not preserve four real turns") }
+        func allTexts(_ view: NSView) -> [NSTextView] {
+            (view as? NSTextView).map { [$0] } ?? view.subviews.flatMap(allTexts)
+        }
+        var anchors: [String] = []
+        for index in [0, 2, 1, 3, 0] {
+            navigator.select(index)
+            let id = navigator.snapshot.turns[index].id
+            guard await flushAndWait(host, until: {
+                ConversationTranscript.readingAnchor(in: scroll)?.entry == id
+            }) != nil else { throw NavigationError("Claude turn selection failed at \(index)") }
+            guard !allTexts(scroll).contains(where: { $0.string.contains("HIDDEN_SKILL_CONTEXT") }) else {
+                throw NavigationError("Claude skill instructions mounted as visible prose")
+            }
+            guard let document = ConversationTranscript.document(in: scroll),
+                  ConversationTranscript.missingVisibleRows(in: document).isEmpty else {
+                throw NavigationError("Claude navigation left missing rows")
+            }
+            anchors.append(id)
+        }
+        let height = ConversationTranscript.document(in: scroll)?.bounds.height ?? 0
+        guard height > 0, height < 12000 else { throw NavigationError("Collapsed Claude context inflated document height") }
+        return ["turns": 4, "tool_results": 104, "skill_characters": model.conversation!.messages.first { $0.id == "claude-skill" }!.content[0].text!.count,
+                "selected_anchors": anchors, "document_height": height, "context_prose_mounted": false]
+    }
+
     func turnNavigation() async throws -> [String: Any] {
         let targets = try warmedTargets()
         guard let host = model.host else { throw NavigationError("missing host") }
@@ -1207,7 +1241,11 @@ struct NavigationPreviewApp: App {
                 report["build"] = try JSONSerialization.jsonObject(with: Data(contentsOf: buildURL))
             }
             try writeNavigationArtifact("started.json", report.merging(["status": "running"]) { _, b in b })
-            if mode == "user-rows" { report.merge(try await runner.nativeUserRows()) { a, _ in a } }
+            if mode == "claude" {
+                report["history_source"] = "claude-synthetic"; report["history_turns"] = 4
+                report.merge(try await runner.claudeNavigation()) { a, _ in a }
+            }
+            else if mode == "user-rows" { report.merge(try await runner.nativeUserRows()) { a, _ in a } }
             else if mode == "assistant-rows" {
                 report.merge(try await runner.nativeUserRows(assistant: true)) { a, _ in a }
                 report.merge(try await runner.nativeAssistantContracts()) { a, _ in a }

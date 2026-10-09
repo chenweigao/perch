@@ -98,6 +98,26 @@ def dsh_catalog():
         if path.exists(): DSH_MODELS = json.loads(path.read_text())
     return DSH_MODELS or []
 
+def codex_home(legacy=False):
+    value = os.environ.get('CODEX_HOME') or str(pathlib.Path.home()/'.codex')
+    marker = ROOT/'codex-home'
+    if not legacy and marker.exists():
+        value = marker.read_text().strip()
+        if not value: raise ValueError('Codex HOME 配置为空')
+    home = pathlib.Path(value).expanduser()
+    if not home.is_absolute() or any(c in value for c in ('\n', '\r', '\0')):
+        raise ValueError('Codex HOME 必须为绝对目录或以 ~/ 开头')
+    return str(home.resolve())
+
+def codex_credential_status(home):
+    client = CodexAppServer(str(ROOT), home=home)
+    try:
+        client.initialize()
+        account = client.request('account/read', {'refreshToken':False})
+        if account.get('requiresOpenaiAuth') is False: return 'provider-managed'
+        return 'present' if account.get('account') else 'missing'
+    finally: client.close()
+
 def setup_status(provider):
     """Readiness for the selected adapter only; never sends a model prompt.
 
@@ -146,12 +166,13 @@ def setup_status(provider):
                             for m in dsh_catalog() if m.get('id')]
         result['modelCheck'] = 'session-handshake'
     else:
-        login = subprocess.run([binary, 'login', 'status'], capture_output=True, text=True, timeout=10)
-        result['credentialCheck'] = 'present' if login.returncode == 0 else 'missing'
-        if login.returncode != 0: return result
-        try: catalog = codex_catalog()
+        try:
+            home = codex_home()
+            result['credentialCheck'] = codex_credential_status(home)
+            if result['credentialCheck'] == 'missing': return result
+            catalog = codex_catalog(home)
         except Exception:
-            result['error'] = 'Could not read the Codex model catalog. Run codex app-server in an SSH terminal.'
+            result['error'] = 'Could not check the configured Codex runtime. Check its HOME and app-server configuration.'
             return result
         result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': 'codex'}
                             for m in catalog if isinstance(m, dict) and m.get('id')]
@@ -182,14 +203,16 @@ def proxy_aware_spawn_env():
     return env
 
 class CodexAppServer:
-    def __init__(self, cwd, on_frame=None, on_exit=None, stderr_path=None):
+    def __init__(self, cwd, on_frame=None, on_exit=None, stderr_path=None, home=None):
         binary = os.environ.get('PERCH_LOCAL_CODEX') or shutil.which('codex')
         if not binary: raise ValueError('未找到 codex CLI，请先安装并登录 Codex')
+        self.home = home or codex_home()
         self.on_frame = on_frame; self.on_exit = on_exit; self.closing = False
         self.write_lock = threading.Lock(); self.pending_lock = threading.Lock()
         self.pending = {}; self.next_id = 0; self.frames = queue.Queue()
         self.stderr = open(stderr_path, 'a') if stderr_path else subprocess.DEVNULL
         env = proxy_aware_spawn_env()
+        env['CODEX_HOME'] = self.home
         if os.environ.get('PERCH_LOCAL_CODEX'):
             # App-bundled CLIs are often symlinked into ~/.local/bin. Their tool
             # helpers live beside the actual executable, not beside the link.
@@ -278,11 +301,13 @@ class CodexAppServer:
             try: self.stderr.close()
             except Exception: pass
 
-def codex_catalog():
+def codex_catalog(home=None):
     global CODEX_MODELS
+    home = home or codex_home()
     with MODEL_LOCK:
-        if CODEX_MODELS is not None: return CODEX_MODELS
-        client = CodexAppServer(str(ROOT))
+        if CODEX_MODELS is None: CODEX_MODELS = {}
+        if home in CODEX_MODELS: return CODEX_MODELS[home]
+        client = CodexAppServer(str(ROOT), home=home)
         try:
             client.initialize(); items = []; cursor = None
             while True:
@@ -291,13 +316,13 @@ def codex_catalog():
                 page = client.request('model/list', params)
                 items.extend(page.get('data') or []); cursor = page.get('nextCursor')
                 if not cursor: break
-            CODEX_MODELS = [
+            CODEX_MODELS[home] = [
                 {'id':m.get('model') or m['id'],'provider':'codex','name':m.get('displayName') or m.get('model') or m['id'],
                  'thinking':[x.get('reasoningEffort') for x in m.get('supportedReasoningEfforts',[]) if x.get('reasoningEffort')],
                  'defaultThinking':m.get('defaultReasoningEffort')}
                 for m in items if m.get('id') and not m.get('hidden',False)
             ]
-            return CODEX_MODELS
+            return CODEX_MODELS[home]
         finally: client.close()
 
 def codex_selection(model, thinking=None, catalog=None):
@@ -351,6 +376,9 @@ def is_user_prompt(message):
     def context(part):
         if part.get('type') != 'text': return False
         value = part.get('text', '').strip()
+        if part.get('source', {}).get('kind') == 'runtime_context': return True
+        # Older Claude snapshots lost the SDK's synthetic-message marker.
+        if value.startswith('Base directory for this skill: ') and '\n' in value: return True
         if value.startswith('<system-reminder>'): return True
         if any(value.startswith(a) and value.endswith(b) for a,b in (
             ('<notification ', '</notification>'), ('<skill-loaded ', '</skill-loaded>'), ('<system>', '</system>'))): return True
@@ -358,7 +386,7 @@ def is_user_prompt(message):
             block = value.split('\n', 1)[1].lstrip()
             return block.startswith('<skill-loaded ') and 'trigger="model-tool"' in block.split('>', 1)[0]
         return False
-    return message['role'] == 'user' and message.get('metadata', {}).get('origin', {}).get('kind') != 'compaction_summary' and not all(context(p) for p in message['content'])
+    return message['role'] == 'user' and message.get('metadata', {}).get('origin', {}).get('kind') != 'compaction_summary' and not all(p.get('type') == 'tool_result' or context(p) for p in message['content'])
 
 def codex_permission_params(mode, turn=False):
     mode = permission_mode('codex', mode)
@@ -378,10 +406,13 @@ class Session:
         provider = state.get('provider')
         if provider in PERMISSION_MODES:
             state['permissionMode'] = restore_permission_mode(provider, state.get('permissionMode'))
-        if provider == 'codex': state['context'] = None
+        if provider == 'codex':
+            state['context'] = None
+            if not state.get('codexHome'): state['codexHome'] = codex_home(legacy=True)
         self.state = state; self.process = None; self.write_lock = threading.Lock(); self.last_save = 0; self.deleted = False
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
+        self.sdk_block_index = None
         self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
         self.acp_blocks = {}; self.permission_options = {}
         self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
@@ -504,12 +535,14 @@ class Session:
     def codex_open_params(self):
         params={'cwd':self.state['cwd']} | codex_permission_params(self.state['permissionMode'])
         if self.state.get('model'): params['model']=self.state['model']
+        provider = self.state.get('provider_id')
+        if provider and provider != 'codex': params['modelProvider'] = provider
         return params
     def codex_ensure(self, attach=True):
         if self.codex and self.codex.process.poll() is None:
             if not attach or self.codex_attached: return self.codex
         else:
-            client=CodexAppServer(self.state['cwd'],stderr_path=ROOT/(self.state['id']+'.stderr'))
+            client=CodexAppServer(self.state['cwd'],stderr_path=ROOT/(self.state['id']+'.stderr'),home=self.state['codexHome'])
             client.on_frame=lambda frame: self.codex_frame(client,frame)
             client.on_exit=self.codex_exit
             self.codex=client; self.codex_attached=False
@@ -1004,6 +1037,10 @@ class Session:
 
     def event(self,e):
         s = self.state; t = e.get('type'); provider = s['provider']; durable = False
+        # Child messages belong to the Agent tool, whose result remains visible.
+        # They must not create main-session turns or replace its streaming tail.
+        if provider == 'claude' and t in ('assistant', 'user', 'stream_event') and e.get('parent_tool_use_id'):
+            return
         if t == 'ready':
             self.ready.set()
             if provider == 'omp':
@@ -1100,18 +1137,44 @@ class Session:
         elif provider in ('qoder','claude') and t == 'interaction': s['interactions'].append(e); durable=True
         elif provider in ('qoder','claude') and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
         elif provider in ('qoder','claude') and t in ('assistant','user'):
-            self.upsert(e['message'], e.get('uuid') or e['message'].get('id') or str(uuid.uuid4())); s.pop('partial',None); durable=True
+            message = e['message']
+            if provider == 'claude' and t == 'user' and e.get('isSynthetic'):
+                message = copy.deepcopy(message)
+                message['content'] = text_parts(message.get('content'))
+                for part in message['content']:
+                    if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
+            self.upsert(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))
+            if t == 'assistant' or provider == 'qoder': s.pop('partial',None)
+            durable=True
         elif provider in ('qoder','claude') and t == 'stream_event':
             ev=e['event']; et=ev['type']
-            if et=='message_start': s['partial']={'role':'assistant','content':[]}
-            elif et=='content_block_start':
-                s.setdefault('partial',{'role':'assistant','content':[]})['content'].append(ev['content_block'])
-            elif et=='content_block_delta' and s.get('partial'):
-                idx=ev['index']; delta=ev['delta']; parts=s['partial']['content']
-                if idx<len(parts):
-                    if delta['type']=='text_delta': parts[idx]['text']=parts[idx].get('text','')+delta['text']
-                    elif delta['type']=='thinking_delta': parts[idx]['thinking']=parts[idx].get('thinking','')+delta['thinking']
-            else: return
+            if provider == 'claude':
+                # Claude emits a complete assistant message for EACH block,
+                # before content_block_stop. API indices keep increasing after
+                # that block has been committed, so they are not list offsets.
+                if et == 'message_start':
+                    s.pop('partial', None); self.sdk_block_index = None
+                elif et == 'content_block_start':
+                    self.sdk_block_index = ev.get('index', 0)
+                    s['partial'] = {'role':'assistant','content':[copy.deepcopy(ev['content_block'])]}
+                elif et == 'content_block_delta' and s.get('partial') and ev['index'] == self.sdk_block_index:
+                    delta = ev['delta']; part = s['partial']['content'][0]
+                    if delta['type'] == 'text_delta': part['text'] = part.get('text','') + delta['text']
+                    elif delta['type'] == 'thinking_delta': part['thinking'] = part.get('thinking','') + delta['thinking']
+                    else: return
+                elif et == 'message_stop':
+                    s.pop('partial', None); self.sdk_block_index = None
+                else: return
+            else:
+                if et=='message_start': s['partial']={'role':'assistant','content':[]}
+                elif et=='content_block_start':
+                    s.setdefault('partial',{'role':'assistant','content':[]})['content'].append(ev['content_block'])
+                elif et=='content_block_delta' and s.get('partial'):
+                    idx=ev['index']; delta=ev['delta']; parts=s['partial']['content']
+                    if idx<len(parts):
+                        if delta['type']=='text_delta': parts[idx]['text']=parts[idx].get('text','')+delta['text']
+                        elif delta['type']=='thinking_delta': parts[idx]['thinking']=parts[idx].get('thinking','')+delta['thinking']
+                else: return
         elif provider in ('qoder','claude') and t == 'result':
             s['resume']=e.get('session_id',s.get('resume')); durable=True
             if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider=='qoder' else 'Claude')+' 执行失败')
@@ -1258,14 +1321,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, setup_status(provider))
             if self.path=='/models' and not post:
                 return self.respond(200,{'models':combined_catalog()})
-            codex_models=None
+            codex_models=None; selected_home=None
             if post and self.path=='/sessions' and body.get('provider')=='codex':
-                codex_models=codex_catalog()
+                selected_home=codex_home()
+                codex_models=codex_catalog(selected_home)
             elif post and len(path)>=4 and path[1]=='sessions' and path[3] in ('model','thinking'):
                 with LOCK:
                     target=SESSIONS.get(path[2])
                     needs_codex_catalog=target is not None and target.state.get('provider')=='codex'
-                if needs_codex_catalog: codex_models=codex_catalog()
+                    if needs_codex_catalog: selected_home=target.state['codexHome']
+                if needs_codex_catalog: codex_models=codex_catalog(selected_home)
             with LOCK:
                 if self.path=='/health':
                     result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid()}
@@ -1283,6 +1348,7 @@ class Handler(BaseHTTPRequestHandler):
                     sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':provider,'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'permissionMode':mode,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
                     SESSIONS[sid]=s
                     if body['provider']=='codex':
+                        s.state['codexHome']=selected_home
                         try: s.codex_start_thread()
                         except Exception:
                             s.deleted=True
@@ -1323,7 +1389,7 @@ class Handler(BaseHTTPRequestHandler):
                             if s.state['provider']=='codex':
                                 if provider!='codex': raise ValueError('Codex 不认识该模型，请刷新模型列表后重试')
                                 entry,_=codex_selection(model,catalog=codex_models)
-                                s.state['model']=model; s.state['provider_id']='codex'; s.state['context']=None
+                                s.state['model']=model; s.state['context']=None
                                 if s.state.get('thinking') not in entry.get('thinking',[]): s.state['thinking']=entry.get('defaultThinking')
                                 s.touch(True)
                             elif s.state['provider']=='dsh':

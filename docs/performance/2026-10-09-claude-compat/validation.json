@@ -1,0 +1,222 @@
+{
+  "protocol_control": {
+    "baseline": {
+      "source_sha256": "947e6e19d6b68a840f4436478f4599b3b0c229e5f34801e0c52403f8a32e985f",
+      "prompt_count": 109,
+      "first_message_on_one_turn_page": "skill",
+      "second_block_text": "",
+      "child_bumps_main_revision": true,
+      "child_clears_main_partial": true
+    },
+    "candidate": {
+      "source_sha256": "a261066659769340f1cb92f80fcac3c557972b72d429af62d223c023b8560cf6",
+      "prompt_count": 4,
+      "first_message_on_one_turn_page": "p3",
+      "second_block_text": "streamed answer",
+      "child_bumps_main_revision": false,
+      "child_clears_main_partial": false
+    }
+  },
+  "ui_checks": {
+    "navigation-final": {
+      "status": "passed",
+      "raw_result_sha256": "1da410f97c60eaeb4f9472b50bbe6eafc7edc7cc292dc2e1dcda9cf3d0a10247",
+      "receipt": {
+        "status": "exited",
+        "mode": "claude",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "claude",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_SCROLL_HZ": "120",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "$WORKTREE/.local/claude-compat/navigation-final",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "d7da66f2186053b60650e08ca7ba88ede3a950d1",
+          "source_sha256": "0e2a2028939eaef40cbda7931ec80607435ba4839704b9593fd44c8240bcde22",
+          "fixture_sha256": "502e1b9a0dec1b16f2e4bcab3a5effd1a0cd53ab8dc947c6e3428ffd98307630",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "d226acd855e9426c22c0db18eae2e7562db5e40142572c88d56cfff58ad840ae",
+        "pid": 2524,
+        "exit_code": 0,
+        "elapsed_s": 3.5600535,
+        "passed": true
+      },
+      "result": {
+        "build": {
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+          "fixture_sha256": "502e1b9a0dec1b16f2e4bcab3a5effd1a0cd53ab8dc947c6e3428ffd98307630",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "source_commit": "d7da66f2186053b60650e08ca7ba88ede3a950d1",
+          "source_sha256": "0e2a2028939eaef40cbda7931ec80607435ba4839704b9593fd44c8240bcde22"
+        },
+        "commit": "d7da66f2186053b60650e08ca7ba88ede3a950d1",
+        "context_prose_mounted": false,
+        "document_height": 2978,
+        "history_source": "claude-synthetic",
+        "history_turns": 4,
+        "macos": "Version 27.0.1 (Build 26A434)",
+        "mode": "claude",
+        "recreates_timeline": false,
+        "selected_anchors": [
+          "text:claude-prompt-0:0",
+          "text:claude-prompt-2:0",
+          "text:claude-prompt-1:0",
+          "text:claude-prompt-3:0",
+          "text:claude-prompt-0:0"
+        ],
+        "sessions": 500,
+        "skill_characters": 136047,
+        "status": "passed",
+        "timestamp": "2026-10-09T08:33:55Z",
+        "tool_results": 104,
+        "turns": 4
+      }
+    },
+    "turns": {
+      "status": "passed",
+      "raw_result_sha256": "303574154a997309480f74f04cee36d50b21150773f95fd67d3cb12223c9057d",
+      "receipt": {
+        "status": "exited",
+        "mode": "turns",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "turns",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_SCROLL_HZ": "120",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "$WORKTREE/.local/claude-compat/turns",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "d7da66f2186053b60650e08ca7ba88ede3a950d1",
+          "source_sha256": "0e2a2028939eaef40cbda7931ec80607435ba4839704b9593fd44c8240bcde22",
+          "fixture_sha256": "5c204a07b6537233726bd2acbc39dbb435b5adbe95c8eb0da86d49dea51dfe72",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "e5591204973b6abce5de4e6b470ec51805b744b824e9f3fb9d2e64ca13792481",
+        "pid": 186,
+        "exit_code": 0,
+        "elapsed_s": 7.265338292,
+        "passed": true
+      }
+    },
+    "reading": {
+      "status": "passed",
+      "raw_result_sha256": "376eb8121d0c9fab4c3a93b62dfd77e8e450c4f707b6e9cf005febedb7e61ed4",
+      "receipt": {
+        "status": "exited",
+        "mode": "reading",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "reading",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_SCROLL_HZ": "120",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "$WORKTREE/.local/claude-compat/reading",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "d7da66f2186053b60650e08ca7ba88ede3a950d1",
+          "source_sha256": "0e2a2028939eaef40cbda7931ec80607435ba4839704b9593fd44c8240bcde22",
+          "fixture_sha256": "5c204a07b6537233726bd2acbc39dbb435b5adbe95c8eb0da86d49dea51dfe72",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "e5591204973b6abce5de4e6b470ec51805b744b824e9f3fb9d2e64ca13792481",
+        "pid": 591,
+        "exit_code": 0,
+        "elapsed_s": 15.587990834,
+        "passed": true
+      }
+    },
+    "interactions": {
+      "status": "passed",
+      "raw_result_sha256": "98c12936f8c0b5b1a1f751ebff97bf8bea7994047ca06b117da9c524bd123f9a",
+      "receipt": {
+        "status": "exited",
+        "mode": "interactions",
+        "timeout_s": 120,
+        "configuration": {
+          "NAVIGATION_AUTORUN": "interactions",
+          "NAVIGATION_TURNS": "200",
+          "NAVIGATION_SCROLL_HZ": "120",
+          "NAVIGATION_AUTOQUIT": "1",
+          "NAVIGATION_RESULTS": "$WORKTREE/.local/claude-compat/interactions",
+          "NAVIGATION_SWITCHES": "40",
+          "NAVIGATION_SOAK_SECONDS": "1260",
+          "NAVIGATION_RECREATE": "0",
+          "NAVIGATION_SCROLL_REVERSAL": "0",
+          "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+          "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+          "NAVIGATION_FULL_DISCLOSURE": "0",
+          "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+          "NAVIGATION_OUTPUT_LINES": "2400",
+          "NAVIGATION_OUTPUT_SHAPE": "lines"
+        },
+        "build": {
+          "source_commit": "d7da66f2186053b60650e08ca7ba88ede3a950d1",
+          "source_sha256": "0e2a2028939eaef40cbda7931ec80607435ba4839704b9593fd44c8240bcde22",
+          "fixture_sha256": "5c204a07b6537233726bd2acbc39dbb435b5adbe95c8eb0da86d49dea51dfe72",
+          "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+          "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+        },
+        "binary_sha256": "e5591204973b6abce5de4e6b470ec51805b744b824e9f3fb9d2e64ca13792481",
+        "pid": 1568,
+        "exit_code": 0,
+        "elapsed_s": 9.764995625,
+        "passed": true
+      }
+    }
+  },
+  "local_checks": {
+    "remote": {
+      "status": "passed",
+      "log_sha256": "dde3b97d1739751c7d9acf3dae4ccc1348a267096f2676d5ceab61f532d21cb1"
+    },
+    "core": {
+      "status": "passed",
+      "log_sha256": "6e1c7306417b21f62001448d1a84f21de10c4488c5a7462ede31a2ccbecde649"
+    },
+    "harness": {
+      "status": "passed",
+      "log_sha256": "bdb203891007c645fd7e351e49f53e0dd8aa362da702de88e5a429dfa2670d92"
+    },
+    "production_build": {
+      "status": "passed",
+      "log_sha256": "201250657f9bc0c040144aee9692f385f97903ea008473de1e84f2372e15b527"
+    }
+  }
+}
