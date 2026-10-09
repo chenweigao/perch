@@ -3,13 +3,14 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
 import time
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("mode", choices=["paragraphs", "reading", "click", "scroll", "soak", "anchor", "interactions", "search", "roundtrip", "turns", "image", "disclosure"])
+parser.add_argument("mode", choices=["user-rows", "paragraphs", "fast-scroll", "reading", "click", "scroll", "soak", "anchor", "interactions", "search", "roundtrip", "turns", "image", "disclosure"])
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built A/B fixture app")
 parser.add_argument("--seconds", type=int, default=1260)
@@ -24,7 +25,10 @@ parser.add_argument("--full-content", action="store_true")
 parser.add_argument("--long-output-variant", choices=["inline", "viewport"], default="viewport")
 parser.add_argument("--output-lines", type=int, default=2400)
 parser.add_argument("--output-shape", choices=["lines", "wrapped-line"], default="lines")
+parser.add_argument("--scroll-hz", type=float, default=120)
 args = parser.parse_args()
+if not math.isfinite(args.scroll_hz) or args.scroll_hz <= 0:
+    parser.error("--scroll-hz must be finite and positive")
 if args.output_lines < 100:
     parser.error("--output-lines must be at least 100")
 if args.scroll_step_points < 0:
@@ -36,7 +40,7 @@ output = args.output.resolve()
 output.mkdir(parents=True, exist_ok=False)
 app = args.app.resolve() if args.app else root / "build/Navigation Preview.app"
 binary = app / "Contents/MacOS/NavigationPreview"
-environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="200",
+environment = dict(os.environ, NAVIGATION_AUTORUN=args.mode, NAVIGATION_TURNS="200", NAVIGATION_SCROLL_HZ=str(args.scroll_hz),
                    NAVIGATION_AUTOQUIT="1", NAVIGATION_RESULTS=str(output),
                    NAVIGATION_SWITCHES=str(args.switches),
                    NAVIGATION_SOAK_SECONDS=str(args.seconds),

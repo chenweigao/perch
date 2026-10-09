@@ -1,0 +1,122 @@
+--- a/Sources/AgentWorkbench/ConversationTranscriptView.swift
++++ b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+@@ -713,12 +713,23 @@
+             nextMounted.insert(id)
+             index += 1
+         }
++        #if TRANSCRIPT_CHECKS
++        // Diagnostic upper bound only: quantify graph recreation versus attachment.
++        let retention = ProcessInfo.processInfo.environment["NAVIGATION_HOST_RETENTION"] ?? "bounded"
++        if retention != "mounted" {
++            for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
++        }
++        #else
+         for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
++        #endif
+         mounted = nextMounted
+         laidOutRange = first..<index
+         let retained = geometry.retainedRows(around: first..<index)
+         var retired: [ConversationEntryController] = []
+         for id in Array(controllers.keys) where !mounted.contains(id) {
++            #if TRANSCRIPT_CHECKS
++            if retention == "all" || retention == "mounted" { continue }
++            #endif
+             if let row = indices[id], retained.contains(row) { continue }
+             if let controller = controllers.removeValue(forKey: id) { retired.append(controller) }
+         }
+@@ -876,6 +887,62 @@
+         if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
+     }
+ }
++
++#if TRANSCRIPT_CHECKS
++/// Container-only experiment. Uses the exact production rows/measurement/cache.
++/// Does not implement pending prompts, paging, follow-latest or the turn rail.
++struct NativeTranscriptScrollProbe: NSViewRepresentable {
++    let messages: [KimiMessage]
++    let sessionID: String
++    @Environment(\.self) private var environment
++    func makeNSView(context: Context) -> ProbeScroll { ProbeScroll() }
++    func updateNSView(_ scroll: ProbeScroll, context: Context) {
++        scroll.configure(messages, sessionID: sessionID, environment: environment)
++    }
++    static func dismantleNSView(_ scroll: ProbeScroll, coordinator: ()) { scroll.cleanup() }
++
++    final class ProbeScroll: NSScrollView {
++        private let transcript = ConversationDocumentView()
++        private let canvas = ProbeCanvas()
++        private let viewport = ConversationViewport()
++        private let presentation = ConversationPresentationHandle()
++        override init(frame: NSRect) {
++            super.init(frame: frame)
++            drawsBackground = false
++            hasVerticalScroller = false
++            documentView = canvas
++            canvas.addSubview(transcript)
++            viewport.view = self
++            transcript.heightChanged = { [weak self] _ in self?.placeDocument() }
++        }
++        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
++        func configure(_ messages: [KimiMessage], sessionID: String, environment: EnvironmentValues) {
++            let snapshot = presentation.update(key: sessionID, input: .init(messages: messages, language: environment.locale.identifier + ":" + AppLanguage.current.localization), cache: nil)
++            let rows = snapshot.displayedRows { _ in nil }.map {
++                ConversationEntryView(entry: $0.entry, tools: $0.tools, api: nil, sessionId: sessionID,
++                                      memoryKey: sessionID + ":" + $0.entry.id, activityNarrative: $0.activity)
++            }
++            transcript.configure(rows, contentIdentity: .init(snapshot: snapshot, narratives: [:], api: nil,
++                                 session: sessionID, memoryKey: sessionID), navigation: snapshot.navigation,
++                                 sessionId: sessionID, appearance: ConversationEntryAppearance(environment),
++                                 viewport: viewport, contentOriginY: 12)
++            placeDocument()
++        }
++        override func layout() { super.layout(); placeDocument() }
++        private func placeDocument() {
++            let width = min(ReplyStyle.readingWidth, max(1, contentView.bounds.width - 72))
++            let size = transcript.measure(width: width)
++            let frame = CGRect(x: (contentView.bounds.width - width) / 2, y: 12, width: width, height: size.height)
++            if transcript.frame != frame { transcript.frame = frame }
++            let canvasSize = CGSize(width: contentView.bounds.width, height: size.height + 43)
++            if canvas.frame.size != canvasSize { canvas.setFrameSize(canvasSize) }
++            reflectScrolledClipView(contentView)
++        }
++        func cleanup() { transcript.prepareForRemoval() }
++    }
++    private final class ProbeCanvas: NSView { override var isFlipped: Bool { true } }
++}
++#endif
+ 
+ #if TRANSCRIPT_CHECKS
+ extension ConversationTranscript {
+--- a/Tests/NavigationPreview/App.swift
++++ b/Tests/NavigationPreview/App.swift
+@@ -139,6 +139,13 @@
+ private struct NavigationConversation: View {
+     @ObservedObject var model: NavigationModel
+     var body: some View {
++        if ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_CONTAINER"] == "native" {
++            NativeTranscriptScrollProbe(messages: model.conversation?.displayMessages ?? [], sessionID: model.selected)
++                .overlay(alignment: .topLeading) {
++                    ContentMarker(token: NavigationModel.token(model.conversation), marker: model.marker)
++                        .frame(width: 1, height: 1).allowsHitTesting(false)
++                }
++        } else {
+             ScrollViewReader { proxy in
+                 ConversationScrollView(onScroll: { ConversationReadingMemory.shared.following[model.selected] = $0 }, onContentSizeChange: {
+                     if ConversationReadingMemory.shared.following[model.selected] == true { proxy.scrollTo("bottom", anchor: .bottom) }
+@@ -153,6 +160,7 @@
+                         .frame(width: 1, height: 1).allowsHitTesting(false)
+                 }
+             }
++        }
+     }
+ }
+ 
+@@ -390,6 +398,8 @@
+                 "retained_hosts": ConversationTranscript.retainedHosts(in: scroll)?.retained ?? 0])
+         }
+         return ["cadence_hz": hz, "budget_ms": budget, "phases": phases,
++                "host_retention": ProcessInfo.processInfo.environment["NAVIGATION_HOST_RETENTION"] ?? "bounded",
++                "scroll_container": ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_CONTAINER"] ?? "swiftui",
+                 "boundary": "paced programmatic main-actor scroll work; excludes hardware input and compositor presentation"]
+     }
+ 

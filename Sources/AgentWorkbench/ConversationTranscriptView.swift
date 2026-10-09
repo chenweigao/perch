@@ -173,12 +173,13 @@ struct ConversationTranscript: View {
         ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment),
                                  viewport: environment.conversationViewport,
-                                 layout: documentLayout, suspended: isSuspended, waitsForInitialPosition: waitsForInitialPosition) { height in
+                                 layout: documentLayout, measuredHeight: measured?.session == sessionId ? measured?.height : nil,
+                                 suspended: isSuspended, waitsForInitialPosition: waitsForInitialPosition) { height in
             measured = (sessionId, height)
-        // Native rows can report their new height one layout pass before the
-        // outer SwiftUI frame receives it. Keep the document's top fixed during
-        // that handoff; centering shifts every row by half the height delta.
-        }.frame(height: measured?.session == sessionId ? measured?.height : nil, alignment: .top)
+        }
+        // The native measurement is the single source of document height.
+        // An asynchronously updated outer fixed frame can keep the scroll view
+        // taller than its already-shrunken transcript for one display pass.
             .onGeometryChange(for: CGFloat.self) {
                 $0.frame(in: .named("conversation-content")).minY
             } action: { documentLayout.updateOrigin($0) }
@@ -219,6 +220,8 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     let appearance: ConversationEntryAppearance
     let viewport: ConversationViewport?
     let layout: ConversationDocumentLayout
+    // Changes invalidate SwiftUI's measurement without imposing a stale frame.
+    let measuredHeight: CGFloat?
     var suspended = false
     var waitsForInitialPosition = false
     let heightChanged: (CGFloat) -> Void
@@ -413,9 +416,13 @@ private final class ConversationDocumentView: NSView {
         cancelPendingRestoration()
         ConversationReadingMemory.shared.following[sessionId] = false
         viewport?.pauseFollowing?()
+        // A reveal is an explicit destination, not a request to preserve the
+        // outgoing visible rows while cold rows above it are being measured.
+        restoreTarget = .init(entry: id, index: index, offset: 0)
         clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
         enclosingScrollView?.reflectScrolledClipView(clip)
         refreshVisibleRows()
+        restoreReadingPosition()
         if highlight, let view = controllers[id]?.view {
             let marker = CALayer()
             marker.frame = view.bounds.insetBy(dx: 1, dy: 1)
@@ -747,7 +754,7 @@ private final class ConversationDocumentView: NSView {
     }
     private func updateHeight(_ id: String, height: CGFloat) {
         guard let index = indices[id], heights[index] != height else { return }
-        if ConversationReadingMemory.shared.following[sessionId] == false,
+        if restoreTarget == nil, ConversationReadingMemory.shared.following[sessionId] == false,
            let reading = readingRowForAnchor(), index < reading {
             saveReadingPosition()
             restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
@@ -860,7 +867,13 @@ private final class ConversationDocumentView: NSView {
         clip.postsBoundsChangedNotifications = true
         boundsObserver = NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification, object: clip, queue: nil
-        ) { [weak self] _ in self?.viewport?.refresh(); self?.saveReadingPosition() }
+        ) { [weak self] _ in
+            // A content resize can move the clip after drawing has already been
+            // scheduled. Mount the new range in this geometry transaction.
+            self?.refreshVisibleRows()
+            self?.viewport?.refresh()
+            self?.saveReadingPosition()
+        }
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -964,7 +977,8 @@ private struct HostedConversationEntry: View {
 }
 
 private final class ConversationEntryController: NSViewController {
-    private let host: NSHostingController<HostedConversationEntry>
+    private var host: NSHostingController<HostedConversationEntry>?
+    private var nativeUser: NativeUserMessageView?
     private var content: ConversationEntryView
     private var appearance: ConversationEntryAppearance
     private var generation = 0
@@ -991,12 +1005,8 @@ private final class ConversationEntryController: NSViewController {
         self.appearance = appearance
         self.heightChanged = heightChanged
         self.disclosureChanged = disclosureChanged
-        host = NSHostingController(rootView: HostedConversationEntry(
-            content: content, appearance: appearance))
         super.init(nibName: nil, bundle: nil)
         if let measuredSize { sizes.append(measuredSize) }
-        host.sizingOptions = []
-        host.safeAreaRegions = []
         setRoot()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -1007,10 +1017,10 @@ private final class ConversationEntryController: NSViewController {
         #endif
         let container = ConversationEntryContainer()
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
-        addChild(host)
         container.wantsLayer = true
         container.layer?.masksToBounds = true
-        container.addSubview(host.view)
+        if let nativeUser { container.addSubview(nativeUser) }
+        if let host { addChild(host); container.addSubview(host.view) }
         container.widthChanged = { [weak self] in self?.committedWidthChanged() }
         // The row already owns its measured frame; its sole child fills it.
         // Avoid rebuilding an Auto Layout constraint graph on viewport changes.
@@ -1019,8 +1029,13 @@ private final class ConversationEntryController: NSViewController {
     func layout(frame: CGRect, contentHeight: CGFloat) {
         if view.frame != frame { view.frame = frame }
         let hostFrame = CGRect(x: 0, y: 0, width: frame.width, height: contentHeight)
-        if host.view.frame != hostFrame { host.view.frame = hostFrame }
+        if let host, host.view.frame != hostFrame { host.view.frame = hostFrame }
+        if let nativeUser {
+            if nativeUser.frame != hostFrame { nativeUser.frame = hostFrame }
+            nativeUser.place(width: frame.width)
+        }
     }
+    deinit { if let nativeUser { NativeUserMessageView.recycle(nativeUser) } }
     private func committedWidthChanged() {
         // A detached host cannot report geometry after a window/sidebar resize.
         // Measure the committed width after this layout pass, including offscreen
@@ -1045,13 +1060,45 @@ private final class ConversationEntryController: NSViewController {
         sizes.removeAll(keepingCapacity: true)
         setRoot()
     }
+    private func nativeUserContent() -> [NSAttributedString]? {
+        #if TRANSCRIPT_CHECKS
+        if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_USER_ROWS"] == "0" { return nil }
+        #endif
+        guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
+              content.entry.presentation == .message, content.entry.messages.count == 1,
+              let message = content.entry.messages.first, message.isUserPrompt,
+              message.content.count == 1, let part = message.content.first,
+              part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
+        return NativeUserMessageView.content(part.text ?? "")
+    }
     private func setRoot() {
+        if let paragraphs = nativeUserContent() {
+            if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
+            if nativeUser == nil {
+                nativeUser = NativeUserMessageView.acquire()
+                if isViewLoaded { view.addSubview(nativeUser!) }
+            }
+            nativeUser!.update(paragraphs, dark: appearance.colorScheme == .dark)
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record("native_user_update", since: CACurrentMediaTime())
+            #endif
+            return
+        }
+        if let nativeUser { NativeUserMessageView.recycle(nativeUser); self.nativeUser = nil }
         let version = generation
-        host.rootView = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] in
+        let root = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
             self?.disclosureChanged()
         }) { [weak self] size in
             self?.contentSizeChanged(size, generation: version)
+        }
+        if let host { host.rootView = root }
+        else {
+            let host = NSHostingController(rootView: root)
+            host.sizingOptions = []
+            host.safeAreaRegions = []
+            self.host = host
+            if isViewLoaded { addChild(host); view.addSubview(host.view) }
         }
     }
     func measure(width proposed: CGFloat?) -> CGSize {
@@ -1069,7 +1116,7 @@ private final class ConversationEntryController: NSViewController {
                 hasMeasured = true
             }
             #endif
-            height = ceil(host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
+            height = ceil(nativeUser?.measure(width: width).height ?? host!.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
             if sizes.count == 8 { sizes.removeFirst() }
             sizes.append((width, height))
         }

@@ -324,12 +324,38 @@ search, resizing, session return and prepend checks cover transcript composition
 See the [experiment](../performance/2026-09-30-paragraph-rendering/REPORT.md) for
 fixed-binary results; these are application layout timings, not measured FPS.
 
-## Visible rows at draw time
+## Document sizing and visible rows
 
-Viewport notifications coalesce ordinary scrolling work, but they are not a
-presentation barrier. After content shrinks, AppKit can clamp the clip origin
-before that queued pass runs. The native document reconciles the visible range
-in `viewWillDraw` as well, preserving complete rows at the draw boundary. Keep
-the existing same-range fast return. Initial-position readiness alone does not
-cover subsequent snapshot changes; `kimi-refresh` checks continuous coverage
-across delayed, height-changing snapshots and preserved reading anchors.
+The native document measurement owns transcript height. Its asynchronously
+reported height invalidates SwiftUI measurement, but must not impose a second
+fixed-height wrapper. Such a wrapper can retain the previous height after the
+native document shrinks, leaving the outer viewport below all actual rows.
+
+Clip-bounds notifications mount the visible range synchronously in the geometry
+transaction; navigator notifications remain coalesced. `viewWillDraw` also checks
+the visible range, retaining the same-range fast return. Relying on that draw
+callback alone misses a bounds change after display has been scheduled.
+An explicit reveal records its target before moving the clip; cold-row height
+updates preserve that pending intent instead of anchoring outgoing rows.
+Initial-position readiness does not cover later snapshots. `kimi-refresh` checks
+continuous coverage through growing/shrinking snapshots and saved reading anchors.
+
+## Native user prose rows
+
+Single-part, ordinary user messages containing only nonempty Markdown paragraphs
+use a direct AppKit bubble and TextKit selection. They share attributed-text
+construction, paragraph grouping, link routing and measurements with SwiftUI
+Markdown. Complex blocks, runtime context, attachments, other presentations and
+right-to-left layout retain the SwiftUI row. This is a rendering boundary, not a
+second message-state owner.
+
+The outer row controller keeps identity if a same-ID edit changes renderer kind.
+Existing generation checks discard stale size callbacks. Native rows clear text
+and selection before reuse; their pool is capped at 16 rows, retaining at most
+eight text containers per recycled row. It does not cache a view for every message.
+
+`user-rows` compares glyph positions and heights at two widths in light and dark
+appearances, links and Unicode copying. `interactions` checks resizing, same-ID
+replacement and transitions to/from complex Markdown. `fast-scroll` separates
+first traversal, full-history revisit and local reversal; its timings do not
+certify compositor frames or physical input responsiveness.
