@@ -164,10 +164,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 Text(group.name).font(.system(size: 25, weight: .semibold)).textSelection(.enabled)
             } else { Text(title).font(.system(size: 25, weight: .semibold)) }
             if !visibleFacets.isEmpty { scopeChips }
-            if attentionOnly {
-                Text("确认、回答或处理错误；查看结果请到工作台。")
+            if attentionOnly && !projection.attention.isEmpty {
+                Text("共 \(projection.attention.items.count) 项 · 确认、回答或处理错误；查看结果请到工作台。")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
-            } else if group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending {
+            } else if !attentionOnly && (group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 14) { summary }
                     VStack(alignment: .leading, spacing: 5) { summary }
@@ -209,23 +209,43 @@ struct WorkbenchDashboard<RowActions: View>: View {
         } else if projection.attention.isEmpty {
             Text("当前没有待处理事项")
         } else {
-            Button(action: onShowInbox) { Text("\(projection.attention.items.count) 项等你处理") }
-                .buttonStyle(.plain).foregroundStyle(.orange)
+            Button(action: onShowInbox) {
+                summaryChip("exclamationmark.circle.fill", tint: .orange,
+                            text: "\(projection.attention.items.count) 项等你处理", active: true)
+            }.buttonStyle(SummaryStatStyle())
         }
-        if !projection.review.isEmpty { Text("\(projection.review.items.count) 项结果待查看") }
-        if !projection.running.isEmpty { Text("\(projection.running.items.count) 项运行中") }
+        if !projection.review.isEmpty {
+            summaryChip("circlebadge.fill", tint: .blue,
+                        text: "\(projection.review.items.count) 项结果待查看", active: false)
+        }
+        if !projection.running.isEmpty {
+            summaryChip("circle.dotted", tint: Color(.tertiaryLabelColor),
+                        text: "\(projection.running.items.count) 项运行中", active: false)
+        }
+    }
+
+    private func summaryChip(_ symbol: String, tint: Color, text: LocalizedStringKey, active: Bool) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).foregroundStyle(tint)
+            Text(text).foregroundStyle(.primary)
+        }.padding(.horizontal, 8).padding(.vertical, 3)
+            .background(tint.opacity(active ? 0.09 : 0.06), in: Capsule())
     }
 
     private func section(_ value: DashboardSection, limit: Int) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 7) {
-                Text(LocalizedStringKey(value.section.rawValue)).accessibilityAddTraits(.isHeader)
-                Text("\(value.items.count)").foregroundStyle(.tertiary)
-                Spacer()
-                if value.section == .attention && !attentionOnly {
-                    Button("进入待处理", action: onShowInbox).buttonStyle(.link)
-                }
-            }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
+            // The inbox intro already names the queue; repeat only the count there.
+            if !attentionOnly {
+                HStack(spacing: 7) {
+                    QueueSectionMark(section: value.section)
+                    Text(LocalizedStringKey(value.section.rawValue)).accessibilityAddTraits(.isHeader)
+                    Text("\(value.items.count)").foregroundStyle(.tertiary)
+                    Spacer()
+                    if value.section == .attention {
+                        Button("进入待处理", action: onShowInbox).buttonStyle(.link)
+                    }
+                }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
+            }
             ForEach(value.items.prefix(limit)) { row($0, in: value.section) }
             if value.items.count > limit && value.section != .attention {
                 DisclosureGroup("展开其余 \(value.items.count - limit) 个会话") {
@@ -316,6 +336,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
         let ordered = memberships.filter { $0.id == group?.id } + memberships.filter { $0.id != group?.id }
         return QueueRow(item: item,
                         time: SessionTime.label(since: item.updatedAt, waiting: section == .attention && item.online),
+                        waiting: section == .attention && item.online,
                         metadata: parts.joined(separator: " · "),
                         groups: ordered,
                         onOpenGroup: onOpenGroup, onManageGroups: { onManageGroups(item) },
@@ -328,6 +349,7 @@ struct QueueRow<Actions: View>: View {
     @UILocalization private var L
     let item: WorkspaceSession
     let time: String?
+    var waiting = false
     let metadata: String
     let groups: [SessionGroupIndex.Membership]
     let onOpenGroup: (UUID) -> Void
@@ -360,7 +382,9 @@ struct QueueRow<Actions: View>: View {
                 }.font(.system(size: 11)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
             if let time {
-                Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).fixedSize()
+                Text(time).font(.system(size: 11)).monospacedDigit()
+                    .foregroundStyle(waiting ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                    .fixedSize()
                     .padding(.top, 2)
                     .opacity(hovered && showsHoverAction ? 0 : 1)
             }
@@ -421,5 +445,32 @@ private struct QueueRowLinkStyle: ButtonStyle {
             .foregroundStyle(hovered || configuration.isPressed ? Color.primary : Color.secondary)
             .underline(hovered)
             .onHover { hovered = $0 }
+    }
+}
+
+/// The one actionable stat is a button; the capsule only deepens on hover.
+private struct SummaryStatStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .brightness(hovered || configuration.isPressed ? -0.04 : 0)
+            .onHover { hovered = $0 }
+    }
+}
+
+/// Section titles share the status palette with the row indicators.
+private struct QueueSectionMark: View {
+    let section: WorkQueueSection
+    var body: some View {
+        switch section {
+        case .attention:
+            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+        case .review:
+            Image(systemName: "circlebadge.fill").foregroundStyle(.blue)
+        case .running:
+            Image(systemName: "circle.dotted").foregroundStyle(.tertiary)
+        case .other:
+            Image(systemName: "tray").foregroundStyle(.tertiary)
+        }
     }
 }
