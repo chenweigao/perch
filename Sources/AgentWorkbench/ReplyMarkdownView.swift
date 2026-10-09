@@ -251,6 +251,16 @@ enum ReplyTextAttributes {
         }
         return result
     }
+
+    /// Matches `SelectableReplyText(_:font:lineSpacing:)` so native and SwiftUI code
+    /// cards measure identical text.
+    static func code(_ source: String) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 5
+        return NSAttributedString(string: source, attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
+        ])
+    }
 }
 
 private struct ReplyText: View {
@@ -461,15 +471,17 @@ private struct NativeAssistantActions: View {
 
 final class NativeAssistantMessageView: NSView {
     private static var recycled: [NativeAssistantMessageView] = []
-    private var texts: [ReplyTextView] = []
     private let links = SelectableReplyText.Coordinator()
+    private let stack: NativeAssistantStackView
     private let actions = NSHostingView(rootView: NativeAssistantActions())
     override var isFlipped: Bool { true }
 
     override init(frame frameRect: NSRect) {
+        stack = NativeAssistantStackView(compact: false, links: links)
         super.init(frame: frameRect)
         actions.sizingOptions = []
         actions.safeAreaRegions = []
+        addSubview(stack)
         addSubview(actions)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -482,46 +494,34 @@ final class NativeAssistantMessageView: NSView {
     static func recycle(_ view: NativeAssistantMessageView) {
         view.removeFromSuperview()
         view.actions.rootView = NativeAssistantActions()
-        for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
-        while view.texts.count > 8 {
-            let text = view.texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
-        }
+        // Block containers are torn down; their text views return to the shared pool
+        // cleared of content and selection, so recycled shells hold no conversation data.
+        view.stack.teardown()
         if recycled.count < 16 { recycled.append(view) }
     }
-    func update(_ content: [NSAttributedString], source: String, dark: Bool, enabled: Bool = true) {
+    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
-        while texts.count > content.count {
-            let text = texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
-        }
-        while texts.count < content.count {
-            let text = SelectableReplyText.acquire(delegate: links)
-            text.isConversationBodyText = true
-            texts.append(text); addSubview(text)
-        }
-        for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
+        stack.update(blocks)
         if actions.rootView.source != source || actions.rootView.enabled != enabled {
             actions.rootView = NativeAssistantActions(source: source, enabled: enabled)
         }
     }
     func measure(width: CGFloat) -> CGSize {
-        CGSize(width: width, height: texts.reduce(24) { $0 + $1.measure(width: width).height + 12 })
+        CGSize(width: width, height: stack.contentHeight(width: width) + 12 + 24)
     }
     func place(width: CGFloat) {
-        var y: CGFloat = 0
-        for text in texts {
-            let height = text.measure(width: width).height
-            let frame = CGRect(x: 0, y: y, width: width, height: height)
-            if text.frame != frame { text.frame = frame }
-            y += height + 12
-        }
-        let frame = CGRect(x: 0, y: y, width: 24, height: 24)
+        let content = stack.contentHeight(width: width)
+        let stackFrame = CGRect(x: 0, y: 0, width: width, height: content)
+        if stack.frame != stackFrame { stack.frame = stackFrame }
+        stack.place(width: width)
+        let frame = CGRect(x: 0, y: content + 12, width: 24, height: 24)
         if actions.frame != frame { actions.frame = frame }
     }
     #if TRANSCRIPT_CHECKS
     static var poolState: [String: Any] {
-        ["rows": recycled.count, "texts": recycled.map { $0.texts.count }.max() ?? 0,
+        ["rows": recycled.count,
          "cleared": recycled.allSatisfy { view in
-             view.actions.rootView.source == nil && view.texts.allSatisfy { $0.string.isEmpty && $0.selectedRange().length == 0 }
+             view.actions.rootView.source == nil && view.stack.blocks.isEmpty && view.stack.textViews().isEmpty
          }]
     }
     #endif

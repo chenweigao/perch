@@ -1080,17 +1080,21 @@ private final class ConversationEntryController: NSViewController {
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
         return NativeUserMessageView.content(part.text ?? "")
     }
-    private func nativeAssistantContent() -> (source: String, paragraphs: [NSAttributedString])? {
+    private func nativeAssistantContent() -> (source: String, blocks: [NativeAssistantBlock])? {
         #if TRANSCRIPT_CHECKS
         if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_ROWS"] == "0" { return nil }
+        let allowsRichBlocks = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_BLOCKS"] != "0"
+        #else
+        let allowsRichBlocks = true
         #endif
         guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
               content.entry.presentation == .message, content.entry.messages.count == 1,
               let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
-              let source = part.text, let paragraphs = NativeParagraphContent.make(source) else { return nil }
-        return (source, paragraphs)
+              let source = part.text,
+              let blocks = NativeAssistantContent.make(source, allowsRichBlocks: allowsRichBlocks) else { return nil }
+        return (source, blocks)
     }
     private func setRoot() {
         if let paragraphs = nativeUserContent() {
@@ -1113,7 +1117,7 @@ private final class ConversationEntryController: NSViewController {
                 nativeAssistant = NativeAssistantMessageView.acquire()
                 if isViewLoaded { view.addSubview(nativeAssistant!) }
             }
-            nativeAssistant!.update(content.paragraphs, source: content.source,
+            nativeAssistant!.update(content.blocks, source: content.source,
                                     dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled)
             #if TRANSCRIPT_CHECKS
             NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())

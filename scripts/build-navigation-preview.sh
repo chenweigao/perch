@@ -15,6 +15,7 @@ app_files=(
      Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/ReplyMarkdownView.swift
+    Sources/AgentWorkbench/NativeAssistantBlocks.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
     Sources/AgentWorkbench/ConversationActivityBar.swift
     Sources/AgentWorkbench/WorkbenchGlass.swift
