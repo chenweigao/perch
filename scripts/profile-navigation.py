@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("mode", choices=["reading", "scroll", "small-scroll", "roundtrip", "interactions", "anchor", "turns", "resource", "soak", "disclosure"])
+parser.add_argument("mode", choices=["reading", "fast-scroll", "scroll", "small-scroll", "roundtrip", "interactions", "anchor", "turns", "resource", "soak", "disclosure"])
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a fixed A/B fixture build")
 parser.add_argument("--image-fixture", type=Path, help="Include the same local attachment in each fixture history")

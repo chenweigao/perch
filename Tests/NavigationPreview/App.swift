@@ -333,6 +333,66 @@ final class NavigationRunner {
                 "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate"]
     }
 
+    /// Paced main-actor work, not hardware event delivery or compositor FPS.
+    func fastScroll() async throws -> [String: Any] {
+        let target = model.scope.sessions[0].id
+        try model.warm([target])
+        guard let host = model.host else { throw NavigationError("missing host") }
+        _ = try await switchTo(target, host: host)
+        guard let scroll = findScrollView(host) else { throw NavigationError("missing scroll") }
+        let hz = Double(ProcessInfo.processInfo.environment["NAVIGATION_SCROLL_HZ"] ?? "120") ?? 120
+        let budget = 1000 / hz
+        var phases: [[String: Any]] = []
+        for phase in ["cold-down", "revisit-up", "hot-local"] {
+            NavigationRenderMetrics.stages = [:]
+            var times: [Double] = [], delays: [Double] = []
+            var heightChanges = 0, corrections = 0, missingRows = 0, boundaryPasses = 0
+            var nextTick = CACurrentMediaTime()
+            var previousHeight = scroll.documentView?.bounds.height ?? 0
+            for step in 0..<600 {
+                let remaining = nextTick - CACurrentMediaTime()
+                if remaining > 0 { try await Task.sleep(for: .seconds(remaining)) }
+                let start = CACurrentMediaTime()
+                delays.append(max(0, start - nextTick) * 1000)
+                let end = max(0, (scroll.documentView?.bounds.height ?? 0) - scroll.contentView.bounds.height)
+                let y: CGFloat
+                if phase == "cold-down" { y = min(end, scroll.contentView.bounds.minY + scroll.contentView.bounds.height) }
+                else if phase == "revisit-up" { y = max(0, scroll.contentView.bounds.minY - scroll.contentView.bounds.height) }
+                else { y = CGFloat(step % 24 < 12 ? step % 24 : 24 - step % 24) * 24 }
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                await withCheckedContinuation { c in DispatchQueue.main.async { c.resume() } }
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+                times.append((CACurrentMediaTime() - start) * 1000)
+                if abs(scroll.contentView.bounds.minY - y) > 1 { corrections += 1 }
+                let height = scroll.documentView?.bounds.height ?? 0
+                let stableHeight = height == previousHeight
+                if !stableHeight { heightChanges += 1 }; previousHeight = height
+                if !ConversationTranscript.missingVisibleRows(in: scroll).isEmpty { missingRows += 1 }
+                nextTick = start + 1 / hz
+                if phase == "hot-local" && step == 239 { break }
+                if phase == "cold-down" {
+                    let committedEnd = max(0, height - scroll.contentView.bounds.height)
+                    boundaryPasses = abs(scroll.contentView.bounds.minY - committedEnd) < 1 && stableHeight ? boundaryPasses + 1 : 0
+                    if boundaryPasses == 3 { break }
+                }
+                if phase == "revisit-up" && scroll.contentView.bounds.minY <= 1 { break }
+            }
+            if phase == "cold-down" && boundaryPasses != 3 { throw NavigationError("fast scroll did not settle at the tail") }
+            if phase == "revisit-up" && scroll.contentView.bounds.minY > 1 { throw NavigationError("fast scroll did not reach the top") }
+            if missingRows != 0 { throw NavigationError("fast scroll left visible rows unmounted") }
+            phases.append(["phase": phase, "work_ms": statistics(times), "schedule_delay_ms": statistics(delays),
+                "over_budget": times.filter { $0 > budget }.count, "samples_ms": times,
+                "height_changes": heightChanges, "position_corrections": corrections,
+                "missing_visible_row_samples": missingRows, "render_stages": NavigationRenderMetrics.report,
+                "resident_mb": residentMB(), "final_y": scroll.contentView.bounds.minY,
+                "final_document_height": scroll.documentView?.bounds.height ?? 0,
+                "retained_hosts": ConversationTranscript.retainedHosts(in: scroll)?.retained ?? 0])
+        }
+        return ["cadence_hz": hz, "budget_ms": budget, "phases": phases,
+                "boundary": "paced programmatic main-actor scroll work; excludes hardware input and compositor presentation"]
+    }
+
     /// Traverse in half-viewport increments, so every turn must be observed in
     /// real mounted NSTextViews. Re-read document geometry as rows are measured.
     /// Timing is separate from the text traversal and coverage assertions.
@@ -1147,6 +1207,7 @@ struct NavigationPreviewApp: App {
             else if mode == "search" { report.merge(try await runner.readingInteractions(searchOnly: true)) { a, _ in a } }
             else if mode == "interactions" { report.merge(try await runner.readingInteractions()) { a, _ in a } }
             else if mode == "anchor" { report.merge(try await runner.prependAnchor()) { a, _ in a } }
+            else if mode == "fast-scroll" { report.merge(try await runner.fastScroll()) { a, _ in a } }
             else if mode == "scroll" { report.merge(try await runner.scrollFrames()) { a, _ in a } }
             else if mode == "soak" {
                 let seconds = Double(ProcessInfo.processInfo.environment["NAVIGATION_SOAK_SECONDS"] ?? "1260") ?? 1_260
