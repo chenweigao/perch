@@ -386,8 +386,19 @@ final class NativeUserMessageView: NSView {
     private static var recycled: [NativeUserMessageView] = []
     private var texts: [ReplyTextView] = []
     private let links = SelectableReplyText.Coordinator()
-    private var bubble = CGRect.zero
+    private let bubbleBackground = NSView()
     override var isFlipped: Bool { true }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        #if TRANSCRIPT_CHECKS
+        bubbleBackground.identifier = NSUserInterfaceItemIdentifier("native-user-bubble-background")
+        #endif
+        bubbleBackground.wantsLayer = true
+        bubbleBackground.layer?.cornerRadius = 12
+        addSubview(bubbleBackground)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     static func content(_ source: String) -> [NSAttributedString]? { NativeParagraphContent.make(source) }
     static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
@@ -403,6 +414,9 @@ final class NativeUserMessageView: NSView {
     }
     func update(_ content: [NSAttributedString], dark: Bool) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            bubbleBackground.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.035).cgColor
+        }
         while texts.count > content.count {
             let text = texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
         }
@@ -433,11 +447,7 @@ final class NativeUserMessageView: NSView {
             y += size.height + 12
         }
         let next = CGRect(x: x, y: 10, width: layout.bubbleWidth, height: measure(width: width).height - 10)
-        if next != bubble { bubble = next; needsDisplay = true }
-    }
-    override func draw(_ dirtyRect: NSRect) {
-        NSColor.labelColor.withAlphaComponent(0.035).setFill()
-        NSBezierPath(roundedRect: bubble, xRadius: 12, yRadius: 12).fill()
+        if bubbleBackground.frame != next { bubbleBackground.frame = next }
     }
 }
 

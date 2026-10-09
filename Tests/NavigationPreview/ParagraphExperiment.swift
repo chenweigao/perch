@@ -191,6 +191,16 @@ extension NavigationRunner {
                             await withCheckedContinuation { c in DispatchQueue.main.async { c.resume() } }
                             view.layoutSubtreeIfNeeded(); view.displayIfNeeded(); CATransaction.flush()
                         }
+                        if isNative && !assistant {
+                            guard let background = native.subviews.first(where: { $0.identifier?.rawValue == "native-user-bubble-background" }),
+                                  let cgColor = background.layer?.backgroundColor,
+                                  let color = NSColor(cgColor: cgColor)?.usingColorSpace(.deviceRGB),
+                                  color.alphaComponent >= 0.03,
+                                  abs(color.redComponent - (dark ? 1 : 0)) <= 0.05,
+                                  background.frame.width > 0, background.frame.height > 0 else {
+                                throw NavigationError("Native user bubble background is not visibly rendered")
+                            }
+                        }
                         heights.append(size.height)
                         var positions: [String: CGPoint] = [:]
                         for marker in markers {
