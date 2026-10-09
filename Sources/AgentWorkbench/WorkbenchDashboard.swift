@@ -350,59 +350,76 @@ struct QueueRow<Actions: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 0) {
-                Button(action: onOpen) {
-                    HStack(spacing: 14) {
-                        SessionStatusIndicator(item: item).frame(width: 17, height: 16).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
-                            Text(metadata).font(.system(size: 11)).foregroundStyle(.secondary)
-                                .lineLimit(1).truncationMode(.middle)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                        if let time {
-                            Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary).fixedSize()
-                        }
-                    }.padding(.horizontal, 8).padding(.top, 13).padding(.bottom, 7).frame(minHeight: 58).contentShape(Rectangle())
-                }.buttonStyle(.plain).disabled(!item.online)
-                    .accessibilityLabel([item.title, groupBadge, metadata, time].compactMap { $0 }.joined(separator: "，"))
-                if item.canMarkReviewed && item.online {
-                    Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
-                        .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 8)
-                }
-            }.opacity(item.online ? 1 : 0.55)
-            membershipControls.padding(.leading, 39).padding(.trailing, 8).padding(.bottom, 12)
-        }.background(hovered && item.online ? Color.primary.opacity(0.025) : .clear, in: RoundedRectangle(cornerRadius: 6))
+        HStack(alignment: .top, spacing: 12) {
+            SessionStatusIndicator(item: item).frame(width: 17, height: 16).padding(.top, 2).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                HStack(spacing: 6) {
+                    Text(metadata).lineLimit(1).truncationMode(.middle).layoutPriority(-1)
+                    membershipControls
+                }.font(.system(size: 11)).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            if let time {
+                Text(time).font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).fixedSize()
+                    .padding(.top, 2)
+                    .opacity(hovered && showsHoverAction ? 0 : 1)
+            }
+            if showsHoverAction {
+                Button("已查看", action: onMarkReviewed).buttonStyle(.borderless)
+                    .font(.system(size: 11)).padding(.top, 2).fixedSize()
+                    .opacity(hovered ? 1 : 0)
+            }
+        }.padding(.horizontal, 10).padding(.vertical, 11)
+            .opacity(item.online ? 1 : 0.55)
+            .contentShape(Rectangle())
+            .onTapGesture { if item.online { onOpen() } }
+            .background(hovered && item.online ? Color.primary.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 8))
             .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
             .onHover { hovered = $0 }
             .contextMenu { actions }
             .help(tooltip)
+            .accessibilityElement(children: .contain)
+            .accessibilityAction(named: Text("打开会话")) { if item.online { onOpen() } }
     }
 
-    private var membershipControls: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder").foregroundStyle(.secondary).accessibilityHidden(true)
-            if let first = groups.first {
-                Text("任务组").foregroundStyle(.secondary)
-                Button { onOpenGroup(first.id) } label: {
-                    Text(first.name).lineLimit(1).truncationMode(.middle)
-                }.buttonStyle(.link).help(first.name)
-                    .accessibilityLabel("打开任务组：\(first.name)")
-                if groups.count > 1 {
-                    Menu {
-                        ForEach(groups.dropFirst()) { group in
-                            Button(group.name) { onOpenGroup(group.id) }
-                        }
-                    } label: { Text("另 \(groups.count - 1) 组") }
-                        .menuStyle(.borderlessButton).fixedSize()
+    private var showsHoverAction: Bool { item.canMarkReviewed && item.online }
+
+    /// Group membership rides the metadata line instead of a full-width third row;
+    /// every row still states its group, and ungrouped rows keep a visible action.
+    @ViewBuilder private var membershipControls: some View {
+        if let first = groups.first {
+            Button { onOpenGroup(first.id) } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "folder").font(.system(size: 9)).accessibilityHidden(true)
+                    Text(first.name).lineLimit(1).truncationMode(.middle).frame(maxWidth: 140)
                 }
-                Button("管理归属", action: onManageGroups).buttonStyle(.link).foregroundStyle(.secondary).fixedSize()
-            } else {
-                Text("未归组").foregroundStyle(.secondary)
-                Button("关联任务组", action: onManageGroups).buttonStyle(.link)
+            }.buttonStyle(QueueRowLinkStyle()).fixedSize().help(first.name)
+                .accessibilityLabel("打开任务组：\(first.name)")
+            if groups.count > 1 {
+                Menu {
+                    ForEach(groups.dropFirst()) { group in
+                        Button(group.name) { onOpenGroup(group.id) }
+                    }
+                } label: { Text("另 \(groups.count - 1) 组") }
+                    .menuStyle(.borderlessButton).fixedSize()
             }
-            Spacer(minLength: 0)
-        }.font(.system(size: 11))
+            Button("管理归属", action: onManageGroups).buttonStyle(QueueRowLinkStyle()).fixedSize()
+                .opacity(hovered ? 1 : 0)
+        } else {
+            Text("未归组").foregroundStyle(.tertiary)
+            Button("关联任务组", action: onManageGroups).buttonStyle(QueueRowLinkStyle()).fixedSize()
+        }
     }
 
+}
+
+/// Inline row links stay in the quiet palette; only hover asks for attention.
+private struct QueueRowLinkStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(hovered || configuration.isPressed ? Color.primary : Color.secondary)
+            .underline(hovered)
+            .onHover { hovered = $0 }
+    }
 }

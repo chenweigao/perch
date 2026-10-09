@@ -31,8 +31,13 @@ private let hostNames = Dictionary(uniqueKeysWithValues: demoHosts.map { ($0.id,
 }
 
 private struct DashboardPreview: View {
-    @State private var inbox = false
-    @State private var scenario = "日常"
+    // Launch arguments for deterministic screenshots: `-scenario <名称>` and `-inbox`.
+    private static func argument(_ name: String) -> String? {
+        guard let index = CommandLine.arguments.firstIndex(of: name), index + 1 < CommandLine.arguments.count else { return nil }
+        return CommandLine.arguments[index + 1]
+    }
+    @State private var inbox = CommandLine.arguments.contains("-inbox")
+    @State private var scenario = argument("-scenario") ?? "日常"
     @State private var reviewed: Set<String> = []
     @State private var notice: String?
     @State private var scope = DashboardScope()
@@ -118,7 +123,7 @@ private struct DashboardPreview: View {
                     if facet.kind == .group { scope.groupID = nil } else { scope.hostID = nil }
                 },
                 onClearAllScopes: { scope = DashboardScope() })
-                .background(.white)
+                .background(.white).tint(Color.primary)
         }.alert("预览操作", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("好") { notice = nil }
         } message: { Text(notice ?? "") }
