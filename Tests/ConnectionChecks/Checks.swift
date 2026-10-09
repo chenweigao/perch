@@ -30,6 +30,8 @@ private final class TransportFixture {
     var abortedTurns: [(String, String?)] = []
     var holdSnapshots = false
     var failSnapshot = false
+    /// Models the bridge's `unchanged` delta answer: delta reads carry no payload.
+    var unchangedSnapshots = false
     var snapshotRequests: [String] = []
     var pendingSnapshots: [(CheckedContinuation<Data, Error>, Data)] = []
     var returnedSnapshots = 0
@@ -99,6 +101,9 @@ private final class TransportFixture {
             let id = parts[1]
             snapshotRequests.append(id)
             if failSnapshot { throw WorkbenchError("snapshot unavailable") }
+            if unchangedSnapshots && path.contains("revision=") {
+                return try JSONSerialization.data(withJSONObject: ["unchanged": true])
+            }
             result = sessions[id]!
             result["revision"] = snapshotRequests.count
             result["messages"] = []; result["interactions"] = []
@@ -208,8 +213,43 @@ struct ConnectionChecks {
     }
 
     @MainActor
+    static func checkIdleSnapshotBackoff() async throws {
+        let fixture = TransportFixture()
+        fixture.unchangedSnapshots = true
+        let client = NativeAgentConnection(host: SSHHost(name: "Backoff", destination: "fixture"), transport: fixture.request)
+        try await client.refresh()
+        client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        let started = Date()
+        let before = fixture.snapshotRequests.count
+        // 24s of unchanged delta reads: t=0 catches up the selection, then +2s, +4s,
+        // then +8s — reads land at 0, 2, 6, 14, 22.
+        for tick in 0..<60 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        FileHandle.standardError.write(Data("phase1 count=\(fixture.snapshotRequests.count - before)\n".utf8))
+        precondition(fixture.snapshotRequests.count - before == 5,
+                     "Unchanged idle reads should back off 2s/4s/8s, got \(fixture.snapshotRequests.count - before)")
+        // A changed answer resets the cadence to 2s: reads at 30, 32, 34.
+        fixture.unchangedSnapshots = false
+        for tick in 60..<90 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        let afterChange = fixture.snapshotRequests.count - before
+        FileHandle.standardError.write(Data("phase2 count=\(afterChange)\n".utf8))
+        precondition(afterChange == 8, "A changed snapshot must reset the idle interval, got \(afterChange)")
+        // A busy session never backs off.
+        fixture.sessions["a"]?["busy"] = true
+        try await client.refresh()
+        let busyBefore = fixture.snapshotRequests.count
+        for tick in 90..<100 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        FileHandle.standardError.write(Data("phase3 count=\(fixture.snapshotRequests.count - busyBefore)\n".utf8))
+        precondition(fixture.snapshotRequests.count - busyBefore == 10, "Busy sessions keep every tick")
+        client.disconnect()
+        print("PASS: idle unchanged reads back off 2s/4s/8s; change and busy reset to full cadence")
+    }
+
+    @MainActor
     static func main() async throws {
+        setbuf(stdout, nil)
         try await checkIdleSnapshotPolling()
+        try await checkIdleSnapshotBackoff()
         try await checkNativeLoading()
         try await checkNativeObservation()
         try await checkKimiTaskLaunch()
