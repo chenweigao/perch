@@ -70,7 +70,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                        group == nil || hasSessionSearch || context.scope.facets.contains(where: { $0.kind == .host }) { emptyState(empty) }
                     if !projection.attention.isEmpty { section(projection.attention, limit: 3) }
                     groupOverview
-                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(.link) }
+                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(QuietLinkStyle()) }
                     if !changes.isEmpty { changeSummary }
                     groupProgress
                     if !projection.review.isEmpty { section(projection.review, limit: 5) }
@@ -80,7 +80,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                             HStack {
                                 Text("最近会话").accessibilityAddTraits(.isHeader)
                                 Spacer()
-                                if group == nil { Button("查看全部", action: onShowAll).buttonStyle(.link) }
+                                if group == nil { Button("查看全部", action: onShowAll).buttonStyle(QuietLinkStyle()) }
                             }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 8)
                             ForEach(projection.recent) { row($0, in: .other) }
                             if group != nil && projection.other.count > projection.recent.count {
@@ -132,9 +132,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
     private var changeSummary: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("新进展 · \(changes.count)").font(.system(size: 13, weight: .medium))
+                Label("新进展 · \(changes.count)", systemImage: "sparkle")
+                    .font(.system(size: 12, weight: .medium))
                 Spacer()
-                if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(.link) }
+                if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(QuietLinkStyle()) }
             }
             Text("自上次确认后新增或变化的请求与结果；首次使用会包含当前事项。")
                 .font(.caption).foregroundStyle(.secondary)
@@ -145,10 +146,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         Spacer()
                         Text(LocalizedStringKey(item.section.rawValue)).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(ChangeRowStyle())
             }
             if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.caption).foregroundStyle(.secondary) }
         }.font(.system(size: 12))
+            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private var title: LocalizedStringKey {
@@ -162,7 +165,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
         VStack(alignment: .leading, spacing: 9) {
             if let group, !attentionOnly {
                 if let facet = context.scope.facets.first(where: { $0.kind == .group }) {
-                    Button("工作台") { onClearScope(facet) }.buttonStyle(.link).font(.system(size: 12))
+                    Button("工作台") { onClearScope(facet) }.buttonStyle(QuietLinkStyle()).font(.system(size: 12))
                 }
                 Text(group.name).font(.system(size: 25, weight: .semibold)).textSelection(.enabled)
             } else { Text(title).font(.system(size: 25, weight: .semibold)) }
@@ -201,7 +204,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
             if visibleFacets.count > 1 {
-                Button("全部清除", action: onClearAllScopes).buttonStyle(.link).font(.system(size: 11))
+                Button("全部清除", action: onClearAllScopes).buttonStyle(QuietLinkStyle()).font(.system(size: 11))
             }
         }
     }
@@ -245,7 +248,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     Text("\(value.items.count)").foregroundStyle(.tertiary)
                     Spacer()
                     if value.section == .attention {
-                        Button("进入待处理", action: onShowInbox).buttonStyle(.link)
+                        Button("进入待处理", action: onShowInbox).buttonStyle(QuietLinkStyle())
                     }
                 }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
             }
@@ -426,7 +429,7 @@ struct QueueRow<Actions: View>: View {
                     Image(systemName: "folder").font(.system(size: 9)).accessibilityHidden(true)
                     Text(first.name).lineLimit(1).truncationMode(.middle).frame(maxWidth: 140)
                 }
-            }.buttonStyle(QueueRowLinkStyle()).fixedSize().help(first.name)
+            }.buttonStyle(QuietLinkStyle()).fixedSize().help(first.name)
                 .accessibilityLabel("打开任务组：\(first.name)")
             if groups.count > 1 {
                 Menu {
@@ -436,18 +439,18 @@ struct QueueRow<Actions: View>: View {
                 } label: { Text("另 \(groups.count - 1) 组") }
                     .menuStyle(.borderlessButton).fixedSize()
             }
-            Button("管理归属", action: onManageGroups).buttonStyle(QueueRowLinkStyle()).fixedSize()
+            Button("管理归属", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
                 .opacity(hovered ? 1 : 0)
         } else {
             Text("未归组").foregroundStyle(.tertiary)
-            Button("关联任务组", action: onManageGroups).buttonStyle(QueueRowLinkStyle()).fixedSize()
+            Button("关联任务组", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
         }
     }
 
 }
 
-/// Inline row links stay in the quiet palette; only hover asks for attention.
-private struct QueueRowLinkStyle: ButtonStyle {
+/// Inline links stay in the quiet palette; only hover asks for attention.
+private struct QuietLinkStyle: ButtonStyle {
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -492,5 +495,17 @@ private extension DashboardEmptyState {
         case .nothingPending: return "checkmark.circle"
         case .noMatches: return "line.3.horizontal.decrease.circle"
         }
+    }
+}
+
+/// Rows inside the change card light up on hover instead of staying flat.
+private struct ChangeRowStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.07 : hovered ? 0.04 : 0),
+                        in: RoundedRectangle(cornerRadius: 6))
+            .onHover { hovered = $0 }
     }
 }
