@@ -178,9 +178,11 @@ public enum RemoteSetup {
     public static func directoryListCommand(_ directory: String) -> String {
         // NUL-separated names preserve whitespace and shell metacharacters.
         let root = SSHCommand.quote(directory)
-        return "test -d " + root + " && test -r " + root + " && test -x " + root
+        let script = "test -d " + root + " && test -r " + root + " && test -x " + root
             + " && for entry in " + root + "/* " + root + "/.[!.]* " + root + "/..?*; do [ -d \"$entry\" ] && printf '%s\\0' \"$entry\"; done;"
             + " test -d " + root + " && test -r " + root + " && test -x " + root
+        // SSH uses the login shell, which may reject unmatched globs (zsh).
+        return "/bin/sh -c " + SSHCommand.quote(script)
     }
 
     public static func kimiStartCommand(binaryPath: String, port: Int) -> String {
