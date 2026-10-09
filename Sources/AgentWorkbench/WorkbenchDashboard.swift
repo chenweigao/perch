@@ -214,9 +214,15 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     @ViewBuilder private var summary: some View {
         if projection.sections.isEmpty && projection.other.isEmpty && !projection.offline.isEmpty {
-            Text("连接后查看最新进展")
+            HStack(spacing: 5) {
+                Image(systemName: "wifi.slash").foregroundStyle(.tertiary)
+                Text("连接后查看最新进展")
+            }
         } else if projection.attention.isEmpty {
-            Text("当前没有待处理事项")
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark.circle").foregroundStyle(.green)
+                Text("当前没有待处理事项")
+            }
         } else {
             Button(action: onShowInbox) {
                 summaryChip("exclamationmark.circle.fill", tint: .orange,
