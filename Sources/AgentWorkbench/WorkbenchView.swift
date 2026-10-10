@@ -176,6 +176,8 @@ private struct WorkbenchDetail: View {
                             onOpenGroup: { model.showHome(groupID: $0) },
                             onManageGroups: { model.groupingSession = $0 },
                             onForgetRestoration: { model.forgetRestoration($0) },
+                            onDismissRestoreReport: { model.dismissRestoreReport() },
+                            onOpenRestoreEntry: { model.openRestoreEntry($0) },
                             onUndoArchive: { model.undoBatchArchive() },
                             onRetryArchive: { model.retryBatchArchive() },
                             onStartLocal: { model.showLocalSetup = true },

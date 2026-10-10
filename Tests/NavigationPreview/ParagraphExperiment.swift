@@ -176,7 +176,7 @@ extension NavigationRunner {
                         if assistant { ReplyCopyButton(text: source) }
                     }.frame(width: width).environment(\.colorScheme, dark ? .dark : .light))
                     original.sizingOptions = []; original.safeAreaRegions = []
-                    let attributed = assistant ? nil : NativeParagraphContent.make(source)
+                    let attributed = assistant ? nil : NativeUserMessageView.content(source)
                     let blocks = assistant ? NativeAssistantContent.make(source) : nil
                     guard attributed != nil || blocks != nil else { throw NavigationError("Native \(role) fixture rejected admitted content") }
                     let userView = assistant ? nil : NativeUserMessageView.acquire()
@@ -211,6 +211,17 @@ extension NavigationRunner {
                                   abs(color.redComponent - (dark ? 1 : 0)) <= 0.05,
                                   background.frame.width > 0, background.frame.height > 0 else {
                                 throw NavigationError("Native user bubble background is not visibly rendered")
+                            }
+                            if source == cases[0].0 {
+                                let expectedHeight = UserMessageStyle.lineHeight + UserMessageStyle.verticalPadding * 2
+                                guard let style = attributed?.first?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle,
+                                      let text = texts(native).first,
+                                      abs(style.minimumLineHeight - UserMessageStyle.lineHeight) <= 0.01,
+                                      abs(background.frame.height - expectedHeight) <= 1,
+                                      abs(text.frame.minY - background.frame.minY - UserMessageStyle.verticalPadding) <= 1,
+                                      abs(background.frame.maxY - text.frame.maxY - UserMessageStyle.verticalPadding) <= 1 else {
+                                    throw NavigationError("Native user bubble lost its compact 20pt line height or symmetric 8pt insets")
+                                }
                             }
                         }
                         heights.append(size.height)
@@ -248,7 +259,12 @@ extension NavigationRunner {
                 throw NavigationError("Rich blocks were admitted with the A/B switch off")
             }
         }
-        return ["cases": observations, "complex_markdown_retains_swiftui": true, "links_and_unicode_copy": true]
+        var report: [String: Any] = ["cases": observations, "complex_markdown_retains_swiftui": true, "links_and_unicode_copy": true]
+        if !assistant {
+            report["user_line_height"] = UserMessageStyle.lineHeight
+            report["single_line_bubble_height"] = UserMessageStyle.lineHeight + UserMessageStyle.verticalPadding * 2
+        }
+        return report
     }
 
     func nativeAssistantContracts() async throws -> [String: Any] {

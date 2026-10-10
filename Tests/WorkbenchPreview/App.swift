@@ -31,8 +31,13 @@ private let hostNames = Dictionary(uniqueKeysWithValues: demoHosts.map { ($0.id,
 }
 
 private struct DashboardPreview: View {
-    @State private var inbox = false
-    @State private var scenario = "日常"
+    // Launch arguments for deterministic screenshots: `-scenario <名称>` and `-inbox`.
+    private static func argument(_ name: String) -> String? {
+        guard let index = CommandLine.arguments.firstIndex(of: name), index + 1 < CommandLine.arguments.count else { return nil }
+        return CommandLine.arguments[index + 1]
+    }
+    @State private var inbox = CommandLine.arguments.contains("-inbox")
+    @State private var scenario = argument("-scenario") ?? "日常"
     @State private var reviewed: Set<String> = []
     @State private var notice: String?
     @State private var scope = DashboardScope()
@@ -50,7 +55,7 @@ private struct DashboardPreview: View {
                 online: scenario != "离线", section: current, canMarkReviewed: current == .review,
                 updatedAt: now - age))
         }
-        if scenario == "需要处理" {
+        if scenario == "需要处理" || scenario == "新进展" {
             for index in 1...4 { add("approval-\(index)", "确认工具栏调整方案 \(index)", .attention, "Kimi · 等待确认", Double(index * 120)) }
             for index in 1...7 { add("result-\(index)", "检查侧栏交互 \(index)", .review, "Kimi · 结果待查看", Double(index * 180)) }
         }
@@ -73,6 +78,10 @@ private struct DashboardPreview: View {
                                    hasConfiguredEnvironment: scenario != "首次使用",
                                    filtered: !activeScope.isEmpty)
     }
+    private var changes: [WorkspaceSession] {
+        guard scenario == "新进展" else { return [] }
+        return sessions.filter { $0.section == .attention || $0.section == .review }
+    }
     var body: some View {
         WorkspaceSplitView(newConversation: { notice = "新建会话" }) {
             WorkspaceSidebarShell(page: inbox ? .inbox : .home,
@@ -91,7 +100,7 @@ private struct DashboardPreview: View {
         } actions: {
             HStack(spacing: 10) {
                 Picker("预览状态", selection: $scenario) {
-                    ForEach(["日常", "需要处理", "空待处理", "离线", "首次使用", "保存错误", "归档中"], id: \.self) { Text($0) }
+                    ForEach(["日常", "需要处理", "新进展", "空待处理", "离线", "首次使用", "保存错误", "归档中"], id: \.self) { Text($0) }
                 }.frame(width: 130)
                 Picker("任务组", selection: Binding(get: { scope.groupID }, set: { scope.groupID = $0 })) {
                     Text("全部任务组").tag(UUID?.none)
@@ -103,7 +112,9 @@ private struct DashboardPreview: View {
                 }.frame(width: 120)
             }
         } content: {
-            WorkbenchDashboard(attentionOnly: inbox, projection: projection,
+            WorkbenchDashboard(attentionOnly: inbox, changes: changes,
+                onAcknowledgeChanges: { notice = "已确认新进展" },
+                projection: projection,
                 context: DashboardContext(storageError: scenario == "保存错误" ? "工作台保存失败（示例）：修改尚未保存。" : nil,
                                           scope: activeScope),
                 isArchiving: scenario == "归档中", archiveResult: nil, onNewTask: { notice = "新建会话" },
@@ -118,7 +129,7 @@ private struct DashboardPreview: View {
                     if facet.kind == .group { scope.groupID = nil } else { scope.hostID = nil }
                 },
                 onClearAllScopes: { scope = DashboardScope() })
-                .background(.white)
+                .background(WorkbenchTheme.contentBackground).tint(WorkbenchTheme.accent)
         }.alert("预览操作", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("好") { notice = nil }
         } message: { Text(notice ?? "") }

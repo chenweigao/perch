@@ -16,6 +16,10 @@ final class NativeAgentConnection {
     private(set) var online = false {
         didSet { if online != oldValue { onOnlineChanged?() } }
     }
+    /// `online` marks the tunnel, not the data: the first catalog arrives one poll
+    /// later. Restore reporting waits for this flag so it never judges a session
+    /// against a stale pre-disconnect list.
+    private(set) var catalogSynced = false
     private(set) var wantsConnection = false
     var error: String?
     var actionError: String? {
@@ -107,7 +111,7 @@ final class NativeAgentConnection {
                 } catch is CancellationError { return }
                 catch {
                     guard generation == token else { return }
-                    online = false; self.error = error.localizedDescription; closeTunnel(); onSessionsChanged?()
+                    online = false; catalogSynced = false; self.error = error.localizedDescription; closeTunnel(); onSessionsChanged?()
                     do { try await Task.sleep(for: .seconds(3)) } catch { return }
                 }
             }
@@ -120,7 +124,7 @@ final class NativeAgentConnection {
         nextIdleSnapshotRefresh = .distantPast
         idleSnapshotInterval = 2
         wakePolling()
-        online = false; wantsConnection = false; error = nil; closeTunnel()
+        online = false; catalogSynced = false; wantsConnection = false; error = nil; closeTunnel()
     }
     /// User actions that change remote state or force refreshes wake the poll loop
     /// before its next scheduled deadline.
@@ -285,10 +289,13 @@ final class NativeAgentConnection {
         }
         if clocks != timings { timings = clocks }
         if let id = selectedID, !next.contains(where: { $0.id == id }) { conversation.select(nil) }
-        if next != sessions {
-            sessions = next
-            onSessionsChanged?()
-        }
+        let changed = next != sessions
+        if changed { sessions = next }
+        // The first successful read of this connection generation settles the
+        // catalog even when nothing moved; observers resolve restore outcomes on it.
+        let firstSync = !catalogSynced
+        catalogSynced = true
+        if changed || firstSync { onSessionsChanged?() }
         reconcileStops()
         nextCatalogRefresh = Date().addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
         try await refreshReceipts()

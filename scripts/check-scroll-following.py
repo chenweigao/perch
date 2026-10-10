@@ -13,7 +13,7 @@ BIN = pathlib.Path(subprocess.check_output(
     cwd=ROOT, text=True).strip())
 files = ["ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory", "ConversationPresentationEnvironment",
          "ActivitySummarySettings", "ActivitySummaryController",
-         "ConversationScrollControls", "ReplyMarkdownView", "KimiAttachmentView",
+         "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView",
          "ConversationActivityBar", "WorkbenchGlass", "WorkbenchTheme"]
 includes = ["-I", str(BIN / "Modules")]
 for path in ["swift-markdown/Sources/CAtomic/include", "swift-cmark/src/include", "swift-cmark/extensions/include"]:

@@ -63,8 +63,12 @@ struct ConversationScrollObserver: NSViewRepresentable {
                 }
             }
         }
+        /// Start loading before the reader hits the wall: one viewport ahead,
+        /// so a page arrives while the loaded remainder is still being read.
         private func loadIfNearTop() {
-            guard let scroll = enclosingScrollView, scroll.documentVisibleRect.minY <= 300 else { return }
+            guard let scroll = enclosingScrollView else { return }
+            let visible = scroll.documentVisibleRect
+            guard visible.minY <= max(480, visible.height) else { return }
             onNearTop()
         }
         private func resumeIfAtBottom() {
@@ -86,15 +90,16 @@ struct ReturnToLatestButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Image(systemName: "arrow.down")
                 if hasNewReply { Text("New reply") }
-            }.font(.system(size: 12, weight: .medium)).padding(.horizontal, 10).frame(height: 32)
+            }.font(.system(size: 12, weight: .medium))
+                .padding(.horizontal, hasNewReply ? 12 : 0)
+                .frame(width: hasNewReply ? nil : 30, height: 30)
                 .workbenchFloatingSurface()
-                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.primary.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(0.08)))
                 .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
         }.buttonStyle(.plain).help("Return to latest reply").accessibilityLabel("Return to latest reply")
-            .padding(.bottom, 8)
             .opacity(isVisible ? 1 : 0)
             .allowsHitTesting(isVisible).accessibilityHidden(!isVisible)
             .disabled(!isVisible)
@@ -129,7 +134,7 @@ struct ConversationScrollView<Content: View>: View {
                         }, onNearTop: onNearTop)
                     }
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
-                .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }))
+                .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }, onNearTop: onNearTop))
                 .overlay(alignment: .leading) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
                 }

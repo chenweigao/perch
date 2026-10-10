@@ -19,8 +19,8 @@ struct TaskGroupOverview: View {
                     Spacer()
                     Button(model.showAllTaskGroups ? "收起任务组" : "全部任务组") {
                         model.showAllTaskGroups.toggle()
-                    }.buttonStyle(.link)
-                    Button("新建任务组") { model.editGroup() }.buttonStyle(.link)
+                    }.buttonStyle(QuietLinkStyle())
+                    Button("新建任务组") { model.editGroup() }.buttonStyle(QuietLinkStyle())
                 }
                 if model.showAllTaskGroups {
                     TextField("搜索任务组", text: $query).textFieldStyle(.roundedBorder)
@@ -56,7 +56,7 @@ struct TaskGroupOverview: View {
                             }
                         }.font(.system(size: 12)).padding(.vertical, 12)
                             .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(GroupRowStyle())
                         .accessibilityIdentifier("workbench.group.\(summary.id)")
                         .contextMenu {
                             Button(summary.group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(summary.group) }
@@ -65,18 +65,51 @@ struct TaskGroupOverview: View {
                     Divider()
                 }
                 if !model.showAllTaskGroups && active.count > visible.count {
-                    Button("查看全部任务组") { model.showAllTaskGroups = true }.buttonStyle(.link)
+                    Button("查看全部任务组") { model.showAllTaskGroups = true }.buttonStyle(QuietLinkStyle())
                 }
             }.font(.system(size: 12))
         }
     }
     @ViewBuilder private func activity(_ value: TaskGroupSummary) -> some View {
-        if value.attentionCount > 0 { Text("\(value.attentionCount) 项等你处理").foregroundStyle(.orange) }
-        if value.reviewCount > 0 { Text("\(value.reviewCount) 项结果待查看").foregroundStyle(.secondary) }
-        if value.runningCount > 0 { Text("\(value.runningCount) 项运行中").foregroundStyle(.secondary) }
-        if value.unsyncedCount > 0 { Text("\(value.unsyncedCount) 项状态未同步").foregroundStyle(.secondary) }
+        if value.attentionCount > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                Text("\(value.attentionCount) 项等你处理")
+            }
+        }
+        if value.reviewCount > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "circlebadge.fill").foregroundStyle(.blue)
+                Text("\(value.reviewCount) 项结果待查看").foregroundStyle(.secondary)
+            }
+        }
+        if value.runningCount > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "circle.dotted").foregroundStyle(.tertiary)
+                Text("\(value.runningCount) 项运行中").foregroundStyle(.secondary)
+            }
+        }
+        if value.unsyncedCount > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "wifi.slash").foregroundStyle(.tertiary)
+                Text("\(value.unsyncedCount) 项状态未同步").foregroundStyle(.secondary)
+            }
+        }
         if value.attentionCount == 0 && value.reviewCount == 0 && value.runningCount == 0 && value.unsyncedCount == 0 {
             Text("当前没有待处理事项").foregroundStyle(.secondary)
         }
+    }
+}
+
+/// Goal rows keep text flush with the section header while the hover wash extends past it.
+private struct GroupRowStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 8)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.06 : hovered ? 0.03 : 0),
+                        in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, -8)
+            .onHover { hovered = $0 }
     }
 }

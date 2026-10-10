@@ -31,7 +31,7 @@ PLIST
 codesign --force --sign - "$app_dir"
 printf '%s\n' "$app_dir"
 if [[ "${1:-}" == "--check" ]]; then
-    for mode in collapse restore; do
+    for mode in collapse restore previewclick; do
         SIDEBAR_CHECK_MODE="$mode" "$app_dir/Contents/MacOS/SidebarPreview" \
             -ApplePersistenceIgnoreState YES -NSQuitAlwaysKeepsWindows NO
     done

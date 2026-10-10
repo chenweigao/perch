@@ -23,6 +23,16 @@ enum ReplyStyle {
     static let tableGeometry = ReplyTableGeometry(fontSize: tableCellSize)
 }
 
+enum UserMessageStyle {
+    static let lineHeight: CGFloat = 20
+    static let horizontalPadding: CGFloat = 14
+    static let verticalPadding: CGFloat = 8
+    static let cornerRadius: CGFloat = 12
+    static let maxWidthRatio: CGFloat = 0.85
+    static let topSpacing: CGFloat = 10
+    static let paragraphSpacing: CGFloat = 12
+}
+
 enum ReplyParagraphLayout {
     static let enabled: Bool = {
         #if TRANSCRIPT_CHECKS
@@ -203,6 +213,15 @@ private extension EnvironmentValues {
         set { self[ReplyInkKey.self] = newValue }
     }
 }
+private struct ReplyLineHeightKey: EnvironmentKey {
+    static let defaultValue = ReplyStyle.bodySize * ReplyStyle.lineHeightRatio
+}
+extension EnvironmentValues {
+    var replyLineHeight: CGFloat {
+        get { self[ReplyLineHeightKey.self] }
+        set { self[ReplyLineHeightKey.self] = newValue }
+    }
+}
 
 /// Both native user rows and SwiftUI Markdown share exact text attributes.
 enum ReplyTextAttributes {
@@ -265,6 +284,7 @@ enum ReplyTextAttributes {
 
 private struct ReplyText: View {
     @Environment(\.replyInk) private var ink
+    @Environment(\.replyLineHeight) private var defaultLineHeight
     let runs: [ReplyInline]
     var size: CGFloat = ReplyStyle.bodySize
     var weight: NSFont.Weight = .regular
@@ -273,9 +293,10 @@ private struct ReplyText: View {
     var followingParagraphs: [[ReplyInline]] = []
     var paragraphSpacing: CGFloat = 12
     var preservesSelectionOnAppend = false
+    private var resolvedLineHeight: CGFloat { lineHeight ?? defaultLineHeight }
     private var attributed: NSAttributedString {
         ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: size, weight: weight,
-                                      alignment: alignment, lineHeight: lineHeight,
+                                      alignment: alignment, lineHeight: resolvedLineHeight,
                                       paragraphSpacing: paragraphSpacing, ink: ink)
     }
     var body: some View {
@@ -284,7 +305,7 @@ private struct ReplyText: View {
                 let font = NSFont.systemFont(ofSize: size)
                 let naturalHeight = ceil(font.ascender - font.descender + font.leading)
                 // TextKit adds minimum-line-height leading above the glyph baseline.
-                return ceil(font.ascender) + max(0, (lineHeight ?? size * ReplyStyle.lineHeightRatio) - naturalHeight)
+                return ceil(font.ascender) + max(0, resolvedLineHeight - naturalHeight)
             }
             .frame(maxWidth: .infinity, alignment: alignment == .trailing ? .trailing : alignment == .center ? .center : .leading)
     }
@@ -376,7 +397,7 @@ struct SelectableReplyText: NSViewRepresentable {
 }
 
 enum NativeParagraphContent {
-    static func make(_ source: String) -> [NSAttributedString]? {
+    static func make(_ source: String, lineHeight: CGFloat? = nil) -> [NSAttributedString]? {
         let blocks = ReplyDocument.parse(source)
         var paragraphs: [[ReplyInline]] = []
         for block in blocks {
@@ -385,7 +406,7 @@ enum NativeParagraphContent {
         }
         guard !paragraphs.isEmpty else { return nil }
         return stride(from: 0, to: paragraphs.count, by: 8).map {
-            ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]))
+            ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]), lineHeight: lineHeight)
         }
     }
 }
@@ -405,12 +426,14 @@ final class NativeUserMessageView: NSView {
         bubbleBackground.identifier = NSUserInterfaceItemIdentifier("native-user-bubble-background")
         #endif
         bubbleBackground.wantsLayer = true
-        bubbleBackground.layer?.cornerRadius = 12
+        bubbleBackground.layer?.cornerRadius = UserMessageStyle.cornerRadius
         addSubview(bubbleBackground)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    static func content(_ source: String) -> [NSAttributedString]? { NativeParagraphContent.make(source) }
+    static func content(_ source: String) -> [NSAttributedString]? {
+        NativeParagraphContent.make(source, lineHeight: UserMessageStyle.lineHeight)
+    }
     static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
     static func recycle(_ view: NativeUserMessageView) {
         view.removeFromSuperview()
@@ -439,24 +462,29 @@ final class NativeUserMessageView: NSView {
         needsDisplay = true
     }
     private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
-        let ideal = (texts.map { $0.measure(width: nil).width }.max() ?? 0) + 28
-        let bubbleWidth = min(ideal, width * 0.85)
-        return (bubbleWidth, texts.map { $0.measure(width: max(1, bubbleWidth - 28)) })
+        let contentPadding = UserMessageStyle.horizontalPadding * 2
+        let ideal = (texts.map { $0.measure(width: nil).width }.max() ?? 0) + contentPadding
+        let bubbleWidth = min(ideal, width * UserMessageStyle.maxWidthRatio)
+        return (bubbleWidth, texts.map { $0.measure(width: max(1, bubbleWidth - contentPadding)) })
     }
     func measure(width: CGFloat) -> CGSize {
         let sizes = measurements(width: width).sizes
-        return CGSize(width: width, height: sizes.reduce(30) { $0 + $1.height } + CGFloat(max(0, sizes.count - 1)) * 12)
+        let textHeight = sizes.reduce(CGFloat.zero) { $0 + $1.height }
+        let gaps = CGFloat(max(0, sizes.count - 1)) * UserMessageStyle.paragraphSpacing
+        return CGSize(width: width, height: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding * 2 + textHeight + gaps)
     }
     func place(width: CGFloat) {
         let layout = measurements(width: width)
         let x = width - layout.bubbleWidth
-        var y: CGFloat = 20
+        var y = UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding
         for (text, size) in zip(texts, layout.sizes) {
-            let frame = CGRect(x: x + 14, y: y, width: max(1, layout.bubbleWidth - 28), height: size.height)
+            let frame = CGRect(x: x + UserMessageStyle.horizontalPadding, y: y,
+                               width: max(1, layout.bubbleWidth - UserMessageStyle.horizontalPadding * 2), height: size.height)
             if text.frame != frame { text.frame = frame }
-            y += size.height + 12
+            y += size.height + UserMessageStyle.paragraphSpacing
         }
-        let next = CGRect(x: x, y: 10, width: layout.bubbleWidth, height: measure(width: width).height - 10)
+        let height = measure(width: width).height - UserMessageStyle.topSpacing
+        let next = CGRect(x: x, y: UserMessageStyle.topSpacing, width: layout.bubbleWidth, height: height)
         if bubbleBackground.frame != next { bubbleBackground.frame = next }
     }
 }
