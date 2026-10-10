@@ -22,34 +22,37 @@ struct ConversationFindBar: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                TextField("Find in conversation", text: $query).textFieldStyle(.roundedBorder).focused($focused)
-                    .onSubmit { move(1) }.onChange(of: query) { _, _ in index = 0; updateSearch(preservingSelection: false); reveal(); publishHighlight() }
-                optionToggles
-                roleMenu
-                Text(hits.isEmpty ? "0 matches" : "\(min(index + 1, hits.count))/\(hits.count)").monospacedDigit()
-                Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").accessibilityLabel("Previous match").disabled(hits.isEmpty)
-                Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").accessibilityLabel("Next match").disabled(hits.isEmpty)
-                if hasOlder {
-                    Button(loadingOlder ? "Loading…" : "Search full history") {
-                        if model.showKimi { kimi.loadAllHistoryForSearch() } else { native.loadAllHistoryForSearch() }
-                    }.disabled(loadingOlder || !canLoadHistory)
-                }
-                Button(action: close) { Image(systemName: "xmark") }.help("Close find").accessibilityLabel("Close find")
-            }
+            controls
             if let error = result.queryError { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
             if hits.indices.contains(index) { Text(hits[index].excerpt).lineLimit(2).textSelection(.enabled).foregroundStyle(.secondary) }
             if hasOlder { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
         }.font(.system(size: 12)).padding(10).background(.regularMaterial)
             .onAppear { focused = true; updateSearch() }
-            .onChange(of: model.selectedReference) { _, _ in index = 0; options = ConversationFindOptions(); updateSearch(preservingSelection: false) }
+            .onChange(of: model.selectedReference) { old, _ in if let old { sessionChanged(from: old) } }
             .onChange(of: messages) { _, _ in updateSearch() }
             .onChange(of: running) { _, _ in updateSearch() }
             .onChange(of: hits.count) { _, count in index = min(index, max(0, count - 1)) }
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindNext"))) { notice in move(notice.object as? Int ?? 1) }
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchFocusFind"))) { _ in focused = true }
             .onExitCommand(perform: close)
+    }
+    private var controls: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+            TextField("Find in conversation", text: $query).textFieldStyle(.roundedBorder).focused($focused)
+                .onSubmit { move(1) }.onChange(of: query) { _, _ in index = 0; updateSearch(preservingSelection: false); reveal(); publishHighlight() }
+            optionToggles
+            roleMenu
+            Text(hits.isEmpty ? "0 matches" : "\(min(index + 1, hits.count))/\(hits.count)").monospacedDigit()
+            Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").accessibilityLabel("Previous match").disabled(hits.isEmpty)
+            Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").accessibilityLabel("Next match").disabled(hits.isEmpty)
+            if hasOlder {
+                Button(loadingOlder ? "Loading…" : "Search full history") {
+                    if model.showKimi { kimi.loadAllHistoryForSearch() } else { native.loadAllHistoryForSearch() }
+                }.disabled(loadingOlder || !canLoadHistory)
+            }
+            Button(action: close) { Image(systemName: "xmark") }.help("Close find").accessibilityLabel("Close find")
+        }
     }
     private var optionToggles: some View {
         HStack(spacing: 2) {
@@ -82,6 +85,15 @@ struct ConversationFindBar: View {
         updateSearch(preservingSelection: false)
         reveal()
         publishHighlight()
+    }
+    /// Switching sessions resets the bar and clears highlights left behind in
+    /// the outgoing session's transcript.
+    private func sessionChanged(from old: SessionReference) {
+        let kind = old.kind == .kimi ? "kimi" : "native"
+        let oldKey = "\(old.hostID.uuidString):\(kind):\(old.terminalID)"
+        let clear = ConversationHighlightUpdate(session: oldKey, query: "", options: ConversationFindOptions())
+        NotificationCenter.default.post(name: .init("PerchConversationHighlight"), object: clear)
+        index = 0; options = ConversationFindOptions(); updateSearch(preservingSelection: false)
     }
     private func updateSearch(preservingSelection: Bool = true) {
         let current = preservingSelection && hits.indices.contains(index) ? hits[index].id : nil
