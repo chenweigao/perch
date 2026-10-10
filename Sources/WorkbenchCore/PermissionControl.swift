@@ -72,7 +72,7 @@ public enum PermissionCatalog {
                 PermissionOption(id: "write", titleKey: "允许写入", detailKey: "允许工作区写入；其他敏感操作仍可能请求批准。", risk: .elevated),
                 PermissionOption(id: "yolo", titleKey: "自动执行", detailKey: "OMP 不再请求工具执行批准。", risk: .dangerous)
             ]
-        case .qoder:
+        case .qoder, .qoderintl:
             return [
                 PermissionOption(id: "default", titleKey: "默认确认", detailKey: "使用 Qoder 的默认权限策略。"),
                 PermissionOption(id: "acceptEdits", titleKey: "自动接受编辑", detailKey: "自动接受文件编辑，其他操作仍按 Qoder 策略确认。", risk: .elevated),
@@ -106,7 +106,7 @@ public enum PermissionCatalog {
         switch provider {
         case .kimi: return "manual"
         case .omp: return "always-ask"
-        case .qoder, .claude: return "default"
+        case .qoder, .qoderintl, .claude: return "default"
         case .dsh: return runtimeManaged
         case .codex: return "workspace-ask"
         case .terminal: return nil
@@ -116,7 +116,7 @@ public enum PermissionCatalog {
     public static func scope(for provider: SessionKind) -> PermissionChangeScope {
         switch provider {
         case .kimi: return .nextMessage
-        case .qoder, .claude: return .nextTurn
+        case .qoder, .qoderintl, .claude: return .nextTurn
         case .omp, .codex: return .newSession
         case .dsh, .terminal: return .runtimeManaged
         }

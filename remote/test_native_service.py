@@ -1331,6 +1331,20 @@ class SetupTests(unittest.TestCase):
             self.assertFalse(broker.setup_status('omp')['installed'])
             run.assert_not_called()
 
+    def test_qoderintl_uses_qodercli_and_intl_sdk(self):
+        calls = []
+        def which(binary):
+            calls.append(binary)
+            return '/fixture/' + binary if binary in ('qodercli', 'node') else None
+        with patch.object(broker.shutil, 'which', side_effect=which), patch.object(broker.subprocess, 'run', return_value=self.result('1.1.67')) as run:
+            status = broker.setup_status('qoderintl')
+        self.assertTrue(status['installed'])
+        self.assertEqual(run.call_count, 1)
+        self.assertNotIn('qoderclicn', calls)
+        self.assertFalse(status['sdkInstalled'])
+        self.assertEqual(status['modelCheck'], 'runtime-default')
+        self.assertEqual(broker.PERMISSION_DEFAULTS['qoderintl'], 'default')
+
     def test_empty_models_and_failed_version_are_not_ready(self):
         with patch.object(broker.shutil, 'which', return_value='/fixture/omp'), patch.object(broker.subprocess, 'run', side_effect=[self.result('18.1.16'), self.result('[]')]):
             self.assertEqual(broker.setup_status('omp')['modelCheck'], 'missing')

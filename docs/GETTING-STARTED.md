@@ -57,6 +57,7 @@ Host my-server
 | Kimi | Install CLI, sign in/configure models, start Kimi Web | CLI version, service authentication and protocol, configured models |
 | OMP | Install CLI, configure models, install bridge | CLI version, bridge health, fresh model catalog |
 | Qoder CN | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
+| Qoder | Install CLI (`curl -fsSL https://qoder.com/install | bash`), sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
 | Claude Code | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
 | DeepSeek | Install bridge with bundled dsh runtime; configure remote `DEEPSEEK_API_KEY` | Runtime version and credential presence in the bridge environment; models are read during the first ACP session handshake |
 | Herdr terminal | Install and start Herdr | Runtime and Unix socket forwarding; CLI agents inside terminals manage their own models |

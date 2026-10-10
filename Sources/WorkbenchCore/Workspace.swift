@@ -1,9 +1,9 @@
 import Foundation
 
 public enum SessionKind: String, Codable, Sendable {
-    case terminal, kimi, omp, qoder, dsh, codex, claude
+    case terminal, kimi, omp, qoder, qoderintl, dsh, codex, claude
     public var symbol: String {
-        [Self.terminal: "terminal", .kimi: "sparkles", .omp: "bolt", .qoder: "curlybraces",
+        [Self.terminal: "terminal", .kimi: "sparkles", .omp: "bolt", .qoder: "curlybraces", .qoderintl: "curlybraces",
          .dsh: "brain.head.profile", .codex: "chevron.left.forwardslash.chevron.right", .claude: "sparkle"][self]!
     }
     public var label: String {
@@ -12,6 +12,7 @@ public enum SessionKind: String, Codable, Sendable {
         case .kimi: return "Kimi"
         case .omp: return "OMP"
         case .qoder: return "Qoder CN"
+        case .qoderintl: return "Qoder"
         case .dsh: return "DeepSeek"
         case .codex: return "Codex"
         case .claude: return "Claude Code"
