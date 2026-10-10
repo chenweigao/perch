@@ -209,9 +209,7 @@ final class KimiConnection {
                         while !Task.isCancelled {
                             do {
                                 try await Task.sleep(for: .seconds(20))
-                                try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
-                                    ws.sendPing { error in if let error { c.resume(throwing: error) } else { c.resume() } }
-                                }
+                                try await WebSocketHeartbeat.ping { ws.sendPing(pongReceiveHandler: $0) }
                             } catch { ws.cancel(with: .goingAway, reason: nil); return }
                         }
                     }
