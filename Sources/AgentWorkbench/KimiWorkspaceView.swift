@@ -285,7 +285,8 @@ private struct KimiQueuedMessages: View {
     var body: some View {
         let reference = connection.reference(for: sessionID)
         let items = connection.queue.items(for: reference)
-        if connection.queue.isPaused(reference), items.contains(where: { $0.state == .stoppedBeforeDelivery }) {
+        // A queue paused at restart also holds messages queued while offline.
+        if connection.queue.isPaused(reference), !items.isEmpty {
             Button("Resume queued messages") { connection.resumeQueue(for: sessionID) }.font(.caption)
                 .disabled(!connection.online)
         }
