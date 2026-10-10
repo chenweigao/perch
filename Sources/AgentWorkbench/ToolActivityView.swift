@@ -93,10 +93,8 @@ struct KimiToolCard: View {
     let tool: VisibleTool
     var onExpand: (() -> Void)? = nil
     @RememberedExpansion("expanded") private var expanded
-    // Every derived value below is a pure function of `tool`. `exitCodeReport`
-    // re-encodes the whole tool output through JSONValue.display — a fresh
-    // JSONEncoder with .prettyPrinted and .sortedKeys — on each read, so the label
-    // must not read it once per use site. Each takes the already-resolved report.
+    // A failed tool's structured output is serialized by exitCodeReport.
+    // Resolve it once per body evaluation and share it across the label.
     private func label(exitReport: Int?) -> String {
         switch tool.status {
         case .running: return "Running"
@@ -123,18 +121,22 @@ struct KimiToolCard: View {
     private func attention(exitReport: Int?) -> Bool {
         ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) && exitReport == nil) || !tool.hasCall
     }
-    #if TRANSCRIPT_CHECKS
-    /// Occurrences only. `tool_card_exit_report_serializing` counts body passes that
-    /// actually reached `JSONValue.display` for the whole tool output — the case the
-    /// hoisting removes six redundant reads from.
-    fileprivate func recordBodyEvaluation(exitReport: Int?) {
-        NavigationRenderMetrics.count("tool_card_body")
+    private func resolvedExitReport() -> Int? {
+        #if TRANSCRIPT_CHECKS
         NavigationRenderMetrics.count("tool_card_exit_report_read")
-        if exitReport != nil { NavigationRenderMetrics.count("tool_card_exit_report_serializing") }
+        if tool.status == .failed, let output = tool.output {
+            NavigationRenderMetrics.count("tool_card_exit_report_output_display")
+            if case .string = output {} else {
+                NavigationRenderMetrics.count("tool_card_exit_report_json_encode")
+            }
+        }
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("tool_card_exit_report", since: start) }
+        #endif
+        return tool.exitCodeReport
     }
-    #endif
     var body: some View {
-        let exitReport = tool.exitCodeReport
+        let exitReport = resolvedExitReport()
         let summary = ToolPresentation.compactTarget(tool)
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention(exitReport: exitReport)
@@ -142,7 +144,7 @@ struct KimiToolCard: View {
         let statusLabel = tool.hasCall ? plainLabel : "\(plainLabel) · Call record missing"
         #if TRANSCRIPT_CHECKS
         // A declaration, not an expression statement: ViewBuilder rejects the latter.
-        let _ = recordBodyEvaluation(exitReport: exitReport)
+        let _ = NavigationRenderMetrics.count("tool_card_body")
         #endif
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {

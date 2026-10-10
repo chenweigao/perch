@@ -430,20 +430,17 @@ the whole string out on one 1,000,000pt line — and `text_measure_wrapped`, wit
 `text_measure_cache_hit` counting repeats absorbed by the per-view width cache.
 Occurrences: `row_parse_native_user`, `row_parse_native_assistant`,
 `row_parse_rejected`, `markdown_parse_reused`,
-`markdown_parse_rejected_fallback`, `markdown_parse_direct`,
-`bubble_probe_bounded` and `bubble_probe_narrower`.
+`markdown_parse_rejected_fallback` and `markdown_parse_direct`.
 `NAVIGATION_REUSE_REJECTED_MARKDOWN=0` is an acceptance-build-only ablation that
 restores the rejected-admission reparse; production builds always use the bounded
 current-entry handoff.
 
-`NAVIGATION_BUBBLE_IDEAL_PROBE=0` replaces the user bubble's unwrapped
-ideal-width probe with one probe at the bubble's maximum content width.
-`ReplyTextView.measure` clamps to the proposed width, so a text reporting exactly
-that width did not fit and the bubble is capped either way, while a text
-reporting less did not wrap and that value already is its unwrapped ideal. The
-bubble width and every per-text size are unchanged; only the 1,000,000pt layout
-disappears, and messages wider than the cap need one layout instead of two.
-Production builds keep the unwrapped probe. `fast-scroll` fails when the switch is
-set but `bubble_probe_bounded` is zero while native user rows were built, so an
-enabled arm cannot silently measure the default path. `user-rows` glyph and height
-parity at both column widths and appearances is the equivalence gate.
+The bounded bubble-width probe was rejected by native glyph parity (49pt drift)
+and removed. Its old acceptance switch is no longer supported.
+
+Tool-card labels resolve the exit report and compact target once per body pass.
+`tool_card_exit_report` times the actual property read; occurrence counters
+separate reads, output display evaluation, and non-string JSON encoding, including
+failed outputs without an exit-code marker. `tool-card` mounts the production card
+and checks large structured failures, same-ID replacement, disclosure restoration,
+Unicode copying, and accessibility labels in both appearances.

@@ -50,7 +50,7 @@ def main():
         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
             "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
-        for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "fast-scroll", "turns", "roundtrip"]:
+        for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "tool-card", "fast-scroll", "turns", "roundtrip"]:
             commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
                 mode, "--output", str(out / ("navigation-" + mode))], 150))
         for label, extra in [("disclosure", []), ("disclosure-full", ["--full-content"])]:

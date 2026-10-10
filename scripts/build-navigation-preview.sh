@@ -30,7 +30,7 @@ for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
 done
 swiftc -O -swift-version 5 -D TRANSCRIPT_CHECKS -parse-as-library "${includes[@]}" \
     "${app_files[@]}" Tests/PerformancePreview/Workload.swift \
-    Tests/NavigationPreview/History.swift Tests/NavigationPreview/ParagraphExperiment.swift Tests/NavigationPreview/JointInteraction.swift Tests/NavigationPreview/App.swift \
+    Tests/NavigationPreview/ToolCardExperiment.swift Tests/NavigationPreview/History.swift Tests/NavigationPreview/ParagraphExperiment.swift Tests/NavigationPreview/JointInteraction.swift Tests/NavigationPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/NavigationPreview"
 commit="$(git rev-parse HEAD)"
 cat > "$app_dir/Contents/Info.plist" <<PLIST

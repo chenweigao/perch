@@ -1,0 +1,200 @@
+{
+  "tool-card-3": {
+    "status": "exited",
+    "mode": "tool-card",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_AUTORUN": "tool-card",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "02cad72ee71c94a5b3ce427c90e6494859517cf4",
+      "source_sha256": "aa507aaaee517af746bb12d71d4bbb31a4cf90429154dee750b07515fa2c0c57",
+      "fixture_sha256": "6584cce8c6df441de4f0032af3df5c17d3708c09bf7463f8359d33cbcb0634f5",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "edb6cb7deb95492b9f88fdc707ecc1d2ec9d72122fd7e86419fba8955cff3997",
+    "pid": 91842,
+    "exit_code": 0,
+    "elapsed_s": 3.625071917,
+    "passed": true,
+    "result_contracts": {
+      "same_id_replacement": true,
+      "unicode_copy": true,
+      "disclosure_remount": true
+    }
+  },
+  "assistant-off": {
+    "status": "exited",
+    "mode": "assistant-rows",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "0",
+      "NAVIGATION_AUTORUN": "assistant-rows",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "02cad72ee71c94a5b3ce427c90e6494859517cf4",
+      "source_sha256": "aa507aaaee517af746bb12d71d4bbb31a4cf90429154dee750b07515fa2c0c57",
+      "fixture_sha256": "6584cce8c6df441de4f0032af3df5c17d3708c09bf7463f8359d33cbcb0634f5",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "edb6cb7deb95492b9f88fdc707ecc1d2ec9d72122fd7e86419fba8955cff3997",
+    "pid": 92558,
+    "exit_code": 0,
+    "elapsed_s": 6.853527167,
+    "passed": true,
+    "result_contracts": {
+      "fallback_parse_reuse": {
+        "markdown_parses": 4,
+        "rejected": 4,
+        "reparsed": 4,
+        "reused": 0
+      },
+      "fallback_parse_reuse_enabled": false,
+      "direct_swiftui_parse": {
+        "direct": 1,
+        "markdown_parses": 1,
+        "row_parses": 0
+      }
+    }
+  },
+  "assistant-on": {
+    "status": "exited",
+    "mode": "assistant-rows",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_AUTORUN": "assistant-rows",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "02cad72ee71c94a5b3ce427c90e6494859517cf4",
+      "source_sha256": "aa507aaaee517af746bb12d71d4bbb31a4cf90429154dee750b07515fa2c0c57",
+      "fixture_sha256": "6584cce8c6df441de4f0032af3df5c17d3708c09bf7463f8359d33cbcb0634f5",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "edb6cb7deb95492b9f88fdc707ecc1d2ec9d72122fd7e86419fba8955cff3997",
+    "pid": 92662,
+    "exit_code": 0,
+    "elapsed_s": 6.790334125,
+    "passed": true,
+    "result_contracts": {
+      "fallback_parse_reuse": {
+        "markdown_parses": 0,
+        "rejected": 4,
+        "reparsed": 0,
+        "reused": 4
+      },
+      "fallback_parse_reuse_enabled": true,
+      "direct_swiftui_parse": {
+        "direct": 1,
+        "markdown_parses": 1,
+        "row_parses": 0
+      }
+    }
+  },
+  "scroll": {
+    "status": "exited",
+    "mode": "fast-scroll",
+    "timeout_s": 120,
+    "configuration": {
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "build": {
+      "source_commit": "02cad72ee71c94a5b3ce427c90e6494859517cf4",
+      "source_sha256": "aa507aaaee517af746bb12d71d4bbb31a4cf90429154dee750b07515fa2c0c57",
+      "fixture_sha256": "6584cce8c6df441de4f0032af3df5c17d3708c09bf7463f8359d33cbcb0634f5",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "binary_sha256": "edb6cb7deb95492b9f88fdc707ecc1d2ec9d72122fd7e86419fba8955cff3997",
+    "pid": 92706,
+    "exit_code": 0,
+    "elapsed_s": 9.495940667,
+    "passed": true,
+    "result_contracts": {},
+    "scroll_phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse_count": 0,
+        "parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse_count": 0,
+        "parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse_count": 0,
+        "parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025
+      }
+    ]
+  },
+  "build_and_checks": {
+    "core_checks_pass": 48,
+    "live_ssh": "SKIP: WORKBENCH_LIVE_HOST not configured",
+    "performance_python_tests": 22,
+    "python_compile": "passed",
+    "release_build": "passed",
+    "codesign_verify": "passed"
+  }
+}

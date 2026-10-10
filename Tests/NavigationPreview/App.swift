@@ -382,15 +382,6 @@ final class NavigationRunner {
             if phase == "cold-down" && boundaryPasses != 3 { throw NavigationError("fast scroll did not settle at the tail") }
             if phase == "revisit-up" && scroll.contentView.bounds.minY > 1 { throw NavigationError("fast scroll did not reach the top") }
             if missingRows != 0 { throw NavigationError("fast scroll left visible rows unmounted") }
-            // Positive control: with the bounded bubble probe selected it must have
-            // run, otherwise this arm silently measures the default path.
-            if ProcessInfo.processInfo.environment["NAVIGATION_BUBBLE_IDEAL_PROBE"] == "0" {
-                let userRows = NavigationRenderMetrics.stages["native_user_update"]?.count ?? 0
-                let bounded = NavigationRenderMetrics.counters["bubble_probe_bounded"] ?? 0
-                if userRows > 0 && bounded == 0 {
-                    throw NavigationError("bounded bubble probe selected but never ran over \(userRows) native user rows")
-                }
-            }
             phases.append(["phase": phase, "work_ms": statistics(times), "schedule_delay_ms": statistics(delays),
                 "over_budget": times.filter { $0 > budget }.count, "samples_ms": times,
                 "height_changes": heightChanges, "position_corrections": corrections,
@@ -401,7 +392,6 @@ final class NavigationRunner {
                 "retained_hosts": ConversationTranscript.retainedHosts(in: scroll)?.retained ?? 0])
         }
         return ["cadence_hz": hz, "budget_ms": budget, "phases": phases,
-                "bubble_ideal_probe": ProcessInfo.processInfo.environment["NAVIGATION_BUBBLE_IDEAL_PROBE"] ?? "unwrapped",
                 "boundary": "paced programmatic main-actor scroll work; excludes hardware input and compositor presentation"]
     }
 
@@ -1258,6 +1248,7 @@ struct NavigationPreviewApp: App {
                 report["history_source"] = "claude-synthetic"; report["history_turns"] = 4
                 report.merge(try await runner.claudeNavigation()) { a, _ in a }
             }
+            else if mode == "tool-card" { report.merge(try await runner.toolCardContracts()) { a, _ in a } }
             else if mode == "user-rows" { report.merge(try await runner.nativeUserRows()) { a, _ in a } }
             else if mode == "assistant-rows" {
                 report.merge(try await runner.nativeUserRows(assistant: true)) { a, _ in a }
