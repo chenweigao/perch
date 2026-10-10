@@ -145,3 +145,179 @@ func benchPresentationTokenUpdates() throws {
     ], options: [.prettyPrinted, .sortedKeys])
     print(String(decoding: data, as: UTF8.self))
 }
+
+
+/// Native release fixture for the derived-value cost of one collapsed tool card
+/// body pass. Pure computation over `VisibleTool`: no SwiftUI, no AppKit, no
+/// layout, no width arithmetic — so it cannot be confused with a layout-parity
+/// claim. Run with WORKBENCH_BENCH=tool-card.
+///
+/// `KimiToolCard`'s label reads `tool.exitCodeReport` at seven separate use sites
+/// and `ToolPresentation.compactTarget(tool)` at two, all inside one `body`
+/// evaluation. `exitCodeReport` calls `JSONValue.display`, which for a structured
+/// output allocates a fresh JSONEncoder with `.prettyPrinted` and `.sortedKeys`
+/// and re-encodes the whole tree. The counts below are read off the label source;
+/// they are the claim under test, not an assumption.
+func benchToolCardDerivedValues() throws {
+    let legacyExitReportReads = 7
+    let legacyCompactTargetReads = 2
+    let candidateExitReportReads = 1
+    let candidateCompactTargetReads = 1
+    let warmupPasses = 5
+    let measuredPasses = 30
+
+    // A failed tool whose output is structured, so `display` must encode rather
+    // than return a string. The marker text lives in stderr, which is where a real
+    // self-reported exit code appears.
+    func fixture(outputRows: Int) -> VisibleTool {
+        let rows: [JSONValue] = (0..<outputRows).map {
+            .string("中文输出行 \($0) with english identifiers and Sources/AgentWorkbench/Foo.swift:\($0)")
+        }
+        let output = JSONValue.object([
+            "stdout": .array(rows),
+            "stderr": .string("Command failed with exit code: 1"),
+            "exit_code": .number(1),
+            "command": .string("bash ./scripts/build.sh"),
+        ])
+        return VisibleTool(id: "tool-bench", name: "Bash",
+                           input: .object(["command": .string("bash ./scripts/build.sh"),
+                                           "description": .string("构建")]),
+                           output: output, status: .failed, hasCall: true)
+    }
+
+    /// The seven reads the label performs today, in the order the source performs
+    /// them: summary, attention, the explicit nil check, symbol, statusLabel,
+    /// attention again, statusLabel for the accessibility label and for help.
+    func legacyPass(_ tool: VisibleTool) -> [String] {
+        var values: [String] = []
+        let summary = ToolPresentation.compactTarget(tool)
+        values.append(summary)
+        func attention() -> Bool {
+            ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status)
+                && tool.exitCodeReport == nil) || !tool.hasCall
+        }
+        func label() -> String {
+            switch tool.status {
+            case .running: return "Running"
+            case .succeeded: return "Completed"
+            case .returned: return "Returned"
+            case .failed:
+                if let code = tool.exitCodeReport { return "Exit code \(code)" }
+                return "Failed"
+            case .missingResult: return "Result not received"
+            case .disconnected: return "Disconnected · Status unknown"
+            case .awaitingApproval: return "Needs approval"
+            }
+        }
+        func statusLabel() -> String { tool.hasCall ? label() : "\(label()) · Call record missing" }
+        func symbol() -> String {
+            switch tool.status {
+            case .failed: return tool.exitCodeReport != nil ? "apple.terminal" : "exclamationmark.circle"
+            default: return "questionmark.circle"
+            }
+        }
+        _ = attention()
+        _ = tool.exitCodeReport != nil
+        values.append(symbol())
+        values.append(statusLabel())
+        _ = attention()
+        values.append(summary)
+        values.append(statusLabel())
+        values.append(statusLabel())
+        values.append(ToolPresentation.compactTarget(tool))
+        return values
+    }
+
+    /// One resolution of each pure value, which is what the candidate body does.
+    func candidatePass(_ tool: VisibleTool) -> [String] {
+        let exitReport = tool.exitCodeReport
+        let summary = ToolPresentation.compactTarget(tool)
+        let attention = ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status)
+            && exitReport == nil) || !tool.hasCall
+        let plainLabel: String
+        switch tool.status {
+        case .running: plainLabel = "Running"
+        case .succeeded: plainLabel = "Completed"
+        case .returned: plainLabel = "Returned"
+        case .failed: plainLabel = exitReport.map { "Exit code \($0)" } ?? "Failed"
+        case .missingResult: plainLabel = "Result not received"
+        case .disconnected: plainLabel = "Disconnected · Status unknown"
+        case .awaitingApproval: plainLabel = "Needs approval"
+        }
+        let statusLabel = tool.hasCall ? plainLabel : "\(plainLabel) · Call record missing"
+        let symbol = tool.status == .failed && exitReport != nil ? "apple.terminal" : "exclamationmark.circle"
+        _ = attention
+        return [summary, symbol, statusLabel, summary, statusLabel, statusLabel, summary]
+    }
+
+    func milliseconds(_ nanoseconds: Double) -> Double { Double(round(nanoseconds / 10_000)) / 100 }
+
+    var results: [[String: Any]] = []
+    for outputRows in [0, 100, 400, 1600] {
+        let tool = fixture(outputRows: outputRows)
+        let displayBytes = tool.output?.display.utf8.count ?? 0
+
+        // Semantic fidelity: both patterns must produce the same displayed values.
+        let legacy = legacyPass(tool)
+        let candidate = candidatePass(tool)
+        guard legacy == candidate else {
+            throw WorkbenchError("derived values differ at \(outputRows) rows: \(legacy) vs \(candidate)")
+        }
+        guard tool.exitCodeReport == 1 else {
+            throw WorkbenchError("fixture did not reproduce a self-reported exit code")
+        }
+
+        var samples: [[String: Any]] = []
+        for _ in 0..<warmupPasses { _ = legacyPass(tool); _ = candidatePass(tool) }
+        for _ in 0..<measuredPasses {
+            var legacyNanoseconds = 0.0, candidateNanoseconds = 0.0
+            let legacyStart = CACurrentMediaTime()
+            for _ in 0..<legacyExitReportReads { _ = tool.exitCodeReport }
+            legacyNanoseconds += (CACurrentMediaTime() - legacyStart) * 1_000_000_000
+            let legacyTargetStart = CACurrentMediaTime()
+            for _ in 0..<legacyCompactTargetReads { _ = ToolPresentation.compactTarget(tool) }
+            legacyNanoseconds += (CACurrentMediaTime() - legacyTargetStart) * 1_000_000_000
+            let candidateStart = CACurrentMediaTime()
+            for _ in 0..<candidateExitReportReads { _ = tool.exitCodeReport }
+            candidateNanoseconds += (CACurrentMediaTime() - candidateStart) * 1_000_000_000
+            let candidateTargetStart = CACurrentMediaTime()
+            for _ in 0..<candidateCompactTargetReads { _ = ToolPresentation.compactTarget(tool) }
+            candidateNanoseconds += (CACurrentMediaTime() - candidateTargetStart) * 1_000_000_000
+            samples.append(["legacy_ms": milliseconds(legacyNanoseconds),
+                            "candidate_ms": milliseconds(candidateNanoseconds)])
+        }
+        let legacyValues = samples.map { $0["legacy_ms"] as! Double }.sorted()
+        let candidateValues = samples.map { $0["candidate_ms"] as! Double }.sorted()
+        func rounded(_ values: [Double], _ pick: (Int) -> Int) -> Double {
+            Double(round(values[pick(values.count)] * 1000)) / 1000
+        }
+        results.append([
+            "scenario": "collapsed-tool-card-derived-values",
+            "output_rows": outputRows,
+            "output_display_bytes": displayBytes,
+            "tool_status": "failed",
+            "exit_code_report": tool.exitCodeReport as Any,
+            "legacy_exit_report_reads": legacyExitReportReads,
+            "legacy_compact_target_reads": legacyCompactTargetReads,
+            "candidate_exit_report_reads": candidateExitReportReads,
+            "candidate_compact_target_reads": candidateCompactTargetReads,
+            "warmup_passes": warmupPasses,
+            "measured_passes": samples.count,
+            "derived_values_identical": legacy == candidate,
+            "legacy_median_ms": rounded(legacyValues) { $0 / 2 },
+            "legacy_max_ms": rounded(legacyValues) { $0 - 1 },
+            "candidate_median_ms": rounded(candidateValues) { $0 / 2 },
+            "candidate_max_ms": rounded(candidateValues) { $0 - 1 },
+            "samples": samples,
+            "scope": "release WorkbenchCore pure computation over one VisibleTool; excludes SwiftUI/AppKit layout, row mounting, display, FPS and physical input",
+        ])
+    }
+    let data = try JSONSerialization.data(withJSONObject: [
+        "schema": 1,
+        "benchmark": "tool-card",
+        "timing_note": "per body pass, one tool card label; legacy and candidate intervals do not overlap. "
+            + "This measures repeated pure-function reads, not a laid-out row, and says nothing about frame rate.",
+        "results": results,
+    ], options: [.prettyPrinted, .sortedKeys])
+    print(String(decoding: data, as: UTF8.self))
+}

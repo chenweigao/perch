@@ -12,6 +12,9 @@ struct ProtocolTests {
         case "presentation-token":
             try benchPresentationTokenUpdates()
             return
+        case "tool-card":
+            try benchToolCardDerivedValues()
+            return
         default:
             break
         }
