@@ -138,6 +138,10 @@ struct ConversationScrollView<Content: View>: View {
                 .overlay(alignment: .leading) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
                 }
+                .overlay(alignment: .bottomLeading) {
+                    ConversationBookmarksMenu(navigator: conversationViewport.navigator)
+                        .padding(.leading, 40).padding(.bottom, 6)
+                }
         }
     }
     var body: some View {
@@ -156,8 +160,7 @@ struct ConversationScrollView<Content: View>: View {
 
 /// Separate observation keeps hover and current-turn changes out of the
 /// transcript's SwiftUI graph. Only the native document supplies positions.
-final class ConversationTurnNavigation: ObservableObject {
-    struct Snapshot: Equatable {
+final class ConversationTurnNavigation: ObservableObject {    struct Snapshot: Equatable {
         var session = ""
         var turns: [ConversationTurnSummary] = []
         var current = 0
@@ -251,6 +254,35 @@ private struct ConversationTurnNavigator: View {
             ConversationTurnRail(turns: model.snapshot.turns, current: model.current, hasOlderHistory: hasOlderHistory,
                                  selectedID: model.selectedID, hover: model.hover, select: model.select)
                 .id(model.snapshot.session)
+        }
+    }
+}
+
+/// Jump list of the reader's bookmarked turns, in rail order. Hidden until the
+/// first bookmark exists so quiet conversations gain no chrome.
+private struct ConversationBookmarksMenu: View {
+    @ObservedObject var navigator: ConversationTurnNavigation
+    private var store: ConversationBookmarksStore { .shared }
+    var body: some View {
+        let session = navigator.snapshot.session
+        let marked = navigator.snapshot.turns.filter { store.isBookmarked($0.id, in: session) }
+        if !marked.isEmpty, !session.isEmpty {
+            Menu {
+                ForEach(marked) { turn in
+                    Button(turn.prompt.isEmpty ? "附件轮次" : String(turn.prompt.prefix(80))) {
+                        if let index = navigator.snapshot.turns.firstIndex(where: { $0.id == turn.id }) {
+                            navigator.select(index)
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "bookmark.fill").font(.system(size: 12))
+                    .frame(width: 30, height: 30)
+                    .workbenchFloatingSurface()
+                    .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(0.08)))
+                    .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
+            }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                .help("已收藏的轮次").accessibilityLabel("已收藏的轮次")
         }
     }
 }

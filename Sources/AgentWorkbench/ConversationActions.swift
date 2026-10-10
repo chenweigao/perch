@@ -92,10 +92,34 @@ final class CopyTextTarget: NSObject {
     }
 }
 
+final class BookmarkTurnTarget: NSObject {
+    static let shared = BookmarkTurnTarget()
+    struct Mark { let turn: String; let session: String }
+    @objc func perform(_ sender: NSMenuItem) {
+        guard let mark = sender.representedObject as? Mark else { return }
+        Task { @MainActor in ConversationBookmarksStore.shared.toggle(mark.turn, in: mark.session) }
+    }
+}
+
+extension ConversationActionContext {
+    /// Bookmark items read the store at menu-open time, so the title always
+    /// reflects the current mark.
+    @MainActor static func bookmarkMenuItem(turn: String, session: String) -> NSMenuItem {
+        let marked = ConversationBookmarksStore.shared.isBookmarked(turn, in: session)
+        let item = NSMenuItem(title: marked ? "取消收藏此轮" : "收藏此轮",
+                              action: #selector(BookmarkTurnTarget.perform(_:)), keyEquivalent: "")
+        item.target = BookmarkTurnTarget.shared
+        item.representedObject = BookmarkTurnTarget.Mark(turn: turn, session: session)
+        return item
+    }
+}
+
 /// SwiftUI context menu for a user's own message.
 struct UserMessageContextMenu: View {
     let context: ConversationActionContext
     let text: String
+    /// Turn id + reading key for the bookmark toggle; nil hides it.
+    var bookmark: (turn: String, session: String)? = nil
     var body: some View {
         Button("复制") {
             NSPasteboard.general.clearContents()
@@ -105,5 +129,12 @@ struct UserMessageContextMenu: View {
         Button("引用到输入框") { context.post(.quote(text)) }
         Button("编辑后重发") { context.post(.editAndResend(text)) }
         Button("再次发送") { context.post(.resend(text)) }
+        if let bookmark {
+            Divider()
+            let marked = ConversationBookmarksStore.shared.isBookmarked(bookmark.turn, in: bookmark.session)
+            Button(marked ? "取消收藏此轮" : "收藏此轮") {
+                ConversationBookmarksStore.shared.toggle(bookmark.turn, in: bookmark.session)
+            }
+        }
     }
 }

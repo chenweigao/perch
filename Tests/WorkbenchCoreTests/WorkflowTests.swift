@@ -160,6 +160,19 @@ func checkWorkflow() throws {
     let jsonRoundTrip = try JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]]
     precondition(jsonRoundTrip?.count == 2 && (jsonRoundTrip?[1]["content"] as? [[String: Any]])?.count == 5,
                  "JSON export decodes with message and part counts intact")
+
+    // Turn bookmarks: per-session toggle, bounded, session-isolated.
+    var marks = ConversationBookmarks()
+    marks.toggle("turn-a", in: "s1"); marks.toggle("turn-b", in: "s1"); marks.toggle("turn-x", in: "s2")
+    precondition(marks.turns(in: "s1") == ["turn-a", "turn-b"] && marks.isBookmarked("turn-x", in: "s2"))
+    marks.toggle("turn-a", in: "s1")
+    precondition(marks.turns(in: "s1") == ["turn-b"], "Toggling twice unmarks")
+    marks.toggle("turn-b", in: "s1"); marks.toggle("turn-b", in: "s1")
+    precondition(marks.turns(in: "s1") == ["turn-b"], "Re-marking appends once")
+    for index in 0..<60 { marks.toggle("turn-\(index)", in: "s3") }
+    precondition(marks.turns(in: "s3").count == 50, "Bookmarks stay bounded")
+    let marksRoundTrip = try JSONDecoder().decode(ConversationBookmarks.self, from: JSONEncoder().encode(marks))
+    precondition(marksRoundTrip == marks, "Bookmarks persist as JSON")
     let edited = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**新正文** 👋 café"},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
     precondition(search.hits(in: edited, query: "match", running: true).hits.isEmpty, "Same-ID edits invalidate cached text")
     precondition(search.hits(in: edited, query: "cafe", running: true).hits.count == 1, "Keep rendered Unicode search semantics")

@@ -326,6 +326,25 @@ enum ReplyTextAttributes {
             .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
         ])
     }
+    /// Gutter numbers share the code font and line spacing so rows align
+    /// exactly; only color and alignment differ.
+    static func codeGutter(_ lines: Int) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 5; paragraph.alignment = .right
+        let numbers = (1...max(1, lines)).map(String.init).joined(separator: "\n")
+        return NSAttributedString(string: numbers, attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: ReplyStyle.nativeInk.withAlphaComponent(0.32), .paragraphStyle: paragraph
+        ])
+    }
+}
+
+/// A trailing newline ends the last line rather than starting another.
+enum CodeLineNumbers {
+    static func count(in source: String) -> Int {
+        var lines = source.split(separator: "\n", omittingEmptySubsequences: false).count
+        if source.hasSuffix("\n") { lines -= 1 }
+        return max(1, lines)
+    }
 }
 
 private struct ReplyText: View {
@@ -371,15 +390,19 @@ struct SelectableReplyText: NSViewRepresentable {
     @Environment(\.isConversationBodyText) private var isConversationBodyText
     let attributed: NSAttributedString
     var preservesSelectionOnAppend = false
-    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false) {
+    /// Gutter-style rows opt out of selection.
+    var selectable = true
+    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true) {
         self.attributed = attributed
         self.preservesSelectionOnAppend = preservesSelectionOnAppend
+        self.selectable = selectable
     }
-    init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4) {
+    init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4, selectable: Bool = true) {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = lineSpacing
         attributed = NSAttributedString(string: text, attributes: [
             .font: font, .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
         ])
+        self.selectable = selectable
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
@@ -438,7 +461,7 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }
-    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
+    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.isSelectable = selectable; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ReplyTextView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
     }
@@ -493,6 +516,9 @@ final class NativeUserMessageView: NSView {
     /// Row identity for message-level menu actions; set by the hosting controller.
     var actionContext: ConversationActionContext?
     var sourceText = ""
+    /// Turn id + reading key for the bookmark menu item.
+    var bookmarkTurn: String?
+    var bookmarkSession: String?
     override var isFlipped: Bool { true }
 
     override init(frame frameRect: NSRect) {
@@ -514,6 +540,8 @@ final class NativeUserMessageView: NSView {
         view.removeFromSuperview()
         view.actionContext = nil
         view.sourceText = ""
+        view.bookmarkTurn = nil
+        view.bookmarkSession = nil
         for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
         // A giant prompt must not leave an unbounded number of text containers
         // in the row pool after it is no longer visible.
@@ -535,7 +563,11 @@ final class NativeUserMessageView: NSView {
             text.isConversationBodyText = true
             text.extraMenuItems = { [weak self] in
                 guard let self, let context = self.actionContext, !self.sourceText.isEmpty else { return [] }
-                return context.userMenuItems(copyText: self.sourceText, sourceText: self.sourceText)
+                var items = context.userMenuItems(copyText: self.sourceText, sourceText: self.sourceText)
+                if let turn = self.bookmarkTurn, let session = self.bookmarkSession {
+                    items += [.separator(), ConversationActionContext.bookmarkMenuItem(turn: turn, session: session)]
+                }
+                return items
             }
             texts.append(text); addSubview(text)
         }
@@ -544,7 +576,12 @@ final class NativeUserMessageView: NSView {
     }
     override func menu(for event: NSEvent) -> NSMenu? {
         guard let actionContext, !sourceText.isEmpty else { return nil }
-        return actionContext.userMenu(copyText: sourceText, sourceText: sourceText)
+        let menu = actionContext.userMenu(copyText: sourceText, sourceText: sourceText)
+        if let turn = bookmarkTurn, let session = bookmarkSession {
+            menu.addItem(.separator())
+            menu.addItem(ConversationActionContext.bookmarkMenuItem(turn: turn, session: session))
+        }
+        return menu
     }
     private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
         let contentPadding = UserMessageStyle.horizontalPadding * 2
@@ -963,6 +1000,7 @@ struct ReplyCopyButton: View {
 private struct ReplyCode: View {
     let language: String
     let source: String
+    private var lineCount: Int { CodeLineNumbers.count(in: source) }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -972,9 +1010,18 @@ private struct ReplyCode: View {
             }.padding(.horizontal, 14).padding(.vertical, 5)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
             ScrollView(.horizontal) {
-                SelectableReplyText(source, font: .monospacedSystemFont(ofSize: 13, weight: .regular), lineSpacing: 5)
-                    .fixedSize(horizontal: true, vertical: true)
-                    .padding(14)
+                HStack(alignment: .top, spacing: 0) {
+                    if lineCount > 1 {
+                        SelectableReplyText(attributed: ReplyTextAttributes.codeGutter(lineCount), selectable: false)
+                            .fixedSize(horizontal: true, vertical: true)
+                            .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 14)
+                    }
+                    SelectableReplyText(source, font: .monospacedSystemFont(ofSize: 13, weight: .regular), lineSpacing: 5)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .padding(lineCount > 1
+                                 ? EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 14)
+                                 : EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14))
+                }
             }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.055)))
