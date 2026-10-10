@@ -326,6 +326,9 @@ private final class ConversationDocumentView: NSView {
     private var boundsObserver: NSObjectProtocol?
     var totalHeight: CGFloat { geometry.totalHeight }
     private var findObserver: NSObjectProtocol?
+    private var highlightObserver: NSObjectProtocol?
+    /// The find bar's current highlight-all request, if it targets this session.
+    private var highlight: ConversationHighlightUpdate?
     #if TRANSCRIPT_CHECKS
     fileprivate var missingVisibleRows: [String] {
         let visible = viewportRect
@@ -423,11 +426,21 @@ private final class ConversationDocumentView: NSView {
             guard let self, let target = notice.object as? ConversationFindTarget, target.session == self.sessionId else { return }
             self.reveal(target)
         }
+        highlightObserver = NotificationCenter.default.addObserver(forName: .init("PerchConversationHighlight"), object: nil, queue: .main) { [weak self] notice in
+            guard let self, let update = notice.object as? ConversationHighlightUpdate else { return }
+            // Other sessions' searches clear nothing here.
+            guard update.session == self.sessionId else { return }
+            self.highlight = update.query.isEmpty ? nil : update
+            self.applyFindHighlights()
+        }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
         guard !suspended else { return }
         revealEntry(target.hit.entryID)
+        // Regular-expression hits reveal their row; only literal queries can
+        // place the caret on the exact occurrence.
+        guard target.options.canLocateOccurrence else { return }
         let intent = readingIntent
         DispatchQueue.main.async { [weak self] in
             guard let self, self.readingIntent == intent, self.sessionId == target.session,
@@ -441,7 +454,7 @@ private final class ConversationDocumentView: NSView {
                     let source = text.string as NSString
                     var search = NSRange(location: 0, length: source.length)
                     while search.length > 0 {
-                        let found = source.range(of: target.query, options: [.caseInsensitive, .diacriticInsensitive], range: search)
+                        let found = source.range(of: target.query, options: target.options.compareOptions(), range: search)
                         if found.location == NSNotFound { break }
                         if remaining == 0 { text.setSelectedRange(found); text.showFindIndicator(for: found); text.scrollRangeToVisible(found); return true }
                         remaining -= 1
@@ -808,6 +821,7 @@ private final class ConversationDocumentView: NSView {
         for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
         mounted = nextMounted
         laidOutRange = nextRange
+        if highlight != nil { applyFindHighlights() }
         let retained = geometry.retainedRows(around: nextRange)
         var retired: [ConversationEntryController] = []
         for id in Array(controllers.keys) where !mounted.contains(id) {
@@ -979,8 +993,25 @@ private final class ConversationDocumentView: NSView {
         super.viewDidMoveToSuperview()
         observeScroll()
     }
+    /// Highlight every find-bar match in the currently mounted text views.
+    /// Rows mounted later pick it up in refreshVisibleRows; streaming rows
+    /// re-apply from ReplyTextView.update.
+    private func applyFindHighlights() {
+        for id in mounted {
+            guard let view = controllers[id]?.view else { continue }
+            applyFindHighlights(in: view)
+        }
+    }
+    private func applyFindHighlights(in view: NSView) {
+        if let text = view as? ReplyTextView {
+            text.findHighlight = highlight.map { (query: $0.query, caseSensitive: $0.options.caseSensitive, regex: $0.options.regex) }
+            text.applyFindHighlight()
+        }
+        for subview in view.subviews { applyFindHighlights(in: subview) }
+    }
     deinit {
         if let findObserver { NotificationCenter.default.removeObserver(findObserver) }
+        if let highlightObserver { NotificationCenter.default.removeObserver(highlightObserver) }
         if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
     }
 }

@@ -401,6 +401,7 @@ struct SelectableReplyText: NSViewRepresentable {
         view.update(NSAttributedString(string: ""))
         view.isConversationBodyText = false
         view.extraMenuItems = nil
+        view.findHighlight = nil
         if recycled.count < 64 { recycled.append(view) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -664,6 +665,10 @@ final class ReplyTextView: NSTextView {
     var isConversationBodyText = false
     /// Extra context-menu items (message-level actions) supplied by the row.
     var extraMenuItems: (() -> [NSMenuItem])?
+    /// Active find-bar query to highlight across this text. Re-applied after
+    /// every content update, since streaming replaces the text storage.
+    var findHighlight: (query: String, caseSensitive: Bool, regex: Bool)?
+    private var hasFindHighlight = false
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = super.menu(for: event) ?? NSMenu()
         if let extra = extraMenuItems?(), !extra.isEmpty {
@@ -671,6 +676,35 @@ final class ReplyTextView: NSTextView {
             extra.forEach { menu.addItem($0) }
         }
         return menu
+    }
+    /// Background-color is not part of reply styling, so clearing it here
+    /// cannot disturb content. Works in text attributes, never layout.
+    func applyFindHighlight() {
+        guard let storage = textStorage, findHighlight != nil || hasFindHighlight else { return }
+        let full = NSRange(location: 0, length: storage.length)
+        storage.beginEditing()
+        storage.removeAttribute(.backgroundColor, range: full)
+        if let highlight = findHighlight, !highlight.query.isEmpty, storage.length > 0 {
+            let color = NSColor.systemYellow.withAlphaComponent(0.35)
+            if highlight.regex, let expression = try? NSRegularExpression(
+                pattern: highlight.query, options: highlight.caseSensitive ? [] : [.caseInsensitive]) {
+                for match in expression.matches(in: storage.string, range: full) {
+                    storage.addAttribute(.backgroundColor, value: color, range: match.range)
+                }
+            } else if !highlight.regex {
+                let options: NSString.CompareOptions = highlight.caseSensitive ? [] : [.caseInsensitive, .diacriticInsensitive]
+                let source = storage.string as NSString
+                var search = full
+                while search.length > 0 {
+                    let found = source.range(of: highlight.query, options: options, range: search)
+                    guard found.location != NSNotFound else { break }
+                    storage.addAttribute(.backgroundColor, value: color, range: found)
+                    search = NSRange(location: NSMaxRange(found), length: source.length - NSMaxRange(found))
+                }
+            }
+        }
+        hasFindHighlight = findHighlight != nil
+        storage.endEditing()
     }
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
@@ -681,6 +715,7 @@ final class ReplyTextView: NSTextView {
         storage.setAttributedString(value)
         if let retainedSelection { setSelectedRange(retainedSelection) }
         measurements.removeAll(keepingCapacity: true)
+        applyFindHighlight()
     }
     func measure(width proposed: CGFloat?) -> CGSize {
         // A nil proposal is the ideal unwrapped width used by code and wide tables.

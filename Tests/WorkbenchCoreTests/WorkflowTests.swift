@@ -125,19 +125,33 @@ func checkWorkflow() throws {
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**Match** one. MATCH two."},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
     let search = ConversationSearch()
     let hits = search.hits(in: messages, query: "match", running: false)
-    precondition(hits.count == 2 && hits[1].occurrence == 1)
-    precondition(search.hits(in: messages, query: "Match one", running: false).count == 1, "Search uses rendered body text")
-    precondition(hits[0].entryID == ConversationTimelineEntry.make(messages)[0].id)
-    precondition(search.hits(in: messages, query: "", running: false).isEmpty)
+    precondition(hits.hits.count == 2 && hits.hits[1].occurrence == 1)
+    precondition(search.hits(in: messages, query: "Match one", running: false).hits.count == 1, "Search uses rendered body text")
+    precondition(hits.hits[0].entryID == ConversationTimelineEntry.make(messages)[0].id)
+    precondition(search.hits(in: messages, query: "", running: false).hits.isEmpty)
+    // Find-bar options: case sensitivity, regular expressions and role filters.
+    precondition(search.hits(in: messages, query: "Match", running: false, options: ConversationFindOptions(caseSensitive: true)).hits.count == 1,
+                 "Case-sensitive search skips the all-caps hit")
+    precondition(search.hits(in: messages, query: "ma?tch", running: false, options: ConversationFindOptions(regex: true)).hits.count == 2,
+                 "Regex search matches both spellings")
+    precondition(search.hits(in: messages, query: "ma?[", running: false, options: ConversationFindOptions(regex: true)).queryError != nil,
+                 "Invalid regex reports an error instead of zero silent hits")
+    precondition(search.hits(in: messages, query: "match", running: false, options: ConversationFindOptions(role: .user)).hits.isEmpty,
+                 "Role filter excludes assistant text from a user-only search")
+    let toolMessages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"u1","role":"user","created_at":"","content":[{"type":"text","text":"run the tests"}]},{"id":"t1","role":"assistant","created_at":"","content":[{"type":"tool_use","tool_call_id":"c1","name":"Bash","input":{"command":"swift needle"}}]}]"#.utf8))
+    precondition(search.hits(in: toolMessages, query: "needle", running: false, options: ConversationFindOptions(role: .tool)).hits.count == 1,
+                 "Tool search covers tool input text once, not per wrapper entry")
+    precondition(search.hits(in: toolMessages, query: "needle", running: false, options: ConversationFindOptions(role: .user)).hits.isEmpty,
+                 "Tool content stays out of a user-only search")
     let edited = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**新正文** 👋 café"},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
-    precondition(search.hits(in: edited, query: "match", running: true).isEmpty, "Same-ID edits invalidate cached text")
-    precondition(search.hits(in: edited, query: "cafe", running: true).count == 1, "Keep rendered Unicode search semantics")
-    precondition(search.hits(in: [], query: "cafe", running: false).isEmpty, "Removed messages must not remain searchable")
+    precondition(search.hits(in: edited, query: "match", running: true).hits.isEmpty, "Same-ID edits invalidate cached text")
+    precondition(search.hits(in: edited, query: "cafe", running: true).hits.count == 1, "Keep rendered Unicode search semantics")
+    precondition(search.hits(in: [], query: "cafe", running: false).hits.isEmpty, "Removed messages must not remain searchable")
     precondition(search.hits(in: messages, query: "match", running: false) == hits, "Switching back restores current content and order")
     let boundaryText = "👋" + String(repeating: "a", count: 49) + "needle" + String(repeating: "b", count: 79) + "👋"
     let boundaryData = try JSONSerialization.data(withJSONObject: [["id": "boundary", "role": "assistant", "created_at": "", "content": [["type": "text", "text": boundaryText]]]])
     let boundaryMessages = try KimiWire.decoder().decode([KimiMessage].self, from: boundaryData)
-    let excerpt = search.hits(in: boundaryMessages, query: "needle", running: false)[0].excerpt
+    let excerpt = search.hits(in: boundaryMessages, query: "needle", running: false).hits[0].excerpt
     precondition(excerpt.hasPrefix("👋") && excerpt.hasSuffix("👋"), "Search excerpts must keep complete characters at both boundaries")
     var navigation = SessionNavigation()
     navigation.visit("a"); navigation.visit("b"); navigation.visit("b")

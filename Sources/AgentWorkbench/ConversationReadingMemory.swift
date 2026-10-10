@@ -104,6 +104,14 @@ struct ConversationFindTarget {
     let session: String
     let hit: ConversationSearchHit
     let query: String
+    var options = ConversationFindOptions()
+}
+
+/// Highlight-all request from the find bar; an empty query clears highlights.
+struct ConversationHighlightUpdate {
+    let session: String
+    let query: String
+    let options: ConversationFindOptions
 }
 
 #if TRANSCRIPT_CHECKS

@@ -1142,3 +1142,4 @@
 "粘贴内容已丢失，可移回草稿重新粘贴。" = "The pasted content is gone. Move it back to the draft and paste again.";
 "找不到这条回复对应的提问，无法重新生成。" = "No user prompt found for this reply; cannot regenerate.";
 "这条回复对应的提问没有文字内容。" = "The prompt for this reply has no text to resend.";
+"无效正则表达式" = "Invalid regular expression";
