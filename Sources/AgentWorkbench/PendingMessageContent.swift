@@ -16,3 +16,28 @@ struct PendingMessageContent: View {
         }.padding(14).background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
     }
 }
+
+/// Editing a not-yet-accepted queue entry; save failure keeps the typed revision.
+struct PendingMessageEditor: View {
+    let message: OutboundMessage
+    let save: (String) -> Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var messageError: String?
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("编辑待发消息").font(.headline)
+            TextEditor(text: $text).frame(minHeight: 140)
+            if let messageError { Text(messageError).font(.caption).foregroundStyle(.orange) }
+            HStack {
+                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("保存") {
+                    if save(text) { dismiss() }
+                    else { messageError = "消息已经提交，修改未保存。可复制这里的文字作为新的补充。" }
+                }
+                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }.padding(22).frame(width: 460).onAppear { text = message.text }
+    }
+}
