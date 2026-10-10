@@ -36,7 +36,7 @@ public enum SessionNaming {
             if trimmed.isEmpty { return true }
             guard let first = firstUserText else { return false }
             return echoes(trimmed, of: first)
-        case .omp, .qoder, .dsh, .codex, .claude:
+        case .omp, .qoder, .qoderintl, .dsh, .codex, .claude:
             // The bridge's default title is a literal, not a localized string.
             if trimmed.isEmpty || trimmed == "新对话" { return true }
             guard let first = firstUserText else { return false }
@@ -52,7 +52,7 @@ public enum SessionNaming {
         switch kind {
         case .terminal: return false
         case .kimi: return true
-        case .omp, .qoder, .dsh, .codex, .claude:
+        case .omp, .qoder, .qoderintl, .dsh, .codex, .claude:
             return title.trimmingCharacters(in: .whitespacesAndNewlines).count <= 60
         }
     }

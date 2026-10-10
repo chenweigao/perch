@@ -1,11 +1,12 @@
-# OMP / Qoder CN / DeepSeek / Codex / Claude Code 原生对话
+# OMP / Qoder CN / Qoder / DeepSeek / Codex / Claude Code 原生对话
 
-Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek、Codex 或 Claude Code，默认沿用当前目录，也可选择最近目录；名称由第一条消息生成，自动关联当前任务组。置顶、分组、待处理队列与工作现场共用，顶部不恢复重复标签栏。
+Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、Qoder、DeepSeek、Codex 或 Claude Code，默认沿用当前目录，也可选择最近目录；名称由第一条消息生成，自动关联当前任务组。置顶、分组、待处理队列与工作现场共用，顶部不恢复重复标签栏。
 
 ## 已核对的运行时
 
 - OMP 18.1.16：先验证 `--mode rpc` 的消息流和审批，再使用同协议的 `--mode rpc-ui` 启用内置 `ask` 工具。创建会话时把所选 `always-ask`、`write` 或 `yolo` 显式传给 `--approval-mode`；会话内不动态切换。接收 message 事件、工具调用/结果及 extension UI 请求；协商 v2，按帧序号与字节数校验分块。
 - Qoder CN：官方 `@qodercn-ai/qodercn-agent-sdk` 1.0.45，发行包 runtime-manifest 明确匹配 CLI 1.1.58。通过 SDK `query`、`canUseTool`、`interrupt` 和 `resume` 接入已安装的 `qoderclicn`，未使用 ACP 推断兼容性。沿用远端 CLI 登录；每次 `query` 带当前权限模式，切换从下一轮生效。需确认的调用由 Mac 界面返回本次 allow/deny；`bypassPermissions` 还会显式设置 `allowDangerouslySkipPermissions`。
+- Qoder（国际版）：官方 `@qoder-ai/qoder-agent-sdk` 1.0.51，接入已安装的 `qodercli`（实机核对 1.1.67，官方安装脚本的原生可执行文件）。与 Qoder CN 共用同一 worker 事件协议和权限模型，worker 按桥传入的 `sdk` 字段动态加载对应 SDK 包。
 - DeepSeek Harness（dsh）0.1.5-rc.1：走标准 ACP v1（`dsh --profile acp`，stdio JSON-RPC）。已实测 `initialize`、`session/new|list|resume`、`session/set_config_option`（model 与 reasoning_effort）以及无凭据时 `session/prompt` 的报错路径；`session/cancel` 与 `session/request_permission` 按官方 ACP 契约接入。每会话一个进程，握手完成后才放行 prompt；dsh 只发已提交的消息块（无增量流），审批以 select 卡片呈现，选项标签映射回不透明 optionId。dsh 是 developer preview，升级版本必须重跑协议核对。
 - Codex CLI 0.155.1：按本机 `app-server generate-json-schema --experimental` 生成的完整 schema 核对协议，并实机验证创建、无工具 turn、恢复、归档、恢复归档与删除。只使用 `codex app-server --listen stdio://` 的 JSON-RPC，不启动 PTY，也不抓取终端画面。创建与恢复分别调用 `thread/start`、`thread/resume`，Perch 会话 ID 就是原生 thread UUID；历史通过 `thread/items/list` 恢复。发送、运行中引导和停止分别使用 `turn/start`、`turn/steer`、`turn/interrupt`。流式正文、思考、计划、工具和 token usage 转入统一对话；`item/reasoning/summaryPartAdded` 与 `summaryTextDelta` 作为结构化 `activity_summary` 元数据传给活动叙事，不把原始 reasoning 当作摘要。`item/completed` 的权威 summary/content 覆盖增量草稿并标记 final，`thread/items/list` 恢复历史时也生成同样元数据。模型及 reasoning effort 来自 `model/list`，创建和切换时均拒绝目录之外的值，切换仅用于后续 turn。command、file change、permissions、tool input 与 MCP elicitation 等 app-server 反向请求全部显示在 Mac 上并等待明确回答，不自动批准或静默拒绝。
 - Claude Code：官方 `@anthropic-ai/claude-agent-sdk` 0.3.280，驱动远端已安装并登录的 `claude` CLI（实机核对 2.1.280）。消息类型与 Qoder SDK 同构（system init / assistant / user / stream_event / result），桥与 Mac 复用同一 worker 事件协议：SDK `query`、`canUseTool`、`interrupt`、`resume`。沿用远端 CLI 登录与凭据，桥不接触；每次 `query` 带当前权限模式，切换从下一轮生效；`bypassPermissions` 同时显式设置 `allowDangerouslySkipPermissions`。SDK 不提供模型清单，留空使用 CLI 默认模型。需 native service v4，旧桥按提示更新组件即可。worker 与 Codex 一样注入代理环境（检测到本机代理时读取 `~/proxy.env`），否则 CLI 回连功能开关/遥测的请求会静默卡住首轮。
@@ -28,7 +29,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、DeepSeek、Codex
 # 保留旧的全套安装方式：<host> 或 <host> --with-dsh
 ```
 
-所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；Claude Code 使用 Node.js/npm 与已登录的 `claude` CLI；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装并完成官方登录或自定义供应商配置的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。桥接协议版本由 `remote/native-agent-service.py` 的 `SERVICE_VERSION` 与客户端的 `RemoteSetup.bridgeServiceVersion` 共同声明，两者必须相等（`scripts/check-version.py` 强制校验）。“服务连接”检查读取远端脚本里的该常量，版本过旧提示重新安装桥接组件，版本过新提示升级 Perch，并显示当前生效的版本；连接时再按 `/health` 校验实际运行的服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查会验证协议版本，并只在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
+所有桥接目标需 Python 3。OMP 使用已配置的 omp 18.1.16，不要求 npm；Qoder CN 使用 Node.js/npm 与已登录的 qoderclicn 1.1.58；Qoder 国际版使用 Node.js/npm 与已登录的 qodercli（官方安装脚本，实机核对 1.1.67）；Claude Code 使用 Node.js/npm 与已登录的 `claude` CLI；dsh 安装固定版本的 Python SDK wheel，不要求 Node.js；Codex 使用已安装并完成官方登录或自定义供应商配置的 `codex` CLI，不要求桥接安装器运行 npm。安装脚本禁用 npm 生命周期脚本，SDK 明确使用现有 CLI。桥接协议版本由 `remote/native-agent-service.py` 的 `SERVICE_VERSION` 与客户端的 `RemoteSetup.bridgeServiceVersion` 共同声明，两者必须相等（`scripts/check-version.py` 强制校验）。“服务连接”检查读取远端脚本里的该常量，版本过旧提示重新安装桥接组件，版本过新提示升级 Perch，并显示当前生效的版本；连接时再按 `/health` 校验实际运行的服务。Mac 连接时启动或复用托管服务；安装或更新文件本身不会终止托管服务，后续检查会验证协议版本，并只在所有会话空闲时自动替换旧服务，存在运行中任务、待审批请求或异步命令时保留旧服务并提示等待。
 
 `/health` 同时上报 `implementation`（运行中服务自身源码的 sha256 前 16 位）与 `startedAt`，`--ensure` 两者都比对：协议号相同但源码不同（改动没有提升 SERVICE_VERSION，或服务早于该字段）同样走空闲替换流程，有活动任务时照旧保留旧服务并提示等待；本机源码读不出来时退回只比协议号，避免每次检查都重启健康服务。向导以「运行进程」信息行显示运行中的源码指纹与启动时间。注意这只覆盖桥自身：Agent CLI 与 SDK worker 在每个会话启动时从磁盘读取，升级后已运行的会话仍是旧版本，从下一个会话生效。
 
@@ -69,7 +70,7 @@ OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选
 
 ## 接入检查
 
-向导通过经鉴权的 `GET /setup?provider=omp|qoder|dsh|codex|claude` 检查所选运行时；
+向导通过经鉴权的 `GET /setup?provider=omp|qoder|qoderintl|dsh|codex|claude` 检查所选运行时；
 不会因为缺少未选 Agent 而报错。检查在会话锁之外执行，不向模型发送消息。
 OMP 每次重新读取模型配置，只返回名称、provider 和 id，不返回 headers 或密钥。
 Qoder 与 Claude 的 SDK 没有独立登录检查接口，首条消息验证鉴权；dsh 只检查桥接进程是否具有
@@ -106,6 +107,7 @@ HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已
 | Kimi | **`manual`** / `yolo` / `auto` | prompt body 的 `permission_mode` | 下一条消息 |
 | OMP | **`always-ask`** / `write` / `yolo` | `omp --approval-mode` | 创建会话时固定 |
 | Qoder CN | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
+| Qoder | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
 | dsh | runtime-managed | ACP `session/request_permission` | 每次请求 |
 | Codex | `read-only` / **`workspace-ask`** / `workspace-auto` / `full-access` | app-server 参数，见下表 | 创建会话时固定 |
 | Claude Code | **`default`** / `acceptEdits` / `plan` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |

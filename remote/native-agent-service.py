@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 4
+SERVICE_VERSION = 5
 
 def source_fingerprint(path=None):
     """Identity of the code a service is executing. SERVICE_VERSION is bumped by
@@ -27,12 +27,15 @@ DSH_MODELS = None
 PERMISSION_MODES = {
     'omp': ('always-ask', 'write', 'yolo'),
     'qoder': ('default', 'acceptEdits', 'plan', 'dontAsk', 'auto', 'bypassPermissions'),
+    'qoderintl': ('default', 'acceptEdits', 'plan', 'dontAsk', 'auto', 'bypassPermissions'),
     'dsh': ('runtime-managed',),
     'codex': ('read-only', 'workspace-ask', 'workspace-auto', 'full-access'),
     'claude': ('default', 'acceptEdits', 'plan', 'bypassPermissions'),
 }
-PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask', 'claude':'default'}
-PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session', 'claude':'next-turn'}
+PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'qoderintl':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask', 'claude':'default'}
+PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'qoderintl':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session', 'claude':'next-turn'}
+QODER_SDK = {'qoder':'@qodercn-ai/qodercn-agent-sdk', 'qoderintl':'@qoder-ai/qoder-agent-sdk'}
+QODER_CLI = {'qoder':'qoderclicn', 'qoderintl':'qodercli'}
 
 def permission_mode(provider, value=None):
     mode = value if value is not None else PERMISSION_DEFAULTS[provider]
@@ -124,12 +127,12 @@ def setup_status(provider):
     This runs outside LOCK, so CLI discovery cannot block active conversations.
     Return names/IDs and booleans only, never CLI configuration or credentials.
     """
-    if provider not in ('omp', 'qoder', 'dsh', 'codex', 'claude'):
+    if provider not in ('omp', 'qoder', 'qoderintl', 'dsh', 'codex', 'claude'):
         raise ValueError('Unknown setup provider')
     try:
         if provider == 'dsh': binary = dsh_binary()
         elif provider == 'codex' and os.environ.get('PERCH_LOCAL_CODEX'): binary = os.environ['PERCH_LOCAL_CODEX']
-        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'codex':'codex', 'claude':'claude'}[provider])
+        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'qoderintl':'qodercli', 'codex':'codex', 'claude':'claude'}[provider])
     except ValueError:
         binary = None
     result = {'installed': bool(binary), 'models': [], 'modelCheck': 'unverified', 'credentialCheck': 'unverified'}
@@ -150,8 +153,8 @@ def setup_status(provider):
         result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
                             for m in catalog if isinstance(m, dict) and m.get('id')]
         result['modelCheck'] = 'configured' if result['models'] else 'missing'
-    elif provider == 'qoder':
-        result['sdkInstalled'] = (ROOT / 'node_modules/@qodercn-ai/qodercn-agent-sdk/package.json').is_file()
+    elif provider in ('qoder', 'qoderintl'):
+        result['sdkInstalled'] = (ROOT / 'node_modules' / QODER_SDK[provider] / 'package.json').is_file()
         result['nodeInstalled'] = bool(shutil.which('node'))
         # The SDK resolves the model and login at the first query; no model-list API.
         result['modelCheck'] = 'runtime-default'
@@ -471,7 +474,7 @@ class Session:
         s.update(busy=True,error=None,cancelled=False,stopRequested=False,stopAcknowledged=False,
                  updated=time.time(),turnId=request_id,turnState='submitting')
         if not s['messages']: s['title']=text[:60]
-        if s['provider'] in ('qoder','dsh','codex','claude'): self.upsert({'role':'user','content':text},request_id)
+        if s['provider'] in ('qoder','qoderintl','dsh','codex','claude'): self.upsert({'role':'user','content':text},request_id)
         if s['provider']=='dsh':
             self.pending_prompt=(request_id,text)
             try:
@@ -493,7 +496,7 @@ class Session:
                 receipt['status']='accepted'; s['turnState']='running' if turn.get('status')=='inProgress' else 'accepted'
             else:
                 message={'type':'prompt','id':request_id,'message':text}
-                if s['provider'] in ('qoder','claude'): message['permissionMode']=s['permissionMode']
+                if s['provider'] in ('qoder','qoderintl','claude'): message['permissionMode']=s['permissionMode']
                 self.send(message)
                 receipt['status']='submitted'; s['turnState']='submitted'
         except Exception as e:
@@ -513,9 +516,10 @@ class Session:
             args = [dsh_binary(),'--profile','acp']
             env = dict(os.environ, DSH_HOME=str(ROOT/'dsh-home'), DSH_TELEMETRY_MODE='DISABLED')
         else:
-            cli = 'qoderclicn' if s['provider'] == 'qoder' else 'claude'
-            worker = 'qoder-worker.mjs' if s['provider'] == 'qoder' else 'claude-worker.mjs'
+            cli = QODER_CLI.get(s['provider'], 'claude')
+            worker = 'qoder-worker.mjs' if s['provider'] in QODER_SDK else 'claude-worker.mjs'
             cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which(cli)}
+            if s['provider'] in QODER_SDK: cfg['sdk'] = QODER_SDK[s['provider']]
             if not cfg['binary']: raise ValueError('未找到 ' + cli)
             args = ['node',str(ROOT/worker),json.dumps(cfg)]
             # The Claude CLI also phones home (feature flags, telemetry) outside the
@@ -1087,7 +1091,7 @@ class Session:
             s['stopAcknowledged']=True; durable=True
         elif t == 'agent_end':
             if e.get('isTerminal') is False: return
-            if provider in ('qoder','claude') and s.get('stopAcknowledged'): s['cancelled']=True
+            if provider in ('qoder','qoderintl','claude') and s.get('stopAcknowledged'): s['cancelled']=True
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
             if not s.get('cancelled') and not s['error']: s['completed']+=1
             self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
@@ -1134,9 +1138,9 @@ class Session:
             commands=[c for c in (e.get('commands') or []) if c.get('name')]
             if commands == s.get('commands'): return
             s['commands']=commands
-        elif provider in ('qoder','claude') and t == 'interaction': s['interactions'].append(e); durable=True
-        elif provider in ('qoder','claude') and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
-        elif provider in ('qoder','claude') and t in ('assistant','user'):
+        elif provider in ('qoder','qoderintl','claude') and t == 'interaction': s['interactions'].append(e); durable=True
+        elif provider in ('qoder','qoderintl','claude') and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
+        elif provider in ('qoder','qoderintl','claude') and t in ('assistant','user'):
             message = e['message']
             if provider == 'claude' and t == 'user' and e.get('isSynthetic'):
                 message = copy.deepcopy(message)
@@ -1144,9 +1148,9 @@ class Session:
                 for part in message['content']:
                     if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
             self.upsert(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))
-            if t == 'assistant' or provider == 'qoder': s.pop('partial',None)
+            if t == 'assistant' or provider in ('qoder','qoderintl'): s.pop('partial',None)
             durable=True
-        elif provider in ('qoder','claude') and t == 'stream_event':
+        elif provider in ('qoder','qoderintl','claude') and t == 'stream_event':
             ev=e['event']; et=ev['type']
             if provider == 'claude':
                 # Claude emits a complete assistant message for EACH block,
@@ -1175,10 +1179,10 @@ class Session:
                         if delta['type']=='text_delta': parts[idx]['text']=parts[idx].get('text','')+delta['text']
                         elif delta['type']=='thinking_delta': parts[idx]['thinking']=parts[idx].get('thinking','')+delta['thinking']
                 else: return
-        elif provider in ('qoder','claude') and t == 'result':
+        elif provider in ('qoder','qoderintl','claude') and t == 'result':
             s['resume']=e.get('session_id',s.get('resume')); durable=True
-            if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider=='qoder' else 'Claude')+' 执行失败')
-        elif provider in ('qoder','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
+            if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider in ('qoder','qoderintl') else 'Claude')+' 执行失败')
+        elif provider in ('qoder','qoderintl','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
             if e.get('error'):
                 s['error']='dsh 握手失败：'+str(e['error'].get('message','initialize 被拒绝'))
@@ -1413,7 +1417,7 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'id':'state','type':'get_state'})
                                 s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
                         elif action=='permission':
-                            if s.state['provider'] not in ('qoder','claude'): raise ValueError('当前 Agent 的权限在创建会话时固定')
+                            if s.state['provider'] not in ('qoder','qoderintl','claude'): raise ValueError('当前 Agent 的权限在创建会话时固定')
                             mode=permission_mode(s.state['provider'],body.get('mode'))
                             s.state['permissionMode']=mode; s.touch(True)
                             result={'ok':True,'permission':permission_capability(s.state)}

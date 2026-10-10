@@ -36,6 +36,7 @@
 | Kimi Code | Kimi Web API + SSH | 原生对话 |
 | Oh My Pi（OMP） | 远端桥接 RPC | 原生对话 |
 | Qoder CN | 远端桥接官方 Agent SDK | 原生对话 |
+| Qoder | 远端桥接官方 Agent SDK | 原生对话 |
 | Claude Code | 远端桥接官方 Agent SDK | 原生对话 |
 | DeepSeek Harness（dsh） | 远端桥接 ACP | 原生对话 |
 | Codex | 远端桥接 `codex app-server` stdio JSON-RPC | 原生对话 |

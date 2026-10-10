@@ -1,6 +1,6 @@
-import {query, qodercliAuth} from '@qodercn-ai/qodercn-agent-sdk';
 import readline from 'node:readline';
 const cfg = JSON.parse(process.argv[2]);
+const {query, qodercliAuth} = await import(cfg.sdk ?? '@qodercn-ai/qodercn-agent-sdk');
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
 let active, activeTurn, resume = cfg.resume, pending = new Map();
 readline.createInterface({input: process.stdin}).on('line', async line => {

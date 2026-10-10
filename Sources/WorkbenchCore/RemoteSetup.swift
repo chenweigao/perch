@@ -27,11 +27,11 @@ public enum BridgeProbeResult: Equatable, Sendable {
 
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
-    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude, .terminal]
+    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .terminal]
 
     /// The bridge protocol this build speaks. It must match SERVICE_VERSION in
     /// remote/native-agent-service.py; scripts/check-version.py enforces that.
-    public static let bridgeServiceVersion = 4
+    public static let bridgeServiceVersion = 5
 
     public static func sshAliases(_ config: String) -> [String] {
         var aliases = Set<String>()

@@ -385,7 +385,7 @@ final class WorkbenchModel {
         else { selectedConnection?.connect() }
     }
     var selectedReference: SessionReference? { openedSessions.first { $0.session.id == tabs.selectedID }?.session }
-    var showNative: Bool { !showDashboard && [.omp, .qoder, .dsh, .codex, .claude].contains(selectedReference?.kind) }
+    var showNative: Bool { !showDashboard && [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(selectedReference?.kind) }
     var showKimi: Bool { !showDashboard && selectedReference?.kind == .kimi }
     var selectedTerminalID: String? { selectedReference?.kind == .terminal ? tabs.selectedID : nil }
     var previewTerminalID: String? { tabs.previewID }
@@ -555,7 +555,7 @@ final class WorkbenchModel {
             selectedHostID = reference.hostID
             if let group = selectedGroup, !group.sessions.contains(reference) { selectedGroupID = nil }
             if let group = selectedGroup { workspace.lastSessionByGroup[group.id.uuidString] = reference.id }
-            if [.omp, .qoder, .dsh, .codex, .claude].contains(reference.kind) { native.select(reference.terminalID) }
+            if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) { native.select(reference.terminalID) }
             if reference.kind == .kimi, kimi.online { kimi.select(reference.terminalID) }
         }
         updateVisibility(focus: true); saveWorkspace(); syncFileViewer()
@@ -743,7 +743,7 @@ final class WorkbenchModel {
     func markReviewed(_ item: WorkspaceSession) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard item.online else { return }
-        if [.omp, .qoder, .dsh, .codex, .claude].contains(item.reference.kind), let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) {
+        if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind), let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) {
             workspace.reviewedKimiUpdates[item.id] = String(session.completed)
         } else if item.reference.kind == .kimi, let session = kimi.sessions.first(where: { $0.id == item.reference.terminalID }) {
             workspace.markReviewed(session, on: kimi.host.id)
@@ -795,7 +795,7 @@ final class WorkbenchModel {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false) }
         let starred = workspace.starred.contains(item.reference)
         let queued = native.queue.items(for: item.reference).filter { $0.state != .delivered }.count
-        if [.omp, .qoder, .dsh, .codex, .claude].contains(item.reference.kind) {
+        if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) {
             guard let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) else {
                 return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false)
             }
@@ -911,7 +911,7 @@ final class WorkbenchModel {
     private func archiveRequest(_ reference: SessionReference, archived: Bool = true) async throws {
         guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError("The task environment is unavailable") }
         if reference.kind == .kimi { try await kimi.setArchived(reference.terminalID, archived: archived, refresh: false) }
-        else if [.omp, .qoder, .dsh, .codex, .claude].contains(reference.kind) {
+        else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) {
             try await native.setArchived(reference.terminalID, archived: archived)
         } else if archived { workspace.archivedTerminals.insert(reference) }
         else { workspace.archivedTerminals.remove(reference) }
@@ -927,7 +927,7 @@ final class WorkbenchModel {
     /// offered as a no-op.
     var canQuoteSelection: Bool {
         guard !showDashboard, let reference = selectedReference else { return false }
-        return reference.kind == .kimi ? kimi.online : [.omp, .qoder, .dsh, .codex, .claude].contains(reference.kind) && native.online
+        return reference.kind == .kimi ? kimi.online : [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) && native.online
     }
     /// Appends the selection to the current session's draft as a Markdown quote.
     /// Existing draft text is kept: quoting is an addition, not a replacement.
@@ -939,7 +939,7 @@ final class WorkbenchModel {
         if reference.kind == .kimi {
             let existing = kimi.drafts[id] ?? ""
             kimi.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
-        } else if [.omp, .qoder, .dsh, .codex, .claude].contains(reference.kind) {
+        } else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) {
             let existing = native.drafts[id] ?? ""
             native.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
         }
@@ -1110,7 +1110,7 @@ final class WorkbenchModel {
     func canArchive(_ item: WorkspaceSession) -> Bool {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return false }
         if item.reference.kind == .terminal { return true }
-        if [.omp, .qoder, .dsh, .codex, .claude].contains(item.reference.kind) { return native.online && native.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false }
+        if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) { return native.online && native.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false }
         return kimi.online && kimi.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false
     }
     func setArchived(_ item: WorkspaceSession, archived: Bool) {
@@ -1156,7 +1156,7 @@ final class WorkbenchModel {
             defer { managing.remove(item.id) }
             do {
                 if item.reference.kind == .kimi { try await kimi.deleteSession(item.reference.terminalID) }
-                else if [.omp, .qoder, .dsh, .codex, .claude].contains(item.reference.kind) { try await native.action(item.reference.terminalID, "delete") }
+                else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) { try await native.action(item.reference.terminalID, "delete") }
                 else if let connection = connections.first(where: { $0.id == item.reference.hostID }) { try await connection.closeTerminal(item.reference.terminalID) }
                 if tabs.ids.contains(item.id) { close(item.id) }
                 workspace.removeSession(item.reference)
@@ -1189,7 +1189,7 @@ final class WorkbenchModel {
             messages = conversation.messages
             liveTools = conversation.live?.runningTools ?? []
         } else if let reference = selectedReference,
-                  [.omp, .qoder, .dsh, .codex, .claude].contains(reference.kind),
+                  [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind),
                   let snapshot = nativeEnvironments[reference.hostID]?.snapshot,
                   snapshot.id == reference.terminalID {
             messages = snapshot.messages

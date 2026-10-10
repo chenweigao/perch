@@ -11,7 +11,7 @@ struct WorkbenchSettings: View {
     @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
-    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .codex, .claude]
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .codex, .claude]
     var body: some View {
         Form {
             Section {

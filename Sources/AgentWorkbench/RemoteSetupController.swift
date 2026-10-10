@@ -61,7 +61,7 @@ final class RemoteSetupController: ObservableObject {
                 autoConnectSSH: original?.autoConnectSSH ?? true,
                 autoConnectHerdr: original?.autoConnectHerdr ?? true)
     }
-    var needsBridge: Bool { [.omp, .qoder, .dsh, .codex, .claude].contains(provider) }
+    var needsBridge: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider) }
     var canContinue: Bool { ready && !busy }
     var canFinish: Bool { projectVerified && ready && !busy }
     var checkAgentTitle: String {
@@ -74,6 +74,7 @@ final class RemoteSetupController: ObservableObject {
         case .kimi: return URL(string: "https://moonshotai.github.io/kimi-code/en/guides/getting-started.html")!
         case .omp: return URL(string: "https://github.com/can1357/oh-my-pi#install")!
         case .qoder: return URL(string: "https://docs.qoder.cn/cli/installation")!
+        case .qoderintl: return URL(string: "https://docs.qoder.com/cli/installation")!
         case .dsh: return URL(string: "https://github.com/deepseek-ai/deepseek-harness")!
         case .codex: return URL(string: "https://github.com/openai/codex#installation")!
         case .claude: return URL(string: "https://code.claude.com/docs/en/setup")!
@@ -85,6 +86,7 @@ final class RemoteSetupController: ObservableObject {
         case .kimi: return "npm install -g @moonshot-ai/kimi-code@2.0.2"
         case .omp: return "bun install -g @oh-my-pi/pi-coding-agent@18.1.16"
         case .qoder: return "npm install -g @qodercn-ai/qoderclicn@1.1.58"
+        case .qoderintl: return "curl -fsSL https://qoder.com/install | bash"
         case .codex: return "npm install -g @openai/codex@0.155.1"
         case .claude: return "npm install -g @anthropic-ai/claude-code@2.1.280"
         case .dsh, .terminal: return nil
@@ -95,6 +97,7 @@ final class RemoteSetupController: ObservableObject {
         case .kimi: return kimiBinaryPath.isEmpty ? "kimi" : SSHCommand.quote(kimiBinaryPath)
         case .omp: return "omp"
         case .qoder: return "qoderclicn"
+        case .qoderintl: return "qodercli"
         case .codex: return "codex login"
         case .claude: return "claude"
         case .dsh: return "" // The user's shell/profile owns DEEPSEEK_API_KEY.
@@ -281,7 +284,7 @@ final class RemoteSetupController: ObservableObject {
     private func checkNative() async throws {
         mark("runtime", .checking)
         hint = L("远端需要 Python 3；Qoder 与 Claude Code 还需要 Node.js 与 npm。")
-        _ = try await ssh(provider == .qoder || provider == .claude ? "python3 --version && node --version" : "python3 --version")
+        _ = try await ssh(provider == .qoder || provider == .qoderintl || provider == .claude ? "python3 --version && node --version" : "python3 --version")
         try Task.checkCancellation()
         mark("runtime", .passed)
         mark("service", .checking)
@@ -308,7 +311,7 @@ final class RemoteSetupController: ObservableObject {
             models = entries.map { ModelOption(id: $0.provider + "/" + $0.id, provider: $0.provider, name: $0.name) }
             guard !models.isEmpty else { throw WorkbenchError(L("OMP 未返回模型。请在远端配置模型后重试。")) }
             mark("models", .passed, L("模型列表已读取；实际模型鉴权将在首条消息时验证。"))
-        case .qoder:
+        case .qoder, .qoderintl:
             guard status["sdkInstalled"] == .bool(true), status["nodeInstalled"] == .bool(true) else {
                 mark("service", .needsAction); failedCheck = "service"
                 throw WorkbenchError(L("缺少 Qoder SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。"))
