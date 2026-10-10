@@ -4,6 +4,9 @@ public struct ConversationSearchHit: Identifiable, Equatable {
     public let entryID: String
     public let occurrence: Int
     public let excerpt: String
+    public init(entryID: String, occurrence: Int, excerpt: String) {
+        self.entryID = entryID; self.occurrence = occurrence; self.excerpt = excerpt
+    }
     public var id: String { "\(entryID):\(occurrence)" }
 }
 

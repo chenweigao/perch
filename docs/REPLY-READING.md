@@ -74,6 +74,12 @@ characters, and confirm column alignment and horizontal scrolling in the tables.
 
 ## Turn visibility and compact chrome
 
+Completed turns fold their process (tools, reasoning, intermediate text) behind
+one quiet “过程记录” disclosure, so a session reads as prompts and final answers;
+expansion remounts the original rows in place and is remembered per fold. The
+running turn keeps its live process visible. A find hit inside a fold opens it
+and lands on the fold row.
+
 Assistant progress stays visible in chronological order, interleaved with each
 reasoning phase. New reasoning and new overviews append below prior output rather
 than replacing a turn-wide slot. Completed reasoning phases have independent
@@ -85,9 +91,9 @@ agent snapshots use the same policy. A volatile Kimi message is deduplicated onl
 against messages in the current turn.
 
 After the turn ends, a text-only answer following the last tool call is treated
-as the final reply. Otherwise all assistant process text remains visible under
-“过程记录 · 未返回最终回复”. A thinking-only turn opens its thinking record by
-default; a tool-only turn shows an explicit no-text notice. These labels never
+as the final reply. Otherwise all assistant process text remains available inside
+the turn's process fold under “过程记录 · 未返回最终回复”; a tool-only turn keeps an
+explicit no-text notice outside the fold. These labels never
 invent a summary or claim that the requested task succeeded. Runtime notifications
 and injected skill context remain separately collapsible at their source positions
 instead of becoming user message bubbles.

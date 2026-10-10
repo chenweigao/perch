@@ -175,6 +175,8 @@ struct ConversationTranscript: View {
     var followsLatest = true
     var historyEpoch: String?
     var isSuspended = false
+    /// Completed turns collapse their process rows behind one disclosure.
+    var foldsProcess = false
     /// The owner restores its initial scroll position before this document is exposed.
     var waitsForInitialPosition = false
     @Environment(\.conversationPresentations) private var presentations
@@ -197,12 +199,17 @@ struct ConversationTranscript: View {
         let narratives = narrativeStore.rows(session: key)
         let identity = ConversationContentIdentity(snapshot: snapshot, narratives: narratives,
             api: api, session: sessionId, memoryKey: key)
-        let contents = snapshot.displayedRows { narratives[$0] }.map { row in
+        let displayed = snapshot.displayedRows { narratives[$0] }
+        let rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
+        let foldParents = rows.reduce(into: [String: String]()) { map, row in
+            for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
+        }
+        let contents = rows.map { row in
             ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity)
+                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows)
         }
         ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
-                                 appearance: ConversationEntryAppearance(environment),
+                                 appearance: ConversationEntryAppearance(environment), foldParents: foldParents,
                                  viewport: environment.conversationViewport,
                                  layout: documentLayout, measuredHeight: measured?.session == sessionId ? measured?.height : nil,
                                  suspended: isSuspended, waitsForInitialPosition: waitsForInitialPosition) { height in
@@ -249,6 +256,8 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     let navigation: [ConversationTurnSummary]
     let sessionId: String
     let appearance: ConversationEntryAppearance
+    /// Folded entry id -> its fold row id, so find results open the fold.
+    let foldParents: [String: String]
     let viewport: ConversationViewport?
     let layout: ConversationDocumentLayout
     // Changes invalidate SwiftUI's measurement without imposing a stale frame.
@@ -266,7 +275,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
         guard !suspended else { view.suspend(); return }
         view.heightChanged = heightChanged
         view.configure(contents, contentIdentity: contentIdentity, navigation: navigation, sessionId: sessionId, appearance: appearance,
-                       viewport: viewport, contentOriginY: layout.originY, waitsForInitialPosition: waitsForInitialPosition)
+                       viewport: viewport, foldParents: foldParents, contentOriginY: layout.originY, waitsForInitialPosition: waitsForInitialPosition)
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ConversationDocumentView, context: Context) -> CGSize? {
         if suspended { nsView.suspend() }
@@ -318,6 +327,7 @@ private final class ConversationDocumentView: NSView {
     private var restoreTarget: ConversationReadingMemory.Position?
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
+    private var foldParents: [String: String] = [:]
     private var columnWidth: CGFloat = ReplyStyle.readingWidth
     private var refreshing = false
     private var contentOriginY: CGFloat = 0
@@ -413,6 +423,10 @@ private final class ConversationDocumentView: NSView {
                 "appearance_invalidation": true, "external_summary_same_snapshot": true, "prepend_and_removal": true]
     }
     fileprivate var navigator: ConversationTurnNavigation? { viewport?.navigator }
+    /// Top-level document rows as (id, presentation), in reading order.
+    fileprivate var rowIdentifiers: [(id: String, presentation: String)] {
+        contents.map { ($0.entry.id, "\($0.entry.presentation)") }
+    }
     fileprivate var retainedHostCount: Int { controllers.count }
     fileprivate var mountedHostCount: Int { mounted.count }
     fileprivate static var retiredHostCount: Int { retiredControllers.count }
@@ -468,18 +482,33 @@ private final class ConversationDocumentView: NSView {
         }
     }
     private func revealEntry(_ id: String, highlight: Bool = false) {
-        guard !suspended, let index = indices[id], let clip = observedClip else { return }
+        guard !suspended, let clip = observedClip else { return }
+        var target = id
+        if indices[id] == nil, let fold = foldParents[id], indices[fold] != nil {
+            // The hit sits inside a folded process group: expand it in place and
+            // land on the fold row. The expanded content re-measures on mount.
+            ConversationReadingMemory.shared.expansions[sessionId + ":" + fold + ":process-fold"] = true
+            measuredSizes.removeValue(forKey: fold)
+            if let controller = controllers.removeValue(forKey: fold) {
+                controller.view.removeFromSuperview()
+                mounted.remove(fold)
+                Self.retire([controller])
+            }
+            laidOutRange = nil
+            target = fold
+        }
+        guard let index = indices[target] else { return }
         cancelPendingRestoration()
         ConversationReadingMemory.shared.following[sessionId] = false
         viewport?.pauseFollowing?()
         // A reveal is an explicit destination, not a request to preserve the
         // outgoing visible rows while cold rows above it are being measured.
-        restoreTarget = .init(entry: id, index: index, offset: 0)
+        restoreTarget = .init(entry: target, index: index, offset: 0)
         clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
         enclosingScrollView?.reflectScrolledClipView(clip)
         refreshVisibleRows(source: .reveal)
         restoreReadingPosition()
-        if highlight, let view = controllers[id]?.view {
+        if highlight, let view = controllers[target]?.view {
             let marker = CALayer()
             marker.frame = view.bounds.insetBy(dx: 1, dy: 1)
             marker.cornerRadius = 12
@@ -530,9 +559,10 @@ private final class ConversationDocumentView: NSView {
     }
 
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
-                   appearance: ConversationEntryAppearance, viewport: ConversationViewport?,
+                   appearance: ConversationEntryAppearance, viewport: ConversationViewport?, foldParents: [String: String]? = nil,
                    contentOriginY: CGFloat, waitsForInitialPosition: Bool = false) {
         self.waitsForInitialPosition = waitsForInitialPosition
+        if let foldParents { self.foldParents = foldParents }
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("document_configure", since: start) }
@@ -1102,6 +1132,11 @@ extension ConversationTranscript {
         }
         return nil
     }
+    /// Top-level document rows as (id, presentation), in reading order.
+    static func rowIdentifiers(in root: NSView) -> [(id: String, presentation: String)] {
+        if let document = root as? ConversationDocumentView { return document.rowIdentifiers }
+        return root.subviews.flatMap { rowIdentifiers(in: $0) }
+    }
 }
 #endif
 
@@ -1670,12 +1705,15 @@ private struct ConversationEntryView: View, Equatable {
     let memoryKey: String
     var activityNarrative: ActivityNarrativeRow? = nil
     var markdownPreparation: ReplyMarkdownPreparation? = nil
+    /// Rows collapsed behind this fold; non-nil only for process-fold entries.
+    var foldedRows: [ConversationPresentationModel.Row]? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
             && lhs.activityNarrative == rhs.activityNarrative
             && lhs.markdownPreparation == rhs.markdownPreparation
+            && lhs.foldedRows == rhs.foldedRows
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1706,6 +1744,10 @@ private struct ConversationEntryView: View, Equatable {
                 case .emptyOutput:
                     Text("本轮未返回文字回复，可展开工具记录查看结果。")
                         .font(.system(size: 13)).foregroundStyle(.secondary)
+                case .processFold:
+                    if let foldedRows {
+                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId)
+                    }
                 default:
                     if entry.presentation == .record {
                         Text("过程记录 · 未返回最终回复").font(.system(size: 11)).foregroundStyle(.secondary)
@@ -1726,9 +1768,37 @@ private struct ConversationEntryView: View, Equatable {
     }
 }
 
+/// A completed turn's folded process: one quiet disclosure that mounts the
+/// original rows in place when expanded. Expansion is remembered per fold row.
+private struct ProcessFoldRow: View {
+    let rows: [ConversationPresentationModel.Row]
+    let api: KimiAPI?
+    let sessionId: String
+    @Environment(\.conversationMemoryKey) private var memoryKey
+    @RememberedExpansion("process-fold") private var expanded
+    private var toolCalls: Int {
+        rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
+    }
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            if expanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(rows, id: \.entry.id) { row in
+                        ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                                              memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
+                    }
+                }.padding(.top, 10)
+            }
+        } label: {
+            Text(toolCalls > 0 ? "过程记录 · \(toolCalls) 次调用" : "过程记录 · \(rows.count) 条")
+                .font(.system(size: 12)).foregroundStyle(.secondary)
+        }.disclosureGroupStyle(WorkbenchDisclosureStyle())
+            .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
+    }
+}
+
 /// Keep live, historical and popover thoughts in the same TextKit style.
-private enum ThoughtTextStyle {
-    static let attributes: [NSAttributedString.Key: Any] = {
+private enum ThoughtTextStyle {    static let attributes: [NSAttributedString.Key: Any] = {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = 4
         let font = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 13, weight: .light), toHaveTrait: .italicFontMask)

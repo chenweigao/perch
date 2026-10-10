@@ -2,7 +2,7 @@ import Foundation
 
 /// Folding is based on the turn's available output, never on an assumed final summary.
 public struct ConversationTimelineEntry: Identifiable, Equatable {
-    public enum Presentation: Equatable { case message, activity, commentary, progress, thinkingPreview, thinkingDetails, record, thinkingRecord, emptyOutput }
+    public enum Presentation: Equatable { case message, activity, commentary, progress, thinkingPreview, thinkingDetails, record, thinkingRecord, emptyOutput, processFold }
     public private(set) var messages: [KimiMessage]
     public private(set) var presentation: Presentation
     public var activity: Bool { presentation == .activity }
@@ -18,6 +18,11 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
         // persisted call. Its activity host must survive all three source IDs.
         if presentation == .activity, let first = messages.first?.content.first, let toolID = first.toolCallId {
             return "activity:tool:\(toolID)"
+        }
+        // Folded process groups carry only their first message; the dedicated
+        // channel keeps their measurements apart from the rows they replace.
+        if presentation == .processFold {
+            return "process-fold:\(messages[0].id):\(partOffset)"
         }
         // A thought that later gains tools keeps its original reading anchor.
         if messages.first?.content.first?.type == "thinking" {
@@ -97,6 +102,55 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
         }
         flush(running: isRunning)
         return entries
+    }
+
+    /// A folded process group keeps only its first message for identity; the
+    /// full rows live in `ConversationPresentationModel.Row.foldedRows`.
+    public static func processFold(firstMessage: KimiMessage) -> Self {
+        Self(messages: [firstMessage], presentation: .processFold, partOffset: 0)
+    }
+}
+
+/// History folds each completed turn's process (tools, thoughts, intermediate
+/// text) behind one disclosure, leaving prompts and final answers visible.
+/// The running turn keeps its live process. Expansion is view state; folded
+/// rows stay fully intact and re-mount in place.
+public enum ConversationProcessFold {
+    public static func foldable(_ row: ConversationPresentationModel.Row) -> Bool {
+        // A closed narrative anchor already summarizes its stage in place.
+        if let activity = row.activity, activity.isAnchor, activity.stageClosed,
+           row.entry.isNarrativeSource(for: activity.narrative) { return false }
+        switch row.entry.presentation {
+        case .activity, .commentary, .progress, .thinkingPreview, .thinkingDetails, .record, .thinkingRecord:
+            return true
+        case .message, .emptyOutput, .processFold:
+            return false
+        }
+    }
+
+    public static func fold(rows: [ConversationPresentationModel.Row], isRunning: Bool) -> [ConversationPresentationModel.Row] {
+        let lastPrompt = rows.lastIndex {
+            $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true
+        }
+        var result: [ConversationPresentationModel.Row] = []
+        var pending: [ConversationPresentationModel.Row] = []
+        func flush() {
+            guard !pending.isEmpty else { return }
+            let entry = ConversationTimelineEntry.processFold(firstMessage: pending[0].entry.messages[0])
+            result.append(ConversationPresentationModel.Row(entry: entry, tools: [:], activity: nil, foldedRows: pending))
+            pending = []
+        }
+        for (index, row) in rows.enumerated() {
+            let live = isRunning && lastPrompt != nil && index > lastPrompt!
+            if foldable(row), !live {
+                pending.append(row)
+            } else {
+                flush()
+                result.append(row)
+            }
+        }
+        flush()
+        return result
     }
 }
 

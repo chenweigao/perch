@@ -245,3 +245,57 @@ func checkCompactionSummaryDisplay() {
     expectEqual(CompactionSummaryDisplay.humanText(recoveryPlan + "\n\n## Context Recovery\n仅 agent 使用"), recoveryPlan)
     print("PASS: compaction summary display strips harness scaffolding")
 }
+
+/// History folding collapses each completed turn's process into one row while
+/// prompts, final answers and the running turn's live process stay top-level.
+func checkConversationProcessFold() throws {
+    func messages(_ json: String) throws -> [KimiMessage] { try KimiWire.decoder().decode([KimiMessage].self, from: Data(json.utf8)) }
+    func rows(_ entries: [ConversationTimelineEntry]) -> [ConversationPresentationModel.Row] {
+        entries.map { ConversationPresentationModel.Row(entry: $0, tools: [:], activity: nil) }
+    }
+    let turn = try messages("""
+    [{"id":"u1","role":"user","created_at":"1","content":[{"type":"text","text":"修复滚动"}]},
+     {"id":"a1","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"先定位"},{"type":"tool_use","tool_call_id":"t1","tool_name":"read"}]},
+     {"id":"a2","role":"assistant","created_at":"3","content":[{"type":"text","text":"中间说明"},{"type":"tool_use","tool_call_id":"t2","tool_name":"edit"}]},
+     {"id":"a3","role":"assistant","created_at":"4","content":[{"type":"text","text":"已完成"}]}]
+    """)
+    let entries = ConversationTimelineEntry.make(turn)
+    let folded = ConversationProcessFold.fold(rows: rows(entries), isRunning: false)
+    precondition(folded.map(\.entry.presentation) == [.message, .processFold, .message],
+                 "A completed turn keeps only its prompt and final answer: \(folded.map(\.entry.presentation))")
+    let foldRow = folded[1]
+    precondition(foldRow.entry.id.hasPrefix("process-fold:") && foldRow.entry.messages.count == 1,
+                 "Fold identity stays light and distinct from the rows it replaces")
+    precondition(foldRow.foldedRows?.map(\.entry.id) == entries.dropFirst().dropLast().map(\.id),
+                 "The fold preserves every process row in source order")
+    precondition(foldRow.foldedRows?.flatMap(\.entry.messages).flatMap(\.content).count
+                 == entries.dropFirst().dropLast().flatMap(\.messages).flatMap(\.content).count,
+                 "The fold preserves every source part")
+    // Folding is idempotent; fold rows never re-fold.
+    precondition(ConversationProcessFold.fold(rows: folded, isRunning: false) == folded)
+    // A single process row folds as well: uniform collapsed history.
+    let single = try messages("""
+    [{"id":"u2","role":"user","created_at":"1","content":[{"type":"text","text":"看一眼"}]},
+     {"id":"b1","role":"assistant","created_at":"2","content":[{"type":"tool_use","tool_call_id":"t3","tool_name":"read"}]},
+     {"id":"b2","role":"assistant","created_at":"3","content":[{"type":"text","text":"看完了"}]}]
+    """)
+    let singleFolded = ConversationProcessFold.fold(rows: rows(ConversationTimelineEntry.make(single)), isRunning: false)
+    precondition(singleFolded.map(\.entry.presentation) == [.message, .processFold, .message])
+    // The running turn keeps its live process; earlier turns fold.
+    let live = try messages("""
+    [{"id":"u3","role":"user","created_at":"1","content":[{"type":"text","text":"继续"}]},
+     {"id":"c1","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"进行中"}]}]
+    """)
+    let twoTurns = turn + live
+    let runningFold = ConversationProcessFold.fold(
+        rows: rows(ConversationTimelineEntry.make(twoTurns, isRunning: true)), isRunning: true)
+    precondition(runningFold.filter { $0.entry.presentation == .processFold }.count == 1,
+                 "Only the completed turn folds while the session runs")
+    precondition(runningFold.suffix(2).map(\.entry.presentation) == [.message, .thinkingPreview],
+                 "The running turn's prompt and live thinking stay visible")
+    let idleFold = ConversationProcessFold.fold(
+        rows: rows(ConversationTimelineEntry.make(twoTurns, isRunning: false)), isRunning: false)
+    precondition(idleFold.filter { $0.entry.presentation == .processFold }.count == 2,
+                 "Once idle, every turn folds")
+    print("PASS: process fold groups completed turns, preserves order, keeps the running turn live")
+}
