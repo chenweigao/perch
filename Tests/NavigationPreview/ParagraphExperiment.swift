@@ -281,11 +281,14 @@ extension NavigationRunner {
             if let metadata { raw["metadata"] = metadata }
             return try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: raw))
         }
+        func counter(_ key: String) -> Int { NavigationRenderMetrics.counters[key] ?? 0 }
+        func stageCount(_ key: String) -> Int { NavigationRenderMetrics.stages[key]?.count ?? 0 }
         let session = "native-assistant-contract"
-        func root(_ messages: [KimiMessage], running: Bool = false, rtl: Bool = false) -> some View {
-            ConversationTranscript(messages: messages, sessionId: session, isRunning: running)
+        func root(_ messages: [KimiMessage], running: Bool = false, rtl: Bool = false,
+                  dark: Bool = false, sessionID: String? = nil) -> some View {
+            ConversationTranscript(messages: messages, sessionId: sessionID ?? session, isRunning: running)
                 .frame(width: 500).environment(\.layoutDirection, rtl ? .rightToLeft : .leftToRight)
-                .environment(\.colorScheme, .light)
+                .environment(\.colorScheme, dark ? .dark : .light)
         }
         let source = "Alpha **bold** 中文 👩🏽‍💻\n\nBeta https://example.com /tmp/fixture.swift:42"
         let host = NSHostingView(rootView: root([try message(source)]))
@@ -299,6 +302,7 @@ extension NavigationRunner {
             }
         }
         func nativeRows() -> [NativeAssistantMessageView] { descendants(host).compactMap { $0 as? NativeAssistantMessageView } }
+        func nativeUserRows() -> [NativeUserMessageView] { descendants(host).compactMap { $0 as? NativeUserMessageView } }
         func textViews() -> [ReplyTextView] { descendants(host).compactMap { $0 as? ReplyTextView } }
         try await settle()
         guard let initial = nativeRows().first, nativeRows().count == 1,
@@ -322,20 +326,62 @@ extension NavigationRunner {
         try await settle()
         guard nativeRows().count == 1, let completedRow = nativeRows()[0].superview,
               completedRow.identifier == row.identifier else { throw NavigationError("Completed stream failed to restore its row identity") }
-        // Rich-but-admitted blocks join the native path; tables and attachments keep SwiftUI.
-        for admitted in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "- List item", "> Quote"] {
+        // Rich and partial-but-admitted blocks join the native path; unsupported shapes keep SwiftUI.
+        for admitted in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "```swift\nlet partial = \"中文 👩🏽‍💻\"", "**未闭合 中文 👩🏽‍💻", "- List item", "> Quote"] {
             host.rootView = root([try message(admitted)])
             try await settle()
             guard nativeRows().count == 1, nativeRows()[0].superview === completedRow else { throw NavigationError("Admitted assistant block lost the native row: \(admitted)") }
         }
-        for complex in ["| A | B |\n| --- | --- |\n| 1 | 2 |", "![](https://example.com/alt.png)", "- 列表项里的代码：\n  ```swift\n  let nested = 1\n  ```"] {
+        let parseBefore = ["rejected": counter("row_parse_rejected"),
+                           "reused": counter("markdown_parse_reused"),
+                           "reparsed": counter("markdown_parse_rejected_fallback"),
+                           "markdown": stageCount("markdown_parse")]
+        let rejectedSources: [(source: String, marker: String?)] = [
+            ("| 列 | 值 |\n| --- | --- |\n| 中文 👩🏽‍💻 | é |", "中文 👩🏽‍💻"),
+            ("![](https://example.com/alt.png)", nil),
+            ("- 列表项里的代码：\n  ```swift\n  let nested = 1\n  ```", "nested")
+        ]
+        for (complex, marker) in rejectedSources {
             host.rootView = root([try message(complex)])
             try await settle()
-            guard nativeRows().isEmpty, descendants(host).contains(where: { $0 === completedRow }) else { throw NavigationError("Complex assistant lost its existing renderer or outer row: \(complex)") }
+            let renderedText = textViews().map(\.string).joined(separator: "|")
+            guard nativeRows().isEmpty, descendants(host).contains(where: { $0 === completedRow }),
+                  marker.map({ renderedText.contains($0) }) ?? !renderedText.contains("中文 👩🏽‍💻") else {
+                throw NavigationError("Complex assistant lost or retained fallback content: \(complex)")
+            }
         }
+        let rejectedUserSource = "# 用户标题 Unicode 👩🏽‍💻 é"
+        host.rootView = root([try message(rejectedUserSource, role: "user")])
+        try await settle()
+        guard nativeUserRows().isEmpty, textViews().contains(where: { $0.string.contains("用户标题") }) else {
+            throw NavigationError("Complex user message lost its SwiftUI fallback")
+        }
+        let fallbackParsing: [String: Int] = [
+            "rejected": counter("row_parse_rejected") - parseBefore["rejected"]!,
+            "reused": counter("markdown_parse_reused") - parseBefore["reused"]!,
+            "reparsed": counter("markdown_parse_rejected_fallback") - parseBefore["reparsed"]!,
+            "markdown_parses": stageCount("markdown_parse") - parseBefore["markdown"]!
+        ]
+        let reuseEnabled = ProcessInfo.processInfo.environment["NAVIGATION_REUSE_REJECTED_MARKDOWN"] != "0"
+        let rejected = fallbackParsing["rejected"]!, reused = fallbackParsing["reused"]!
+        let reparsed = fallbackParsing["reparsed"]!, markdownParses = fallbackParsing["markdown_parses"]!
+        guard rejected > 0, markdownParses == reparsed,
+              (reuseEnabled ? reparsed == 0 && reused >= rejected : reused == 0 && reparsed >= rejected) else {
+            throw NavigationError("Rejected Markdown parse reuse contract failed: \(fallbackParsing)")
+        }
+        let directBefore = ["row": stageCount("row_parse"), "direct": counter("markdown_parse_direct"),
+                            "markdown": stageCount("markdown_parse")]
         host.rootView = root([try message(source)], rtl: true)
         try await settle()
-        guard nativeRows().isEmpty else { throw NavigationError("RTL assistant used LTR native layout") }
+        let directRowParses = stageCount("row_parse") - directBefore["row"]!
+        let directParses = counter("markdown_parse_direct") - directBefore["direct"]!
+        let directMarkdownParses = stageCount("markdown_parse") - directBefore["markdown"]!
+        let directParsing = ["row_parses": directRowParses, "direct": directParses,
+                             "markdown_parses": directMarkdownParses]
+        guard nativeRows().isEmpty, directRowParses == 0, directParses > 0,
+              directParses == directMarkdownParses else {
+            throw NavigationError("RTL assistant did not retain direct SwiftUI parsing: \(directParsing)")
+        }
         host.rootView = root([try message(source)])
         try await settle()
         guard let restored = nativeRows().first, restored.superview === completedRow else { throw NavigationError("Plain assistant failed to return to native row") }
@@ -395,7 +441,14 @@ extension NavigationRunner {
             try await settle()
             guard nativeRows().isEmpty else { throw NavigationError("Summary or runtime context entered plain assistant renderer") }
         }
-        host.rootView = root([])
+        let switchedSource = "| 会话 | 内容 |\n| --- | --- |\n| 会话乙 | Unicode 👩🏽‍💻 é |"
+        host.rootView = root([try message(switchedSource)], dark: true, sessionID: session + "-next")
+        try await settle()
+        let switchedText = textViews().map(\.string).joined(separator: "|")
+        guard nativeRows().isEmpty, switchedText.contains("会话乙"), !switchedText.contains("Skill summary") else {
+            throw NavigationError("Rejected Markdown reused content across session or appearance change")
+        }
+        host.rootView = root([], sessionID: session + "-next")
         try await settle()
         // Recycled shells hold no block content; text views return to the shared pool cleared.
         guard let prose = NativeAssistantContent.make((0..<80).map { "Paragraph \($0)" }.joined(separator: "\n\n")),
@@ -413,6 +466,9 @@ extension NavigationRunner {
         let pool = NativeAssistantMessageView.poolState
         guard pool["rows"] as? Int == 16, pool["cleared"] as? Bool == true else { throw NavigationError("Assistant row pool exceeded its budget or kept private state") }
         return ["production_lifecycle": true, "streaming_retains_swiftui": true, "same_id_shape_changes": true,
-                "copy_button_source_and_feedback": true, "code_card_copy_and_scroll": true, "pool": pool]
+                "copy_button_source_and_feedback": true, "code_card_copy_and_scroll": true,
+                "fallback_parse_reuse": fallbackParsing, "fallback_parse_reuse_enabled": reuseEnabled,
+                "direct_swiftui_parse": directParsing,
+                "fallback_session_and_appearance_isolation": true, "pool": pool]
     }
 }

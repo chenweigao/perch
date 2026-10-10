@@ -390,16 +390,20 @@ alone do not establish a performance improvement.
 
 The native assistant row also admits headings, code cards, rules, paragraph-only
 quotes and paragraph/list items (nested lists to depth four). Tables, attachments
-and deeper nesting keep the SwiftUI renderer. `NativeAssistantContent.make` parses
-once and builds attributed strings up front; `NativeAssistantStackView` lays out
-block views with the exact `ReplyBlocks` spacing rules (compact variants inside
-quotes and list items) and reuses same-type block views by position. Code cards are
-plain AppKit: an overlay-scrolling `NSScrollView` with an unwrapped text container,
-a language label and a hosted `ReplyCopyButton` whose copy state survives source
-edits, matching the SwiftUI card. List markers align by the same first-baseline
-constant the SwiftUI alignment guide uses. Recycling tears down all block
-containers and returns cleared text views to the shared pool; shells retain no
-conversation content.
+and deeper nesting keep the SwiftUI renderer. `NativeAssistantContent.prepare`
+parses once and builds attributed strings up front; when admission rejects the
+source, the current entry controller passes those immutable `ReplyBlock` values to
+its SwiftUI fallback instead of parsing the same source again. The handoff is
+matched by session, message ID and source and lives only as long as that controller;
+attributed strings are not shared across the renderer boundary.
+`NativeAssistantStackView` lays out block views with the exact `ReplyBlocks` spacing
+rules (compact variants inside quotes and list items) and reuses same-type block
+views by position. Code cards are plain AppKit: an overlay-scrolling `NSScrollView`
+with an unwrapped text container, a language label and a hosted `ReplyCopyButton`
+whose copy state survives source edits, matching the SwiftUI card. List markers
+align by the same first-baseline constant the SwiftUI alignment guide uses.
+Recycling tears down all block containers and returns cleared text views to the
+shared pool; shells retain no conversation content.
 
 `assistant-rows` parity covers mixed blocks at both column widths and appearances,
 including glyph positions inside code scroll views. Contracts cover admitted-block
@@ -418,16 +422,19 @@ Acceptance builds therefore report a separate counter dictionary next to
 
 Timed segments: `set_root` (native admission probing, attributed construction,
 native view acquisition and text-storage replacement, plus `NSHostingController`
-creation for fallback rows), `row_parse` (both native admission probes; the
+creation for fallback rows), `row_parse` (both native admission probes; an actual
 SwiftUI parse stays `markdown_parse`), and `file_reference_scan` (nested inside
 `attributed_text`, because its cost grows with paragraph length rather than run
 count). `text_measure` splits into `text_measure_unwrapped` — a nil proposal lays
 the whole string out on one 1,000,000pt line — and `text_measure_wrapped`, with
 `text_measure_cache_hit` counting repeats absorbed by the per-view width cache.
 Occurrences: `row_parse_native_user`, `row_parse_native_assistant`,
-`row_parse_rejected` (a rejected admission discards its parse and attributed
-strings, and the SwiftUI renderer repeats the parse for the same source),
+`row_parse_rejected`, `markdown_parse_reused`,
+`markdown_parse_rejected_fallback`, `markdown_parse_direct`,
 `bubble_probe_bounded` and `bubble_probe_narrower`.
+`NAVIGATION_REUSE_REJECTED_MARKDOWN=0` is an acceptance-build-only ablation that
+restores the rejected-admission reparse; production builds always use the bounded
+current-entry handoff.
 
 `NAVIGATION_BUBBLE_IDEAL_PROBE=0` replaces the user bubble's unwrapped
 ideal-width probe with one probe at the bubble's maximum content width.
