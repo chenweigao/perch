@@ -32,6 +32,7 @@ struct ProtocolTests {
         try checkKimiTasks()
         try checkKimiTranscript()
         try await checkKimiAPILifecycle()
+        try await checkWebSocketHeartbeat()
         try checkKimiPrompts()
         try checkUnifiedWorkspace()
         try checkSessionManagement()
