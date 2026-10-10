@@ -1,0 +1,36 @@
+== fingerprints ==
+  off        runs=3 binary=fc2b4aa1e557 source=6a97826c8b8e row_cache=0 macos=Version 27.0.1 (Build 26A434)
+  candidate  runs=3 binary=fc2b4aa1e557 source=6a97826c8b8e row_cache=48 macos=Version 27.0.1 (Build 26A434)
+
+== per-phase summary (median across runs) ==
+  arm/phase                   steps    sum_ms     med     p95   RSS_MB  create  measure   hit  admit  evict  peak
+  off/cold-down                 162   1948.28   12.28   17.93   170.14     477      477     0      0      0     0
+  off/revisit-up                160   1835.84   11.58   19.03   166.92     466        0     0      0      0     0
+  off/hot-local                 240    657.21    2.73    5.07   167.09       0        0     0      0      0     0
+  off/short-reverse              72    655.68    9.51   14.57   167.91     144        0     0      0      0     0
+  candidate/cold-down           162   2075.54   12.94   18.92   192.91     477      477     0    466    418    48
+  candidate/revisit-up          160   1928.39   12.51   20.74   185.83     418        0    48    465    417    48
+  candidate/hot-local           240    537.28    1.77    4.95    185.7       0        0     0      0      0    48
+  candidate/short-reverse        72    363.41    4.76     7.6   183.55       0        0   144    144      1    48
+
+== prediction checks ==
+  [PASS      ] both arms visible rows mounted / cache within budget
+              no failure recorded above
+  [PASS      ] short-reverse fully served from cache
+              candidate hits=144 creates=0; off-arm hits=0
+  [PASS      ] revisit-up reduction matches the bounded model
+              host_create fell 10.3%, consistent with a bounded cache; full-history return is NOT expected to reach the -55% full-retention bound
+  [PASS      ] cold-down not materially worse
+              step median 12.28 -> 12.94 ms (+5.4%); threshold +10%. Full retention measured +15% here in phase 1.
+  [PASS      ] cold-down serves no reuse
+              hits=0 as predicted
+  [PASS      ] hot-local untouched by the candidate
+              host_create off=0 candidate=0; both must be 0 because the +/-12 retained window already serves this phase
+  [JUDGE     ] resident memory delta
+              166.92 -> 185.83 MB (+18.9 MB). No automatic threshold: the phase-1 +41MB figure was a linear extrapolation and is withdrawn. Judge against the adoption gate, and note full retention measured +205MB for 480 hosts.
+
+== overall ==
+  INCONCLUSIVE: some checks could not be evaluated from these receipts.
+
+  Adoption still requires, beyond this script: no materially worse first traversal across 3 non-overlapping rounds; a judged RSS delta; all functional fixtures green (full-text coverage, links/copy/search, same-ID updates, disclosure, zoom, reading anchors, session switching, refresh-without-blank); and confirmation on the machine where the user reported the problem.
+  This script summarises paced main-actor scroll receipts. It does not measure compositor frame rate, hardware input latency or user experience.
