@@ -61,6 +61,9 @@ struct ProjectMessageComposer: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("引用项目文件").font(.system(size: 11, weight: .medium))
+                        if !matches.isEmpty {
+                            Text("\(matches.count) 个匹配").font(.system(size: 10)).foregroundStyle(.tertiary)
+                        }
                         Spacer()
                         Button("刷新") { choice = 0; files.load(host: host, cwd: cwd) }
                         Button("关闭") { dismiss() }
@@ -81,7 +84,7 @@ struct ProjectMessageComposer: View {
                                         }.buttonStyle(.plain).help(path).id(index)
                                     }
                                 }
-                            }.frame(height: CGFloat(min(150, matches.count * 25 - 2)))
+                            }.frame(height: CGFloat(min(240, matches.count * 25 - 2)))
                                 .onChange(of: choice) { _, value in proxy.scrollTo(value) }
                         }
                     }

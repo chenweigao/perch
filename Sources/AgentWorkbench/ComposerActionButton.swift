@@ -62,8 +62,13 @@ struct ComposerAddButton: View {
 struct ComposerDeliveryHint: View {
     let sending: Bool
     let saveError: String?
+    /// Character count of a long draft, so a wall of text is visible at a glance.
+    var draftLength: Int = 0
     var body: some View {
         if let saveError { Text(saveError).font(.system(size: 11)).foregroundStyle(.orange).textSelection(.enabled) }
         else if sending { Text("Sending…").font(.system(size: 11)).foregroundStyle(.secondary) }
+        else if draftLength >= 200 {
+            Text("草稿 \(draftLength) 字").font(.system(size: 11)).foregroundStyle(.tertiary)
+        }
     }
 }

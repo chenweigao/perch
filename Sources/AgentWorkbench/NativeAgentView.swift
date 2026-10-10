@@ -201,6 +201,11 @@ private struct NativeComposerView: View {
                     ) { mode in
                         connection.setPermission(mode, for: s.id)
                     }
+                    ComposerTemplatesMenu(draft: connection.drafts[s.id] ?? "") { template in
+                        let existing = connection.drafts[s.id] ?? ""
+                        connection.drafts[s.id] = existing.isEmpty ? template : existing + "\n\n" + template
+                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                    }
                     ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
                                  reportedAt: s.context?.reportedAt, isStale: !connection.online)
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
@@ -211,7 +216,8 @@ private struct NativeComposerView: View {
                                          onQueue: defaultMode(s) == .steer ? { send(.nextTurn) } : nil)
                 }
             }.padding(12).workbenchControlSurface()
-            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
+                                 draftLength: (connection.drafts[s.id] ?? "").count)
         }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
     }
     private var isCurrent: Bool { connection.selectedID == s.id && connection.snapshot?.id == s.id }

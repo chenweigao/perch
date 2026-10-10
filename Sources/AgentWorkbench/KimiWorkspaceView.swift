@@ -179,6 +179,12 @@ private struct KimiComposerView: View {
                                      disabled: connection.sending) { mode in
                         connection.setPermission(mode, for: sessionID)
                     }
+                    ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
+                        onInput()
+                        let existing = connection.drafts[sessionID] ?? ""
+                        connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
+                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                    }
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget,
                                  isStale: !connection.online || !connection.snapshotReady)
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.isTurnRunning == true,
@@ -188,7 +194,8 @@ private struct KimiComposerView: View {
                                          onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
                 }
             }.padding(12).workbenchControlSurface()
-            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
+                                 draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
