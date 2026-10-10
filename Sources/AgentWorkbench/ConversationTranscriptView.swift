@@ -6,13 +6,21 @@ import WorkbenchCore
 /// Nested stages are reported separately; their durations must not be summed.
 enum NavigationRenderMetrics {
     static var stages: [String: (count: Int, ms: Double)] = [:]
+    /// Occurrences only. A lifecycle event must not be reported as a duration:
+    /// taking the start timestamp at the record call always reads ~0.0ms, which is
+    /// how native-row parsing became invisible under `markdown_parse`.
+    static var counters: [String: Int] = [:]
     static func record(_ stage: String, since start: TimeInterval) {
         let old = stages[stage] ?? (0, 0)
         stages[stage] = (old.count + 1, old.ms + (CACurrentMediaTime() - start) * 1_000)
     }
+    static func count(_ key: String, by amount: Int = 1) { counters[key, default: 0] += amount }
     static var report: [String: Any] {
         stages.mapValues { ["count": $0.count, "ms": $0.ms] as [String: Any] }
     }
+    /// Reported separately from `report` so an occurrence can never be read as a
+    /// 0.0ms duration.
+    static var counterReport: [String: Any] { counters }
 }
 #endif
 
@@ -1115,6 +1123,13 @@ private final class ConversationEntryController: NSViewController {
         return (source, blocks)
     }
     private func setRoot() {
+        #if TRANSCRIPT_CHECKS
+        // Covers native admission probing (parse + attributed construction), native
+        // view acquisition and text-storage replacement, and NSHostingController
+        // creation for fallback rows. Nested inside host_create/host_view callers.
+        let rootStart = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("set_root", since: rootStart) }
+        #endif
         if let paragraphs = nativeUserContent() {
             if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
             if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
