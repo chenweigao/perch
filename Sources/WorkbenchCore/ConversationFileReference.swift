@@ -27,6 +27,9 @@ public struct ConversationFileReference: Equatable {
         self.path = path; line = values.first(where: { $0.name == "line" })?.value.flatMap(Int.init)
     }
     public static func matches(in text: String) -> [(NSRange, Self)] {
+        // Inline references require a line suffix. Avoid regex backtracking on
+        // long punctuation-heavy tokens that cannot contain one.
+        guard text.contains(":") || text.contains("#") else { return [] }
         let source = text as NSString
         return inlinePattern.matches(in: text, range: NSRange(location: 0, length: source.length)).compactMap {
             guard let value = Self(text: source.substring(with: $0.range)) else { return nil }

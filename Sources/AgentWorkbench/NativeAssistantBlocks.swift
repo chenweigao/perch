@@ -24,7 +24,23 @@ enum NativeAssistantContent {
     /// Completed assistant text with plain structure. `allowsRichBlocks` exists for
     /// acceptance A/B runs: off limits admission to paragraph groups.
     static func make(_ source: String, allowsRichBlocks: Bool = true) -> [NativeAssistantBlock]? {
+        let result = build(source, allowsRichBlocks: allowsRichBlocks)
+        #if TRANSCRIPT_CHECKS
+        // A rejection discards the parse and the attributed strings built before it;
+        // the SwiftUI renderer then repeats the parse for the same source.
+        if result == nil { NavigationRenderMetrics.count("row_parse_rejected") }
+        #endif
+        return result
+    }
+    private static func build(_ source: String, allowsRichBlocks: Bool) -> [NativeAssistantBlock]? {
+        #if TRANSCRIPT_CHECKS
+        let parseStart = CACurrentMediaTime()
         let blocks = ReplyDocument.parse(source)
+        NavigationRenderMetrics.record("row_parse", since: parseStart)
+        NavigationRenderMetrics.count("row_parse_native_assistant")
+        #else
+        let blocks = ReplyDocument.parse(source)
+        #endif
         guard !blocks.isEmpty else { return nil }
         var result: [NativeAssistantBlock] = []
         var pending: [[ReplyInline]] = []

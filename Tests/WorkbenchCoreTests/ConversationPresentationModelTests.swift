@@ -34,6 +34,10 @@ func checkConversationPresentationModel() throws {
             precondition(row.tools == visible.tools.filter { ids.contains($0.key) })
             precondition(row.activity == narrative.rows[row.entry.id])
         }
+        let costOracle = Model(key: model.key)
+        _ = costOracle.update(input)
+        precondition(model.retainedPayloadCost == costOracle.retainedPayloadCost,
+                     "Reused payload accounting must match a full recomputation after edits, paging and truncation")
         let count = model.preparationCount
         precondition(model.update(input) === snapshot && model.preparationCount == count, "Equal values must reuse the prepared snapshot")
     }
@@ -47,6 +51,19 @@ func checkConversationPresentationModel() throws {
     let restarted = liveModel.update(.init(messages: [initial[0]], epoch: "two", language: "en"))
     precondition(restarted.rows.allSatisfy { $0.tools["live"] == nil }, "New runtime epoch must not resurrect old live tools")
 
+    let costModel = Model(key: "cost-parity")
+    for input in [Model.Input(messages: initial, language: "zh"),
+                  Model.Input(messages: try messages("👋 中文", output: String(repeating: "工具内容", count: 1000)), language: "zh"),
+                  Model.Input(messages: older + initial, language: "zh"),
+                  Model.Input(messages: Array(initial.reversed()), epoch: "new", language: "en"),
+                  Model.Input(messages: [], epoch: "new", language: "en"),
+                  Model.Input(messages: initial, epoch: "new", language: "en")] {
+        _ = costModel.update(input)
+        let oracle = Model(key: "cost-parity")
+        _ = oracle.update(input)
+        precondition(costModel.retainedPayloadCost == oracle.retainedPayloadCost,
+                     "Payload admission cost must remain exact across Unicode edits, reordering and reset")
+    }
     let cache = ConversationPresentationCache(capacity: 2)
     let input = Model.Input(messages: initial, language: "zh")
     let a = ConversationPresentationHandle().update(key: "host-a:native:same", input: input, cache: cache)
@@ -99,5 +116,23 @@ func checkConversationPresentationModel() throws {
     do { released = ConversationPresentationHandle().update(key: "release", input: input, cache: cache) }
     precondition(released != nil)
     cache.removeAll(); precondition(released == nil, "Eviction must release prepared data once no view owns it")
-    print("PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU and oversized active state")
+
+    var metrics: [ConversationPresentationUpdateMetrics] = []
+    let measured = Model(key: "metrics", metricsHandler: { metrics.append($0) })
+    let measuredInitial = older + initial
+    _ = measured.update(.init(messages: measuredInitial, isRunning: true, language: "zh"))
+    let measuredChanged = older + (try messages("连续 token"))
+    let measuredSnapshot = measured.update(.init(messages: measuredChanged, isRunning: true, language: "zh"))
+    let oracle = Model(key: "metrics").update(.init(messages: measuredChanged, isRunning: true, language: "zh"))
+    precondition(measuredSnapshot.rows == oracle.rows && measuredSnapshot.navigation == oracle.navigation
+                 && measuredSnapshot.narrative == oracle.narrative && measuredSnapshot.batch == oracle.batch,
+                 "Metrics must not change the complete-recompute result")
+    let changedMetrics = metrics.last!
+    precondition(!changedMetrics.cacheHit && changedMetrics.reusedTurnCount == 1 && changedMetrics.rebuiltTurnCount == 1,
+                 "Turn counters must report the actual cache branches for a same-ID tail replacement")
+    let preparationCount = measured.preparationCount
+    precondition(measured.update(.init(messages: measuredChanged, isRunning: true, language: "zh")) === measuredSnapshot)
+    precondition(metrics.last?.cacheHit == true && measured.preparationCount == preparationCount,
+                 "An equal replay must report a cache hit without preparing another snapshot")
+    print("PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics")
 }

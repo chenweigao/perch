@@ -1,0 +1,34 @@
+{
+  "status": "exited",
+  "mode": "user-rows",
+  "timeout_s": 120,
+  "configuration": {
+    "NAVIGATION_AUTORUN": "user-rows",
+    "NAVIGATION_TURNS": "200",
+    "NAVIGATION_SCROLL_HZ": "120",
+    "NAVIGATION_AUTOQUIT": "1",
+    "NAVIGATION_RESULTS": "<worktree>/.local/layout-acceptance/final-user-rows",
+    "NAVIGATION_SWITCHES": "40",
+    "NAVIGATION_SOAK_SECONDS": "1260",
+    "NAVIGATION_RECREATE": "0",
+    "NAVIGATION_SCROLL_REVERSAL": "0",
+    "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+    "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+    "NAVIGATION_FULL_DISCLOSURE": "0",
+    "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+    "NAVIGATION_OUTPUT_LINES": "2400",
+    "NAVIGATION_OUTPUT_SHAPE": "lines"
+  },
+  "build": {
+    "source_commit": "9778c5508dbbe4f24cc1d463848e30c81a064d52",
+    "source_sha256": "628887319f33e5204dad74ad7c75cbb4902ad6fdcc7fcc8a2f2fc43eb7497fed",
+    "fixture_sha256": "63b686e3e9f19a9a341f3aaa042f7c92ef4e82fdf6fe3655a589a3a19bfa29e7",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+  },
+  "binary_sha256": "6c9a4c4b9b02083e51b377ec03b67a0a2a96c8b22b9145012ba2004e8c05adb7",
+  "pid": 1103,
+  "exit_code": 0,
+  "elapsed_s": 4.050940333000001,
+  "passed": true
+}

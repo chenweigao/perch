@@ -345,6 +345,7 @@ final class NavigationRunner {
         var phases: [[String: Any]] = []
         for phase in ["cold-down", "revisit-up", "hot-local"] {
             NavigationRenderMetrics.stages = [:]
+            NavigationRenderMetrics.counters = [:]
             var times: [Double] = [], delays: [Double] = []
             var heightChanges = 0, corrections = 0, missingRows = 0, boundaryPasses = 0
             var nextTick = CACurrentMediaTime()
@@ -381,15 +382,26 @@ final class NavigationRunner {
             if phase == "cold-down" && boundaryPasses != 3 { throw NavigationError("fast scroll did not settle at the tail") }
             if phase == "revisit-up" && scroll.contentView.bounds.minY > 1 { throw NavigationError("fast scroll did not reach the top") }
             if missingRows != 0 { throw NavigationError("fast scroll left visible rows unmounted") }
+            // Positive control: with the bounded bubble probe selected it must have
+            // run, otherwise this arm silently measures the default path.
+            if ProcessInfo.processInfo.environment["NAVIGATION_BUBBLE_IDEAL_PROBE"] == "0" {
+                let userRows = NavigationRenderMetrics.stages["native_user_update"]?.count ?? 0
+                let bounded = NavigationRenderMetrics.counters["bubble_probe_bounded"] ?? 0
+                if userRows > 0 && bounded == 0 {
+                    throw NavigationError("bounded bubble probe selected but never ran over \(userRows) native user rows")
+                }
+            }
             phases.append(["phase": phase, "work_ms": statistics(times), "schedule_delay_ms": statistics(delays),
                 "over_budget": times.filter { $0 > budget }.count, "samples_ms": times,
                 "height_changes": heightChanges, "position_corrections": corrections,
                 "missing_visible_row_samples": missingRows, "render_stages": NavigationRenderMetrics.report,
+                "render_counters": NavigationRenderMetrics.counterReport,
                 "resident_mb": residentMB(), "final_y": scroll.contentView.bounds.minY,
                 "final_document_height": scroll.documentView?.bounds.height ?? 0,
                 "retained_hosts": ConversationTranscript.retainedHosts(in: scroll)?.retained ?? 0])
         }
         return ["cadence_hz": hz, "budget_ms": budget, "phases": phases,
+                "bubble_ideal_probe": ProcessInfo.processInfo.environment["NAVIGATION_BUBBLE_IDEAL_PROBE"] ?? "unwrapped",
                 "boundary": "paced programmatic main-actor scroll work; excludes hardware input and compositor presentation"]
     }
 

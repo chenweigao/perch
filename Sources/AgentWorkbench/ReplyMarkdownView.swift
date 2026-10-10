@@ -263,6 +263,12 @@ enum ReplyTextAttributes {
                 result.append(NSAttributedString(string: run.text, attributes: attributes))
             }
         }
+        #if TRANSCRIPT_CHECKS
+        // Nested inside attributed_text; reported separately because this scan is
+        // the part whose cost grows with paragraph length rather than run count.
+        let scanStart = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("file_reference_scan", since: scanStart) }
+        #endif
         for (range, reference) in ConversationFileReference.matches(in: result.string) {
             if result.attribute(.link, at: range.location, effectiveRange: nil) == nil {
                 result.addAttribute(.link, value: reference.url, range: range)
@@ -398,13 +404,31 @@ struct SelectableReplyText: NSViewRepresentable {
 
 enum NativeParagraphContent {
     static func make(_ source: String, lineHeight: CGFloat? = nil) -> [NSAttributedString]? {
+        #if TRANSCRIPT_CHECKS
+        let parseStart = CACurrentMediaTime()
         let blocks = ReplyDocument.parse(source)
+        NavigationRenderMetrics.record("row_parse", since: parseStart)
+        NavigationRenderMetrics.count("row_parse_native_user")
+        #else
+        let blocks = ReplyDocument.parse(source)
+        #endif
         var paragraphs: [[ReplyInline]] = []
         for block in blocks {
-            guard case .paragraph(let runs) = block, runs.contains(where: { !$0.text.isEmpty }) else { return nil }
+            guard case .paragraph(let runs) = block, runs.contains(where: { !$0.text.isEmpty }) else {
+                #if TRANSCRIPT_CHECKS
+                // The parse is discarded and the SwiftUI renderer repeats it.
+                NavigationRenderMetrics.count("row_parse_rejected")
+                #endif
+                return nil
+            }
             paragraphs.append(runs)
         }
-        guard !paragraphs.isEmpty else { return nil }
+        guard !paragraphs.isEmpty else {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("row_parse_rejected")
+            #endif
+            return nil
+        }
         return stride(from: 0, to: paragraphs.count, by: 8).map {
             ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]), lineHeight: lineHeight)
         }
@@ -463,8 +487,9 @@ final class NativeUserMessageView: NSView {
     }
     private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
         let contentPadding = UserMessageStyle.horizontalPadding * 2
+        let maxBubble = width * UserMessageStyle.maxWidthRatio
         let ideal = (texts.map { $0.measure(width: nil).width }.max() ?? 0) + contentPadding
-        let bubbleWidth = min(ideal, width * UserMessageStyle.maxWidthRatio)
+        let bubbleWidth = min(ideal, maxBubble)
         return (bubbleWidth, texts.map { $0.measure(width: max(1, bubbleWidth - contentPadding)) })
     }
     func measure(width: CGFloat) -> CGSize {
@@ -570,11 +595,22 @@ final class ReplyTextView: NSTextView {
     func measure(width proposed: CGFloat?) -> CGSize {
         // A nil proposal is the ideal unwrapped width used by code and wide tables.
         let width = max(1, proposed?.isFinite == true ? proposed! : 1_000_000)
-        if let cached = measurements.first(where: { $0.width == width }) { return cached.size }
+        if let cached = measurements.first(where: { $0.width == width }) {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("text_measure_cache_hit")
+            #endif
+            return cached.size
+        }
         guard let storage = textStorage else { return .zero }
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
-        defer { NavigationRenderMetrics.record("text_measure", since: start) }
+        defer {
+            NavigationRenderMetrics.record("text_measure", since: start)
+            // An unwrapped probe lays the whole string out on one 1,000,000pt line;
+            // splitting it from wrapped measurement is what makes a redundant
+            // ideal-width probe visible instead of hiding inside text_measure.
+            NavigationRenderMetrics.record(width >= 1_000_000 ? "text_measure_unwrapped" : "text_measure_wrapped", since: start)
+        }
         #endif
         // Measure independently from NSTextView's drawing container: Grid probes
         // multiple widths, and those probes must never reflow the displayed text.

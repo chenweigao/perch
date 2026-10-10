@@ -6,13 +6,21 @@ import WorkbenchCore
 /// Nested stages are reported separately; their durations must not be summed.
 enum NavigationRenderMetrics {
     static var stages: [String: (count: Int, ms: Double)] = [:]
+    /// Occurrences only. A lifecycle event must not be reported as a duration:
+    /// taking the start timestamp at the record call always reads ~0.0ms, which is
+    /// how native-row parsing became invisible under `markdown_parse`.
+    static var counters: [String: Int] = [:]
     static func record(_ stage: String, since start: TimeInterval) {
         let old = stages[stage] ?? (0, 0)
         stages[stage] = (old.count + 1, old.ms + (CACurrentMediaTime() - start) * 1_000)
     }
+    static func count(_ key: String, by amount: Int = 1) { counters[key, default: 0] += amount }
     static var report: [String: Any] {
         stages.mapValues { ["count": $0.count, "ms": $0.ms] as [String: Any] }
     }
+    /// Reported separately from `report` so an occurrence can never be read as a
+    /// 0.0ms duration.
+    static var counterReport: [String: Any] { counters }
 }
 #endif
 
@@ -249,6 +257,18 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     }
 }
 
+private enum ConversationRefreshSource: String {
+    case reveal
+    case configure
+    case contentOrigin = "content_origin"
+    case measurement
+    case rowHeight = "row_height"
+    case willDraw = "will_draw"
+    case restore
+    case clipBounds = "clip_bounds"
+    case viewport
+}
+
 /// Reserve history geometry, but only instantiate hosts intersecting the viewport.
 /// Actual measurements replace estimates as rows are read. Only nearby controllers
 /// survive detachment; disclosure state lives in ConversationReadingMemory.
@@ -423,7 +443,7 @@ private final class ConversationDocumentView: NSView {
         restoreTarget = .init(entry: id, index: index, offset: 0)
         clip.scroll(to: NSPoint(x: 0, y: max(0, offsets[index] + contentOriginY)))
         enclosingScrollView?.reflectScrolledClipView(clip)
-        refreshVisibleRows()
+        refreshVisibleRows(source: .reveal)
         restoreReadingPosition()
         if highlight, let view = controllers[id]?.view {
             let marker = CALayer()
@@ -505,7 +525,7 @@ private final class ConversationDocumentView: NSView {
         self.contentOriginY = contentOriginY
         observeScroll()
         restoreReadingPosition()
-        refreshVisibleRows()
+        refreshVisibleRows(source: .configure)
         publishHeight()
         viewport?.refresh()
     }
@@ -520,7 +540,7 @@ private final class ConversationDocumentView: NSView {
         }
         contentOriginY = value
         restoreReadingPosition()
-        refreshVisibleRows()
+        refreshVisibleRows(source: .contentOrigin)
         viewport?.refresh()
     }
 
@@ -650,7 +670,7 @@ private final class ConversationDocumentView: NSView {
             laidOutRange = nil
         }
         columnWidth = nextWidth
-        refreshVisibleRows()
+        refreshVisibleRows(source: .measurement)
         return CGSize(width: columnWidth, height: totalHeight)
     }
     private func rebuildOffsets() {
@@ -674,8 +694,20 @@ private final class ConversationDocumentView: NSView {
         }
         return CGRect(x: 0, y: 0, width: columnWidth, height: viewport?.view?.bounds.height ?? 600)
     }
-    func refreshVisibleRows() {
-        guard !suspended, !refreshing, let appearance = rowAppearance, !contents.isEmpty else { return }
+    func refreshVisibleRows(source: ConversationRefreshSource) {
+        #if TRANSCRIPT_CHECKS
+        let refreshStart = CACurrentMediaTime()
+        defer {
+            NavigationRenderMetrics.record("refresh_total", since: refreshStart)
+            NavigationRenderMetrics.record("refresh_source_\(source.rawValue)", since: refreshStart)
+        }
+        #endif
+        guard !suspended, !refreshing, let appearance = rowAppearance, !contents.isEmpty else {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record(refreshing ? "refresh_guard_reentrant" : "refresh_guard_unavailable", since: refreshStart)
+            #endif
+            return
+        }
         refreshing = true
         defer { refreshing = false; revealInitialViewportIfReady() }
         var visible = viewportRect
@@ -687,9 +719,21 @@ private final class ConversationDocumentView: NSView {
         var index = min(geometry.firstIntersecting(max(0, visible.minY)), contents.count - 1)
         let first = index
         let end = max(first, geometry.end(before: visible.maxY))
+        #if TRANSCRIPT_CHECKS
+        let previousRange = laidOutRange
+        #endif
         // Most wheel deltas stay within the same rows. The clip view moves their
         // pixels; no hosting measurement, frame writes or reattachment is needed.
-        if laidOutRange == first..<end { return }
+        if laidOutRange == first..<end {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record("refresh_same_range", since: refreshStart)
+            #endif
+            return
+        }
+        #if TRANSCRIPT_CHECKS
+        let rangeWorkStart = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("refresh_range_work", since: rangeWorkStart) }
+        #endif
         var nextMounted: Set<String> = []
         while index < contents.count && offsets[index] < visible.maxY {
             let content = contents[index]
@@ -728,10 +772,23 @@ private final class ConversationDocumentView: NSView {
             nextMounted.insert(id)
             index += 1
         }
+        let nextRange = first..<index
+        #if TRANSCRIPT_CHECKS
+        let overlap: Int
+        if let previousRange {
+            overlap = max(0, min(previousRange.upperBound, nextRange.upperBound) - max(previousRange.lowerBound, nextRange.lowerBound))
+            NavigationRenderMetrics.count("refresh_exited_rows", by: previousRange.count - overlap)
+        } else {
+            overlap = 0
+        }
+        NavigationRenderMetrics.count("refresh_rows_visited", by: nextRange.count)
+        NavigationRenderMetrics.count("refresh_overlap_rows", by: overlap)
+        NavigationRenderMetrics.count("refresh_entered_rows", by: nextRange.count - overlap)
+        #endif
         for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
         mounted = nextMounted
-        laidOutRange = first..<index
-        let retained = geometry.retainedRows(around: first..<index)
+        laidOutRange = nextRange
+        let retained = geometry.retainedRows(around: nextRange)
         var retired: [ConversationEntryController] = []
         for id in Array(controllers.keys) where !mounted.contains(id) {
             if let row = indices[id], retained.contains(row) { continue }
@@ -777,7 +834,7 @@ private final class ConversationDocumentView: NSView {
         updateHeight(id, height: height)
         // Resize the host and reposition its neighbors together, before the
         // deferred SwiftUI document-height publication can display stale frames.
-        refreshVisibleRows()
+        refreshVisibleRows(source: .rowHeight)
         publishHeight()
         restoreReadingPosition()
         viewport?.refresh()
@@ -814,7 +871,7 @@ private final class ConversationDocumentView: NSView {
         // AppKit may clamp the clip origin after a height change, before the
         // coalesced viewport callback runs. Populate that visible range before
         // drawing, so a cached reply cannot disappear for one display pass.
-        refreshVisibleRows()
+        refreshVisibleRows(source: .willDraw)
         super.viewWillDraw()
     }
     override func layout() {
@@ -863,7 +920,7 @@ private final class ConversationDocumentView: NSView {
         clip.scroll(to: NSPoint(x: 0, y: y))
         enclosingScrollView?.reflectScrolledClipView(clip)
         restoreTarget = nil
-        refreshVisibleRows()
+        refreshVisibleRows(source: .restore)
     }
     private func observeScroll() {
         let clip = enclosingScrollView?.contentView
@@ -878,7 +935,7 @@ private final class ConversationDocumentView: NSView {
         ) { [weak self] _ in
             // A content resize can move the clip after drawing has already been
             // scheduled. Mount the new range in this geometry transaction.
-            self?.refreshVisibleRows()
+            self?.refreshVisibleRows(source: .clipBounds)
             self?.viewport?.refresh()
             self?.saveReadingPosition()
             self?.loadEarlierIfNearTop()
@@ -1009,6 +1066,11 @@ private final class ConversationEntryController: NSViewController {
     #if TRANSCRIPT_CHECKS
     var hasAttached = false
     private var hasMeasured = false
+    private var diagnosticKind: String {
+        if nativeUser != nil { return "native_user" }
+        if nativeAssistant != nil { return "native_assistant" }
+        return "swiftui_" + String(describing: content.entry.presentation)
+    }
     #endif
     var heightChanged: (CGFloat) -> Void
     private let disclosureChanged: () -> Void
@@ -1018,7 +1080,10 @@ private final class ConversationEntryController: NSViewController {
          disclosureChanged: @escaping () -> Void, heightChanged: @escaping (CGFloat) -> Void) {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
-        defer { NavigationRenderMetrics.record("host_create", since: start) }
+        defer {
+            NavigationRenderMetrics.record("host_create", since: start)
+            NavigationRenderMetrics.record("row_create_" + diagnosticKind, since: start)
+        }
         #endif
         self.content = content
         self.appearance = appearance
@@ -1032,7 +1097,10 @@ private final class ConversationEntryController: NSViewController {
     override func loadView() {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
-        defer { NavigationRenderMetrics.record("host_view", since: start) }
+        defer {
+            NavigationRenderMetrics.record("host_view", since: start)
+            NavigationRenderMetrics.record("row_view_" + diagnosticKind, since: start)
+        }
         #endif
         let container = ConversationEntryContainer()
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
@@ -1047,16 +1115,52 @@ private final class ConversationEntryController: NSViewController {
         view = container
     }
     func layout(frame: CGRect, contentHeight: CGFloat) {
-        if view.frame != frame { view.frame = frame }
+        #if TRANSCRIPT_CHECKS
+        let layoutStart = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("row_layout", since: layoutStart) }
+        #endif
+        let rowFrameChanged = view.frame != frame
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count(rowFrameChanged ? "row_frame_write" : "row_frame_unchanged")
+        #endif
+        if rowFrameChanged { view.frame = frame }
         let hostFrame = CGRect(x: 0, y: 0, width: frame.width, height: contentHeight)
-        if let host, host.view.frame != hostFrame { host.view.frame = hostFrame }
+        if let host {
+            let frameChanged = host.view.frame != hostFrame
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count(frameChanged ? "child_frame_write" : "child_frame_unchanged")
+            #endif
+            if frameChanged { host.view.frame = hostFrame }
+        }
         if let nativeUser {
-            if nativeUser.frame != hostFrame { nativeUser.frame = hostFrame }
+            let frameChanged = nativeUser.frame != hostFrame
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count(frameChanged ? "child_frame_write" : "child_frame_unchanged")
+            #endif
+            if frameChanged { nativeUser.frame = hostFrame }
+            #if TRANSCRIPT_CHECKS
+            let placeStart = CACurrentMediaTime()
+            #endif
             nativeUser.place(width: frame.width)
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record("native_place", since: placeStart)
+            NavigationRenderMetrics.record("native_user_place", since: placeStart)
+            #endif
         }
         if let nativeAssistant {
-            if nativeAssistant.frame != hostFrame { nativeAssistant.frame = hostFrame }
+            let frameChanged = nativeAssistant.frame != hostFrame
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count(frameChanged ? "child_frame_write" : "child_frame_unchanged")
+            #endif
+            if frameChanged { nativeAssistant.frame = hostFrame }
+            #if TRANSCRIPT_CHECKS
+            let placeStart = CACurrentMediaTime()
+            #endif
             nativeAssistant.place(width: frame.width)
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record("native_place", since: placeStart)
+            NavigationRenderMetrics.record("native_assistant_place", since: placeStart)
+            #endif
         }
     }
     deinit {
@@ -1079,7 +1183,13 @@ private final class ConversationEntryController: NSViewController {
         }
     }
     func update(_ next: ConversationEntryView, appearance nextAppearance: ConversationEntryAppearance) {
-        guard content != next || appearance != nextAppearance else { return }
+        let contentChanged = content != next
+        let appearanceChanged = appearance != nextAppearance
+        guard contentChanged || appearanceChanged else { return }
+        #if TRANSCRIPT_CHECKS
+        if contentChanged { NavigationRenderMetrics.count("host_content_update") }
+        if appearanceChanged { NavigationRenderMetrics.count("host_appearance_update") }
+        #endif
         content = next
         appearance = nextAppearance
         generation += 1
@@ -1115,6 +1225,13 @@ private final class ConversationEntryController: NSViewController {
         return (source, blocks)
     }
     private func setRoot() {
+        #if TRANSCRIPT_CHECKS
+        // Covers native admission probing (parse + attributed construction), native
+        // view acquisition and text-storage replacement, and NSHostingController
+        // creation for fallback rows. Nested inside host_create/host_view callers.
+        let rootStart = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("set_root", since: rootStart) }
+        #endif
         if let paragraphs = nativeUserContent() {
             if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
             if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
@@ -1163,12 +1280,17 @@ private final class ConversationEntryController: NSViewController {
         let width = max(1, proposed?.isFinite == true ? proposed! : ReplyStyle.readingWidth)
         let height: CGFloat
         if let cached = sizes.first(where: { $0.width == width }) {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("host_size_cache_hit")
+            #endif
             height = cached.height
         } else {
             #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("host_size_cache_miss")
             let start = CACurrentMediaTime()
             defer {
                 NavigationRenderMetrics.record("host_measure", since: start)
+                NavigationRenderMetrics.record("row_measure_" + diagnosticKind, since: start)
                 NavigationRenderMetrics.record(hasMeasured ? "host_remeasure" : "host_first_measure", since: start)
                 NavigationRenderMetrics.record(content.entry.messages.first?.isUserPrompt == true ? "host_measure_user" : "host_measure_assistant", since: start)
                 hasMeasured = true
@@ -1248,7 +1370,7 @@ final class ConversationViewport {
             // Coalesce scroll and layout updates into one document pass.
             for row in self.rows.allObjects {
                 if let document = row as? ConversationDocumentView {
-                    document.refreshVisibleRows()
+                    document.refreshVisibleRows(source: .viewport)
                     document.updateNavigator()
                 }
             }

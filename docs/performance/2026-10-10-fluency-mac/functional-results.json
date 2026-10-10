@@ -1,0 +1,90 @@
+{
+  "functional-interactions": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  },
+  "functional-search": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  },
+  "functional-disclosure": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  },
+  "functional-anchor": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  },
+  "functional-assistant-rows": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  },
+  "native-cache-all": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": {
+      "appearance_invalidation": true,
+      "external_summary_same_snapshot": true,
+      "prepend_and_removal": true,
+      "row_cache": {
+        "byte_budget_kib": 1024,
+        "capacity": 48,
+        "counters": {
+          "row_cache_admit": 2,
+          "row_cache_clear": 1,
+          "row_cache_evict": 1,
+          "row_cache_miss": 4
+        },
+        "estimated_source_bytes": 0,
+        "peak_rows": 1,
+        "retired_pending": 2,
+        "rows": 0
+      },
+      "same_id_offscreen_and_visible_edits": true,
+      "unchanged_geometry_rebuilds": 0,
+      "unchanged_host_measurements": 0,
+      "unchanged_reconciliations": 0,
+      "unchanged_replays": 40
+    }
+  },
+  "native-default-all": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": {
+      "appearance_invalidation": true,
+      "external_summary_same_snapshot": true,
+      "prepend_and_removal": true,
+      "row_cache": {
+        "byte_budget_kib": 1024,
+        "capacity": 0,
+        "counters": {
+          "row_cache_miss": 4
+        },
+        "estimated_source_bytes": 0,
+        "peak_rows": 0,
+        "retired_pending": 0,
+        "rows": 0
+      },
+      "same_id_offscreen_and_visible_edits": true,
+      "unchanged_geometry_rebuilds": 0,
+      "unchanged_host_measurements": 0,
+      "unchanged_reconciliations": 0,
+      "unchanged_replays": 40
+    }
+  },
+  "native-lifecycle": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  },
+  "native-refresh": {
+    "status": "passed",
+    "error": null,
+    "row_reconciliation": null
+  }
+}

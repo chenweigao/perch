@@ -1,0 +1,6 @@
+{
+  "error" : "Native user layout differs from SwiftUI: heights [1646.0, 1646.0], drift 49.0",
+  "history_turns" : 200,
+  "mode" : "user-rows",
+  "status" : "failed"
+}

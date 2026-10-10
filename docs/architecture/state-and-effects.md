@@ -406,3 +406,37 @@ including glyph positions inside code scroll views. Contracts cover admitted-blo
 transitions, table/attachment fallback, code-card copy and horizontal overflow.
 `NAVIGATION_NATIVE_ASSISTANT_BLOCKS=0` limits acceptance builds to prose rows for
 stacked A/B measurements.
+
+## Cold-row typesetting segments
+
+`markdown_parse` only times `ReplyContent.blocks`, so the parses performed by the
+native admission probes were invisible and their cost landed inside `host_create`.
+`native_user_update` and `native_assistant_update` take their start timestamp at
+the record call, so they read ~0.0ms and are occurrence counts, not durations.
+Acceptance builds therefore report a separate counter dictionary next to
+`render_stages`, and an occurrence must never be read as a 0.0ms duration.
+
+Timed segments: `set_root` (native admission probing, attributed construction,
+native view acquisition and text-storage replacement, plus `NSHostingController`
+creation for fallback rows), `row_parse` (both native admission probes; the
+SwiftUI parse stays `markdown_parse`), and `file_reference_scan` (nested inside
+`attributed_text`, because its cost grows with paragraph length rather than run
+count). `text_measure` splits into `text_measure_unwrapped` — a nil proposal lays
+the whole string out on one 1,000,000pt line — and `text_measure_wrapped`, with
+`text_measure_cache_hit` counting repeats absorbed by the per-view width cache.
+Occurrences: `row_parse_native_user`, `row_parse_native_assistant`,
+`row_parse_rejected` (a rejected admission discards its parse and attributed
+strings, and the SwiftUI renderer repeats the parse for the same source),
+`bubble_probe_bounded` and `bubble_probe_narrower`.
+
+`NAVIGATION_BUBBLE_IDEAL_PROBE=0` replaces the user bubble's unwrapped
+ideal-width probe with one probe at the bubble's maximum content width.
+`ReplyTextView.measure` clamps to the proposed width, so a text reporting exactly
+that width did not fit and the bubble is capped either way, while a text
+reporting less did not wrap and that value already is its unwrapped ideal. The
+bubble width and every per-text size are unchanged; only the 1,000,000pt layout
+disappears, and messages wider than the cap need one layout instead of two.
+Production builds keep the unwrapped probe. `fast-scroll` fails when the switch is
+set but `bubble_probe_bounded` is zero while native user rows were built, so an
+enabled arm cannot silently measure the default path. `user-rows` glyph and height
+parity at both column widths and appearances is the equivalence gate.
