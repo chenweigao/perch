@@ -1580,12 +1580,8 @@ private struct ConversationEntryView: View, Equatable {
                         Text("过程记录 · 未返回最终回复").font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                     ForEach(entry.messages) { message in
-<<<<<<< HEAD
                         KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
-                                        markdownPreparation: markdownPreparation)
-=======
-                        KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId, entryID: entry.id)
->>>>>>> 02255b2 (feat: code line numbers and per-session turn bookmarks)
+                                        markdownPreparation: markdownPreparation, entryID: entry.id)
                     }
                     if entry.messages.first?.role == "assistant" && entry.presentation != .progress {
                         let text = entry.messages.flatMap(\.content).compactMap(\.text).joined(separator: "\n\n")
