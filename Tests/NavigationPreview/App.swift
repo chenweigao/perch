@@ -817,7 +817,7 @@ final class NavigationRunner {
             try writeNavigationArtifact("interaction-detail.json", report)
         }
         for query in ["fixture-195", "第 6 轮结果", "中文换行"] {
-            guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: query, running: false).first else {
+            guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: query, running: false).hits.first else {
                 throw NavigationError("fixture query has no hit: \(query)")
             }
             NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: hit, query: query))
@@ -860,7 +860,7 @@ final class NavigationRunner {
         if narrow.entry != restored.entry || abs(narrow.offset - restored.offset) > 1 { failures.append("session return anchor") }
         // Verify the hosted native text, not just the provider snapshot/marker.
         let oldReply = "远端任务不受本地测试影响"
-        guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: oldReply, running: false).last else {
+        guard let hit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: oldReply, running: false).hits.last else {
             throw NavigationError("missing same-ID replacement target")
         }
         NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: hit, query: oldReply))
@@ -886,7 +886,7 @@ final class NavigationRunner {
         // Retained rows must follow content edits and wrapping widths, including
         // same-ID user messages whose native host remains mounted.
         let promptQuery = "第 1 轮："
-        guard let promptHit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: promptQuery, running: false).first else {
+        guard let promptHit = ConversationSearch().hits(in: model.conversation!.displayMessages, query: promptQuery, running: false).hits.first else {
             throw NavigationError("missing user bubble target")
         }
         NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(session: targets[0], hit: promptHit, query: promptQuery))

@@ -64,7 +64,7 @@ var index = 0
 results["search_repeated"] = benchmark(8) {
     let query = queries[index % queries.count]; index += 1
 #if PERFORMANCE_PATHS
-    let hits = search.hits(in: messages, query: query, running: false)
+    let hits = search.hits(in: messages, query: query, running: false).hits
 #else
     let hits = ConversationSearch.hits(in: messages, query: query, running: false)
 #endif
@@ -73,7 +73,7 @@ results["search_repeated"] = benchmark(8) {
 }
 results["search_cold"] = benchmark(3) {
 #if PERFORMANCE_PATHS
-    let hits = ConversationSearch().hits(in: messages, query: "needle", running: false)
+    let hits = ConversationSearch().hits(in: messages, query: "needle", running: false).hits
 #else
     let hits = ConversationSearch.hits(in: messages, query: "needle", running: false)
 #endif

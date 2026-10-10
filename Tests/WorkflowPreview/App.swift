@@ -33,7 +33,7 @@ private struct WorkflowPreview: View {
         }
         return try! KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: rows))
     }
-    private var hits: [ConversationSearchHit] { search.hits(in: messages, query: query, running: false) }
+    private var hits: [ConversationSearchHit] { search.hits(in: messages, query: query, running: false).hits }
     var body: some View {
         VStack(spacing: 10) {
             HStack {
