@@ -12,6 +12,7 @@ struct ActivityNarrativeHistoryView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(narrative.headline).font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = narrative.detail, !detail.isEmpty {
                     Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
@@ -20,7 +21,6 @@ struct ActivityNarrativeHistoryView: View {
             }
         }
         .textSelection(.enabled)
-        .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: [narrative.headline, narrative.detail]
             .compactMap { $0 }.joined(separator: ". ")))
