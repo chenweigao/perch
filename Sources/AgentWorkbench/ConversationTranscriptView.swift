@@ -707,16 +707,21 @@ private final class ConversationDocumentView: NSView {
         refreshVisibleRows(source: .measurement)
         return CGSize(width: columnWidth, height: totalHeight)
     }
+    /// Rows mounting above the reader resolve their estimates during a refresh.
+    /// Defer the O(history) offsets rebuild to the end of the pass; the anchor
+    /// must be pinned from pre-pass geometry, which matches the on-screen rows.
+    private var deferringGeometry = false
+    private var geometryDirty = false
     private func rebuildOffsets() {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("row_geometry", since: start) }
         #endif
         laidOutRange = nil
-        let spacing = contents.indices.map { index -> CGFloat in
-            index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess ? 6 : 18
-        }
-        geometry = ConversationRowGeometry(heights: heights, spacingAfter: spacing)
+        geometry = ConversationRowGeometry(heights: heights, spacingAfter: contents.indices.map(spacing(after:)))
+    }
+    private func spacing(after index: Int) -> CGFloat {
+        index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess ? 6 : 18
     }
     private var viewportRect: CGRect {
         if let clip = observedClip {
@@ -750,6 +755,8 @@ private final class ConversationDocumentView: NSView {
             // or the top of a newly created scroll view. Keep estimates hidden.
             visible.origin.y = max(0, totalHeight - visible.height)
         }
+        // Mount exactly the visible range; wider speculative ranges measured as
+        // pure overhead on whole-viewport steps and did not pay for themselves.
         var index = min(geometry.firstIntersecting(max(0, visible.minY)), contents.count - 1)
         let first = index
         let end = max(first, geometry.end(before: visible.maxY))
@@ -768,8 +775,23 @@ private final class ConversationDocumentView: NSView {
         let rangeWorkStart = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("refresh_range_work", since: rangeWorkStart) }
         #endif
+        // Pin the reading position from pre-pass geometry (what is on screen now)
+        // before rows above the reader resolve their estimates this pass. Edits
+        // and disclosures evict their measuredSizes entry, so presence at the
+        // committed width is enough to prove a row will not shift this pass.
+        if restoreTarget == nil, ConversationReadingMemory.shared.following[sessionId] == false,
+           let reading = readingRowForAnchor(), first < reading,
+           (first..<reading).contains(where: { row in
+               guard let measured = measuredSizes[contents[row].entry.id] else { return true }
+               return measured.width != columnWidth
+           }) {
+            saveReadingPosition()
+            restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+        }
+        deferringGeometry = true
         var nextMounted: Set<String> = []
-        while index < contents.count && offsets[index] < visible.maxY {
+        var rowY = offsets[first]
+        while index < contents.count && rowY < visible.maxY {
             let content = contents[index]
             let id = content.entry.id
             let controller: ConversationEntryController
@@ -788,7 +810,7 @@ private final class ConversationDocumentView: NSView {
             // for its size. Measuring detached builds a graph that attachment
             // immediately invalidates and lays out again.
             if controller.view.superview !== self {
-                controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: heights[index])
+                controller.layout(frame: CGRect(x: 0, y: rowY, width: columnWidth, height: heights[index]), contentHeight: heights[index])
                 #if TRANSCRIPT_CHECKS
                 let attachStart = CACurrentMediaTime()
                 #endif
@@ -802,11 +824,26 @@ private final class ConversationDocumentView: NSView {
             let height = controller.measure(width: columnWidth).height
             measuredSizes[id] = (content, columnWidth, height)
             updateHeight(id, height: height)
-            controller.layout(frame: CGRect(x: 0, y: offsets[index], width: columnWidth, height: heights[index]), contentHeight: height)
+            controller.layout(frame: CGRect(x: 0, y: rowY, width: columnWidth, height: heights[index]), contentHeight: height)
             nextMounted.insert(id)
+            rowY += heights[index] + spacing(after: index)
             index += 1
         }
+        deferringGeometry = false
         let nextRange = first..<index
+        // Resolve this pass's height updates in one rebuild, then correct row
+        // positions against the final geometry (rows already in place skip).
+        if geometryDirty {
+            geometryDirty = false
+            rebuildOffsets()
+            for row in nextRange {
+                let id = contents[row].entry.id
+                let frame = CGRect(x: 0, y: offsets[row], width: columnWidth, height: heights[row])
+                if let controller = controllers[id], controller.view.frame != frame {
+                    controller.layout(frame: frame, contentHeight: heights[row])
+                }
+            }
+        }
         #if TRANSCRIPT_CHECKS
         let overlap: Int
         if let previousRange {
@@ -854,6 +891,13 @@ private final class ConversationDocumentView: NSView {
     }
     private func updateHeight(_ id: String, height: CGFloat) {
         guard let index = indices[id], heights[index] != height else { return }
+        if deferringGeometry {
+            // Anchors were pinned from pre-pass geometry; rebuild once at the
+            // end of the pass instead of per resolved row.
+            heights[index] = height
+            geometryDirty = true
+            return
+        }
         if restoreTarget == nil, ConversationReadingMemory.shared.following[sessionId] == false,
            let reading = readingRowForAnchor(), index < reading {
             saveReadingPosition()
@@ -1106,6 +1150,75 @@ private struct HostedConversationEntry: View {
     }
 }
 
+/// Parse and attributed-string construction are pure functions of the source
+/// text, and the built strings use dynamic colors. Recreated hosts reuse the
+/// earlier preparation instead of parsing the same history on every revisit.
+/// Bounded by entry count and retained source size.
+private final class NativeRowPreparationCache {
+    private enum Value {
+        case user(source: String, preparation: NativeParagraphContent.Preparation)
+        case assistant(source: String, allowsRichBlocks: Bool, preparation: NativeAssistantContent.Preparation)
+        var source: String {
+            switch self {
+            case .user(let source, _): return source
+            case .assistant(let source, _, _): return source
+            }
+        }
+    }
+    private struct Key: Hashable { let session: String; let messageID: String }
+    private var entries: [Key: Value] = [:]
+    private var order: [Key] = []
+    private var sourceBytes = 0
+
+    func user(session: String, messageID: String, source: String,
+              prepare: () -> NativeParagraphContent.Preparation) -> NativeParagraphContent.Preparation {
+        let key = Key(session: session, messageID: messageID)
+        if case .user(let cached, let preparation) = entries[key], cached == source {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("row_prepare_cache_hit")
+            #endif
+            return preparation
+        }
+        let preparation = prepare()
+        store(key, .user(source: source, preparation: preparation))
+        return preparation
+    }
+
+    func assistant(session: String, messageID: String, source: String, allowsRichBlocks: Bool,
+                   prepare: () -> NativeAssistantContent.Preparation) -> NativeAssistantContent.Preparation {
+        let key = Key(session: session, messageID: messageID)
+        if case .assistant(let cached, let cachedAllows, let preparation) = entries[key],
+           cached == source, cachedAllows == allowsRichBlocks {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("row_prepare_cache_hit")
+            #endif
+            return preparation
+        }
+        let preparation = prepare()
+        store(key, .assistant(source: source, allowsRichBlocks: allowsRichBlocks, preparation: preparation))
+        return preparation
+    }
+
+    private func store(_ key: Key, _ value: Value) {
+        if let old = entries[key] {
+            sourceBytes -= old.source.utf8.count
+        } else {
+            order.append(key)
+        }
+        entries[key] = value
+        sourceBytes += value.source.utf8.count
+        while entries.count > 240 || sourceBytes > 12 * 1024 * 1024, !order.isEmpty {
+            let oldest = order.removeFirst()
+            if let evicted = entries.removeValue(forKey: oldest) { sourceBytes -= evicted.source.utf8.count }
+        }
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count("row_prepare_cache_store")
+        #endif
+    }
+}
+
+private let nativeRowPreparations = NativeRowPreparationCache()
+
 private final class ConversationEntryController: NSViewController {
     private var host: NSHostingController<HostedConversationEntry>?
     private var nativeUser: NativeUserMessageView?
@@ -1114,6 +1227,8 @@ private final class ConversationEntryController: NSViewController {
     private var appearance: ConversationEntryAppearance
     private var generation = 0
     private var sizes: [(width: CGFloat, height: CGFloat)] = []
+    /// Width of the last committed native place; content changes re-place.
+    private var placedWidth: CGFloat?
     private var pendingSize: (size: CGSize, generation: Int)?
     private var notificationScheduled = false
     private var publishedHeight: CGFloat?
@@ -1193,14 +1308,19 @@ private final class ConversationEntryController: NSViewController {
             NavigationRenderMetrics.count(frameChanged ? "child_frame_write" : "child_frame_unchanged")
             #endif
             if frameChanged { nativeUser.frame = hostFrame }
-            #if TRANSCRIPT_CHECKS
-            let placeStart = CACurrentMediaTime()
-            #endif
-            nativeUser.place(width: frame.width)
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.record("native_place", since: placeStart)
-            NavigationRenderMetrics.record("native_user_place", since: placeStart)
-            #endif
+            // place is a pure function of width and committed content; a row whose
+            // frame survived the pass needs neither it nor its measurement pass.
+            if frameChanged || placedWidth != frame.width {
+                #if TRANSCRIPT_CHECKS
+                let placeStart = CACurrentMediaTime()
+                #endif
+                nativeUser.place(width: frame.width)
+                placedWidth = frame.width
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.record("native_place", since: placeStart)
+                NavigationRenderMetrics.record("native_user_place", since: placeStart)
+                #endif
+            }
         }
         if let nativeAssistant {
             let frameChanged = nativeAssistant.frame != hostFrame
@@ -1208,14 +1328,17 @@ private final class ConversationEntryController: NSViewController {
             NavigationRenderMetrics.count(frameChanged ? "child_frame_write" : "child_frame_unchanged")
             #endif
             if frameChanged { nativeAssistant.frame = hostFrame }
-            #if TRANSCRIPT_CHECKS
-            let placeStart = CACurrentMediaTime()
-            #endif
-            nativeAssistant.place(width: frame.width)
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.record("native_place", since: placeStart)
-            NavigationRenderMetrics.record("native_assistant_place", since: placeStart)
-            #endif
+            if frameChanged || placedWidth != frame.width {
+                #if TRANSCRIPT_CHECKS
+                let placeStart = CACurrentMediaTime()
+                #endif
+                nativeAssistant.place(width: frame.width)
+                placedWidth = frame.width
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.record("native_place", since: placeStart)
+                NavigationRenderMetrics.record("native_assistant_place", since: placeStart)
+                #endif
+            }
         }
     }
     deinit {
@@ -1262,7 +1385,10 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
         let source = part.text ?? ""
-        return (message.id, source, NativeParagraphContent.prepare(source, lineHeight: UserMessageStyle.lineHeight))
+        let preparation = nativeRowPreparations.user(session: content.sessionId, messageID: message.id, source: source) {
+            NativeParagraphContent.prepare(source, lineHeight: UserMessageStyle.lineHeight)
+        }
+        return (message.id, source, preparation)
     }
     private func nativeAssistantPreparation() -> (messageID: String, source: String, value: NativeAssistantContent.Preparation)? {
         #if TRANSCRIPT_CHECKS
@@ -1277,7 +1403,11 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
               let source = part.text else { return nil }
-        return (message.id, source, NativeAssistantContent.prepare(source, allowsRichBlocks: allowsRichBlocks))
+        let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
+                                                          source: source, allowsRichBlocks: allowsRichBlocks) {
+            NativeAssistantContent.prepare(source, allowsRichBlocks: allowsRichBlocks)
+        }
+        return (message.id, source, preparation)
     }
     private func fallbackPreparation(messageID: String, source: String, blocks: [ReplyBlock]) -> ReplyMarkdownPreparation {
         #if TRANSCRIPT_CHECKS
@@ -1295,6 +1425,7 @@ private final class ConversationEntryController: NSViewController {
         let rootStart = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("set_root", since: rootStart) }
         #endif
+        placedWidth = nil
         var markdownPreparation: ReplyMarkdownPreparation?
         if let user = nativeUserPreparation() {
             if let paragraphs = user.value.content {

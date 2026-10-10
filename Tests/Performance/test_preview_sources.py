@@ -28,6 +28,7 @@ class PreviewSourceTests(unittest.TestCase):
             "ConversationScrollControls", "ReplyMarkdownView", "KimiAttachmentView",
             "ConversationActivityBar", "WorkbenchGlass", "WorkspaceSplitView",
             "ToolActivityView", "NativeAssistantBlocks",
+            "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel",
         ):
             (app / f"{name}.swift").write_text("// historical source\n")
         (self.repo / "Sources/WorkbenchCore").mkdir()
