@@ -69,6 +69,23 @@ func checkWorkflow() throws {
     let preserved = try Data(contentsOf: file.url)
     precondition(preserved == corrupt)
 
+    // Draft files from before the history/outbox fields existed must keep decoding.
+    let legacy = Data(#"{"text":{"s1":"旧草稿"}}"#.utf8)
+    let legacyDrafts = try JSONDecoder().decode(SavedDrafts.self, from: legacy)
+    precondition(legacyDrafts.text["s1"] == "旧草稿" && legacyDrafts.history.isEmpty && legacyDrafts.outbox.allPendingCount == 0)
+    var histories = SavedDrafts()
+    histories.recordHistory("  ", for: "s1")
+    precondition(histories.history["s1"] == nil, "Blank prompts are not history")
+    histories.recordHistory("第一条", for: "s1"); histories.recordHistory("第二条", for: "s1")
+    histories.recordHistory("第一条", for: "s1")
+    precondition(histories.history["s1"] == ["第二条", "第一条"], "Recalling a repeat moves it to the end once")
+    histories.recordHistory("别处", for: "s2")
+    precondition(histories.history["s1"]?.count == 2 && histories.history["s2"] == ["别处"])
+    for index in 0..<60 { histories.recordHistory("填充 \(index)", for: "s1") }
+    precondition(histories.history["s1"]?.count == 50, "History stays bounded")
+    let roundTrip = try JSONDecoder().decode(SavedDrafts.self, from: JSONEncoder().encode(histories))
+    precondition(roundTrip.history == histories.history)
+
     let reference = ConversationFileReference(text: "src/foo.swift:42:7")!
     precondition(reference.path == "src/foo.swift" && reference.line == 42)
     precondition(ConversationFileReference(url: reference.url) == reference)

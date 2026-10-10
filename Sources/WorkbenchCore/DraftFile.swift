@@ -4,8 +4,29 @@ public struct SavedDrafts: Codable, Sendable {
     public var text: [String: String] = [:]
     public var attachments: [String: [URL]] = [:]
     public var outbox = OutboundQueue()
-    public init(text: [String: String] = [:], attachments: [String: [URL]] = [:], outbox: OutboundQueue = .init()) {
-        self.text = text; self.attachments = attachments; self.outbox = outbox
+    /// Sent prompts per session, oldest first, for composer history recall.
+    public var history: [String: [String]] = [:]
+    public init(text: [String: String] = [:], attachments: [String: [URL]] = [:], outbox: OutboundQueue = .init(),
+                history: [String: [String]] = [:]) {
+        self.text = text; self.attachments = attachments; self.outbox = outbox; self.history = history
+    }
+    /// Files written before a field existed must keep decoding.
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        text = try values.decodeIfPresent([String: String].self, forKey: .text) ?? [:]
+        attachments = try values.decodeIfPresent([String: [URL]].self, forKey: .attachments) ?? [:]
+        outbox = try values.decodeIfPresent(OutboundQueue.self, forKey: .outbox) ?? OutboundQueue()
+        history = try values.decodeIfPresent([String: [String]].self, forKey: .history) ?? [:]
+    }
+
+    /// Repeating the latest prompt must not grow the list; recall stays meaningful.
+    public mutating func recordHistory(_ text: String, for session: String, limit: Int = 50) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var entries = (history[session] ?? []).filter { $0 != text }
+        entries.append(text)
+        if entries.count > limit { entries.removeFirst(entries.count - limit) }
+        history[session] = entries
     }
 }
 
