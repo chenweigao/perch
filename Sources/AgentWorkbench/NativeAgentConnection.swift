@@ -466,7 +466,7 @@ final class NativeAgentConnection {
     }
     func setPermission(_ mode: String, for id: String) {
         guard let provider = sessions.first(where: { $0.id == id })?.provider,
-              [.qoder, .claude].contains(provider),
+              [.qoder, .qoderintl, .claude].contains(provider),
               PermissionCatalog.isValid(mode, for: provider) else {
             actionError = L("当前 Agent 不支持动态切换权限")
             return

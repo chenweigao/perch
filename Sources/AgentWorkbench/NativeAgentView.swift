@@ -193,7 +193,7 @@ private struct NativeComposerView: View {
                             ?? s.permission
                             ?? PermissionCatalog.capability(for: s.provider),
                         disabled: !connection.online,
-                        allowsSelection: [.qoder, .claude].contains(s.provider)
+                        allowsSelection: [.qoder, .qoderintl, .claude].contains(s.provider)
                     ) { mode in
                         connection.setPermission(mode, for: s.id)
                     }

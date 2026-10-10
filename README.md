@@ -38,6 +38,7 @@ presentation only; no private conversations or live command results are shown.
 | Kimi Code | Kimi Web API over SSH | Native conversation |
 | Oh My Pi (OMP) | RPC through the remote bridge | Native conversation |
 | Qoder CN | Official Agent SDK through the remote bridge | Native conversation |
+| Qoder | Official Agent SDK through the remote bridge | Native conversation |
 | Claude Code | Official Agent SDK through the remote bridge | Native conversation |
 | DeepSeek Harness (dsh) | ACP through the remote bridge | Native conversation |
 | Codex | `codex app-server` JSON-RPC over stdio through the remote bridge | Native conversation |
