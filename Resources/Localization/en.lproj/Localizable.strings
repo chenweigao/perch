@@ -1146,3 +1146,9 @@
 "无效正则表达式" = "Invalid regular expression";
 "导出当前会话（Markdown）…" = "Export Current Conversation (Markdown)…";
 "导出当前会话（JSON）…" = "Export Current Conversation (JSON)…";
+"当前 Agent 不支持发送附件" = "This agent does not support attachments.";
+"当前 Agent 不支持附件，请切换 Agent 或移除附件后再开始。" = "This agent does not support attachments. Switch agents or remove them before starting.";
+"读取附件失败：%@" = "Failed to read attachment: %@";
+"附件一次最多 5 个" = "Up to 5 attachments at a time.";
+"附件为空或超过 10MB：%@" = "Attachment is empty or over 10MB: %@";
+"附件恢复失败：%@" = "Attachment recovery failed: %@";

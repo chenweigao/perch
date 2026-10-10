@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 import WorkbenchCore
 
 @MainActor @Observable
@@ -27,6 +28,9 @@ final class NativeAgentConnection {
         set { conversation.actionError = newValue }
     }
     var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
+    /// Staged files for the composer; bytes are copied into the queued message at
+    /// send time, so these URLs only matter until then.
+    var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
     private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     var queue = OutboundQueue() { didSet { persistDrafts() } }
@@ -67,12 +71,13 @@ final class NativeAgentConnection {
     let pastes: DraftPasteStore
     @ObservationIgnored private var draftLoadError: String?
     private(set) var draftSaveError: String?
-    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue, history: history) }
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments, outbox: queue, history: history) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "native-\(host.id)")
         do {
             let saved = try file.load()
             drafts = saved.text
+            attachments = saved.attachments
             queue = saved.outbox
             history = saved.history
             draftFile = file
@@ -504,8 +509,17 @@ final class NativeAgentConnection {
     /// draft is cleared only once the message is queued, so nothing is lost if the
     /// request fails.
     func send(mode: DeliveryMode = .now) {
-        guard online, let id = selectedID, let reference = reference(id),
-              let draftText = drafts[id], !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard online, let id = selectedID, let reference = reference(id) else { return }
+        let draftText = drafts[id] ?? ""
+        let files = attachments[id] ?? []
+        guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        if !files.isEmpty {
+            guard sessions.first(where: { $0.id == id })?.provider == .claude else {
+                actionError = L("当前 Agent 不支持发送附件")
+                return
+            }
+            guard files.count <= 5 else { actionError = L("附件一次最多 5 个"); return }
+        }
         // Folded pastes rejoin the prompt here; a lost paste file must not
         // silently send a prompt with a dead token in it.
         let expansion = pastes.expand(draftText)
@@ -518,6 +532,7 @@ final class NativeAgentConnection {
         // it to the model would just produce a reply about the text "/compact".
         if let snapshot, snapshot.id == id, let commands = snapshot.commands,
            let invocation = SlashCommands.invocation(in: text, from: commands) {
+            guard files.isEmpty else { actionError = L("Remove attachments before running a command."); return }
             run(invocation.command, arguments: invocation.arguments, for: id, draft: text)
             return
         }
@@ -525,9 +540,25 @@ final class NativeAgentConnection {
             actionError = L("This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation.")
             return
         }
-        guard queue.enqueue(text, for: reference, mode: mode) != nil else { return }
+        var payload: [OutboundAttachment] = []
+        for file in files {
+            do {
+                let data = try Data(contentsOf: file)
+                guard !data.isEmpty, data.count <= 10_485_760 else {
+                    actionError = L("附件为空或超过 10MB：\(file.lastPathComponent)")
+                    return
+                }
+                let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+                payload.append(OutboundAttachment(name: file.lastPathComponent, mediaType: mime, data: data))
+            } catch {
+                actionError = L("读取附件失败：\(error.localizedDescription)")
+                return
+            }
+        }
+        guard queue.enqueue(text, for: reference, mode: mode, attachments: payload) != nil else { return }
         PromptHistory.record(draftText, for: id, into: &history)
         drafts[id] = ""
+        attachments[id] = nil
         actionError = nil
         deliver(id)
     }
@@ -542,8 +573,14 @@ final class NativeAgentConnection {
         Task {
             defer { sendingSessions.remove(id); drainQueues() }
             do {
-                let receipt: NativeRequestReceipt = try await request("/sessions/\(id)/\(message.mode == .steer ? "steer" : "prompt")", body: .object([
-                    "text": .string(message.text), "requestId": .string(message.id)]))
+                var fields: [String: JSONValue] = ["text": .string(message.text), "requestId": .string(message.id)]
+                if !message.attachments.isEmpty {
+                    fields["attachments"] = .array(message.attachments.map {
+                        .object(["name": .string($0.name), "mediaType": .string($0.mediaType),
+                                 "data": .string($0.data.base64EncodedString())])
+                    })
+                }
+                let receipt: NativeRequestReceipt = try await request("/sessions/\(id)/\(message.mode == .steer ? "steer" : "prompt")", body: .object(fields))
                 apply(receipt)
                 nextCatalogRefresh = .distantPast
                 do { try await refresh() } catch { actionError = "操作已受理，同步失败：\(error.localizedDescription)" }
@@ -609,6 +646,17 @@ final class NativeAgentConnection {
         let id = message.session.terminalID
         let existing = drafts[id] ?? ""
         drafts[id] = existing.isEmpty ? message.text : existing + "\n\n" + message.text
+        // The queued message carries bytes, not URLs, so restoring to the composer
+        // means materializing them again.
+        for attachment in message.attachments {
+            do {
+                let folder = FileManager.default.temporaryDirectory.appendingPathComponent("AgentWorkbenchAttachments", isDirectory: true)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let file = folder.appendingPathComponent("\(UUID().uuidString.prefix(8))-\(attachment.name)")
+                try attachment.data.write(to: file, options: .atomic)
+                attachments[id, default: []].append(file)
+            } catch { actionError = L("附件恢复失败：\(error.localizedDescription)") }
+        }
         drainQueues()
     }
 
@@ -718,7 +766,10 @@ final class NativeAgentConnection {
     }
     func action(_ id: String, _ action: String, _ body: [String: JSONValue] = [:]) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/\(action)", body: .object(body))
-        if action == "delete", selectedID == id { conversation.select(nil) }
+        if action == "delete" {
+            if selectedID == id { conversation.select(nil) }
+            drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
+        }
         // A successful mutation stays successful if only the following read fails.
         do { try await refresh() } catch { self.actionError = "操作已受理，同步失败：\(error.localizedDescription)" }
     }
