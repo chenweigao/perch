@@ -143,6 +143,23 @@ func checkWorkflow() throws {
                  "Tool search covers tool input text once, not per wrapper entry")
     precondition(search.hits(in: toolMessages, query: "needle", running: false, options: ConversationFindOptions(role: .user)).hits.isEmpty,
                  "Tool content stays out of a user-only search")
+
+    // Conversation export: Markdown keeps visible text, thoughts and tool calls.
+    let exportMessages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"u1","role":"user","created_at":"","content":[{"type":"text","text":"帮我看下这个问题"}]},{"id":"a1","role":"assistant","created_at":"","content":[{"type":"thinking","thinking":"先看日志"},{"type":"text","text":"结论：配置错了"},{"type":"tool_use","tool_call_id":"c1","tool_name":"Read","input":{"file_path":"/tmp/a.swift"}},{"type":"tool_result","tool_call_id":"c1","output":"文件内容"},{"type":"text","text":"<system-reminder>内部上下文</system-reminder>"}]}]"#.utf8))
+    let markdown = ConversationExport.markdown(exportMessages)
+    precondition(markdown.contains("## 用户") && markdown.contains("帮我看下这个问题"), "Export keeps user prompts")
+    precondition(markdown.contains("## 助手") && markdown.contains("结论：配置错了"), "Export keeps assistant text")
+    precondition(markdown.contains("<summary>思考</summary>") && markdown.contains("先看日志"), "Export folds thoughts")
+    precondition(markdown.contains("### 工具调用：`Read`") && markdown.contains("/tmp/a.swift"), "Export keeps tool calls and input")
+    precondition(markdown.contains("### 工具结果") && markdown.contains("文件内容"), "Export keeps tool output")
+    precondition(!markdown.contains("内部上下文"), "Runtime context never exports")
+    let jsonData = try ConversationExport.json(exportMessages)
+    let jsonText = String(decoding: jsonData, as: UTF8.self)
+    precondition(jsonText.contains("\"role\" : \"user\"") && jsonText.contains("\"role\" : \"assistant\""), "JSON export mirrors roles")
+    precondition(jsonText.contains("文件内容"), "JSON export keeps tool output")
+    let jsonRoundTrip = try JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]]
+    precondition(jsonRoundTrip?.count == 2 && (jsonRoundTrip?[1]["content"] as? [[String: Any]])?.count == 5,
+                 "JSON export decodes with message and part counts intact")
     let edited = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**新正文** 👋 café"},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
     precondition(search.hits(in: edited, query: "match", running: true).hits.isEmpty, "Same-ID edits invalidate cached text")
     precondition(search.hits(in: edited, query: "cafe", running: true).hits.count == 1, "Keep rendered Unicode search semantics")

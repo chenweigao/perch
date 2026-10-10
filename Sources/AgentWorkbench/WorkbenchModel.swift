@@ -984,10 +984,35 @@ final class WorkbenchModel {
             native.drafts[id] = existing.isEmpty ? text : existing + "\n\n" + text
         }
     }
+    /// Exports the currently shown conversation's loaded messages as a local
+    /// document. The save panel decides the destination; failures surface in
+    /// the active connection's action line.
+    func exportSelectedConversation(markdown: Bool) {
+        guard let reference = selectedReference else { return }
+        let kimi = kimiEnvironments[reference.hostID]
+        let native = nativeEnvironments[reference.hostID]
+        let messages = reference.kind == .kimi ? kimi?.conversation?.displayMessages : native?.snapshot?.messages
+        guard let messages, !messages.isEmpty else { return }
+        do {
+            let data: Data
+            let ext: String
+            if markdown {
+                data = Data(ConversationExport.markdown(messages).utf8); ext = "md"
+            } else {
+                data = try ConversationExport.json(messages); ext = "json"
+            }
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = "conversation-\(reference.terminalID).\(ext)"
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            try data.write(to: url, options: .atomic)
+        } catch {
+            if reference.kind == .kimi { kimi?.actionError = error.localizedDescription }
+            else { native?.actionError = error.localizedDescription }
+        }
+    }
     /// Review feedback is staged in the same task; it never sends automatically.
     func appendReviewContext(_ text: String, to reference: SessionReference) {
-        guard selectedReference == reference, canQuoteSelection else { return }
-        let id = reference.terminalID
+        guard selectedReference == reference, canQuoteSelection else { return }        let id = reference.terminalID
         if reference.kind == .kimi {
             let existing = kimi.drafts[id] ?? ""
             kimi.drafts[id] = existing + (existing.isEmpty ? "" : "\n\n") + text + "\n\n"

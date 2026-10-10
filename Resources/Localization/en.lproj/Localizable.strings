@@ -1143,3 +1143,5 @@
 "找不到这条回复对应的提问，无法重新生成。" = "No user prompt found for this reply; cannot regenerate.";
 "这条回复对应的提问没有文字内容。" = "The prompt for this reply has no text to resend.";
 "无效正则表达式" = "Invalid regular expression";
+"导出当前会话（Markdown）…" = "Export Current Conversation (Markdown)…";
+"导出当前会话（JSON）…" = "Export Current Conversation (JSON)…";
