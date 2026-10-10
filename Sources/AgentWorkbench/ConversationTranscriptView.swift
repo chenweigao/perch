@@ -65,7 +65,17 @@ struct KimiMessageView: View {
     let api: KimiAPI?
     let sessionId: String
     var markdownPreparation: ReplyMarkdownPreparation? = nil
+    /// The hosting entry's id doubles as the turn's bookmark id for user rows.
+    var entryID: String? = nil
+    @Environment(\.conversationActionContext) private var actionContext
+    @Environment(\.conversationMemoryKey) private var memoryKey
     private var isUserMessage: Bool { message.isUserPrompt }
+    /// The message's visible text, the same source search excerpts read.
+    private var visibleText: String {
+        message.content.filter { $0.type == "text" && !$0.isRuntimeContext }
+            .map { $0.skillContextSplit?.prefix ?? $0.text ?? "" }.joined(separator: "\n\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     private func runtimeContext(_ text: String) -> some View {
         DisclosureGroup("运行上下文") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
     }
@@ -80,6 +90,12 @@ struct KimiMessageView: View {
                     .padding(.vertical, UserMessageStyle.verticalPadding)
                     .background(kimiPaper, in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
             }.padding(.top, UserMessageStyle.topSpacing)
+                .contextMenu {
+                    if let actionContext, !visibleText.isEmpty {
+                        UserMessageContextMenu(context: actionContext, text: visibleText,
+                                               bookmark: entryID.map { (turn: $0, session: memoryKey) })
+                    }
+                }
         } else {
             content.frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -311,6 +327,9 @@ private final class ConversationDocumentView: NSView {
     private var boundsObserver: NSObjectProtocol?
     var totalHeight: CGFloat { geometry.totalHeight }
     private var findObserver: NSObjectProtocol?
+    private var highlightObserver: NSObjectProtocol?
+    /// The find bar's current highlight-all request, if it targets this session.
+    private var highlight: ConversationHighlightUpdate?
     #if TRANSCRIPT_CHECKS
     fileprivate var missingVisibleRows: [String] {
         let visible = viewportRect
@@ -408,11 +427,21 @@ private final class ConversationDocumentView: NSView {
             guard let self, let target = notice.object as? ConversationFindTarget, target.session == self.sessionId else { return }
             self.reveal(target)
         }
+        highlightObserver = NotificationCenter.default.addObserver(forName: .init("PerchConversationHighlight"), object: nil, queue: .main) { [weak self] notice in
+            guard let self, let update = notice.object as? ConversationHighlightUpdate else { return }
+            // Other sessions' searches clear nothing here.
+            guard update.session == self.sessionId else { return }
+            self.highlight = update.query.isEmpty ? nil : update
+            self.applyFindHighlights()
+        }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
         guard !suspended else { return }
         revealEntry(target.hit.entryID)
+        // Regular-expression hits reveal their row; only literal queries can
+        // place the caret on the exact occurrence.
+        guard target.options.canLocateOccurrence else { return }
         let intent = readingIntent
         DispatchQueue.main.async { [weak self] in
             guard let self, self.readingIntent == intent, self.sessionId == target.session,
@@ -426,7 +455,7 @@ private final class ConversationDocumentView: NSView {
                     let source = text.string as NSString
                     var search = NSRange(location: 0, length: source.length)
                     while search.length > 0 {
-                        let found = source.range(of: target.query, options: [.caseInsensitive, .diacriticInsensitive], range: search)
+                        let found = source.range(of: target.query, options: target.options.compareOptions(), range: search)
                         if found.location == NSNotFound { break }
                         if remaining == 0 { text.setSelectedRange(found); text.showFindIndicator(for: found); text.scrollRangeToVisible(found); return true }
                         remaining -= 1
@@ -793,6 +822,7 @@ private final class ConversationDocumentView: NSView {
         for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
         mounted = nextMounted
         laidOutRange = nextRange
+        if highlight != nil { applyFindHighlights() }
         let retained = geometry.retainedRows(around: nextRange)
         var retired: [ConversationEntryController] = []
         for id in Array(controllers.keys) where !mounted.contains(id) {
@@ -964,8 +994,25 @@ private final class ConversationDocumentView: NSView {
         super.viewDidMoveToSuperview()
         observeScroll()
     }
+    /// Highlight every find-bar match in the currently mounted text views.
+    /// Rows mounted later pick it up in refreshVisibleRows; streaming rows
+    /// re-apply from ReplyTextView.update.
+    private func applyFindHighlights() {
+        for id in mounted {
+            guard let view = controllers[id]?.view else { continue }
+            applyFindHighlights(in: view)
+        }
+    }
+    private func applyFindHighlights(in view: NSView) {
+        if let text = view as? ReplyTextView {
+            text.findHighlight = highlight.map { (query: $0.query, caseSensitive: $0.options.caseSensitive, regex: $0.options.regex) }
+            text.applyFindHighlight()
+        }
+        for subview in view.subviews { applyFindHighlights(in: subview) }
+    }
     deinit {
         if let findObserver { NotificationCenter.default.removeObserver(findObserver) }
+        if let highlightObserver { NotificationCenter.default.removeObserver(highlightObserver) }
         if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
     }
 }
@@ -1024,6 +1071,7 @@ private struct ConversationEntryAppearance: Equatable {
     let dynamicTypeSize: DynamicTypeSize
     let reduceMotion: Bool
     let isEnabled: Bool
+    let actionContext: ConversationActionContext?
     init(_ environment: EnvironmentValues) {
         colorScheme = environment.colorScheme
         layoutDirection = environment.layoutDirection
@@ -1031,6 +1079,7 @@ private struct ConversationEntryAppearance: Equatable {
         dynamicTypeSize = environment.dynamicTypeSize
         reduceMotion = environment.accessibilityReduceMotion || environment.conversationReduceMotion
         isEnabled = environment.isEnabled
+        actionContext = environment.conversationActionContext
     }
 }
 
@@ -1050,6 +1099,7 @@ private struct HostedConversationEntry: View {
             .environment(\.dynamicTypeSize, appearance.dynamicTypeSize)
             .environment(\.conversationReduceMotion, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
+            .environment(\.conversationActionContext, appearance.actionContext)
             // Match Perch's ink and monochrome disclosure/control tint in both appearances.
             .foregroundStyle(WorkbenchTheme.ink)
             .tint(WorkbenchTheme.accent)
@@ -1254,6 +1304,10 @@ private final class ConversationEntryController: NSViewController {
                     nativeUser = NativeUserMessageView.acquire()
                     if isViewLoaded { view.addSubview(nativeUser!) }
                 }
+                nativeUser!.actionContext = appearance.actionContext
+                nativeUser!.sourceText = user.source
+                nativeUser!.bookmarkTurn = self.content.entry.id
+                nativeUser!.bookmarkSession = self.content.memoryKey
                 nativeUser!.update(paragraphs, dark: appearance.colorScheme == .dark)
                 #if TRANSCRIPT_CHECKS
                 NavigationRenderMetrics.record("native_user_update", since: CACurrentMediaTime())
@@ -1271,7 +1325,8 @@ private final class ConversationEntryController: NSViewController {
                     if isViewLoaded { view.addSubview(nativeAssistant!) }
                 }
                 nativeAssistant!.update(blocks, source: assistant.source,
-                                        dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled)
+                                        dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled,
+                                        actionContext: appearance.actionContext, messageID: assistant.messageID)
                 #if TRANSCRIPT_CHECKS
                 NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
                 #endif
@@ -1363,6 +1418,33 @@ private final class ConversationEntryController: NSViewController {
             guard self.publishedHeight != height else { return }
             self.publishedHeight = height
             self.heightChanged(height)
+        }
+    }
+}
+
+/// Assistant rows offer copy, quote-into-composer and regenerate. Regenerate
+/// re-sends the preceding user prompt; the connection reports when none exists.
+private struct AssistantEntryActions: View {
+    let text: String
+    let messageID: String
+    @Environment(\.conversationActionContext) private var context
+    var body: some View {
+        HStack(spacing: 2) {
+            ReplyCopyButton(text: text)
+            if let context {
+                Button { context.post(.quote(text)) } label: {
+                    Image(systemName: "quote.opening").font(.system(size: 11))
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
+                    .accessibilityLabel("引用到输入框")
+                if !messageID.isEmpty {
+                    Button { context.post(.regenerate(before: messageID)) } label: {
+                        Image(systemName: "arrow.clockwise").font(.system(size: 11))
+                            .frame(width: 24, height: 24).contentShape(Rectangle())
+                    }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
+                        .accessibilityLabel("重新生成")
+                }
+            }
         }
     }
 }
@@ -1499,11 +1581,13 @@ private struct ConversationEntryView: View, Equatable {
                     }
                     ForEach(entry.messages) { message in
                         KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
-                                        markdownPreparation: markdownPreparation)
+                                        markdownPreparation: markdownPreparation, entryID: entry.id)
                     }
                     if entry.messages.first?.role == "assistant" && entry.presentation != .progress {
                         let text = entry.messages.flatMap(\.content).compactMap(\.text).joined(separator: "\n\n")
-                        if !text.isEmpty { ReplyCopyButton(text: text) }
+                        if !text.isEmpty {
+                            AssistantEntryActions(text: text, messageID: entry.messages.first?.id ?? "")
+                        }
                     }
                 }
             }

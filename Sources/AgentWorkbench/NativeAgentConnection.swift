@@ -30,6 +30,9 @@ final class NativeAgentConnection {
     private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     var queue = OutboundQueue() { didSet { persistDrafts() } }
+    /// Sent prompts per session, oldest first, for composer Up-arrow recall.
+    private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
+    func historyEntries(for id: String) -> [String] { history[id] ?? [] }
     var stops = StopController()
     /// The bridge's combined catalog: OMP answers `omp models`, Codex answers
     /// `model/list`, and dsh contributes its ACP config options after each handshake.
@@ -60,15 +63,18 @@ final class NativeAgentConnection {
     @ObservationIgnored private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
     @ObservationIgnored private var draftFile: DraftFile?
+    /// Folded long pastes live on disk per host; tokens ride inside drafts.
+    let pastes: DraftPasteStore
     @ObservationIgnored private var draftLoadError: String?
     private(set) var draftSaveError: String?
-    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue) }
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue, history: history) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "native-\(host.id)")
         do {
             let saved = try file.load()
             drafts = saved.text
             queue = saved.outbox
+            history = saved.history
             draftFile = file
         } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
@@ -82,12 +88,20 @@ final class NativeAgentConnection {
         try draftFile?.flush(savedDrafts)
     }
 
-    init(host: SSHHost) { self.host = host; requestTransport = nil; loadDrafts() }
+    init(host: SSHHost) {
+        self.host = host; requestTransport = nil
+        pastes = DraftPasteStore.applicationStore(namespace: "native-\(host.id)")
+        loadDrafts()
+    }
     /// A setup probe must never drain the user's persisted outbox.
-    init(setupHost: SSHHost) { self.host = setupHost; requestTransport = nil }
+    init(setupHost: SSHHost) {
+        self.host = setupHost; requestTransport = nil
+        pastes = DraftPasteStore.applicationStore(namespace: "native-\(setupHost.id)")
+    }
     /// Used by the isolated connection contract checks; no SSH or App is started.
     init(host: SSHHost, transport: @escaping (String, JSONValue?) async throws -> Data) {
         self.host = host; requestTransport = transport; online = true
+        pastes = DraftPasteStore.applicationStore(namespace: "native-\(host.id)")
     }
     func updateHost(_ value: SSHHost) {
         if value.destination != host.destination { disconnect() }
@@ -491,7 +505,15 @@ final class NativeAgentConnection {
     /// request fails.
     func send(mode: DeliveryMode = .now) {
         guard online, let id = selectedID, let reference = reference(id),
-              let text = drafts[id], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+              let draftText = drafts[id], !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Folded pastes rejoin the prompt here; a lost paste file must not
+        // silently send a prompt with a dead token in it.
+        let expansion = pastes.expand(draftText)
+        guard expansion.missing.isEmpty else {
+            actionError = L("粘贴内容已丢失，请重新粘贴后再发送。")
+            return
+        }
+        let text = expansion.text
         // A draft that names one of this session's commands runs that command; sending
         // it to the model would just produce a reply about the text "/compact".
         if let snapshot, snapshot.id == id, let commands = snapshot.commands,
@@ -504,6 +526,7 @@ final class NativeAgentConnection {
             return
         }
         guard queue.enqueue(text, for: reference, mode: mode) != nil else { return }
+        PromptHistory.record(draftText, for: id, into: &history)
         drafts[id] = ""
         actionError = nil
         deliver(id)
@@ -587,6 +610,36 @@ final class NativeAgentConnection {
         let existing = drafts[id] ?? ""
         drafts[id] = existing.isEmpty ? message.text : existing + "\n\n" + message.text
         drainQueues()
+    }
+
+    /// Re-sends text as a new prompt. An in-progress draft is never replaced:
+    /// the resend queues behind it instead.
+    func resend(_ text: String, for id: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, reference(id) != nil else { return }
+        if selectedID == id, (drafts[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            drafts[id] = text
+            send(mode: modes(for: id).first ?? .now)
+            return
+        }
+        guard let reference = reference(id),
+              queue.enqueue(text, for: reference, mode: .nextTurn) != nil else { return }
+        PromptHistory.record(text, for: id, into: &history)
+        deliver(id)
+    }
+
+    /// Regeneration re-sends the user prompt that preceded the given message.
+    func resendPrompt(before messageID: String, for id: String) -> String? {
+        guard snapshot?.id == id, let messages = snapshot?.messages,
+              let index = messages.firstIndex(where: { $0.id == messageID }),
+              let user = messages[..<index].last(where: { $0.isUserPrompt }) else {
+            return L("找不到这条回复对应的提问，无法重新生成。")
+        }
+        let text = user.content.filter { $0.type == "text" && !$0.isRuntimeContext }
+            .map { $0.skillContextSplit?.prefix ?? $0.text ?? "" }.joined(separator: "\n\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return L("这条回复对应的提问没有文字内容。") }
+        resend(text, for: id)
+        return nil
     }
     /// Runs a slash command instead of sending it to the model. Only `compact` has
     /// its own RPC verb; the runtime has no generic command-invocation command, so

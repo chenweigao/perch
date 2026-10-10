@@ -22,7 +22,8 @@ List rows are measured at the available width: adjacent single-line items have
 a 2 pt gap, increasing to 6 pt when either item spans multiple lines. Nested list
 continuations align with the text, ordered lists preserve their starting number,
 and task markers are read-only. Quotes use a fine left rule. Code uses the system
-monospace font, a quiet header and horizontal scrolling. Body text, inline paths
+monospace font, a quiet header, horizontal scrolling, and a right-aligned line-number
+gutter for multi-line blocks in both the SwiftUI card and the native fast path. Body text, inline paths
 and links use native word wrapping, including oversized unbroken tokens, without
 inserting characters into selectable text. Text and link colors are unchanged.
 Tables render as native grids sized to their viewport. Column widths follow

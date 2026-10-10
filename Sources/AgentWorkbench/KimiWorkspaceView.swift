@@ -111,6 +111,7 @@ private struct KimiComposerView: View {
     let onInput: () -> Void
     @State private var chooseFiles = false
     @State private var palette = CommandPaletteState()
+    @State private var recall = ComposerRecall()
     var body: some View {
         VStack(spacing: 10) {
             if let goal = connection.goal {
@@ -145,14 +146,15 @@ private struct KimiComposerView: View {
                     }
                 }
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
-                                              set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0) }),
+                                              set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: connection.conversation?.snapshot.session.cwd ?? "",
                                 placeholder: L("继续此任务…"),
                                 accessibilityLabel: "Message Kimi", canSend: canSend,
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 },
-                                onKey: { handle($0, for: sessionID) }).id(sessionID)
+                                onKey: { handle($0, for: sessionID) },
+                                pastes: connection.pastes).id(sessionID)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
                     let sessionModel = connection.conversation?.snapshot.session.model ?? ""
@@ -177,6 +179,12 @@ private struct KimiComposerView: View {
                                      disabled: connection.sending) { mode in
                         connection.setPermission(mode, for: sessionID)
                     }
+                    ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
+                        onInput()
+                        let existing = connection.drafts[sessionID] ?? ""
+                        connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
+                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                    }
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget,
                                  isStale: !connection.online || !connection.snapshotReady)
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.isTurnRunning == true,
@@ -186,10 +194,25 @@ private struct KimiComposerView: View {
                                          onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
                 }
             }.padding(12).workbenchControlSurface()
-            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
+                                 draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
+        }
+        // Images dragged from browsers arrive as image data, not file URLs.
+        .dropDestination(for: NSImage.self) { images, _ in
+            var accepted = false
+            for image in images {
+                guard let tiff = image.tiffRepresentation,
+                      let bitmap = NSBitmapImageRep(data: tiff),
+                      let png = bitmap.representation(using: .png, properties: [:]) else { continue }
+                do {
+                    addAttachments([try ComposerAttachments.saveImageToTemp(png)], to: sessionID)
+                    accepted = true
+                } catch { connection.actionError = error.localizedDescription }
+            }
+            return accepted
         }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do {
@@ -201,17 +224,24 @@ private struct KimiComposerView: View {
     }
     private func handle(_ key: ComposerKey, for id: String) -> Bool {
         let draft = connection.drafts[id] ?? ""
-        guard let completion = palette.completion(for: draft, in: KimiCommand.catalog) else { return false }
-        switch key {
-        case .up: palette.move(-1, count: completion.matches.count)
-        case .down: palette.move(1, count: completion.matches.count)
-        case .enter, .tab:
-            guard let command = palette.choice(in: completion) else { return false }
-            if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
-            apply(command, completion, to: id)
-        case .escape: palette.dismiss(draft)
+        if let completion = palette.completion(for: draft, in: KimiCommand.catalog) {
+            switch key {
+            case .up: palette.move(-1, count: completion.matches.count)
+            case .down: palette.move(1, count: completion.matches.count)
+            case .enter, .tab:
+                guard let command = palette.choice(in: completion) else { return false }
+                if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
+                apply(command, completion, to: id)
+            case .escape: palette.dismiss(draft)
+            }
+            return true
         }
-        return true
+        // With no palette open, an empty draft offers Up-arrow prompt recall.
+        if let next = recall.handle(key, draft: draft, entries: connection.historyEntries(for: id)) {
+            onInput(); connection.drafts[id] = next; palette.draftChanged(next)
+            return true
+        }
+        return false
     }
     private func apply(_ command: AgentCommand, _ completion: CommandCompletion, to id: String) {
         onInput()
@@ -221,6 +251,10 @@ private struct KimiComposerView: View {
     }
     private func addAttachments(_ files: [URL], to sessionID: String) {
         for file in files where !(connection.attachments[sessionID] ?? []).contains(file) {
+            if let refusal = ComposerAttachments.refusal(for: file) {
+                connection.actionError = "\(file.lastPathComponent): \(refusal)"
+                continue
+            }
             onInput(); connection.attachments[sessionID, default: []].append(file)
         }
     }
@@ -229,11 +263,56 @@ private struct KimiComposerView: View {
         return SlashCommands.invocation(in: draft, from: KimiCommand.catalog) != nil
     }
     private var canSend: Bool {
-        return connection.online && connection.snapshotReady && !connection.sending && !connection.isStopping &&
+        let id = connection.selectedId ?? ""
+        let hasText = !(connection.drafts[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // Offline text queues locally; commands and attachments wait for the server.
+        if !connection.online {
+            return hasText && (connection.attachments[id] ?? []).isEmpty && !isCommandDraft
+        }
+        return connection.snapshotReady && !connection.sending && !connection.isStopping &&
         (isCommandDraft ||
-        (!(connection.modelChoices[connection.selectedId ?? ""] ?? "").isEmpty || connection.conversation?.snapshot.session.model.isEmpty == false) &&
-        (!(connection.drafts[connection.selectedId ?? ""] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-         !(connection.attachments[connection.selectedId ?? ""] ?? []).isEmpty))
+        (!(connection.modelChoices[id] ?? "").isEmpty || connection.conversation?.snapshot.session.model.isEmpty == false) &&
+        (hasText || !(connection.attachments[id] ?? []).isEmpty))
+    }
+}
+
+/// Locally queued offline sends for this session. Editable until the server
+/// accepts them; unknown receipts need an explicit retry, never auto-replay.
+private struct KimiQueuedMessages: View {
+    let connection: KimiConnection
+    let sessionID: String
+    @State private var editing: OutboundMessage?
+    var body: some View {
+        let reference = connection.reference(for: sessionID)
+        let items = connection.queue.items(for: reference)
+        // A queue paused at restart also holds messages queued while offline.
+        if connection.queue.isPaused(reference), !items.isEmpty {
+            Button("Resume queued messages") { connection.resumeQueue(for: sessionID) }.font(.caption)
+                .disabled(!connection.online)
+        }
+        ForEach(items) { message in
+            VStack(alignment: .leading, spacing: 8) {
+                PendingMessageContent(text: message.text, status: message.state.label,
+                                      mode: message.mode == .steer ? "Steer" : "Queue")
+                HStack(spacing: 10) {
+                    if message.state.isEditable {
+                        Button("Edit") { editing = message }.font(.caption2)
+                        Button("Remove") { connection.removeQueued(message.id) }.font(.caption2)
+                    }
+                    if case .unknown = message.state {
+                        Button("核对并重试") { connection.retryQueued(message.id) }.font(.caption2)
+                        Text("先核对原请求的接收状态，避免重复执行。")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    if case .failed = message.state {
+                        Button("Move to draft") { connection.restoreQueued(message) }.font(.caption2)
+                    }
+                }
+            }.padding(.vertical, 8)
+        }
+        .sheet(item: $editing) { message in
+            PendingMessageEditor(message: message) { connection.editQueued(message.id, text: $0) }
+        }
     }
 }
 
@@ -281,6 +360,8 @@ private struct KimiTimeline: View {
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
                                            allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
                                            waitsForInitialPosition: true)
+                        .environment(\.conversationActionContext,
+                                     ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: c.snapshot.session.id))
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         VStack(alignment: .leading, spacing: 8) {
                             PendingMessageContent(text: prompt.text, status: prompt.label)
@@ -291,6 +372,7 @@ private struct KimiTimeline: View {
                             }
                         }.padding(.vertical, 8)
                     }
+                    KimiQueuedMessages(connection: connection, sessionID: c.snapshot.session.id)
                     if let notice = c.notice { Text(notice).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(c.snapshot.pendingApprovals) { approval in

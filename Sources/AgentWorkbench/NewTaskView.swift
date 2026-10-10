@@ -166,7 +166,7 @@ struct NewTaskView: View {
                                         referenceBrowser.configure(host: kimi.host, cwd: cwd)
                                         referenceBrowser.open(path)
                                         showReference = true
-                                    }, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
+                                    }, pastes: kimi.pastes, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
                     if !attachments.isEmpty {
                         ScrollView(.horizontal) {
                             HStack {
@@ -408,7 +408,13 @@ struct NewTaskView: View {
         }.padding(18).frame(width: 360).disabled(creating)
     }
     private func addAttachments(_ files: [URL]) {
-        for file in files where !attachments.contains(file) { attachments.append(file) }
+        for file in files where !attachments.contains(file) {
+            if let refusal = ComposerAttachments.refusal(for: file) {
+                error = "\(file.lastPathComponent): \(refusal)"
+                continue
+            }
+            attachments.append(file)
+        }
     }
     private func start() { create(sendInitialPrompt: true) }
     private func create(sendInitialPrompt: Bool) {

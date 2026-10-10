@@ -48,6 +48,11 @@ struct WorkbenchApp: App {
                 Button(L("Next match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }.keyboardShortcut("g").disabled(!model.showConversationFind)
                 Button(L("Previous match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showConversationFind)
                 Divider()
+                Button(L("导出当前会话（Markdown）…")) { model.exportSelectedConversation(markdown: true) }
+                    .disabled(!model.showKimi && !model.showNative)
+                Button(L("导出当前会话（JSON）…")) { model.exportSelectedConversation(markdown: false) }
+                    .disabled(!model.showKimi && !model.showNative)
+                Divider()
                 Button(L("Back")) { model.navigate(-1) }.keyboardShortcut("[", modifiers: .command).disabled(!model.canNavigate(-1))
                 Button(L("Forward")) { model.navigate(1) }.keyboardShortcut("]", modifiers: .command).disabled(!model.canNavigate(1))
                 Button(L("Next task needing attention")) { model.nextAttentionTask() }.keyboardShortcut("j", modifiers: [.command, .shift])

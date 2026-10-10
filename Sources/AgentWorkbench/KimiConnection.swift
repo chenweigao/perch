@@ -61,6 +61,13 @@ final class KimiConnection {
     var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
     private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
+    /// Instructions written while offline. They deliver only after a reconnect,
+    /// each reusing its original prompt id so a retry cannot double-run.
+    private(set) var queue = OutboundQueue() { didSet { persistDrafts() } }
+    /// Sent prompts per session, oldest first, for composer Up-arrow recall.
+    private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
+    func historyEntries(for id: String) -> [String] { history[id] ?? [] }
+    func reference(for id: String) -> SessionReference { SessionReference(hostID: host.id, terminalID: id, kind: .kimi) }
     private(set) var aborting: Set<String> = []
     private(set) var loadingTaskOutput: Set<String> = []
     private(set) var stoppingTasks: Set<String> = []
@@ -98,6 +105,8 @@ final class KimiConnection {
     /// it and nothing more: the daemon belongs to the user, not to this client.
     private(set) var staleRuntimeNotice: String?
     @ObservationIgnored private(set) var api: KimiAPI?
+    /// Folded long pastes live on disk per host; tokens ride inside drafts.
+    let pastes: DraftPasteStore
     @ObservationIgnored private var cachedConversations = KimiConversationCache()
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
     @ObservationIgnored private var tunnel: Process?
@@ -119,13 +128,15 @@ final class KimiConnection {
     @ObservationIgnored private var draftFile: DraftFile?
     @ObservationIgnored private var draftLoadError: String?
     private(set) var draftSaveError: String?
-    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments) }
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments, outbox: queue, history: history) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "kimi-\(host.id)")
         do {
             let saved = try file.load()
             drafts = saved.text
             attachments = saved.attachments
+            queue = saved.outbox
+            history = saved.history
             draftFile = file
         } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
@@ -141,16 +152,18 @@ final class KimiConnection {
 
     init(host: SSHHost) {
         self.host = host; probesInstalledVersion = true
+        pastes = DraftPasteStore.applicationStore(namespace: "kimi-\(host.id)")
         selectedId = UserDefaults.standard.string(forKey: savedSelectionKey); loadDrafts()
     }
 
     /// Setup never restores drafts, selection or an existing conversation. It also
     /// reads the installed version itself, so this connection skips that probe.
-    init(setupHost: SSHHost) { self.host = setupHost; probesInstalledVersion = false }
+    init(setupHost: SSHHost) { self.host = setupHost; probesInstalledVersion = false; pastes = DraftPasteStore.applicationStore(namespace: "kimi-\(setupHost.id)") }
 
     /// Isolated connection checks use a local HTTP fixture without SSH.
     init(host: SSHHost, api: KimiAPI) {
         self.host = host; self.api = api; probesInstalledVersion = false; online = true
+        pastes = DraftPasteStore.applicationStore(namespace: "kimi-\(host.id)")
     }
 
     func refreshModels() async {
@@ -193,6 +206,7 @@ final class KimiConnection {
                     try await sendFrame(ws, type: "client_hello", payload: ["client_id": .string("agent-workbench")])
                     online = true; stateMessage = "已连接"; error = nil; delay = 1
                     checkRuntimeFreshness()
+                    drainQueue()
                     if let id = selectedId, sessions.contains(where: { $0.id == id }) {
                         do {
                             try await refreshConversation(selectionToken: selectionGeneration)
@@ -725,21 +739,139 @@ final class KimiConnection {
         return session
     }
     func sendPrompt(mode: DeliveryMode = .steer) {
-        guard online, snapshotReady, !loading, !sending, let id = selectedId else { return }
+        guard let id = selectedId, !sending else { return }
+        guard online, snapshotReady, !loading else {
+            // Offline drafts queue locally; attachments and commands still wait.
+            if !online { queueOffline(for: id, mode: mode) }
+            return
+        }
         Task { await sendPrompt(for: id, mode: mode) }
+    }
+    /// Offline sends become local queue entries, delivered after a reconnect.
+    /// Text stays in token form so queued rows stay readable and editable.
+    private func queueOffline(for id: String, mode: DeliveryMode) {
+        let draftText = drafts[id] ?? ""
+        guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard (attachments[id] ?? []).isEmpty else {
+            actionError = L("附件需要在线上传，连接恢复后再发送。")
+            return
+        }
+        if (try? KimiCommand.parse(draftText)) != nil {
+            actionError = L("命令需要连接后执行，请等待恢复在线。")
+            return
+        }
+        let promptID = "awb_\(UUID().uuidString)"
+        guard queue.enqueue(draftText, for: reference(for: id), mode: mode, id: promptID) != nil else { return }
+        PromptHistory.record(draftText, for: id, into: &history)
+        drafts[id] = ""
+        actionError = nil
+    }
+    /// Reconnected: hand each locally queued instruction to the server once, in
+    /// order. The server queue then owns ordering, exactly like an online send.
+    private func drainQueue() {
+        guard online, api != nil else { return }
+        let pending = Set(queue.allItems.filter { $0.state == .draftQueued }.map { $0.session.terminalID })
+        for id in pending { deliverQueued(id) }
+    }
+    private func deliverQueued(_ id: String) {
+        let reference = reference(for: id)
+        guard online, !sendingSessions.contains(id), !queue.isPaused(reference) else { return }
+        guard let message = queue.nextDelivery(for: reference, isStreaming: false) else { return }
+        let expansion = pastes.expand(message.text)
+        guard expansion.missing.isEmpty else {
+            queue.markFailed(message.id, L("粘贴内容已丢失，可移回草稿重新粘贴。"))
+            return
+        }
+        sendingSessions.insert(id)
+        Task {
+            defer { sendingSessions.remove(id) }
+            do {
+                let accepted = try await submit(id: message.id, session: id, text: expansion.text, mode: message.mode)
+                queue.markDelivered(message.id)
+                pendingPrompts[id, default: []].append(accepted)
+                if message.mode == .steer && ["queued", "blocked"].contains(accepted.status) {
+                    await steerPrompt(message.id, for: id)
+                }
+            } catch {
+                // The POST's receipt is unknown, so an automatic retry could run
+                // the instruction twice. Surface it for an explicit user retry.
+                queue.markUnknown(message.id, error.localizedDescription)
+                if selectedId == id { actionError = error.localizedDescription }
+            }
+            deliverQueued(id)
+        }
+    }
+    func resumeQueue(for id: String) {
+        let reference = reference(for: id)
+        guard online else { return }
+        queue.resume(reference)
+        deliverQueued(id)
+    }
+    func retryQueued(_ messageID: String) {
+        guard let message = queue.retry(messageID) else { return }
+        deliverQueued(message.session.terminalID)
+    }
+    /// A rejected instruction returns to the draft for revision instead of
+    /// being silently discarded or replayed.
+    func restoreQueued(_ message: OutboundMessage) {
+        guard queue.removeFailed(message.id) else { return }
+        let id = message.session.terminalID
+        let existing = drafts[id] ?? ""
+        drafts[id] = existing.isEmpty ? message.text : existing + "\n\n" + message.text
+    }
+    func editQueued(_ messageID: String, text: String) -> Bool { queue.edit(messageID, text: text) }
+    func removeQueued(_ messageID: String) { _ = queue.remove(messageID) }
+
+    /// Re-sends text as a new prompt. An in-progress draft is never replaced:
+    /// the resend queues behind it instead.
+    func resend(_ text: String, for id: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if (drafts[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            drafts[id] = text
+            if online { Task { await sendPrompt(for: id, mode: .steer) } }
+            else { queueOffline(for: id, mode: .steer) }
+            return
+        }
+        let promptID = "awb_\(UUID().uuidString)"
+        guard queue.enqueue(text, for: reference(for: id), mode: .steer, id: promptID) != nil else { return }
+        PromptHistory.record(text, for: id, into: &history)
+        if online { deliverQueued(id) }
+    }
+
+    /// Regeneration re-sends the user prompt that preceded the given message.
+    func resendPrompt(before messageID: String, for id: String) -> String? {
+        guard conversation?.snapshot.session.id == id, let messages = conversation?.displayMessages,
+              let index = messages.firstIndex(where: { $0.id == messageID }),
+              let user = messages[..<index].last(where: { $0.isUserPrompt }) else {
+            return L("找不到这条回复对应的提问，无法重新生成。")
+        }
+        let text = user.content.filter { $0.type == "text" && !$0.isRuntimeContext }
+            .map { $0.skillContextSplit?.prefix ?? $0.text ?? "" }.joined(separator: "\n\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return L("这条回复对应的提问没有文字内容。") }
+        resend(text, for: id)
+        return nil
     }
     /// A newly created session can accept a prompt before its display snapshot loads.
     /// Keep the destination fixed even when catalog updates restore another tab.
     func sendPrompt(for id: String, mode: DeliveryMode = .steer) async {
         guard online, let api else {
-            actionError = "发送未确认，草稿已保留。请先连接 Kimi。"
+            queueOffline(for: id, mode: mode)
             return
         }
         guard !sendingSessions.contains(id) else { return }
-        var text = drafts[id] ?? ""
+        let draftText = drafts[id] ?? ""
         var startingGoal = false
         let files = attachments[id] ?? []
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        // Folded pastes rejoin the prompt here; a lost paste file must not
+        // silently send a prompt with a dead token in it.
+        let expansion = pastes.expand(draftText)
+        guard expansion.missing.isEmpty else {
+            actionError = L("粘贴内容已丢失，请重新粘贴后再发送。")
+            return
+        }
+        var text = expansion.text
         commandErrors[id] = nil
         do {
             if let command = try KimiCommand.parse(text) {
@@ -758,7 +890,7 @@ final class KimiConnection {
                 if selectedId == id { actionError = nil }
                 commandFeedback[id] = nil
                 defer { sendingSessions.remove(id) }
-                let submittedDraft = text
+                let submittedDraft = draftText
                 if let objective = try await runCommand(command, for: id, api: api) {
                     // Goal creation and the starter prompt are separate Kimi APIs.
                     // Once created, retain only the objective on a failed send so
@@ -777,6 +909,7 @@ final class KimiConnection {
             return
         }
         let promptID = "awb_\(UUID().uuidString)"
+        PromptHistory.record(draftText, for: id, into: &history)
         let preview: [JSONValue] = [.object(["type": .string("text"), "text": .string(text)])]
             + files.map { .object(["type": .string("file"), "name": .string($0.lastPathComponent)]) }
         pendingPrompts[id, default: []].append(KimiPrompt(id: promptID, content: preview))
@@ -814,7 +947,9 @@ final class KimiConnection {
             if let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) {
                 pendingPrompts[id]?[index] = accepted
             }
-            if drafts[id] == text { drafts[id] = "" }
+            // Clear the draft the user actually has: the token form, or the
+            // objective text a /goal command replaced it with.
+            if drafts[id] == draftText || drafts[id] == text { drafts[id] = "" }
             attachments[id]?.removeAll { files.contains($0) }
             if mode == .steer && ["queued", "blocked"].contains(accepted.status) {
                 await steerPrompt(promptID, for: id)
@@ -825,6 +960,21 @@ final class KimiConnection {
             updatePrompt(promptID, for: id, status: "unknown", error: message)
             if selectedId == id { actionError = message }
         }
+    }
+    /// One text-only POST shared by the direct send and the offline-queue drain.
+    /// The prompt id is the caller's idempotency key in both paths.
+    private func submit(id promptID: String, session id: String, text: String, mode: DeliveryMode) async throws -> KimiPrompt {
+        guard let api else { throw WorkbenchError("请先连接 Kimi。") }
+        var body: [String: JSONValue] = [
+            "prompt_id": .string(promptID),
+            "content": .array([.object(["type": .string("text"), "text": .string(text)])])
+        ]
+        let chosenModel = modelChoices[id]
+        if let model = chosenModel, !model.isEmpty { body["model"] = .string(model) }
+        if let effort = activeModel(for: id)?.resolve(thinkingChoices[id]) { body["thinking"] = .string(effort.rawValue) }
+        if let permissionMode = permissionMode(for: id) { body["permission_mode"] = .string(permissionMode) }
+        timings.submitted(promptID)
+        return try await api.post(KimiPrompt.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
     }
     private func runCommand(_ command: KimiCommand, for id: String, api: KimiAPI) async throws -> String? {
         let path = "/api/v1/sessions/\(id)"

@@ -43,6 +43,8 @@ struct ProjectMessageComposer: View {
     var onError: ((String) -> Void)? = nil
     var onKey: ((ComposerKey) -> Bool)? = nil
     var onOpenReference: ((String) -> Void)? = nil
+    /// When present, long pastes fold into `@paste("id")` tokens backed by this store.
+    var pastes: DraftPasteStore? = nil
     var minimumEditorHeight: CGFloat = 40
     var referencesBelowEditor = false
     @StateObject var files = ProjectFileSuggestions()
@@ -59,6 +61,9 @@ struct ProjectMessageComposer: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("引用项目文件").font(.system(size: 11, weight: .medium))
+                        if !matches.isEmpty {
+                            Text("\(matches.count) 个匹配").font(.system(size: 10)).foregroundStyle(.tertiary)
+                        }
                         Spacer()
                         Button("刷新") { choice = 0; files.load(host: host, cwd: cwd) }
                         Button("关闭") { dismiss() }
@@ -79,7 +84,7 @@ struct ProjectMessageComposer: View {
                                         }.buttonStyle(.plain).help(path).id(index)
                                     }
                                 }
-                            }.frame(height: CGFloat(min(150, matches.count * 25 - 2)))
+                            }.frame(height: CGFloat(min(240, matches.count * 25 - 2)))
                                 .onChange(of: choice) { _, value in proxy.scrollTo(value) }
                         }
                     }
@@ -110,6 +115,22 @@ struct ProjectMessageComposer: View {
                     }
                 }
             }
+            let pastes = pastes.map { store in DraftPaste.references(in: text).map { ($0, store) } } ?? []
+            if !pastes.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(pastes, id: \.0.id) { paste, store in
+                            let stats = store.stats(for: paste.id)
+                            HStack(spacing: 4) {
+                                PastePreviewButton(paste: paste, store: store, stats: stats)
+                                Button { remove(paste) } label: { Image(systemName: "xmark.circle.fill") }
+                                    .help("移除粘贴内容")
+                            }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
+                                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5))
+                        }
+                    }
+                }
+            }
             if !referencesBelowEditor { editor }
         }
         .onChange(of: cwd) { _, _ in dismiss() }
@@ -120,7 +141,13 @@ struct ProjectMessageComposer: View {
     private var editor: some View {
         MessageComposer(text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel,
                 canSend: canSend, onSend: onSend, onFiles: onFiles, onError: onError,
-                onKey: handle, onEditSelection: editSelection, selectionAfterReplacement: nextSelection, minimumHeight: minimumEditorHeight)
+                onKey: handle,
+                onLongPaste: pastes.map { store in { content in
+                    guard DraftPaste.shouldFold(content) else { return nil as String? }
+                    do { return DraftPaste.token(id: try store.save(content)) }
+                    catch { onError?(error.localizedDescription); return nil }
+                } },
+                onEditSelection: editSelection, selectionAfterReplacement: nextSelection, minimumHeight: minimumEditorHeight)
     }
 
     private func editSelection(_ draft: String, _ selection: NSRange) {
@@ -162,5 +189,33 @@ struct ProjectMessageComposer: View {
         text = (text as NSString).replacingCharacters(in: reference.range, with: "")
         dismiss()
         NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+    }
+
+    private func remove(_ paste: DraftPaste) {
+        nextSelection = NSRange(location: paste.range.location, length: 0)
+        text = (text as NSString).replacingCharacters(in: paste.range, with: "")
+        dismiss()
+        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+    }
+}
+
+/// The chip keeps the draft readable; the full paste is one click away.
+private struct PastePreviewButton: View {
+    let paste: DraftPaste
+    let store: DraftPasteStore
+    let stats: DraftPasteStore.Stats?
+    @State private var previewing = false
+    var body: some View {
+        Button { previewing = true } label: {
+            Label(stats.map { "粘贴 · \($0.lines) 行" } ?? "粘贴内容", systemImage: "doc.on.clipboard")
+                .lineLimit(1)
+        }.help(stats.map { "粘贴文本 · \($0.lines) 行 · \($0.bytes) 字节" } ?? "粘贴文本")
+        .popover(isPresented: $previewing, arrowEdge: .bottom) {
+            ScrollView {
+                Text(store.text(for: paste.id) ?? "粘贴内容已不存在，发送时将缺失这段文字。")
+                    .font(.system(size: 11, design: .monospaced))
+                    .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+            }.frame(width: 420, height: 260)
+        }
     }
 }

@@ -326,6 +326,25 @@ enum ReplyTextAttributes {
             .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
         ])
     }
+    /// Gutter numbers share the code font and line spacing so rows align
+    /// exactly; only color and alignment differ.
+    static func codeGutter(_ lines: Int) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 5; paragraph.alignment = .right
+        let numbers = (1...max(1, lines)).map(String.init).joined(separator: "\n")
+        return NSAttributedString(string: numbers, attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: ReplyStyle.nativeInk.withAlphaComponent(0.32), .paragraphStyle: paragraph
+        ])
+    }
+}
+
+/// A trailing newline ends the last line rather than starting another.
+enum CodeLineNumbers {
+    static func count(in source: String) -> Int {
+        var lines = source.split(separator: "\n", omittingEmptySubsequences: false).count
+        if source.hasSuffix("\n") { lines -= 1 }
+        return max(1, lines)
+    }
 }
 
 private struct ReplyText: View {
@@ -371,15 +390,19 @@ struct SelectableReplyText: NSViewRepresentable {
     @Environment(\.isConversationBodyText) private var isConversationBodyText
     let attributed: NSAttributedString
     var preservesSelectionOnAppend = false
-    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false) {
+    /// Gutter-style rows opt out of selection.
+    var selectable = true
+    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true) {
         self.attributed = attributed
         self.preservesSelectionOnAppend = preservesSelectionOnAppend
+        self.selectable = selectable
     }
-    init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4) {
+    init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4, selectable: Bool = true) {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = lineSpacing
         attributed = NSAttributedString(string: text, attributes: [
             .font: font, .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
         ])
+        self.selectable = selectable
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
@@ -400,6 +423,8 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setSelectedRange(NSRange(location: 0, length: 0))
         view.update(NSAttributedString(string: ""))
         view.isConversationBodyText = false
+        view.extraMenuItems = nil
+        view.findHighlight = nil
         if recycled.count < 64 { recycled.append(view) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -436,7 +461,7 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }
-    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
+    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.isSelectable = selectable; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ReplyTextView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
     }
@@ -488,6 +513,12 @@ final class NativeUserMessageView: NSView {
     private var texts: [ReplyTextView] = []
     private let links = SelectableReplyText.Coordinator()
     private let bubbleBackground = NSView()
+    /// Row identity for message-level menu actions; set by the hosting controller.
+    var actionContext: ConversationActionContext?
+    var sourceText = ""
+    /// Turn id + reading key for the bookmark menu item.
+    var bookmarkTurn: String?
+    var bookmarkSession: String?
     override var isFlipped: Bool { true }
 
     override init(frame frameRect: NSRect) {
@@ -507,6 +538,10 @@ final class NativeUserMessageView: NSView {
     static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
     static func recycle(_ view: NativeUserMessageView) {
         view.removeFromSuperview()
+        view.actionContext = nil
+        view.sourceText = ""
+        view.bookmarkTurn = nil
+        view.bookmarkSession = nil
         for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
         // A giant prompt must not leave an unbounded number of text containers
         // in the row pool after it is no longer visible.
@@ -526,10 +561,27 @@ final class NativeUserMessageView: NSView {
         while texts.count < content.count {
             let text = SelectableReplyText.acquire(delegate: links)
             text.isConversationBodyText = true
+            text.extraMenuItems = { [weak self] in
+                guard let self, let context = self.actionContext, !self.sourceText.isEmpty else { return [] }
+                var items = context.userMenuItems(copyText: self.sourceText, sourceText: self.sourceText)
+                if let turn = self.bookmarkTurn, let session = self.bookmarkSession {
+                    items += [.separator(), ConversationActionContext.bookmarkMenuItem(turn: turn, session: session)]
+                }
+                return items
+            }
             texts.append(text); addSubview(text)
         }
         for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
         needsDisplay = true
+    }
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let actionContext, !sourceText.isEmpty else { return nil }
+        let menu = actionContext.userMenu(copyText: sourceText, sourceText: sourceText)
+        if let turn = bookmarkTurn, let session = bookmarkSession {
+            menu.addItem(.separator())
+            menu.addItem(ConversationActionContext.bookmarkMenuItem(turn: turn, session: session))
+        }
+        return menu
     }
     private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
         let contentPadding = UserMessageStyle.horizontalPadding * 2
@@ -563,8 +615,26 @@ final class NativeUserMessageView: NSView {
 private struct NativeAssistantActions: View {
     var source: String?
     var enabled = true
+    var context: ConversationActionContext?
+    var messageID: String?
     var body: some View {
-        if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
+        HStack(spacing: 2) {
+            if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
+            if let context, let source {
+                Button { context.post(.quote(source)) } label: {
+                    Image(systemName: "quote.opening").font(.system(size: 11))
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
+                    .accessibilityLabel("引用到输入框")
+                if let messageID, !messageID.isEmpty {
+                    Button { context.post(.regenerate(before: messageID)) } label: {
+                        Image(systemName: "arrow.clockwise").font(.system(size: 11))
+                            .frame(width: 24, height: 24).contentShape(Rectangle())
+                    }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
+                        .accessibilityLabel("重新生成")
+                }
+            }
+        }
     }
 }
 
@@ -598,13 +668,20 @@ final class NativeAssistantMessageView: NSView {
         view.stack.teardown()
         if recycled.count < 16 { recycled.append(view) }
     }
-    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true) {
+    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true,
+                actionContext: ConversationActionContext? = nil, messageID: String? = nil) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         stack.update(blocks)
-        if actions.rootView.source != source || actions.rootView.enabled != enabled {
-            actions.rootView = NativeAssistantActions(source: source, enabled: enabled)
+        let next = actions.rootView
+        if next.source != source || next.enabled != enabled || next.context != actionContext || next.messageID != messageID {
+            actions.rootView = NativeAssistantActions(source: source, enabled: enabled, context: actionContext, messageID: messageID)
         }
+        // The hosting view hugs its buttons so hit targets never sit in padding.
+        actionButtonCount = (source == nil ? 0 : 1) + (actionContext != nil && source != nil ? 1 : 0)
+            + (actionContext != nil && messageID?.isEmpty == false ? 1 : 0)
     }
+    private var actionButtonCount = 1
+    private var actionsWidth: CGFloat { CGFloat(actionButtonCount) * 24 + CGFloat(max(0, actionButtonCount - 1)) * 2 }
     func measure(width: CGFloat) -> CGSize {
         CGSize(width: width, height: stack.contentHeight(width: width) + 12 + 24)
     }
@@ -613,7 +690,7 @@ final class NativeAssistantMessageView: NSView {
         let stackFrame = CGRect(x: 0, y: 0, width: width, height: content)
         if stack.frame != stackFrame { stack.frame = stackFrame }
         stack.place(width: width)
-        let frame = CGRect(x: 0, y: content + 12, width: 24, height: 24)
+        let frame = CGRect(x: 0, y: content + 12, width: actionsWidth, height: 24)
         if actions.frame != frame { actions.frame = frame }
     }
     #if TRANSCRIPT_CHECKS
@@ -628,6 +705,49 @@ final class NativeAssistantMessageView: NSView {
 
 final class ReplyTextView: NSTextView {
     var isConversationBodyText = false
+    /// Extra context-menu items (message-level actions) supplied by the row.
+    var extraMenuItems: (() -> [NSMenuItem])?
+    /// Active find-bar query to highlight across this text. Re-applied after
+    /// every content update, since streaming replaces the text storage.
+    var findHighlight: (query: String, caseSensitive: Bool, regex: Bool)?
+    private var hasFindHighlight = false
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = super.menu(for: event) ?? NSMenu()
+        if let extra = extraMenuItems?(), !extra.isEmpty {
+            if !menu.items.isEmpty { menu.addItem(.separator()) }
+            extra.forEach { menu.addItem($0) }
+        }
+        return menu
+    }
+    /// Background-color is not part of reply styling, so clearing it here
+    /// cannot disturb content. Works in text attributes, never layout.
+    func applyFindHighlight() {
+        guard let storage = textStorage, findHighlight != nil || hasFindHighlight else { return }
+        let full = NSRange(location: 0, length: storage.length)
+        storage.beginEditing()
+        storage.removeAttribute(.backgroundColor, range: full)
+        if let highlight = findHighlight, !highlight.query.isEmpty, storage.length > 0 {
+            let color = NSColor.systemYellow.withAlphaComponent(0.35)
+            if highlight.regex, let expression = try? NSRegularExpression(
+                pattern: highlight.query, options: highlight.caseSensitive ? [] : [.caseInsensitive]) {
+                for match in expression.matches(in: storage.string, range: full) {
+                    storage.addAttribute(.backgroundColor, value: color, range: match.range)
+                }
+            } else if !highlight.regex {
+                let options: NSString.CompareOptions = highlight.caseSensitive ? [] : [.caseInsensitive, .diacriticInsensitive]
+                let source = storage.string as NSString
+                var search = full
+                while search.length > 0 {
+                    let found = source.range(of: highlight.query, options: options, range: search)
+                    guard found.location != NSNotFound else { break }
+                    storage.addAttribute(.backgroundColor, value: color, range: found)
+                    search = NSRange(location: NSMaxRange(found), length: source.length - NSMaxRange(found))
+                }
+            }
+        }
+        hasFindHighlight = findHighlight != nil
+        storage.endEditing()
+    }
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
     private var measurements: [(width: CGFloat, size: CGSize)] = []
@@ -637,6 +757,7 @@ final class ReplyTextView: NSTextView {
         storage.setAttributedString(value)
         if let retainedSelection { setSelectedRange(retainedSelection) }
         measurements.removeAll(keepingCapacity: true)
+        applyFindHighlight()
     }
     func measure(width proposed: CGFloat?) -> CGSize {
         // A nil proposal is the ideal unwrapped width used by code and wide tables.
@@ -884,6 +1005,7 @@ struct ReplyCopyButton: View {
 private struct ReplyCode: View {
     let language: String
     let source: String
+    private var lineCount: Int { CodeLineNumbers.count(in: source) }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -893,9 +1015,18 @@ private struct ReplyCode: View {
             }.padding(.horizontal, 14).padding(.vertical, 5)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
             ScrollView(.horizontal) {
-                SelectableReplyText(source, font: .monospacedSystemFont(ofSize: 13, weight: .regular), lineSpacing: 5)
-                    .fixedSize(horizontal: true, vertical: true)
-                    .padding(14)
+                HStack(alignment: .top, spacing: 0) {
+                    if lineCount > 1 {
+                        SelectableReplyText(attributed: ReplyTextAttributes.codeGutter(lineCount), selectable: false)
+                            .fixedSize(horizontal: true, vertical: true)
+                            .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 14)
+                    }
+                    SelectableReplyText(source, font: .monospacedSystemFont(ofSize: 13, weight: .regular), lineSpacing: 5)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .padding(lineCount > 1
+                                 ? EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 14)
+                                 : EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14))
+                }
             }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.055)))

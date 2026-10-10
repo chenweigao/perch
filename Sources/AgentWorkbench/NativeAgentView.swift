@@ -85,6 +85,8 @@ struct NativeAgentView: View {
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
                                            isSuspended: !isCurrent(s), waitsForInitialPosition: true)
+                        .environment(\.conversationActionContext,
+                                     ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id))
                     NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
@@ -168,6 +170,7 @@ private struct NativeComposerView: View {
     let connection: NativeAgentConnection
     let s: NativeAgentSnapshot
     @State private var palette = CommandPaletteState()
+    @State private var recall = ComposerRecall()
     var body: some View {
         VStack(spacing: 8) {
             if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
@@ -177,13 +180,14 @@ private struct NativeComposerView: View {
             }
             VStack(spacing: 8) {
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
-                                              set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
+                                              set: { connection.drafts[s.id] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: s.cwd,
                                 placeholder: L("继续此任务…"),
                                 accessibilityLabel: "Message \(s.provider.label)",
                                 canSend: canSend(s),
                                 onSend: { send(defaultMode(s)) },
-                                onKey: { key in handle(key, for: s) }).id(s.id)
+                                onKey: { key in handle(key, for: s) },
+                                pastes: connection.pastes).id(s.id)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: false)
                     NativeModelControls(connection: connection, snapshot: s)
@@ -197,6 +201,11 @@ private struct NativeComposerView: View {
                     ) { mode in
                         connection.setPermission(mode, for: s.id)
                     }
+                    ComposerTemplatesMenu(draft: connection.drafts[s.id] ?? "") { template in
+                        let existing = connection.drafts[s.id] ?? ""
+                        connection.drafts[s.id] = existing.isEmpty ? template : existing + "\n\n" + template
+                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                    }
                     ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
                                  reportedAt: s.context?.reportedAt, isStale: !connection.online)
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
@@ -207,7 +216,8 @@ private struct NativeComposerView: View {
                                          onQueue: defaultMode(s) == .steer ? { send(.nextTurn) } : nil)
                 }
             }.padding(12).workbenchControlSurface()
-            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError)
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
+                                 draftLength: (connection.drafts[s.id] ?? "").count)
         }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
     }
     private var isCurrent: Bool { connection.selectedID == s.id && connection.snapshot?.id == s.id }
@@ -229,17 +239,24 @@ private struct NativeComposerView: View {
     /// otherwise every key falls through to normal editing and Return still sends.
     private func handle(_ key: ComposerKey, for s: NativeAgentSnapshot) -> Bool {
         let draft = connection.drafts[s.id] ?? ""
-        guard let completion = palette.completion(for: draft, in: s.commands) else { return false }
-        switch key {
-        case .up: palette.move(-1, count: completion.matches.count); return true
-        case .down: palette.move(1, count: completion.matches.count); return true
-        case .enter, .tab:
-            guard let command = palette.choice(in: completion) else { return false }
-            if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
-            apply(command, completion, to: s.id)
-            return true
-        case .escape: palette.dismiss(draft); return true
+        if let completion = palette.completion(for: draft, in: s.commands) {
+            switch key {
+            case .up: palette.move(-1, count: completion.matches.count); return true
+            case .down: palette.move(1, count: completion.matches.count); return true
+            case .enter, .tab:
+                guard let command = palette.choice(in: completion) else { return false }
+                if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
+                apply(command, completion, to: s.id)
+                return true
+            case .escape: palette.dismiss(draft); return true
+            }
         }
+        // With no palette open, an empty draft offers Up-arrow prompt recall.
+        if let next = recall.handle(key, draft: draft, entries: connection.historyEntries(for: s.id)) {
+            connection.drafts[s.id] = next; palette.draftChanged(next)
+            return true
+        }
+        return false
     }
     /// Completing only fills the composer. Running the command stays an explicit
     /// send, so a keystroke cannot start work the user has not read back.
@@ -342,30 +359,6 @@ struct NativeRunControls: View {
                     }
                 }
         }
-    }
-}
-
-private struct PendingMessageEditor: View {
-    let message: OutboundMessage
-    let save: (String) -> Bool
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-    @State private var messageError: String?
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("编辑待发消息").font(.headline)
-            TextEditor(text: $text).frame(minHeight: 140)
-            if let messageError { Text(messageError).font(.caption).foregroundStyle(.orange) }
-            HStack {
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("保存") {
-                    if save(text) { dismiss() }
-                    else { messageError = "消息已经提交，修改未保存。可复制这里的文字作为新的补充。" }
-                }
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }.padding(22).frame(width: 460).onAppear { text = message.text }
     }
 }
 

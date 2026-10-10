@@ -1136,3 +1136,12 @@
 "没有等待确认、回答或处理的事项；查看结果请到工作台。" = "Nothing is waiting for confirmation, an answer, or a fix. Results are in the workbench.";
 "共 %lld 项 · 确认、回答或处理错误；查看结果请到工作台。" = "%lld pending · approvals, questions, and errors appear here. Results are in the workbench.";
 "打开会话" = "Open Session";
+"粘贴内容已丢失，请重新粘贴后再发送。" = "The pasted content is gone. Paste it again before sending.";
+"附件需要在线上传，连接恢复后再发送。" = "Attachments upload online only; send after the connection returns.";
+"命令需要连接后执行，请等待恢复在线。" = "Commands run online only; wait for the connection to return.";
+"粘贴内容已丢失，可移回草稿重新粘贴。" = "The pasted content is gone. Move it back to the draft and paste again.";
+"找不到这条回复对应的提问，无法重新生成。" = "No user prompt found for this reply; cannot regenerate.";
+"这条回复对应的提问没有文字内容。" = "The prompt for this reply has no text to resend.";
+"无效正则表达式" = "Invalid regular expression";
+"导出当前会话（Markdown）…" = "Export Current Conversation (Markdown)…";
+"导出当前会话（JSON）…" = "Export Current Conversation (JSON)…";

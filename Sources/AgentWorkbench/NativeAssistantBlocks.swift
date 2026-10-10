@@ -223,6 +223,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private let scroll = NSScrollView()
     private let document = NSView()
     private var codeText: ReplyTextView?
+    private var gutter: ReplyTextView?
     private var language = ""
     private var source = ""
 
@@ -263,11 +264,34 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
             return view
         }()
         codeText.update(text)
+        let lineCount = CodeLineNumbers.count(in: source)
+        if lineCount > 1 {
+            let gutter = self.gutter ?? {
+                let view = SelectableReplyText.acquire(delegate: links)
+                view.isSelectable = false
+                view.textContainer?.widthTracksTextView = false
+                view.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude,
+                                                           height: CGFloat.greatestFiniteMagnitude)
+                document.addSubview(view); self.gutter = view
+                return view
+            }()
+            gutter.update(ReplyTextAttributes.codeGutter(lineCount))
+        } else if let gutter {
+            gutter.update(NSAttributedString(string: ""))
+            gutter.removeFromSuperview()
+            SelectableReplyText.recycle(gutter)
+            self.gutter = nil
+        }
     }
     private func textSize() -> CGSize { codeText?.measure(width: nil) ?? .zero }
+    private func gutterSize() -> CGSize { gutter?.measure(width: nil) ?? .zero }
     override func contentHeight(width: CGFloat) -> CGFloat { 34 + 1 + textSize().height + 28 }
     override func placeContent(width: CGFloat) {
         let text = textSize()
+        let gutter = gutterSize()
+        // With a gutter the code starts at 12 + gutter + 8, matching the
+        // SwiftUI card; without one the code keeps its original 14 pt inset.
+        let codeX = gutter.width > 0 ? 12 + gutter.width + 8 : 14
         let labelSize = label.fittingSize
         let labelFrame = CGRect(x: 14, y: 5 + (24 - labelSize.height) / 2,
                                 width: min(labelSize.width, max(0, width - 14 - 14 - 24 - 8)), height: labelSize.height)
@@ -279,14 +303,24 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         separator.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.055).cgColor
         let scrollFrame = CGRect(x: 0, y: 35, width: width, height: text.height + 28)
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
-        let documentFrame = CGRect(x: 0, y: 0, width: text.width + 28, height: text.height + 28)
+        let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + 14, height: text.height + 28)
         if document.frame != documentFrame { document.frame = documentFrame }
+        if let gutterView = self.gutter {
+            let frame = CGRect(x: 12, y: 14, width: gutter.width, height: gutter.height)
+            if gutterView.frame != frame { gutterView.frame = frame }
+        }
         if let codeText {
-            let frame = CGRect(x: 14, y: 14, width: text.width, height: text.height)
+            let frame = CGRect(x: codeX, y: 14, width: text.width, height: text.height)
             if codeText.frame != frame { codeText.frame = frame }
         }
     }
     override func teardown() {
+        if let gutter {
+            gutter.update(NSAttributedString(string: ""))
+            gutter.removeFromSuperview()
+            SelectableReplyText.recycle(gutter)
+            self.gutter = nil
+        }
         guard let codeText else { return }
         codeText.setSelectedRange(NSRange(location: 0, length: 0))
         codeText.update(NSAttributedString(string: ""))

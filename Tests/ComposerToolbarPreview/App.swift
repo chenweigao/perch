@@ -105,6 +105,9 @@ private struct ToolbarPreview: View {
                                      disabled: offline, allowsSelection: [.kimi, .qoder, .claude].contains(selectedProvider)) {
                         permissionMode = $0
                     }.background(ToolbarButtonProbe(id: "permission"))
+                    Menu("模板") { Button("示例模板") {} }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .background(ToolbarButtonProbe(id: "templates"))
                     ContextMeter(budget: ContextBudget(used: low ? 95 : 29, limit: 100), isStale: offline)
                     ComposerActionButton(isRunning: running, isStopping: stopping, canSend: canSend,
                                          canStop: running && !offline && !stopping, onSend: send) {

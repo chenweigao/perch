@@ -43,6 +43,12 @@ if [[ "$variant" == baseline ]]; then theme_ref="$baseline_ref"; fi
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/NativeAssistantBlocks.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/NativeAssistantBlocks.swift)
 fi
+# Revisions before message actions/bookmarks/image preview do not carry these.
+for introduced in ConversationActions ConversationBookmarksStore ImagePreviewPanel; do
+    if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/${introduced}.swift" 2>/dev/null; then
+        app_files+=("Sources/AgentWorkbench/${introduced}.swift")
+    fi
+done
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/WorkbenchTheme.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/WorkbenchTheme.swift)
 fi

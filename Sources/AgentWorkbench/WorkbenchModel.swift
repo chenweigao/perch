@@ -225,6 +225,10 @@ final class WorkbenchModel {
                 self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
             }
         })
+        observers.append(NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { [weak self] notice in
+            guard let payload = notice.object as? ConversationActionPayload else { return }
+            MainActor.assumeIsolated { self?.handleConversationAction(payload) }
+        })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -944,6 +948,67 @@ final class WorkbenchModel {
             native.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
         }
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+    }
+    /// Message-level transcript actions (quote / edit-and-resend / resend /
+    /// regenerate) route to the connection owning the payload's session.
+    func handleConversationAction(_ payload: ConversationActionPayload) {
+        let context = payload.context
+        let kimi = kimiEnvironments[context.hostID]
+        let native = nativeEnvironments[context.hostID]
+        let id = context.sessionID
+        let isKimi = context.kind == .kimi
+        switch payload.action {
+        case .quote(let text):
+            let quoted = text.split(separator: "\n", omittingEmptySubsequences: false)
+                .map { "> " + $0 }.joined(separator: "\n")
+            appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: quoted + "\n\n")
+        case .editAndResend(let text):
+            appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: text)
+        case .resend(let text):
+            if isKimi { kimi?.resend(text, for: id) } else { native?.resend(text, for: id) }
+        case .regenerate(let messageID):
+            let failure = isKimi ? kimi?.resendPrompt(before: messageID, for: id)
+                                 : native?.resendPrompt(before: messageID, for: id)
+            if let failure {
+                if isKimi { kimi?.actionError = failure } else { native?.actionError = failure }
+            }
+        }
+        DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+    }
+    private func appendToDraft(kimi: KimiConnection?, native: NativeAgentConnection?, isKimi: Bool, id: String, text: String) {
+        if isKimi, let kimi {
+            let existing = kimi.drafts[id] ?? ""
+            kimi.drafts[id] = existing.isEmpty ? text : existing + "\n\n" + text
+        } else if !isKimi, let native {
+            let existing = native.drafts[id] ?? ""
+            native.drafts[id] = existing.isEmpty ? text : existing + "\n\n" + text
+        }
+    }
+    /// Exports the currently shown conversation's loaded messages as a local
+    /// document. The save panel decides the destination; failures surface in
+    /// the active connection's action line.
+    func exportSelectedConversation(markdown: Bool) {
+        guard let reference = selectedReference else { return }
+        let kimi = kimiEnvironments[reference.hostID]
+        let native = nativeEnvironments[reference.hostID]
+        let messages = reference.kind == .kimi ? kimi?.conversation?.displayMessages : native?.snapshot?.messages
+        guard let messages, !messages.isEmpty else { return }
+        do {
+            let data: Data
+            let ext: String
+            if markdown {
+                data = Data(ConversationExport.markdown(messages).utf8); ext = "md"
+            } else {
+                data = try ConversationExport.json(messages); ext = "json"
+            }
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = "conversation-\(reference.terminalID).\(ext)"
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            try data.write(to: url, options: .atomic)
+        } catch {
+            if reference.kind == .kimi { kimi?.actionError = error.localizedDescription }
+            else { native?.actionError = error.localizedDescription }
+        }
     }
     /// Review feedback is staged in the same task; it never sends automatically.
     func appendReviewContext(_ text: String, to reference: SessionReference) {

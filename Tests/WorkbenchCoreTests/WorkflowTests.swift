@@ -69,6 +69,38 @@ func checkWorkflow() throws {
     let preserved = try Data(contentsOf: file.url)
     precondition(preserved == corrupt)
 
+    // Draft files from before the history/outbox fields existed must keep decoding.
+    let legacy = Data(#"{"text":{"s1":"旧草稿"}}"#.utf8)
+    let legacyDrafts = try JSONDecoder().decode(SavedDrafts.self, from: legacy)
+    precondition(legacyDrafts.text["s1"] == "旧草稿" && legacyDrafts.history.isEmpty && legacyDrafts.outbox.allPendingCount == 0)
+    var histories = SavedDrafts()
+    histories.recordHistory("  ", for: "s1")
+    precondition(histories.history["s1"] == nil, "Blank prompts are not history")
+    histories.recordHistory("第一条", for: "s1"); histories.recordHistory("第二条", for: "s1")
+    histories.recordHistory("第一条", for: "s1")
+    precondition(histories.history["s1"] == ["第二条", "第一条"], "Recalling a repeat moves it to the end once")
+    histories.recordHistory("别处", for: "s2")
+    precondition(histories.history["s1"]?.count == 2 && histories.history["s2"] == ["别处"])
+    for index in 0..<60 { histories.recordHistory("填充 \(index)", for: "s1") }
+    precondition(histories.history["s1"]?.count == 50, "History stays bounded")
+    let roundTrip = try JSONDecoder().decode(SavedDrafts.self, from: JSONEncoder().encode(histories))
+    precondition(roundTrip.history == histories.history)
+
+    // Folded pastes round-trip through the store; missing files are reported.
+    let pasteStore = DraftPasteStore(directory: directory.appendingPathComponent("pastes"))
+    let longPaste = String(repeating: "日志行 中文\n", count: 30)
+    precondition(DraftPaste.shouldFold(longPaste) && !DraftPaste.shouldFold("短短一句"))
+    let pasteID = try pasteStore.save(longPaste)
+    let pasteDraft = "分析这段日志 \(DraftPaste.token(id: pasteID)) 重点看错误"
+    let expanded = pasteStore.expand(pasteDraft)
+    precondition(expanded.text == "分析这段日志 \(longPaste) 重点看错误" && expanded.missing.isEmpty)
+    precondition(pasteStore.stats(for: pasteID)?.lines == 31, "Stats count trailing newline's empty tail")
+    let missingPaste = pasteStore.expand("broken \(DraftPaste.token(id: "00000000"))")
+    precondition(missingPaste.missing == ["00000000"] && missingPaste.text.contains(#"@paste("00000000")"#))
+    let secondPaste = try pasteStore.save("第二段")
+    precondition(pasteStore.expand("\(DraftPaste.token(id: pasteID))|\(DraftPaste.token(id: secondPaste))").text == "\(longPaste)|第二段")
+    precondition(DraftPaste.references(in: pasteDraft).map(\.id) == [pasteID])
+
     let reference = ConversationFileReference(text: "src/foo.swift:42:7")!
     precondition(reference.path == "src/foo.swift" && reference.line == 42)
     precondition(ConversationFileReference(url: reference.url) == reference)
@@ -91,19 +123,63 @@ func checkWorkflow() throws {
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**Match** one. MATCH two."},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
     let search = ConversationSearch()
     let hits = search.hits(in: messages, query: "match", running: false)
-    precondition(hits.count == 2 && hits[1].occurrence == 1)
-    precondition(search.hits(in: messages, query: "Match one", running: false).count == 1, "Search uses rendered body text")
-    precondition(hits[0].entryID == ConversationTimelineEntry.make(messages)[0].id)
-    precondition(search.hits(in: messages, query: "", running: false).isEmpty)
+    precondition(hits.hits.count == 2 && hits.hits[1].occurrence == 1)
+    precondition(search.hits(in: messages, query: "Match one", running: false).hits.count == 1, "Search uses rendered body text")
+    precondition(hits.hits[0].entryID == ConversationTimelineEntry.make(messages)[0].id)
+    precondition(search.hits(in: messages, query: "", running: false).hits.isEmpty)
+    // Find-bar options: case sensitivity, regular expressions and role filters.
+    precondition(search.hits(in: messages, query: "Match", running: false, options: ConversationFindOptions(caseSensitive: true)).hits.count == 1,
+                 "Case-sensitive search skips the all-caps hit")
+    precondition(search.hits(in: messages, query: "ma?tch", running: false, options: ConversationFindOptions(regex: true)).hits.count == 2,
+                 "Regex search matches both spellings")
+    precondition(search.hits(in: messages, query: "ma?[", running: false, options: ConversationFindOptions(regex: true)).queryError != nil,
+                 "Invalid regex reports an error instead of zero silent hits")
+    precondition(search.hits(in: messages, query: "match", running: false, options: ConversationFindOptions(role: .user)).hits.isEmpty,
+                 "Role filter excludes assistant text from a user-only search")
+    let toolMessages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"u1","role":"user","created_at":"","content":[{"type":"text","text":"run the tests"}]},{"id":"t1","role":"assistant","created_at":"","content":[{"type":"tool_use","tool_call_id":"c1","name":"Bash","input":{"command":"swift needle"}}]}]"#.utf8))
+    precondition(search.hits(in: toolMessages, query: "needle", running: false, options: ConversationFindOptions(role: .tool)).hits.count == 1,
+                 "Tool search covers tool input text once, not per wrapper entry")
+    precondition(search.hits(in: toolMessages, query: "needle", running: false, options: ConversationFindOptions(role: .user)).hits.isEmpty,
+                 "Tool content stays out of a user-only search")
+
+    // Conversation export: Markdown keeps visible text, thoughts and tool calls.
+    let exportMessages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"u1","role":"user","created_at":"","content":[{"type":"text","text":"帮我看下这个问题"}]},{"id":"a1","role":"assistant","created_at":"","content":[{"type":"thinking","thinking":"先看日志"},{"type":"text","text":"结论：配置错了"},{"type":"tool_use","tool_call_id":"c1","tool_name":"Read","input":{"file_path":"/tmp/a.swift"}},{"type":"tool_result","tool_call_id":"c1","output":"文件内容"},{"type":"text","text":"<system-reminder>内部上下文</system-reminder>"}]}]"#.utf8))
+    let markdown = ConversationExport.markdown(exportMessages)
+    precondition(markdown.contains("## 用户") && markdown.contains("帮我看下这个问题"), "Export keeps user prompts")
+    precondition(markdown.contains("## 助手") && markdown.contains("结论：配置错了"), "Export keeps assistant text")
+    precondition(markdown.contains("<summary>思考</summary>") && markdown.contains("先看日志"), "Export folds thoughts")
+    precondition(markdown.contains("### 工具调用：`Read`") && markdown.contains("/tmp/a.swift"), "Export keeps tool calls and input")
+    precondition(markdown.contains("### 工具结果") && markdown.contains("文件内容"), "Export keeps tool output")
+    precondition(!markdown.contains("内部上下文"), "Runtime context never exports")
+    let jsonData = try ConversationExport.json(exportMessages)
+    let jsonText = String(decoding: jsonData, as: UTF8.self)
+    precondition(jsonText.contains("\"role\" : \"user\"") && jsonText.contains("\"role\" : \"assistant\""), "JSON export mirrors roles")
+    precondition(jsonText.contains("文件内容"), "JSON export keeps tool output")
+    let jsonRoundTrip = try JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]]
+    precondition(jsonRoundTrip?.count == 2 && (jsonRoundTrip?[1]["content"] as? [[String: Any]])?.count == 5,
+                 "JSON export decodes with message and part counts intact")
+
+    // Turn bookmarks: per-session toggle, bounded, session-isolated.
+    var marks = ConversationBookmarks()
+    marks.toggle("turn-a", in: "s1"); marks.toggle("turn-b", in: "s1"); marks.toggle("turn-x", in: "s2")
+    precondition(marks.turns(in: "s1") == ["turn-a", "turn-b"] && marks.isBookmarked("turn-x", in: "s2"))
+    marks.toggle("turn-a", in: "s1")
+    precondition(marks.turns(in: "s1") == ["turn-b"], "Toggling twice unmarks")
+    marks.toggle("turn-b", in: "s1"); marks.toggle("turn-b", in: "s1")
+    precondition(marks.turns(in: "s1") == ["turn-b"], "Re-marking appends once")
+    for index in 0..<60 { marks.toggle("turn-\(index)", in: "s3") }
+    precondition(marks.turns(in: "s3").count == 50, "Bookmarks stay bounded")
+    let marksRoundTrip = try JSONDecoder().decode(ConversationBookmarks.self, from: JSONEncoder().encode(marks))
+    precondition(marksRoundTrip == marks, "Bookmarks persist as JSON")
     let edited = try KimiWire.decoder().decode([KimiMessage].self, from: Data(#"[{"id":"a","role":"assistant","created_at":"","content":[{"type":"text","text":"**新正文** 👋 café"},{"type":"thinking","thinking":"Match hidden"}]}]"#.utf8))
-    precondition(search.hits(in: edited, query: "match", running: true).isEmpty, "Same-ID edits invalidate cached text")
-    precondition(search.hits(in: edited, query: "cafe", running: true).count == 1, "Keep rendered Unicode search semantics")
-    precondition(search.hits(in: [], query: "cafe", running: false).isEmpty, "Removed messages must not remain searchable")
+    precondition(search.hits(in: edited, query: "match", running: true).hits.isEmpty, "Same-ID edits invalidate cached text")
+    precondition(search.hits(in: edited, query: "cafe", running: true).hits.count == 1, "Keep rendered Unicode search semantics")
+    precondition(search.hits(in: [], query: "cafe", running: false).hits.isEmpty, "Removed messages must not remain searchable")
     precondition(search.hits(in: messages, query: "match", running: false) == hits, "Switching back restores current content and order")
     let boundaryText = "👋" + String(repeating: "a", count: 49) + "needle" + String(repeating: "b", count: 79) + "👋"
     let boundaryData = try JSONSerialization.data(withJSONObject: [["id": "boundary", "role": "assistant", "created_at": "", "content": [["type": "text", "text": boundaryText]]]])
     let boundaryMessages = try KimiWire.decoder().decode([KimiMessage].self, from: boundaryData)
-    let excerpt = search.hits(in: boundaryMessages, query: "needle", running: false)[0].excerpt
+    let excerpt = search.hits(in: boundaryMessages, query: "needle", running: false).hits[0].excerpt
     precondition(excerpt.hasPrefix("👋") && excerpt.hasSuffix("👋"), "Search excerpts must keep complete characters at both boundaries")
     var navigation = SessionNavigation()
     navigation.visit("a"); navigation.visit("b"); navigation.visit("b")

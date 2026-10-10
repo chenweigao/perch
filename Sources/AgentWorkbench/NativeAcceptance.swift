@@ -1340,7 +1340,7 @@ private struct ReferenceComposerFixtureView: View {
         all.select(0); try await settle(window, "first turn") { all.current == 0 }
         all.select(199); try await settle(window, "last turn") { all.current == 199 }
         let search = ConversationSearch()
-        guard let hit = search.hits(in: model.native.snapshot!.messages, query: "第 1 轮", running: true).first else {
+        guard let hit = search.hits(in: model.native.snapshot!.messages, query: "第 1 轮", running: true).hits.first else {
             throw WorkbenchError("Full-history search lost the first turn")
         }
         let key = "\(NativeAcceptanceFixture.host.id):native:session-0"

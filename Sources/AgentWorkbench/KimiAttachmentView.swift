@@ -8,6 +8,7 @@ struct KimiAttachmentView: View {
     let api: KimiAPI?
     let sessionId: String
     @State private var image: NSImage?
+    @State private var rawData: Data?
     @State private var error: String?
     @Environment(\.displayScale) private var displayScale
     private var fileId: String? { part.source?["file_id"].string ?? part.fileId }
@@ -17,7 +18,13 @@ struct KimiAttachmentView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let image { Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 340).frame(maxWidth: 600, alignment: .leading) }
+            if let image {
+                Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 340).frame(maxWidth: 600, alignment: .leading)
+                    .onTapGesture {
+                        if let rawData { ImagePreviewPanel.show(data: rawData, name: part.name ?? "图片附件") }
+                    }
+                    .help("点击预览大图")
+            }
             HStack {
                 Label(part.name ?? (part.type == "image" ? "图片附件" : "文件附件"), systemImage: part.type == "image" ? "photo" : "doc").font(.system(size: 12))
                 if let fileId, let api {
@@ -42,6 +49,7 @@ struct KimiAttachmentView: View {
                 else { return }
                 let decoded = try await AttachmentImageDecoder.shared.image(data: data, maxPixels: 600 * displayScale)
                 try Task.checkCancellation()
+                rawData = data
                 image = decoded
             } catch is CancellationError {
                 // Leaving history or switching sessions must not publish stale images.
