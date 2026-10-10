@@ -86,6 +86,23 @@ func checkWorkflow() throws {
     let roundTrip = try JSONDecoder().decode(SavedDrafts.self, from: JSONEncoder().encode(histories))
     precondition(roundTrip.history == histories.history)
 
+    // Folded pastes round-trip through the store; missing files are reported.
+    let pasteStore = DraftPasteStore(directory: directory.appendingPathComponent("pastes"))
+    let longPaste = String(repeating: "日志行 中文\n", count: 30)
+    precondition(DraftPaste.shouldFold(longPaste) && !DraftPaste.shouldFold("短短一句"))
+    let pasteID = try pasteStore.save(longPaste)
+    let pasteDraft = "分析这段日志 \(DraftPaste.token(id: pasteID)) 重点看错误"
+    let expanded = pasteStore.expand(pasteDraft)
+    precondition(expanded.text == "分析这段日志 \(longPaste) 重点看错误" && expanded.missing.isEmpty)
+    precondition(pasteStore.stats(for: pasteID)?.lines == 31, "Stats count trailing newline's empty tail")
+    let missingPaste = pasteStore.expand("broken \(DraftPaste.token(id: "00000000"))")
+    precondition(missingPaste.missing == ["00000000"] && missingPaste.text.contains(#"@paste("00000000")"#))
+    let secondPaste = try pasteStore.save("第二段")
+    precondition(pasteStore.expand("\(DraftPaste.token(id: pasteID))|\(DraftPaste.token(id: secondPaste))").text == "\(longPaste)|第二段")
+    precondition(DraftPaste.references(in: pasteDraft).map(\.id) == [pasteID])
+    pasteStore.prune(keeping: [pasteID])
+    precondition(pasteStore.text(for: pasteID) == longPaste && pasteStore.text(for: secondPaste) == nil)
+
     let reference = ConversationFileReference(text: "src/foo.swift:42:7")!
     precondition(reference.path == "src/foo.swift" && reference.line == 42)
     precondition(ConversationFileReference(url: reference.url) == reference)

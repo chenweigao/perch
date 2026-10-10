@@ -166,7 +166,7 @@ struct NewTaskView: View {
                                         referenceBrowser.configure(host: kimi.host, cwd: cwd)
                                         referenceBrowser.open(path)
                                         showReference = true
-                                    }, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
+                                    }, pastes: kimi.pastes, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
                     if !attachments.isEmpty {
                         ScrollView(.horizontal) {
                             HStack {

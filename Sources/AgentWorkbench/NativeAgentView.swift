@@ -184,7 +184,8 @@ private struct NativeComposerView: View {
                                 accessibilityLabel: "Message \(s.provider.label)",
                                 canSend: canSend(s),
                                 onSend: { send(defaultMode(s)) },
-                                onKey: { key in handle(key, for: s) }).id(s.id)
+                                onKey: { key in handle(key, for: s) },
+                                pastes: connection.pastes).id(s.id)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: false)
                     NativeModelControls(connection: connection, snapshot: s)

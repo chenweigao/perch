@@ -63,6 +63,8 @@ final class NativeAgentConnection {
     @ObservationIgnored private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
     @ObservationIgnored private var draftFile: DraftFile?
+    /// Folded long pastes live on disk per host; tokens ride inside drafts.
+    let pastes: DraftPasteStore
     @ObservationIgnored private var draftLoadError: String?
     private(set) var draftSaveError: String?
     private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue, history: history) }
@@ -86,12 +88,20 @@ final class NativeAgentConnection {
         try draftFile?.flush(savedDrafts)
     }
 
-    init(host: SSHHost) { self.host = host; requestTransport = nil; loadDrafts() }
+    init(host: SSHHost) {
+        self.host = host; requestTransport = nil
+        pastes = DraftPasteStore.applicationStore(namespace: "native-\(host.id)")
+        loadDrafts()
+    }
     /// A setup probe must never drain the user's persisted outbox.
-    init(setupHost: SSHHost) { self.host = setupHost; requestTransport = nil }
+    init(setupHost: SSHHost) {
+        self.host = setupHost; requestTransport = nil
+        pastes = DraftPasteStore.applicationStore(namespace: "native-\(setupHost.id)")
+    }
     /// Used by the isolated connection contract checks; no SSH or App is started.
     init(host: SSHHost, transport: @escaping (String, JSONValue?) async throws -> Data) {
         self.host = host; requestTransport = transport; online = true
+        pastes = DraftPasteStore.applicationStore(namespace: "native-\(host.id)")
     }
     func updateHost(_ value: SSHHost) {
         if value.destination != host.destination { disconnect() }
@@ -495,7 +505,15 @@ final class NativeAgentConnection {
     /// request fails.
     func send(mode: DeliveryMode = .now) {
         guard online, let id = selectedID, let reference = reference(id),
-              let text = drafts[id], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+              let draftText = drafts[id], !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Folded pastes rejoin the prompt here; a lost paste file must not
+        // silently send a prompt with a dead token in it.
+        let expansion = pastes.expand(draftText)
+        guard expansion.missing.isEmpty else {
+            actionError = L("粘贴内容已丢失，请重新粘贴后再发送。")
+            return
+        }
+        let text = expansion.text
         // A draft that names one of this session's commands runs that command; sending
         // it to the model would just produce a reply about the text "/compact".
         if let snapshot, snapshot.id == id, let commands = snapshot.commands,
@@ -508,7 +526,7 @@ final class NativeAgentConnection {
             return
         }
         guard queue.enqueue(text, for: reference, mode: mode) != nil else { return }
-        PromptHistory.record(text, for: id, into: &history)
+        PromptHistory.record(draftText, for: id, into: &history)
         drafts[id] = ""
         actionError = nil
         deliver(id)

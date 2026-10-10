@@ -101,6 +101,8 @@ final class KimiConnection {
     /// it and nothing more: the daemon belongs to the user, not to this client.
     private(set) var staleRuntimeNotice: String?
     @ObservationIgnored private(set) var api: KimiAPI?
+    /// Folded long pastes live on disk per host; tokens ride inside drafts.
+    let pastes: DraftPasteStore
     @ObservationIgnored private var cachedConversations = KimiConversationCache()
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
     @ObservationIgnored private var tunnel: Process?
@@ -145,16 +147,18 @@ final class KimiConnection {
 
     init(host: SSHHost) {
         self.host = host; probesInstalledVersion = true
+        pastes = DraftPasteStore.applicationStore(namespace: "kimi-\(host.id)")
         selectedId = UserDefaults.standard.string(forKey: savedSelectionKey); loadDrafts()
     }
 
     /// Setup never restores drafts, selection or an existing conversation. It also
     /// reads the installed version itself, so this connection skips that probe.
-    init(setupHost: SSHHost) { self.host = setupHost; probesInstalledVersion = false }
+    init(setupHost: SSHHost) { self.host = setupHost; probesInstalledVersion = false; pastes = DraftPasteStore.applicationStore(namespace: "kimi-\(setupHost.id)") }
 
     /// Isolated connection checks use a local HTTP fixture without SSH.
     init(host: SSHHost, api: KimiAPI) {
         self.host = host; self.api = api; probesInstalledVersion = false; online = true
+        pastes = DraftPasteStore.applicationStore(namespace: "kimi-\(host.id)")
     }
 
     func refreshModels() async {
@@ -740,10 +744,18 @@ final class KimiConnection {
             return
         }
         guard !sendingSessions.contains(id) else { return }
-        var text = drafts[id] ?? ""
+        let draftText = drafts[id] ?? ""
         var startingGoal = false
         let files = attachments[id] ?? []
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
+        // Folded pastes rejoin the prompt here; a lost paste file must not
+        // silently send a prompt with a dead token in it.
+        let expansion = pastes.expand(draftText)
+        guard expansion.missing.isEmpty else {
+            actionError = L("粘贴内容已丢失，请重新粘贴后再发送。")
+            return
+        }
+        var text = expansion.text
         commandErrors[id] = nil
         do {
             if let command = try KimiCommand.parse(text) {
@@ -762,7 +774,7 @@ final class KimiConnection {
                 if selectedId == id { actionError = nil }
                 commandFeedback[id] = nil
                 defer { sendingSessions.remove(id) }
-                let submittedDraft = text
+                let submittedDraft = draftText
                 if let objective = try await runCommand(command, for: id, api: api) {
                     // Goal creation and the starter prompt are separate Kimi APIs.
                     // Once created, retain only the objective on a failed send so
@@ -781,7 +793,7 @@ final class KimiConnection {
             return
         }
         let promptID = "awb_\(UUID().uuidString)"
-        PromptHistory.record(text, for: id, into: &history)
+        PromptHistory.record(draftText, for: id, into: &history)
         let preview: [JSONValue] = [.object(["type": .string("text"), "text": .string(text)])]
             + files.map { .object(["type": .string("file"), "name": .string($0.lastPathComponent)]) }
         pendingPrompts[id, default: []].append(KimiPrompt(id: promptID, content: preview))
@@ -819,7 +831,7 @@ final class KimiConnection {
             if let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) {
                 pendingPrompts[id]?[index] = accepted
             }
-            if drafts[id] == text { drafts[id] = "" }
+            if drafts[id] == draftText { drafts[id] = "" }
             attachments[id]?.removeAll { files.contains($0) }
             if mode == .steer && ["queued", "blocked"].contains(accepted.status) {
                 await steerPrompt(promptID, for: id)

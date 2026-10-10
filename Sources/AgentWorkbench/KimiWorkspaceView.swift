@@ -153,7 +153,8 @@ private struct KimiComposerView: View {
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 },
-                                onKey: { handle($0, for: sessionID) }).id(sessionID)
+                                onKey: { handle($0, for: sessionID) },
+                                pastes: connection.pastes).id(sessionID)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
                     let sessionModel = connection.conversation?.snapshot.session.model ?? ""

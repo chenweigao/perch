@@ -142,6 +142,20 @@ print("Composer undo checks passed: isolated typing, redo and send boundary")
 editor.syncDraft("中文 file suffix", selection: NSRange(location: 7, length: 0))
 check(editor.selectedRange().location == 7, "File completion must restore the insertion caret instead of jumping past the suffix")
 
+// Long plain-text pastes fold into tokens; short pastes stay inline.
+editor.syncDraft("")
+editor.onLongPaste = { $0.utf8.count >= 1000 ? "@paste(\"deadbeef\")" : nil }
+let longText = String(repeating: "日志行\n", count: 120)
+plainBoard.clearContents()
+plainBoard.setString(longText, forType: .string)
+check(editor.readSelection(from: plainBoard), "Long paste must fold through the callback")
+check(editor.string == "@paste(\"deadbeef\")", "Folded paste inserts the token, not the content")
+check(draft == editor.string, "The folded token publishes to the draft")
+editor.onLongPaste = nil
+plainBoard.setString(longText, forType: .string)
+check(editor.readSelection(from: plainBoard) && editor.string.hasSuffix(longText), "Without a folder the same paste stays inline")
+print("Long-paste folding checks passed")
+
 var recall = ComposerRecall()
 let sent = ["第一条指令", "第二条指令"]
 check(recall.handle(.up, draft: "正在输入", entries: sent) == nil, "A non-empty draft keeps Up as cursor movement")

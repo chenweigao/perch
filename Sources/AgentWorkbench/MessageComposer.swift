@@ -19,6 +19,9 @@ struct MessageComposer: View {
     /// Lets an attached suggestion list claim navigation keys. Returning false leaves
     /// the key to normal editing, so the composer stays a text editor.
     var onKey: ((ComposerKey) -> Bool)? = nil
+    /// Long plain-text pastes hand their content here; a returned token is
+    /// inserted instead of the full text.
+    var onLongPaste: ((String) -> String?)? = nil
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
     var minimumHeight: CGFloat = 40
@@ -27,7 +30,7 @@ struct MessageComposer: View {
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
                        accessibilityLabel: accessibilityLabel, canSend: canSend,
-                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
+                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onLongPaste: onLongPaste, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
             .frame(height: max(minimumHeight, height))
     }
 }
@@ -43,6 +46,7 @@ struct ComposerEditor: NSViewRepresentable {
     let onFiles: (([URL]) -> Void)?
     let onError: ((String) -> Void)?
     let onKey: ((ComposerKey) -> Bool)?
+    var onLongPaste: ((String) -> String?)? = nil
 
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
@@ -102,6 +106,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.onFiles = onFiles
         editor.onError = onError
         editor.onKey = onKey
+        editor.onLongPaste = onLongPaste
         editor.syncDraft(text, selection: selectionAfterReplacement)
         coordinator.measure()
     }
@@ -156,6 +161,7 @@ final class DraftTextView: NSTextView {
     var onError: ((String) -> Void)?
     var onLayout: (() -> Void)?
     var onKey: ((ComposerKey) -> Bool)?
+    var onLongPaste: ((String) -> String?)?
 
     func syncDraft(_ value: String, selection: NSRange? = nil) {
         guard !hasMarkedText(), string != value else { return }
@@ -215,6 +221,12 @@ final class DraftTextView: NSTextView {
     }
     override func readSelection(from board: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
         guard isEditable else { return false }
+        // Plain text arrives under either the modern or the legacy type name.
+        if (type == .string || type.rawValue == "NSStringPboardType"), let onLongPaste,
+           let text = board.string(forType: .string), let token = onLongPaste(text) {
+            insertText(token, replacementRange: selectedRange())
+            return true
+        }
         guard let onFiles else { return super.readSelection(from: board, type: type) }
         if type == .fileURL,
            let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
