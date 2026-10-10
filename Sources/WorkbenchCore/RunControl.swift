@@ -312,6 +312,12 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
         }
     }
 
+    /// Lifts the pause without touching parked messages: a brand-new send after a
+    /// settled stop may proceed, but stopped drafts still wait for an explicit resume.
+    public mutating func unpause(_ session: SessionReference) {
+        paused.remove(session.id)
+    }
+
     /// Never automatically replay instructions whose receipt may have been lost.
     public mutating func recoverAfterRestart() {
         for index in messages.indices {

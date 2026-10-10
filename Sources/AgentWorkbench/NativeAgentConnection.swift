@@ -560,6 +560,10 @@ final class NativeAgentConnection {
         drafts[id] = ""
         attachments[id] = nil
         actionError = nil
+        // A stop pauses the queue so it is not immediately followed by a new turn.
+        // Once that stop has settled, an explicit new send lifts the pause; parked
+        // messages still wait for "Resume queued messages".
+        if queue.isPaused(reference), !stops.isStopping(reference) { queue.unpause(reference) }
         deliver(id)
     }
     private func deliver(_ id: String) {

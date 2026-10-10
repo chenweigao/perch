@@ -349,6 +349,17 @@ struct ConnectionChecks {
         try await connection.refresh()
         precondition(connection.stops.phase(for: a) == .stopped)
         precondition(!connection.isStopping && !connection.canStop)
+
+        // A new send after the settled stop lifts the pause and delivers, while a
+        // parked draft still waits for an explicit resume.
+        connection.queue.enqueue("被停止挡住的草稿", for: a, mode: .nextTurn, id: "parked-a")
+        connection.queue.pauseForStop(a)
+        connection.drafts["a"] = "停止后再发"
+        connection.send()
+        await settle { fixture.prompts.count == 3 && !connection.sending }
+        precondition(!connection.queue.isPaused(a))
+        precondition(fixture.prompts == ["a", "b", "a"])
+        precondition(connection.queue.message("parked-a")?.state == .stoppedBeforeDelivery)
         fixture.sessions["a"]?["busy"] = true
         fixture.sessions["a"]?["turnId"] = "new-turn"
         try await connection.refresh()

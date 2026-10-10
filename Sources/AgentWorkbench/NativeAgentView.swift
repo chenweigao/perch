@@ -344,7 +344,7 @@ struct NativeRunControls: View {
                         }
                     }
                 }
-                if connection.queue.isPaused(reference) {
+                if connection.queue.isPaused(reference) || pending.contains(where: { $0.state == .stoppedBeforeDelivery }) {
                     Button("Resume queued messages") { connection.resumeQueue(reference) }.font(.caption)
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
