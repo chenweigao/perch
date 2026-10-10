@@ -74,6 +74,7 @@ public final class ConversationPresentationModel {
     private let metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)?
     private var tools = ToolVisibilityProjection()
     private var turns = ConversationProjection()
+    private var messageCosts: [Int] = []
     private var previous: Input?
     private var snapshot: Snapshot?
     public init(key: String, metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)? = nil) {
@@ -134,11 +135,21 @@ public final class ConversationPresentationModel {
             isRunning: input.isRunning, enabled: input.summariesEnabled, includeToolOutput: input.includeToolOutput)
         let summaryEnded = timestamp()
         let value = Snapshot(rows: rows, navigation: timeline.navigation, narrative: narrative, batch: batch)
-        previous = input; snapshot = value; preparationCount += 1
+        snapshot = value; preparationCount += 1
         messageCount = input.messages.count
         let retainedCostStarted = timestamp()
-        retainedPayloadCost = input.messages.reduce(0) { $0 + Self.cost($1) }
+        // Token updates preserve historical message values. Reuse their source
+        // costs while still comparing full values, including same-ID tool edits.
+        let oldCosts = messageCosts
+        messageCosts = input.messages.enumerated().map { index, message in
+            if let previous, previous.messages.indices.contains(index), previous.messages[index] == message {
+                return oldCosts[index]
+            }
+            return Self.cost(message)
+        }
+        retainedPayloadCost = messageCosts.reduce(0, +)
             + tools.retainedLiveTools.reduce(0) { $0 + $1.name.utf8.count + $1.id.utf8.count + Self.cost($1.args) + Self.cost($1.lastProgress) }
+        previous = input
         let retainedCostEnded = timestamp()
         let updateEnded = timestamp()
         metricsHandler?(ConversationPresentationUpdateMetrics(
