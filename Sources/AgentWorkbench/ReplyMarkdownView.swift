@@ -676,7 +676,12 @@ final class NativeAssistantMessageView: NSView {
         if next.source != source || next.enabled != enabled || next.context != actionContext || next.messageID != messageID {
             actions.rootView = NativeAssistantActions(source: source, enabled: enabled, context: actionContext, messageID: messageID)
         }
+        // The hosting view hugs its buttons so hit targets never sit in padding.
+        actionButtonCount = (source == nil ? 0 : 1) + (actionContext != nil && source != nil ? 1 : 0)
+            + (actionContext != nil && messageID?.isEmpty == false ? 1 : 0)
     }
+    private var actionButtonCount = 1
+    private var actionsWidth: CGFloat { CGFloat(actionButtonCount) * 24 + CGFloat(max(0, actionButtonCount - 1)) * 2 }
     func measure(width: CGFloat) -> CGSize {
         CGSize(width: width, height: stack.contentHeight(width: width) + 12 + 24)
     }
@@ -685,7 +690,7 @@ final class NativeAssistantMessageView: NSView {
         let stackFrame = CGRect(x: 0, y: 0, width: width, height: content)
         if stack.frame != stackFrame { stack.frame = stackFrame }
         stack.place(width: width)
-        let frame = CGRect(x: 0, y: content + 12, width: 76, height: 24)
+        let frame = CGRect(x: 0, y: content + 12, width: actionsWidth, height: 24)
         if actions.frame != frame { actions.frame = frame }
     }
     #if TRANSCRIPT_CHECKS
