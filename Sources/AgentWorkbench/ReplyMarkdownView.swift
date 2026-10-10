@@ -485,45 +485,12 @@ final class NativeUserMessageView: NSView {
         for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
         needsDisplay = true
     }
-    /// Acceptance A/B switch: `NAVIGATION_BUBBLE_IDEAL_PROBE=0` replaces the
-    /// unwrapped ideal-width probe with a probe at the bubble's maximum content
-    /// width. Production builds keep the existing behaviour.
-    private static var avoidsUnwrappedIdealProbe: Bool = {
-        #if TRANSCRIPT_CHECKS
-        return ProcessInfo.processInfo.environment["NAVIGATION_BUBBLE_IDEAL_PROBE"] == "0"
-        #else
-        return false
-        #endif
-    }()
     private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
         let contentPadding = UserMessageStyle.horizontalPadding * 2
         let maxBubble = width * UserMessageStyle.maxWidthRatio
-        guard Self.avoidsUnwrappedIdealProbe else {
-            let ideal = (texts.map { $0.measure(width: nil).width }.max() ?? 0) + contentPadding
-            let bubbleWidth = min(ideal, maxBubble)
-            return (bubbleWidth, texts.map { $0.measure(width: max(1, bubbleWidth - contentPadding)) })
-        }
-        // `ReplyTextView.measure` clamps its result to the proposed width, so probing
-        // once at the maximum content width answers the only question the unwrapped
-        // ideal existed for: a text reporting exactly that width did not fit, so the
-        // bubble is capped either way; a text reporting less did not wrap, so that
-        // value already is its unwrapped ideal. Same bubble width, same per-text
-        // sizes, and no 1,000,000pt single-line layout of the whole message.
-        let maxContent = max(1, maxBubble - contentPadding)
-        var sizes = texts.map { $0.measure(width: maxContent) }
-        let bubbleWidth = min((sizes.map(\.width).max() ?? 0) + contentPadding, maxBubble)
-        #if TRANSCRIPT_CHECKS
-        NavigationRenderMetrics.count("bubble_probe_bounded")
-        #endif
-        if bubbleWidth != maxBubble {
-            // A bubble narrower than the cap re-measures at its own content width,
-            // exactly as the unwrapped path does.
-            sizes = texts.map { $0.measure(width: max(1, bubbleWidth - contentPadding)) }
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.count("bubble_probe_narrower")
-            #endif
-        }
-        return (bubbleWidth, sizes)
+        let ideal = (texts.map { $0.measure(width: nil).width }.max() ?? 0) + contentPadding
+        let bubbleWidth = min(ideal, maxBubble)
+        return (bubbleWidth, texts.map { $0.measure(width: max(1, bubbleWidth - contentPadding)) })
     }
     func measure(width: CGFloat) -> CGSize {
         let sizes = measurements(width: width).sizes

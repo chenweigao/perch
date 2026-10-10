@@ -1,0 +1,2410 @@
+{
+  "diagnostic": {
+    "cold-down": {
+      "attributed_text": {
+        "median_phase_total_ms": 20.157375147391576,
+        "run_phase_total_ms": [
+          20.178916689474136,
+          19.571124983485788,
+          20.157375147391576
+        ],
+        "run_counts": [
+          946,
+          946,
+          946
+        ]
+      },
+      "document_configure": {
+        "median_phase_total_ms": 0.6499166847788729,
+        "run_phase_total_ms": [
+          0.6499166847788729,
+          0.652666603855323,
+          0.632833267445676
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "file_reference_scan": {
+        "median_phase_total_ms": 4.930249975586776,
+        "run_phase_total_ms": [
+          4.930249975586776,
+          4.903833272692282,
+          5.015541617467534
+        ],
+        "run_counts": [
+          946,
+          946,
+          946
+        ]
+      },
+      "host_attach": {
+        "median_phase_total_ms": 29.935833263152745,
+        "run_phase_total_ms": [
+          29.935833263152745,
+          29.88558337528957,
+          30.069916654611006
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_create": {
+        "median_phase_total_ms": 218.13525016477797,
+        "run_phase_total_ms": [
+          218.13525016477797,
+          217.55145814677235,
+          243.87933327670908
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_first_attach": {
+        "median_phase_total_ms": 29.982833286339883,
+        "run_phase_total_ms": [
+          29.982833286339883,
+          29.936666702269576,
+          30.119874973024707
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_first_measure": {
+        "median_phase_total_ms": 239.26854161254596,
+        "run_phase_total_ms": [
+          239.26854161254596,
+          235.31979174731532,
+          239.3124165610061
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_measure": {
+        "median_phase_total_ms": 239.236500026891,
+        "run_phase_total_ms": [
+          239.236500026891,
+          235.2873333657044,
+          239.27762501261896
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_measure_assistant": {
+        "median_phase_total_ms": 239.21083333698334,
+        "run_phase_total_ms": [
+          239.21083333698334,
+          235.2651666806196,
+          239.24899998382898
+        ],
+        "run_counts": [
+          279,
+          279,
+          279
+        ]
+      },
+      "host_measure_user": {
+        "median_phase_total_ms": 0.34320833219680935,
+        "run_phase_total_ms": [
+          0.34320833219680935,
+          0.3381666901987046,
+          0.3650832732091658
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "host_view": {
+        "median_phase_total_ms": 67.48124998557614,
+        "run_phase_total_ms": [
+          67.48124998557614,
+          66.08000006963266,
+          89.99016657617176
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "markdown_parse": {
+        "median_phase_total_ms": 10.367999988375232,
+        "run_phase_total_ms": [
+          10.367999988375232,
+          10.33191664464539,
+          10.471583329490386
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "native_assistant_create": {
+        "median_phase_total_ms": 0.0003749955794773996,
+        "run_phase_total_ms": [
+          0.00016667036106809974,
+          0.0005416732165031135,
+          0.0003749955794773996
+        ],
+        "run_counts": [
+          4,
+          4,
+          4
+        ]
+      },
+      "native_assistant_place": {
+        "median_phase_total_ms": 70.03983337926911,
+        "run_phase_total_ms": [
+          70.03983337926911,
+          69.14679169130977,
+          71.17720835231012
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "native_assistant_reuse": {
+        "median_phase_total_ms": 0.0067916844272986054,
+        "run_phase_total_ms": [
+          0.005291658453643322,
+          0.0067916844272986054,
+          0.007958347850944847
+        ],
+        "run_counts": [
+          76,
+          76,
+          76
+        ]
+      },
+      "native_assistant_update": {
+        "median_phase_total_ms": 0.007916685717646033,
+        "run_phase_total_ms": [
+          0.007916685717646033,
+          0.0112500274553895,
+          0.007333335815928876
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "native_place": {
+        "median_phase_total_ms": 126.90875004045665,
+        "run_phase_total_ms": [
+          126.90875004045665,
+          121.53645830403548,
+          146.9058334332658
+        ],
+        "run_counts": [
+          636,
+          636,
+          636
+        ]
+      },
+      "native_user_place": {
+        "median_phase_total_ms": 56.90970827708952,
+        "run_phase_total_ms": [
+          56.90970827708952,
+          52.433999997447245,
+          75.77133345330367
+        ],
+        "run_counts": [
+          476,
+          476,
+          476
+        ]
+      },
+      "native_user_update": {
+        "median_phase_total_ms": 0.02804167161229998,
+        "run_phase_total_ms": [
+          0.02587493509054184,
+          0.02804167161229998,
+          0.028124995878897607
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "refresh_range_work": {
+        "median_phase_total_ms": 756.0938333772356,
+        "run_phase_total_ms": [
+          756.0938333772356,
+          743.1808750261553,
+          827.9782083336613
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "refresh_same_range": {
+        "median_phase_total_ms": 0.420874850533437,
+        "run_phase_total_ms": [
+          0.420874850533437,
+          0.4016666207462549,
+          0.4284166352590546
+        ],
+        "run_counts": [
+          1509,
+          1505,
+          1539
+        ]
+      },
+      "refresh_source_clip_bounds": {
+        "median_phase_total_ms": 756.2362916432903,
+        "run_phase_total_ms": [
+          756.2362916432903,
+          743.3090417107451,
+          828.1134166682023
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "refresh_source_configure": {
+        "median_phase_total_ms": 0.0880416773725301,
+        "run_phase_total_ms": [
+          0.0880416773725301,
+          0.08920830441638827,
+          0.08558340778108686
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "refresh_source_measurement": {
+        "median_phase_total_ms": 0.3829583220067434,
+        "run_phase_total_ms": [
+          0.3829583220067434,
+          0.3569582768250257,
+          0.3847500411211513
+        ],
+        "run_counts": [
+          554,
+          549,
+          584
+        ]
+      },
+      "refresh_source_row_height": {
+        "median_phase_total_ms": 0.23591650096932426,
+        "run_phase_total_ms": [
+          0.24354164634132758,
+          0.2283334542880766,
+          0.23591650096932426
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "refresh_source_viewport": {
+        "median_phase_total_ms": 0.20762503845617175,
+        "run_phase_total_ms": [
+          0.2182082607760094,
+          0.20712511468445882,
+          0.20762503845617175
+        ],
+        "run_counts": [
+          318,
+          319,
+          318
+        ]
+      },
+      "refresh_total": {
+        "median_phase_total_ms": 756.7146665678592,
+        "run_phase_total_ms": [
+          756.7146665678592,
+          743.7658750641276,
+          828.5894168511732
+        ],
+        "run_counts": [
+          1668,
+          1664,
+          1698
+        ]
+      },
+      "row_geometry": {
+        "median_phase_total_ms": 3.9048750477377325,
+        "run_phase_total_ms": [
+          3.9048750477377325,
+          3.808000110439025,
+          3.994416634668596
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "row_layout": {
+        "median_phase_total_ms": 142.36941671697423,
+        "run_phase_total_ms": [
+          142.36941671697423,
+          136.61416671675397,
+          165.2498750554514
+        ],
+        "run_counts": [
+          1074,
+          1074,
+          1074
+        ]
+      },
+      "row_parse": {
+        "median_phase_total_ms": 69.79541663895361,
+        "run_phase_total_ms": [
+          69.79541663895361,
+          69.50870838772971,
+          69.93341659836005
+        ],
+        "run_counts": [
+          317,
+          317,
+          317
+        ]
+      },
+      "set_root": {
+        "median_phase_total_ms": 217.60483337857295,
+        "run_phase_total_ms": [
+          217.60483337857295,
+          217.01812502578832,
+          243.33308346831473
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "text_create": {
+        "median_phase_total_ms": 10.386208348791115,
+        "run_phase_total_ms": [
+          10.386208348791115,
+          9.273708274122328,
+          11.040249912184663
+        ],
+        "run_counts": [
+          766,
+          761,
+          789
+        ]
+      },
+      "text_measure": {
+        "median_phase_total_ms": 82.85291671199957,
+        "run_phase_total_ms": [
+          83.2492499393993,
+          82.48320818529464,
+          82.85291671199957
+        ],
+        "run_counts": [
+          1264,
+          1264,
+          1264
+        ]
+      },
+      "text_measure_unwrapped": {
+        "median_phase_total_ms": 19.618499900388997,
+        "run_phase_total_ms": [
+          19.618499900388997,
+          19.550374971004203,
+          19.656458265671972
+        ],
+        "run_counts": [
+          277,
+          277,
+          277
+        ]
+      },
+      "text_measure_wrapped": {
+        "median_phase_total_ms": 63.29304171958938,
+        "run_phase_total_ms": [
+          63.72862494754372,
+          63.036041719897185,
+          63.29304171958938
+        ],
+        "run_counts": [
+          987,
+          987,
+          987
+        ]
+      },
+      "text_reuse": {
+        "median_phase_total_ms": 0.03400009882170707,
+        "run_phase_total_ms": [
+          0.03400009882170707,
+          0.03379156987648457,
+          0.0350416376022622
+        ],
+        "run_counts": [
+          720,
+          725,
+          742
+        ]
+      }
+    },
+    "revisit-up": {
+      "attributed_text": {
+        "median_phase_total_ms": 19.298124920169357,
+        "run_phase_total_ms": [
+          19.391124966205098,
+          18.72212494345149,
+          19.298124920169357
+        ],
+        "run_counts": [
+          929,
+          929,
+          929
+        ]
+      },
+      "file_reference_scan": {
+        "median_phase_total_ms": 4.668791669246275,
+        "run_phase_total_ms": [
+          4.668791669246275,
+          4.62679160409607,
+          4.78345864394214
+        ],
+        "run_counts": [
+          929,
+          929,
+          929
+        ]
+      },
+      "host_attach": {
+        "median_phase_total_ms": 31.328666664194316,
+        "run_phase_total_ms": [
+          31.328666664194316,
+          31.79583331075264,
+          31.074750018888153
+        ],
+        "run_counts": [
+          478,
+          478,
+          478
+        ]
+      },
+      "host_create": {
+        "median_phase_total_ms": 242.5328750105109,
+        "run_phase_total_ms": [
+          222.73912504169857,
+          242.5328750105109,
+          259.7425833737361
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "host_first_attach": {
+        "median_phase_total_ms": 30.08324999245815,
+        "run_phase_total_ms": [
+          30.08324999245815,
+          30.534166617144365,
+          29.757666678051464
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "host_reattach": {
+        "median_phase_total_ms": 1.3124999750289135,
+        "run_phase_total_ms": [
+          1.2947499708388932,
+          1.3124999750289135,
+          1.3692916618310846
+        ],
+        "run_counts": [
+          12,
+          12,
+          12
+        ]
+      },
+      "host_view": {
+        "median_phase_total_ms": 172.04216660320526,
+        "run_phase_total_ms": [
+          172.04216660320526,
+          72.01699996221578,
+          181.75383341440465
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "markdown_parse": {
+        "median_phase_total_ms": 11.838541649922263,
+        "run_phase_total_ms": [
+          11.952625005505979,
+          11.838541649922263,
+          11.76395833317656
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "native_assistant_place": {
+        "median_phase_total_ms": 70.58395830972586,
+        "run_phase_total_ms": [
+          70.58395830972586,
+          70.33058333036024,
+          71.96958329586778
+        ],
+        "run_counts": [
+          158,
+          158,
+          158
+        ]
+      },
+      "native_assistant_reuse": {
+        "median_phase_total_ms": 0.003291606844868511,
+        "run_phase_total_ms": [
+          0.002833330654539168,
+          0.0032916723284870386,
+          0.003291606844868511
+        ],
+        "run_counts": [
+          77,
+          77,
+          77
+        ]
+      },
+      "native_assistant_update": {
+        "median_phase_total_ms": 0.008249968232121319,
+        "run_phase_total_ms": [
+          0.008249968232121319,
+          0.00841666042106226,
+          0.007375019777100533
+        ],
+        "run_counts": [
+          77,
+          77,
+          77
+        ]
+      },
+      "native_place": {
+        "median_phase_total_ms": 158.41333326534368,
+        "run_phase_total_ms": [
+          158.41333326534368,
+          158.22183342970675,
+          161.06283324916149
+        ],
+        "run_counts": [
+          675,
+          675,
+          675
+        ]
+      },
+      "native_user_place": {
+        "median_phase_total_ms": 87.92837513465201,
+        "run_phase_total_ms": [
+          87.8860832672217,
+          87.92837513465201,
+          89.15379164682236
+        ],
+        "run_counts": [
+          517,
+          517,
+          517
+        ]
+      },
+      "native_user_update": {
+        "median_phase_total_ms": 0.021583378838840872,
+        "run_phase_total_ms": [
+          0.033250013075303286,
+          0.021208332327660173,
+          0.021583378838840872
+        ],
+        "run_counts": [
+          194,
+          194,
+          194
+        ]
+      },
+      "refresh_range_work": {
+        "median_phase_total_ms": 646.2335416581482,
+        "run_phase_total_ms": [
+          646.2335416581482,
+          564.6949583097012,
+          693.6117916920921
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "refresh_same_range": {
+        "median_phase_total_ms": 0.3170417548972182,
+        "run_phase_total_ms": [
+          0.328458147123456,
+          0.31333341757999733,
+          0.3170417548972182
+        ],
+        "run_counts": [
+          1048,
+          1054,
+          1047
+        ]
+      },
+      "refresh_source_clip_bounds": {
+        "median_phase_total_ms": 646.372875002271,
+        "run_phase_total_ms": [
+          646.372875002271,
+          564.8346666857833,
+          693.7586666899733
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "refresh_source_measurement": {
+        "median_phase_total_ms": 0.3636249457485974,
+        "run_phase_total_ms": [
+          0.3692083482746966,
+          0.3636249457485974,
+          0.3608333645388484
+        ],
+        "run_counts": [
+          421,
+          427,
+          420
+        ]
+      },
+      "refresh_source_row_height": {
+        "median_phase_total_ms": 0.23145824525272474,
+        "run_phase_total_ms": [
+          0.23145824525272474,
+          0.2339167331228964,
+          0.2259999018860981
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "refresh_source_viewport": {
+        "median_phase_total_ms": 0.07987498247530311,
+        "run_phase_total_ms": [
+          0.09058327850652859,
+          0.07987498247530311,
+          0.07933328743092716
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "refresh_total": {
+        "median_phase_total_ms": 646.7253750670352,
+        "run_phase_total_ms": [
+          646.7253750670352,
+          565.1804166191141,
+          694.1014583062497
+        ],
+        "run_counts": [
+          1207,
+          1213,
+          1206
+        ]
+      },
+      "row_layout": {
+        "median_phase_total_ms": 167.65641680103727,
+        "run_phase_total_ms": [
+          167.65641680103727,
+          166.34054172754986,
+          169.2047082760837
+        ],
+        "run_counts": [
+          1115,
+          1115,
+          1115
+        ]
+      },
+      "row_parse": {
+        "median_phase_total_ms": 65.93149986292701,
+        "run_phase_total_ms": [
+          66.07404175156262,
+          65.86241671902826,
+          65.93149986292701
+        ],
+        "run_counts": [
+          310,
+          310,
+          310
+        ]
+      },
+      "set_root": {
+        "median_phase_total_ms": 241.94416663522134,
+        "run_phase_total_ms": [
+          222.170083259698,
+          241.94416663522134,
+          259.1638333542505
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "text_create": {
+        "median_phase_total_ms": 5.129625082190614,
+        "run_phase_total_ms": [
+          5.129625082190614,
+          5.3792915132362396,
+          5.0936249463120475
+        ],
+        "run_counts": [
+          774,
+          774,
+          774
+        ]
+      },
+      "text_measure": {
+        "median_phase_total_ms": 80.2547083949321,
+        "run_phase_total_ms": [
+          80.2547083949321,
+          80.58350000646897,
+          80.1207499607699
+        ],
+        "run_counts": [
+          1241,
+          1241,
+          1241
+        ]
+      },
+      "text_measure_unwrapped": {
+        "median_phase_total_ms": 18.80350001010811,
+        "run_phase_total_ms": [
+          18.80350001010811,
+          18.80408335273387,
+          18.78312493499834
+        ],
+        "run_counts": [
+          271,
+          271,
+          271
+        ]
+      },
+      "text_measure_wrapped": {
+        "median_phase_total_ms": 61.55616669275332,
+        "run_phase_total_ms": [
+          61.55616669275332,
+          61.88154171832139,
+          61.43133317527827
+        ],
+        "run_counts": [
+          970,
+          970,
+          970
+        ]
+      },
+      "text_reuse": {
+        "median_phase_total_ms": 0.03029161598533392,
+        "run_phase_total_ms": [
+          0.03029161598533392,
+          0.02975000097649172,
+          0.033875076042022556
+        ],
+        "run_counts": [
+          774,
+          772,
+          774
+        ]
+      }
+    },
+    "hot-local": {
+      "host_attach": {
+        "median_phase_total_ms": 11.857041688926984,
+        "run_phase_total_ms": [
+          11.857041688926984,
+          11.141166622110177,
+          13.036833312071394
+        ],
+        "run_counts": [
+          30,
+          30,
+          30
+        ]
+      },
+      "host_reattach": {
+        "median_phase_total_ms": 11.86891666293377,
+        "run_phase_total_ms": [
+          11.86891666293377,
+          11.155958294693846,
+          13.054625000222586
+        ],
+        "run_counts": [
+          30,
+          30,
+          30
+        ]
+      },
+      "native_assistant_place": {
+        "median_phase_total_ms": 0.06379167462000623,
+        "run_phase_total_ms": [
+          0.05575000250246376,
+          0.06379167462000623,
+          0.0682916579535231
+        ],
+        "run_counts": [
+          20,
+          20,
+          20
+        ]
+      },
+      "native_place": {
+        "median_phase_total_ms": 0.399291624489706,
+        "run_phase_total_ms": [
+          0.399291624489706,
+          0.3769166723941453,
+          0.4087916895514354
+        ],
+        "run_counts": [
+          120,
+          120,
+          120
+        ]
+      },
+      "native_user_place": {
+        "median_phase_total_ms": 0.3656249973573722,
+        "run_phase_total_ms": [
+          0.3686666168505326,
+          0.3370833073859103,
+          0.3656249973573722
+        ],
+        "run_counts": [
+          100,
+          100,
+          100
+        ]
+      },
+      "refresh_range_work": {
+        "median_phase_total_ms": 28.34587500547059,
+        "run_phase_total_ms": [
+          28.34587500547059,
+          26.3896666947403,
+          29.928416675829794
+        ],
+        "run_counts": [
+          60,
+          60,
+          60
+        ]
+      },
+      "refresh_same_range": {
+        "median_phase_total_ms": 1.4544999867212027,
+        "run_phase_total_ms": [
+          1.4544999867212027,
+          1.4680000531370752,
+          1.3844583154423162
+        ],
+        "run_counts": [
+          657,
+          657,
+          657
+        ]
+      },
+      "refresh_source_clip_bounds": {
+        "median_phase_total_ms": 29.94412496627774,
+        "run_phase_total_ms": [
+          29.94412496627774,
+          27.933041645155754,
+          31.50687499146443
+        ],
+        "run_counts": [
+          239,
+          239,
+          239
+        ]
+      },
+      "refresh_source_measurement": {
+        "median_phase_total_ms": 0.6755415524821728,
+        "run_phase_total_ms": [
+          0.7006249434198253,
+          0.6525000353576615,
+          0.6755415524821728
+        ],
+        "run_counts": [
+          239,
+          239,
+          239
+        ]
+      },
+      "refresh_source_viewport": {
+        "median_phase_total_ms": 0.648124965664465,
+        "run_phase_total_ms": [
+          0.648124965664465,
+          0.6759999814676121,
+          0.5700833353330381
+        ],
+        "run_counts": [
+          239,
+          239,
+          239
+        ]
+      },
+      "refresh_total": {
+        "median_phase_total_ms": 30.263999993621837,
+        "run_phase_total_ms": [
+          30.263999993621837,
+          28.2839999999851,
+          31.811958251637407
+        ],
+        "run_counts": [
+          717,
+          717,
+          717
+        ]
+      },
+      "row_layout": {
+        "median_phase_total_ms": 0.6640416613663547,
+        "run_phase_total_ms": [
+          0.6640416613663547,
+          0.6379999977070838,
+          0.6837917026132345
+        ],
+        "run_counts": [
+          240,
+          240,
+          240
+        ]
+      }
+    }
+  },
+  "kind": {
+    "cold-down": {
+      "attributed_text": {
+        "median_phase_total_ms": 21.61541665554978,
+        "run_phase_total_ms": [
+          21.646333269018214,
+          21.61541665554978,
+          20.19191659928765
+        ],
+        "run_counts": [
+          946,
+          946,
+          946
+        ]
+      },
+      "document_configure": {
+        "median_phase_total_ms": 0.6933332915650681,
+        "run_phase_total_ms": [
+          0.6933332915650681,
+          0.7583333499496803,
+          0.6437916745198891
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "file_reference_scan": {
+        "median_phase_total_ms": 5.030374850321095,
+        "run_phase_total_ms": [
+          5.030374850321095,
+          5.296041512337979,
+          4.903833301796112
+        ],
+        "run_counts": [
+          946,
+          946,
+          946
+        ]
+      },
+      "host_attach": {
+        "median_phase_total_ms": 32.06237508129561,
+        "run_phase_total_ms": [
+          32.06237508129561,
+          34.35612504108576,
+          30.245249981817324
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_create": {
+        "median_phase_total_ms": 298.71279155486263,
+        "run_phase_total_ms": [
+          298.71279155486263,
+          308.7632499737083,
+          249.14450004143873
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_first_attach": {
+        "median_phase_total_ms": 32.11512507550651,
+        "run_phase_total_ms": [
+          32.11512507550651,
+          34.415791706123855,
+          30.287291738204658
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_first_measure": {
+        "median_phase_total_ms": 248.84949999977835,
+        "run_phase_total_ms": [
+          248.84949999977835,
+          264.39424995623995,
+          240.92812497838167
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_measure": {
+        "median_phase_total_ms": 248.38966652168892,
+        "run_phase_total_ms": [
+          248.38966652168892,
+          263.8871666204068,
+          240.48200005927356
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "host_measure_assistant": {
+        "median_phase_total_ms": 248.73420825315407,
+        "run_phase_total_ms": [
+          248.73420825315407,
+          264.26979162351927,
+          240.82091660238802
+        ],
+        "run_counts": [
+          279,
+          279,
+          279
+        ]
+      },
+      "host_measure_user": {
+        "median_phase_total_ms": 0.4491249637794681,
+        "run_phase_total_ms": [
+          0.4491249637794681,
+          0.5467916853376664,
+          0.40666665881872177
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "host_view": {
+        "median_phase_total_ms": 155.6305417107069,
+        "run_phase_total_ms": [
+          155.6305417107069,
+          184.46045836026315,
+          80.49458334426163
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "markdown_parse": {
+        "median_phase_total_ms": 10.748958338808734,
+        "run_phase_total_ms": [
+          10.748958338808734,
+          10.953624987450894,
+          10.401958323200233
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "native_assistant_create": {
+        "median_phase_total_ms": 0.0005416732165031135,
+        "run_phase_total_ms": [
+          0.0006666741683147848,
+          0.0005416659405454993,
+          0.0005416732165031135
+        ],
+        "run_counts": [
+          4,
+          4,
+          4
+        ]
+      },
+      "native_assistant_place": {
+        "median_phase_total_ms": 74.9897499990766,
+        "run_phase_total_ms": [
+          74.9897499990766,
+          78.04479159676703,
+          72.04620831180364
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "native_assistant_reuse": {
+        "median_phase_total_ms": 0.009000024874694645,
+        "run_phase_total_ms": [
+          0.008458271622657776,
+          0.011041644029319286,
+          0.009000024874694645
+        ],
+        "run_counts": [
+          76,
+          76,
+          76
+        ]
+      },
+      "native_assistant_update": {
+        "median_phase_total_ms": 0.012250013242010027,
+        "run_phase_total_ms": [
+          0.009624985978007317,
+          0.012250013242010027,
+          0.013999990187585354
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "native_place": {
+        "median_phase_total_ms": 158.49891669495264,
+        "run_phase_total_ms": [
+          158.49891669495264,
+          165.15912496834062,
+          140.08637497317977
+        ],
+        "run_counts": [
+          636,
+          636,
+          636
+        ]
+      },
+      "native_user_place": {
+        "median_phase_total_ms": 83.56745832861634,
+        "run_phase_total_ms": [
+          83.56745832861634,
+          87.15991659846622,
+          68.08412487589521
+        ],
+        "run_counts": [
+          476,
+          476,
+          476
+        ]
+      },
+      "native_user_update": {
+        "median_phase_total_ms": 0.027208399842493236,
+        "run_phase_total_ms": [
+          0.019208317098673433,
+          0.03749999450519681,
+          0.027208399842493236
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "refresh_range_work": {
+        "median_phase_total_ms": 976.4883750976878,
+        "run_phase_total_ms": [
+          976.4883750976878,
+          1048.267083344399,
+          818.8198333373293
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "refresh_same_range": {
+        "median_phase_total_ms": 0.4499166534515098,
+        "run_phase_total_ms": [
+          0.4417081654537469,
+          0.5135416577104479,
+          0.4499166534515098
+        ],
+        "run_counts": [
+          1517,
+          1508,
+          1534
+        ]
+      },
+      "refresh_source_clip_bounds": {
+        "median_phase_total_ms": 976.6210416710237,
+        "run_phase_total_ms": [
+          976.6210416710237,
+          1048.4166666283272,
+          818.9517500431975
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "refresh_source_configure": {
+        "median_phase_total_ms": 0.0893333854037337,
+        "run_phase_total_ms": [
+          0.0893333854037337,
+          0.09745830175234005,
+          0.08562504081055522
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "refresh_source_measurement": {
+        "median_phase_total_ms": 0.4111666130484082,
+        "run_phase_total_ms": [
+          0.3932914696633816,
+          0.42787504935404286,
+          0.4111666130484082
+        ],
+        "run_counts": [
+          562,
+          553,
+          579
+        ]
+      },
+      "refresh_source_row_height": {
+        "median_phase_total_ms": 0.25966669636545703,
+        "run_phase_total_ms": [
+          0.25966669636545703,
+          0.29666673799511045,
+          0.24158344604074955
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "refresh_source_viewport": {
+        "median_phase_total_ms": 0.20316675363574177,
+        "run_phase_total_ms": [
+          0.20316675363574177,
+          0.22549991263076663,
+          0.20295838476158679
+        ],
+        "run_counts": [
+          318,
+          318,
+          318
+        ]
+      },
+      "refresh_total": {
+        "median_phase_total_ms": 977.1280833665514,
+        "run_phase_total_ms": [
+          977.1280833665514,
+          1048.9964581065578,
+          819.4672084282502
+        ],
+        "run_counts": [
+          1676,
+          1667,
+          1693
+        ]
+      },
+      "row_create_native_assistant": {
+        "median_phase_total_ms": 179.54854168056045,
+        "run_phase_total_ms": [
+          179.54854168056045,
+          184.85225000040373,
+          134.66091663576663
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "row_create_native_user": {
+        "median_phase_total_ms": 79.0328333459911,
+        "run_phase_total_ms": [
+          79.0328333459911,
+          81.91245824855287,
+          75.45329163986025
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "row_create_swiftui_activity": {
+        "median_phase_total_ms": 11.289166628557723,
+        "run_phase_total_ms": [
+          11.289166628557723,
+          12.038166671118233,
+          10.804166689922567
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "row_create_swiftui_emptyOutput": {
+        "median_phase_total_ms": 4.493333333812188,
+        "run_phase_total_ms": [
+          4.493333333812188,
+          4.76858331967378,
+          4.401749982207548
+        ],
+        "run_counts": [
+          40,
+          40,
+          40
+        ]
+      },
+      "row_create_swiftui_message": {
+        "median_phase_total_ms": 20.5208333209157,
+        "run_phase_total_ms": [
+          20.5208333209157,
+          21.241208356514107,
+          20.08524999837391
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_create_swiftui_thinkingRecord": {
+        "median_phase_total_ms": 4.364250002254266,
+        "run_phase_total_ms": [
+          4.364250002254266,
+          4.499000024225097,
+          4.223374999128282
+        ],
+        "run_counts": [
+          40,
+          40,
+          40
+        ]
+      },
+      "row_geometry": {
+        "median_phase_total_ms": 4.149041691562161,
+        "run_phase_total_ms": [
+          4.149041691562161,
+          4.560416571621317,
+          3.8261665758909658
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "row_layout": {
+        "median_phase_total_ms": 177.74758348241448,
+        "run_phase_total_ms": [
+          177.74758348241448,
+          186.01041664078366,
+          157.89929177844897
+        ],
+        "run_counts": [
+          1074,
+          1074,
+          1074
+        ]
+      },
+      "row_measure_native_assistant": {
+        "median_phase_total_ms": 2.8416249697329476,
+        "run_phase_total_ms": [
+          2.8923749923706055,
+          2.8416249697329476,
+          2.7949583236477338
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "row_measure_native_user": {
+        "median_phase_total_ms": 0.1484999811509624,
+        "run_phase_total_ms": [
+          0.1484999811509624,
+          0.1792916882550344,
+          0.1397499581798911
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "row_measure_swiftui_activity": {
+        "median_phase_total_ms": 68.02166662964737,
+        "run_phase_total_ms": [
+          68.02166662964737,
+          73.28183336358052,
+          65.73079164809315
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "row_measure_swiftui_emptyOutput": {
+        "median_phase_total_ms": 8.354374971531797,
+        "run_phase_total_ms": [
+          8.354374971531797,
+          9.031249981489964,
+          8.17645835923031
+        ],
+        "run_counts": [
+          40,
+          40,
+          40
+        ]
+      },
+      "row_measure_swiftui_message": {
+        "median_phase_total_ms": 127.79020831658272,
+        "run_phase_total_ms": [
+          127.79020831658272,
+          134.98316668119514,
+          124.01729167322628
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_measure_swiftui_thinkingRecord": {
+        "median_phase_total_ms": 41.58924997318536,
+        "run_phase_total_ms": [
+          41.58924997318536,
+          44.017583335516974,
+          40.014875019551255
+        ],
+        "run_counts": [
+          40,
+          40,
+          40
+        ]
+      },
+      "row_parse": {
+        "median_phase_total_ms": 71.21579166414449,
+        "run_phase_total_ms": [
+          71.21579166414449,
+          74.78320838708896,
+          69.79891661467263
+        ],
+        "run_counts": [
+          317,
+          317,
+          317
+        ]
+      },
+      "row_view_native_assistant": {
+        "median_phase_total_ms": 3.697166721394751,
+        "run_phase_total_ms": [
+          3.697166721394751,
+          3.894958324963227,
+          3.432708304899279
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "row_view_native_user": {
+        "median_phase_total_ms": 149.5389583578799,
+        "run_phase_total_ms": [
+          149.5389583578799,
+          178.08212502131937,
+          74.74241670570336
+        ],
+        "run_counts": [
+          198,
+          198,
+          198
+        ]
+      },
+      "row_view_swiftui_activity": {
+        "median_phase_total_ms": 1.1852500028908253,
+        "run_phase_total_ms": [
+          1.1852500028908253,
+          1.243958315171767,
+          1.1367916522431187
+        ],
+        "run_counts": [
+          80,
+          80,
+          80
+        ]
+      },
+      "row_view_swiftui_emptyOutput": {
+        "median_phase_total_ms": 0.5046249862061813,
+        "run_phase_total_ms": [
+          0.5046249862061813,
+          0.5347500191419385,
+          0.49375001253793016
+        ],
+        "run_counts": [
+          40,
+          40,
+          40
+        ]
+      },
+      "row_view_swiftui_message": {
+        "median_phase_total_ms": 0.5790833529317752,
+        "run_phase_total_ms": [
+          0.5790833529317752,
+          0.5893333509447984,
+          0.5657083165715449
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_view_swiftui_thinkingRecord": {
+        "median_phase_total_ms": 0.44087497371947393,
+        "run_phase_total_ms": [
+          0.44087497371947393,
+          0.44912500015925616,
+          0.42600002052495256
+        ],
+        "run_counts": [
+          40,
+          40,
+          40
+        ]
+      },
+      "set_root": {
+        "median_phase_total_ms": 298.1594999364461,
+        "run_phase_total_ms": [
+          298.1594999364461,
+          308.15079172316473,
+          248.61366652476136
+        ],
+        "run_counts": [
+          477,
+          477,
+          477
+        ]
+      },
+      "text_create": {
+        "median_phase_total_ms": 11.46470833919011,
+        "run_phase_total_ms": [
+          11.46470833919011,
+          12.167791574029252,
+          10.753583286714274
+        ],
+        "run_counts": [
+          796,
+          797,
+          779
+        ]
+      },
+      "text_measure": {
+        "median_phase_total_ms": 85.04658324818593,
+        "run_phase_total_ms": [
+          85.04658324818593,
+          88.55429174582241,
+          83.02174993877998
+        ],
+        "run_counts": [
+          1264,
+          1264,
+          1264
+        ]
+      },
+      "text_measure_unwrapped": {
+        "median_phase_total_ms": 20.24500001425622,
+        "run_phase_total_ms": [
+          20.24500001425622,
+          20.983624963264447,
+          19.681958328874316
+        ],
+        "run_counts": [
+          277,
+          277,
+          277
+        ]
+      },
+      "text_measure_wrapped": {
+        "median_phase_total_ms": 64.90591661713552,
+        "run_phase_total_ms": [
+          64.90591661713552,
+          67.6890418981202,
+          63.427375025639776
+        ],
+        "run_counts": [
+          987,
+          987,
+          987
+        ]
+      },
+      "text_reuse": {
+        "median_phase_total_ms": 0.03716680657817051,
+        "run_phase_total_ms": [
+          0.03524988278513774,
+          0.058708224969450384,
+          0.03716680657817051
+        ],
+        "run_counts": [
+          748,
+          751,
+          733
+        ]
+      }
+    },
+    "revisit-up": {
+      "attributed_text": {
+        "median_phase_total_ms": 20.615291803551372,
+        "run_phase_total_ms": [
+          21.021708285843488,
+          19.082249978964683,
+          20.615291803551372
+        ],
+        "run_counts": [
+          929,
+          929,
+          929
+        ]
+      },
+      "file_reference_scan": {
+        "median_phase_total_ms": 4.898083199805114,
+        "run_phase_total_ms": [
+          4.898083199805114,
+          4.673041548812762,
+          5.011708308302332
+        ],
+        "run_counts": [
+          929,
+          929,
+          929
+        ]
+      },
+      "host_attach": {
+        "median_phase_total_ms": 35.130124968418386,
+        "run_phase_total_ms": [
+          35.130124968418386,
+          31.65191670996137,
+          35.41037510149181
+        ],
+        "run_counts": [
+          478,
+          478,
+          478
+        ]
+      },
+      "host_create": {
+        "median_phase_total_ms": 256.1449998684111,
+        "run_phase_total_ms": [
+          291.16016668558586,
+          220.77883333258796,
+          256.1449998684111
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "host_first_attach": {
+        "median_phase_total_ms": 33.60262502246769,
+        "run_phase_total_ms": [
+          33.60262502246769,
+          30.11179168242961,
+          34.065791667671874
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "host_reattach": {
+        "median_phase_total_ms": 1.5792083358974196,
+        "run_phase_total_ms": [
+          1.5792083358974196,
+          1.5831666605663486,
+          1.4042500115465373
+        ],
+        "run_counts": [
+          12,
+          12,
+          12
+        ]
+      },
+      "host_view": {
+        "median_phase_total_ms": 191.80020836211042,
+        "run_phase_total_ms": [
+          191.80020836211042,
+          180.96345843514428,
+          202.87929167534458
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "markdown_parse": {
+        "median_phase_total_ms": 12.60437497694511,
+        "run_phase_total_ms": [
+          12.60437497694511,
+          12.02833335264586,
+          12.781041659764014
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "native_assistant_place": {
+        "median_phase_total_ms": 74.75908331252867,
+        "run_phase_total_ms": [
+          74.75908331252867,
+          70.97595832601655,
+          75.40124998195097
+        ],
+        "run_counts": [
+          158,
+          158,
+          158
+        ]
+      },
+      "native_assistant_reuse": {
+        "median_phase_total_ms": 0.003583321813493967,
+        "run_phase_total_ms": [
+          0.0030416485969908535,
+          0.004249995981808752,
+          0.003583321813493967
+        ],
+        "run_counts": [
+          77,
+          77,
+          77
+        ]
+      },
+      "native_assistant_update": {
+        "median_phase_total_ms": 0.011333329894114286,
+        "run_phase_total_ms": [
+          0.011333329894114286,
+          0.009791598131414503,
+          0.014833341992925853
+        ],
+        "run_counts": [
+          77,
+          77,
+          77
+        ]
+      },
+      "native_place": {
+        "median_phase_total_ms": 166.92458329634974,
+        "run_phase_total_ms": [
+          166.92458329634974,
+          160.2560833125608,
+          170.23195833462523
+        ],
+        "run_counts": [
+          675,
+          675,
+          675
+        ]
+      },
+      "native_user_place": {
+        "median_phase_total_ms": 92.21383328986121,
+        "run_phase_total_ms": [
+          92.21383328986121,
+          89.31675004714634,
+          94.87458326475462
+        ],
+        "run_counts": [
+          517,
+          517,
+          517
+        ]
+      },
+      "native_user_update": {
+        "median_phase_total_ms": 0.0207917473744601,
+        "run_phase_total_ms": [
+          0.021624997316394,
+          0.018291677406523377,
+          0.0207917473744601
+        ],
+        "run_counts": [
+          194,
+          194,
+          194
+        ]
+      },
+      "refresh_range_work": {
+        "median_phase_total_ms": 734.3160833406728,
+        "run_phase_total_ms": [
+          752.2856666619191,
+          655.0384583970299,
+          734.3160833406728
+        ],
+        "run_counts": [
+          159,
+          159,
+          159
+        ]
+      },
+      "refresh_same_range": {
+        "median_phase_total_ms": 0.36445829027798027,
+        "run_phase_total_ms": [
+          0.36445829027798027,
+          0.34433352993801236,
+          0.382000049285125
+        ],
+        "run_counts": [
+          1055,
+          1057,
+          1053
+        ]
+      },
+      "refresh_source_clip_bounds": {
+        "median_phase_total_ms": 734.4829167050193,
+        "run_phase_total_ms": [
+          752.4398333116551,
+          655.1751666847849,
+          734.4829167050193
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "refresh_source_measurement": {
+        "median_phase_total_ms": 0.4130832603550516,
+        "run_phase_total_ms": [
+          0.4130832603550516,
+          0.3898750655935146,
+          0.41804159263847396
+        ],
+        "run_counts": [
+          428,
+          430,
+          426
+        ]
+      },
+      "refresh_source_row_height": {
+        "median_phase_total_ms": 0.2484998622094281,
+        "run_phase_total_ms": [
+          0.2484998622094281,
+          0.23104169667931274,
+          0.26745835202746093
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "refresh_source_viewport": {
+        "median_phase_total_ms": 0.08937502570915967,
+        "run_phase_total_ms": [
+          0.08870828605722636,
+          0.08954171789810061,
+          0.08937502570915967
+        ],
+        "run_counts": [
+          160,
+          160,
+          160
+        ]
+      },
+      "refresh_total": {
+        "median_phase_total_ms": 734.900291703525,
+        "run_phase_total_ms": [
+          752.8442496914067,
+          655.5695419447147,
+          734.900291703525
+        ],
+        "run_counts": [
+          1214,
+          1216,
+          1212
+        ]
+      },
+      "row_create_native_assistant": {
+        "median_phase_total_ms": 134.30174999666633,
+        "run_phase_total_ms": [
+          171.3983333465876,
+          107.64816664595855,
+          134.30174999666633
+        ],
+        "run_counts": [
+          77,
+          77,
+          77
+        ]
+      },
+      "row_create_native_user": {
+        "median_phase_total_ms": 78.44724999449681,
+        "run_phase_total_ms": [
+          78.44724999449681,
+          73.78124997921987,
+          79.7800000073039
+        ],
+        "run_counts": [
+          194,
+          194,
+          194
+        ]
+      },
+      "row_create_swiftui_activity": {
+        "median_phase_total_ms": 11.008083340129815,
+        "run_phase_total_ms": [
+          11.100833355158102,
+          10.007958320784383,
+          11.008083340129815
+        ],
+        "run_counts": [
+          78,
+          78,
+          78
+        ]
+      },
+      "row_create_swiftui_emptyOutput": {
+        "median_phase_total_ms": 4.029708354210015,
+        "run_phase_total_ms": [
+          4.029708354210015,
+          3.9109583376557566,
+          4.173333298240323
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_create_swiftui_message": {
+        "median_phase_total_ms": 20.406958312378265,
+        "run_phase_total_ms": [
+          20.406958312378265,
+          19.71933332970366,
+          20.83845831657527
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_create_swiftui_thinkingRecord": {
+        "median_phase_total_ms": 6.5195416755159386,
+        "run_phase_total_ms": [
+          6.5195416755159386,
+          6.38333335518837,
+          6.777874965337105
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_layout": {
+        "median_phase_total_ms": 175.91958327102475,
+        "run_phase_total_ms": [
+          175.91958327102475,
+          168.49916682986077,
+          180.40108325658366
+        ],
+        "run_counts": [
+          1115,
+          1115,
+          1115
+        ]
+      },
+      "row_parse": {
+        "median_phase_total_ms": 68.4875833831029,
+        "run_phase_total_ms": [
+          68.4875833831029,
+          65.85545834241202,
+          69.80837500304915
+        ],
+        "run_counts": [
+          310,
+          310,
+          310
+        ]
+      },
+      "row_view_native_assistant": {
+        "median_phase_total_ms": 3.5341249749762937,
+        "run_phase_total_ms": [
+          3.547166670614388,
+          3.2205416791839525,
+          3.5341249749762937
+        ],
+        "run_counts": [
+          77,
+          77,
+          77
+        ]
+      },
+      "row_view_native_user": {
+        "median_phase_total_ms": 185.81475000246428,
+        "run_phase_total_ms": [
+          185.81475000246428,
+          175.4509166421485,
+          196.90429168986157
+        ],
+        "run_counts": [
+          194,
+          194,
+          194
+        ]
+      },
+      "row_view_swiftui_activity": {
+        "median_phase_total_ms": 1.0662916538421996,
+        "run_phase_total_ms": [
+          1.0749583161668852,
+          0.9987916782847606,
+          1.0662916538421996
+        ],
+        "run_counts": [
+          78,
+          78,
+          78
+        ]
+      },
+      "row_view_swiftui_emptyOutput": {
+        "median_phase_total_ms": 0.4264166782377288,
+        "run_phase_total_ms": [
+          0.4264166782377288,
+          0.4086666667717509,
+          0.4425833176355809
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_view_swiftui_message": {
+        "median_phase_total_ms": 0.5637083522742614,
+        "run_phase_total_ms": [
+          0.5637083522742614,
+          0.5375416731112637,
+          0.5930000115768053
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "row_view_swiftui_thinkingRecord": {
+        "median_phase_total_ms": 0.6879583233967423,
+        "run_phase_total_ms": [
+          0.7014583243289962,
+          0.6529999955091625,
+          0.6879583233967423
+        ],
+        "run_counts": [
+          39,
+          39,
+          39
+        ]
+      },
+      "set_root": {
+        "median_phase_total_ms": 255.48633336438797,
+        "run_phase_total_ms": [
+          290.54441663902253,
+          220.1990416579065,
+          255.48633336438797
+        ],
+        "run_counts": [
+          466,
+          466,
+          466
+        ]
+      },
+      "text_create": {
+        "median_phase_total_ms": 5.5141251723398454,
+        "run_phase_total_ms": [
+          5.5141251723398454,
+          5.184083456697408,
+          5.6827499938663095
+        ],
+        "run_counts": [
+          774,
+          774,
+          775
+        ]
+      },
+      "text_measure": {
+        "median_phase_total_ms": 83.48412504710723,
+        "run_phase_total_ms": [
+          83.48412504710723,
+          80.59166659950279,
+          85.69429180352017
+        ],
+        "run_counts": [
+          1241,
+          1241,
+          1241
+        ]
+      },
+      "text_measure_unwrapped": {
+        "median_phase_total_ms": 19.488625090161804,
+        "run_phase_total_ms": [
+          19.488625090161804,
+          18.80158335552551,
+          20.208000009006355
+        ],
+        "run_counts": [
+          271,
+          271,
+          271
+        ]
+      },
+      "text_measure_wrapped": {
+        "median_phase_total_ms": 64.09704178804532,
+        "run_phase_total_ms": [
+          64.09704178804532,
+          61.882791509560775,
+          65.60287508909823
+        ],
+        "run_counts": [
+          970,
+          970,
+          970
+        ]
+      },
+      "text_reuse": {
+        "median_phase_total_ms": 0.030999930459074676,
+        "run_phase_total_ms": [
+          0.031124996894504875,
+          0.029708353395108134,
+          0.030999930459074676
+        ],
+        "run_counts": [
+          774,
+          774,
+          775
+        ]
+      }
+    },
+    "hot-local": {
+      "host_attach": {
+        "median_phase_total_ms": 11.875166681420524,
+        "run_phase_total_ms": [
+          12.599041692737956,
+          11.875166681420524,
+          9.96729165490251
+        ],
+        "run_counts": [
+          30,
+          30,
+          30
+        ]
+      },
+      "host_reattach": {
+        "median_phase_total_ms": 11.888916706084274,
+        "run_phase_total_ms": [
+          12.61625003098743,
+          11.888916706084274,
+          9.97899998765206
+        ],
+        "run_counts": [
+          30,
+          30,
+          30
+        ]
+      },
+      "native_assistant_place": {
+        "median_phase_total_ms": 0.06350000330712646,
+        "run_phase_total_ms": [
+          0.07320833537960425,
+          0.06350000330712646,
+          0.06224996468517929
+        ],
+        "run_counts": [
+          20,
+          20,
+          20
+        ]
+      },
+      "native_place": {
+        "median_phase_total_ms": 0.39983331225812435,
+        "run_phase_total_ms": [
+          0.40858338616089895,
+          0.39983331225812435,
+          0.33420838008169085
+        ],
+        "run_counts": [
+          120,
+          120,
+          120
+        ]
+      },
+      "native_user_place": {
+        "median_phase_total_ms": 0.35812499845633283,
+        "run_phase_total_ms": [
+          0.36566668131854385,
+          0.35812499845633283,
+          0.2935833254014142
+        ],
+        "run_counts": [
+          100,
+          100,
+          100
+        ]
+      },
+      "refresh_range_work": {
+        "median_phase_total_ms": 28.837374979048036,
+        "run_phase_total_ms": [
+          29.283208314154763,
+          28.837374979048036,
+          24.0881249847007
+        ],
+        "run_counts": [
+          60,
+          60,
+          60
+        ]
+      },
+      "refresh_same_range": {
+        "median_phase_total_ms": 1.4942500711185858,
+        "run_phase_total_ms": [
+          1.538708369480446,
+          1.4942500711185858,
+          1.301708362007048
+        ],
+        "run_counts": [
+          657,
+          657,
+          657
+        ]
+      },
+      "refresh_source_clip_bounds": {
+        "median_phase_total_ms": 30.50420833460521,
+        "run_phase_total_ms": [
+          30.90645834163297,
+          30.50420833460521,
+          25.45675003057113
+        ],
+        "run_counts": [
+          239,
+          239,
+          239
+        ]
+      },
+      "refresh_source_measurement": {
+        "median_phase_total_ms": 0.6692083261441439,
+        "run_phase_total_ms": [
+          0.7197082813945599,
+          0.6692083261441439,
+          0.6186667233123444
+        ],
+        "run_counts": [
+          239,
+          239,
+          239
+        ]
+      },
+      "refresh_source_viewport": {
+        "median_phase_total_ms": 0.6225833931239322,
+        "run_phase_total_ms": [
+          0.6225833931239322,
+          0.6372499337885529,
+          0.5966666212771088
+        ],
+        "run_counts": [
+          239,
+          239,
+          239
+        ]
+      },
+      "refresh_total": {
+        "median_phase_total_ms": 30.82087497750763,
+        "run_phase_total_ms": [
+          31.31195835157996,
+          30.82087497750763,
+          25.818291651376057
+        ],
+        "run_counts": [
+          717,
+          717,
+          717
+        ]
+      },
+      "row_layout": {
+        "median_phase_total_ms": 0.6700832673232071,
+        "run_phase_total_ms": [
+          0.6769166575395502,
+          0.6700832673232071,
+          0.5672500774380751
+        ],
+        "run_counts": [
+          240,
+          240,
+          240
+        ]
+      }
+    }
+  }
+}

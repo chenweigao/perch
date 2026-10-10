@@ -1,0 +1,48 @@
+diff --git a/Sources/AgentWorkbench/ConversationTranscriptView.swift b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+index e6eba29..ce5221f 100644
+--- a/Sources/AgentWorkbench/ConversationTranscriptView.swift
++++ b/Sources/AgentWorkbench/ConversationTranscriptView.swift
+@@ -1066,6 +1066,11 @@ private final class ConversationEntryController: NSViewController {
+     #if TRANSCRIPT_CHECKS
+     var hasAttached = false
+     private var hasMeasured = false
++    private var diagnosticKind: String {
++        if nativeUser != nil { return "native_user" }
++        if nativeAssistant != nil { return "native_assistant" }
++        return "swiftui_" + String(describing: content.entry.presentation)
++    }
+     #endif
+     var heightChanged: (CGFloat) -> Void
+     private let disclosureChanged: () -> Void
+@@ -1075,7 +1080,10 @@ private final class ConversationEntryController: NSViewController {
+          disclosureChanged: @escaping () -> Void, heightChanged: @escaping (CGFloat) -> Void) {
+         #if TRANSCRIPT_CHECKS
+         let start = CACurrentMediaTime()
+-        defer { NavigationRenderMetrics.record("host_create", since: start) }
++        defer {
++            NavigationRenderMetrics.record("host_create", since: start)
++            NavigationRenderMetrics.record("row_create_" + diagnosticKind, since: start)
++        }
+         #endif
+         self.content = content
+         self.appearance = appearance
+@@ -1089,7 +1097,10 @@ private final class ConversationEntryController: NSViewController {
+     override func loadView() {
+         #if TRANSCRIPT_CHECKS
+         let start = CACurrentMediaTime()
+-        defer { NavigationRenderMetrics.record("host_view", since: start) }
++        defer {
++            NavigationRenderMetrics.record("host_view", since: start)
++            NavigationRenderMetrics.record("row_view_" + diagnosticKind, since: start)
++        }
+         #endif
+         let container = ConversationEntryContainer()
+         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
+@@ -1279,6 +1290,7 @@ private final class ConversationEntryController: NSViewController {
+             let start = CACurrentMediaTime()
+             defer {
+                 NavigationRenderMetrics.record("host_measure", since: start)
++                NavigationRenderMetrics.record("row_measure_" + diagnosticKind, since: start)
+                 NavigationRenderMetrics.record(hasMeasured ? "host_remeasure" : "host_first_measure", since: start)
+                 NavigationRenderMetrics.record(content.entry.messages.first?.isUserPrompt == true ? "host_measure_user" : "host_measure_assistant", since: start)
+                 hasMeasured = true
