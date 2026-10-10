@@ -168,6 +168,7 @@ private struct NativeComposerView: View {
     let connection: NativeAgentConnection
     let s: NativeAgentSnapshot
     @State private var palette = CommandPaletteState()
+    @State private var recall = ComposerRecall()
     var body: some View {
         VStack(spacing: 8) {
             if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
@@ -177,7 +178,7 @@ private struct NativeComposerView: View {
             }
             VStack(spacing: 8) {
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
-                                              set: { connection.drafts[s.id] = $0; palette.draftChanged($0) }),
+                                              set: { connection.drafts[s.id] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: s.cwd,
                                 placeholder: L("继续此任务…"),
                                 accessibilityLabel: "Message \(s.provider.label)",
@@ -229,17 +230,24 @@ private struct NativeComposerView: View {
     /// otherwise every key falls through to normal editing and Return still sends.
     private func handle(_ key: ComposerKey, for s: NativeAgentSnapshot) -> Bool {
         let draft = connection.drafts[s.id] ?? ""
-        guard let completion = palette.completion(for: draft, in: s.commands) else { return false }
-        switch key {
-        case .up: palette.move(-1, count: completion.matches.count); return true
-        case .down: palette.move(1, count: completion.matches.count); return true
-        case .enter, .tab:
-            guard let command = palette.choice(in: completion) else { return false }
-            if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
-            apply(command, completion, to: s.id)
-            return true
-        case .escape: palette.dismiss(draft); return true
+        if let completion = palette.completion(for: draft, in: s.commands) {
+            switch key {
+            case .up: palette.move(-1, count: completion.matches.count); return true
+            case .down: palette.move(1, count: completion.matches.count); return true
+            case .enter, .tab:
+                guard let command = palette.choice(in: completion) else { return false }
+                if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
+                apply(command, completion, to: s.id)
+                return true
+            case .escape: palette.dismiss(draft); return true
+            }
         }
+        // With no palette open, an empty draft offers Up-arrow prompt recall.
+        if let next = recall.handle(key, draft: draft, entries: connection.historyEntries(for: s.id)) {
+            connection.drafts[s.id] = next; palette.draftChanged(next)
+            return true
+        }
+        return false
     }
     /// Completing only fills the composer. Running the command stays an explicit
     /// send, so a keystroke cannot start work the user has not read back.

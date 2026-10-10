@@ -30,6 +30,9 @@ final class NativeAgentConnection {
     private var sendingSessions: Set<String> = []
     var sending: Bool { selectedID.map { sendingSessions.contains($0) } ?? false }
     var queue = OutboundQueue() { didSet { persistDrafts() } }
+    /// Sent prompts per session, oldest first, for composer Up-arrow recall.
+    private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
+    func historyEntries(for id: String) -> [String] { history[id] ?? [] }
     var stops = StopController()
     /// The bridge's combined catalog: OMP answers `omp models`, Codex answers
     /// `model/list`, and dsh contributes its ACP config options after each handshake.
@@ -62,13 +65,14 @@ final class NativeAgentConnection {
     @ObservationIgnored private var draftFile: DraftFile?
     @ObservationIgnored private var draftLoadError: String?
     private(set) var draftSaveError: String?
-    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue) }
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, outbox: queue, history: history) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "native-\(host.id)")
         do {
             let saved = try file.load()
             drafts = saved.text
             queue = saved.outbox
+            history = saved.history
             draftFile = file
         } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
@@ -504,6 +508,7 @@ final class NativeAgentConnection {
             return
         }
         guard queue.enqueue(text, for: reference, mode: mode) != nil else { return }
+        PromptHistory.record(text, for: id, into: &history)
         drafts[id] = ""
         actionError = nil
         deliver(id)

@@ -141,6 +141,27 @@ check(editor.undoManager?.canUndo == false, "A sent draft must not remain in thi
 print("Composer undo checks passed: isolated typing, redo and send boundary")
 editor.syncDraft("中文 file suffix", selection: NSRange(location: 7, length: 0))
 check(editor.selectedRange().location == 7, "File completion must restore the insertion caret instead of jumping past the suffix")
+
+var recall = ComposerRecall()
+let sent = ["第一条指令", "第二条指令"]
+check(recall.handle(.up, draft: "正在输入", entries: sent) == nil, "A non-empty draft keeps Up as cursor movement")
+check(recall.handle(.up, draft: "", entries: sent) == "第二条指令", "Empty draft recalls the newest prompt")
+check(recall.handle(.up, draft: "第二条指令", entries: sent) == "第一条指令", "Up again moves to the older prompt")
+check(recall.handle(.up, draft: "第一条指令", entries: sent) == "第一条指令", "The oldest entry stays selected and consumes the key")
+check(recall.handle(.down, draft: "第一条指令", entries: sent) == "第二条指令", "Down walks back toward the newest")
+check(recall.handle(.down, draft: "第二条指令", entries: sent) == "", "Down past the newest restores the empty draft")
+check(!recall.isActive, "Recall ends after returning to the draft")
+recall.draftChanged("第一条指令") // An edit while inactive has nothing to end.
+check(recall.handle(.up, draft: "", entries: sent) == "第二条指令" && recall.isActive, "Recall restarts from the newest entry")
+recall.draftChanged("第二条指令") // The applied value itself must not end recall.
+check(recall.isActive, "Applying a recalled draft is not an edit")
+recall.draftChanged("第二条指令。")
+check(!recall.isActive, "Editing the recalled draft ends recall")
+check(recall.handle(.escape, draft: "第二条指令。", entries: sent) == nil, "Escape after an edit is normal editing")
+check(recall.handle(.up, draft: "", entries: sent) == "第二条指令", "Recall starts from the newest again")
+check(recall.handle(.escape, draft: "第二条指令", entries: sent) == "" && !recall.isActive, "Escape during recall restores the empty draft")
+check(recall.handle(.up, draft: "", entries: []) == nil, "A session without history keeps Up as cursor movement")
+print("Composer recall checks passed: empty-draft start, walk, edit and escape boundaries")
 if let path = ProcessInfo.processInfo.environment["COMPOSER_CHECK_RESULT"] {
     try Data("{\"status\":\"passed\"}\n".utf8).write(to: URL(fileURLWithPath: path), options: .atomic)
 }

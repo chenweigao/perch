@@ -20,7 +20,15 @@ public struct SavedDrafts: Codable, Sendable {
     }
 
     /// Repeating the latest prompt must not grow the list; recall stays meaningful.
-    public mutating func recordHistory(_ text: String, for session: String, limit: Int = 50) {
+    public mutating func recordHistory(_ text: String, for session: String, limit: Int = PromptHistory.limit) {
+        PromptHistory.record(text, for: session, into: &history, limit: limit)
+    }
+}
+
+/// The recall list shared by the draft store and live connections.
+public enum PromptHistory {
+    public static let limit = 50
+    public static func record(_ text: String, for session: String, into history: inout [String: [String]], limit: Int = PromptHistory.limit) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         var entries = (history[session] ?? []).filter { $0 != text }

@@ -111,6 +111,7 @@ private struct KimiComposerView: View {
     let onInput: () -> Void
     @State private var chooseFiles = false
     @State private var palette = CommandPaletteState()
+    @State private var recall = ComposerRecall()
     var body: some View {
         VStack(spacing: 10) {
             if let goal = connection.goal {
@@ -145,7 +146,7 @@ private struct KimiComposerView: View {
                     }
                 }
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
-                                              set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0) }),
+                                              set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: connection.conversation?.snapshot.session.cwd ?? "",
                                 placeholder: L("继续此任务…"),
                                 accessibilityLabel: "Message Kimi", canSend: canSend,
@@ -201,17 +202,24 @@ private struct KimiComposerView: View {
     }
     private func handle(_ key: ComposerKey, for id: String) -> Bool {
         let draft = connection.drafts[id] ?? ""
-        guard let completion = palette.completion(for: draft, in: KimiCommand.catalog) else { return false }
-        switch key {
-        case .up: palette.move(-1, count: completion.matches.count)
-        case .down: palette.move(1, count: completion.matches.count)
-        case .enter, .tab:
-            guard let command = palette.choice(in: completion) else { return false }
-            if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
-            apply(command, completion, to: id)
-        case .escape: palette.dismiss(draft)
+        if let completion = palette.completion(for: draft, in: KimiCommand.catalog) {
+            switch key {
+            case .up: palette.move(-1, count: completion.matches.count)
+            case .down: palette.move(1, count: completion.matches.count)
+            case .enter, .tab:
+                guard let command = palette.choice(in: completion) else { return false }
+                if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
+                apply(command, completion, to: id)
+            case .escape: palette.dismiss(draft)
+            }
+            return true
         }
-        return true
+        // With no palette open, an empty draft offers Up-arrow prompt recall.
+        if let next = recall.handle(key, draft: draft, entries: connection.historyEntries(for: id)) {
+            onInput(); connection.drafts[id] = next; palette.draftChanged(next)
+            return true
+        }
+        return false
     }
     private func apply(_ command: AgentCommand, _ completion: CommandCompletion, to id: String) {
         onInput()

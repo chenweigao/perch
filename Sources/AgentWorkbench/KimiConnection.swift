@@ -61,6 +61,9 @@ final class KimiConnection {
     var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
     private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
+    /// Sent prompts per session, oldest first, for composer Up-arrow recall.
+    private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
+    func historyEntries(for id: String) -> [String] { history[id] ?? [] }
     private(set) var aborting: Set<String> = []
     private(set) var loadingTaskOutput: Set<String> = []
     private(set) var stoppingTasks: Set<String> = []
@@ -119,13 +122,14 @@ final class KimiConnection {
     @ObservationIgnored private var draftFile: DraftFile?
     @ObservationIgnored private var draftLoadError: String?
     private(set) var draftSaveError: String?
-    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments) }
+    private var savedDrafts: SavedDrafts { SavedDrafts(text: drafts, attachments: attachments, history: history) }
     private func loadDrafts() {
         let file = DraftFile.applicationFile(namespace: "kimi-\(host.id)")
         do {
             let saved = try file.load()
             drafts = saved.text
             attachments = saved.attachments
+            history = saved.history
             draftFile = file
         } catch { draftLoadError = error.localizedDescription; draftSaveError = L("草稿恢复失败，原文件已保留：\(error.localizedDescription)") }
     }
@@ -777,6 +781,7 @@ final class KimiConnection {
             return
         }
         let promptID = "awb_\(UUID().uuidString)"
+        PromptHistory.record(text, for: id, into: &history)
         let preview: [JSONValue] = [.object(["type": .string("text"), "text": .string(text)])]
             + files.map { .object(["type": .string("file"), "name": .string($0.lastPathComponent)]) }
         pendingPrompts[id, default: []].append(KimiPrompt(id: promptID, content: preview))
