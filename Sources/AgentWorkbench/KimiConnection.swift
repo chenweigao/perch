@@ -947,7 +947,9 @@ final class KimiConnection {
             if let index = pendingPrompts[id]?.firstIndex(where: { $0.id == promptID }) {
                 pendingPrompts[id]?[index] = accepted
             }
-            if drafts[id] == draftText { drafts[id] = "" }
+            // Clear the draft the user actually has: the token form, or the
+            // objective text a /goal command replaced it with.
+            if drafts[id] == draftText || drafts[id] == text { drafts[id] = "" }
             attachments[id]?.removeAll { files.contains($0) }
             if mode == .steer && ["queued", "blocked"].contains(accepted.status) {
                 await steerPrompt(promptID, for: id)
