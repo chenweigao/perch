@@ -41,6 +41,12 @@ public final class ConversationPresentationModel {
         public let entry: ConversationTimelineEntry
         public let tools: [String: VisibleTool]
         public let activity: ActivityNarrativeRow?
+        /// Rows collapsed behind a process fold; non-nil only on fold rows.
+        public let foldedRows: [Row]?
+        public init(entry: ConversationTimelineEntry, tools: [String: VisibleTool],
+                    activity: ActivityNarrativeRow?, foldedRows: [Row]? = nil) {
+            self.entry = entry; self.tools = tools; self.activity = activity; self.foldedRows = foldedRows
+        }
     }
     public final class Snapshot {
         public let rows: [Row]

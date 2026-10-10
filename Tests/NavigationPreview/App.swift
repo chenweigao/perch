@@ -145,7 +145,8 @@ private struct NavigationConversation: View {
                 }) {
                     if let conversation = model.conversation {
                         ConversationTranscript(messages: conversation.displayMessages,
-                                               sessionId: model.selected, isRunning: conversation.snapshot.session.busy)
+                                               sessionId: model.selected, isRunning: conversation.snapshot.session.busy,
+                                               foldsProcess: ProcessInfo.processInfo.environment["NAVIGATION_AUTORUN"] == "process-fold")
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }.overlay(alignment: .topLeading) {
@@ -393,6 +394,87 @@ final class NavigationRunner {
         }
         return ["cadence_hz": hz, "budget_ms": budget, "phases": phases,
                 "boundary": "paced programmatic main-actor scroll work; excludes hardware input and compositor presentation"]
+    }
+
+    /// Completed turns fold their process behind one row. The document keeps only
+    /// prompts, final answers and fold rows; expansion and find-reveal restore the
+    /// original rows in place without changing the top-level structure.
+    func processFoldContracts() async throws -> [String: Any] {
+        ConversationDisclosureFixture.enabled = true
+        defer { ConversationDisclosureFixture.enabled = false }
+        let target = model.scope.sessions[0].id
+        try model.warm([target])
+        guard let host = model.host else { throw NavigationError("missing host") }
+        _ = try await switchTo(target, host: host)
+        guard let scroll = findScrollView(host) else { throw NavigationError("missing scroll") }
+        // Recompute the expected document from the same source messages.
+        let messages = model.conversation!.displayMessages
+        let entries = ConversationProjection().update(messages, isRunning: false).entries
+        let source = entries.map { ConversationPresentationModel.Row(entry: $0, tools: [:], activity: nil) }
+        let expected = ConversationProcessFold.fold(rows: source, isRunning: false)
+        let foldGroups = expected.filter { $0.entry.presentation == .processFold }
+        guard !foldGroups.isEmpty else { throw NavigationError("fixture history produced no process folds") }
+        guard await flushAndWait(host, until: {
+            ConversationTranscript.rowIdentifiers(in: host).count == expected.count
+        }) != nil else { throw NavigationError("folded transcript did not settle") }
+        let actual = ConversationTranscript.rowIdentifiers(in: host)
+        guard actual.map(\.id) == expected.map(\.entry.id), actual.map(\.presentation) == expected.map({ "\($0.entry.presentation)" }) else {
+            throw NavigationError("folded rows differ from the source projection")
+        }
+        guard !actual.contains(where: { ["activity", "thinkingDetails", "progress", "record"].contains($0.presentation) }) else {
+            throw NavigationError("historical process rows stayed top-level")
+        }
+        // Expand the largest fold row through its remembered disclosure binding;
+        // reveal scrolls it into the viewport first so its host actually mounts.
+        guard let largest = foldGroups.max(by: { ($0.foldedRows?.count ?? 0) < ($1.foldedRows?.count ?? 0) }),
+              (largest.foldedRows?.count ?? 0) > 0 else { throw NavigationError("fold groups carry no rows") }
+        let foldID = largest.entry.id
+        let key = "\(target):\(foldID):process-fold"
+        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"),
+            object: ConversationFindTarget(session: target,
+                hit: ConversationSearchHit(entryID: foldID, occurrence: 0, excerpt: ""), query: "fixture"))
+        guard await flushAndWait(host, until: {
+            ConversationDisclosureFixture.bindings[key] != nil
+        }) != nil else {
+            throw NavigationError("no fold disclosure mounted; fold: \(foldID); bindings: \(ConversationDisclosureFixture.bindings.keys.count)")
+        }
+        guard let foldRow = findRow(foldID, in: host) else { throw NavigationError("fold row is not mounted") }
+        let collapsedHeight = foldRow.frame.height
+        let collapsedViews = countViews(foldRow)
+        ConversationDisclosureFixture.bindings[key]!.wrappedValue = true
+        guard await flushAndWait(host, until: {
+            guard let row = self.findRow(foldID, in: host) else { return false }
+            return self.countViews(row) > collapsedViews && row.frame.height > collapsedHeight + 1
+        }) != nil else {
+            let stored = ConversationReadingMemory.shared.expansions[key] as Any
+            let row = findRow(foldID, in: host)
+            throw NavigationError("fold row did not expand in place; stored: \(String(describing: stored)); height: \(String(describing: row?.frame.height)) vs \(collapsedHeight); views: \(row.map(countViews) ?? -1) vs \(collapsedViews)")
+        }
+        guard ConversationTranscript.rowIdentifiers(in: host).count == expected.count else {
+            throw NavigationError("expansion changed the top-level row structure")
+        }
+        ConversationDisclosureFixture.bindings[key]!.wrappedValue = false
+        guard await flushAndWait(host, until: {
+            guard let row = self.findRow(foldID, in: host) else { return false }
+            return abs(row.frame.height - collapsedHeight) < 1 && self.countViews(row) == collapsedViews
+        }) != nil else { throw NavigationError("fold row did not collapse back") }
+        // A find hit inside a still-folded group opens it and lands on the fold row.
+        guard let other = foldGroups.last(where: {
+            $0.entry.id != foldID
+                && ConversationReadingMemory.shared.expansions["\(target):\($0.entry.id):process-fold"] != true
+        }), let inner = other.foldedRows?.first else { throw NavigationError("missing second fold group") }
+        let otherKey = "\(target):\(other.entry.id):process-fold"
+        NotificationCenter.default.post(name: .init("PerchRevealConversationHit"),
+            object: ConversationFindTarget(session: target,
+                hit: ConversationSearchHit(entryID: inner.entry.id, occurrence: 0, excerpt: ""), query: "fixture"))
+        guard await flushAndWait(host, until: {
+            ConversationReadingMemory.shared.expansions[otherKey] == true
+        }) != nil else { throw NavigationError("reveal did not open the folded group") }
+        guard let revealed = findRow(other.entry.id, in: host) else { throw NavigationError("revealed fold row is not mounted") }
+        let onScreen = revealed.convert(revealed.bounds, to: scroll.contentView).intersects(scroll.contentView.bounds)
+        guard onScreen else { throw NavigationError("reveal left the fold row off screen") }
+        return ["fold_groups": foldGroups.count, "top_level_rows": actual.count, "source_rows": source.count,
+                "expanded_height_growth": "in-place", "reveal_opens_fold": true]
     }
 
     /// Traverse in half-viewport increments, so every turn must be observed in
@@ -1176,6 +1258,14 @@ final class NavigationRunner {
         1 + view.subviews.reduce(0) { $0 + countViews($1) }
     }
 
+    private func findRow(_ id: String, in root: NSView) -> NSView? {
+        if root.identifier?.rawValue == id { return root }
+        for subview in root.subviews {
+            if let found = findRow(id, in: subview) { return found }
+        }
+        return nil
+    }
+
     private func findScrollView(_ view: NSView) -> NSScrollView? {
         // The sidebar's own scroll view comes first in the hierarchy; take the widest.
         var found: [NSScrollView] = []
@@ -1262,6 +1352,7 @@ struct NavigationPreviewApp: App {
             else if mode == "search" { report.merge(try await runner.readingInteractions(searchOnly: true)) { a, _ in a } }
             else if mode == "interactions" { report.merge(try await runner.readingInteractions()) { a, _ in a } }
             else if mode == "anchor" { report.merge(try await runner.prependAnchor()) { a, _ in a } }
+            else if mode == "process-fold" { report.merge(try await runner.processFoldContracts()) { a, _ in a } }
             else if mode == "fast-scroll" { report.merge(try await runner.fastScroll()) { a, _ in a } }
             else if mode == "scroll" { report.merge(try await runner.scrollFrames()) { a, _ in a } }
             else if mode == "soak" {

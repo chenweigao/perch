@@ -359,7 +359,7 @@ private struct KimiTimeline: View {
                                            running: running, isRunning: c.snapshot.session.isTurnRunning,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
                                            allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
-                                           waitsForInitialPosition: true)
+                                           foldsProcess: true, waitsForInitialPosition: true)
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: c.snapshot.session.id))
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in

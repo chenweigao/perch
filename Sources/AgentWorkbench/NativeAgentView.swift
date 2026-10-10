@@ -84,7 +84,7 @@ struct NativeAgentView: View {
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
-                                           isSuspended: !isCurrent(s), waitsForInitialPosition: true)
+                                           isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true)
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id))
                     NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
