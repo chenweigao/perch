@@ -289,7 +289,9 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     override func placeContent(width: CGFloat) {
         let text = textSize()
         let gutter = gutterSize()
-        let codeX = 14 + (gutter.width > 0 ? gutter.width + 8 : 0)
+        // With a gutter the code starts at 12 + gutter + 8, matching the
+        // SwiftUI card; without one the code keeps its original 14 pt inset.
+        let codeX = gutter.width > 0 ? 12 + gutter.width + 8 : 14
         let labelSize = label.fittingSize
         let labelFrame = CGRect(x: 14, y: 5 + (24 - labelSize.height) / 2,
                                 width: min(labelSize.width, max(0, width - 14 - 14 - 24 - 8)), height: labelSize.height)
