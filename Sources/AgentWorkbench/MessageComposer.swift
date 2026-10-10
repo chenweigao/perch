@@ -224,16 +224,35 @@ final class DraftTextView: NSTextView {
         if type == .png || type == .tiff,
            let data = board.data(forType: type),
            let bitmap = NSBitmapImageRep(data: data), let png = bitmap.representation(using: .png, properties: [:]) {
-            do {
-                let folder = FileManager.default.temporaryDirectory.appendingPathComponent("AgentWorkbenchAttachments", isDirectory: true)
-                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                let file = folder.appendingPathComponent("pasted-image-\(UUID().uuidString.prefix(8)).png")
-                try png.write(to: file, options: .atomic)
-                onFiles([file])
-            } catch { onError?(error.localizedDescription) }
+            do { onFiles([try ComposerAttachments.saveImageToTemp(png)]) }
+            catch { onError?(error.localizedDescription) }
             return true
         }
         return super.readSelection(from: board, type: type)
+    }
+}
+
+/// Shared attachment helpers: pasted images get readable names, and additions
+/// are validated before they reach a connection's upload path.
+enum ComposerAttachments {
+    static let maximumAttachmentBytes = 200 * 1024 * 1024
+    static func saveImageToTemp(_ png: Data) throws -> URL {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("AgentWorkbenchAttachments", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium)
+            .replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-").replacingOccurrences(of: " ", with: "_")
+        let file = folder.appendingPathComponent("pasted-image-\(stamp)-\(UUID().uuidString.prefix(4)).png")
+        try png.write(to: file, options: .atomic)
+        return file
+    }
+    /// Returns a refusal reason, or nil when the file can be attached.
+    static func refusal(for url: URL) -> String? {
+        guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+              values.isRegularFile == true else { return "Only regular files can be attached." }
+        if let size = values.fileSize, size > maximumAttachmentBytes {
+            return "Files over 200 MB cannot be uploaded as attachments."
+        }
+        return nil
     }
 }
 

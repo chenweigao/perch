@@ -408,7 +408,13 @@ struct NewTaskView: View {
         }.padding(18).frame(width: 360).disabled(creating)
     }
     private func addAttachments(_ files: [URL]) {
-        for file in files where !attachments.contains(file) { attachments.append(file) }
+        for file in files where !attachments.contains(file) {
+            if let refusal = ComposerAttachments.refusal(for: file) {
+                error = "\(file.lastPathComponent): \(refusal)"
+                continue
+            }
+            attachments.append(file)
+        }
     }
     private func start() { create(sendInitialPrompt: true) }
     private func create(sendInitialPrompt: Bool) {

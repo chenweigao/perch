@@ -191,6 +191,20 @@ private struct KimiComposerView: View {
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
+        }
+        // Images dragged from browsers arrive as image data, not file URLs.
+        .dropDestination(for: NSImage.self) { images, _ in
+            var accepted = false
+            for image in images {
+                guard let tiff = image.tiffRepresentation,
+                      let bitmap = NSBitmapImageRep(data: tiff),
+                      let png = bitmap.representation(using: .png, properties: [:]) else { continue }
+                do {
+                    addAttachments([try ComposerAttachments.saveImageToTemp(png)], to: sessionID)
+                    accepted = true
+                } catch { connection.actionError = error.localizedDescription }
+            }
+            return accepted
         }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do {
@@ -229,6 +243,10 @@ private struct KimiComposerView: View {
     }
     private func addAttachments(_ files: [URL], to sessionID: String) {
         for file in files where !(connection.attachments[sessionID] ?? []).contains(file) {
+            if let refusal = ComposerAttachments.refusal(for: file) {
+                connection.actionError = "\(file.lastPathComponent): \(refusal)"
+                continue
+            }
             onInput(); connection.attachments[sessionID, default: []].append(file)
         }
     }
