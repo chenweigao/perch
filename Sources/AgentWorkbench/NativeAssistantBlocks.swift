@@ -21,18 +21,18 @@ struct NativeAssistantListItem: Equatable {
 }
 
 enum NativeAssistantContent {
+    struct Preparation {
+        let blocks: [ReplyBlock]
+        let content: [NativeAssistantBlock]?
+    }
+
     /// Completed assistant text with plain structure. `allowsRichBlocks` exists for
     /// acceptance A/B runs: off limits admission to paragraph groups.
     static func make(_ source: String, allowsRichBlocks: Bool = true) -> [NativeAssistantBlock]? {
-        let result = build(source, allowsRichBlocks: allowsRichBlocks)
-        #if TRANSCRIPT_CHECKS
-        // A rejection discards the parse and the attributed strings built before it;
-        // the SwiftUI renderer then repeats the parse for the same source.
-        if result == nil { NavigationRenderMetrics.count("row_parse_rejected") }
-        #endif
-        return result
+        prepare(source, allowsRichBlocks: allowsRichBlocks).content
     }
-    private static func build(_ source: String, allowsRichBlocks: Bool) -> [NativeAssistantBlock]? {
+
+    static func prepare(_ source: String, allowsRichBlocks: Bool = true) -> Preparation {
         #if TRANSCRIPT_CHECKS
         let parseStart = CACurrentMediaTime()
         let blocks = ReplyDocument.parse(source)
@@ -41,6 +41,14 @@ enum NativeAssistantContent {
         #else
         let blocks = ReplyDocument.parse(source)
         #endif
+        let content = build(blocks, allowsRichBlocks: allowsRichBlocks)
+        #if TRANSCRIPT_CHECKS
+        if content == nil { NavigationRenderMetrics.count("row_parse_rejected") }
+        #endif
+        return Preparation(blocks: blocks, content: content)
+    }
+
+    private static func build(_ blocks: [ReplyBlock], allowsRichBlocks: Bool) -> [NativeAssistantBlock]? {
         guard !blocks.isEmpty else { return nil }
         var result: [NativeAssistantBlock] = []
         var pending: [[ReplyInline]] = []

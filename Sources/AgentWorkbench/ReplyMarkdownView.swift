@@ -43,18 +43,58 @@ enum ReplyParagraphLayout {
     }()
 }
 
+enum ReplyMarkdownPreparation: Equatable {
+    case reuse(sessionID: String, messageID: String, source: String, blocks: [ReplyBlock])
+    case reparseRejected(sessionID: String, messageID: String, source: String)
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case let (.reuse(lhsSession, lhsMessage, lhsSource, _), .reuse(rhsSession, rhsMessage, rhsSource, _)):
+            return lhsSession == rhsSession && lhsMessage == rhsMessage && lhsSource == rhsSource
+        case let (.reparseRejected(lhsSession, lhsMessage, lhsSource),
+                  .reparseRejected(rhsSession, rhsMessage, rhsSource)):
+            return lhsSession == rhsSession && lhsMessage == rhsMessage && lhsSource == rhsSource
+        default:
+            return false
+        }
+    }
+}
+
 struct KimiMarkdown: View {
     let text: String
+    var sessionID: String? = nil
+    var messageID: String? = nil
+    var preparation: ReplyMarkdownPreparation? = nil
     var coalescesParagraphs = ReplyParagraphLayout.enabled
-    var body: some View { ReplyContent(text: text, coalescesParagraphs: coalescesParagraphs).equatable() }
+    var body: some View {
+        ReplyContent(text: text, sessionID: sessionID, messageID: messageID, preparation: preparation,
+                     coalescesParagraphs: coalescesParagraphs).equatable()
+    }
 }
 
 /// Static history is not reparsed when the surrounding conversation streams updates.
 private struct ReplyContent: View, Equatable {
     let text: String
+    let sessionID: String?
+    let messageID: String?
+    let preparation: ReplyMarkdownPreparation?
     let coalescesParagraphs: Bool
     private var blocks: [ReplyBlock] {
+        if case .reuse(let expectedSession, let expectedID, let expectedSource, let blocks)? = preparation,
+           expectedSession == sessionID, expectedID == messageID, expectedSource == text {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("markdown_parse_reused")
+            #endif
+            return blocks
+        }
         #if TRANSCRIPT_CHECKS
+        if case .reparseRejected(let expectedSession, let expectedID, let expectedSource)? = preparation,
+           expectedSession == sessionID, expectedID == messageID, expectedSource == text {
+            NavigationRenderMetrics.count("markdown_parse_rejected_fallback")
+        } else {
+            NavigationRenderMetrics.count("markdown_parse_direct")
+            if preparation != nil { NavigationRenderMetrics.count("markdown_parse_preparation_mismatch") }
+        }
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("markdown_parse", since: start) }
         #endif
@@ -403,7 +443,16 @@ struct SelectableReplyText: NSViewRepresentable {
 }
 
 enum NativeParagraphContent {
+    struct Preparation {
+        let blocks: [ReplyBlock]
+        let content: [NSAttributedString]?
+    }
+
     static func make(_ source: String, lineHeight: CGFloat? = nil) -> [NSAttributedString]? {
+        prepare(source, lineHeight: lineHeight).content
+    }
+
+    static func prepare(_ source: String, lineHeight: CGFloat? = nil) -> Preparation {
         #if TRANSCRIPT_CHECKS
         let parseStart = CACurrentMediaTime()
         let blocks = ReplyDocument.parse(source)
@@ -412,23 +461,20 @@ enum NativeParagraphContent {
         #else
         let blocks = ReplyDocument.parse(source)
         #endif
+        let content = build(blocks, lineHeight: lineHeight)
+        #if TRANSCRIPT_CHECKS
+        if content == nil { NavigationRenderMetrics.count("row_parse_rejected") }
+        #endif
+        return Preparation(blocks: blocks, content: content)
+    }
+
+    private static func build(_ blocks: [ReplyBlock], lineHeight: CGFloat?) -> [NSAttributedString]? {
         var paragraphs: [[ReplyInline]] = []
         for block in blocks {
-            guard case .paragraph(let runs) = block, runs.contains(where: { !$0.text.isEmpty }) else {
-                #if TRANSCRIPT_CHECKS
-                // The parse is discarded and the SwiftUI renderer repeats it.
-                NavigationRenderMetrics.count("row_parse_rejected")
-                #endif
-                return nil
-            }
+            guard case .paragraph(let runs) = block, runs.contains(where: { !$0.text.isEmpty }) else { return nil }
             paragraphs.append(runs)
         }
-        guard !paragraphs.isEmpty else {
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.count("row_parse_rejected")
-            #endif
-            return nil
-        }
+        guard !paragraphs.isEmpty else { return nil }
         return stride(from: 0, to: paragraphs.count, by: 8).map {
             ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]), lineHeight: lineHeight)
         }

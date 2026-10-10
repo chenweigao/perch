@@ -64,6 +64,7 @@ struct KimiMessageView: View {
     let tools: [String: VisibleTool]
     let api: KimiAPI?
     let sessionId: String
+    var markdownPreparation: ReplyMarkdownPreparation? = nil
     private var isUserMessage: Bool { message.isUserPrompt }
     private func runtimeContext(_ text: String) -> some View {
         DisclosureGroup("运行上下文") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -95,7 +96,11 @@ struct KimiMessageView: View {
                         runtimeContext(split.context)
                     } else if part.isRuntimeContext {
                         runtimeContext(part.text ?? "")
-                    } else { KimiMarkdown(text: part.text ?? "").environment(\.isConversationBodyText, true) }
+                    } else {
+                        KimiMarkdown(text: part.text ?? "", sessionID: sessionId, messageID: message.id,
+                                     preparation: markdownPreparation)
+                            .environment(\.isConversationBodyText, true)
+                    }
                 case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
                 case "tool_use":
                     if let tool = tools[part.toolCallId ?? ""] { KimiToolCard(tool: tool) }
@@ -1197,7 +1202,7 @@ private final class ConversationEntryController: NSViewController {
         sizes.removeAll(keepingCapacity: true)
         setRoot()
     }
-    private func nativeUserContent() -> [NSAttributedString]? {
+    private func nativeUserPreparation() -> (messageID: String, source: String, value: NativeParagraphContent.Preparation)? {
         #if TRANSCRIPT_CHECKS
         if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_USER_ROWS"] == "0" { return nil }
         #endif
@@ -1206,9 +1211,10 @@ private final class ConversationEntryController: NSViewController {
               let message = content.entry.messages.first, message.isUserPrompt,
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
-        return NativeUserMessageView.content(part.text ?? "")
+        let source = part.text ?? ""
+        return (message.id, source, NativeParagraphContent.prepare(source, lineHeight: UserMessageStyle.lineHeight))
     }
-    private func nativeAssistantContent() -> (source: String, blocks: [NativeAssistantBlock])? {
+    private func nativeAssistantPreparation() -> (messageID: String, source: String, value: NativeAssistantContent.Preparation)? {
         #if TRANSCRIPT_CHECKS
         if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_ROWS"] == "0" { return nil }
         let allowsRichBlocks = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_BLOCKS"] != "0"
@@ -1220,9 +1226,16 @@ private final class ConversationEntryController: NSViewController {
               let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
-              let source = part.text,
-              let blocks = NativeAssistantContent.make(source, allowsRichBlocks: allowsRichBlocks) else { return nil }
-        return (source, blocks)
+              let source = part.text else { return nil }
+        return (message.id, source, NativeAssistantContent.prepare(source, allowsRichBlocks: allowsRichBlocks))
+    }
+    private func fallbackPreparation(messageID: String, source: String, blocks: [ReplyBlock]) -> ReplyMarkdownPreparation {
+        #if TRANSCRIPT_CHECKS
+        if ProcessInfo.processInfo.environment["NAVIGATION_REUSE_REJECTED_MARKDOWN"] == "0" {
+            return .reparseRejected(sessionID: content.sessionId, messageID: messageID, source: source)
+        }
+        #endif
+        return .reuse(sessionID: content.sessionId, messageID: messageID, source: source, blocks: blocks)
     }
     private func setRoot() {
         #if TRANSCRIPT_CHECKS
@@ -1232,36 +1245,46 @@ private final class ConversationEntryController: NSViewController {
         let rootStart = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("set_root", since: rootStart) }
         #endif
-        if let paragraphs = nativeUserContent() {
-            if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
-            if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
-            if nativeUser == nil {
-                nativeUser = NativeUserMessageView.acquire()
-                if isViewLoaded { view.addSubview(nativeUser!) }
+        var markdownPreparation: ReplyMarkdownPreparation?
+        if let user = nativeUserPreparation() {
+            if let paragraphs = user.value.content {
+                if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
+                if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
+                if nativeUser == nil {
+                    nativeUser = NativeUserMessageView.acquire()
+                    if isViewLoaded { view.addSubview(nativeUser!) }
+                }
+                nativeUser!.update(paragraphs, dark: appearance.colorScheme == .dark)
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.record("native_user_update", since: CACurrentMediaTime())
+                #endif
+                return
             }
-            nativeUser!.update(paragraphs, dark: appearance.colorScheme == .dark)
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.record("native_user_update", since: CACurrentMediaTime())
-            #endif
-            return
+            markdownPreparation = fallbackPreparation(messageID: user.messageID, source: user.source, blocks: user.value.blocks)
         }
         if let nativeUser { NativeUserMessageView.recycle(nativeUser); self.nativeUser = nil }
-        if let content = nativeAssistantContent() {
-            if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
-            if nativeAssistant == nil {
-                nativeAssistant = NativeAssistantMessageView.acquire()
-                if isViewLoaded { view.addSubview(nativeAssistant!) }
+        if let assistant = nativeAssistantPreparation() {
+            if let blocks = assistant.value.content {
+                if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
+                if nativeAssistant == nil {
+                    nativeAssistant = NativeAssistantMessageView.acquire()
+                    if isViewLoaded { view.addSubview(nativeAssistant!) }
+                }
+                nativeAssistant!.update(blocks, source: assistant.source,
+                                        dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled)
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
+                #endif
+                return
             }
-            nativeAssistant!.update(content.blocks, source: content.source,
-                                    dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled)
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
-            #endif
-            return
+            markdownPreparation = fallbackPreparation(messageID: assistant.messageID, source: assistant.source,
+                                                       blocks: assistant.value.blocks)
         }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
+        var hostedContent = content
+        hostedContent.markdownPreparation = markdownPreparation
         let version = generation
-        let root = HostedConversationEntry(content: content, appearance: appearance, disclosureChanged: { [weak self] in
+        let root = HostedConversationEntry(content: hostedContent, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
             self?.disclosureChanged()
         }) { [weak self] size in
@@ -1433,11 +1456,13 @@ private struct ConversationEntryView: View, Equatable {
     let sessionId: String
     let memoryKey: String
     var activityNarrative: ActivityNarrativeRow? = nil
+    var markdownPreparation: ReplyMarkdownPreparation? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
             && lhs.activityNarrative == rhs.activityNarrative
+            && lhs.markdownPreparation == rhs.markdownPreparation
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1455,7 +1480,8 @@ private struct ConversationEntryView: View, Equatable {
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: 12) {
                             ForEach(entry.messages) { message in
-                                KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
+                                KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
+                                                markdownPreparation: markdownPreparation)
                             }
                         }.padding(.top, 10) }
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle()).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -1472,7 +1498,8 @@ private struct ConversationEntryView: View, Equatable {
                         Text("过程记录 · 未返回最终回复").font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                     ForEach(entry.messages) { message in
-                        KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
+                        KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
+                                        markdownPreparation: markdownPreparation)
                     }
                     if entry.messages.first?.role == "assistant" && entry.presentation != .progress {
                         let text = entry.messages.flatMap(\.content).compactMap(\.text).joined(separator: "\n\n")

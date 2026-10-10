@@ -1,0 +1,262 @@
+{
+  "boundary": "production tool-card native behavior; not FPS or scrolling latency",
+  "build": {
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "fixture_sha256": "6584cce8c6df441de4f0032af3df5c17d3708c09bf7463f8359d33cbcb0634f5",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "source_commit": "02cad72ee71c94a5b3ce427c90e6494859517cf4",
+    "source_sha256": "aa507aaaee517af746bb12d71d4bbb31a4cf90429154dee750b07515fa2c0c57"
+  },
+  "commit": "02cad72ee71c94a5b3ce427c90e6494859517cf4",
+  "disclosure_remount": true,
+  "history_source": "navigation-mixed",
+  "history_turns": 200,
+  "macos": "Version 27.0.1 (Build 26A434)",
+  "mode": "tool-card",
+  "recreates_timeline": false,
+  "same_id_replacement": true,
+  "sessions": 500,
+  "status": "passed",
+  "timestamp": "2026-10-10T06:22:40Z",
+  "tool_card_cases": [
+    {
+      "accessibility": [
+        "Bash · echo · Exit code 1"
+      ],
+      "case": "structured-exit",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_json_encode": 1,
+        "tool_card_exit_report_output_display": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": false,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 2,
+          "ms": 1.5280416700989008
+        }
+      },
+      "width": 700
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Failed"
+      ],
+      "case": "structured-no-marker",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_json_encode": 1,
+        "tool_card_exit_report_output_display": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": false,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 1.1365416648914106
+        }
+      },
+      "width": 700
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Exit code 2"
+      ],
+      "case": "string-exit",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_output_display": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": false,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 0.0026666675694286823
+        }
+      },
+      "width": 700
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Failed"
+      ],
+      "case": "failed-no-output",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": false,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 0
+        }
+      },
+      "width": 700
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Running"
+      ],
+      "case": "running",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": false,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 0
+        }
+      },
+      "width": 700
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Result not received · Call record missing"
+      ],
+      "case": "missing-call",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": false,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 0.00012500095181167126
+        }
+      },
+      "width": 700
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Exit code 1"
+      ],
+      "case": "structured-exit",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_json_encode": 1,
+        "tool_card_exit_report_output_display": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": true,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 2,
+          "ms": 0.8629583244328387
+        }
+      },
+      "width": 340
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Failed"
+      ],
+      "case": "structured-no-marker",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_json_encode": 1,
+        "tool_card_exit_report_output_display": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": true,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 0.6544166608364321
+        }
+      },
+      "width": 340
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Exit code 2"
+      ],
+      "case": "string-exit",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_output_display": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": true,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 0.0012916643754579127
+        }
+      },
+      "width": 340
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Failed"
+      ],
+      "case": "failed-no-output",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": true,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 8.333154255524278e-05
+        }
+      },
+      "width": 340
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Running"
+      ],
+      "case": "running",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": true,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 4.16621332988143e-05
+        }
+      },
+      "width": 340
+    },
+    {
+      "accessibility": [
+        "Bash · echo · Result not received · Call record missing"
+      ],
+      "case": "missing-call",
+      "collapsed": true,
+      "counters": {
+        "tool_card_body": 1,
+        "tool_card_exit_report_read": 1
+      },
+      "dark": true,
+      "stages": {
+        "tool_card_exit_report": {
+          "count": 1,
+          "ms": 4.166940925642848e-05
+        }
+      },
+      "width": 340
+    }
+  ],
+  "unicode_copy": true
+}

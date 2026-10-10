@@ -1,0 +1,386 @@
+[
+  {
+    "run": "scroll-1-0",
+    "binary_sha256": "f169eaea1942c412e193c8e915cfc47cf71cbf8634d603ed80b8028a1d04fc98",
+    "build": {
+      "source_commit": "3da769f94a9b165be400e6ea8715e3f5cf5dcca4",
+      "source_sha256": "82749c68fe5dadf413ef3b87adbc215e4694d2d78d601af4a48d21d425de28b5",
+      "fixture_sha256": "7a629e30aadad712715ae2d1ff4da57cf2f377ff2f75defd54ab6e303f761fa1",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "0",
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "passed": true,
+    "phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse": {
+          "count": 39,
+          "ms": 12.764374987455085
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 159.609375
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse": {
+          "count": 39,
+          "ms": 16.093250014819205
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 163.953125
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 163.890625
+      }
+    ]
+  },
+  {
+    "run": "scroll-2-1",
+    "binary_sha256": "f169eaea1942c412e193c8e915cfc47cf71cbf8634d603ed80b8028a1d04fc98",
+    "build": {
+      "source_commit": "3da769f94a9b165be400e6ea8715e3f5cf5dcca4",
+      "source_sha256": "82749c68fe5dadf413ef3b87adbc215e4694d2d78d601af4a48d21d425de28b5",
+      "fixture_sha256": "7a629e30aadad712715ae2d1ff4da57cf2f377ff2f75defd54ab6e303f761fa1",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "1",
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "passed": true,
+    "phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 159.6875
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 163.921875
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 163.9375
+      }
+    ]
+  },
+  {
+    "run": "scroll-3-1",
+    "binary_sha256": "f169eaea1942c412e193c8e915cfc47cf71cbf8634d603ed80b8028a1d04fc98",
+    "build": {
+      "source_commit": "3da769f94a9b165be400e6ea8715e3f5cf5dcca4",
+      "source_sha256": "82749c68fe5dadf413ef3b87adbc215e4694d2d78d601af4a48d21d425de28b5",
+      "fixture_sha256": "7a629e30aadad712715ae2d1ff4da57cf2f377ff2f75defd54ab6e303f761fa1",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "1",
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "passed": true,
+    "phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 160.625
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 164.390625
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 164.40625
+      }
+    ]
+  },
+  {
+    "run": "scroll-4-0",
+    "binary_sha256": "f169eaea1942c412e193c8e915cfc47cf71cbf8634d603ed80b8028a1d04fc98",
+    "build": {
+      "source_commit": "3da769f94a9b165be400e6ea8715e3f5cf5dcca4",
+      "source_sha256": "82749c68fe5dadf413ef3b87adbc215e4694d2d78d601af4a48d21d425de28b5",
+      "fixture_sha256": "7a629e30aadad712715ae2d1ff4da57cf2f377ff2f75defd54ab6e303f761fa1",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "0",
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "passed": true,
+    "phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse": {
+          "count": 39,
+          "ms": 12.068875032127835
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 159.71875
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse": {
+          "count": 39,
+          "ms": 13.142083327693399
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 159.03125
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 158.9375
+      }
+    ]
+  },
+  {
+    "run": "scroll-5-0",
+    "binary_sha256": "f169eaea1942c412e193c8e915cfc47cf71cbf8634d603ed80b8028a1d04fc98",
+    "build": {
+      "source_commit": "3da769f94a9b165be400e6ea8715e3f5cf5dcca4",
+      "source_sha256": "82749c68fe5dadf413ef3b87adbc215e4694d2d78d601af4a48d21d425de28b5",
+      "fixture_sha256": "7a629e30aadad712715ae2d1ff4da57cf2f377ff2f75defd54ab6e303f761fa1",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "0",
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "passed": true,
+    "phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse": {
+          "count": 39,
+          "ms": 10.98662501317449
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 160.4375
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse": {
+          "count": 39,
+          "ms": 13.10550000926014
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 164.3125
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 159.875
+      }
+    ]
+  },
+  {
+    "run": "scroll-6-1",
+    "binary_sha256": "f169eaea1942c412e193c8e915cfc47cf71cbf8634d603ed80b8028a1d04fc98",
+    "build": {
+      "source_commit": "3da769f94a9b165be400e6ea8715e3f5cf5dcca4",
+      "source_sha256": "82749c68fe5dadf413ef3b87adbc215e4694d2d78d601af4a48d21d425de28b5",
+      "fixture_sha256": "7a629e30aadad712715ae2d1ff4da57cf2f377ff2f75defd54ab6e303f761fa1",
+      "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+    },
+    "configuration": {
+      "NAVIGATION_REUSE_REJECTED_MARKDOWN": "1",
+      "NAVIGATION_AUTORUN": "fast-scroll",
+      "NAVIGATION_TURNS": "200",
+      "NAVIGATION_SCROLL_HZ": "120",
+      "NAVIGATION_AUTOQUIT": "1",
+      "NAVIGATION_SWITCHES": "40",
+      "NAVIGATION_SOAK_SECONDS": "1260",
+      "NAVIGATION_RECREATE": "0",
+      "NAVIGATION_SCROLL_REVERSAL": "0",
+      "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+      "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+      "NAVIGATION_FULL_DISCLOSURE": "0",
+      "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+      "NAVIGATION_OUTPUT_LINES": "2400",
+      "NAVIGATION_OUTPUT_SHAPE": "lines"
+    },
+    "passed": true,
+    "phases": [
+      {
+        "phase": "cold-down",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 159.84375
+      },
+      {
+        "phase": "revisit-up",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 39,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 164.125
+      },
+      {
+        "phase": "hot-local",
+        "markdown_parse": {
+          "count": 0,
+          "ms": 0
+        },
+        "markdown_parse_reused": 0,
+        "missing_visible_row_samples": 0,
+        "document_height": 96025,
+        "resident_mb": 164.109375
+      }
+    ]
+  }
+]

@@ -40,6 +40,14 @@ struct KimiActivityView: View {
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
         let grouped = entry.messages.count > 1 || items.isEmpty || narrative != nil
+        #if TRANSCRIPT_CHECKS
+        // Occurrences only, and a declaration because ViewBuilder rejects bare
+        // expression statements. Records that a collapsed activity row still walks
+        // every message and every tool before laying out its header.
+        let _ = NavigationRenderMetrics.count("activity_row_body")
+        let _ = NavigationRenderMetrics.count("activity_row_message_scan", by: entry.messages.count)
+        let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
+        #endif
         VStack(alignment: .leading, spacing: 2) {
             if grouped {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
@@ -85,37 +93,59 @@ struct KimiToolCard: View {
     let tool: VisibleTool
     var onExpand: (() -> Void)? = nil
     @RememberedExpansion("expanded") private var expanded
-    private var summary: String {
-        ToolPresentation.compactTarget(tool)
-    }
-    private var label: String {
+    // A failed tool's structured output is serialized by exitCodeReport.
+    // Resolve it once per body evaluation and share it across the label.
+    private func label(exitReport: Int?) -> String {
         switch tool.status {
         case .running: return "Running"
         case .succeeded: return "Completed"
         case .returned: return "Returned"
         case .failed:
-            if let code = tool.exitCodeReport { return "Exit code \(code)" }
+            if let code = exitReport { return "Exit code \(code)" }
             return "Failed"
         case .missingResult: return "Result not received"
         case .disconnected: return "Disconnected · Status unknown"
         case .awaitingApproval: return "Needs approval"
         }
     }
-    private var symbol: String {
+    private func symbol(exitReport: Int?) -> String {
         switch tool.status {
         case .running: return "circle.dotted"
         case .succeeded: return "checkmark"
         case .returned: return "tray"
-        case .failed: return tool.exitCodeReport != nil ? "apple.terminal" : "exclamationmark.circle"
+        case .failed: return exitReport != nil ? "apple.terminal" : "exclamationmark.circle"
         case .missingResult, .disconnected: return "questionmark.circle"
         case .awaitingApproval: return "hand.raised"
         }
     }
-    private var attention: Bool {
-        ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) && tool.exitCodeReport == nil) || !tool.hasCall
+    private func attention(exitReport: Int?) -> Bool {
+        ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) && exitReport == nil) || !tool.hasCall
     }
-    private var statusLabel: String { tool.hasCall ? label : "\(label) · Call record missing" }
+    private func resolvedExitReport() -> Int? {
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count("tool_card_exit_report_read")
+        if tool.status == .failed, let output = tool.output {
+            NavigationRenderMetrics.count("tool_card_exit_report_output_display")
+            if case .string = output {} else {
+                NavigationRenderMetrics.count("tool_card_exit_report_json_encode")
+            }
+        }
+        let start = CACurrentMediaTime()
+        defer { NavigationRenderMetrics.record("tool_card_exit_report", since: start) }
+        #endif
+        return tool.exitCodeReport
+    }
     var body: some View {
+        let exitReport = resolvedExitReport()
+        let summary = ToolPresentation.compactTarget(tool)
+        // Named apart from the method so the local never shadows its own initializer.
+        let showsAttention = attention(exitReport: exitReport)
+        let plainLabel = label(exitReport: exitReport)
+        let statusLabel = tool.hasCall ? plainLabel : "\(plainLabel) · Call record missing"
+        #if TRANSCRIPT_CHECKS
+        // A declaration, not an expression statement: ViewBuilder rejects the latter.
+        let _ = NavigationRenderMetrics.count("tool_card_body")
+        #endif
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
                 VStack(alignment: .leading, spacing: 10) {
@@ -134,11 +164,11 @@ struct KimiToolCard: View {
                 Text(ToolPresentation.action(tool.name)).font(.system(size: 12)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
                 Spacer(minLength: 0)
-                if attention || tool.status == .running || tool.exitCodeReport != nil {
-                    Image(systemName: symbol).font(.system(size: 11)).accessibilityHidden(true)
+                if showsAttention || tool.status == .running || exitReport != nil {
+                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: 11)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: 11)).fixedSize()
                 }
-            }.font(.system(size: 12)).foregroundStyle(attention ? Color.orange : Color.secondary)
+            }.font(.system(size: 12)).foregroundStyle(showsAttention ? Color.orange : Color.secondary)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
                 .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
