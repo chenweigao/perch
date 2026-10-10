@@ -27,8 +27,11 @@ public struct ConversationFindOptions: Equatable, Sendable {
 
 public struct ConversationFindResult: Equatable {
     public let hits: [ConversationSearchHit]
-    /// Invalid regular expression input; the last valid matches stay on screen.
+    /// Invalid regular expression input; the find bar keeps its last matches.
     public let queryError: String?
+    public init(hits: [ConversationSearchHit], queryError: String?) {
+        self.hits = hits; self.queryError = queryError
+    }
     public static let empty = ConversationFindResult(hits: [], queryError: nil)
 }
 
@@ -56,18 +59,19 @@ public final class ConversationSearch {
                 return ConversationFindResult(hits: [], queryError: L("无效正则表达式"))
             }
         }
-        let entries_ = ConversationTimelineEntry.make(messages, isRunning: running)
+        let timeline = ConversationTimelineEntry.make(messages, isRunning: running)
         var hits: [ConversationSearchHit] = []
-        for entry in entries_ {
-            let classified = Self.classify(entry)
-            guard options.role == .all || classified.role == options.role else { continue }
+        for entry in timeline {
+            let role = Self.role(of: entry)
+            guard options.role == .all || role == options.role else { continue }
+            let sources = Self.sources(of: entry, role: role)
             let cached: Entry
-            if let previous = entries[entry.id], previous.sources == classified.sources {
+            if let previous = entries[entry.id], previous.sources == sources {
                 cached = previous
             } else {
-                cached = Entry(sources: classified.sources,
-                               text: classified.sources.map { Self.renderedText(ReplyDocument.parse($0)) }.joined(separator: "\n") as NSString,
-                               role: classified.role)
+                cached = Entry(sources: sources,
+                               text: sources.map { Self.renderedText(ReplyDocument.parse($0)) }.joined(separator: "\n") as NSString,
+                               role: role)
             }
             next[entry.id] = cached
             let text = cached.text
@@ -94,21 +98,23 @@ public final class ConversationSearch {
 
     /// User prompts, tool activity and assistant text search separately. Tool
     /// parts count only on activity rows — an empty-output row holds the same
-    /// message and must not double the hits.
-    private static func classify(_ entry: ConversationTimelineEntry) -> (role: ConversationFindOptions.Role, sources: [String]) {
-        let textSources = entry.messages.flatMap(\.content).filter { $0.type == "text" }.compactMap(\.visibleText)
-        if entry.messages.contains(where: { $0.isUserPrompt }) { return (.user, textSources) }
+    /// message and must not double the hits. Sources build only after the role
+    /// filter passes, so a user-only search never formats tool JSON.
+    private static func role(of entry: ConversationTimelineEntry) -> ConversationFindOptions.Role {
+        if entry.messages.contains(where: { $0.isUserPrompt }) { return .user }
         let parts = entry.messages.flatMap(\.content)
         let hasToolActivity = (entry.presentation == .activity || entry.presentation == .progress)
             && parts.contains { $0.type == "tool_use" || $0.type == "tool_result" }
-        if hasToolActivity {
-            var sources = textSources
-            sources += parts.filter { $0.type == "tool_use" || $0.type == "tool_result" }
-                .flatMap { [$0.toolName, $0.name, $0.text, $0.input?.display, $0.output?.display] }
-                .compactMap { $0?.isEmpty == false ? $0 : nil }
-            return (.tool, sources)
-        }
-        return (.assistant, textSources)
+        return hasToolActivity ? .tool : .assistant
+    }
+    private static func sources(of entry: ConversationTimelineEntry, role: ConversationFindOptions.Role) -> [String] {
+        let parts = entry.messages.flatMap(\.content)
+        var sources = parts.filter { $0.type == "text" }.compactMap(\.visibleText)
+        guard role == .tool else { return sources }
+        sources += parts.filter { $0.type == "tool_use" || $0.type == "tool_result" }
+            .flatMap { [$0.toolName, $0.name, $0.text, $0.input?.display, $0.output?.display] }
+            .compactMap { $0?.isEmpty == false ? $0 : nil }
+        return sources
     }
 
     private static func renderedText(_ blocks: [ReplyBlock]) -> String {

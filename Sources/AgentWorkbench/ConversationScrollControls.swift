@@ -160,7 +160,8 @@ struct ConversationScrollView<Content: View>: View {
 
 /// Separate observation keeps hover and current-turn changes out of the
 /// transcript's SwiftUI graph. Only the native document supplies positions.
-final class ConversationTurnNavigation: ObservableObject {    struct Snapshot: Equatable {
+final class ConversationTurnNavigation: ObservableObject {
+    struct Snapshot: Equatable {
         var session = ""
         var turns: [ConversationTurnSummary] = []
         var current = 0

@@ -97,7 +97,9 @@ struct ConversationFindBar: View {
     }
     private func updateSearch(preservingSelection: Bool = true) {
         let current = preservingSelection && hits.indices.contains(index) ? hits[index].id : nil
-        result = search.hits(in: messages, query: query, running: running, options: options)
+        let next = search.hits(in: messages, query: query, running: running, options: options)
+        // An invalid regex keeps the last valid matches next to its error.
+        result = next.queryError.map { ConversationFindResult(hits: result.hits, queryError: $0) } ?? next
         // Loading older messages inserts matches before the current one.
         // Keep the user's match selected instead of changing it by array index.
         index = current.flatMap { id in hits.firstIndex { $0.id == id } } ?? min(index, max(0, hits.count - 1))

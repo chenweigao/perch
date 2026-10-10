@@ -59,15 +59,6 @@ public final class DraftPasteStore: @unchecked Sendable {
         return stats
     }
 
-    /// Removing a token from the draft orphans its file; pruning runs at save
-    /// time against the drafts the caller knows still reference pastes.
-    public func prune(keeping ids: Set<String>) {
-        guard let files = try? FileManager.default.contentsOfDirectory(atPath: directory.path) else { return }
-        for name in files where name.hasSuffix(".txt") && !ids.contains(String(name.dropLast(4))) {
-            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
-        }
-    }
-
     public func expand(_ draft: String) -> DraftPasteExpansion {
         var result = draft as NSString
         var missing: [String] = []

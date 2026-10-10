@@ -100,8 +100,6 @@ func checkWorkflow() throws {
     let secondPaste = try pasteStore.save("第二段")
     precondition(pasteStore.expand("\(DraftPaste.token(id: pasteID))|\(DraftPaste.token(id: secondPaste))").text == "\(longPaste)|第二段")
     precondition(DraftPaste.references(in: pasteDraft).map(\.id) == [pasteID])
-    pasteStore.prune(keeping: [pasteID])
-    precondition(pasteStore.text(for: pasteID) == longPaste && pasteStore.text(for: secondPaste) == nil)
 
     let reference = ConversationFileReference(text: "src/foo.swift:42:7")!
     precondition(reference.path == "src/foo.swift" && reference.line == 42)
