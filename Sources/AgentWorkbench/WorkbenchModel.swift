@@ -225,6 +225,10 @@ final class WorkbenchModel {
                 self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
             }
         })
+        observers.append(NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { [weak self] notice in
+            guard let payload = notice.object as? ConversationActionPayload else { return }
+            MainActor.assumeIsolated { self?.handleConversationAction(payload) }
+        })
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -944,6 +948,41 @@ final class WorkbenchModel {
             native.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
         }
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+    }
+    /// Message-level transcript actions (quote / edit-and-resend / resend /
+    /// regenerate) route to the connection owning the payload's session.
+    func handleConversationAction(_ payload: ConversationActionPayload) {
+        let context = payload.context
+        let kimi = kimiEnvironments[context.hostID]
+        let native = nativeEnvironments[context.hostID]
+        let id = context.sessionID
+        let isKimi = context.kind == .kimi
+        switch payload.action {
+        case .quote(let text):
+            let quoted = text.split(separator: "\n", omittingEmptySubsequences: false)
+                .map { "> " + $0 }.joined(separator: "\n")
+            appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: quoted + "\n\n")
+        case .editAndResend(let text):
+            appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: text)
+        case .resend(let text):
+            if isKimi { kimi?.resend(text, for: id) } else { native?.resend(text, for: id) }
+        case .regenerate(let messageID):
+            let failure = isKimi ? kimi?.resendPrompt(before: messageID, for: id)
+                                 : native?.resendPrompt(before: messageID, for: id)
+            if let failure {
+                if isKimi { kimi?.actionError = failure } else { native?.actionError = failure }
+            }
+        }
+        DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+    }
+    private func appendToDraft(kimi: KimiConnection?, native: NativeAgentConnection?, isKimi: Bool, id: String, text: String) {
+        if isKimi, let kimi {
+            let existing = kimi.drafts[id] ?? ""
+            kimi.drafts[id] = existing.isEmpty ? text : existing + "\n\n" + text
+        } else if !isKimi, let native {
+            let existing = native.drafts[id] ?? ""
+            native.drafts[id] = existing.isEmpty ? text : existing + "\n\n" + text
+        }
     }
     /// Review feedback is staged in the same task; it never sends automatically.
     func appendReviewContext(_ text: String, to reference: SessionReference) {

@@ -821,6 +821,37 @@ final class KimiConnection {
     }
     func editQueued(_ messageID: String, text: String) -> Bool { queue.edit(messageID, text: text) }
     func removeQueued(_ messageID: String) { _ = queue.remove(messageID) }
+
+    /// Re-sends text as a new prompt. An in-progress draft is never replaced:
+    /// the resend queues behind it instead.
+    func resend(_ text: String, for id: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if (drafts[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            drafts[id] = text
+            if online { Task { await sendPrompt(for: id, mode: .steer) } }
+            else { queueOffline(for: id, mode: .steer) }
+            return
+        }
+        let promptID = "awb_\(UUID().uuidString)"
+        guard queue.enqueue(text, for: reference(for: id), mode: .steer, id: promptID) != nil else { return }
+        PromptHistory.record(text, for: id, into: &history)
+        if online { deliverQueued(id) }
+    }
+
+    /// Regeneration re-sends the user prompt that preceded the given message.
+    func resendPrompt(before messageID: String, for id: String) -> String? {
+        guard conversation?.snapshot.session.id == id, let messages = conversation?.displayMessages,
+              let index = messages.firstIndex(where: { $0.id == messageID }),
+              let user = messages[..<index].last(where: { $0.isUserPrompt }) else {
+            return L("找不到这条回复对应的提问，无法重新生成。")
+        }
+        let text = user.content.filter { $0.type == "text" && !$0.isRuntimeContext }
+            .map { $0.skillContextSplit?.prefix ?? $0.text ?? "" }.joined(separator: "\n\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return L("这条回复对应的提问没有文字内容。") }
+        resend(text, for: id)
+        return nil
+    }
     /// A newly created session can accept a prompt before its display snapshot loads.
     /// Keep the destination fixed even when catalog updates restore another tab.
     func sendPrompt(for id: String, mode: DeliveryMode = .steer) async {

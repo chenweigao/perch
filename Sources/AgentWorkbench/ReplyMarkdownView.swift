@@ -400,6 +400,7 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setSelectedRange(NSRange(location: 0, length: 0))
         view.update(NSAttributedString(string: ""))
         view.isConversationBodyText = false
+        view.extraMenuItems = nil
         if recycled.count < 64 { recycled.append(view) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -488,6 +489,9 @@ final class NativeUserMessageView: NSView {
     private var texts: [ReplyTextView] = []
     private let links = SelectableReplyText.Coordinator()
     private let bubbleBackground = NSView()
+    /// Row identity for message-level menu actions; set by the hosting controller.
+    var actionContext: ConversationActionContext?
+    var sourceText = ""
     override var isFlipped: Bool { true }
 
     override init(frame frameRect: NSRect) {
@@ -507,6 +511,8 @@ final class NativeUserMessageView: NSView {
     static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
     static func recycle(_ view: NativeUserMessageView) {
         view.removeFromSuperview()
+        view.actionContext = nil
+        view.sourceText = ""
         for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
         // A giant prompt must not leave an unbounded number of text containers
         // in the row pool after it is no longer visible.
@@ -526,10 +532,18 @@ final class NativeUserMessageView: NSView {
         while texts.count < content.count {
             let text = SelectableReplyText.acquire(delegate: links)
             text.isConversationBodyText = true
+            text.extraMenuItems = { [weak self] in
+                guard let self, let context = self.actionContext, !self.sourceText.isEmpty else { return [] }
+                return context.userMenuItems(copyText: self.sourceText, sourceText: self.sourceText)
+            }
             texts.append(text); addSubview(text)
         }
         for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
         needsDisplay = true
+    }
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let actionContext, !sourceText.isEmpty else { return nil }
+        return actionContext.userMenu(copyText: sourceText, sourceText: sourceText)
     }
     private func measurements(width: CGFloat) -> (bubbleWidth: CGFloat, sizes: [CGSize]) {
         let contentPadding = UserMessageStyle.horizontalPadding * 2
@@ -563,8 +577,26 @@ final class NativeUserMessageView: NSView {
 private struct NativeAssistantActions: View {
     var source: String?
     var enabled = true
+    var context: ConversationActionContext?
+    var messageID: String?
     var body: some View {
-        if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
+        HStack(spacing: 2) {
+            if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
+            if let context, let source {
+                Button { context.post(.quote(source)) } label: {
+                    Image(systemName: "quote.opening").font(.system(size: 11))
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
+                    .accessibilityLabel("引用到输入框")
+                if let messageID, !messageID.isEmpty {
+                    Button { context.post(.regenerate(before: messageID)) } label: {
+                        Image(systemName: "arrow.clockwise").font(.system(size: 11))
+                            .frame(width: 24, height: 24).contentShape(Rectangle())
+                    }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
+                        .accessibilityLabel("重新生成")
+                }
+            }
+        }
     }
 }
 
@@ -598,11 +630,13 @@ final class NativeAssistantMessageView: NSView {
         view.stack.teardown()
         if recycled.count < 16 { recycled.append(view) }
     }
-    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true) {
+    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true,
+                actionContext: ConversationActionContext? = nil, messageID: String? = nil) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         stack.update(blocks)
-        if actions.rootView.source != source || actions.rootView.enabled != enabled {
-            actions.rootView = NativeAssistantActions(source: source, enabled: enabled)
+        let next = actions.rootView
+        if next.source != source || next.enabled != enabled || next.context != actionContext || next.messageID != messageID {
+            actions.rootView = NativeAssistantActions(source: source, enabled: enabled, context: actionContext, messageID: messageID)
         }
     }
     func measure(width: CGFloat) -> CGSize {
@@ -613,7 +647,7 @@ final class NativeAssistantMessageView: NSView {
         let stackFrame = CGRect(x: 0, y: 0, width: width, height: content)
         if stack.frame != stackFrame { stack.frame = stackFrame }
         stack.place(width: width)
-        let frame = CGRect(x: 0, y: content + 12, width: 24, height: 24)
+        let frame = CGRect(x: 0, y: content + 12, width: 76, height: 24)
         if actions.frame != frame { actions.frame = frame }
     }
     #if TRANSCRIPT_CHECKS
@@ -628,6 +662,16 @@ final class NativeAssistantMessageView: NSView {
 
 final class ReplyTextView: NSTextView {
     var isConversationBodyText = false
+    /// Extra context-menu items (message-level actions) supplied by the row.
+    var extraMenuItems: (() -> [NSMenuItem])?
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = super.menu(for: event) ?? NSMenu()
+        if let extra = extraMenuItems?(), !extra.isEmpty {
+            if !menu.items.isEmpty { menu.addItem(.separator()) }
+            extra.forEach { menu.addItem($0) }
+        }
+        return menu
+    }
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
     private var measurements: [(width: CGFloat, size: CGSize)] = []

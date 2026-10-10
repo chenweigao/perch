@@ -352,6 +352,8 @@ private struct KimiTimeline: View {
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
                                            allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
                                            waitsForInitialPosition: true)
+                        .environment(\.conversationActionContext,
+                                     ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: c.snapshot.session.id))
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         VStack(alignment: .leading, spacing: 8) {
                             PendingMessageContent(text: prompt.text, status: prompt.label)

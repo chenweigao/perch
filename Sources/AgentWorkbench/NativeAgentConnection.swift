@@ -611,6 +611,36 @@ final class NativeAgentConnection {
         drafts[id] = existing.isEmpty ? message.text : existing + "\n\n" + message.text
         drainQueues()
     }
+
+    /// Re-sends text as a new prompt. An in-progress draft is never replaced:
+    /// the resend queues behind it instead.
+    func resend(_ text: String, for id: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, reference(id) != nil else { return }
+        if selectedID == id, (drafts[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            drafts[id] = text
+            send(mode: modes(for: id).first ?? .now)
+            return
+        }
+        guard let reference = reference(id),
+              queue.enqueue(text, for: reference, mode: .nextTurn) != nil else { return }
+        PromptHistory.record(text, for: id, into: &history)
+        deliver(id)
+    }
+
+    /// Regeneration re-sends the user prompt that preceded the given message.
+    func resendPrompt(before messageID: String, for id: String) -> String? {
+        guard snapshot?.id == id, let messages = snapshot?.messages,
+              let index = messages.firstIndex(where: { $0.id == messageID }),
+              let user = messages[..<index].last(where: { $0.isUserPrompt }) else {
+            return L("找不到这条回复对应的提问，无法重新生成。")
+        }
+        let text = user.content.filter { $0.type == "text" && !$0.isRuntimeContext }
+            .map { $0.skillContextSplit?.prefix ?? $0.text ?? "" }.joined(separator: "\n\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return L("这条回复对应的提问没有文字内容。") }
+        resend(text, for: id)
+        return nil
+    }
     /// Runs a slash command instead of sending it to the model. Only `compact` has
     /// its own RPC verb; the runtime has no generic command-invocation command, so
     /// anything else is refused rather than quietly sent as a prompt.
