@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import QuartzCore
 import WorkbenchCore
@@ -7,6 +8,11 @@ extension NavigationRunner {
     /// Mount the production card; no synthetic seven-read model or layout oracle.
     func toolCardContracts() async throws -> [String: Any] {
         ConversationDisclosureFixture.enabled = true
+        // AppKit builds the accessibility subtree lazily and only once the process
+        // opts in; CI runners have no assistive client attached, so without this the
+        // label walk below sees an empty tree there (local runs already materialize it).
+        let ownAX = AXUIElementCreateApplication(getpid())
+        AXUIElementSetAttributeValue(ownAX, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
         defer {
             ConversationDisclosureFixture.enabled = false
             ConversationDisclosureFixture.bindings.removeAll()
