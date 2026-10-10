@@ -1012,7 +1012,8 @@ final class WorkbenchModel {
     }
     /// Review feedback is staged in the same task; it never sends automatically.
     func appendReviewContext(_ text: String, to reference: SessionReference) {
-        guard selectedReference == reference, canQuoteSelection else { return }        let id = reference.terminalID
+        guard selectedReference == reference, canQuoteSelection else { return }
+        let id = reference.terminalID
         if reference.kind == .kimi {
             let existing = kimi.drafts[id] ?? ""
             kimi.drafts[id] = existing + (existing.isEmpty ? "" : "\n\n") + text + "\n\n"
