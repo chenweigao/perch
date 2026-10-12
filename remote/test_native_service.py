@@ -293,6 +293,18 @@ class ProtocolTests(unittest.TestCase):
         message=broker.normalize({'role':'user','content':[
             {'type':'image','source':{'type':'base64','media_type':'image/png','data':'x'}}]},'img')
         self.assertEqual(message['content'],[{'type':'text','text':'[图片]'}])
+    def test_claude_result_reports_context_usage(self):
+        s=self.session('claude')
+        s.event({'type':'result','session_id':'sess','usage':{'input_tokens':120,
+            'cache_read_input_tokens':8000,'cache_creation_input_tokens':200,'output_tokens':50},
+            'modelUsage':{'claude-opus-4-7':{'contextWindow':200000}}})
+        ctx=s.state['context']
+        self.assertEqual((ctx['tokens'],ctx['limit']),(8320,200000))
+        self.assertTrue(ctx['reportedAt'])
+        self.assertEqual(s.summary()['context']['tokens'],8320)
+        # A zeroed (crashed) result must not overwrite a real reading.
+        s.event({'type':'result','session_id':'sess','usage':{},'modelUsage':{}})
+        self.assertEqual(s.state['context']['tokens'],8320)
     def test_claude_tool_link_and_stream(self):
         s=self.session('claude')
         s.event({'type':'stream_event','event':{'type':'message_start'}})
