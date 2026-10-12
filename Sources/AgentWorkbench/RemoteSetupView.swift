@@ -90,12 +90,9 @@ struct AddHostSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Label(setup.destination, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.secondary)
             Text("选择要使用的 Agent。只检查所选 Agent 所需的环境。").foregroundStyle(.secondary)
-            HStack(spacing: 8) {
-                AgentMark(kind: setup.provider, size: 16)
-                Picker("Agent", selection: $setup.provider) {
-                    ForEach(providers, id: \.self) { kind in Text(kind.label).tag(kind) }
-                }.pickerStyle(.segmented).disabled(setup.busy)
-            }
+            Picker("Agent", selection: $setup.provider) {
+                ForEach(providers, id: \.self) { kind in Text(kind.label).tag(kind) }
+            }.pickerStyle(.segmented).disabled(setup.busy)
             if setup.provider == .kimi {
                 DisclosureGroup("高级设置", isExpanded: $advanced) {
                     VStack(alignment: .leading, spacing: 10) {
