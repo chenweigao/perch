@@ -15,11 +15,14 @@ struct LocalAgentSetupSheet: View {
                 .font(.callout).foregroundStyle(.secondary)
             ForEach(LocalAgentDiscovery.agents, id: \.self) { kind in
                 HStack(alignment: .top, spacing: 12) {
-                    if LocalAgentDiscovery.supported.contains(kind) {
-                        Toggle(kind.label, isOn: Binding(get: { selected.contains(kind) }, set: {
-                            if $0 { selected.insert(kind) } else { selected.remove(kind) }
-                        })).frame(width: 100, alignment: .leading)
-                    } else { Text(kind.label).frame(width: 100, alignment: .leading) }
+                    HStack(spacing: 6) {
+                        AgentMark(kind: kind, size: 15)
+                        if LocalAgentDiscovery.supported.contains(kind) {
+                            Toggle(kind.label, isOn: Binding(get: { selected.contains(kind) }, set: {
+                                if $0 { selected.insert(kind) } else { selected.remove(kind) }
+                            }))
+                        } else { Text(kind.label) }
+                    }.frame(width: 124, alignment: .leading)
                     VStack(alignment: .leading, spacing: 4) {
                         switch model.localAgents[kind] {
                         case .found(let path, let version):

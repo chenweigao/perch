@@ -108,13 +108,19 @@ struct NewTaskView: View {
 
     private var agentMenu: some View {
         Menu {
-            ForEach(availableProviders, id: \.self) { kind in
-                Button { selectProvider(kind) } label: {
-                    if kind == provider { Label(kind.label, systemImage: "checkmark") } else { Text(kind.label) }
+            Picker("选择 Agent", selection: Binding(get: { provider }, set: { selectProvider($0) })) {
+                ForEach(availableProviders, id: \.self) { kind in
+                    Label { Text(kind.label) } icon: { AgentMarkMenuImage.image(for: kind) }.tag(kind)
+                }
+            }.pickerStyle(.inline)
+        } label: {
+            DraftMenuLabel {
+                HStack(spacing: 6) {
+                    // Menu labels flatten Canvas content; use the cached image here.
+                    AgentMarkMenuImage.image(for: provider, size: 13)
+                    Text(provider.label)
                 }
             }
-        } label: {
-            DraftMenuLabel { Text(provider.label) }
         }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
             .accessibilityLabel("选择 Agent")
     }

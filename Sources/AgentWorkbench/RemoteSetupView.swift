@@ -90,9 +90,12 @@ struct AddHostSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Label(setup.destination, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.secondary)
             Text("选择要使用的 Agent。只检查所选 Agent 所需的环境。").foregroundStyle(.secondary)
-            Picker("Agent", selection: $setup.provider) {
-                ForEach(providers, id: \.self) { kind in Text(kind.label).tag(kind) }
-            }.pickerStyle(.segmented).disabled(setup.busy)
+            HStack(spacing: 8) {
+                AgentMark(kind: setup.provider, size: 16)
+                Picker("Agent", selection: $setup.provider) {
+                    ForEach(providers, id: \.self) { kind in Text(kind.label).tag(kind) }
+                }.pickerStyle(.segmented).disabled(setup.busy)
+            }
             if setup.provider == .kimi {
                 DisclosureGroup("高级设置", isExpanded: $advanced) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -106,9 +109,14 @@ struct AddHostSheet: View {
             if let original = setup.original, original.enabledAgents.contains(where: { $0 != setup.provider }) {
                 DisclosureGroup("其他自动连接的 Agent") {
                     ForEach(original.enabledAgents.filter { $0 != setup.provider }, id: \.self) { kind in
-                        Toggle(kind.label, isOn: Binding(get: { setup.enabledAgents.contains(kind) }, set: { enabled in
+                        Toggle(isOn: Binding(get: { setup.enabledAgents.contains(kind) }, set: { enabled in
                             if enabled { setup.enabledAgents.insert(kind) } else { setup.enabledAgents.remove(kind) }
-                        }))
+                        })) {
+                            HStack(spacing: 6) {
+                                AgentMark(kind: kind, size: 14)
+                                Text(kind.label)
+                            }
+                        }
                     }
                 }.font(.callout).disabled(setup.busy)
             }
@@ -194,7 +202,10 @@ struct AddHostSheet: View {
     private var project: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Agent 已连接", systemImage: "checkmark.circle.fill").font(.headline)
-            Text(setup.host.name + " · " + setup.provider.label).foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                AgentMark(kind: setup.provider, size: 14)
+                Text(setup.host.name + " · " + setup.provider.label)
+            }.foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 8) {
                 Text("远端项目目录").font(.callout.weight(.medium))
                 HStack {

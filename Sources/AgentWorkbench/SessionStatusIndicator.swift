@@ -22,7 +22,7 @@ struct SessionStatusIndicator: View {
             case .review:
                 Circle().fill(.blue).frame(width: 6, height: 6)
             case .other:
-                Image(systemName: item.reference.kind.symbol).font(.system(size: 11)).foregroundStyle(.secondary)
+                AgentMark(kind: item.reference.kind, size: 12)
             }
         }
     }
