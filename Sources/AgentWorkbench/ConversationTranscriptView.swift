@@ -1333,6 +1333,21 @@ private final class ConversationEntryController: NSViewController {
             NavigationRenderMetrics.record("row_view_" + diagnosticKind, since: start)
         }
         #endif
+        #if TRANSCRIPT_CHECKS
+        let directUserRoot = ProcessInfo.processInfo.environment["NAVIGATION_DIRECT_USER_ROOT"] != "0"
+        #else
+        let directUserRoot = true
+        #endif
+        // Attaching an already populated text subtree to another container makes
+        // AppKit invalidate its layout again. Native user rows can own the frame.
+        if directUserRoot, let nativeUser {
+            nativeUser.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
+            nativeUser.wantsLayer = true
+            nativeUser.layer?.masksToBounds = true
+            nativeUser.widthChanged = { [weak self] in self?.committedWidthChanged() }
+            view = nativeUser
+            return
+        }
         let container = ConversationEntryContainer()
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
         container.wantsLayer = true
@@ -1364,7 +1379,7 @@ private final class ConversationEntryController: NSViewController {
             if frameChanged { host.view.frame = hostFrame }
         }
         if let nativeUser {
-            let frameChanged = nativeUser.frame != hostFrame
+            let frameChanged = nativeUser !== view && nativeUser.frame != hostFrame
             #if TRANSCRIPT_CHECKS
             NavigationRenderMetrics.count(frameChanged ? "child_frame_write" : "child_frame_unchanged")
             #endif
@@ -1508,7 +1523,23 @@ private final class ConversationEntryController: NSViewController {
             }
             markdownPreparation = fallbackPreparation(messageID: user.messageID, source: user.source, blocks: user.value.blocks)
         }
-        if let nativeUser { NativeUserMessageView.recycle(nativeUser); self.nativeUser = nil }
+        if let nativeUser {
+            if isViewLoaded, view === nativeUser {
+                // A same-ID edit may need SwiftUI or the assistant renderer.
+                // Replace the row in place before recycling its former root.
+                let container = ConversationEntryContainer()
+                container.identifier = nativeUser.identifier
+                container.frame = nativeUser.frame
+                container.wantsLayer = true
+                container.layer?.masksToBounds = true
+                nativeUser.widthChanged = nil
+                nativeUser.superview?.replaceSubview(nativeUser, with: container)
+                container.widthChanged = { [weak self] in self?.committedWidthChanged() }
+                view = container
+            }
+            NativeUserMessageView.recycle(nativeUser)
+            self.nativeUser = nil
+        }
         if let assistant = nativeAssistantPreparation() {
             if let blocks = assistant.value.content {
                 if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }

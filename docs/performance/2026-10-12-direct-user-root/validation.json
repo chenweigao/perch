@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-10-12T12:45:05.944462+00:00",
+  "source_commit": "c2d330e5eeed8456f57e6db6cb385da6b2f81879",
+  "production_build": {
+    "command": "bash scripts/build.sh",
+    "exit_code": 0,
+    "binary_sha256": "1e33fabd9d0e335e25cb5a5265aa985653d28dd08d347770087342a8f80a745b"
+  },
+  "core_checks": {
+    "command": "swift run WorkbenchChecks",
+    "exit_code": 0,
+    "pass_lines": 49,
+    "skips": [
+      "SKIP: set WORKBENCH_LIVE_HOST for the read-only SSH integration check"
+    ]
+  },
+  "signature": {
+    "command": "codesign --verify --deep --strict build/Perch.app",
+    "exit_code": 0
+  },
+  "installed_skills": [
+    {
+      "name": "axiom-macos",
+      "path": "$CODEX_HOME/skills/axiom-macos",
+      "validation": "Skill is valid!",
+      "skill_sha256": "5025d31c19a2b9c278c83c72a49a9c015914c9522ad55a3b778fb8426808b937"
+    },
+    {
+      "name": "axiom-performance",
+      "path": "$CODEX_HOME/skills/axiom-performance",
+      "validation": "Skill is valid!",
+      "skill_sha256": "a969757b6e9864fe00219a5413fccafb51c921cd223c8cd4cef4d41714c2ff4d"
+    },
+    {
+      "name": "swift-concurrency",
+      "path": "$CODEX_HOME/skills/swift-concurrency",
+      "validation": "Skill is valid!",
+      "skill_sha256": "8c667b2ff988251c7c291abe046b77d7b8fcfbe3b5ed36961e25e224b1ead491"
+    }
+  ],
+  "not_verified": [
+    "physical trackpad on user machine",
+    "compositor presentation frames",
+    "live SSH"
+  ],
+  "published": false,
+  "deployed": false
+}

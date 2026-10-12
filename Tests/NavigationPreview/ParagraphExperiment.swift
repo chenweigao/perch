@@ -267,6 +267,86 @@ extension NavigationRunner {
         return report
     }
 
+    /// Exercise mounted user rows across width, content and renderer changes.
+    func nativeUserControllerContracts() async throws -> [String: Any] {
+        func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+        func message(_ source: String, id: String = "user-contract", role: String = "user") throws -> KimiMessage {
+            let raw: [String: Any] = ["id": id, "role": role, "created_at": "fixture",
+                                     "content": [["type": "text", "text": source]]]
+            return try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: raw))
+        }
+        let prefix = try message("Earlier prompt", id: "earlier-user")
+        func root(_ source: String, width: CGFloat = 500, dark: Bool = false,
+                  role: String = "user", session: String = "user-controller-contract") throws -> some View {
+            ConversationTranscript(messages: [prefix, try message(source, role: role)], sessionId: session, isRunning: false)
+                .frame(width: width).environment(\.colorScheme, dark ? .dark : .light)
+        }
+        let source = "Alpha 中文 👩🏽‍💻 é " + String(repeating: "wrapping text 中文 ", count: 16)
+        let host = NSHostingView(rootView: try root(source))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 1000), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = host; window.orderFront(nil)
+        defer { window.close() }
+        func settle() async throws {
+            for _ in 0..<12 {
+                try await Task.sleep(for: .milliseconds(2))
+                host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+            }
+        }
+        func target() -> NativeUserMessageView? {
+            descendants(host).compactMap { $0 as? NativeUserMessageView }.first { $0.sourceText != "Earlier prompt" }
+        }
+        func texts(_ view: NSView) -> [ReplyTextView] { descendants(view).compactMap { $0 as? ReplyTextView } }
+        try await settle()
+        guard let initial = target(), let text = texts(initial).first else { throw NavigationError("Missing mounted user row") }
+        let selection = (text.string as NSString).range(of: "中文 👩🏽‍💻 é")
+        text.setSelectedRange(selection)
+        let initialY = initial.convert(initial.bounds, to: host).minY
+        let prefixY = descendants(host).compactMap { $0 as? NativeUserMessageView }
+            .first { $0.sourceText == "Earlier prompt" }.map { $0.convert($0.bounds, to: host).minY }
+        guard let prefixY, abs(initialY - prefixY) > 20 else { throw NavigationError("User rows overlap") }
+        host.rootView = try root(source + " appended")
+        try await settle()
+        guard target() === initial, texts(initial).first === text, text.selectedRange() == selection else {
+            throw NavigationError("User append lost row, text identity or selection")
+        }
+        let wideHeight = initial.bounds.height
+        window.setContentSize(NSSize(width: 340, height: 1000))
+        host.rootView = try root(source + " appended", width: 340, dark: true)
+        try await settle()
+        guard target() === initial, initial.bounds.width == 340, initial.bounds.height > wideHeight,
+              initial.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua,
+              texts(initial).allSatisfy({ $0.frame.maxX <= initial.bounds.width + 0.5 }) else {
+            throw NavigationError("Mounted user resize or appearance failed")
+        }
+        host.rootView = try root("Replacement 中文")
+        try await settle()
+        guard target() === initial, texts(initial).map(\.string) == ["Replacement 中文"],
+              texts(initial).allSatisfy({ $0.selectedRange().length == 0 }) else {
+            throw NavigationError("User replacement retained old text or selection")
+        }
+        host.rootView = try root("# Fallback heading 中文")
+        try await settle()
+        guard target() == nil, texts(host).contains(where: { $0.string.contains("Fallback heading 中文") }) else {
+            throw NavigationError("Native user to SwiftUI transition lost content")
+        }
+        host.rootView = try root("Back to native")
+        try await settle()
+        guard target()?.sourceText == "Back to native" else { throw NavigationError("User fallback failed to return to native") }
+        host.rootView = try root("Assistant replacement", role: "assistant")
+        try await settle()
+        guard target() == nil, descendants(host).contains(where: { $0 is NativeAssistantMessageView }),
+              texts(host).contains(where: { $0.string == "Assistant replacement" }) else {
+            throw NavigationError("User to assistant transition lost content")
+        }
+        host.rootView = try root("Another session", session: "user-controller-other")
+        try await settle()
+        guard target()?.sourceText == "Another session", !texts(host).contains(where: { $0.string.contains("replacement") }) else {
+            throw NavigationError("User session switch retained old content")
+        }
+        return ["user_controller_contracts": ["append_selection": true, "resize_appearance": true,
+                    "replacement": true, "renderer_transitions": true, "session_switch": true]]
+    }
+
     func nativeAssistantContracts() async throws -> [String: Any] {
         func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
         func buttonImage(_ view: NSView) throws -> Data {

@@ -1,0 +1,863 @@
+{
+  "after_s": 6.582046041,
+  "before_s": 8.773074083,
+  "sample_rows": 21713,
+  "main_sample_rows": 21351,
+  "all_threads_sampled_cpu_ms": 2171.3,
+  "main_sampled_cpu_ms": 2135.1,
+  "main_cpu_ms_per_second": {
+    "6": 388.3000000000198,
+    "7": 982.8000000001549,
+    "8": 764.0000000001052
+  },
+  "main_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      1925.899999999344
+    ],
+    [
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+      1265.2999999999447
+    ],
+    [
+      "NavigationRunner.fastScroll()",
+      1153.6000000000463
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      1144.9000000000542
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      1144.8000000000543
+    ],
+    [
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      1142.7000000000562
+    ],
+    [
+      "NSPerformVisuallyAtomicChange",
+      1087.0000000001069
+    ],
+    [
+      "0x19de3c234",
+      888.2000000001334
+    ],
+    [
+      "0x19de3c20c",
+      888.0000000001334
+    ],
+    [
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      851.6000000001251
+    ],
+    [
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      851.300000000125
+    ],
+    [
+      "_NSViewLayout",
+      850.7000000001249
+    ],
+    [
+      "___NSViewLayout_block_invoke",
+      848.6000000001244
+    ],
+    [
+      "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+      845.7000000001237
+    ],
+    [
+      "0x19deed890",
+      845.6000000001237
+    ],
+    [
+      "0x19deecd24",
+      845.6000000001237
+    ],
+    [
+      "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+      844.9000000001236
+    ],
+    [
+      "-[NSView layoutSubtreeIfNeeded]",
+      843.5000000001232
+    ],
+    [
+      "@objc NSHostingView.layout()",
+      834.7000000001212
+    ],
+    [
+      "NSHostingView.layout()",
+      834.7000000001212
+    ],
+    [
+      "+[NSAnimationContext runAnimationGroup:]",
+      833.600000000121
+    ],
+    [
+      "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+      833.3000000001209
+    ],
+    [
+      "closure #1 in NSHostingView.layout()",
+      833.3000000001209
+    ],
+    [
+      "closure #1 in ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+      832.0000000001206
+    ],
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      816.9000000001172
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      816.200000000117
+    ],
+    [
+      "ReceiveNextEventCommon",
+      815.3000000001168
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      813.9000000001165
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      813.5000000001164
+    ],
+    [
+      "_DPSNextEvent",
+      812.5000000001162
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      811.800000000116
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      811.2000000001159
+    ],
+    [
+      "-[NSApplication run]",
+      810.6000000001158
+    ],
+    [
+      "NSApplicationMain",
+      809.9000000001156
+    ],
+    [
+      "specialized runApp(_:)",
+      809.0000000001154
+    ],
+    [
+      "runApp<A>(_:)",
+      808.4000000001153
+    ],
+    [
+      "static App.main()",
+      807.6000000001151
+    ],
+    [
+      "main",
+      806.4000000001148
+    ],
+    [
+      "start",
+      805.4000000001146
+    ],
+    [
+      "CA::Transaction::commit()",
+      771.1000000001068
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "u_strFromUTF8WithSub",
+      140.7999999999963
+    ],
+    [
+      "objc_msgSend",
+      103.89999999999837
+    ],
+    [
+      "<deduplicated_symbol>",
+      55.00000000000051
+    ],
+    [
+      "bool ComputeIndex12or13<((anonymous namespace)::SubtableFormat12or13)0, unsigned short>((anonymous namespace)::ExtGroup const*, (anonymous namespace)::ExtGroup const*, unsigned int, unsigned short*)",
+      29.800000000000153
+    ],
+    [
+      "_xzm_free_main",
+      27.40000000000012
+    ],
+    [
+      "_xzm_xzone_malloc_tiny",
+      23.20000000000006
+    ],
+    [
+      "_platform_memmove",
+      21.80000000000004
+    ],
+    [
+      "__CF_IS_OBJC",
+      20.200000000000017
+    ],
+    [
+      "AccelerateCrypto_SHA256_compress",
+      19.400000000000006
+    ],
+    [
+      "swift_release",
+      18.799999999999997
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      18.19999999999999
+    ],
+    [
+      "objc_release",
+      17.49999999999998
+    ],
+    [
+      "mach_absolute_time",
+      16.89999999999997
+    ],
+    [
+      "__kdebug_trace64",
+      16.79999999999997
+    ],
+    [
+      "iokit_user_client_trap",
+      16.399999999999963
+    ],
+    [
+      "A8_mark_constmask(BltDepth const*, BltOp const*, MODE)",
+      14.199999999999966
+    ],
+    [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      13.999999999999966
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      13.499999999999968
+    ],
+    [
+      "timingsafe_enable_if_supported",
+      11.599999999999975
+    ],
+    [
+      "write",
+      11.399999999999975
+    ],
+    [
+      "-[NSAttributeDictionary objectForKey:]",
+      10.499999999999979
+    ],
+    [
+      "weak_entry_for_referent",
+      10.09999999999998
+    ],
+    [
+      "-[NSGlyphGenerator generateGlyphsForGlyphStorage:desiredNumberOfCharacters:glyphIndex:characterIndex:]",
+      10.09999999999998
+    ],
+    [
+      "___chkstk_darwin",
+      9.99999999999998
+    ],
+    [
+      "mach_msg2_trap",
+      9.699999999999982
+    ]
+  ],
+  "main_stack_context_partition_ms": {
+    "transcript_other": 899.0000000001359,
+    "framework_graph_remaining": 532.7000000000526,
+    "other": 357.1000000000127,
+    "framework_layout_remaining": 345.90000000001015,
+    "row_measure": 0.4
+  },
+  "partition_note": "First matching context: row_measure, row_create, transcript_other, sidebar, composer, framework_graph_remaining, framework_layout_remaining, other. Buckets sum to main CPU, but deferred framework work cannot be assigned to a feature from these stacks.",
+  "main_app_inclusive_top": [
+    [
+      "<deduplicated_symbol>",
+      1300.8999999999123
+    ],
+    [
+      "NavigationRunner.fastScroll()",
+      1153.6000000000463
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      1144.9000000000542
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      1144.8000000000543
+    ],
+    [
+      "main",
+      806.4000000001148
+    ],
+    [
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      721.5000000000955
+    ],
+    [
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      721.4000000000955
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      721.2000000000954
+    ],
+    [
+      "closure #1 in HostedConversationEntry.body.getter",
+      257.99999999999017
+    ],
+    [
+      "ConversationEntryController.setRoot()",
+      248.29999999999018
+    ],
+    [
+      "ConversationEntryController.loadView()",
+      212.09999999999224
+    ],
+    [
+      "@objc ConversationEntryController.loadView()",
+      212.09999999999224
+    ],
+    [
+      "ConversationEntryController.layout(frame:contentHeight:)",
+      167.39999999999478
+    ],
+    [
+      "NativeAssistantMessageView.update(_:source:dark:enabled:actionContext:messageID:)",
+      158.89999999999526
+    ],
+    [
+      "NativeAssistantStackView.update(_:)",
+      158.3999999999953
+    ],
+    [
+      "closure #2 in static ConversationDocumentView.retire(_:)",
+      123.09999999999728
+    ],
+    [
+      "NativeUserMessageView.place(width:)",
+      94.39999999999891
+    ],
+    [
+      "ReplyTextView.measure(width:)",
+      86.99999999999933
+    ],
+    [
+      "NativeAssistantMessageView.place(width:)",
+      63.80000000000064
+    ],
+    [
+      "NativeAssistantStackView.place(width:)",
+      48.900000000000425
+    ],
+    [
+      "NativeUserMessageView.measurements(width:)",
+      43.10000000000034
+    ],
+    [
+      "NativeListBlockView.update(_:)",
+      41.50000000000032
+    ],
+    [
+      "ReplyTextView.update(_:preservingSelectionOnAppend:)",
+      37.700000000000266
+    ],
+    [
+      "@objc ConversationEntryController.__deallocating_deinit",
+      31.60000000000018
+    ],
+    [
+      "ConversationEntryController.__deallocating_deinit",
+      31.60000000000018
+    ],
+    [
+      "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ReplyTableLayout",
+      31.100000000000172
+    ],
+    [
+      "ReplyTableLayout.measure(width:subviews:cache:)",
+      31.100000000000172
+    ],
+    [
+      "ConversationEntryController.nativeUserPreparation()",
+      28.600000000000136
+    ],
+    [
+      "ConversationEntryController.nativeAssistantPreparation()",
+      21.20000000000003
+    ],
+    [
+      "NativeUserMessageView.update(_:dark:)",
+      19.200000000000003
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance SelectableReplyText",
+      18.9
+    ],
+    [
+      "NativeListBlockView.placeContent(width:)",
+      18.599999999999994
+    ],
+    [
+      "static ReplyDocument.parse(_:)",
+      17.899999999999984
+    ],
+    [
+      "NativeTextBlockView.placeContent(width:)",
+      16.19999999999996
+    ],
+    [
+      "specialized static SelectableReplyText.recycle(_:)",
+      16.09999999999996
+    ]
+  ],
+  "app_stack_examples": {
+    "<deduplicated_symbol>": [
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::mark(CA::Transaction*, unsigned int, unsigned int)",
+      "-[CALayer setNeedsDisplayInRect:]",
+      "-[NSViewBackingLayer setNeedsDisplayInRect:]",
+      "-[CALayer(NSViewVisibleRect) NS_viewVisibleRectDidChange]",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "NavigationRunner.fastScroll()": [
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::mark(CA::Transaction*, unsigned int, unsigned int)",
+      "-[CALayer setNeedsDisplayInRect:]",
+      "-[NSViewBackingLayer setNeedsDisplayInRect:]",
+      "-[CALayer(NSViewVisibleRect) NS_viewVisibleRectDidChange]",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "NavigationPreviewApp.run()": [
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::mark(CA::Transaction*, unsigned int, unsigned int)",
+      "-[CALayer setNeedsDisplayInRect:]",
+      "-[NSViewBackingLayer setNeedsDisplayInRect:]",
+      "-[CALayer(NSViewVisibleRect) NS_viewVisibleRectDidChange]",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "closure #2 in closure #1 in NavigationPreviewApp.body.getter": [
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::thread_flags_(CA::Transaction*)",
+      "CA::Layer::mark(CA::Transaction*, unsigned int, unsigned int)",
+      "-[CALayer setNeedsDisplayInRect:]",
+      "-[NSViewBackingLayer setNeedsDisplayInRect:]",
+      "-[CALayer(NSViewVisibleRect) NS_viewVisibleRectDidChange]",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "NSViewHierarchyInvalidateVisibleRect",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "main": [
+      "AutoreleasePoolPage::releaseUntil(objc_object**)",
+      "objc_autoreleasePoolPop",
+      "swift::runJobInEstablishedExecutorContext(swift::Job*, swift::SerialExecutorRef, swift::TaskExecutorRef)",
+      "swift_job_runImpl(swift::Job*, swift::SerialExecutorRef)",
+      "_dispatch_main_queue_drain.cold.6",
+      "_dispatch_main_queue_drain",
+      "_dispatch_main_queue_callback_4CF",
+      "__CFRUNLOOP_IS_SERVICING_THE_MAIN_DISPATCH_QUEUE__",
+      "__CFRunLoopRun",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "main",
+      "start"
+    ],
+    "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()": [
+      "tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool, bool)",
+      "swift_dynamicCast",
+      "NSWindow.firstResponderObserver.getter",
+      "NSHostingView.viewWillMove(toWindow:)",
+      "@objc NSHostingView.viewWillMove(toWindow:)",
+      "-[NSView _setWindow:]",
+      "__21-[NSView _setWindow:]_block_invoke.164",
+      "-[NSView _setWindow:]",
+      "-[NSView addSubview:]",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      "__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__",
+      "___CFXRegistrationPost_block_invoke",
+      "_CFXRegistrationPost",
+      "_CFXNotificationPost",
+      "-[NSNotificationCenter postNotificationName:object:userInfo:]",
+      "-[NSView _postBoundsChangeNotification]",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "partial apply for closure #1 in ConversationDocumentView.observeScroll()": [
+      "tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool, bool)",
+      "swift_dynamicCast",
+      "NSWindow.firstResponderObserver.getter",
+      "NSHostingView.viewWillMove(toWindow:)",
+      "@objc NSHostingView.viewWillMove(toWindow:)",
+      "-[NSView _setWindow:]",
+      "__21-[NSView _setWindow:]_block_invoke.164",
+      "-[NSView _setWindow:]",
+      "-[NSView addSubview:]",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      "__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__",
+      "___CFXRegistrationPost_block_invoke",
+      "_CFXRegistrationPost",
+      "_CFXNotificationPost",
+      "-[NSNotificationCenter postNotificationName:object:userInfo:]",
+      "-[NSView _postBoundsChangeNotification]",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "ConversationDocumentView.refreshVisibleRows(source:)": [
+      "tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool, bool)",
+      "swift_dynamicCast",
+      "NSWindow.firstResponderObserver.getter",
+      "NSHostingView.viewWillMove(toWindow:)",
+      "@objc NSHostingView.viewWillMove(toWindow:)",
+      "-[NSView _setWindow:]",
+      "__21-[NSView _setWindow:]_block_invoke.164",
+      "-[NSView _setWindow:]",
+      "-[NSView addSubview:]",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      "__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__",
+      "___CFXRegistrationPost_block_invoke",
+      "_CFXRegistrationPost",
+      "_CFXNotificationPost",
+      "-[NSNotificationCenter postNotificationName:object:userInfo:]",
+      "-[NSView _postBoundsChangeNotification]",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "closure #1 in HostedConversationEntry.body.getter": [
+      "__thread_stack_pcs",
+      "_thread_stack_pcs",
+      "backtrace",
+      "backtrace()",
+      "specialized Trace_Handle.writtenBacktrace()",
+      "specialized Trace_Handle.write<A>(_:omit:)",
+      "@objc begin_modify_node(raw:_:)",
+      "AG::Graph::attribute_modify(AG::data::ptr<AG::Node>, AGSwiftMetadata const*, AG::ClosureFunctionPV<void, void*>, bool) (.cold.1)",
+      "AG::Graph::attribute_modify(AG::data::ptr<AG::Node>, AGSwiftMetadata const*, AG::ClosureFunctionPV<void, void*>, bool)",
+      "specialized static DynamicContainer.makeContainer<A>(adaptor:inputs:)",
+      "specialized static Layout.makeLayoutView(root:inputs:body:)",
+      "protocol witness for static _VariadicView_ViewRoot._makeView(root:inputs:body:) in conformance _HStackLayout",
+      "static _VariadicView.Tree<>._makeView(view:inputs:)",
+      "static HStack._makeView(view:inputs:)",
+      "project #1 <A>(_:) in TypedUnaryViewGenerator.makeView(inputs:)",
+      "protocol witness for UnaryViewGenerator.makeView(inputs:) in conformance TypedUnaryViewGenerator",
+      "closure #1 in UnaryElements.makeElements(from:inputs:body:)",
+      "closure #2 in DynamicLayoutViewAdaptor.makeItemLayout(item:uniqueId:inputs:containerInfo:containerInputs:)",
+      "partial apply for closure #2 in DynamicLayoutViewAdaptor.makeItemLayout(item:uniqueId:inputs:containerInfo:containerInputs:)",
+      "thunk for @callee_guaranteed (@in_guaranteed _ViewInputs, @guaranteed @escaping @callee_guaranteed (@in_guaranteed _ViewInputs) -> (@out _ViewOutputs)) -> (@out _ViewOutputs?)",
+      "closure #1 in closure #1 in _ViewList_Elements.makeAllElements(inputs:body:)",
+      "UnaryElements.makeElements(from:inputs:body:)",
+      "specialized DynamicContainerInfo.makeItem(_:uniqueId:container:disableTransitions:)",
+      "specialized closure #1 in DynamicContainerInfo.updateItems(disableTransitions:dirtyFlags:hasDepth:)",
+      "closure #1 in DynamicLayoutViewAdaptor.foreachItem(items:_:)",
+      "_ViewList_Node.applySublists(from:style:transform:to:)",
+      "partial apply for closure #1 in _ViewList_Node.applySublists(from:style:transform:to:)",
+      "BaseViewList.applyNodes(from:style:list:transform:to:)",
+      "_ViewList_Node.applySublists(from:style:transform:to:)",
+      "partial apply for closure #1 in _ViewList_Node.applySublists(from:style:transform:to:)",
+      "protocol witness for ViewList.applyNodes(from:style:list:transform:to:) in conformance _ViewList_Group",
+      "ViewList.applySublists(from:list:to:)",
+      "specialized DynamicContainerInfo.updateItems(disableTransitions:dirtyFlags:hasDepth:)",
+      "specialized DynamicContainerInfo.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetValue",
+      "specialized DynamicLayoutComputer.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "StackLayout.makeChildren()",
+      "specialized ViewLayoutEngine.init(layout:context:children:)",
+      "<deduplicated_symbol>",
+      "specialized StatefulRule<>.updateLayoutComputer<A>(layout:environment:attributes:)",
+      "specialized DynamicLayoutComputer.updateValue()",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "_FixedSizeLayout.sizeThatFits(in:context:child:)",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x23c326288",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "_FlexFrameLayout.sizeThatFits(in:context:child:)",
+      "protocol witness for UnaryLayout.sizeThatFits(in:context:child:) in conformance _FlexFrameLayout",
+      "UnaryLayoutEngine.sizeThatFits(_:)",
+      "0x23c326288",
+      "LayoutEngineBox.sizeThatFits(_:)",
+      "RootGeometry.value.getter",
+      "specialized implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Graph::update_attribute(AG::data::ptr<AG::Node>, unsigned int)",
+      "AG::Graph::input_value_ref_slow(AG::data::ptr<AG::Node>, AG::AttributeID, unsigned int, unsigned int, AGSwiftMetadata const*, unsigned char&, long)",
+      "AGGraphGetInputValue",
+      "GeometryProxy.size.getter",
+      "closure #1 in HostedConversationEntry.body.getter",
+      "_GeometryActionModifier.value(geometry:)",
+      "GeometryActionBinder.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Subgraph::update(unsigned int)",
+      "GraphHost.runTransaction()",
+      "ViewGraph.updateOutputs(at:)",
+      "closure #1 in ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+      "ViewGraphRootValueUpdater.render(interval:updateDisplayList:targetTimestamp:)",
+      "closure #1 in NSHostingView.layout()",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "+[NSAnimationContext runAnimationGroup:]",
+      "NSHostingView.layout()",
+      "@objc NSHostingView.layout()",
+      "0x19de3c20c",
+      "0x19de3c234",
+      "0x19deecd24",
+      "0x19deed890",
+      "___NSViewLayout_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "_NSViewLayout",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__36-[NSView _layoutSubtreeWithOldSize:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeWithOldSize:]",
+      "__56-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]_block_invoke",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView _layoutSubtreeIfNeededAndAllowTemporaryEngine:]",
+      "NSPerformVisuallyAtomicChange",
+      "-[NSView layoutSubtreeIfNeeded]",
+      "-[NSWindow(NSConstraintBasedLayoutInternal) _layoutViewTree]",
+      "-[NSWindow(NSConstraintBasedLayoutInternal) layoutIfNeeded]",
+      "__NSWindowGetDisplayCycleObserverForLayout_block_invoke",
+      "NSDisplayCycleObserverInvoke",
+      "NSDisplayCycleFlush",
+      "CA::Transaction::run_commit_handlers(CATransactionPhase)",
+      "CA::Transaction::commit()",
+      "CA::Transaction::flush()",
+      "CA::Transaction::flush_as_runloop_observer(bool)",
+      "stepTransactionFlush",
+      "UC::DriverCore::continueProcessing()",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__",
+      "__CFRunLoopDoSource0",
+      "__CFRunLoopDoSources0",
+      "__CFRunLoopRun",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "main",
+      "start"
+    ],
+    "ConversationEntryController.setRoot()": [
+      "specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)",
+      "specialized Collection<>.firstIndex(of:)",
+      "specialized _ProcessInfo.environment.getter",
+      "@objc _NSSwiftProcessInfo.environment.getter",
+      "ConversationEntryController.nativeAssistantPreparation()",
+      "ConversationEntryController.setRoot()",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      "__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__",
+      "___CFXRegistrationPost_block_invoke",
+      "_CFXRegistrationPost",
+      "_CFXNotificationPost",
+      "-[NSNotificationCenter postNotificationName:object:userInfo:]",
+      "-[NSView _postBoundsChangeNotification]",
+      "-[NSView translateOriginToPoint:]",
+      "-[NSClipView _immediateScrollToPoint:]",
+      "-[NSClipView scrollToPoint:]",
+      "NavigationRunner.fastScroll()",
+      "NavigationPreviewApp.run()",
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "<deduplicated_symbol>",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "<deduplicated_symbol>",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ]
+  },
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}

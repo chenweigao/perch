@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "exit_code": 0,
+  "build": {
+    "source_commit": "c2d330e5eeed8456f57e6db6cb385da6b2f81879",
+    "source_sha256": "6bcba588deaa1aa07c5ad26600194baed948a00bdbfdb0c11552d8205aa14c59",
+    "fixture_sha256": "77c1af85d0dbf334ffdbff5f36097b8013a67a26102562d340bde1d0ebc92389",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+  },
+  "binary_sha256": "068d1fad5f07b2f0d6a430cd9bf211cd16a2583589b6c6316bf56fe244563faa",
+  "candidate_enabled": false
+}
