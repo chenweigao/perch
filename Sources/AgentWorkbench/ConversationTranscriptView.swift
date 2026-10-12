@@ -418,9 +418,35 @@ private final class ConversationDocumentView: NSView {
         guard indices[original[0].entry.id] == nil, heights.count == original.count - 1 else {
             throw WorkbenchError("Removal kept obsolete row geometry")
         }
+        // Reproduce the launch crash: separate folds from one persisted message
+        // must survive the native unique-key indices and saved-height maps.
+        let multipart = try KimiWire.decoder().decode([KimiMessage].self, from: Data("""
+        [{"id":"fold-user","role":"user","created_at":"1","content":[{"type":"text","text":"分析并回答"}]},
+         {"id":"fold-answer","role":"assistant","created_at":"2","content":[
+           {"type":"thinking","thinking":"第一段思考"},{"type":"text","text":"第一段回答"},
+           {"type":"thinking","thinking":"第二段思考"},{"type":"text","text":"第二段回答"}]}]
+        """.utf8))
+        let projection = ConversationPresentationModel(key: "fold-regression")
+        let snapshot = projection.update(.init(messages: multipart, language: "en"))
+        let folded = ConversationProcessFold.fold(rows: snapshot.displayedRows { _ in nil }, isRunning: false)
+        let foldedContents = folded.map { row in
+            ConversationEntryView(entry: row.entry, tools: row.tools, api: nil, sessionId: sessionId,
+                memoryKey: sessionId + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows)
+        }
+        for _ in 0..<2 {
+            apply(foldedContents, appearance)
+            _ = measure(width: columnWidth)
+            guard contents.count == 5, indices.count == 5, heights.count == 5,
+                  foldedContents.enumerated().allSatisfy({ indices[$0.element.entry.id] == $0.offset }) else {
+                throw WorkbenchError("Multipart fold reconciliation lost a row or reused another fold's index")
+            }
+            saveReadingHeights()
+            apply(original, appearance)
+        }
         return ["unchanged_replays": 40, "unchanged_reconciliations": 0, "unchanged_geometry_rebuilds": 0,
                 "unchanged_host_measurements": 0, "same_id_offscreen_and_visible_edits": true,
-                "appearance_invalidation": true, "external_summary_same_snapshot": true, "prepend_and_removal": true]
+                "appearance_invalidation": true, "external_summary_same_snapshot": true, "prepend_and_removal": true,
+                "multipart_fold_reconciliation_and_heights": true]
     }
     fileprivate var navigator: ConversationTurnNavigation? { viewport?.navigator }
     /// Top-level document rows as (id, presentation), in reading order.

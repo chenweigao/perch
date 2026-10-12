@@ -104,10 +104,10 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
         return entries
     }
 
-    /// A folded process group keeps only its first message for identity; the
-    /// full rows live in `ConversationPresentationModel.Row.foldedRows`.
-    public static func processFold(firstMessage: KimiMessage) -> Self {
-        Self(messages: [firstMessage], presentation: .processFold, partOffset: 0)
+    /// Preserve the first row's source offset: one message may contain multiple
+    /// process groups separated by visible answers or narrative anchors.
+    public static func processFold(firstEntry: Self) -> Self {
+        Self(messages: [firstEntry.messages[0]], presentation: .processFold, partOffset: firstEntry.partOffset)
     }
 }
 
@@ -136,7 +136,7 @@ public enum ConversationProcessFold {
         var pending: [ConversationPresentationModel.Row] = []
         func flush() {
             guard !pending.isEmpty else { return }
-            let entry = ConversationTimelineEntry.processFold(firstMessage: pending[0].entry.messages[0])
+            let entry = ConversationTimelineEntry.processFold(firstEntry: pending[0].entry)
             result.append(ConversationPresentationModel.Row(entry: entry, tools: [:], activity: nil, foldedRows: pending))
             pending = []
         }

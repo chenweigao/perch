@@ -297,5 +297,32 @@ func checkConversationProcessFold() throws {
         rows: rows(ConversationTimelineEntry.make(twoTurns, isRunning: false)), isRunning: false)
     precondition(idleFold.filter { $0.entry.presentation == .processFold }.count == 2,
                  "Once idle, every turn folds")
+    // One assistant message can alternate thoughts and visible answer blocks.
+    // Each thought becomes a separate fold around the answers, even though all
+    // of those folds originate from the same message ID.
+    let multipart = try messages("""
+    [{"id":"multipart-user","role":"user","created_at":"1","content":[{"type":"text","text":"分析并回答"}]},
+     {"id":"multipart-answer","role":"assistant","created_at":"2","content":[
+       {"type":"thinking","thinking":"第一段思考"},{"type":"text","text":"第一段回答"},
+       {"type":"thinking","thinking":"第二段思考"},{"type":"text","text":"第二段回答"}]}]
+    """)
+    func projected(_ model: ConversationPresentationModel, running: Bool) -> [ConversationPresentationModel.Row] {
+        let snapshot = model.update(.init(messages: multipart, isRunning: running, language: "en"))
+        return ConversationProcessFold.fold(rows: snapshot.displayedRows { _ in nil }, isRunning: running)
+    }
+    let model = ConversationPresentationModel(key: "multipart")
+    _ = projected(model, running: true)
+    let completed = projected(model, running: false)
+    precondition(completed.map(\.entry.presentation) == [.message, .processFold, .message, .processFold, .message])
+    let ids = completed.map(\.entry.id)
+    precondition(Set(ids).count == ids.count, "Separate folds within one message must have distinct IDs: \(ids)")
+    // Exercise the same unique-key contract used by the native row reconciler.
+    let indices = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($0.element, $0.offset) })
+    precondition(indices.count == completed.count)
+    precondition(completed.flatMap { $0.foldedRows ?? [$0] }.flatMap(\.entry.messages).flatMap(\.content)
+                 == multipart.flatMap(\.content), "Folding must preserve all source content in order")
+    precondition(projected(ConversationPresentationModel(key: "reopened"), running: false) == completed,
+                 "Reopening persisted history must preserve unique fold identities")
+    precondition(ConversationProcessFold.fold(rows: completed, isRunning: false) == completed)
     print("PASS: process fold groups completed turns, preserves order, keeps the running turn live")
 }
