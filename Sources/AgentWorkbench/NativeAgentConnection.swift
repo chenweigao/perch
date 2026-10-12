@@ -514,7 +514,7 @@ final class NativeAgentConnection {
         let files = attachments[id] ?? []
         guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
         if !files.isEmpty {
-            guard sessions.first(where: { $0.id == id })?.provider == .claude else {
+            guard [.claude, .codex].contains(sessions.first(where: { $0.id == id })?.provider) else {
                 actionError = L("当前 Agent 不支持发送附件")
                 return
             }
@@ -555,6 +555,8 @@ final class NativeAgentConnection {
                 return
             }
         }
+        // Attachments cannot ride a steer; they wait for the next turn.
+        let mode = files.isEmpty || mode != .steer ? mode : .nextTurn
         guard queue.enqueue(text, for: reference, mode: mode, attachments: payload) != nil else { return }
         PromptHistory.record(draftText, for: id, into: &history)
         drafts[id] = ""

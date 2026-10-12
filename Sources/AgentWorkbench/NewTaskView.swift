@@ -50,7 +50,7 @@ struct NewTaskView: View {
     private var modelCatalogID: String {
         availableModels.map { "\($0.provider):\($0.id):\($0.thinking.map(\.rawValue).joined(separator: ","))" }.joined(separator: "|")
     }
-    private var supportsAttachments: Bool { [.kimi, .claude].contains(provider) }
+    private var supportsAttachments: Bool { [.kimi, .claude, .codex].contains(provider) }
     private var hasInitialContent: Bool {
         !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (supportsAttachments && !attachments.isEmpty)
     }

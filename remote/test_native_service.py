@@ -443,6 +443,59 @@ class CodexProtocolTests(unittest.TestCase):
                 if stored is not None: state['permissionMode']=stored
                 self.assertEqual(broker.Session(state).state['permissionMode'],expected)
 
+    def test_prompt_sends_images_as_local_image_items(self):
+        s,fake=self.session()
+        data=base64.b64encode(b'png-bytes').decode()
+        receipt=s.prompt({'text':'描述这张图','requestId':'codex-attachment','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':data}]})
+        self.assertEqual(receipt['status'],'accepted')
+        turn=next(params for method,params in fake.calls if method=='turn/start')
+        self.assertEqual([i['type'] for i in turn['input']],['text','localImage'])
+        self.assertEqual(turn['input'][0],{'type':'text','text':'描述这张图'})
+        self.assertEqual(pathlib.Path(turn['input'][1]['path']).read_bytes(),b'png-bytes')
+        self.assertIn('[图片: shot.png]',s.state['messages'][0]['content'][0]['text'])
+        # The same requestId replays the receipt without starting another turn.
+        again=s.prompt({'text':'描述这张图','requestId':'codex-attachment','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':data}]})
+        self.assertEqual(again,receipt)
+        self.assertEqual(len([c for c in fake.calls if c[0]=='turn/start']),1)
+
+    def test_prompt_notes_non_image_attachments_in_text(self):
+        s,fake=self.session()
+        s.prompt({'text':'','requestId':'codex-file','attachments':[
+            {'name':'notes.txt','mediaType':'text/plain','data':base64.b64encode(b'notes').decode()}]})
+        turn=next(params for method,params in fake.calls if method=='turn/start')
+        self.assertEqual([i['type'] for i in turn['input']],['text'])
+        self.assertIn('notes.txt',turn['input'][0]['text'])
+        self.assertIn(str(broker.ROOT/'attachments'),turn['input'][0]['text'])
+        self.assertEqual(s.state['title'],'[附件: notes.txt]')
+
+    def test_prompt_image_only_omits_empty_text_item(self):
+        s,fake=self.session()
+        s.prompt({'text':'','requestId':'codex-image-only','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':base64.b64encode(b'png-bytes').decode()}]})
+        turn=next(params for method,params in fake.calls if method=='turn/start')
+        self.assertEqual([i['type'] for i in turn['input']],['localImage'])
+
+    def test_steer_rejects_attachments(self):
+        s,fake=self.session()
+        s.prompt({'text':'开始','requestId':'request-1'})
+        with self.assertRaises(ValueError):
+            s.steer({'text':'带图','requestId':'steer-img','attachments':[
+                {'name':'a.png','mediaType':'image/png','data':base64.b64encode(b'x').decode()}]})
+        self.assertEqual([c for c in fake.calls if c[0]=='turn/steer'],[])
+
+    def test_user_message_echo_keeps_attachment_marks(self):
+        s,fake=self.session()
+        s.prompt({'text':'描述这张图','requestId':'codex-attachment','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':base64.b64encode(b'png-bytes').decode()}]})
+        # Codex echoes the submitted user message without image data; the record
+        # made at send time carries the [图片] mark and must survive.
+        s.codex_frame(fake,{'method':'item/completed','params':{'threadId':'native-thread','item':{
+            'type':'userMessage','id':'u1','clientId':'codex-attachment','content':[{'type':'text','text':'描述这张图'}]}}})
+        self.assertEqual(s.state['messages'][0]['content'][0]['text'],'描述这张图\n[图片: shot.png]')
+        self.assertEqual(s.state['requests']['codex-attachment']['runtimeId'],'u1')
+
     def test_context_uses_last_request_and_shrinks_after_compaction(self):
         s,fake=self.session()
         for cumulative,current in [(300000,80000),(600000,12000)]:
