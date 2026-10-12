@@ -1229,6 +1229,13 @@ class Session:
         elif provider in ('qoder','qoderintl','claude') and t == 'result':
             s['resume']=e.get('session_id',s.get('resume')); durable=True
             if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider in ('qoder','qoderintl') else 'Claude')+' 执行失败')
+            if provider == 'claude':
+                # Per-turn usage: input+cache is the live window fill; modelUsage is
+                # cumulative but its contextWindow is a static model property.
+                u=e.get('usage') or {}
+                tokens=u.get('input_tokens',0)+u.get('cache_read_input_tokens',0)+u.get('cache_creation_input_tokens',0)
+                windows=[m.get('contextWindow') for m in (e.get('modelUsage') or {}).values() if m.get('contextWindow')]
+                if tokens and windows: s['context']={'tokens':tokens,'limit':max(windows),'reportedAt':time.time()}
         elif provider in ('qoder','qoderintl','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
             if e.get('error'):
