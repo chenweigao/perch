@@ -183,8 +183,8 @@ distinguishes user scrolling from programmatic stream updates.
 The sidebar uses native NSSplitViewController with a saved width between 220 and 420 pt.
 Floating controls use the public macOS 26
 [Liquid Glass modifier](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views),
-which is available in the installed SDK. macOS 14/15 use system Material; the
-transcript and composer retain solid reading surfaces.
+available on every supported macOS version (26+). Reduce Transparency keeps its
+accessible opaque surface; transcript text does not use glass.
 
 `scripts/check-composer.sh` runs actual AppKit marked-text, Unicode, Return and
 draft synchronization checks. `scripts/build-composer-preview.sh` builds an

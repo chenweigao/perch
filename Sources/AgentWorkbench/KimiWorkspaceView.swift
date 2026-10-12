@@ -401,16 +401,6 @@ private struct KimiTimeline: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
-            .onChange(of: [String(connection.conversation?.snapshot.asOfSeq ?? 0), connection.conversation?.live?.assistantText ?? "", String(connection.conversation?.live?.thinkingText.isEmpty ?? true)]) { _, _ in
-                if #unavailable(macOS 15) {
-                    if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                }
-            }
-            .onChange(of: connection.pendingPrompts[connection.selectedId ?? ""] ?? []) { _, _ in
-                if #unavailable(macOS 15) {
-                    if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                }
-            }
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
                 if (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
             }

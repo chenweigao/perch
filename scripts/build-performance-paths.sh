@@ -11,7 +11,7 @@ for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
 done
 flags=()
 if [[ "$variant" == candidate ]]; then flags=(-D PERFORMANCE_PATHS); fi
-swiftc -O -swift-version 5 "${flags[@]}" -I "$bin_dir/Modules" \
+swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 "${flags[@]}" -I "$bin_dir/Modules" \
     -I "$root/.build/checkouts/swift-markdown/Sources/CAtomic/include" \
     -I "$root/.build/checkouts/swift-cmark/src/include" \
     -I "$root/.build/checkouts/swift-cmark/extensions/include" \

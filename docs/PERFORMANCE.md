@@ -184,7 +184,7 @@ Reply paragraphs use selectable TextKit 1 views, avoiding a separate TextKit 2
 viewport controller for every paragraph. Read-only reply and thought views disable
 system text checking. Following new replies hides the vertical scroller; user
 history scrolling restores the system's automatic indicator. Bottom following is
-triggered by actual content-size changes on macOS 15+, not every thought token.
+triggered by actual content-size changes on supported macOS versions (26+), not every thought token.
 
 Rejected intermediate candidates: plain eager placement was stable in the bounded
 history test but only 12.60–13.02 events/s; row hosting without effective viewport

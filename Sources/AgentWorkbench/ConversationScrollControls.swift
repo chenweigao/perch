@@ -145,15 +145,11 @@ struct ConversationScrollView<Content: View>: View {
         }
     }
     var body: some View {
-        if #available(macOS 15, *) {
-            scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
-                contentSize = size
-            }.task(id: contentSize) {
-                await Task.yield()
-                if !Task.isCancelled { onContentSizeChange() }
-            }
-        } else {
-            scroll
+        scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
+            contentSize = size
+        }.task(id: contentSize) {
+            await Task.yield()
+            if !Task.isCancelled { onContentSizeChange() }
         }
     }
 }

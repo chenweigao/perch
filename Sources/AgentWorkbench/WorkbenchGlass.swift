@@ -19,10 +19,8 @@ private struct WorkbenchGlassSurface: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: cornerRadius)
         if reduceTransparency {
             content.background(Color(nsColor: .controlBackgroundColor), in: shape)
-        } else if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: shape)
         } else {
-            content.background(.regularMaterial, in: shape)
+            content.glassEffect(.regular, in: shape)
         }
     }
 }

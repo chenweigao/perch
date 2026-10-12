@@ -99,7 +99,7 @@ PY
 includes=( -I "$bin_dir/Modules" -I .build/checkouts/swift-markdown/Sources/CAtomic/include -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include )
 # Compile the complete matching Core instead of accidentally linking baseline UI
 # against a current WorkbenchCore. Dependency objects are identical for both apps.
-swiftc -O -swift-version 5 -parse-as-library -whole-module-optimization \
+swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -whole-module-optimization \
     -emit-object -emit-module -module-name WorkbenchCore \
     -emit-module-path "$module_dir/WorkbenchCore.swiftmodule" \
     "${includes[@]}" "$snapshot_root"/Sources/WorkbenchCore/*.swift -o "$module_dir/WorkbenchCore.o"
@@ -111,7 +111,7 @@ compile_flags=( -D PERFORMANCE_CURRENT )
 if [[ "$variant" == baseline ]]; then compile_flags=( -D PERFORMANCE_BASELINE ); fi
 copied_app_files=()
 for path in "${app_files[@]}"; do copied_app_files+=("$snapshot_root/$path"); done
-swiftc -O -swift-version 5 -parse-as-library "${compile_flags[@]}" -I "$module_dir" "${includes[@]}" \
+swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library "${compile_flags[@]}" -I "$module_dir" "${includes[@]}" \
     "${copied_app_files[@]}" Tests/PerformancePreview/Workload.swift Tests/PerformancePreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/PerformancePreview"
 cat > "$app_dir/Contents/Info.plist" <<PLIST

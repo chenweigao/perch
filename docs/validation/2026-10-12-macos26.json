@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-10-12T13:50:03.482082+00:00",
+  "base_commit": "c2d330e5eeed8456f57e6db6cb385da6b2f81879",
+  "macos": "27.0.1",
+  "build_command": "bash scripts/build.sh",
+  "bundle_minimum": "26.0",
+  "binary_build_version": "build/Perch.app/Contents/MacOS/AgentWorkbench:\nLoad command 11\n      cmd LC_BUILD_VERSION\n  cmdsize 32\n platform MACOS\n    minos 26.0\n      sdk 27.0\n   ntools 1\n     tool LD\n  version 27037.1\n",
+  "binary_sha256": "ab88e087c525baad1dab4b57bcbda37b65415c2cdcbe4609553bf53e2afe2359",
+  "core_checks": {
+    "command": "swift run --build-system native -c release WorkbenchChecks",
+    "passed_groups": 49,
+    "skips": [
+      "SKIP: set WORKBENCH_LIVE_HOST for the read-only SSH integration check"
+    ]
+  },
+  "scroll_following": {
+    "command": "python3 scripts/check-scroll-following.py",
+    "assertions": [
+      "PASS: immediate wheel pause, streaming position retention, explicit tail resume, direction reversal, native scroll lifecycle and near-top history loading"
+    ]
+  },
+  "roundtrip": {
+    "supervisor": {
+      "status": "exited",
+      "mode": "roundtrip",
+      "timeout_s": 120,
+      "configuration": {
+        "NAVIGATION_AUTORUN": "roundtrip",
+        "NAVIGATION_TURNS": "200",
+        "NAVIGATION_SCROLL_HZ": "120",
+        "NAVIGATION_AUTOQUIT": "1",
+        "NAVIGATION_RESULTS": "$WORKTREE/.local/macos26/roundtrip",
+        "NAVIGATION_SWITCHES": "40",
+        "NAVIGATION_SOAK_SECONDS": "1260",
+        "NAVIGATION_RECREATE": "0",
+        "NAVIGATION_SCROLL_REVERSAL": "0",
+        "NAVIGATION_DISCLOSURE_CONTEXT": "0",
+        "NAVIGATION_ASSERT_ATOMIC_DISCLOSURE": "0",
+        "NAVIGATION_FULL_DISCLOSURE": "0",
+        "NAVIGATION_LONG_OUTPUT_VARIANT": "viewport",
+        "NAVIGATION_OUTPUT_LINES": "2400",
+        "NAVIGATION_OUTPUT_SHAPE": "lines"
+      },
+      "build": {
+        "source_commit": "c2d330e5eeed8456f57e6db6cb385da6b2f81879",
+        "source_sha256": "74585392f1fbe143fe657efe4d39feacdc1690b277048f44d80f8fad7fac1cc5",
+        "fixture_sha256": "ffda45dc47fe24f1116a72556086c047e5b1be0706413ac1c1dfb89f5934b46c",
+        "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+      },
+      "binary_sha256": "c722706685f212a63090c9867f8cece887a031cbacc955296ecb411f0ca71d9a",
+      "pid": 63778,
+      "exit_code": 0,
+      "elapsed_s": 7.360032834,
+      "passed": true
+    },
+    "status": "passed"
+  },
+  "limitations": [
+    "No performance speedup measured for this change",
+    "No macOS 26 runtime acceptance",
+    "Live SSH not run",
+    "Not deployed"
+  ]
+}

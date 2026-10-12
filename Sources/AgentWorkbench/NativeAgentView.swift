@@ -104,16 +104,6 @@ struct NativeAgentView: View {
                         ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
                             .padding(.trailing, 40).padding(.bottom, 10)
                     }
-                    .onChange(of: s.revision) { _, _ in
-                        if #unavailable(macOS 15) {
-                            if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                    }
-                    .onChange(of: connection.queue.allItems.filter { $0.session.terminalID == s.id }) { _, _ in
-                        if #unavailable(macOS 15) {
-                            if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                    }
                     .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
                         if isCurrent(s), (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
                     }

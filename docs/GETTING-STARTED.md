@@ -2,8 +2,9 @@
 
 ## Local build
 
-Use a Swift toolchain with the macOS 26 SDK. Perch targets macOS 14+, with Liquid
-Glass enabled only on macOS 26. Dependencies are pinned in `Package.resolved`.
+Use a Swift toolchain with the macOS 26 SDK or newer. Perch targets macOS 26+,
+including macOS 27. Liquid Glass is available on every supported version.
+Dependencies are pinned in `Package.resolved`.
 The build downloads dependencies, compiles Release, packages resources and signs
 `build/Perch.app` locally. It does not install remote software.
 
