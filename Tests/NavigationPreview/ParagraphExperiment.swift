@@ -277,9 +277,10 @@ extension NavigationRunner {
         }
         let prefix = try message("Earlier prompt", id: "earlier-user")
         func root(_ source: String, width: CGFloat = 500, dark: Bool = false,
-                  role: String = "user", session: String = "user-controller-contract") throws -> some View {
+                  role: String = "user", session: String = "user-controller-contract", rtl: Bool = false) throws -> some View {
             ConversationTranscript(messages: [prefix, try message(source, role: role)], sessionId: session, isRunning: false)
                 .frame(width: width).environment(\.colorScheme, dark ? .dark : .light)
+                .environment(\.layoutDirection, rtl ? .rightToLeft : .leftToRight)
         }
         let source = "Alpha 中文 👩🏽‍💻 é " + String(repeating: "wrapping text 中文 ", count: 16)
         let host = NSHostingView(rootView: try root(source))
@@ -300,6 +301,24 @@ extension NavigationRunner {
         guard let initial = target(), let text = texts(initial).first else { throw NavigationError("Missing mounted user row") }
         let selection = (text.string as NSString).range(of: "中文 👩🏽‍💻 é")
         text.setSelectedRange(selection)
+        // Exercise the responder chain, not only NSTextView.writeSelection.
+        window.makeKeyAndOrderFront(nil)
+        guard window.makeFirstResponder(text) else { throw NavigationError("User text rejected focus") }
+        do {
+            let board = NSPasteboard.general
+            let savedItems = (board.pasteboardItems ?? []).map { item in
+                let copy = NSPasteboardItem()
+                for type in item.types { if let data = item.data(forType: type) { copy.setData(data, forType: type) } }
+                return copy
+            }
+            var ownChange = board.changeCount
+            defer { if board.changeCount == ownChange { board.clearContents(); board.writeObjects(savedItems) } }
+            let copied = NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+            ownChange = board.changeCount
+            guard copied, board.string(forType: .string) == "中文 👩🏽‍💻 é" else {
+                throw NavigationError("Mounted user responder-chain copy failed")
+            }
+        }
         let initialY = initial.convert(initial.bounds, to: host).minY
         let prefixY = descendants(host).compactMap { $0 as? NativeUserMessageView }
             .first { $0.sourceText == "Earlier prompt" }.map { $0.convert($0.bounds, to: host).minY }
@@ -329,6 +348,9 @@ extension NavigationRunner {
         guard target() == nil, texts(host).contains(where: { $0.string.contains("Fallback heading 中文") }) else {
             throw NavigationError("Native user to SwiftUI transition lost content")
         }
+        guard initial.widthChanged == nil, initial.identifier == nil, initial.sourceText.isEmpty else {
+            throw NavigationError("Recycled user root retained a callback or row identity")
+        }
         host.rootView = try root("Back to native")
         try await settle()
         guard target()?.sourceText == "Back to native" else { throw NavigationError("User fallback failed to return to native") }
@@ -343,8 +365,26 @@ extension NavigationRunner {
         guard target()?.sourceText == "Another session", !texts(host).contains(where: { $0.string.contains("replacement") }) else {
             throw NavigationError("User session switch retained old content")
         }
+        // This fresh session starts directly on the native root (no preceding fallback).
+        host.rootView = try root("Direct assistant transition", role: "assistant", session: "user-controller-other")
+        try await settle()
+        guard target() == nil, texts(host).contains(where: { $0.string == "Direct assistant transition" }) else {
+            throw NavigationError("Direct user root to assistant transition lost content")
+        }
+        host.rootView = try root("Direction change", session: "user-controller-direction")
+        try await settle()
+        host.rootView = try root("Direction change", session: "user-controller-direction", rtl: true)
+        try await settle()
+        guard target() == nil, texts(host).contains(where: { $0.string == "Direction change" }) else {
+            throw NavigationError("Direct user root to RTL fallback lost content")
+        }
+        host.rootView = try root("Direction change", session: "user-controller-direction")
+        try await settle()
+        guard target()?.sourceText == "Direction change" else { throw NavigationError("LTR did not restore native user content") }
         return ["user_controller_contracts": ["append_selection": true, "resize_appearance": true,
-                    "replacement": true, "renderer_transitions": true, "session_switch": true]]
+                    "replacement": true, "renderer_transitions": true, "session_switch": true,
+                    "responder_copy": true, "recycled_identity": true, "direct_assistant_transition": true,
+                    "layout_direction_transition": true]]
     }
 
     func nativeAssistantContracts() async throws -> [String: Any] {
