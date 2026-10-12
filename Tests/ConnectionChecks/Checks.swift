@@ -385,6 +385,7 @@ struct ConnectionChecks {
         try await checkQoderPermission()
         try await checkClaudePermission()
         try await checkClaudeAttachments()
+        try await checkCodexAttachments()
         print("PASS: actual connection resume, cross-session dispatch, receipt recovery, stop evidence and mutation/read separation")
     }
 
@@ -625,6 +626,37 @@ struct ConnectionChecks {
                      "Non-Claude runtimes must refuse attachments")
         client.disconnect()
         print("PASS: Claude attachments reach the bridge with bytes and stay Claude-only")
+    }
+
+    @MainActor
+    static func checkCodexAttachments() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Codex", destination: "fixture"), transport: fixture.request)
+        let session = try await client.create(provider: .codex, cwd: "/fixture", model: "gpt-codex",
+                                              permissionMode: "workspace-ask")
+        let bytes = Data([0x89, 0x50, 0x4E, 0x47])
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("perch-check-\(UUID().uuidString.prefix(8)).png")
+        try bytes.write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        client.attachments[session.id] = [file]
+        client.send()
+        await settle { !client.sending && fixture.promptAttachments.count == 1 }
+        let sent = fixture.promptAttachments.values.first
+        precondition(sent?.count == 1 && sent?[0]["name"] == file.lastPathComponent
+                     && sent?[0]["mediaType"] == "image/png"
+                     && sent?[0]["data"] == bytes.base64EncodedString(),
+                     "Codex attachments must reach the bridge with names, media types and bytes")
+        precondition(client.attachments[session.id] == nil, "Staged attachments clear once the message is queued")
+        // A running turn offers steer, but attachments must wait for the next turn.
+        fixture.sessions[session.id]?["busy"] = true
+        try await client.refresh()
+        client.attachments[session.id] = [file]
+        client.send(mode: .steer)
+        precondition(client.queue.allItems.contains { $0.mode == .nextTurn && $0.attachments.count == 1 },
+                     "Attachments must downgrade steer to next-turn queueing")
+        precondition(fixture.promptAttachments.count == 1, "Queued attachments must not steer the running turn")
+        client.disconnect()
+        print("PASS: Codex attachments reach the bridge and queue instead of steering")
     }
 
     @MainActor

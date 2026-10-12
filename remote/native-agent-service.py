@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 5
+SERVICE_VERSION = 6
 
 def source_fingerprint(path=None):
     """Identity of the code a service is executing. SERVICE_VERSION is bumped by
@@ -459,7 +459,7 @@ class Session:
             receipt['error']=self.state.get('error')
     def decode_attachments(self, value):
         if not value: return []
-        if self.state['provider'] != 'claude': raise ValueError('当前 Agent 不支持发送附件')
+        if self.state['provider'] not in ('claude','codex'): raise ValueError('当前 Agent 不支持发送附件')
         if not isinstance(value, list) or len(value) > 5: raise ValueError('附件一次最多 5 个')
         result = []
         for item in value:
@@ -518,7 +518,16 @@ class Session:
         self.touch(True)
         try:
             if s['provider']=='codex':
-                params={'threadId':s['resume'],'input':[{'type':'text','text':text}],
+                # Images ride the turn as localImage items referencing the stored
+                # files; other attachments are noted in the text with their path.
+                prompt_text=text; images=[]
+                for a in stored:
+                    if a['mediaType'].startswith('image/'):
+                        images.append({'type':'localImage','path':a['path']})
+                    else:
+                        prompt_text+='\n[Attached file %s is saved at %s; inspect it with the Read tool.]'%(a['name'],a['path'])
+                input_items=[{'type':'text','text':prompt_text}] if prompt_text.strip() else []
+                params={'threadId':s['resume'],'input':input_items+images,
                         'clientUserMessageId':request_id} | codex_permission_params(s['permissionMode'], turn=True)
                 if s.get('model'): params['model']=s['model']
                 if s.get('thinking'): params['effort']=s['thinking']
@@ -676,7 +685,11 @@ class Session:
                 receipt['runtimeId']=item_id
                 if receipt.get('mode')=='steer': receipt.update(status='consumed',error=None)
                 elif receipt.get('status') in ('submitting','submitted','accepted'): receipt['status']='running'
-            self.upsert({'role':'user','content':text,'timestamp':stamp},identity)
+            # A prompt recorded at send time already carries its attachment marks;
+            # Codex echoes the same user message without them, so only foreign or
+            # hydrated messages are imported here.
+            if identity not in self.message_indices:
+                self.upsert({'role':'user','content':text,'timestamp':stamp},identity)
             return
         if kind=='agentMessage':
             if completed or item.get('text'):
@@ -1044,6 +1057,7 @@ class Session:
     def steer(self, body):
         s=self.state; request_id=body.get('requestId'); text=body.get('text','')
         if s['provider'] not in ('omp','codex'): raise ValueError('当前 Agent 不支持运行中引导')
+        if body.get('attachments'): raise ValueError('运行中引导不支持附件，请等待当前轮结束后再发送')
         if not isinstance(request_id,str) or not request_id or not text.strip():
             raise ValueError('缺少 requestId 或消息内容')
         receipts=s.setdefault('requests',{}); digest=hashlib.sha256(text.encode()).hexdigest()

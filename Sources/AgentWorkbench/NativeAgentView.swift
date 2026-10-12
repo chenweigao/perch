@@ -172,7 +172,7 @@ private struct NativeComposerView: View {
     @State private var palette = CommandPaletteState()
     @State private var recall = ComposerRecall()
     @State private var chooseFiles = false
-    private var supportsAttachments: Bool { s.provider == .claude }
+    private var supportsAttachments: Bool { [.claude, .codex].contains(s.provider) }
     var body: some View {
         VStack(spacing: 8) {
             if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
@@ -255,7 +255,11 @@ private struct NativeComposerView: View {
         return !connection.modes(for: s.id).isEmpty
     }
     private func defaultMode(_ s: NativeAgentSnapshot) -> DeliveryMode {
-        connection.modes(for: s.id).first ?? .now
+        let modes = connection.modes(for: s.id)
+        // Attachments cannot steer a running turn; fall back to the queued mode.
+        if !(connection.attachments[s.id] ?? []).isEmpty,
+           let queued = modes.first(where: { $0 != .steer }) { return queued }
+        return modes.first ?? .now
     }
     /// The palette claims navigation keys only while it is showing suggestions;
     /// otherwise every key falls through to normal editing and Return still sends.
