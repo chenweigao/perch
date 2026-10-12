@@ -308,7 +308,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 ForEach(context.restoreReport) { entry in
                     HStack {
                         Button { onOpenRestoreEntry?(entry) } label: {
-                            Label(entry.title, systemImage: entry.reference.kind.symbol).lineLimit(1)
+                            Label { Text(entry.title) } icon: { AgentMark(kind: entry.reference.kind, size: 12) }.lineLimit(1)
                         }.buttonStyle(.plain).disabled(entry.outcome == .missing)
                         Text(entry.hostName).font(.caption).foregroundStyle(.tertiary)
                         Spacer()
@@ -332,7 +332,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(context.pendingRestoration, id: \.session.id) { saved in
                     HStack {
-                        Label(saved.title, systemImage: saved.session.kind.symbol).lineLimit(1)
+                        Label { Text(saved.title) } icon: { AgentMark(kind: saved.session.kind, size: 12) }.lineLimit(1)
                         Spacer()
                         Button("不再恢复") { onForgetRestoration(saved) }.buttonStyle(QuietLinkStyle())
                     }

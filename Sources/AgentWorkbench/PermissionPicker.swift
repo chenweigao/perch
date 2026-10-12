@@ -55,7 +55,10 @@ struct PermissionPicker: View {
             if layout == .form {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack {
-                        Text(provider.label)
+                        HStack(spacing: 6) {
+                            AgentMark(kind: provider, size: 14)
+                            Text(provider.label)
+                        }
                         Spacer()
                         control
                     }

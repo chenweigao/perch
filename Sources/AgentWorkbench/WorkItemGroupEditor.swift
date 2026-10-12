@@ -38,7 +38,8 @@ struct WorkItemGroupEditor: View {
                             if selected { sessions.insert(item.reference) } else { sessions.remove(item.reference) }
                         })) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Label(item.title, systemImage: item.reference.kind.symbol).font(.system(size: 12)).lineLimit(1)
+                                Label { Text(item.title) } icon: { AgentMark(kind: item.reference.kind, size: 12) }
+                                    .font(.system(size: 12)).lineLimit(1)
                                 Text("\(item.hostName) · \(item.detail)").font(.caption).foregroundStyle(.secondary)
                             }
                         }.toggleStyle(.checkbox)
