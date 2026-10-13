@@ -425,6 +425,30 @@ struct KimiQuestionView: View {
     let connection: KimiConnection
     @State private var choices: [String: Set<String>] = [:]
     @State private var other: [String: String] = [:]
+    /// Multi-select questions confirmed mid-flow (ccgui 确认本题并继续); the last
+    /// outstanding question goes straight to the final submit instead.
+    @State private var confirmed: Set<String> = []
+
+    private func answered(_ q: KimiQuestion.Item) -> Bool {
+        !(choices[q.id] ?? []).isEmpty
+            || !(other[q.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    private func done(_ q: KimiQuestion.Item) -> Bool {
+        answered(q) && (q.multiSelect != true || confirmed.contains(q.id))
+    }
+    /// The first unfinished question drives the flow; single-select answers
+    /// advance it automatically.
+    private var currentID: String? { question.questions.first { !done($0) }?.id }
+    /// The last unfinished question skips 确认并继续: the final submit covers it.
+    private func isLastPending(_ q: KimiQuestion.Item) -> Bool {
+        question.questions.filter { !done($0) }.count == 1 && !done(q)
+    }
+    private var submittable: Bool {
+        question.questions.allSatisfy { q in
+            answered(q) && (q.multiSelect != true || confirmed.contains(q.id) || isLastPending(q))
+        }
+    }
+
     private var answers: [String: JSONValue] {
         var values: [String: JSONValue] = [:]
         for q in question.questions {
@@ -443,33 +467,77 @@ struct KimiQuestionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("等你回答", systemImage: "bubble.left.and.exclamationmark.bubble.right").font(.headline)
-            ForEach(question.questions) { q in
+            ForEach(Array(question.questions.enumerated()), id: \.element.id) { index, q in
+                let isCurrent = q.id == currentID
+                let isDone = done(q)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(q.question).font(.system(size: 14, weight: .medium))
-                    if let body = q.body { KimiMarkdown(text: body) }
-                    ForEach(q.options) { option in
-                        Toggle(isOn: Binding(get: { choices[q.id]?.contains(option.id) == true }, set: { value in
-                            if q.multiSelect == true {
-                                if value { choices[q.id, default: []].insert(option.id) } else { choices[q.id]?.remove(option.id) }
-                            } else { choices[q.id] = value ? [option.id] : []; if value { other[q.id] = "" } }
-                        })) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(option.label)
-                                if let description = option.description { Text(description).font(.system(size: 11)).foregroundStyle(.secondary) }
-                            }
-                        }.toggleStyle(.checkbox)
+                    HStack(spacing: 6) {
+                        Text(q.question).font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(isDone ? .secondary : .primary)
+                        if isDone { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.system(size: 11)) }
                     }
-                    if q.allowOther == true || q.options.isEmpty {
-                        TextField("填写回答", text: Binding(get: { other[q.id] ?? "" }, set: { other[q.id] = $0; if q.multiSelect != true && !$0.isEmpty { choices[q.id] = [] } })).textFieldStyle(.roundedBorder)
+                    if let body = q.body, !isDone { KimiMarkdown(text: body) }
+                    if isDone {
+                        // Answered questions fold to a summary so the current one owns the space.
+                        Text(summary(of: q)).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                    } else {
+                        ForEach(q.options) { option in
+                            Button {
+                                choose(option.id, in: q)
+                            } label: {
+                                HStack(alignment: .top, spacing: 9) {
+                                    // Radio for single, checkbox for multi (ccgui marker parity).
+                                    Image(systemName: markerImage(for: q, option: option.id))
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(selected(option.id, in: q) ? Color.accentColor : Color.secondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(option.label)
+                                        if let description = option.description { Text(description).font(.system(size: 11)).foregroundStyle(.secondary) }
+                                    }
+                                }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        }
+                        if q.allowOther == true || q.options.isEmpty {
+                            TextField("填写回答", text: Binding(get: { other[q.id] ?? "" }, set: { other[q.id] = $0; if q.multiSelect != true && !$0.isEmpty { choices[q.id] = [] } })).textFieldStyle(.roundedBorder)
+                        }
+                        if q.multiSelect == true, answered(q), !isDone, !isLastPending(q) {
+                            Button("确认本题并继续") { confirmed.insert(q.id) }
+                                .buttonStyle(.bordered).controlSize(.small)
+                        }
                     }
                 }
+                .padding(10)
+                .background(isCurrent ? Color.accentColor.opacity(0.06) : .clear,
+                            in: RoundedRectangle(cornerRadius: 8))
             }
             Button("提交回答") {
                 guard sessionID == nil || sessionID == connection.selectedId else { return }
                 connection.answer(question, answers: answers)
             }.buttonStyle(.borderedProminent)
-                .disabled(answers.count != question.questions.count || !connection.online || !connection.snapshotReady || connection.resolving.contains(question.id))
+                .disabled(!submittable || !connection.online || !connection.snapshotReady || connection.resolving.contains(question.id))
         }.padding(16).background(kimiAccent.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func selected(_ option: String, in q: KimiQuestion.Item) -> Bool {
+        choices[q.id]?.contains(option) == true
+    }
+    private func markerImage(for q: KimiQuestion.Item, option: String) -> String {
+        let picked = selected(option, in: q)
+        if q.multiSelect == true { return picked ? "checkmark.square.fill" : "square" }
+        return picked ? "checkmark.circle.fill" : "circle"
+    }
+    private func choose(_ option: String, in q: KimiQuestion.Item) {
+        if q.multiSelect == true {
+            if selected(option, in: q) { choices[q.id]?.remove(option) } else { choices[q.id, default: []].insert(option) }
+        } else {
+            choices[q.id] = [option]
+            other[q.id] = ""
+        }
+    }
+    private func summary(of q: KimiQuestion.Item) -> String {
+        let labels = (choices[q.id] ?? []).sorted().compactMap { id in q.options.first { $0.id == id }?.label }
+        let text = (other[q.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return (labels + (text.isEmpty ? [] : [text])).joined(separator: "、")
     }
 }
 

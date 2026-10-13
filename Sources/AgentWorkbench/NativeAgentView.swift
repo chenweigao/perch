@@ -424,7 +424,16 @@ struct NativeInteractionView: View {
                     let question = q["question"].string ?? ""
                     Text(question)
                     ForEach(q["options"].array, id: \.display) { option in
-                        Button(option["label"].string ?? option.display) { answers[question] = option["label"].string ?? option.display }.buttonStyle(.bordered)
+                        let label = option["label"].string ?? option.display
+                        Button {
+                            answers[question] = label
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: answers[question] == label ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(answers[question] == label ? Color.accentColor : Color.secondary)
+                                Text(label).foregroundStyle(.primary)
+                            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
                     }
                     TextField("回答", text: Binding(get: { answers[question] ?? "" }, set: { answers[question] = $0 })).textFieldStyle(.roundedBorder)
                 }
