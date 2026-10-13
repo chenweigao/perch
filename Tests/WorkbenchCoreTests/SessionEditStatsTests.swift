@@ -49,5 +49,17 @@ func checkSessionEditStats() throws {
         precondition(SessionEditStats.derive(from: [read]) == nil, "read-only tools are not edits")
         precondition(SessionEditStats.derive(from: [noop]) == nil, "edit without payload is not counted")
     }
+    // Reused IDs and revised inputs must not reuse another snapshot's stats.
+    let prior = try editMessage("reused", "Edit", #"{"path":"first.swift","new_string":"a"}"#)
+    let next = try editMessage("reused", "Edit", #"{"path":"second.swift","new_string":"b\nc"}"#)
+    _ = SessionEditStats.derive(from: [prior])
+    expectEqual(SessionEditStats.derive(from: [next])?.perFile,
+                ["second.swift": SessionEditStat(additions: 2, deletions: 0)])
+    // Exact bridge fileChange envelope, including multiple files and diff headers.
+    let codex = try editMessage("codex", "apply_patch", #"{"changes":[{"path":"one.swift","kind":{"type":"update"},"diff":"--- a/one.swift\n+++ b/one.swift\n@@ -1 +1 @@\n-old\n+new"},{"path":"two.swift","kind":{"type":"add"},"diff":"+first\n+second"}]}"#)
+    let codexStats = SessionEditStats.derive(from: [codex])
+    expectEqual(codexStats?.perFile["one.swift"], SessionEditStat(additions: 1, deletions: 1))
+    expectEqual(codexStats?.perFile["two.swift"], SessionEditStat(additions: 2, deletions: 0))
+    expectEqual(codexStats?.total, SessionEditStat(additions: 3, deletions: 1))
     print("PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection")
 }

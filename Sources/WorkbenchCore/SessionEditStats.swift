@@ -23,13 +23,26 @@ public enum SessionEditStats {
         var perFile: [String: SessionEditStat] = [:]
         for message in messages {
             for part in message.content where part.type == "tool_use" {
-                guard let id = part.toolCallId, let tool = part.toolName, let input = part.input,
-                      let resolved = resolve(id: id, tool: tool, input: input),
-                      let path = resolved.path else { continue }
-                var accumulated = perFile[path] ?? SessionEditStat(additions: 0, deletions: 0)
-                accumulated.additions += resolved.stat.additions
-                accumulated.deletions += resolved.stat.deletions
-                perFile[path] = accumulated
+                guard let tool = part.toolName, let input = part.input else { continue }
+                let edits: [(stat: SessionEditStat, path: String?)]
+                if tool.lowercased() == "apply_patch", !input["changes"].array.isEmpty {
+                    // Codex fileChange is normalized by native-agent-service.py to
+                    // one changes array, with a path and unified diff per file.
+                    edits = input["changes"].array.compactMap { change in
+                        guard let path = change["path"].string, !path.contains("://"),
+                              let diff = change["diff"].string else { return nil }
+                        return (patchStat(diff), path)
+                    }
+                } else {
+                    edits = compute(tool: tool, input: input).map { [$0] } ?? []
+                }
+                for edit in edits {
+                    guard let path = edit.path else { continue }
+                    var accumulated = perFile[path] ?? SessionEditStat(additions: 0, deletions: 0)
+                    accumulated.additions += edit.stat.additions
+                    accumulated.deletions += edit.stat.deletions
+                    perFile[path] = accumulated
+                }
             }
         }
         guard !perFile.isEmpty else { return nil }
@@ -39,23 +52,8 @@ public enum SessionEditStats {
         return (perFile, total)
     }
 
-    /// Edit arguments never change once the call is recorded; the session walk
-    /// re-derives per update, so memoize successes by tool call. Misses fail
-    /// fast on the tool-name switch and are not cached. Bounded FIFO.
-    private static var memo: [String: (stat: SessionEditStat, path: String?)] = [:]
-    private static var memoOrder: [String] = []
-
-    private static func resolve(id: String, tool: String, input: JSONValue) -> (stat: SessionEditStat, path: String?)? {
-        if let hit = memo[id] { return hit }
-        guard let computed = compute(tool: tool, input: input) else { return nil }
-        memo[id] = computed
-        memoOrder.append(id)
-        if memoOrder.count > 2048 {
-            memo.removeValue(forKey: memoOrder.removeFirst())
-        }
-        return computed
-    }
-
+    // Derive from this snapshot only. Tool IDs are not globally unique and
+    // providers can publish revised inputs under the same ID.
     private static func compute(tool: String, input: JSONValue) -> (stat: SessionEditStat, path: String?)? {
         // Tool-call paths may be absolute; URL-ish values are never files.
         let path = input["file_path"].string ?? input["filePath"].string ?? input["path"].string
@@ -70,17 +68,20 @@ public enum SessionEditStats {
             return (SessionEditStat(additions: lineCount(content), deletions: 0), path)
         case "apply_patch":
             guard let patch = input["patch"].string ?? input["diff"].string else { return nil }
-            var stat = SessionEditStat(additions: 0, deletions: 0)
-            for line in patch.split(separator: "\n", omittingEmptySubsequences: false) {
-                // +++/--- name the file, not an edit.
-                if line.hasPrefix("+++") || line.hasPrefix("---") { continue }
-                if line.hasPrefix("+") { stat.additions += 1 }
-                else if line.hasPrefix("-") { stat.deletions += 1 }
-            }
-            return (stat, path)
+            return (patchStat(patch), path)
         default:
             return nil
         }
+    }
+
+    private static func patchStat(_ patch: String) -> SessionEditStat {
+        var stat = SessionEditStat(additions: 0, deletions: 0)
+        for line in patch.split(separator: "\n", omittingEmptySubsequences: false) {
+            if line.hasPrefix("+++ ") || line.hasPrefix("--- ") { continue }
+            if line.hasPrefix("+") { stat.additions += 1 }
+            else if line.hasPrefix("-") { stat.deletions += 1 }
+        }
+        return stat
     }
 
     /// A trailing newline ends the last line rather than starting another —
