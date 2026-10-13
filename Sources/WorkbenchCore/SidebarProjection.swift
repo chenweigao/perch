@@ -54,7 +54,7 @@ public struct SidebarProjection {
             if item.online && item.section == .attention { attention += 1 }
             if pins.contains(item.reference) {
                 if pinned[item.reference] == nil { pinned[item.reference] = item }
-            } else if filter == .all || item.section == .running {
+            } else if filter == .all || (item.online && item.section == .running) {
                 count += 1
                 recent.append(item)
             }
@@ -80,13 +80,14 @@ public struct SidebarProjection {
                 grouped[id] = SidebarProject(location: location, sessions: [])
                 projectOrder.append(id)
             }
-            if !pins.contains(item.reference) && (filter == .all || item.section == .running) {
+            if !pins.contains(item.reference) && (filter == .all || (item.online && item.section == .running)) {
                 grouped[id]?.sessions.append(item)
             }
         }
         let names = Dictionary(projectOrder.map { (grouped[$0]!.title, 1) }, uniquingKeysWith: +)
         projects = projectOrder.compactMap { id -> SidebarProject? in
             guard var project = grouped[id] else { return nil }
+            if filter != .all && project.sessions.isEmpty { return nil }
             project.disambiguate = names[project.title, default: 0] > 1
             return project
         }.sorted {

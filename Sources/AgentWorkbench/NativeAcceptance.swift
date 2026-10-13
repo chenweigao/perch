@@ -1130,10 +1130,25 @@ private struct ReferenceComposerFixtureView: View {
         }
         model.sidebarRepositories.acceptanceReplace(host: host, roots: roots)
         try await settle(window, "repository projection restored") { self.probe.sidebarProjection?.projects.count == original.projects.count }
+        model.navigationState.tabs.open(first.sessions[0].id, pinned: true)
+        model.showDashboard = false
+        try await settle(window, "select a session before collapsing its project") {
+            rows().contains { $0.item.id == first.sessions[0].id && $0.selected }
+        }
         let selectedBefore = model.tabs.selectedID
         defaults.set(String(decoding: try JSONEncoder().encode([first.id]), as: UTF8.self), forKey: key)
         try await settle(window, "project collapsed") { !rows().contains { first.sessions.contains($0.item) } }
         guard model.tabs.selectedID == selectedBefore else { throw WorkbenchError("Collapse navigated away") }
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: mergedRoots)
+        try await settle(window, "metadata refresh preserves manual collapse") {
+            self.probe.sidebarProjection?.projects.count == original.projects.count - 1
+                && !rows().contains { first.sessions.contains($0.item) }
+        }
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: roots)
+        try await settle(window, "restored metadata still preserves manual collapse") {
+            self.probe.sidebarProjection?.projects.count == original.projects.count
+                && !rows().contains { first.sessions.contains($0.item) }
+        }
         defaults.set("[]", forKey: key)
         try await settle(window, "project expanded") { rows().count == 40 }
         let item = first.sessions[0]
@@ -1175,6 +1190,16 @@ private struct ReferenceComposerFixtureView: View {
                   let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
             return scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
         }
+        for destination in [first.location, nil] {
+            model.moveSidebarSession(outside, to: destination)
+            try await settle(window, "selected session stays visible after regrouping") {
+                guard let row = self.probe.sidebarRows.allObjects.first(where: { $0.window === window && $0.value?.item.id == outside.id }),
+                      let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
+                let project = self.probe.sidebarProjection?.projects.first { $0.sessions.contains { $0.id == outside.id } }
+                return project?.id == (destination?.id ?? original.projects[15].id)
+                    && scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
+            }
+        }
         func findSplit(_ view: NSView?) -> NSSplitView? {
             guard let view else { return nil }
             if let split = view as? NSSplitView { return split }
@@ -1206,6 +1231,7 @@ private struct ReferenceComposerFixtureView: View {
         try await settle(window, "restore conversation after draft") { self.hasMountedMessage(window, session: "session-0") }
         return ["project_identity_count": original.projects.count, "bounded_initial_rows": 40,
                 "collapse_preserves_selection": true, "pin_without_duplicate": true,
+                "metadata_refresh_preserves_manual_collapse": true,
                 "manual_membership_and_reset": true, "selected_outside_limits_revealed": true,
                 "repository_metadata_regroups_without_changing_cwd": true,
                 "repository_failure_retains_directory_and_retry_recovers": true,
@@ -1213,6 +1239,7 @@ private struct ReferenceComposerFixtureView: View {
                 "project_flat_switch_preserves_catalog": true,
                 "pinned_session_preserved_across_views": true,
                 "selected_scrolled_into_view": true,
+                "selected_stays_visible_after_regrouping": true,
                 "narrow_sidebar_selection": true,
                 "new_task_project_directory_and_repeated_requests": true,
                 "boundary": "production model and mounted native sidebar; offline fixture, no live agent or pointer-event claim"]

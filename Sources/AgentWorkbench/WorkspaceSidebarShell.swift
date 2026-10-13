@@ -18,6 +18,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     var onGroups: (() -> Void)? = nil
     var scrollRows = true
     var scrollTargetID: String? = nil
+    var scrollContext = ""
     @ViewBuilder let rows: Rows
     @ViewBuilder let environments: Environments
     @State private var showSettings = false
@@ -47,8 +48,8 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 VStack(alignment: .leading, spacing: 3) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
             }.scrollIndicators(.hidden)
-                .onChange(of: scrollTargetID, initial: true) { _, target in
-                    if let target { proxy.scrollTo(target, anchor: .center) }
+                .onChange(of: [scrollTargetID, scrollContext], initial: true) { _, _ in
+                    if let scrollTargetID { proxy.scrollTo(scrollTargetID, anchor: .center) }
                 }
             }
             } else { rows.padding(.horizontal, 10).padding(.bottom, 10) }

@@ -13,10 +13,8 @@ struct SidebarAgentIndicator: View {
                         Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
                     } else if item.section == .attention {
                         Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
-                    } else if item.section == .running {
-                        Circle().fill(.blue).frame(width: 5, height: 5)
                     } else if item.section == .review {
-                        Circle().fill(.orange).frame(width: 5, height: 5)
+                        Circle().fill(.blue).frame(width: 5, height: 5)
                     }
                 }.font(.system(size: 7, weight: .bold)).offset(x: 3, y: 2)
             }

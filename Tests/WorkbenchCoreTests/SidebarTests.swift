@@ -34,6 +34,13 @@ func checkSidebar() {
     expectEqual(running.recent.map(\.id), [localRun.id])
     expectEqual(running.attentionCount, all.attentionCount)
     expectEqual(running.favorites.map(\.id), all.favorites.map(\.id))
+    let offlineRun = session("offline-run", section: .running, online: false)
+    let filteredOffline = SidebarProjection(sessions: [offlineRun, localRun], starred: [], filter: .running)
+    expectEqual(filteredOffline.ungrouped.map(\.id), [localRun.id])
+    expectEqual(filteredOffline.projects.flatMap(\.sessions).map(\.id), [localRun.id])
+    let noRunning = SidebarProjection(sessions: [pinned, offlineRun], starred: [pinned.reference], filter: .running)
+    precondition(noRunning.projects.isEmpty && noRunning.ungrouped.isEmpty && noRunning.favorites.count == 1,
+                 "An empty running filter keeps pins but must not display empty projects or stale offline activity")
     print("PASS: stable sidebar pins, bounded recents, independent filters and actionable attention count")
 }
 

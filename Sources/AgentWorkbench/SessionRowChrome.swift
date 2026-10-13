@@ -71,10 +71,8 @@ struct SessionRowChrome<Indicator: View>: View {
                         #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
                     if compact && running {
-                        HStack(spacing: 3) {
-                            ConversationBusyIndicator()
-                            Text("运行中").font(.system(size: 11, weight: .medium)).foregroundStyle(Color.blue)
-                        }.fixedSize().accessibilityIdentifier("sidebar.running")
+                        ConversationBusyIndicator().help("运行中")
+                            .accessibilityIdentifier("sidebar.running")
                     }
                     if updatedAt > 0 && !compact {
                         TimelineView(.periodic(from: .now, by: 60)) { context in

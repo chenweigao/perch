@@ -32,6 +32,10 @@ struct WorkbenchSidebar: View {
         #endif
         let projection = model.sidebarProjection(filter: filter)
         let index = model.groupIndex
+        let selectedProjectID = projection.projects.first { project in
+            project.sessions.contains { $0.id == model.tabs.selectedID }
+        }?.id
+        let selectedPinned = projection.favorites.contains { $0.id == model.tabs.selectedID }
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个环境"),
                               environmentNeedsAttention: environmentNeedsAttention,
@@ -41,7 +45,8 @@ struct WorkbenchSidebar: View {
                               onArchive: { model.showArchive() },
                               onAllSessions: { model.showAllSessions() },
                               onGroups: { model.clearScope(); model.showHome(); model.showAllTaskGroups = true },
-                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection)) {
+                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection),
+                              scrollContext: selectedPinned ? "favorites" : groupedByProject ? selectedProjectID ?? "projects" : "flat") {
             #if PERCH_ACCEPTANCE
             if experiment.sidebarVariant == "projects" { projectRows(projection, index: index) }
             else if usesTable { tableRows(projection, index: index) }
@@ -58,8 +63,7 @@ struct WorkbenchSidebar: View {
         .onChange(of: model.workspace.starred) { old, new in
             if new.count > old.count { favoritesExpanded = true }
         }
-        .onChange(of: model.workspace.sidebarProjectLocations) { _, _ in revealSelectedProject() }
-        .onChange(of: model.sidebarRepositories.revision) { _, _ in revealSelectedProject() }
+        .onChange(of: selectedProjectID) { _, _ in revealSelectedProject() }
         #if !PERCH_ACCEPTANCE
         .task(id: SidebarRepositoryLoad(requests: model.sidebarRepositoryRequests, retry: model.sidebarRepositories.retryRevision)) {
             await model.sidebarRepositories.resolve(model.sidebarRepositoryRequests) { reference in
@@ -302,8 +306,9 @@ struct WorkbenchSidebar: View {
                     .buttonStyle(SidebarNavigationStyle()).padding(.horizontal, 10).padding(.vertical, 6)
             }
         }
-        if projection.projects.isEmpty && projection.favorites.isEmpty {
-            Text("新任务会出现在这里").font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
+        if projection.ungrouped.isEmpty && (filter != .all || projection.favorites.isEmpty) {
+            Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
+                .font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
         }
     }
 
