@@ -17,6 +17,9 @@ final class RevealFrameDriver {
     private var timers: [Int: Timer] = [:]
     private var nextToken = 0
 
+    var pendingFrameCount: Int { frames.count }
+    var isRunning: Bool { link != nil }
+
     var clock: StreamReveal.Clock {
         StreamReveal.Clock(
             now: { CACurrentMediaTime() * 1000 },
@@ -56,8 +59,13 @@ final class RevealFrameDriver {
     }
     private func fire() {
         // Controllers re-arm inside their tick; only stop once nobody did.
-        let pending = frames
-        for (_, callback) in pending { callback() }
+        let pending = Array(frames.keys)
+        for token in pending {
+            // Consume before invoking: a tick can schedule the next frame or
+            // cancel a sibling without replaying an old callback.
+            guard let callback = frames.removeValue(forKey: token) else { continue }
+            callback()
+        }
         if frames.isEmpty, let link {
             CVDisplayLinkStop(link)
             self.link = nil

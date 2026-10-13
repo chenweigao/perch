@@ -14,6 +14,9 @@ import WorkbenchCore
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
         switch CommandLine.arguments[1] {
+        case "stream-reveal":
+            try await checkProductionStreamReveal()
+
         case "architecture":
             UserDefaults.standard.removePersistentDomain(forName: domain)
             try await checkStateArchitecture()

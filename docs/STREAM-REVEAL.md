@@ -27,24 +27,17 @@ complete; a presentation-only cursor paces how much of the tail is on screen.
   stay `.equatable`-equal and only the crossing paragraph group rebuilds per
   frame. When the turn settles (`.progress` → `.message`/`.record`), the
   controller finishes the reveal in the same pass.
-- The controller-side cursor text counts one extra separator per text block, so
-  the published cursor can only overshoot a group boundary — never hide the
-  tail after the drain ends.
+- The controller and paragraph groups count the same trailing separators.
+  Nested non-text blocks render whole at their checkpoint.
 
 ## Verification
 
-- `swift run WorkbenchChecks` covers the cursor math with a manual clock
-  (drain pacing, wholesale dump, replacement, shrink, stall, re-arm) and
-  grapheme-safe prefixing.
-- Rendering no-regression on this Mac, baseline 0878fc0 vs the feature branch,
-  assistant scenario, alternating order: 342.62 → 349.75 events/s (1.021×),
-  reverse order 346.10 → 347.42 events/s (1.004×). Projection bench
-  (`WORKBENCH_BENCH=1 swift run -c release WorkbenchChecks`) is unchanged
-  within noise.
-- `scripts/benchmark-transcript.sh` currently cannot run on this Mac:
-  Gatekeeper kills bare `swiftc`-linked executables (reproducible on main with
-  a hello-world binary). The SPM-embedded bench above covers the same
-  projection.
+Core checks exercise pacing, replacement, completion and Unicode prefixes.
+Host lifecycle checks exercise the actual display driver and mount the production
+transcript: the growing reply must be visible, its tail initially withheld, then
+complete; no callbacks or display link remain after settling. The prior
+PerformancePreview throughput numbers did not exercise the hidden live row and
+are not acceptance evidence for this feature.
 
 ## Boundaries
 

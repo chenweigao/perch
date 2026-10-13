@@ -127,9 +127,9 @@ private struct ReplyBlocks: View {
                 for paragraph in following {
                     total += 1 + paragraph.reduce(0) { $0 + $1.text.utf16.count }
                 }
-                return total
+                return total + 1
             case .heading(_, let runs):
-                return runs.reduce(0) { $0 + $1.text.utf16.count }
+                return 1 + runs.reduce(0) { $0 + $1.text.utf16.count }
             default:
                 return 0
             }
@@ -194,6 +194,9 @@ private struct ReplyBlocks: View {
             } else {
                 ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs,
                                   truncateAt: truncateAt).equatable()
+                    // Lists/quotes/tables appear whole at their checkpoint.
+                    // Their nested blocks must not restart the outer cursor.
+                    .environment(\.streamRevealCursor, nil)
             }
         }
     }

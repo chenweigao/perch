@@ -1520,9 +1520,7 @@ private final class ConversationEntryController: NSViewController {
         return (message.id, source, preparation)
     }
     /// Cursor-space text: rendered paragraph/heading text plus one separator per
-    /// text block. Deliberately one separator MORE than the in-group separators
-    /// the view counts, so the published cursor can only overshoot a group
-    /// boundary — never truncate the tail after the drain completes.
+    /// text block, matching ReplyBlocks.Group.renderedLength exactly.
     private static func revealCursorText(blocks: [ReplyBlock]) -> String {
         var text = ""
         for block in blocks {
@@ -1547,7 +1545,12 @@ private final class ConversationEntryController: NSViewController {
         reveal?.update(Self.revealCursorText(blocks: blocks), animate: animate)
     }
     private func finishReveal() {
-        reveal?.finish()
+        reveal?.cancel()
+        reveal = nil
+        revealMessageID = nil
+        // Completion may contain a final chunk or switch renderer. Never cap
+        // the settled Markdown with a cursor from the preceding live snapshot.
+        revealCursor.visible = Int.max
     }
     private func setRoot() {
         #if TRANSCRIPT_CHECKS
