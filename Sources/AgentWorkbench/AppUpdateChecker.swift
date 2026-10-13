@@ -29,7 +29,7 @@ import WorkbenchCore
         if case .checking = state { return }
         state = .checking
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastCheckKey)
-        defer { if case .checking = state { state = .failed("检查失败") } }
+        defer { if case .checking = state { state = .failed(L("检查失败")) } }
         var components = URLComponents(string: "https://api.github.com/repos/chenweigao/perch/tags")!
         components.queryItems = [URLQueryItem(name: "per_page", value: "100")]
         var request = URLRequest(url: components.url!)
@@ -38,19 +38,19 @@ import WorkbenchCore
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                state = .failed("查询返回 \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                state = .failed(L("查询返回 \((response as? HTTPURLResponse)?.statusCode ?? 0)"))
                 return
             }
             struct Tag: Decodable { let name: String }
             let names = try JSONDecoder().decode([Tag].self, from: data).map(\.name)
             guard let latest = AppVersionCheck.latestTag(names) else {
-                state = .failed("发布页暂无可解析版本")
+                state = .failed(L("发布页暂无可解析版本"))
                 return
             }
             let current = currentVersion
             state = AppVersionCheck.compare(current, latest) == .orderedAscending ? .available(latest) : .upToDate
         } catch {
-            state = .failed("网络不可用")
+            state = .failed(L("网络不可用"))
         }
     }
 }

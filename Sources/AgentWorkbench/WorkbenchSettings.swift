@@ -149,7 +149,7 @@ struct WorkbenchSettings: View {
                 Label("有新版本 \(latest)", systemImage: "arrow.down.circle").foregroundStyle(.orange)
                 Link("查看发布", destination: URL(string: "https://github.com/chenweigao/perch/releases")!)
                     .font(.caption)
-                Text("源码构建更新：git pull && ./scripts/build.sh").foregroundStyle(.tertiary)
+                Text("此版本需手动更新").foregroundStyle(.tertiary)
             case .failed(let reason):
                 Text(reason).foregroundStyle(.secondary)
             }

@@ -3,8 +3,7 @@ import Foundation
 /// Semantic version helpers for the update check. Tag names look like
 /// `v0.1.0`; comparison is component-wise numeric with missing parts as zero.
 public enum AppVersionCheck {
-    /// The greatest semantic version among tag names; junk suffixes after a
-    /// `-` are ignored, non-conforming names drop out.
+    /// The greatest stable release version; prereleases are not stable updates.
     public static func latestTag(_ names: [String]) -> String? {
         names.compactMap(parse).max { compare($0.version, $1.version) == .orderedAscending }?.version
     }
@@ -13,10 +12,12 @@ public enum AppVersionCheck {
     static func parse(_ name: String) -> (version: String, components: [Int])? {
         var value = name
         if value.hasPrefix("v") || value.hasPrefix("V") { value.removeFirst() }
-        if let dash = value.firstIndex(of: "-") { value = String(value[..<dash]) }
-        let parts = value.split(separator: ".")
-        guard (2...3).contains(parts.count), parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }) else { return nil }
-        return (value, parts.map { Int($0)! })
+        guard !value.contains("-") else { return nil }
+        let parts = value.split(separator: ".", omittingEmptySubsequences: false)
+        let numbers = parts.compactMap { Int($0) }
+        guard (2...3).contains(parts.count), numbers.count == parts.count,
+              parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCII) && $0.allSatisfy(\.isNumber) }) else { return nil }
+        return (value, numbers)
     }
 
     public static func compare(_ a: String, _ b: String) -> ComparisonResult {
