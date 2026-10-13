@@ -64,6 +64,7 @@ def main():
     env = dict(os.environ)
     # A developer's optional live SSH target must never turn these into online checks.
     env.pop("WORKBENCH_LIVE_HOST", None)
+    env.pop("WORKBENCH_GIT_WRITE_HOST", None)
     env.pop("PERCH_ACCEPTANCE_ALLOW_INVALIDATION", None)
     for name, command, timeout in commands:
         print("Running " + name, flush=True)
