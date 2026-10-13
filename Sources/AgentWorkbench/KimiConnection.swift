@@ -338,6 +338,16 @@ final class KimiConnection {
         } catch {}
     }
 
+    /// Read navigation evidence without selecting or subscribing to a conversation.
+    func projectMessages(for id: String) async throws -> [KimiMessage] {
+        guard let api else { throw WorkbenchError("Project history unavailable") }
+        let token = generation
+        let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=50")
+        try Task.checkCancellation()
+        guard token == generation else { throw CancellationError() }
+        return page.items
+    }
+
     func refreshSessions() async throws {
         guard let api else { throw WorkbenchError("请先连接 Kimi Web") }
         let token = generation

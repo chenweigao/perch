@@ -124,6 +124,36 @@ func checkRemoteGitDiff() async throws {
                 repo.resolvingSymlinksInPath().path)
 
     try await git(["worktree", "add", "--quiet", "-b", "feature/linked", linked.path])
+    let nested = linked.appendingPathComponent("nested ; '$()\n项目")
+    try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+    let attempt = root.appendingPathComponent("tasks/random-attempt")
+    try FileManager.default.createDirectory(at: attempt, withIntermediateDirectories: true)
+    try JSONSerialization.data(withJSONObject: ["cwd": repo.path, "token": "test-only-secret"])
+        .write(to: attempt.appendingPathComponent("PERCH_CLAIM.json"))
+    let projectDirectories = [repo.path, linked.path, nested.path, root.path, missingPath, attempt.path]
+    let projectData = try await ProcessRunner.run("/bin/sh", ["-c", SidebarRepositoryCommand.command(directories: projectDirectories)])
+    let projectRoots = try SidebarRepositoryCommand.parse(projectData, directories: projectDirectories)
+    for directory in [repo.path, linked.path, nested.path, attempt.path] {
+        expectEqual(URL(fileURLWithPath: projectRoots[directory]!).resolvingSymlinksInPath().path,
+                    repo.resolvingSymlinksInPath().path)
+    }
+    expectEqual(projectRoots[root.path], root.path)
+    expectEqual(projectRoots[missingPath], missingPath)
+    expectFalse(String(decoding: projectData, as: UTF8.self).contains("test-only-secret"))
+    let projectHost = UUID()
+    let projectSessions = projectDirectories.enumerated().map { index, directory in
+        WorkspaceSession(reference: .init(hostID: projectHost, terminalID: String(index), kind: .codex),
+            title: String(index), directory: directory, hostName: "Local", detail: "", online: true,
+            section: .other, canMarkReviewed: false)
+    }
+    let projectLocations = Dictionary(uniqueKeysWithValues: projectSessions.map {
+        ($0.id, SidebarProjectLocation(hostID: projectHost, directory: projectRoots[$0.directory]!, hostName: "Local"))
+    })
+    let projects = SidebarProjection(sessions: projectSessions, starred: [], projectLocations: projectLocations).projects
+    expectEqual(projects.count, 3)
+    expectEqual(projects.first { $0.location?.directory == projectRoots[repo.path] }?.sessions.count, 4)
+    expectFalse(projects.contains { $0.location == nil })
+    print("PASS: Git worktrees and task claims share their owning project; non-Git and missing directories retain identity without exposing claim credentials")
     try Data("changed only in linked worktree\n".utf8).write(to: linked.appendingPathComponent("stable.txt"))
 
     guard case .clean(_, let mainWorktrees) = try await status()

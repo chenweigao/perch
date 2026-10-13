@@ -19,7 +19,7 @@ import os
     weak var dashboardView: NSView?
     let checkSidebarInvalidation: Bool = {
         let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? ""
-        return ["sidebar-invalidation", "sidebar-structure"].contains(mode) || (mode.hasPrefix("sidebar-layout-") && !mode.hasSuffix("-unprobed"))
+        return ["sidebar-invalidation", "sidebar-structure", "sidebar-projects"].contains(mode) || (mode.hasPrefix("sidebar-layout-") && !mode.hasSuffix("-unprobed"))
     }()
     let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
     let sidebarVariant = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] ?? "flat"
@@ -35,6 +35,7 @@ import os
     var sidebarRowEvaluations: [String: Int] = [:]
     let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
     var sidebarProjection: SidebarProjection?
+    var newTaskProject: SidebarProjectLocation?
     weak var sidebarView: NSView?
     weak var detailView: NSView?
     var detailCurrent = false
@@ -81,6 +82,12 @@ struct NativeSidebarProbe: NSViewRepresentable {
         NativeAcceptanceProbe.shared.sidebarProjection = projection
         NativeAcceptanceProbe.shared.sidebarView = view
     }
+}
+
+struct NativeTaskProjectProbe: NSViewRepresentable {
+    let location: SidebarProjectLocation
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) { NativeAcceptanceProbe.shared.newTaskProject = location }
 }
 
 /// Report only the mounted dashboard. During destination replacement SwiftUI can
@@ -340,6 +347,7 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
             if mode.hasPrefix("sidebar-layout-") { report.merge(try await sidebarLayout(window, mode: mode)) { _, new in new } }
+            if mode == "sidebar-projects" { report.merge(try await sidebarProjects(window)) { _, new in new } }
             if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
             if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
@@ -376,7 +384,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             let responsivenessReport = responsiveness.finish()
             report["main_actor_lateness"] = responsivenessReport
             let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
@@ -1057,6 +1065,224 @@ private struct ReferenceComposerFixtureView: View {
                 "layout_contract": probe.sidebarTable != nil ? "full native table data and visible row values/order/heights; offscreen rows unmounted; geometry counts cover mounted markers only" : unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
                 "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
     }
+    private func sidebarProjects(_ window: NSWindow) async throws -> [String: Any] {
+        guard probe.sidebarVariant == "projects" else { throw WorkbenchError("Project checks require the projects variant") }
+        let defaults = UserDefaults.standard
+        let key = "sidebar.projects.collapsed", saved = defaults.object(forKey: "sidebar.projects.collapsed")
+        let groupedKey = "sidebar.projects.grouped", savedGrouped = defaults.object(forKey: "sidebar.projects.grouped")
+        defer { defaults.set(saved, forKey: key); defaults.set(savedGrouped, forKey: groupedKey) }
+        defaults.set("[]", forKey: key)
+        defaults.set(true, forKey: groupedKey)
+        model.workspace.starred = []
+        model.workspace.sidebarProjectLocations = [:]
+        func rows() -> [NativeSidebarRowProbe] {
+            probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap(\.value)
+        }
+        let original = model.sidebarProjection(filter: .all)
+        let first = original.projects[0], second = original.projects[1]
+        try await settle(window, "project tree mounted") { rows().count == 40 }
+        defaults.set(false, forKey: groupedKey)
+        try await settle(window, "flat sessions mounted") {
+            Set(rows().map { $0.item.id }) == Set(original.ungrouped.prefix(40).map(\.id))
+        }
+        defaults.set(true, forKey: groupedKey)
+        try await settle(window, "project tree restored") {
+            Set(rows().map { $0.item.id }) == Set(original.projects.prefix(8).flatMap { $0.sessions.prefix(5).map(\.id) })
+        }
+        let host = model.connections[0].host
+        try await sidebarOperationEvidence(host: host)
+        let resolver = SidebarRepositoryState()
+        let request = SidebarRepositoryRequest(host: host, directories: [first.sessions[0].directory])
+        resolver.read = { _, _ in .failure(WorkbenchError("fixture connection failure")) }
+        await resolver.resolve([request])
+        guard resolver.failed, !resolver.isResolving,
+              resolver.location(for: first.sessions[0], host: host).directory == first.sessions[0].directory else {
+            throw WorkbenchError("Failed repository lookup silently classified a known directory as temporary")
+        }
+        resolver.read = { _, directories in
+            let records = Data("worktree /fixture/recovered-project\0".utf8).base64EncodedString()
+            return .success(Data("\(directories[0])\0\(directories[0])\0\(records)\0".utf8))
+        }
+        resolver.retry()
+        await resolver.resolve([request])
+        guard !resolver.failed, !resolver.isResolving,
+              resolver.location(for: first.sessions[0], host: host).directory == "/fixture/recovered-project" else {
+            throw WorkbenchError("Repository retry did not recover project membership")
+        }
+        resolver.read = { _, _ in .failure(WorkbenchError("fixture refresh failure")) }
+        resolver.retry()
+        await resolver.resolve([request])
+        guard resolver.failed,
+              resolver.location(for: first.sessions[0], host: host).directory == "/fixture/recovered-project" else {
+            throw WorkbenchError("Failed refresh discarded the last known repository")
+        }
+        let roots = Dictionary(model.allSessions.map { ($0.directory, $0.directory) }, uniquingKeysWith: { first, _ in first })
+        var mergedRoots = roots
+        mergedRoots[second.location!.directory] = first.location!.directory
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: mergedRoots)
+        try await settle(window, "worktrees grouped by owning repository") {
+            guard let projects = self.probe.sidebarProjection?.projects else { return false }
+            return projects.count == original.projects.count - 1
+                && projects.first { $0.id == first.id }?.sessions.count == first.sessions.count + second.sessions.count
+        }
+        guard second.sessions.allSatisfy({ $0.directory == second.location!.directory }) else {
+            throw WorkbenchError("Grouping changed execution directories")
+        }
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: roots)
+        try await settle(window, "repository projection restored") { self.probe.sidebarProjection?.projects.count == original.projects.count }
+        model.navigationState.tabs.open(first.sessions[0].id, pinned: true)
+        model.showDashboard = false
+        try await settle(window, "select a session before collapsing its project") {
+            rows().contains { $0.item.id == first.sessions[0].id && $0.selected }
+        }
+        let selectedBefore = model.tabs.selectedID
+        defaults.set(String(decoding: try JSONEncoder().encode([first.id]), as: UTF8.self), forKey: key)
+        try await settle(window, "project collapsed") { !rows().contains { first.sessions.contains($0.item) } }
+        guard model.tabs.selectedID == selectedBefore else { throw WorkbenchError("Collapse navigated away") }
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: mergedRoots)
+        try await settle(window, "metadata refresh preserves manual collapse") {
+            self.probe.sidebarProjection?.projects.count == original.projects.count - 1
+                && !rows().contains { first.sessions.contains($0.item) }
+        }
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: roots)
+        try await settle(window, "restored metadata still preserves manual collapse") {
+            self.probe.sidebarProjection?.projects.count == original.projects.count
+                && !rows().contains { first.sessions.contains($0.item) }
+        }
+        defaults.set("[]", forKey: key)
+        try await settle(window, "project expanded") { rows().count == 40 }
+        let item = first.sessions[0]
+        model.workspace.starred = [item.reference]
+        try await settle(window, "project pin without duplicate") {
+            rows().filter { $0.item.id == item.id }.count == 1 && rows().contains { $0.item.id == item.id && $0.starred }
+        }
+        defaults.set(false, forKey: groupedKey)
+        try await settle(window, "flat view retains pinned session without duplicate") {
+            rows().count == 41 && rows().filter { $0.item.id == item.id }.count == 1
+                && rows().contains { $0.item.id == item.id && $0.starred }
+        }
+        defaults.set(true, forKey: groupedKey)
+        try await settle(window, "project view retains pinned session") {
+            rows().contains { $0.item.id == item.id && $0.starred }
+                && Set(rows().map { $0.item.id }) != Set(self.model.sidebarProjection(filter: .all).ungrouped.prefix(40).map(\.id) + [item.id])
+        }
+        model.workspace.starred = []
+        model.moveSidebarSession(item, to: second.location)
+        try await settle(window, "project membership refreshed") {
+            self.probe.sidebarProjection?.projects.first { $0.id == second.id }?.sessions.contains(item) == true &&
+            self.probe.sidebarProjection?.projects.first { $0.id == first.id }?.sessions.contains(item) == false
+        }
+        guard model.allSessions.first(where: { $0.id == item.id })?.directory == item.directory else {
+            throw WorkbenchError("Sidebar move changed runtime cwd")
+        }
+        model.moveSidebarSession(item, to: nil)
+        try await settle(window, "automatic project restored") {
+            self.probe.sidebarProjection?.projects.first { $0.id == first.id }?.sessions.contains(item) == true
+        }
+        // The selected row must remain visible beyond both project and row limits.
+        let outside = original.projects[15].sessions[10]
+        model.navigationState.tabs.open(outside.id, pinned: true); model.showDashboard = false
+        try await settle(window, "selected session revealed outside limits") {
+            rows().contains { $0.item.id == outside.id && $0.selected }
+        }
+        try await settle(window, "selected session scrolled into view") {
+            guard let row = self.probe.sidebarRows.allObjects.first(where: { $0.window === window && $0.value?.item.id == outside.id }),
+                  let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
+            return scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
+        }
+        for destination in [first.location, nil] {
+            model.moveSidebarSession(outside, to: destination)
+            try await settle(window, "selected session stays visible after regrouping") {
+                guard let row = self.probe.sidebarRows.allObjects.first(where: { $0.window === window && $0.value?.item.id == outside.id }),
+                      let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
+                let project = self.probe.sidebarProjection?.projects.first { $0.sessions.contains { $0.id == outside.id } }
+                return project?.id == (destination?.id ?? original.projects[15].id)
+                    && scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
+            }
+        }
+        func findSplit(_ view: NSView?) -> NSSplitView? {
+            guard let view else { return nil }
+            if let split = view as? NSSplitView { return split }
+            return view.subviews.lazy.compactMap { findSplit($0) }.first
+        }
+        guard let split = findSplit(window.contentView) else {
+            throw WorkbenchError("Missing native split view")
+        }
+        split.setPosition(220, ofDividerAt: 0)
+        flush(window)
+        guard rows().contains(where: { $0.item.id == outside.id }) else { throw WorkbenchError("Narrow sidebar lost selection") }
+        split.setPosition(300, ofDividerAt: 0)
+        model.navigationState.tabs.close(outside.id)
+        model.navigationState.tabs.select(fixture.sessions[0].id)
+        try await settle(window, "restore selected row") { rows().contains { $0.item.id == self.fixture.sessions[0].id && $0.selected } }
+        model.selectedGroupID = model.workspace.groups.first?.id
+        model.startNewTask(in: first.location)
+        guard model.selectedGroupID == nil else { throw WorkbenchError("Project draft inherited an unrelated task group") }
+        try await settle(window, "project new task directory") {
+            self.probe.newTaskProject?.id == first.location?.id && self.model.newTaskProject == nil
+        }
+        model.startNewTask(in: second.location)
+        try await settle(window, "switch project while drafting") {
+            self.probe.newTaskProject?.id == second.location?.id && self.model.newTaskProject == nil
+        }
+        model.startNewTask(in: first.location)
+        try await settle(window, "repeat project draft request") { self.probe.newTaskProject?.id == first.location?.id }
+        model.open(fixture.sessions[0])
+        try await settle(window, "restore conversation after draft") { self.hasMountedMessage(window, session: "session-0") }
+        return ["project_identity_count": original.projects.count, "bounded_initial_rows": 40,
+                "collapse_preserves_selection": true, "pin_without_duplicate": true,
+                "metadata_refresh_preserves_manual_collapse": true,
+                "manual_membership_and_reset": true, "selected_outside_limits_revealed": true,
+                "repository_metadata_regroups_without_changing_cwd": true,
+                "repository_failure_retains_directory_and_retry_recovers": true,
+                "operation_evidence_refines_same_cwd_sessions": true,
+                "project_flat_switch_preserves_catalog": true,
+                "pinned_session_preserved_across_views": true,
+                "selected_scrolled_into_view": true,
+                "selected_stays_visible_after_regrouping": true,
+                "narrow_sidebar_selection": true,
+                "new_task_project_directory_and_repeated_requests": true,
+                "boundary": "production model and mounted native sidebar; offline fixture, no live agent or pointer-event claim"]
+    }
+
+    private func sidebarOperationEvidence(host: SSHHost) async throws {
+        let state = SidebarRepositoryState()
+        let sessions = ["a", "b"].map { id in
+            WorkspaceSession(reference: .init(hostID: host.id, terminalID: "evidence-" + id, kind: .kimi),
+                title: id, directory: "/fixture/code", hostName: host.name, detail: "", online: true,
+                section: .other, canMarkReviewed: false, updatedAt: 1)
+        }
+        state.read = { _, directories in
+            var data = Data()
+            for directory in directories {
+                let project = directory.contains("/tree-a") ? "/repos/a" : directory.contains("/tree-b") ? "/repos/b" : nil
+                let records = project.map { Data("worktree \($0)\0".utf8).base64EncodedString() } ?? ""
+                data.append(Data("\(directory)\0\(directory)\0\(records)\0".utf8))
+            }
+            return .success(data)
+        }
+        let request = SidebarRepositoryRequest(host: host, directories: ["/fixture/code"], sessions: sessions.map {
+            SidebarRepositorySession(reference: $0.reference, directory: $0.directory, revision: 1)
+        })
+        var reads = 0
+        let evidence: (SessionReference) async throws -> [KimiMessage] = { reference in
+            reads += 1
+            let name = reference.terminalID.hasSuffix("a") ? "a" : "b"
+            let data = try JSONSerialization.data(withJSONObject: [["id": name, "role": "assistant",
+                "created_at": "2026-10-13T00:00:00Z", "content": [["type": "tool_use",
+                    "input": ["path": "/fixture/tree-\(name)/Sources/file.swift"]]]]])
+            return try KimiWire.decoder().decode([KimiMessage].self, from: data)
+        }
+        await state.resolve([request], evidence: evidence)
+        guard state.location(for: sessions[0], host: host).directory == "/repos/a",
+              state.location(for: sessions[1], host: host).directory == "/repos/b",
+              sessions.allSatisfy({ $0.directory == "/fixture/code" }), !state.failed else {
+            throw WorkbenchError("Two sessions sharing cwd must follow their own operation evidence")
+        }
+        await state.resolve([request], evidence: evidence)
+        guard reads == 2 else { throw WorkbenchError("Unchanged project evidence was fetched again") }
+    }
+
     private func sidebarStructure(_ window: NSWindow) async throws -> [String: Any] {
         let defaults = UserDefaults.standard
         let keys = ["sidebar.favorites.expanded", "sidebar.recent.expanded"]

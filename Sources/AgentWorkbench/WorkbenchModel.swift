@@ -16,6 +16,7 @@ let namingLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "dev.agentwork
 final class WorkbenchModel {
     let navigationState = WorkbenchNavigationState()
     let catalog = SessionCatalogState()
+    let sidebarRepositories = SidebarRepositoryState()
     let conversationPresentations = ConversationPresentationCache()
     var kimi: KimiConnection
     var native: NativeAgentConnection
@@ -57,12 +58,12 @@ final class WorkbenchModel {
             if workspace.groups != oldValue.groups {
                 cachedGroupIndex = nil; cachedGroupShortcuts = nil
             }
-            if workspace.starred != oldValue.starred { cachedSidebar = nil }
+            if workspace.starred != oldValue.starred || workspace.sidebarProjectLocations != oldValue.sidebarProjectLocations { cachedSidebar = nil }
         }
     }
     @ObservationIgnored private var cachedGroupIndex: SessionGroupIndex?
     @ObservationIgnored private var cachedGroupShortcuts: (catalogRevision: Int, selectedID: UUID?, summaries: [TaskGroupSummary])?
-    @ObservationIgnored private var cachedSidebar: (catalogRevision: Int, filter: SidebarRecentFilter, projection: SidebarProjection)?
+    @ObservationIgnored private var cachedSidebar: (catalogRevision: Int, repositoryRevision: Int, filter: SidebarRecentFilter, projection: SidebarProjection)?
     var workspaceError: String?
     private(set) var allSessions: [WorkspaceSession] {
         get { catalog.sessions }
@@ -112,6 +113,7 @@ final class WorkbenchModel {
     var draftingNewTask = false {
         didSet { updateVisibility() }
     }
+    var newTaskProject: SidebarProjectLocation?
     var showRenderReport = false
     var renderReport = ""
     var showGroupEditor = false
@@ -245,11 +247,16 @@ final class WorkbenchModel {
     init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection, kimi: KimiConnection? = nil) {
         self.kimi = kimi ?? KimiConnection(setupHost: host)
         self.native = native
-        connections = []
+        // The project fixture needs a selectable creation target, but never calls
+        // connect, observes it, or restores any saved hosts.
+        connections = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] == "projects"
+            ? [HostConnection(host: host)] : []
         configuredEnvironment = true
         selectedHostID = host.id
         canSaveWorkspace = false
         allSessions = sessions
+        sidebarRepositories.acceptanceReplace(host: host,
+            roots: Dictionary(sessions.map { ($0.directory, $0.directory) }, uniquingKeysWith: { first, _ in first }))
         kimiEnvironments[host.id] = self.kimi; nativeEnvironments[host.id] = native
         workspace.starred = Array(sessions.prefix(4).map(\.reference))
         workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
@@ -337,7 +344,16 @@ final class WorkbenchModel {
             }
         } catch { workspaceError = error.localizedDescription }
     }
-    func startNewTask() { if connections.isEmpty { configureHost() } else { draftingNewTask = true } }
+    func startNewTask(in project: SidebarProjectLocation? = nil) {
+        newTaskProject = project
+        if let project { clearScope(); activateAgentEnvironment(project.hostID) }
+        if connections.isEmpty { configureHost() } else { draftingNewTask = true }
+    }
+
+    func moveSidebarSession(_ item: WorkspaceSession, to project: SidebarProjectLocation?) {
+        workspace.sidebarProjectLocations[item.id] = project
+        saveWorkspace()
+    }
     func configureHost(_ host: SSHHost? = nil) {
         if host?.isLocal == true { showLocalSetup = true; return }
         setupHost = host; showAddHost = true
@@ -412,12 +428,50 @@ final class WorkbenchModel {
         cachedGroupIndex = index
         return index
     }
+    var sidebarRepositoryRequests: [SidebarRepositoryRequest] {
+        connections.compactMap { connection in
+            let directories = Set(allSessions.filter {
+                !$0.archived && $0.reference.hostID == connection.id && ($0.online || connection.host.isLocal)
+            }.map(\.directory).filter { $0.hasPrefix("/") && !$0.contains("\0") }).sorted()
+            let sessions = allSessions.filter {
+                !$0.archived && $0.online && $0.reference.hostID == connection.id && $0.reference.kind != .terminal
+            }.map { SidebarRepositorySession(reference: $0.reference, directory: $0.directory,
+                                             revision: $0.section == .running ? 0 : $0.updatedAt) }
+                .sorted { $0.reference.id < $1.reference.id }
+            return directories.isEmpty ? nil : SidebarRepositoryRequest(host: connection.host, directories: directories, sessions: sessions)
+        }
+    }
+    func sidebarProjectMessages(_ reference: SessionReference) async throws -> [KimiMessage] {
+        if reference.kind == .kimi, let connection = kimiEnvironments[reference.hostID] {
+            return try await connection.projectMessages(for: reference.terminalID)
+        }
+        if let connection = nativeEnvironments[reference.hostID] {
+            return try await connection.projectMessages(for: reference.terminalID)
+        }
+        throw WorkbenchError("Project history unavailable")
+    }
+    var sidebarProjectLocations: [String: SidebarProjectLocation] {
+        let _ = sidebarRepositories.revision
+        var locations = workspace.sidebarProjectLocations
+        #if PERCH_ACCEPTANCE
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] != "projects" { return locations }
+        #endif
+        let hosts = Dictionary(connections.map { ($0.id, $0.host) }, uniquingKeysWith: { first, _ in first })
+        for item in allSessions where locations[item.id] == nil {
+            locations[item.id] = sidebarRepositories.location(for: item, host: hosts[item.reference.hostID])
+        }
+        return locations
+    }
     func sidebarProjection(filter: SidebarRecentFilter) -> SidebarProjection {
         let revision = catalog.revision
+        let repositoryRevision = sidebarRepositories.revision
         let starred = workspace.starred
-        if let cachedSidebar, cachedSidebar.catalogRevision == revision, cachedSidebar.filter == filter { return cachedSidebar.projection }
-        let projection = SidebarProjection(sessions: allSessions, starred: starred, filter: filter)
-        cachedSidebar = (revision, filter, projection)
+        let _ = workspace.sidebarProjectLocations
+        if let cachedSidebar, cachedSidebar.catalogRevision == revision,
+           cachedSidebar.repositoryRevision == repositoryRevision, cachedSidebar.filter == filter { return cachedSidebar.projection }
+        let locations = sidebarProjectLocations
+        let projection = SidebarProjection(sessions: allSessions, starred: starred, filter: filter, projectLocations: locations)
+        cachedSidebar = (revision, repositoryRevision, filter, projection)
         return projection
     }
     func setScope(groupID: UUID?) {

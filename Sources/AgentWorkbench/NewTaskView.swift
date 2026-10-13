@@ -255,6 +255,12 @@ struct NewTaskView: View {
                     .frame(minWidth: 540, idealWidth: 680, minHeight: 400, idealHeight: 560)
             }
             .onChange(of: cwd) { _, _ in showReference = false; referenceBrowser.cancel() }
+            #if PERCH_ACCEPTANCE
+            .background(NativeTaskProjectProbe(location: .init(hostID: kimi.host.id, directory: cwd, hostName: kimi.host.name)))
+            #endif
+            .onChange(of: model.newTaskProject) { _, project in
+                if let project { applyProject(project) }
+            }
             .onChange(of: kimi.host.id) { _, _ in
                 showReference = false; referenceBrowser.cancel()
                 showDirectory = false; showConnectionDetails = false
@@ -281,7 +287,9 @@ struct NewTaskView: View {
                 reconcileThinking()
             }
             .onAppear {
-                if let launch = model.launchAfterSetup {
+                if let project = model.newTaskProject {
+                    applyProject(project)
+                } else if let launch = model.launchAfterSetup {
                     model.launchAfterSetup = nil
                     model.activateAgentEnvironment(launch.hostID)
                     provider = launch.provider; cwd = launch.directory; agentModel = launch.model
@@ -306,6 +314,16 @@ struct NewTaskView: View {
                     reconcileThinking()
                 }
             }
+    }
+    private func applyProject(_ project: SidebarProjectLocation) {
+        model.activateAgentEnvironment(project.hostID)
+        cwd = project.directory
+        provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi
+        agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
+        thinking = savedThinking(for: provider)
+        permissionMode = PermissionDefaults.mode(for: provider) ?? PermissionCatalog.runtimeManaged
+        reconcileThinking()
+        model.newTaskProject = nil
     }
     private var contextBar: some View {
         HStack(spacing: 14) {

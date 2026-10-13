@@ -51,7 +51,8 @@ func checkSidebarPerformance() {
     for filter in SidebarRecentFilter.allCases {
         let pins = [sessions[2].reference, sessions[0].reference, sessions[2].reference, goals[0].sessions.last!]
         let active = sessions.filter { !$0.archived }
-        let candidates = active.filter { !Set(pins).contains($0.reference) && (filter == .all || $0.section == .running) }
+        // Offline snapshots retain old activity, but cannot establish a live run.
+        let candidates = active.filter { !Set(pins).contains($0.reference) && (filter == .all || ($0.online && $0.section == .running)) }
         let result = SidebarProjection(sessions: sessions, starred: pins, filter: filter)
         precondition(result.favorites == pins.compactMap { ref in active.first { $0.reference == ref } })
         precondition(result.recent == Array(candidates.prefix(20)) && result.totalRecentCount == candidates.count)
