@@ -1080,6 +1080,7 @@ private struct ReferenceComposerFixtureView: View {
         let first = original.projects[0], second = original.projects[1]
         try await settle(window, "project tree mounted") { rows().count == 40 }
         let host = model.connections[0].host
+        try await sidebarOperationEvidence(host: host)
         let resolver = SidebarRepositoryState()
         let request = SidebarRepositoryRequest(host: host, directories: [first.sessions[0].directory])
         resolver.read = { _, _ in .failure(WorkbenchError("fixture connection failure")) }
@@ -1188,10 +1189,49 @@ private struct ReferenceComposerFixtureView: View {
                 "manual_membership_and_reset": true, "selected_outside_limits_revealed": true,
                 "repository_metadata_regroups_without_changing_cwd": true,
                 "repository_failure_retains_directory_and_retry_recovers": true,
+                "operation_evidence_refines_same_cwd_sessions": true,
                 "selected_scrolled_into_view": true,
                 "narrow_sidebar_selection": true,
                 "new_task_project_directory_and_repeated_requests": true,
                 "boundary": "production model and mounted native sidebar; offline fixture, no live agent or pointer-event claim"]
+    }
+
+    private func sidebarOperationEvidence(host: SSHHost) async throws {
+        let state = SidebarRepositoryState()
+        let sessions = ["a", "b"].map { id in
+            WorkspaceSession(reference: .init(hostID: host.id, terminalID: "evidence-" + id, kind: .kimi),
+                title: id, directory: "/fixture/code", hostName: host.name, detail: "", online: true,
+                section: .other, canMarkReviewed: false, updatedAt: 1)
+        }
+        state.read = { _, directories in
+            var data = Data()
+            for directory in directories {
+                let project = directory.contains("/tree-a") ? "/repos/a" : directory.contains("/tree-b") ? "/repos/b" : nil
+                let records = project.map { Data("worktree \($0)\0".utf8).base64EncodedString() } ?? ""
+                data.append(Data("\(directory)\0\(directory)\0\(records)\0".utf8))
+            }
+            return .success(data)
+        }
+        let request = SidebarRepositoryRequest(host: host, directories: ["/fixture/code"], sessions: sessions.map {
+            SidebarRepositorySession(reference: $0.reference, directory: $0.directory, revision: 1)
+        })
+        var reads = 0
+        let evidence: (SessionReference) async throws -> [KimiMessage] = { reference in
+            reads += 1
+            let name = reference.terminalID.hasSuffix("a") ? "a" : "b"
+            let data = try JSONSerialization.data(withJSONObject: [["id": name, "role": "assistant",
+                "created_at": "2026-10-13T00:00:00Z", "content": [["type": "tool_use",
+                    "input": ["path": "/fixture/tree-\(name)/Sources/file.swift"]]]]])
+            return try KimiWire.decoder().decode([KimiMessage].self, from: data)
+        }
+        await state.resolve([request], evidence: evidence)
+        guard state.location(for: sessions[0], host: host).directory == "/repos/a",
+              state.location(for: sessions[1], host: host).directory == "/repos/b",
+              sessions.allSatisfy({ $0.directory == "/fixture/code" }), !state.failed else {
+            throw WorkbenchError("Two sessions sharing cwd must follow their own operation evidence")
+        }
+        await state.resolve([request], evidence: evidence)
+        guard reads == 2 else { throw WorkbenchError("Unchanged project evidence was fetched again") }
     }
 
     private func sidebarStructure(_ window: NSWindow) async throws -> [String: Any] {

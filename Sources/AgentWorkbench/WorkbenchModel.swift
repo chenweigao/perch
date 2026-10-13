@@ -433,8 +433,22 @@ final class WorkbenchModel {
             let directories = Set(allSessions.filter {
                 !$0.archived && $0.reference.hostID == connection.id && ($0.online || connection.host.isLocal)
             }.map(\.directory).filter { $0.hasPrefix("/") && !$0.contains("\0") }).sorted()
-            return directories.isEmpty ? nil : SidebarRepositoryRequest(host: connection.host, directories: directories)
+            let sessions = allSessions.filter {
+                !$0.archived && $0.online && $0.reference.hostID == connection.id && $0.reference.kind != .terminal
+            }.map { SidebarRepositorySession(reference: $0.reference, directory: $0.directory,
+                                             revision: $0.section == .running ? 0 : $0.updatedAt) }
+                .sorted { $0.reference.id < $1.reference.id }
+            return directories.isEmpty ? nil : SidebarRepositoryRequest(host: connection.host, directories: directories, sessions: sessions)
         }
+    }
+    func sidebarProjectMessages(_ reference: SessionReference) async throws -> [KimiMessage] {
+        if reference.kind == .kimi, let connection = kimiEnvironments[reference.hostID] {
+            return try await connection.projectMessages(for: reference.terminalID)
+        }
+        if let connection = nativeEnvironments[reference.hostID] {
+            return try await connection.projectMessages(for: reference.terminalID)
+        }
+        throw WorkbenchError("Project history unavailable")
     }
     var sidebarProjectLocations: [String: SidebarProjectLocation] {
         let _ = sidebarRepositories.revision

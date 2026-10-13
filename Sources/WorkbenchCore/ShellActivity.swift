@@ -73,7 +73,7 @@ struct ShellActivity {
             ? ([executable] + arguments.prefix(1)).joined(separator: " ") : executable
     }
 
-    private static func segments(_ command: String) -> [[String]] {
+    static func segments(_ command: String) -> [[String]] {
         var result: [[String]] = [], words: [String] = [], word = ""
         var quote: Character?, escaped = false
         func finishWord() {

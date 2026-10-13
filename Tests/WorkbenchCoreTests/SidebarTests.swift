@@ -4,6 +4,7 @@ import WorkbenchCore
 func checkSidebar() {
     checkSidebarPerformance()
     checkSidebarProjects()
+    checkSidebarEvidence()
     let remote = UUID()
     func session(_ id: String, section: WorkQueueSection = .other, online: Bool = true,
                  archived: Bool = false, local: Bool = false) -> WorkspaceSession {
@@ -34,6 +35,29 @@ func checkSidebar() {
     expectEqual(running.attentionCount, all.attentionCount)
     expectEqual(running.favorites.map(\.id), all.favorites.map(\.id))
     print("PASS: stable sidebar pins, bounded recents, independent filters and actionable attention count")
+}
+
+private func checkSidebarEvidence() {
+    let messages = try! KimiWire.decoder().decode([KimiMessage].self, from: Data(#"""
+    [{"id":"one","role":"assistant","created_at":"2026-10-13T00:00:00Z","content":[
+      {"type":"text","text":"cd /unrelated/prose"},
+      {"type":"tool_use","input":{"path":"/work/tree-a/Sources/file.swift"}},
+      {"type":"tool_use","input":{"command":"cd '/work/tree-a' && git status"}},
+      {"type":"tool_use","input":{"command":"git -C /work/tree-b diff"}},
+      {"type":"tool_use","input":{"command":"echo 'cd /unrelated/quoted'"}},
+      {"type":"tool_use","input":{"command":"python3 - <<'PY'\ncd /unrelated/heredoc\nPY"}},
+      {"type":"tool_use","input":{"command":"cd $(echo /unrelated/dynamic)"}}
+    ]}]
+    """#.utf8))
+    let hints = SidebarProjectEvidence.directories(messages: messages, cwd: "/work")
+    precondition(hints.contains("/work/tree-a") && hints.contains("/work/tree-b"))
+    precondition(!hints.contains { $0.contains("unrelated") })
+    let matches = Dictionary(uniqueKeysWithValues: Set(hints).map { path in
+        (path, SidebarRepositoryMatch(directory: path.hasPrefix("/work/tree-a") ? "/repos/a" : "/repos/b", isRepository: true))
+    })
+    precondition(SidebarProjectEvidence.project(directories: hints, matches: matches) == "/repos/a")
+    precondition(SidebarProjectEvidence.project(directories: hints, matches: [:]) == nil)
+    print("PASS: project evidence uses real tool paths and literal navigation, rejects prose/quoted commands/heredocs/dynamic paths, and favors sustained repository work")
 }
 
 private func checkSidebarProjects() {

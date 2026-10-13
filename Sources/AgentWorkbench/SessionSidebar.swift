@@ -55,7 +55,9 @@ struct WorkbenchSidebar: View {
         .onChange(of: model.sidebarRepositories.revision) { _, _ in revealSelectedProject() }
         #if !PERCH_ACCEPTANCE
         .task(id: SidebarRepositoryLoad(requests: model.sidebarRepositoryRequests, retry: model.sidebarRepositories.retryRevision)) {
-            await model.sidebarRepositories.resolve(model.sidebarRepositoryRequests)
+            await model.sidebarRepositories.resolve(model.sidebarRepositoryRequests) { reference in
+                try await model.sidebarProjectMessages(reference)
+            }
         }
         #endif
         #if PERCH_ACCEPTANCE

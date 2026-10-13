@@ -336,6 +336,14 @@ final class NativeAgentConnection {
     func loadedMessages(for id: String) -> [KimiMessage]? {
         snapshot?.id == id && snapshot?.hasOlder == false ? snapshot?.messages : nil
     }
+    func projectMessages(for id: String) async throws -> [KimiMessage] {
+        let token = generation
+        let page: NativeAgentSnapshot = try await request("/sessions/\(id)?turns=25")
+        try Task.checkCancellation()
+        guard token == generation else { throw CancellationError() }
+        return page.messages
+    }
+
     func recapMessages(for id: String) async throws -> [KimiMessage] {
         guard id == selectedID, var full = snapshot, full.id == id,
               !full.busy, full.interactions.isEmpty, full.error == nil, full.completed > 0 else {

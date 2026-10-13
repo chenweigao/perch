@@ -1,5 +1,13 @@
 import Foundation
 
+public struct SidebarRepositoryMatch: Equatable, Sendable {
+    public let directory: String
+    public let isRepository: Bool
+    public init(directory: String, isRepository: Bool) {
+        self.directory = directory; self.isRepository = isRepository
+    }
+}
+
 /// Resolve on the owning machine. Git's first worktree is the main checkout,
 /// regardless of the linked checkout's name, branch, or current subdirectory.
 public enum SidebarRepositoryCommand {
@@ -39,19 +47,24 @@ public enum SidebarRepositoryCommand {
     /// classification. Paths are NUL-delimited, including
     /// spaces, shell metacharacters, non-ASCII text and embedded newlines.
     public static func parse(_ data: Data, directories: [String]) throws -> [String: String] {
+        try parseMatches(data, directories: directories).mapValues(\.directory)
+    }
+
+    public static func parseMatches(_ data: Data, directories: [String]) throws -> [String: SidebarRepositoryMatch] {
         let fields = data.split(separator: 0, omittingEmptySubsequences: false)
         guard fields.count == directories.count * 3 + 1, fields.last?.isEmpty == true else {
             throw WorkbenchError("Invalid repository response")
         }
-        var roots: [String: String] = [:]
+        var roots: [String: SidebarRepositoryMatch] = [:]
         for (index, directory) in directories.enumerated() {
             guard String(decoding: fields[index * 3], as: UTF8.self) == directory,
                   let decoded = Data(base64Encoded: Data(fields[index * 3 + 2])) else {
                 throw WorkbenchError("Invalid repository response")
             }
             let first = decoded.split(separator: 0).first.map { String(decoding: $0, as: UTF8.self) } ?? ""
-            roots[directory] = first.hasPrefix("worktree /") ? String(first.dropFirst(9))
-                : String(decoding: fields[index * 3 + 1], as: UTF8.self)
+            let repository = first.hasPrefix("worktree /")
+            roots[directory] = SidebarRepositoryMatch(directory: repository ? String(first.dropFirst(9))
+                : String(decoding: fields[index * 3 + 1], as: UTF8.self), isRepository: repository)
         }
         return roots
     }
