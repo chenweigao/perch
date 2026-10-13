@@ -39,6 +39,7 @@ public struct SidebarProject: Identifiable, Sendable {
 public struct SidebarProjection {
     public let favorites: [WorkspaceSession]
     public let recent: [WorkspaceSession]
+    public let ungrouped: [WorkspaceSession]
     public let totalRecentCount: Int
     public let attentionCount: Int
     public let projects: [SidebarProject]
@@ -55,11 +56,12 @@ public struct SidebarProjection {
                 if pinned[item.reference] == nil { pinned[item.reference] = item }
             } else if filter == .all || item.section == .running {
                 count += 1
-                if recent.count < 20 { recent.append(item) }
+                recent.append(item)
             }
         }
         favorites = starred.compactMap { pinned[$0] }
-        self.recent = recent
+        self.recent = Array(recent.prefix(20))
+        ungrouped = recent
         totalRecentCount = count
         attentionCount = attention
 

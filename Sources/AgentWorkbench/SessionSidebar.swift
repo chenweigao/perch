@@ -10,7 +10,9 @@ struct WorkbenchSidebar: View {
     @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
     @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
     @AppStorage("sidebar.projects.collapsed") private var collapsedProjectsJSON = "[]"
+    @AppStorage("sidebar.projects.grouped") private var groupedByProject = true
     @State private var projectLimit = 8
+    @State private var sessionLimit = 40
     @State private var expandedProjects = Set<String>()
     private var collapsedProjects: Set<String> {
         Set((try? JSONDecoder().decode([String].self, from: Data(collapsedProjectsJSON.utf8))) ?? [])
@@ -51,6 +53,7 @@ struct WorkbenchSidebar: View {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }
         .onChange(of: model.tabs.selectedID) { _, _ in revealSelectedProject() }
+        .onChange(of: groupedByProject) { _, _ in revealSelectedProject() }
         .onChange(of: model.workspace.sidebarProjectLocations) { _, _ in revealSelectedProject() }
         .onChange(of: model.sidebarRepositories.revision) { _, _ in revealSelectedProject() }
         #if !PERCH_ACCEPTANCE
@@ -84,6 +87,9 @@ struct WorkbenchSidebar: View {
         guard !model.showDashboard, let selected = model.tabs.selectedID else { return nil }
         if projection.favorites.contains(where: { $0.id == selected }) {
             return favoritesExpanded ? "session-" + selected : nil
+        }
+        if !groupedByProject {
+            return projection.ungrouped.contains(where: { $0.id == selected }) ? "session-" + selected : nil
         }
         guard let project = projection.projects.first(where: { $0.sessions.contains { $0.id == selected } }),
               !collapsedProjects.contains(project.id) else { return nil }
@@ -180,7 +186,7 @@ struct WorkbenchSidebar: View {
         }
     }
     private enum ProjectEntry: Identifiable {
-        case favorites, projects, project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects
+        case favorites, projects, project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects, moreSessions(Int)
         var id: String {
             switch self {
             case .favorites: "header-favorites"
@@ -189,6 +195,7 @@ struct WorkbenchSidebar: View {
             case .session(let item, _): "session-" + item.id
             case .more(let project): "more-" + project.id
             case .moreProjects: "more-projects"
+            case .moreSessions: "more-sessions"
             }
         }
     }
@@ -201,6 +208,14 @@ struct WorkbenchSidebar: View {
         result.append(.projects)
         let collapsed = collapsedProjects
         let selectedID = model.showDashboard ? nil : model.tabs.selectedID
+        if !groupedByProject {
+            var sessions = Array(projection.ungrouped.prefix(sessionLimit))
+            if let selected = projection.ungrouped.first(where: { $0.id == selectedID }),
+               !sessions.contains(where: { $0.id == selected.id }) { sessions.append(selected) }
+            result += sessions.map { .session($0, false) }
+            if sessions.count < projection.ungrouped.count { result.append(.moreSessions(projection.ungrouped.count)) }
+            return result
+        }
         var visible = Array(projection.projects.prefix(projectLimit))
         if let selectedProject = projection.projects.first(where: { $0.sessions.contains { $0.id == selectedID } }),
            !visible.contains(where: { $0.id == selectedProject.id }) { visible.append(selectedProject) }
@@ -223,16 +238,22 @@ struct WorkbenchSidebar: View {
             case .favorites: SidebarSection("置顶", id: "favorites") { EmptyView() }
             case .projects:
                 HStack {
-                    Text("项目").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Picker("会话视图", selection: $groupedByProject) {
+                        Text("按项目").tag(true)
+                        Text("平铺会话").tag(false)
+                    }.pickerStyle(.segmented).labelsHidden().controlSize(.small)
+                        .frame(maxWidth: 180).accessibilityIdentifier("sidebar.layout")
                     Spacer()
-                    if model.sidebarRepositories.isResolving {
+                    if groupedByProject && model.sidebarRepositories.isResolving {
                         ProgressView().controlSize(.mini).help("正在识别项目…")
                     }
-                    Button { model.sidebarRepositories.retry() } label: {
-                        Image(systemName: model.sidebarRepositories.failed ? "exclamationmark.arrow.circlepath" : "arrow.clockwise")
-                    }.buttonStyle(.plain).foregroundStyle(.secondary)
-                        .help(model.sidebarRepositories.failed ? "项目识别失败，点击重试" : "重新识别项目")
-                        .accessibilityLabel("重新识别项目")
+                    if groupedByProject {
+                        Button { model.sidebarRepositories.retry() } label: {
+                            Image(systemName: model.sidebarRepositories.failed ? "exclamationmark.arrow.circlepath" : "arrow.clockwise")
+                        }.buttonStyle(.plain).foregroundStyle(.secondary)
+                            .help(model.sidebarRepositories.failed ? "项目识别失败，点击重试" : "重新识别项目")
+                            .accessibilityLabel("重新识别项目")
+                    }
                     recentActions
                 }.padding(.horizontal, 10).padding(.top, 18).padding(.bottom, 3)
             case .project(let project):
@@ -253,6 +274,9 @@ struct WorkbenchSidebar: View {
                 }.buttonStyle(SidebarNavigationStyle()).padding(.leading, 32).padding(.vertical, 4)
             case .moreProjects:
                 Button("更多项目") { projectLimit += 8 }
+                    .buttonStyle(SidebarNavigationStyle()).padding(.horizontal, 10).padding(.vertical, 6)
+            case .moreSessions(let count):
+                Button("更多会话（共 \(count) 个）") { sessionLimit += 40 }
                     .buttonStyle(SidebarNavigationStyle()).padding(.horizontal, 10).padding(.vertical, 6)
             }
         }

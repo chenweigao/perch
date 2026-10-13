@@ -1069,8 +1069,10 @@ private struct ReferenceComposerFixtureView: View {
         guard probe.sidebarVariant == "projects" else { throw WorkbenchError("Project checks require the projects variant") }
         let defaults = UserDefaults.standard
         let key = "sidebar.projects.collapsed", saved = defaults.object(forKey: "sidebar.projects.collapsed")
-        defer { defaults.set(saved, forKey: key) }
+        let groupedKey = "sidebar.projects.grouped", savedGrouped = defaults.object(forKey: "sidebar.projects.grouped")
+        defer { defaults.set(saved, forKey: key); defaults.set(savedGrouped, forKey: groupedKey) }
         defaults.set("[]", forKey: key)
+        defaults.set(true, forKey: groupedKey)
         model.workspace.starred = []
         model.workspace.sidebarProjectLocations = [:]
         func rows() -> [NativeSidebarRowProbe] {
@@ -1079,6 +1081,14 @@ private struct ReferenceComposerFixtureView: View {
         let original = model.sidebarProjection(filter: .all)
         let first = original.projects[0], second = original.projects[1]
         try await settle(window, "project tree mounted") { rows().count == 40 }
+        defaults.set(false, forKey: groupedKey)
+        try await settle(window, "flat sessions mounted") {
+            Set(rows().map { $0.item.id }) == Set(original.ungrouped.prefix(40).map(\.id))
+        }
+        defaults.set(true, forKey: groupedKey)
+        try await settle(window, "project tree restored") {
+            Set(rows().map { $0.item.id }) == Set(original.projects.prefix(8).flatMap { $0.sessions.prefix(5).map(\.id) })
+        }
         let host = model.connections[0].host
         try await sidebarOperationEvidence(host: host)
         let resolver = SidebarRepositoryState()
@@ -1190,6 +1200,7 @@ private struct ReferenceComposerFixtureView: View {
                 "repository_metadata_regroups_without_changing_cwd": true,
                 "repository_failure_retains_directory_and_retry_recovers": true,
                 "operation_evidence_refines_same_cwd_sessions": true,
+                "project_flat_switch_preserves_catalog": true,
                 "selected_scrolled_into_view": true,
                 "narrow_sidebar_selection": true,
                 "new_task_project_directory_and_repeated_requests": true,

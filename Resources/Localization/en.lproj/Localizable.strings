@@ -1184,3 +1184,11 @@
 "项目识别失败，点击重试" = "Project lookup failed. Click to retry.";
 
 "重新识别项目" = "Refresh projects";
+
+"会话视图" = "Chat view";
+
+"按项目" = "By project";
+
+"平铺会话" = "Flat list";
+
+"更多会话（共 %lld 个）" = "More chats (%lld total)";
