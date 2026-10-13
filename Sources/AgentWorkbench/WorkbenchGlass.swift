@@ -64,6 +64,7 @@ struct WorkbenchDisclosureContent<Content: View>: View {
     /// Non-nil while animating: the clipped height growing 0→natural or
     /// shrinking natural→0. Nil means the content flows at its natural height.
     @State private var clippedHeight: CGFloat?
+    @State private var animationRevision = 0
 
     init(expanded: Bool, @ViewBuilder content: () -> Content) {
         self.expanded = expanded
@@ -84,6 +85,8 @@ struct WorkbenchDisclosureContent<Content: View>: View {
             }
         }
         .onChange(of: expanded) { _, now in
+                animationRevision += 1
+                let revision = animationRevision
                 guard !reduceMotion else { mounted = now; clippedHeight = nil; return }
                 if now {
                     // Mount at zero height, then grow once the first layout pass
@@ -91,10 +94,11 @@ struct WorkbenchDisclosureContent<Content: View>: View {
                     mounted = true
                     clippedHeight = 0
                     DispatchQueue.main.async {
+                        guard revision == animationRevision else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             clippedHeight = naturalHeight
                         } completion: {
-                            if expanded { clippedHeight = nil }
+                            if revision == animationRevision { clippedHeight = nil }
                         }
                     }
                 } else {
@@ -102,13 +106,21 @@ struct WorkbenchDisclosureContent<Content: View>: View {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         clippedHeight = 0
                     } completion: {
-                        if !expanded {
+                        if revision == animationRevision {
                             mounted = false
                             clippedHeight = nil
                         }
                     }
                 }
             }
+        .onDisappear { animationRevision += 1 }
+        .onChange(of: reduceMotion) { _, reduced in
+            if reduced {
+                animationRevision += 1
+                mounted = expanded
+                clippedHeight = nil
+            }
+        }
     }
 }
 struct WorkbenchDisclosureButtonStyle: ButtonStyle {

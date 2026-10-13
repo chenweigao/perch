@@ -428,13 +428,15 @@ struct KimiQuestionView: View {
     /// Multi-select questions confirmed mid-flow (ccgui 确认本题并继续); the last
     /// outstanding question goes straight to the final submit instead.
     @State private var confirmed: Set<String> = []
+    @State private var editing: String?
 
     private func answered(_ q: KimiQuestion.Item) -> Bool {
         !(choices[q.id] ?? []).isEmpty
             || !(other[q.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     private func done(_ q: KimiQuestion.Item) -> Bool {
-        answered(q) && (q.multiSelect != true || confirmed.contains(q.id))
+        editing != q.id && answered(q) && (confirmed.contains(q.id)
+            || (q.multiSelect != true && (other[q.id] ?? "").isEmpty && !(choices[q.id] ?? []).isEmpty))
     }
     /// The first unfinished question drives the flow; single-select answers
     /// advance it automatically.
@@ -445,7 +447,7 @@ struct KimiQuestionView: View {
     }
     private var submittable: Bool {
         question.questions.allSatisfy { q in
-            answered(q) && (q.multiSelect != true || confirmed.contains(q.id) || isLastPending(q))
+            answered(q) && (done(q) || isLastPending(q))
         }
     }
 
@@ -474,7 +476,15 @@ struct KimiQuestionView: View {
                     HStack(spacing: 6) {
                         Text(q.question).font(.system(size: 14, weight: .medium))
                             .foregroundStyle(isDone ? .secondary : .primary)
-                        if isDone { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.system(size: 11)) }
+                        if isDone {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.system(size: 11))
+                            Spacer()
+                            Button("修改回答") {
+                                confirmed.remove(q.id)
+                                // Keep the answer while returning to its editable form.
+                                editing = q.id
+                            }.font(.caption).buttonStyle(.plain)
+                        }
                     }
                     if let body = q.body, !isDone { KimiMarkdown(text: body) }
                     if isDone {
@@ -500,8 +510,8 @@ struct KimiQuestionView: View {
                         if q.allowOther == true || q.options.isEmpty {
                             TextField("填写回答", text: Binding(get: { other[q.id] ?? "" }, set: { other[q.id] = $0; if q.multiSelect != true && !$0.isEmpty { choices[q.id] = [] } })).textFieldStyle(.roundedBorder)
                         }
-                        if q.multiSelect == true, answered(q), !isDone, !isLastPending(q) {
-                            Button("确认本题并继续") { confirmed.insert(q.id) }
+                        if answered(q), !isDone, !isLastPending(q) {
+                            Button("确认本题并继续") { confirmed.insert(q.id); editing = nil }
                                 .buttonStyle(.bordered).controlSize(.small)
                         }
                     }
@@ -532,6 +542,7 @@ struct KimiQuestionView: View {
         } else {
             choices[q.id] = [option]
             other[q.id] = ""
+            editing = nil
         }
     }
     private func summary(of q: KimiQuestion.Item) -> String {

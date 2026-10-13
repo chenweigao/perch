@@ -19,7 +19,4 @@ Mechanism: the content measures its natural height via `fixedSize` +
 height (0 → natural on open, natural → 0 on close), then returns to natural
 flow so streaming content keeps resizing without animating every token.
 
-Validation: release build and WorkbenchChecks passed; PerformancePreview
-assistant scenario against the parent branch shows no regression (see
-docs/STREAM-REVEAL.md for the fixture usage). The benchmark never toggles
-disclosures, so it covers only the added container cost, not the animation.
+Validation: the native interaction checks cover initial open/closed state, rapid close/reopen, remembered expansion, and Reduce Motion. A revision invalidates obsolete animation completions.
