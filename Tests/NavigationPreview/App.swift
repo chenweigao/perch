@@ -4,6 +4,9 @@ import QuartzCore
 import SwiftUI
 import ImageIO
 import WorkbenchCore
+import os
+
+private let scrollProfileLog = OSLog(subsystem: "dev.agentworkbench.navigationqa", category: .pointsOfInterest)
 
 // Isolated click-response and scroll fixture. It hosts the production
 // ConversationScrollView/ConversationTranscript and the production
@@ -345,6 +348,10 @@ final class NavigationRunner {
         let budget = 1000 / hz
         var phases: [[String: Any]] = []
         for phase in ["cold-down", "revisit-up", "hot-local"] {
+            let phaseID = OSSignpostID(log: scrollProfileLog)
+            os_signpost(.begin, log: scrollProfileLog, name: "TranscriptScrollPhase", signpostID: phaseID, "%{public}s", phase)
+            defer { os_signpost(.end, log: scrollProfileLog, name: "TranscriptScrollPhase", signpostID: phaseID) }
+            let phaseStart = CACurrentMediaTime()
             NavigationRenderMetrics.stages = [:]
             NavigationRenderMetrics.counters = [:]
             var times: [Double] = [], delays: [Double] = []
@@ -384,6 +391,7 @@ final class NavigationRunner {
             if phase == "revisit-up" && scroll.contentView.bounds.minY > 1 { throw NavigationError("fast scroll did not reach the top") }
             if missingRows != 0 { throw NavigationError("fast scroll left visible rows unmounted") }
             phases.append(["phase": phase, "work_ms": statistics(times), "schedule_delay_ms": statistics(delays),
+                "start_uptime_s": phaseStart, "end_uptime_s": CACurrentMediaTime(),
                 "over_budget": times.filter { $0 > budget }.count, "samples_ms": times,
                 "height_changes": heightChanges, "position_corrections": corrections,
                 "missing_visible_row_samples": missingRows, "render_stages": NavigationRenderMetrics.report,
@@ -1339,7 +1347,10 @@ struct NavigationPreviewApp: App {
                 report.merge(try await runner.claudeNavigation()) { a, _ in a }
             }
             else if mode == "tool-card" { report.merge(try await runner.toolCardContracts()) { a, _ in a } }
-            else if mode == "user-rows" { report.merge(try await runner.nativeUserRows()) { a, _ in a } }
+            else if mode == "user-rows" {
+                report.merge(try await runner.nativeUserRows()) { a, _ in a }
+                report.merge(try await runner.nativeUserControllerContracts()) { a, _ in a }
+            }
             else if mode == "assistant-rows" {
                 report.merge(try await runner.nativeUserRows(assistant: true)) { a, _ in a }
                 report.merge(try await runner.nativeAssistantContracts()) { a, _ in a }

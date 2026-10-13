@@ -1,0 +1,44 @@
+{
+  "raw_interval_count": 6,
+  "unique_intervals": [
+    {
+      "start_ns": 4227303291,
+      "name": "TranscriptScrollPhase",
+      "subsystem": "dev.agentworkbench.navigationqa",
+      "category": "PointsOfInterest",
+      "process": "NavigationPreview",
+      "signpost_id": "33",
+      "end_ns": 6582041083,
+      "duration_ns": 2354737792,
+      "start_ms": 4227.303,
+      "end_ms": 6582.041,
+      "duration_ms": 2354.738
+    },
+    {
+      "start_ns": 6582046041,
+      "name": "TranscriptScrollPhase",
+      "subsystem": "dev.agentworkbench.navigationqa",
+      "category": "PointsOfInterest",
+      "process": "NavigationPreview",
+      "signpost_id": "3784",
+      "end_ns": 8773074083,
+      "duration_ns": 2191028042,
+      "start_ms": 6582.046,
+      "end_ms": 8773.074,
+      "duration_ms": 2191.028
+    },
+    {
+      "start_ns": 8773077166,
+      "name": "TranscriptScrollPhase",
+      "subsystem": "dev.agentworkbench.navigationqa",
+      "category": "PointsOfInterest",
+      "process": "NavigationPreview",
+      "signpost_id": "4802",
+      "end_ns": 11009905708,
+      "duration_ns": 2236828542,
+      "start_ms": 8773.077,
+      "end_ms": 11009.906,
+      "duration_ms": 2236.829
+    }
+  ]
+}

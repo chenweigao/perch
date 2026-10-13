@@ -520,6 +520,12 @@ final class NativeUserMessageView: NSView {
     var bookmarkTurn: String?
     var bookmarkSession: String?
     override var isFlipped: Bool { true }
+    var widthChanged: (() -> Void)?
+    override func setFrameSize(_ newSize: NSSize) {
+        let previousWidth = bounds.width
+        super.setFrameSize(newSize)
+        if bounds.width != previousWidth { widthChanged?() }
+    }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -537,6 +543,8 @@ final class NativeUserMessageView: NSView {
     }
     static func acquire() -> NativeUserMessageView { recycled.popLast() ?? NativeUserMessageView() }
     static func recycle(_ view: NativeUserMessageView) {
+        view.widthChanged = nil
+        view.identifier = nil
         view.removeFromSuperview()
         view.actionContext = nil
         view.sourceText = ""

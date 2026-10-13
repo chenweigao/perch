@@ -1,0 +1,241 @@
+{
+  "revisit_utf8_inclusive_sample_counts": [
+    [
+      "icu::RuleBasedBreakIterator::RuleBasedBreakIterator(UDataMemory*, signed char, UErrorCode&)",
+      1408
+    ],
+    [
+      "<deduplicated_symbol>",
+      1408
+    ],
+    [
+      "0x19c6e2084",
+      1408
+    ],
+    [
+      "-[NSParagraphArbitrator _firstFitLineBreakContextBeforeIndex:lineFragmentWidth:range:]",
+      1408
+    ],
+    [
+      "u_strFromUTF8WithSub",
+      1408
+    ],
+    [
+      "0x19c6e22e0",
+      1408
+    ],
+    [
+      "icu::BreakIterator::makeInstance(icu::Locale const&, int, UErrorCode&)",
+      1408
+    ],
+    [
+      "_NSCopyBreakIterator",
+      1408
+    ],
+    [
+      "-[NSParagraphArbitrator prepareBreakIteratorForCharacterAtIndex:]",
+      1408
+    ],
+    [
+      "icu::BreakIterator::buildInstance(icu::Locale const&, char const*, UErrorCode&)",
+      1408
+    ],
+    [
+      "ubrk_open",
+      1408
+    ],
+    [
+      "icu::RuleBasedBreakIterator::RuleBasedBreakIterator(UDataMemory*, UErrorCode&)",
+      1408
+    ],
+    [
+      "icu::UnicodeString::setToUTF8(icu::StringPiece)",
+      1407
+    ],
+    [
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      1401
+    ],
+    [
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)",
+      1401
+    ],
+    [
+      "closure #2 in closure #1 in NavigationPreviewApp.body.getter",
+      1401
+    ],
+    [
+      "NavigationPreviewApp.run()",
+      1401
+    ],
+    [
+      "NavigationRunner.fastScroll()",
+      1401
+    ],
+    [
+      "-[NSLayoutManager(NSPrivate) _fillLayoutHoleForCharacterRange:desiredNumberOfLines:isSoft:]",
+      1397
+    ],
+    [
+      "-[NSATSLineFragment layoutForStartingGlyphAtIndex:characterIndex:minPosition:maxPosition:lineFragmentRect:]",
+      1397
+    ],
+    [
+      "-[NSATSLineFragment _charIndexToBreakLineByWordWrappingAtIndex:lineFragmentWidth:hyphenate:]",
+      1397
+    ],
+    [
+      "-[NSATSTypesetter layoutParagraphAtPoint:]",
+      1397
+    ],
+    [
+      "-[NSTypesetter layoutCharactersInRange:forLayoutManager:maximumNumberOfLineFragments:]",
+      1397
+    ],
+    [
+      "-[NSTypesetter _layoutGlyphsInLayoutManager:startingAtGlyphIndex:maxNumberOfLineFragments:maxCharacterIndex:nextGlyphIndex:nextCharacterIndex:]",
+      1397
+    ],
+    [
+      "_NSFastFillAllLayoutHolesForGlyphRange",
+      1397
+    ],
+    [
+      "-[NSATSTypesetter _layoutLineFragmentStartingWithGlyphAtIndex:characterIndex:atPoint:renderingContext:]",
+      1397
+    ],
+    [
+      "-[NSLayoutManager(NSPrivate) _glyphRangeForBoundingRect:inTextContainer:fast:okToFillHoles:]",
+      1397
+    ],
+    [
+      "-[NSATSTypesetter layoutCharactersInRange:forLayoutManager:maximumNumberOfLineFragments:]",
+      1397
+    ],
+    [
+      "-[NSLayoutManager(NSPrivate) _firstPassGlyphRangeForBoundingRect:inTextContainer:okToFillHoles:]",
+      1397
+    ],
+    [
+      "-[NSClipView _immediateScrollToPoint:]",
+      1388
+    ],
+    [
+      "_CFXRegistrationPost",
+      1388
+    ],
+    [
+      "-[NSNotificationCenter postNotificationName:object:userInfo:]",
+      1388
+    ],
+    [
+      "-[NSView translateOriginToPoint:]",
+      1388
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      1388
+    ],
+    [
+      "_CFXNotificationPost",
+      1388
+    ],
+    [
+      "__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__",
+      1388
+    ],
+    [
+      "-[NSView _postBoundsChangeNotification]",
+      1388
+    ],
+    [
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      1388
+    ],
+    [
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()",
+      1388
+    ],
+    [
+      "___CFXRegistrationPost_block_invoke",
+      1388
+    ]
+  ],
+  "example_stacks": [
+    [
+      "u_strFromUTF8WithSub",
+      "icu::UnicodeString::setToUTF8(icu::StringPiece)",
+      "0x19c6e2084",
+      "0x19c6e22e0",
+      "icu::RuleBasedBreakIterator::RuleBasedBreakIterator(UDataMemory*, UErrorCode&)",
+      "icu::RuleBasedBreakIterator::RuleBasedBreakIterator(UDataMemory*, signed char, UErrorCode&)",
+      "icu::BreakIterator::buildInstance(icu::Locale const&, char const*, UErrorCode&)",
+      "icu::BreakIterator::makeInstance(icu::Locale const&, int, UErrorCode&)",
+      "ubrk_open",
+      "_NSCopyBreakIterator",
+      "-[NSParagraphArbitrator prepareBreakIteratorForCharacterAtIndex:]",
+      "-[NSParagraphArbitrator _firstFitLineBreakContextBeforeIndex:lineFragmentWidth:range:]",
+      "-[NSATSLineFragment _charIndexToBreakLineByWordWrappingAtIndex:lineFragmentWidth:hyphenate:]",
+      "-[NSATSLineFragment layoutForStartingGlyphAtIndex:characterIndex:minPosition:maxPosition:lineFragmentRect:]",
+      "-[NSATSTypesetter _layoutLineFragmentStartingWithGlyphAtIndex:characterIndex:atPoint:renderingContext:]",
+      "-[NSATSTypesetter layoutParagraphAtPoint:]",
+      "-[NSTypesetter _layoutGlyphsInLayoutManager:startingAtGlyphIndex:maxNumberOfLineFragments:maxCharacterIndex:nextGlyphIndex:nextCharacterIndex:]",
+      "-[NSTypesetter layoutCharactersInRange:forLayoutManager:maximumNumberOfLineFragments:]",
+      "-[NSATSTypesetter layoutCharactersInRange:forLayoutManager:maximumNumberOfLineFragments:]",
+      "-[NSLayoutManager(NSPrivate) _fillLayoutHoleForCharacterRange:desiredNumberOfLines:isSoft:]",
+      "_NSFastFillAllLayoutHolesForGlyphRange",
+      "-[NSLayoutManager(NSPrivate) _firstPassGlyphRangeForBoundingRect:inTextContainer:okToFillHoles:]",
+      "-[NSLayoutManager(NSPrivate) _glyphRangeForBoundingRect:inTextContainer:fast:okToFillHoles:]",
+      "-[NSTextView setNeedsDisplayInRect:avoidAdditionalLayout:]",
+      "-[NSView(NSViewContentStyle) _recursivelyInvalidateCachedContentStyle]",
+      "-[NSView(NSViewContentStyle) _recursivelyInvalidateCachedContentStyle]",
+      "-[NSView _setSuperview:]",
+      "-[NSView addSubview:]",
+      "-[NSView setSubviews:]",
+      "NativeAssistantStackView.update(_:)",
+      "NativeAssistantMessageView.update(_:source:dark:enabled:actionContext:messageID:)",
+      "ConversationEntryController.setRoot()",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()"
+    ],
+    [
+      "u_strFromUTF8WithSub",
+      "icu::UnicodeString::setToUTF8(icu::StringPiece)",
+      "0x19c6e2084",
+      "0x19c6e22e0",
+      "icu::RuleBasedBreakIterator::RuleBasedBreakIterator(UDataMemory*, UErrorCode&)",
+      "icu::RuleBasedBreakIterator::RuleBasedBreakIterator(UDataMemory*, signed char, UErrorCode&)",
+      "icu::BreakIterator::buildInstance(icu::Locale const&, char const*, UErrorCode&)",
+      "icu::BreakIterator::makeInstance(icu::Locale const&, int, UErrorCode&)",
+      "ubrk_open",
+      "_NSCopyBreakIterator",
+      "-[NSParagraphArbitrator prepareBreakIteratorForCharacterAtIndex:]",
+      "-[NSParagraphArbitrator _firstFitLineBreakContextBeforeIndex:lineFragmentWidth:range:]",
+      "-[NSATSLineFragment _charIndexToBreakLineByWordWrappingAtIndex:lineFragmentWidth:hyphenate:]",
+      "-[NSATSLineFragment layoutForStartingGlyphAtIndex:characterIndex:minPosition:maxPosition:lineFragmentRect:]",
+      "-[NSATSTypesetter _layoutLineFragmentStartingWithGlyphAtIndex:characterIndex:atPoint:renderingContext:]",
+      "-[NSATSTypesetter layoutParagraphAtPoint:]",
+      "-[NSTypesetter _layoutGlyphsInLayoutManager:startingAtGlyphIndex:maxNumberOfLineFragments:maxCharacterIndex:nextGlyphIndex:nextCharacterIndex:]",
+      "-[NSTypesetter layoutCharactersInRange:forLayoutManager:maximumNumberOfLineFragments:]",
+      "-[NSATSTypesetter layoutCharactersInRange:forLayoutManager:maximumNumberOfLineFragments:]",
+      "-[NSLayoutManager(NSPrivate) _fillLayoutHoleForCharacterRange:desiredNumberOfLines:isSoft:]",
+      "_NSFastFillAllLayoutHolesForGlyphRange",
+      "-[NSLayoutManager(NSPrivate) _firstPassGlyphRangeForBoundingRect:inTextContainer:okToFillHoles:]",
+      "-[NSLayoutManager(NSPrivate) _glyphRangeForBoundingRect:inTextContainer:fast:okToFillHoles:]",
+      "-[NSTextView setNeedsDisplayInRect:avoidAdditionalLayout:]",
+      "-[NSView(NSViewContentStyle) _recursivelyInvalidateCachedContentStyle]",
+      "-[NSView(NSViewContentStyle) _recursivelyInvalidateCachedContentStyle]",
+      "-[NSView _setSuperview:]",
+      "-[NSView addSubview:]",
+      "-[NSView setSubviews:]",
+      "NativeAssistantStackView.update(_:)",
+      "NativeAssistantMessageView.update(_:source:dark:enabled:actionContext:messageID:)",
+      "ConversationEntryController.setRoot()",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "partial apply for closure #1 in ConversationDocumentView.observeScroll()",
+      "thunk for @escaping @callee_guaranteed @Sendable (@in_guaranteed Notification) -> ()"
+    ]
+  ],
+  "sample_weight_ms": 0.1
+}

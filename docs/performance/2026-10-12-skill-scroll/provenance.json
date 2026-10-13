@@ -1,0 +1,22 @@
+{
+  "source_commit": "c2d330e5eeed8456f57e6db6cb385da6b2f81879",
+  "diagnostic_patch_sha256": "9c60fbbe997523bab24f9185f96f1f9039521405d182121df31d859ab504b2e3",
+  "candidate_patch_sha256": "72fdca215306566c8ad96415aff45b5effaf14da5b53dad74ff06d804b83c361",
+  "experiment_build": {
+    "source_commit": "c2d330e5eeed8456f57e6db6cb385da6b2f81879",
+    "source_sha256": "45fc2ff71961ca2b5b50dd81503ff208ca52f80d0fb9a9f70380de4d7e849e59",
+    "fixture_sha256": "77c1af85d0dbf334ffdbff5f36097b8013a67a26102562d340bde1d0ebc92389",
+    "package_resolved_sha256": "2b17c6f64607ae25c2b498bac7e47db0ccc700117962307ab327a55813fe91a7",
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+  },
+  "xcode": "Xcode 27.0\nBuild version 27A266a",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+  "hardware_model": "Mac16,10",
+  "display_refresh_hz": null,
+  "raw_artifacts": ".local/skill-scroll-investigation",
+  "skills": {
+    "swiftui-expert-skill": "3b794f9cb46efb016eafcad2fcedce7127c74d60c50a949619e0bcd2bc38351f",
+    "perch-performance": "08ae14bdcf64f09b650863b02e98e1d77366d9445f494a71d09d0c6bf0b91310"
+  },
+  "final_installed_skill_sha256": "1689deb95c2714ec53936d1fff3efce1a8e64fa79eebdc6594020591d2a73384"
+}

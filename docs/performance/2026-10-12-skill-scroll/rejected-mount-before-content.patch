@@ -1,0 +1,47 @@
+diff --git a/Sources/AgentWorkbench/NativeAssistantBlocks.swift b/Sources/AgentWorkbench/NativeAssistantBlocks.swift
+index 60a5ad8..31ccb10 100644
+--- a/Sources/AgentWorkbench/NativeAssistantBlocks.swift
++++ b/Sources/AgentWorkbench/NativeAssistantBlocks.swift
+@@ -2,6 +2,10 @@ import AppKit
+ import SwiftUI
+ import WorkbenchCore
+ 
++#if TRANSCRIPT_CHECKS
++private let mountBlocksBeforeContent = ProcessInfo.processInfo.environment["NAVIGATION_MOUNT_BEFORE_CONTENT"] == "1"
++#endif
++
+ /// Bounded native blocks for completed assistant messages: paragraphs, headings,
+ /// code cards, rules, paragraph-only quotes and paragraph/list items. Tables,
+ /// attachments and nested content outside this set keep the SwiftUI renderer.
+@@ -489,14 +493,19 @@ final class NativeAssistantStackView: NSView {
+     func update(_ blocks: [NativeAssistantBlock]) {
+         guard blocks != self.blocks else { return }
+         self.blocks = blocks
++        #if TRANSCRIPT_CHECKS
++        let deferContent = mountBlocksBeforeContent
++        #else
++        let deferContent = false
++        #endif
+         var next: [NativeAssistantBlockView] = []
+         for (index, block) in blocks.enumerated() {
+             if index < blockViews.count, type(of: blockViews[index]) == makeViewType(for: block) {
+-                blockViews[index].update(block)
++                if !deferContent { blockViews[index].update(block) }
+                 next.append(blockViews[index])
+             } else {
+                 let view = makeView(for: block)
+-                view.update(block)
++                if !deferContent { view.update(block) }
+                 next.append(view)
+             }
+         }
+@@ -506,6 +515,9 @@ final class NativeAssistantStackView: NSView {
+         }
+         blockViews = next
+         subviews = blockViews.map { $0 as NSView }
++        if deferContent {
++            for (view, block) in zip(blockViews, blocks) { view.update(block) }
++        }
+     }
+     private func makeViewType(for block: NativeAssistantBlock) -> NativeAssistantBlockView.Type {
+         switch block {
