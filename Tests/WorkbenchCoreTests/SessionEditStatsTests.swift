@@ -1,0 +1,53 @@
+import Foundation
+import WorkbenchCore
+
+private func editMessage(_ id: String, _ tool: String, _ inputJSON: String) throws -> KimiMessage {
+    try KimiWire.decoder().decode(KimiMessage.self, from: Data("""
+    {"id":"\(id)","role":"assistant","created_at":"0","content":[
+      {"type":"tool_use","tool_name":"\(tool)","tool_call_id":"call-\(id)","input":\(inputJSON)}
+    ]}
+    """.utf8))
+}
+
+func checkSessionEditStats() throws {
+    // Edit: only the changed middle counts; shared prefix/suffix are context.
+    do {
+        let message = try editMessage("1", "Edit", #"{"path":"a.swift","old_string":"a\nb\nc","new_string":"a\nx\nc"}"#)
+        let stats = SessionEditStats.derive(from: [message])
+        expectEqual(stats?.perFile["a.swift"], SessionEditStat(additions: 1, deletions: 1))
+    }
+    // Pure deletion and pure addition.
+    do {
+        let message = try editMessage("2", "edit_file", #"{"path":"b.swift","old_string":"gone\ntwo"}"#)
+        expectEqual(SessionEditStats.derive(from: [message])?.perFile["b.swift"],
+                    SessionEditStat(additions: 0, deletions: 2))
+        let fresh = try editMessage("3", "Edit", #"{"path":"c.swift","new_string":"one\ntwo\nthree"}"#)
+        expectEqual(SessionEditStats.derive(from: [fresh])?.perFile["c.swift"],
+                    SessionEditStat(additions: 3, deletions: 0))
+    }
+    // Write counts content lines; repeated edits of one path accumulate.
+    do {
+        let first = try editMessage("4", "Write", #"{"path":"d.md","content":"alpha\nbeta"}"#)
+        let second = try editMessage("5", "write_file", #"{"path":"d.md","content":"alpha\nbeta\ngamma"}"#)
+        let stats = SessionEditStats.derive(from: [first, second])
+        expectEqual(stats?.perFile["d.md"], SessionEditStat(additions: 5, deletions: 0))
+        expectEqual(stats?.total, SessionEditStat(additions: 5, deletions: 0))
+    }
+    // Patches count +/- lines but not the +++/--- file headers.
+    do {
+        let message = try editMessage("6", "apply_patch",
+            #"{"path":"e.swift","patch":"--- a/e.swift\n+++ b/e.swift\n@@ -1,2 +1,2 @@\n-old\n+new\n context"}"#)
+        expectEqual(SessionEditStats.derive(from: [message])?.perFile["e.swift"],
+                    SessionEditStat(additions: 1, deletions: 1))
+    }
+    // URL-ish paths and unknown tools are not edits; empty derivation hides.
+    do {
+        let remote = try editMessage("7", "Edit", #"{"path":"https://example.com/x","new_string":"data"}"#)
+        let read = try editMessage("8", "Read", #"{"path":"f.swift"}"#)
+        let noop = try editMessage("9", "Edit", #"{"path":"g.swift"}"#)
+        precondition(SessionEditStats.derive(from: [remote]) == nil, "URL path must not resolve")
+        precondition(SessionEditStats.derive(from: [read]) == nil, "read-only tools are not edits")
+        precondition(SessionEditStats.derive(from: [noop]) == nil, "edit without payload is not counted")
+    }
+    print("PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection")
+}
