@@ -7,7 +7,7 @@ import WorkbenchCore
 enum ReplyStyle {
     static let readingWidth: CGFloat = 720
     static let bodySize: CGFloat = 15
-    static let lineHeightRatio: CGFloat = 1.7
+    static let lineHeightRatio: CGFloat = 26.0 / 15.0
     static let ink = Color.primary.opacity(0.94)
     static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 22 : level == 2 ? 18 : 16 }
     static func headingLineHeight(_ level: Int) -> CGFloat { headingSize(level) * 1.4 }
