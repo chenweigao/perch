@@ -315,13 +315,13 @@ extension RemoteGitCommand {
     }
 
     public static func stageCommand(directory: String, path: String) -> String {
-        ["/bin/sh", "-c", writeScript("add -- \"$2\""), "perch-git", directory, path]
+        ["/bin/sh", "-c", writeScript("--literal-pathspecs add -- \"$2\""), "perch-git", directory, path]
             .map(SSHCommand.quote).joined(separator: " ")
     }
     /// `reset -q` covers unborn HEAD too; `restore --staged` resolves HEAD and
     /// fails before the first commit.
     public static func unstageCommand(directory: String, path: String) -> String {
-        ["/bin/sh", "-c", writeScript("reset -q -- \"$2\""), "perch-git", directory, path]
+        ["/bin/sh", "-c", writeScript("--literal-pathspecs reset -q -- \"$2\""), "perch-git", directory, path]
             .map(SSHCommand.quote).joined(separator: " ")
     }
     public static func commitCommand(directory: String, message: String) -> String {
@@ -338,7 +338,7 @@ extension RemoteGitCommand {
         """
         \(guardScript)
         printf 'kind=branches\\n--\\n'
-        git \(safety) symbolic-ref --short -q HEAD 2>/dev/null || true
+        git \(safety) symbolic-ref --short -q HEAD 2>/dev/null || printf '\\n'
         git \(safety) for-each-ref --format='%(refname:short)' refs/heads
         """
     }

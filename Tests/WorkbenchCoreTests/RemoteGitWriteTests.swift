@@ -83,5 +83,48 @@ func checkRemoteGitWrite() async throws {
         RemoteGitCommand.showCommand(directory: repo.path, commit: hash))) else { fatalError("expected text diff") }
     precondition(shown.contains(message) && shown.contains("+let a = 1"))
 
+    try await git(["checkout", "--detach"])
+    let detached = try RemoteGitCommand.parseBranches(try await run(RemoteGitCommand.branchesCommand(directory: repo.path)))
+    expectEqual(detached?.current, nil)
+    expectEqual(detached?.names, ["feature/x", "main"])
+    for name in ["[ab].txt", "a.txt", "b.txt", "*.txt", ":(glob)*.txt"] {
+        try "fixture".write(to: repo.appendingPathComponent(name), atomically: true, encoding: .utf8)
+    }
+    for name in ["[ab].txt", "*.txt", ":(glob)*.txt"] {
+        expectEqual(try RemoteGitCommand.parseWrite(try await run(RemoteGitCommand.stageCommand(directory: repo.path, path: name))), .ok)
+        let names = try await ProcessRunner.run("/usr/bin/git", ["-C", repo.path, "diff", "--cached", "--name-only", "-z"])
+        expectEqual(String(decoding: names, as: UTF8.self), name + "\0")
+        expectEqual(try RemoteGitCommand.parseWrite(try await run(RemoteGitCommand.unstageCommand(directory: repo.path, path: name))), .ok)
+    }
+    if let host = ProcessInfo.processInfo.environment["WORKBENCH_GIT_WRITE_HOST"] {
+        try SSHCommand.validateDestination(host)
+        func remote(_ command: String) async throws -> Data {
+            try await ProcessRunner.run("/usr/bin/ssh", RemoteGitCommand.sshArguments(destination: host, command: command))
+        }
+        let temporary = try await remote("mktemp -d /tmp/perch-git-write-XXXXXXXX")
+        let directory = String(decoding: temporary, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        precondition(directory.hasPrefix("/tmp/perch-git-write-") && !directory.contains("\n"))
+        do {
+            _ = try await remote("git init -b main " + SSHCommand.quote(directory))
+            let prefix = "git -C " + SSHCommand.quote(directory)
+            _ = try await remote(prefix + " config user.name Fixture && " + prefix + " config user.email t@example.com && " + prefix + " config commit.gpgsign false")
+            _ = try await remote("printf fixture > " + SSHCommand.quote(directory + "/[ab].txt") + "; printf other > " + SSHCommand.quote(directory + "/a.txt"))
+            expectEqual(try RemoteGitCommand.parseWrite(try await remote(RemoteGitCommand.stageCommand(directory: directory, path: "[ab].txt"))), .ok)
+            let stagedNames = try await remote(prefix + " diff --cached --name-only -z")
+            expectEqual(String(decoding: stagedNames, as: UTF8.self), "[ab].txt\0")
+            expectEqual(try RemoteGitCommand.parseWrite(try await remote(RemoteGitCommand.unstageCommand(directory: directory, path: "[ab].txt"))), .ok)
+            expectEqual(try RemoteGitCommand.parseWrite(try await remote(RemoteGitCommand.stageCommand(directory: directory, path: "[ab].txt"))), .ok)
+            expectEqual(try RemoteGitCommand.parseWrite(try await remote(RemoteGitCommand.commitCommand(directory: directory, message: "SSH fixture"))), .ok)
+            _ = try await remote(prefix + " branch other")
+            expectEqual(try RemoteGitCommand.parseWrite(try await remote(RemoteGitCommand.switchCommand(directory: directory, branch: "other"))), .ok)
+            expectEqual(try RemoteGitCommand.parseBranches(try await remote(RemoteGitCommand.branchesCommand(directory: directory)))?.current, "other")
+            expectEqual(try RemoteGitCommand.parseLog(try await remote(RemoteGitCommand.logCommand(directory: directory)))?.first?.subject, "SSH fixture")
+            _ = try await remote("rm -rf -- " + SSHCommand.quote(directory))
+        } catch {
+            _ = try? await remote("rm -rf -- " + SSHCommand.quote(directory))
+            throw error
+        }
+        print("PASS: live SSH temporary repository stage/unstage/commit/switch/history and literal pathspec")
+    }
     print("PASS: remote git write — quoting, stage/unstage/commit/switch, branches, log, show")
 }

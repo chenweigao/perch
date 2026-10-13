@@ -171,6 +171,11 @@ final class RemoteFileBrowser: ObservableObject {
         gitPath = nil
         gitDiff = nil
         gitComparison = nil
+        gitBranches = nil
+        gitLog = nil
+        gitCommitSheet = nil
+        gitCommitDiff = nil
+        gitWriteError = nil
         run(RemoteGitCommand.statusCommand(directories: directories), destination: host.destination, token: token) { browser, data in
             let status = try RemoteGitCommand.parseStatus(data)
             if allowSuggestion, let suggested = browser.suggestedWorktree(in: status.worktrees),
@@ -196,7 +201,6 @@ final class RemoteFileBrowser: ObservableObject {
             } else {
                 browser.gitWorktrees = []
             }
-            if browser.gitRange == .branch { browser.loadGitRefs() }
             if status.root != nil { browser.loadGitMetadata() }
         } failed: { browser in
             browser.gitStatus = nil
@@ -344,7 +348,16 @@ final class RemoteFileBrowser: ObservableObject {
     // MARK: - Write actions and history
 
     @Published var gitWriteError: String?
-    @Published private(set) var gitWriting = false
+    private struct GitTarget: Hashable { let hostID: UUID; let directory: String }
+    @Published private var pendingWrites: Set<GitTarget> = []
+    private var gitTarget: GitTarget? {
+        host.map {
+            let directory = $0.isLocal && !gitDirectory.isEmpty
+                ? URL(fileURLWithPath: gitDirectory).resolvingSymlinksInPath().path : gitDirectory
+            return GitTarget(hostID: $0.id, directory: directory)
+        }
+    }
+    var gitWriting: Bool { gitTarget.map { pendingWrites.contains($0) } ?? false }
     @Published private(set) var gitBranches: RemoteGitBranches?
     @Published private(set) var gitLog: [RemoteGitCommit]?
     @Published var gitCommitMessage = ""
@@ -354,27 +367,28 @@ final class RemoteFileBrowser: ObservableObject {
     /// Writes never show the full-pane spinner; failures stay inline and every
     /// success re-reads status so the lists stay authoritative.
     private func runGitWrite(_ command: String, then: @escaping (RemoteFileBrowser) -> Void = { _ in }) {
-        guard let host, !gitDirectory.isEmpty else { return }
-        cancel()
-        generation += 1
-        gitWriting = true
+        guard let host, let target = gitTarget, !target.directory.isEmpty, !loading,
+              pendingWrites.insert(target).inserted else { return }
         gitWriteError = nil
-        run(command, destination: host.destination, token: generation) { browser, data in
-            browser.gitWriting = false
-            switch try RemoteGitCommand.parseWrite(data) {
-            case .ok:
-                then(browser)
-                browser.gitBranches = nil
-                browser.gitLog = nil
-                browser.loadGitStatus()
-            case .notARepository:
-                browser.gitWriteError = "所选目录不是可用的 Git 工作树。"
-            case .failed(let message):
-                browser.gitWriteError = message
-            }
-        } failed: { browser in
-            browser.gitWriting = false
-            browser.gitWriteError = browser.error
+        // A user-started write owns its transport until completion. Page reads
+        // and navigation may cancel each other, never this remote operation.
+        let writer = RemoteReader(local: host.isLocal)
+        let destination = host.destination
+        Task {
+            let result = await writer.run(command: command, destination: destination)
+            pendingWrites.remove(target)
+            guard gitTarget == target else { return }
+            do {
+                let data = try result.get()
+                switch try RemoteGitCommand.parseWrite(data) {
+                case .ok:
+                    then(self)
+                    loadGitStatus()
+                case .notARepository:
+                    gitWriteError = L("所选目录不是可用的 Git 工作树。")
+                case .failed(let message): gitWriteError = message
+                }
+            } catch { gitWriteError = error.localizedDescription }
         }
     }
 
@@ -405,22 +419,28 @@ final class RemoteFileBrowser: ObservableObject {
     /// single-reader transport never interleaves responses. A stale nil retries
     /// on the next status load.
     func loadGitMetadata() {
-        guard let host, !gitDirectory.isEmpty, gitBranches == nil || gitLog == nil else { return }
+        guard let host, !gitDirectory.isEmpty else { return }
         let destination = host.destination
         run(RemoteGitCommand.branchesCommand(directory: gitDirectory), destination: destination, token: generation) { browser, data in
             browser.gitBranches = try RemoteGitCommand.parseBranches(data)
             browser.run(RemoteGitCommand.logCommand(directory: browser.gitDirectory), destination: destination, token: browser.generation) { inner, logData in
                 inner.gitLog = try RemoteGitCommand.parseLog(logData)
-            } failed: { inner in inner.gitLog = nil }
+                if inner.gitRange == .branch { inner.loadGitRefs() }
+            } failed: { inner in
+                inner.gitLog = nil
+                if inner.gitRange == .branch { inner.loadGitRefs() }
+            }
         } failed: { browser in browser.gitBranches = nil }
     }
 
     func showGitCommit(_ commit: RemoteGitCommit) {
         guard let host else { return }
+        cancel()
         gitCommitSheet = commit
         gitCommitDiff = nil
         run(RemoteGitCommand.showCommand(directory: gitDirectory, commit: commit.hash),
             destination: host.destination, token: generation) { browser, data in
+            guard browser.gitCommitSheet?.id == commit.id else { return }
             browser.gitCommitDiff = try RemoteGitCommand.parseDiff(data)
         } failed: { browser in browser.gitCommitDiff = nil }
     }
@@ -669,6 +689,7 @@ struct RemoteFilePanel: View {
                         HStack(spacing: 7) {
                             TextField("提交信息", text: $browser.gitCommitMessage)
                                 .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                                .disabled(browser.gitWriting)
                                 .onSubmit { browser.commitGit() }
                             Button("提交") { browser.commitGit() }.controlSize(.small)
                                 .disabled(browser.gitWriting
