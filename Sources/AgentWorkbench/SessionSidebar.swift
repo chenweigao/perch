@@ -9,10 +9,18 @@ struct WorkbenchSidebar: View {
     @State private var filter = SidebarRecentFilter.all
     @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
     @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
+    @AppStorage("sidebar.projects.collapsed") private var collapsedProjectsJSON = "[]"
+    @State private var projectLimit = 8
+    @State private var expandedProjects = Set<String>()
+    private var collapsedProjects: Set<String> {
+        Set((try? JSONDecoder().decode([String].self, from: Data(collapsedProjectsJSON.utf8))) ?? [])
+    }
     private var page: SidebarPage {
         guard model.showDashboard else { return .other }
         if model.showArchived { return .archive }
         if model.onlyAttention { return .inbox }
+        if model.showSessionDirectory { return .sessions }
+        if model.showAllTaskGroups || model.selectedGroupID != nil { return .groups }
         return model.selectedGroupID == nil && !model.showSessionDirectory ? .home : .other
     }
     var body: some View {
@@ -27,21 +35,51 @@ struct WorkbenchSidebar: View {
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
-                              onArchive: { model.showArchive() }, scrollRows: !usesTable) {
+                              onArchive: { model.showArchive() },
+                              onAllSessions: { model.showAllSessions() },
+                              onGroups: { model.clearScope(); model.showHome(); model.showAllTaskGroups = true },
+                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection)) {
             #if PERCH_ACCEPTANCE
-            if usesTable { tableRows(projection, index: index) }
+            if experiment.sidebarVariant == "projects" { projectRows(projection, index: index) }
+            else if usesTable { tableRows(projection, index: index) }
             else if experiment.flatSidebar { flatRows(projection, index: index) }
             else { sectionRows(projection, index: index) }
             #else
-            flatRows(projection, index: index)
+            projectRows(projection, index: index)
             #endif
         } environments: {
             ConnectionControls(model: model, kimi: model.kimi, native: model.native).frame(width: 320)
         }
+        .onChange(of: model.tabs.selectedID) { _, _ in revealSelectedProject() }
+        .onChange(of: model.workspace.sidebarProjectLocations) { _, _ in revealSelectedProject() }
         #if PERCH_ACCEPTANCE
         .background(NativeSidebarProbe(projection: projection))
         .onReceive(experiment.$sidebarFilter) { if let value = $0 { filter = value } }
         #endif
+    }
+    private func revealSelectedProject() {
+        if let selected = model.selectedItem, model.workspace.starred.contains(selected.reference) {
+            favoritesExpanded = true
+        }
+        guard let project = model.sidebarProjection(filter: .all).projects.first(where: {
+            $0.sessions.contains { $0.id == model.tabs.selectedID }
+        }) else { return }
+        var collapsed = collapsedProjects
+        if collapsed.remove(project.id) != nil {
+            collapsedProjectsJSON = String(decoding: try! JSONEncoder().encode(collapsed.sorted()), as: UTF8.self)
+        }
+    }
+    private func scrollTarget(in projection: SidebarProjection) -> String? {
+        #if PERCH_ACCEPTANCE
+        guard experiment.sidebarVariant == "projects" else { return nil }
+        #endif
+        guard !model.showDashboard, let selected = model.tabs.selectedID else { return nil }
+        if projection.favorites.contains(where: { $0.id == selected }) {
+            return favoritesExpanded ? "session-" + selected : nil
+        }
+        guard let project = projection.projects.first(where: { $0.sessions.contains { $0.id == selected } }),
+              !collapsedProjects.contains(project.id) else { return nil }
+        return "session-" + selected
     }
     private var environmentNeedsAttention: Bool {
         if model.connections.contains(where: { !$0.online && $0.error != nil }) { return true }
@@ -133,6 +171,80 @@ struct WorkbenchSidebar: View {
             }
         }
     }
+    private enum ProjectEntry: Identifiable {
+        case favorites, projects, project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects
+        var id: String {
+            switch self {
+            case .favorites: "header-favorites"
+            case .projects: "header-projects"
+            case .project(let project): "project-" + project.id
+            case .session(let item, _): "session-" + item.id
+            case .more(let project): "more-" + project.id
+            case .moreProjects: "more-projects"
+            }
+        }
+    }
+    private func projectEntries(_ projection: SidebarProjection) -> [ProjectEntry] {
+        var result: [ProjectEntry] = []
+        if !projection.favorites.isEmpty {
+            result.append(.favorites)
+            if favoritesExpanded { result += projection.favorites.map { .session($0, false) } }
+        }
+        result.append(.projects)
+        let collapsed = collapsedProjects
+        let selectedID = model.showDashboard ? nil : model.tabs.selectedID
+        var visible = Array(projection.projects.prefix(projectLimit))
+        if let selectedProject = projection.projects.first(where: { $0.sessions.contains { $0.id == selectedID } }),
+           !visible.contains(where: { $0.id == selectedProject.id }) { visible.append(selectedProject) }
+        for project in visible {
+            result.append(.project(project))
+            guard !collapsed.contains(project.id) else { continue }
+            var sessions = expandedProjects.contains(project.id) ? project.sessions : Array(project.sessions.prefix(5))
+            if let selected = project.sessions.first(where: { $0.id == selectedID }), !sessions.contains(where: { $0.id == selected.id }) {
+                sessions.append(selected)
+            }
+            result += sessions.map { .session($0, true) }
+            if sessions.count < project.sessions.count { result.append(.more(project)) }
+        }
+        if visible.count < projection.projects.count { result.append(.moreProjects) }
+        return result
+    }
+    @ViewBuilder private func projectRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
+        ForEach(projectEntries(projection)) { entry in
+            switch entry {
+            case .favorites: SidebarSection("置顶", id: "favorites") { EmptyView() }
+            case .projects:
+                HStack {
+                    Text("项目").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Spacer()
+                    recentActions
+                }.padding(.horizontal, 10).padding(.top, 18).padding(.bottom, 3)
+            case .project(let project):
+                SidebarProjectHeader(project: project, expanded: !collapsedProjects.contains(project.id),
+                    canCreate: project.location.map { location in model.connections.contains { $0.id == location.hostID } } ?? true,
+                    onToggle: {
+                        var collapsed = collapsedProjects
+                        if !collapsed.insert(project.id).inserted { collapsed.remove(project.id) }
+                        collapsedProjectsJSON = String(decoding: try! JSONEncoder().encode(collapsed.sorted()), as: UTF8.self)
+                    }, onNew: { model.startNewTask(in: project.location) })
+            case .session(let item, let indented):
+                SessionSidebarRow(model: model, item: item, groups: index[item.id], compact: true,
+                    selected: !model.showDashboard && item.id == model.tabs.selectedID,
+                    onOpen: { model.open(item) }).padding(.leading, indented ? 22 : 0).id(entry.id)
+            case .more(let project):
+                Button { expandedProjects.insert(project.id) } label: {
+                    Text("显示全部 \(project.sessions.count) 个会话").font(.system(size: 11)).foregroundStyle(.secondary)
+                }.buttonStyle(SidebarNavigationStyle()).padding(.leading, 32).padding(.vertical, 4)
+            case .moreProjects:
+                Button("更多项目") { projectLimit += 8 }
+                    .buttonStyle(SidebarNavigationStyle()).padding(.horizontal, 10).padding(.vertical, 6)
+            }
+        }
+        if projection.projects.isEmpty && projection.favorites.isEmpty {
+            Text("新任务会出现在这里").font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
+        }
+    }
+
     private var groupSection: some View {
         SidebarSection("常用任务组", id: "groups") {
             ForEach(model.groupShortcuts) { summary in
@@ -218,7 +330,8 @@ struct SessionDirectoryView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var search = SessionDirectorySearch()
     var body: some View {
-        let result = search.update(model.allSessions, query: query, locale: L.locale)
+        let result = search.update(model.allSessions, query: query, locale: L.locale,
+                                   projectLocations: model.workspace.sidebarProjectLocations)
         let sessions = result.sessions
         let index = model.groupIndex
         VStack(alignment: .leading, spacing: 16) {
@@ -286,6 +399,7 @@ private struct SessionSidebarRow: View {
     /// Task groups this session belongs to. The subtitle is already spoken for by
     /// attention and offline states, so membership stays in the hover preview.
     var groups: [String] = []
+    var compact = false
     let selected: Bool
     let onOpen: () -> Void
     private var subtitle: String? {
@@ -297,10 +411,10 @@ private struct SessionSidebarRow: View {
         #if PERCH_ACCEPTANCE
         let _ = recordBody()
         #endif
-        SessionRowChrome(title: item.title, subtitle: subtitle,
+        SessionRowChrome(title: item.title, subtitle: compact ? nil : subtitle,
                          hostName: item.hostName, hostID: item.reference.hostID,
                          directory: item.directory, detail: item.detail,
-                         groups: groups, updatedAt: item.updatedAt,
+                         groups: groups, updatedAt: item.updatedAt, compact: compact,
                          selected: selected,
                          starred: model.workspace.starred.contains(item.reference), archived: item.archived,
                          canOpen: item.online && !item.archived,
@@ -308,7 +422,12 @@ private struct SessionSidebarRow: View {
                          busy: model.managing.contains(item.id), onOpen: onOpen,
                          onPin: { model.toggleStar(item.reference) },
                          onArchive: { model.setArchived(item, archived: !item.archived) }) {
-            SessionStatusIndicator(item: item)
+            if compact {
+                if !item.online { Image(systemName: "wifi.slash").font(.system(size: 10)).foregroundStyle(.secondary) }
+                else if item.section == .running { Circle().fill(.blue).frame(width: 6, height: 6) }
+                else if item.section == .attention { RoundedRectangle(cornerRadius: 2).fill(.orange).frame(width: 6, height: 6) }
+                else { Color.clear.frame(width: 6, height: 6) }
+            } else { SessionStatusIndicator(item: item) }
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
             #if PERCH_ACCEPTANCE
@@ -340,6 +459,17 @@ struct SessionActionsMenu: View {
             Button { model.toggleStar(item.reference) } label: {
                 Label(model.workspace.starred.contains(item.reference) ? "取消置顶" : "置顶会话", systemImage: "pin")
             }
+        }
+        Menu("移动到项目") {
+            ForEach(model.sidebarProjection(filter: .all).projects) { project in
+                if let location = project.location {
+                    Button(project.disambiguate ? "\(project.title) · \(project.detail ?? "")" : project.title) {
+                        model.moveSidebarSession(item, to: location)
+                    }
+                }
+            }
+            Divider()
+            Button("按工作目录归组") { model.moveSidebarSession(item, to: nil) }
         }
         Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "folder") }
         Button { model.toggleTaskNotifications(item.id) } label: {

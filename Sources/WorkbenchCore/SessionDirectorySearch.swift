@@ -9,14 +9,18 @@ public final class SessionDirectorySearch {
     private var language = ""
     private var records: [(WorkspaceSession, String)] = []
     private var query: String?
+    private var projectLocations: [String: SidebarProjectLocation] = [:]
     public private(set) var result = Result()
     public init() {}
-    public func update(_ sessions: [WorkspaceSession], query: String, locale: Locale) -> Result {
-        if catalog != sessions || language != locale.identifier {
+    public func update(_ sessions: [WorkspaceSession], query: String, locale: Locale,
+                       projectLocations: [String: SidebarProjectLocation] = [:]) -> Result {
+        if catalog != sessions || language != locale.identifier || self.projectLocations != projectLocations {
             catalog = sessions; language = locale.identifier
+            self.projectLocations = projectLocations
             records = sessions.filter { !$0.archived }.map { item in
                 let agent = item.reference.kind == .terminal ? L("终端", locale: locale) : item.reference.kind.label
-                return (item, "\(item.title) \(item.directory) \(item.hostName) \(item.detail) \(agent)")
+                let project = projectLocations[item.id]
+                return (item, "\(item.title) \(item.directory) \(item.hostName) \(item.detail) \(agent) \(project?.directory ?? "") \(project?.hostName ?? "")")
             }
             self.query = nil
         }

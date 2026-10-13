@@ -19,7 +19,7 @@ import os
     weak var dashboardView: NSView?
     let checkSidebarInvalidation: Bool = {
         let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? ""
-        return ["sidebar-invalidation", "sidebar-structure"].contains(mode) || (mode.hasPrefix("sidebar-layout-") && !mode.hasSuffix("-unprobed"))
+        return ["sidebar-invalidation", "sidebar-structure", "sidebar-projects"].contains(mode) || (mode.hasPrefix("sidebar-layout-") && !mode.hasSuffix("-unprobed"))
     }()
     let fixedSidebarHeight = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "sidebar-layout-height-fixed"
     let sidebarVariant = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] ?? "flat"
@@ -35,6 +35,7 @@ import os
     var sidebarRowEvaluations: [String: Int] = [:]
     let sidebarRows = NSHashTable<NativeSidebarRowProbeView>.weakObjects()
     var sidebarProjection: SidebarProjection?
+    var newTaskProject: SidebarProjectLocation?
     weak var sidebarView: NSView?
     weak var detailView: NSView?
     var detailCurrent = false
@@ -81,6 +82,12 @@ struct NativeSidebarProbe: NSViewRepresentable {
         NativeAcceptanceProbe.shared.sidebarProjection = projection
         NativeAcceptanceProbe.shared.sidebarView = view
     }
+}
+
+struct NativeTaskProjectProbe: NSViewRepresentable {
+    let location: SidebarProjectLocation
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) { NativeAcceptanceProbe.shared.newTaskProject = location }
 }
 
 /// Report only the mounted dashboard. During destination replacement SwiftUI can
@@ -340,6 +347,7 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
             if mode.hasPrefix("sidebar-layout-") { report.merge(try await sidebarLayout(window, mode: mode)) { _, new in new } }
+            if mode == "sidebar-projects" { report.merge(try await sidebarProjects(window)) { _, new in new } }
             if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
             if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
@@ -376,7 +384,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             let responsivenessReport = responsiveness.finish()
             report["main_actor_lateness"] = responsivenessReport
             let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
@@ -1057,6 +1065,93 @@ private struct ReferenceComposerFixtureView: View {
                 "layout_contract": probe.sidebarTable != nil ? "full native table data and visible row values/order/heights; offscreen rows unmounted; geometry counts cover mounted markers only" : unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
                 "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
     }
+    private func sidebarProjects(_ window: NSWindow) async throws -> [String: Any] {
+        guard probe.sidebarVariant == "projects" else { throw WorkbenchError("Project checks require the projects variant") }
+        let defaults = UserDefaults.standard
+        let key = "sidebar.projects.collapsed", saved = defaults.object(forKey: "sidebar.projects.collapsed")
+        defer { defaults.set(saved, forKey: key) }
+        defaults.set("[]", forKey: key)
+        model.workspace.starred = []
+        model.workspace.sidebarProjectLocations = [:]
+        func rows() -> [NativeSidebarRowProbe] {
+            probe.sidebarRows.allObjects.filter { $0.window === window }.compactMap(\.value)
+        }
+        let original = model.sidebarProjection(filter: .all)
+        let first = original.projects[0], second = original.projects[1]
+        try await settle(window, "project tree mounted") { rows().count == 40 }
+        let selectedBefore = model.tabs.selectedID
+        defaults.set(String(decoding: try JSONEncoder().encode([first.id]), as: UTF8.self), forKey: key)
+        try await settle(window, "project collapsed") { !rows().contains { first.sessions.contains($0.item) } }
+        guard model.tabs.selectedID == selectedBefore else { throw WorkbenchError("Collapse navigated away") }
+        defaults.set("[]", forKey: key)
+        try await settle(window, "project expanded") { rows().count == 40 }
+        let item = first.sessions[0]
+        model.workspace.starred = [item.reference]
+        try await settle(window, "project pin without duplicate") {
+            rows().filter { $0.item.id == item.id }.count == 1 && rows().contains { $0.item.id == item.id && $0.starred }
+        }
+        model.workspace.starred = []
+        model.moveSidebarSession(item, to: second.location)
+        try await settle(window, "project membership refreshed") {
+            self.probe.sidebarProjection?.projects.first { $0.id == second.id }?.sessions.contains(item) == true &&
+            self.probe.sidebarProjection?.projects.first { $0.id == first.id }?.sessions.contains(item) == false
+        }
+        guard model.allSessions.first(where: { $0.id == item.id })?.directory == item.directory else {
+            throw WorkbenchError("Sidebar move changed runtime cwd")
+        }
+        model.moveSidebarSession(item, to: nil)
+        try await settle(window, "automatic project restored") {
+            self.probe.sidebarProjection?.projects.first { $0.id == first.id }?.sessions.contains(item) == true
+        }
+        // The selected row must remain visible beyond both project and row limits.
+        let outside = original.projects[15].sessions[10]
+        model.navigationState.tabs.open(outside.id, pinned: true); model.showDashboard = false
+        try await settle(window, "selected session revealed outside limits") {
+            rows().contains { $0.item.id == outside.id && $0.selected }
+        }
+        try await settle(window, "selected session scrolled into view") {
+            guard let row = self.probe.sidebarRows.allObjects.first(where: { $0.window === window && $0.value?.item.id == outside.id }),
+                  let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
+            return scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
+        }
+        func findSplit(_ view: NSView?) -> NSSplitView? {
+            guard let view else { return nil }
+            if let split = view as? NSSplitView { return split }
+            return view.subviews.lazy.compactMap { findSplit($0) }.first
+        }
+        guard let split = findSplit(window.contentView) else {
+            throw WorkbenchError("Missing native split view")
+        }
+        split.setPosition(220, ofDividerAt: 0)
+        flush(window)
+        guard rows().contains(where: { $0.item.id == outside.id }) else { throw WorkbenchError("Narrow sidebar lost selection") }
+        split.setPosition(300, ofDividerAt: 0)
+        model.navigationState.tabs.close(outside.id)
+        model.navigationState.tabs.select(fixture.sessions[0].id)
+        try await settle(window, "restore selected row") { rows().contains { $0.item.id == self.fixture.sessions[0].id && $0.selected } }
+        model.selectedGroupID = model.workspace.groups.first?.id
+        model.startNewTask(in: first.location)
+        guard model.selectedGroupID == nil else { throw WorkbenchError("Project draft inherited an unrelated task group") }
+        try await settle(window, "project new task directory") {
+            self.probe.newTaskProject?.id == first.location?.id && self.model.newTaskProject == nil
+        }
+        model.startNewTask(in: second.location)
+        try await settle(window, "switch project while drafting") {
+            self.probe.newTaskProject?.id == second.location?.id && self.model.newTaskProject == nil
+        }
+        model.startNewTask(in: first.location)
+        try await settle(window, "repeat project draft request") { self.probe.newTaskProject?.id == first.location?.id }
+        model.open(fixture.sessions[0])
+        try await settle(window, "restore conversation after draft") { self.hasMountedMessage(window, session: "session-0") }
+        return ["project_identity_count": original.projects.count, "bounded_initial_rows": 40,
+                "collapse_preserves_selection": true, "pin_without_duplicate": true,
+                "manual_membership_and_reset": true, "selected_outside_limits_revealed": true,
+                "selected_scrolled_into_view": true,
+                "narrow_sidebar_selection": true,
+                "new_task_project_directory_and_repeated_requests": true,
+                "boundary": "production model and mounted native sidebar; offline fixture, no live agent or pointer-event claim"]
+    }
+
     private func sidebarStructure(_ window: NSWindow) async throws -> [String: Any] {
         let defaults = UserDefaults.standard
         let keys = ["sidebar.favorites.expanded", "sidebar.recent.expanded"]

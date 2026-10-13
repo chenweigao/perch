@@ -1152,3 +1152,29 @@
 "附件一次最多 5 个" = "Up to 5 attachments at a time.";
 "附件为空或超过 10MB：%@" = "Attachment is empty or over 10MB: %@";
 "附件恢复失败：%@" = "Attachment recovery failed: %@";
+
+"项目" = "Projects";
+
+"临时会话" = "Temporary chats";
+
+"搜索项目与会话" = "Search projects and chats";
+
+"设置与环境" = "Settings & environments";
+
+"更多项目" = "More projects";
+
+"显示全部 %lld 个会话" = "Show all %lld chats";
+
+"移动到项目" = "Move to project";
+
+"按工作目录归组" = "Group by working directory";
+
+"在此项目新建会话" = "New chat in this project";
+
+"刚刚" = "now";
+
+"%lld分" = "%lldm";
+
+"%lld时" = "%lldh";
+
+"%lld天" = "%lldd";

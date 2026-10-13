@@ -57,7 +57,7 @@ final class WorkbenchModel {
             if workspace.groups != oldValue.groups {
                 cachedGroupIndex = nil; cachedGroupShortcuts = nil
             }
-            if workspace.starred != oldValue.starred { cachedSidebar = nil }
+            if workspace.starred != oldValue.starred || workspace.sidebarProjectLocations != oldValue.sidebarProjectLocations { cachedSidebar = nil }
         }
     }
     @ObservationIgnored private var cachedGroupIndex: SessionGroupIndex?
@@ -112,6 +112,7 @@ final class WorkbenchModel {
     var draftingNewTask = false {
         didSet { updateVisibility() }
     }
+    var newTaskProject: SidebarProjectLocation?
     var showRenderReport = false
     var renderReport = ""
     var showGroupEditor = false
@@ -245,7 +246,10 @@ final class WorkbenchModel {
     init(acceptanceHost host: SSHHost, sessions: [WorkspaceSession], native: NativeAgentConnection, kimi: KimiConnection? = nil) {
         self.kimi = kimi ?? KimiConnection(setupHost: host)
         self.native = native
-        connections = []
+        // The project fixture needs a selectable creation target, but never calls
+        // connect, observes it, or restores any saved hosts.
+        connections = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_SIDEBAR_VARIANT"] == "projects"
+            ? [HostConnection(host: host)] : []
         configuredEnvironment = true
         selectedHostID = host.id
         canSaveWorkspace = false
@@ -337,7 +341,16 @@ final class WorkbenchModel {
             }
         } catch { workspaceError = error.localizedDescription }
     }
-    func startNewTask() { if connections.isEmpty { configureHost() } else { draftingNewTask = true } }
+    func startNewTask(in project: SidebarProjectLocation? = nil) {
+        newTaskProject = project
+        if let project { clearScope(); activateAgentEnvironment(project.hostID) }
+        if connections.isEmpty { configureHost() } else { draftingNewTask = true }
+    }
+
+    func moveSidebarSession(_ item: WorkspaceSession, to project: SidebarProjectLocation?) {
+        workspace.sidebarProjectLocations[item.id] = project
+        saveWorkspace()
+    }
     func configureHost(_ host: SSHHost? = nil) {
         if host?.isLocal == true { showLocalSetup = true; return }
         setupHost = host; showAddHost = true
@@ -415,8 +428,9 @@ final class WorkbenchModel {
     func sidebarProjection(filter: SidebarRecentFilter) -> SidebarProjection {
         let revision = catalog.revision
         let starred = workspace.starred
+        let locations = workspace.sidebarProjectLocations
         if let cachedSidebar, cachedSidebar.catalogRevision == revision, cachedSidebar.filter == filter { return cachedSidebar.projection }
-        let projection = SidebarProjection(sessions: allSessions, starred: starred, filter: filter)
+        let projection = SidebarProjection(sessions: allSessions, starred: starred, filter: filter, projectLocations: locations)
         cachedSidebar = (revision, filter, projection)
         return projection
     }

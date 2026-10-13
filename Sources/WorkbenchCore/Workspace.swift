@@ -113,6 +113,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var selectedGroupID: UUID?
     public var lastSessionByGroup: [String: String] = [:]
     public var starred: [SessionReference] = []
+    public var sidebarProjectLocations: [String: SidebarProjectLocation] = [:]
     public var sessionTitles: [String: String] = [:]
     /// Sessions an automatic name was applied to. A manual rename or cleared
     /// title keeps this record, so automation never retitles a session the
@@ -124,7 +125,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var reviewedRevisions: [String: UInt64] = [:]
     public init() {}
     private enum CodingKeys: String, CodingKey {
-        case dashboardSeen, sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions
+        case dashboardSeen, sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions, sidebarProjectLocations
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -134,6 +135,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
         sessionTitles = try values.decodeIfPresent([String: String].self, forKey: .sessionTitles) ?? [:]
         autoNamedSessions = try values.decodeIfPresent(Set<String>.self, forKey: .autoNamedSessions) ?? []
         starred = try values.decodeIfPresent([SessionReference].self, forKey: .starred) ?? pinned.map(\.session)
+        sidebarProjectLocations = try values.decodeIfPresent([String: SidebarProjectLocation].self, forKey: .sidebarProjectLocations) ?? [:]
         archivedTerminals = try values.decodeIfPresent(Set<SessionReference>.self, forKey: .archivedTerminals) ?? []
         selectedTerminalID = try values.decodeIfPresent(String.self, forKey: .selectedTerminalID)
         selectedGroupID = try values.decodeIfPresent(UUID.self, forKey: .selectedGroupID)
@@ -157,6 +159,7 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public mutating func removeSession(_ reference: SessionReference) {
         dashboardSeen.removeValue(forKey: reference.id)
         sessionTitles.removeValue(forKey: reference.id)
+        sidebarProjectLocations.removeValue(forKey: reference.id)
         autoNamedSessions.remove(reference.id)
         starred.removeAll { $0 == reference }; archivedTerminals.remove(reference)
         pinned.removeAll { $0.session == reference }

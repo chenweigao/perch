@@ -47,6 +47,8 @@ def main():
         for mode in ["all", "switching", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input"]:
             commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
                 "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
+        commands.append(("native-sidebar-projects", [python, "scripts/run-native-acceptance.py",
+            "--mode", "sidebar-projects", "--sidebar-variant", "projects", "--output", str(out / "native-sidebar-projects")], 150))
         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
             "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))

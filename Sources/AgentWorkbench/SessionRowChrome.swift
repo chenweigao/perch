@@ -13,6 +13,7 @@ struct SessionRowChrome<Indicator: View>: View {
     var detail: String? = nil
     var groups: [String] = []
     var updatedAt: Double = 0
+    var compact = false
     let selected: Bool
     let starred: Bool
     let archived: Bool
@@ -27,13 +28,14 @@ struct SessionRowChrome<Indicator: View>: View {
     @State private var titleHovered = false
     @State private var rowView: NSView?
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private enum Focus { case open, pin, archive }
     @FocusState private var focus: Focus?
 
     private var showActions: Bool { hovered || focus != nil }
     private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 28 : 0 }
-    private var trailingWidth: CGFloat { max(actionWidth, hostName == nil ? 0 : 28) }
+    private var trailingWidth: CGFloat { compact ? 36 : max(actionWidth, hostName == nil ? 0 : 28) }
     private var rowHeight: CGFloat {
         #if PERCH_ACCEPTANCE
         if NativeAcceptanceProbe.shared.fixedSidebarHeight { return 48 }
@@ -47,7 +49,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 onOpen()
             } label: {
                 HStack(alignment: .top, spacing: 9) {
-                    indicator.frame(width: 17, height: 16).accessibilityHidden(true)
+                    indicator.frame(width: compact ? 8 : 17, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
                         #if PERCH_ACCEPTANCE
@@ -67,7 +69,7 @@ struct SessionRowChrome<Indicator: View>: View {
                         }
                         #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
-                    if updatedAt > 0 {
+                    if updatedAt > 0 && !compact {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             Text(SessionTime.label(since: updatedAt, waiting: false, now: context.date) ?? "")
                                 .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary)
@@ -81,7 +83,12 @@ struct SessionRowChrome<Indicator: View>: View {
                 .accessibilityValue(([hostName, directory, detail, updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
                 .onHover { titleHovered = $0 }
             ZStack(alignment: .trailing) {
-                if hostName != nil {
+                if compact && updatedAt > 0 {
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
+                            .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).lineLimit(1)
+                    }.opacity(showActions ? 0 : 1).accessibilityHidden(true)
+                } else if hostName != nil && !compact {
                     HostIdentityIcon(hostID: hostID)
                         .font(.system(size: 12)).frame(width: 28)
                         .opacity(showActions && actionWidth > 0 ? 0 : 1)
@@ -106,6 +113,9 @@ struct SessionRowChrome<Indicator: View>: View {
                     }
                 }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
                     .frame(width: actionWidth, alignment: .trailing).clipped()
+                    .background {
+                        if compact && showActions { RoundedRectangle(cornerRadius: 6).fill(.regularMaterial) }
+                    }
                     .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: showActions)
             }.frame(width: trailingWidth, alignment: .trailing)
