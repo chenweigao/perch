@@ -36,6 +36,8 @@ private final class TransportFixture {
     var snapshotRequests: [String] = []
     var pendingSnapshots: [(CheckedContinuation<Data, Error>, Data)] = []
     var returnedSnapshots = 0
+    /// Prompts the bridge already recorded, surfaced through the snapshot.
+    var recordedMessages: [String: [[String: Any]]] = [:]
 
     private func receipt(_ key: String) -> [String: Any] {
         var result: [String: Any] = ["id": key, "status": receipts[key] ?? "notFound"]
@@ -107,7 +109,7 @@ private final class TransportFixture {
             }
             result = sessions[id]!
             result["revision"] = snapshotRequests.count
-            result["messages"] = []; result["interactions"] = []
+            result["messages"] = recordedMessages[id] ?? []; result["interactions"] = []
             let data = try JSONSerialization.data(withJSONObject: result)
             defer { returnedSnapshots += 1 }
             if holdSnapshots {
@@ -267,6 +269,7 @@ struct ConnectionChecks {
         try await checkKimiSelectionIsolation()
         try await checkKimiObservation()
         try await checkSendFailureIsolation()
+        try await checkFailedTurnUnblocksQueue()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
         try await checkNativeModelCatalog()
@@ -673,6 +676,60 @@ struct ConnectionChecks {
         precondition(client.actionError == "B's own message", "A send failure must not replace B's feedback")
         precondition(client.queue.message(message.id)?.text == "Keep this instruction")
         print("PASS: native send failure stays with its queued message across selection changes")
+    }
+
+    /// A turn that fails after the prompt was recorded must not leave the queue
+    /// blocked behind an entry nobody can see.
+    @MainActor
+    static func checkFailedTurnUnblocksQueue() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Failure", destination: "fixture"), transport: fixture.request)
+        try await client.refresh(); client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        let a = client.reference("a")!
+        let body: [[String: Any]] = [["type": "text", "text": "会失败的一轮"]]
+
+        // Failure arrives while the prompt is already on screen: the local copy
+        // leaves the queue and the queue pauses instead of blocking invisibly.
+        fixture.recordedMessages["a"] = [["id": "fail-a", "role": "user", "content": body, "created_at": ""]]
+        client.select("b"); client.select("a")
+        await settle { client.snapshot?.messages.contains { $0.id == "fail-a" } == true }
+        client.queue.enqueue("会失败的一轮", for: a, mode: .now, id: "fail-a")
+        client.resumeQueue(a)
+        await settle { fixture.prompts == ["a"] && !client.sending }
+        fixture.sessions["a"]?["busy"] = false
+        fixture.sessions["a"]?["turnState"] = "failed"
+        fixture.receipts["fail-a"] = "failed"
+        try await client.refresh()
+        precondition(client.queue.message("fail-a") == nil, "Recorded failure must leave the queue")
+        precondition(client.queue.isPaused(a), "A failed turn pauses queued work")
+
+        // Failure arrives before the transcript records the prompt: the entry
+        // stays visible as failed and blocks later drafts until the catch-up.
+        client.queue.enqueue("晚些失败的一轮", for: a, mode: .now, id: "fail-b")
+        client.resumeQueue(a)
+        await settle { fixture.prompts.count == 2 && !client.sending }
+        fixture.sessions["a"]?["busy"] = false
+        fixture.sessions["a"]?["turnState"] = "failed"
+        fixture.receipts["fail-b"] = "failed"
+        try await client.refresh()
+        if case .failed = client.queue.message("fail-b")?.state {} else { preconditionFailure("Unrecorded failure stays queued") }
+        client.queue.enqueue("排在失败后面", for: a, mode: .nextTurn, id: "after-failure")
+        client.resumeQueue(a)
+        try? await Task.sleep(for: .milliseconds(200))
+        precondition(fixture.prompts.count == 2, "A failed entry blocks later drafts")
+
+        // Once the transcript records the prompt the blocker is purged, and an
+        // explicit resume delivers what was queued behind it.
+        fixture.recordedMessages["a"]?.append(["id": "fail-b", "role": "user", "content": body, "created_at": ""])
+        client.select("b"); client.select("a")
+        await settle { client.snapshot?.messages.contains { $0.id == "fail-b" } == true }
+        precondition(client.queue.message("fail-b") == nil, "Transcript-recorded failure is purged")
+        client.resumeQueue(a)
+        await settle { fixture.prompts.count == 3 && !client.sending }
+        precondition(client.queue.message("after-failure")?.state == .accepted)
+        client.disconnect()
+        print("PASS: failed turn pauses the queue, recorded failures are purged, explicit resume delivers parked drafts")
     }
 
     @MainActor

@@ -21,6 +21,9 @@ final class NativeAgentConnection {
     /// later. Restore reporting waits for this flag so it never judges a session
     /// against a stale pre-disconnect list.
     private(set) var catalogSynced = false
+    /// Last successful catalog or snapshot read. `online` covers the tunnel; this
+    /// covers the data, so a wedged sync is visible before the next failure lands.
+    private(set) var lastSyncAt: Date?
     private(set) var wantsConnection = false
     var error: String?
     var actionError: String? {
@@ -318,6 +321,7 @@ final class NativeAgentConnection {
         reconcileStops()
         nextCatalogRefresh = Date().addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
         try await refreshReceipts()
+        lastSyncAt = Date()
     }
     private func refreshReceipts() async throws {
         // Receipts, not catalog changes, settle pending sends after a reconnect.
@@ -389,6 +393,8 @@ final class NativeAgentConnection {
         } else { suffix = "?turns=50" }
         let response: NativeSnapshotResponse = try await request("/sessions/\(id)\(suffix)")
         try Task.checkCancellation()
+        // Delta reads that answer "unchanged" are still proof the sync is alive.
+        lastSyncAt = Date()
         guard token == selectionGeneration, connectionToken == generation, id == selectedID,
               let value = response.snapshot else { return false }
         // A page may have expanded the window while this delta was in flight.
@@ -404,7 +410,18 @@ final class NativeAgentConnection {
             nextCatalogRefresh = .distantPast
         }
         snapshot = next
+        purgeRecordedFailures()
         return true
+    }
+    /// A failure receipt can arrive before the snapshot that records the prompt.
+    /// Once the prompt is on screen, the transcript fully represents the failure;
+    /// the local copy is only an invisible blocker for everything queued behind it.
+    private func purgeRecordedFailures() {
+        guard let snapshot else { return }
+        let visible = Set(snapshot.messages.map(\.id))
+        for item in queue.allItems where item.session.terminalID == snapshot.id && visible.contains(item.id) {
+            if case .failed = item.state { _ = queue.removeFailed(item.id) }
+        }
     }
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
@@ -615,7 +632,16 @@ final class NativeAgentConnection {
                 timings.finished(sessionID: sessionID, requestID: receipt.id, turnID: receipt.activeTurnId)
             }
             queue.markDelivered(receipt.id); return
-        case "failed": next = .failed(receipt.error ?? "运行时拒绝消息")
+        case "failed":
+            // A failed turn pauses the queue: queued drafts must not fire into a
+            // session that just rejected work. When the prompt is already on
+            // screen the transcript carries the failure, so the local copy is
+            // dropped rather than left to invisibly block every later send.
+            queue.pause(message.session)
+            if snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
+                queue.markDelivered(receipt.id); return
+            }
+            next = .failed(receipt.error ?? "运行时拒绝消息")
         case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
         default: next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")
         }

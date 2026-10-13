@@ -318,6 +318,11 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
         paused.remove(session.id)
     }
 
+    /// A failed turn pauses delivery without reparking drafts: queued text keeps
+    /// its queued label while the user decides whether to resume into a session
+    /// that just rejected work.
+    public mutating func pause(_ session: SessionReference) { paused.insert(session.id) }
+
     /// Never automatically replay instructions whose receipt may have been lost.
     public mutating func recoverAfterRestart() {
         for index in messages.indices {
