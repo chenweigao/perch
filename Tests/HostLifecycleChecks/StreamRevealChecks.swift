@@ -6,14 +6,17 @@ import WorkbenchCore
 @MainActor @Observable private final class StreamingFixture {
     var messages: [KimiMessage] = []
     var running = true
+    var systemReduceMotion: Bool?
 }
 private struct StreamingFixtureView: View {
     let model: StreamingFixture
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ScrollView {
             ConversationTranscript(messages: model.messages, sessionId: "reveal-fixture", isRunning: model.running)
         }.frame(width: 720, height: 500)
             .environment(\.conversationReduceMotion, false)
+            .onAppear { model.systemReduceMotion = reduceMotion }
     }
 }
 @MainActor private func revealSettle(_ ms: Int) async { try? await Task.sleep(for: .milliseconds(ms)) }
@@ -58,7 +61,13 @@ private struct StreamingFixtureView: View {
     let partialObserved = !during.contains("VISIBLE_END")
     await revealSettle(450)
     let after = textViews(host).map(\.string).joined(separator: "\n")
-    precondition(driver.requestedFrameCount > requestedBefore, "Production transcript must arm the actual frame driver")
+    let reduced = model.systemReduceMotion == true
+    fputs("Stream fixture: systemReduceMotion=\(String(describing: model.systemReduceMotion)), new frame requests=\(driver.requestedFrameCount - requestedBefore)\n", stderr)
+    if reduced {
+        precondition(driver.requestedFrameCount == requestedBefore, "System Reduce Motion must bypass reveal")
+    } else {
+        precondition(driver.requestedFrameCount > requestedBefore, "Production transcript must arm the actual frame driver")
+    }
     precondition(after.contains(complete), "The full received Unicode reply must eventually be visible")
     precondition(driver.pendingFrameCount == 0 && !driver.isRunning, "A completed reveal must leave no callbacks")
     model.messages = try messages(complete + "\n\n| A | B |\n| --- | --- |\n| one | two |\n\nFINAL_CHUNK")
