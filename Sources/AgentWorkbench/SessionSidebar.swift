@@ -312,7 +312,7 @@ struct WorkbenchSidebar: View {
             Button { favoritesExpanded.toggle() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "pin.fill").font(.system(size: 10))
-                    Text("置顶").font(.system(size: 12, weight: .semibold))
+                    Text("置顶").font(.system(size: 12, weight: .semibold)).foregroundStyle(.primary)
                     if count > 0 { Text("\(count)").font(.system(size: 11)).monospacedDigit() }
                     Image(systemName: favoritesExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .medium))
@@ -324,7 +324,9 @@ struct WorkbenchSidebar: View {
             Button { showPinPicker = true } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
                 .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
                 .accessibilityLabel("置顶会话").accessibilityIdentifier("sidebar.pin.add")
-                .popover(isPresented: $showPinPicker, arrowEdge: .trailing) { SidebarPinPicker(model: model) }
+                .popover(isPresented: $showPinPicker, arrowEdge: .trailing) {
+                    SidebarPinPicker(model: model).foregroundStyle(.primary)
+                }
         }.foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 8)
     }
 
