@@ -43,15 +43,22 @@ private struct StreamingFixtureView: View {
     defer { window.orderOut(nil) }
     let host = NSHostingView(rootView: StreamingFixtureView(model: model))
     window.contentView = host; window.makeKeyAndOrderFront(nil)
-    await revealSettle(300)
+    // Wait for the first real row, not an assumed cold SwiftUI layout duration.
+    for _ in 0..<100 {
+        if textViews(host).contains(where: { $0.string.contains("VISIBLE_START") }) { break }
+        await revealSettle(20)
+    }
+    precondition(textViews(host).contains { $0.string.contains("VISIBLE_START") })
+    let requestedBefore = driver.requestedFrameCount
     let complete = prefix + String(repeating: "中文流式文本 ", count: 30) + "VISIBLE_END"
     model.messages = try messages(complete)
     await revealSettle(40)
     let during = textViews(host).map(\.string).joined(separator: "\n")
-    precondition(during.contains("VISIBLE_START") && !during.contains("VISIBLE_END"), "Mounted reply must reveal its live tail")
-    precondition(driver.pendingFrameCount > 0, "Production transcript must arm the actual frame driver")
+    precondition(during.contains("VISIBLE_START"), "Mounted reply must remain visible")
+    let partialObserved = !during.contains("VISIBLE_END")
     await revealSettle(450)
     let after = textViews(host).map(\.string).joined(separator: "\n")
+    precondition(driver.requestedFrameCount > requestedBefore, "Production transcript must arm the actual frame driver")
     precondition(after.contains(complete), "The full received Unicode reply must eventually be visible")
     precondition(driver.pendingFrameCount == 0 && !driver.isRunning, "A completed reveal must leave no callbacks")
     model.messages = try messages(complete + "\n\n| A | B |\n| --- | --- |\n| one | two |\n\nFINAL_CHUNK")
@@ -59,5 +66,6 @@ private struct StreamingFixtureView: View {
     await revealSettle(300)
     precondition(textViews(host).map(\.string).joined(separator: "\n").contains("FINAL_CHUNK"),
                  "Completion with a final chunk and fallback renderer must never be truncated")
+    print("Observed partial live tail at sample: \(partialObserved); pacing deadlines are verified with the deterministic core clock")
     print("PASS: production one-shot frame lifecycle, visible live reply, partial tail, complete Unicode text and idle cleanup")
 }

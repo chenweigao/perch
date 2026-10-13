@@ -17,6 +17,7 @@ final class RevealFrameDriver {
     private var timers: [Int: Timer] = [:]
     private var nextToken = 0
 
+    private(set) var requestedFrameCount = 0
     var pendingFrameCount: Int { frames.count }
     var isRunning: Bool { link != nil }
 
@@ -31,6 +32,7 @@ final class RevealFrameDriver {
 
     private func addFrame(_ callback: @escaping () -> Void) -> Int {
         nextToken += 1
+        requestedFrameCount += 1
         frames[nextToken] = callback
         ensureLink()
         return nextToken

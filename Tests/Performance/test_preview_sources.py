@@ -44,6 +44,7 @@ class PreviewSourceTests(unittest.TestCase):
         self.after = self.git("rev-parse", "HEAD")
         (self.repo / THEME).write_text("// working tree theme\n")
         (self.repo / PRESENTATION).write_text("// presentation environment\n")
+        (app / "RevealFrameDriver.swift").write_text("// working tree reveal driver\n")
         stubs = self.repo / "stubs"
         stubs.mkdir()
         # Stop immediately after source export, before metadata or compilation.
