@@ -312,7 +312,7 @@ struct WorkbenchSidebar: View {
             Button { favoritesExpanded.toggle() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "pin.fill").font(.system(size: 10))
-                    Text("置顶").font(.system(size: 12, weight: .semibold)).foregroundStyle(.primary)
+                    Text("置顶").font(.system(size: 12, weight: .semibold))
                     if count > 0 { Text("\(count)").font(.system(size: 11)).monospacedDigit() }
                     Image(systemName: favoritesExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .medium))
@@ -321,13 +321,17 @@ struct WorkbenchSidebar: View {
             }.buttonStyle(SidebarNavigationStyle()).accessibilityLabel("置顶")
                 .accessibilityValue(favoritesExpanded ? Text("已展开") : Text("已收起"))
                 .accessibilityIdentifier("sidebar.section.favorites")
-            Button { showPinPicker = true } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
+            Button { showPinPicker = true } label: {
+                Image(systemName: "plus").font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.primary).frame(width: 26, height: 26)
+                    .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 6))
+            }
                 .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
                 .accessibilityLabel("置顶会话").accessibilityIdentifier("sidebar.pin.add")
                 .popover(isPresented: $showPinPicker, arrowEdge: .trailing) {
-                    SidebarPinPicker(model: model).foregroundStyle(.primary)
+                    SidebarPinPicker(model: model).foregroundStyle(Color.primary)
                 }
-        }.foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 8)
+        }.foregroundStyle(Color.primary).padding(.horizontal, 10).padding(.top, 8)
     }
 
     private var groupSection: some View {
@@ -540,6 +544,7 @@ private struct SessionSidebarRow: View {
                          hostName: item.hostName, hostID: item.reference.hostID,
                          directory: item.directory, detail: item.detail,
                          groups: groups, updatedAt: item.updatedAt, compact: compact,
+                         running: item.online && !item.archived && item.section == .running,
                          selected: selected,
                          starred: model.workspace.starred.contains(item.reference), archived: item.archived,
                          canOpen: item.online && !item.archived,

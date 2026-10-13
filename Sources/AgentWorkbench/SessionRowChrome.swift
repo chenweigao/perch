@@ -14,6 +14,7 @@ struct SessionRowChrome<Indicator: View>: View {
     var groups: [String] = []
     var updatedAt: Double = 0
     var compact = false
+    var running = false
     let selected: Bool
     let starred: Bool
     let archived: Bool
@@ -35,7 +36,7 @@ struct SessionRowChrome<Indicator: View>: View {
 
     private var showActions: Bool { hovered || focus != nil }
     private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 28 : 0 }
-    private var trailingWidth: CGFloat { compact ? 36 : max(actionWidth, hostName == nil ? 0 : 28) }
+    private var trailingWidth: CGFloat { compact ? (running ? actionWidth : 36) : max(actionWidth, hostName == nil ? 0 : 28) }
     private var rowHeight: CGFloat {
         #if PERCH_ACCEPTANCE
         if NativeAcceptanceProbe.shared.fixedSidebarHeight { return 48 }
@@ -69,6 +70,12 @@ struct SessionRowChrome<Indicator: View>: View {
                         }
                         #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
+                    if compact && running {
+                        HStack(spacing: 3) {
+                            ConversationBusyIndicator()
+                            Text("运行中").font(.system(size: 11, weight: .medium)).foregroundStyle(Color.blue)
+                        }.fixedSize().accessibilityIdentifier("sidebar.running")
+                    }
                     if updatedAt > 0 && !compact {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             Text(SessionTime.label(since: updatedAt, waiting: false, now: context.date) ?? "")
@@ -83,7 +90,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .accessibilityValue(([hostName, directory, detail, updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
                 .onHover { titleHovered = $0 }
             ZStack(alignment: .trailing) {
-                if compact && updatedAt > 0 {
+                if compact && !running && updatedAt > 0 {
                     TimelineView(.periodic(from: .now, by: 60)) { context in
                         Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
                             .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).lineLimit(1)
