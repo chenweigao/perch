@@ -71,6 +71,12 @@ final class RemoteFileBrowser: ObservableObject {
         gitDiff = nil
         gitDirectory = ""
         gitWorktrees = []
+        gitWriteError = nil
+        gitBranches = nil
+        gitLog = nil
+        gitCommitMessage = ""
+        gitCommitSheet = nil
+        gitCommitDiff = nil
         gitInput = cwd
         gitSelectionExplicit = false
         targetLine = nil
@@ -191,6 +197,7 @@ final class RemoteFileBrowser: ObservableObject {
                 browser.gitWorktrees = []
             }
             if browser.gitRange == .branch { browser.loadGitRefs() }
+            if status.root != nil { browser.loadGitMetadata() }
         } failed: { browser in
             browser.gitStatus = nil
         }
@@ -332,6 +339,90 @@ final class RemoteFileBrowser: ObservableObject {
         guard case .changes(_, _, let entries) = gitStatus, let path = gitPath,
               let entry = entries.first(where: { $0.path == path }) else { return }
         loadGitDiff(entry)
+    }
+
+    // MARK: - Write actions and history
+
+    @Published var gitWriteError: String?
+    @Published private(set) var gitWriting = false
+    @Published private(set) var gitBranches: RemoteGitBranches?
+    @Published private(set) var gitLog: [RemoteGitCommit]?
+    @Published var gitCommitMessage = ""
+    @Published var gitCommitSheet: RemoteGitCommit?
+    @Published private(set) var gitCommitDiff: RemoteGitDiff?
+
+    /// Writes never show the full-pane spinner; failures stay inline and every
+    /// success re-reads status so the lists stay authoritative.
+    private func runGitWrite(_ command: String, then: @escaping (RemoteFileBrowser) -> Void = { _ in }) {
+        guard let host, !gitDirectory.isEmpty else { return }
+        cancel()
+        generation += 1
+        gitWriting = true
+        gitWriteError = nil
+        run(command, destination: host.destination, token: generation) { browser, data in
+            browser.gitWriting = false
+            switch try RemoteGitCommand.parseWrite(data) {
+            case .ok:
+                then(browser)
+                browser.gitBranches = nil
+                browser.gitLog = nil
+                browser.loadGitStatus()
+            case .notARepository:
+                browser.gitWriteError = "所选目录不是可用的 Git 工作树。"
+            case .failed(let message):
+                browser.gitWriteError = message
+            }
+        } failed: { browser in
+            browser.gitWriting = false
+            browser.gitWriteError = browser.error
+        }
+    }
+
+    func stageGitEntry(_ entry: RemoteGitEntry) {
+        runGitWrite(RemoteGitCommand.stageCommand(directory: gitDirectory, path: entry.path))
+    }
+    func unstageGitEntry(_ entry: RemoteGitEntry) {
+        runGitWrite(RemoteGitCommand.unstageCommand(directory: gitDirectory, path: entry.path))
+    }
+    func commitGit() {
+        let message = gitCommitMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty else { return }
+        runGitWrite(RemoteGitCommand.commitCommand(directory: gitDirectory, message: message)) { browser in
+            browser.gitCommitMessage = ""
+        }
+    }
+    func switchGitBranch(_ branch: String) {
+        guard branch != gitBranches?.current else { return }
+        runGitWrite(RemoteGitCommand.switchCommand(directory: gitDirectory, branch: branch)) { browser in
+            // Comparison pins belong to the old branch.
+            browser.gitRefs = []
+            browser.gitComparison = nil
+            browser.gitBaseInput = ""
+        }
+    }
+
+    /// Branches and recent commits chain after a status read so the
+    /// single-reader transport never interleaves responses. A stale nil retries
+    /// on the next status load.
+    func loadGitMetadata() {
+        guard let host, !gitDirectory.isEmpty, gitBranches == nil || gitLog == nil else { return }
+        let destination = host.destination
+        run(RemoteGitCommand.branchesCommand(directory: gitDirectory), destination: destination, token: generation) { browser, data in
+            browser.gitBranches = try RemoteGitCommand.parseBranches(data)
+            browser.run(RemoteGitCommand.logCommand(directory: browser.gitDirectory), destination: destination, token: browser.generation) { inner, logData in
+                inner.gitLog = try RemoteGitCommand.parseLog(logData)
+            } failed: { inner in inner.gitLog = nil }
+        } failed: { browser in browser.gitBranches = nil }
+    }
+
+    func showGitCommit(_ commit: RemoteGitCommit) {
+        guard let host else { return }
+        gitCommitSheet = commit
+        gitCommitDiff = nil
+        run(RemoteGitCommand.showCommand(directory: gitDirectory, commit: commit.hash),
+            destination: host.destination, token: generation) { browser, data in
+            browser.gitCommitDiff = try RemoteGitCommand.parseDiff(data)
+        } failed: { browser in browser.gitCommitDiff = nil }
     }
 
     private func run(_ command: String, destination: String, token: Int,
@@ -550,6 +641,56 @@ struct RemoteFilePanel: View {
                             Text("分支改动").tag(GitReviewRange.branch)
                         }.pickerStyle(.segmented).labelsHidden()
                             .onChange(of: browser.gitRange) { previous, _ in browser.changeGitRange(from: previous) }
+                        if let branches = browser.gitBranches {
+                            Menu {
+                                ForEach(branches.names, id: \.self) { name in
+                                    Button { browser.switchGitBranch(name) } label: {
+                                        HStack {
+                                            Text(name)
+                                            if name == branches.current { Image(systemName: "checkmark") }
+                                        }
+                                    }.disabled(name == branches.current)
+                                }
+                            } label: {
+                                Label(branches.current ?? "游离 HEAD", systemImage: "arrow.triangle.branch")
+                                    .font(.system(size: 12))
+                            }.menuStyle(.borderlessButton).fixedSize()
+                                .help("切换分支，直接作用于远端工作区")
+                                .disabled(browser.gitWriting)
+                        }
+                        if browser.gitWriting { ProgressView().controlSize(.mini) }
+                    }
+                    if let writeError = browser.gitWriteError {
+                        Text(writeError).font(.system(size: 10)).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if case .changes(_, _, let entries) = browser.gitStatus,
+                       entries.contains(where: { $0.hasStaged }) {
+                        HStack(spacing: 7) {
+                            TextField("提交信息", text: $browser.gitCommitMessage)
+                                .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                                .onSubmit { browser.commitGit() }
+                            Button("提交") { browser.commitGit() }.controlSize(.small)
+                                .disabled(browser.gitWriting
+                                          || browser.gitCommitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                    if let log = browser.gitLog, !log.isEmpty {
+                        DisclosureGroup("最近提交（\(log.count)）") {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(log) { commit in
+                                    Button { browser.showGitCommit(commit) } label: {
+                                        HStack(spacing: 7) {
+                                            Text(commit.hash).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                                            Text(commit.subject).font(.system(size: 11)).lineLimit(1)
+                                            Spacer(minLength: 0)
+                                            Text(commit.relativeDate).font(.system(size: 10)).foregroundStyle(.tertiary)
+                                        }.frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.vertical, 2).contentShape(Rectangle())
+                                    }.buttonStyle(.plain)
+                                }
+                            }.padding(.top, 4)
+                        }.font(.system(size: 11))
                     }
                     if browser.gitRange == .branch {
                         HStack(spacing: 7) {
@@ -581,7 +722,7 @@ struct RemoteFilePanel: View {
                         Text("比较共同祖先到当前提交的改动，不含未提交内容；引用使用仓库现有数据，不自动 fetch。")
                             .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     } else {
-                        Text("只读：仅执行 worktree list、status 与 diff，不做任何写操作。")
+                        Text("暂存、提交与切换分支会直接修改远端工作区；差异与比较仍为只读。")
                             .font(.system(size: 10)).foregroundStyle(.secondary)
                     }
                 }
@@ -609,6 +750,28 @@ struct RemoteFilePanel: View {
         }.background(WorkbenchTheme.contentBackground)
             .onChange(of: browser.loading) { _, loading in if loading { selection = NSRange(location: 0, length: 0) } }
             .onChange(of: browser.mode) { _, _ in selection = NSRange(location: 0, length: 0) }
+            .sheet(item: $browser.gitCommitSheet) { commit in
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("\(commit.hash) · \(commit.subject)").font(.headline).lineLimit(1)
+                        Spacer()
+                        Button("关闭") { browser.gitCommitSheet = nil }
+                    }
+                    Text("\(commit.author) · \(commit.relativeDate)").font(.caption).foregroundStyle(.secondary)
+                    switch browser.gitCommitDiff {
+                    case .text(let diff, let truncated):
+                        if truncated {
+                            Label("差异过大，已截断", systemImage: "scissors")
+                                .font(.system(size: 11)).foregroundStyle(.orange)
+                        }
+                        RemoteSourceText(text: diff, line: nil, diff: true)
+                    case .some(.binary): Text("二进制文件差异，不做预览。").foregroundStyle(.secondary)
+                    case .some(.empty): Text("该提交没有差异正文。").foregroundStyle(.secondary)
+                    case .some(.untracked), .some(.notARepository): EmptyView()
+                    case nil: ProgressView().controlSize(.small)
+                    }
+                }.padding(20).frame(width: 640, height: 520)
+            }
             .sheet(item: $feedbackContext) { context in
                 VStack(alignment: .leading, spacing: 12) {
                     Text("代码反馈").font(.headline)
@@ -679,21 +842,31 @@ struct RemoteFilePanel: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 1) {
                     ForEach(entries) { entry in
-                        Button { browser.loadGitDiff(entry) } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
-                                    .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
-                                HStack(spacing: 6) {
-                                    Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label)
-                                    if browser.gitRange == .branch {
-                                        if browser.reviewProgress.isReviewed(entry.path) { Label("已读", systemImage: "checkmark.circle.fill") }
-                                        else if browser.reviewProgress.changed.contains(entry.path) { Text("有新改动").foregroundStyle(.orange) }
-                                    }
-                                }.font(.system(size: 10)).foregroundStyle(.secondary)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
-                                .background(entry.path == browser.gitPath ? Color.primary.opacity(0.05) : .clear)
-                        }.buttonStyle(.plain)
+                        HStack(spacing: 6) {
+                            Button { browser.loadGitDiff(entry) } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
+                                        .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                                    HStack(spacing: 6) {
+                                        Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label)
+                                        if browser.gitRange == .branch {
+                                            if browser.reviewProgress.isReviewed(entry.path) { Label("已读", systemImage: "checkmark.circle.fill") }
+                                            else if browser.reviewProgress.changed.contains(entry.path) { Text("有新改动").foregroundStyle(.orange) }
+                                        }
+                                    }.font(.system(size: 10)).foregroundStyle(.secondary)
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                            if browser.gitRange == .unstaged, entry.hasUnstaged || entry.untracked {
+                                Button("暂存") { browser.stageGitEntry(entry) }
+                                    .controlSize(.mini).disabled(browser.gitWriting)
+                            } else if browser.gitRange == .staged, entry.hasStaged {
+                                Button("取消暂存") { browser.unstageGitEntry(entry) }
+                                    .controlSize(.mini).disabled(browser.gitWriting)
+                            }
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 6)
+                        .background(entry.path == browser.gitPath ? Color.primary.opacity(0.05) : .clear)
                     }
                 }.padding(.vertical, 8)
             }.frame(minHeight: 80, idealHeight: max(80, min(220, Double(entries.count) * 42 + 16)), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))
