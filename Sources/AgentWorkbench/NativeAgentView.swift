@@ -38,6 +38,7 @@ struct NativeAgentView: View {
                     .overlay { if !isCurrent(s) { selectionPlaceholder } }
             } else { selectionPlaceholder }
             if !connection.online { HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10) }
+            else { NativeStaleSyncHint(connection: connection) }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
@@ -153,6 +154,23 @@ struct NativeAgentView: View {
         }
     }
 
+}
+
+/// `online` only flips after a failed poll; a wedged sync can stall updates while
+/// the connection still looks live. Past the idle cadence's slowest gap, show how
+/// stale the screen is instead of presenting it as current.
+private struct NativeStaleSyncHint: View {
+    let connection: NativeAgentConnection
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 5)) { context in
+            if let last = connection.lastSyncAt, context.date.timeIntervalSince(last) > 15 {
+                HStack {
+                    Text("数据同步中断，界面可能不是最新。")
+                    Button("重新连接") { connection.connect() }
+                }.font(.caption).foregroundStyle(.orange).padding(10)
+            }
+        }
+    }
 }
 
 /// Draft and palette updates are local to the input area, not the long transcript.
@@ -339,7 +357,7 @@ struct NativeRunControls: View {
                     }
                 }
                 if connection.queue.isPaused(reference) || pending.contains(where: { $0.state == .stoppedBeforeDelivery }) {
-                    Button("Resume queued messages") { connection.resumeQueue(reference) }.font(.caption)
+                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.caption)
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in

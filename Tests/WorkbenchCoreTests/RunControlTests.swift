@@ -168,6 +168,22 @@ func checkRunControl() throws {
     precondition(!queue.isPaused(session))
     precondition(queue.nextDelivery(for: session, isStreaming: false)?.id == "m-a")
 
+    // A failure pause keeps drafts under their queued label, not the stop's.
+    queue.pause(session)
+    precondition(queue.isPaused(session))
+    precondition(queue.nextDelivery(for: session, isStreaming: false) == nil)
+    precondition(queue.message("m-b")?.state == .draftQueued)
+    queue.resume(session)
+    precondition(!queue.isPaused(session))
+
+    // A failed entry blocks everything queued behind it until explicitly removed.
+    queue.markFailed("m-a", "运行时被拒绝")
+    precondition(queue.nextDelivery(for: session, isStreaming: false) == nil)
+    precondition(queue.removeFailed("m-a"))
+    precondition(queue.nextDelivery(for: session, isStreaming: false)?.id == "m-b")
+    queue.markDelivered("m-b")
+    queue.enqueue("留给退出提示", for: session, mode: .nextTurn, id: "m-d")
+
     // Persisted pending messages remain visible until their receipt is reconciled.
     precondition(queue.unsentWarning(for: session)?.contains("saved locally") == true)
     precondition(queue.unsentWarning(for: neighbour) == nil)
