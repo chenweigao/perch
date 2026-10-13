@@ -1191,10 +1191,14 @@ private struct ConversationEntryAppearance: Equatable {
 private struct HostedConversationEntry: View {
     let content: ConversationEntryView
     let appearance: ConversationEntryAppearance
+    var cursor: RevealCursor? = nil
     var disclosureChanged: () -> Void = {}
     var sizeChanged: (CGSize) -> Void = { _ in }
     var body: some View {
-        content.equatable().environment(\.conversationMemoryKey, content.memoryKey).fixedSize(horizontal: false, vertical: true)
+        content.equatable()
+            .environment(\.conversationMemoryKey, content.memoryKey)
+            .environment(\.streamRevealCursor, cursor)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGSize.self) { $0.size } action: { sizeChanged($0) }
             .environment(\.conversationDisclosureWillChange, disclosureChanged)
@@ -1284,6 +1288,11 @@ private final class ConversationEntryController: NSViewController {
     private var host: NSHostingController<HostedConversationEntry>?
     private var nativeUser: NativeUserMessageView?
     private var nativeAssistant: NativeAssistantMessageView?
+    /// Live-tail reveal: the cursor object is always injected; `reveal` exists
+    /// only while a .progress assistant text row is pacing its tail.
+    private let revealCursor = RevealCursor()
+    private var reveal: StreamReveal?
+    private var revealMessageID: String?
     private var content: ConversationEntryView
     private var appearance: ConversationEntryAppearance
     private var generation = 0
@@ -1418,6 +1427,7 @@ private final class ConversationEntryController: NSViewController {
         }
     }
     deinit {
+        reveal?.cancel()
         if let nativeUser { NativeUserMessageView.recycle(nativeUser) }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant) }
     }
@@ -1493,6 +1503,52 @@ private final class ConversationEntryController: NSViewController {
         #endif
         return .reuse(sessionID: content.sessionId, messageID: messageID, source: source, blocks: blocks)
     }
+    /// Live assistant tail (.progress): same admission shape as the settled
+    /// native probe, minus the presentation requirement. The cached preparation
+    /// doubles as the hosted Markdown's parse, so streaming parses once.
+    private func liveAssistantPreparation() -> (messageID: String, source: String, value: NativeAssistantContent.Preparation)? {
+        guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
+              content.entry.messages.count == 1,
+              let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
+              message.content.count == 1, let part = message.content.first,
+              part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
+              let source = part.text else { return nil }
+        let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
+                                                          source: source, allowsRichBlocks: true) {
+            NativeAssistantContent.prepare(source, allowsRichBlocks: true)
+        }
+        return (message.id, source, preparation)
+    }
+    /// Cursor-space text: rendered paragraph/heading text plus one separator per
+    /// text block. Deliberately one separator MORE than the in-group separators
+    /// the view counts, so the published cursor can only overshoot a group
+    /// boundary — never truncate the tail after the drain completes.
+    private static func revealCursorText(blocks: [ReplyBlock]) -> String {
+        var text = ""
+        for block in blocks {
+            switch block {
+            case .paragraph(let runs), .heading(_, let runs):
+                for run in runs { text += run.text }
+                text += "\n"
+            default:
+                break
+            }
+        }
+        return text
+    }
+    private func updateReveal(messageID: String, blocks: [ReplyBlock], animate: Bool) {
+        if reveal == nil || revealMessageID != messageID {
+            reveal?.cancel()
+            let reveal = StreamReveal(clock: RevealFrameDriver.shared.clock)
+            reveal.onVisibleChange = { [weak self] visible in self?.revealCursor.visible = visible }
+            self.reveal = reveal
+            revealMessageID = messageID
+        }
+        reveal?.update(Self.revealCursorText(blocks: blocks), animate: animate)
+    }
+    private func finishReveal() {
+        reveal?.finish()
+    }
     private func setRoot() {
         #if TRANSCRIPT_CHECKS
         // Covers native admission probing (parse + attributed construction), native
@@ -1543,6 +1599,9 @@ private final class ConversationEntryController: NSViewController {
         if let assistant = nativeAssistantPreparation() {
             if let blocks = assistant.value.content {
                 if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
+                // A settled row shows everything: the reveal ends at the flip
+                // from .progress to .message, not when the drain happens to finish.
+                finishReveal()
                 if nativeAssistant == nil {
                     nativeAssistant = NativeAssistantMessageView.acquire()
                     if isViewLoaded { view.addSubview(nativeAssistant!) }
@@ -1559,10 +1618,20 @@ private final class ConversationEntryController: NSViewController {
                                                        blocks: assistant.value.blocks)
         }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
+        if content.entry.presentation == .progress, let live = liveAssistantPreparation() {
+            // Parse once here (cached) so the reveal cursor and the hosted
+            // Markdown share the same blocks.
+            markdownPreparation = .reuse(sessionID: content.sessionId, messageID: live.messageID,
+                                         source: live.source, blocks: live.value.blocks)
+            updateReveal(messageID: live.messageID, blocks: live.value.blocks,
+                         animate: !appearance.reduceMotion)
+        } else {
+            finishReveal()
+        }
         var hostedContent = content
         hostedContent.markdownPreparation = markdownPreparation
         let version = generation
-        let root = HostedConversationEntry(content: hostedContent, appearance: appearance, disclosureChanged: { [weak self] in
+        let root = HostedConversationEntry(content: hostedContent, appearance: appearance, cursor: revealCursor, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
             self?.disclosureChanged()
         }) { [weak self] size in

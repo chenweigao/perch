@@ -111,10 +111,33 @@ private struct ReplyBlocks: View {
     let blocks: [ReplyBlock]
     var compact = false
     var coalescesParagraphs = ReplyParagraphLayout.enabled
+    @Environment(\.streamRevealCursor) private var revealCursor
     private struct Group: Identifiable, Equatable {
         let id: Int
         let block: ReplyBlock
         var following: [[ReplyInline]] = []
+        /// Length in the reveal cursor space: paragraph and heading groups count
+        /// their rendered UTF-16 text (with paragraph separators); code, lists,
+        /// quotes, tables and rules are wholesale checkpoints with zero length —
+        /// they appear once the cursor reaches them.
+        var renderedLength: Int {
+            switch block {
+            case .paragraph(let runs):
+                var total = runs.reduce(0) { $0 + $1.text.utf16.count }
+                for paragraph in following {
+                    total += 1 + paragraph.reduce(0) { $0 + $1.text.utf16.count }
+                }
+                return total
+            case .heading(_, let runs):
+                return runs.reduce(0) { $0 + $1.text.utf16.count }
+            default:
+                return 0
+            }
+        }
+    }
+    private struct RevealedGroup: Equatable {
+        let group: Group
+        let truncateAt: Int?
     }
     // Bound streaming invalidation: only the final group of at most eight
     // paragraphs changes when the tail grows; completed groups remain equal.
@@ -131,10 +154,30 @@ private struct ReplyBlocks: View {
         }
         return result
     }
+    /// Map the cursor onto groups: fully covered groups render whole, the
+    /// crossing paragraph/heading group renders a grapheme-safe prefix, groups
+    /// beyond the cursor stay hidden until it reaches them.
+    private func revealedGroups(upTo cursor: Int) -> [RevealedGroup] {
+        guard cursor != Int.max else { return groups.map { RevealedGroup(group: $0, truncateAt: nil) } }
+        var offset = 0
+        var result: [RevealedGroup] = []
+        for group in groups {
+            let length = group.renderedLength
+            if cursor >= offset + length {
+                result.append(RevealedGroup(group: group, truncateAt: nil))
+            } else if length > 0, cursor > offset {
+                result.append(RevealedGroup(group: group, truncateAt: cursor - offset))
+            }
+            offset += length
+        }
+        return result
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(groups) { group in
-                GroupContent(group: group, compact: compact, coalescesParagraphs: coalescesParagraphs).equatable()
+            ForEach(revealedGroups(upTo: revealCursor?.visible ?? Int.max), id: \.group.id) { revealed in
+                let group = revealed.group
+                GroupContent(group: group, compact: compact, coalescesParagraphs: coalescesParagraphs,
+                             truncateAt: revealed.truncateAt).equatable()
                     .padding(.top, group.id == 0 ? 0 : spacing(before: group.block, after: blocks[group.id - 1]))
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -143,11 +186,14 @@ private struct ReplyBlocks: View {
         let group: Group
         let compact: Bool
         let coalescesParagraphs: Bool
+        var truncateAt: Int? = nil
         @ViewBuilder var body: some View {
             if case .paragraph(let runs) = group.block {
-                ReplyText(runs: runs, followingParagraphs: group.following, paragraphSpacing: compact ? 8 : 12, preservesSelectionOnAppend: coalescesParagraphs)
+                ReplyText(runs: runs, followingParagraphs: group.following, paragraphSpacing: compact ? 8 : 12,
+                          preservesSelectionOnAppend: coalescesParagraphs, truncateAt: truncateAt)
             } else {
-                ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs).equatable()
+                ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs,
+                                  truncateAt: truncateAt).equatable()
             }
         }
     }
@@ -170,12 +216,14 @@ private struct ReplyBlocks: View {
 private struct ReplyBlockContent: View, Equatable {
     let block: ReplyBlock
     var coalescesParagraphs = ReplyParagraphLayout.enabled
+    /// UTF-16 cap in reveal cursor space; only headings consume it.
+    var truncateAt: Int? = nil
     @ViewBuilder var body: some View {
         switch block {
-        case .paragraph(let runs): ReplyText(runs: runs)
+        case .paragraph(let runs): ReplyText(runs: runs, truncateAt: truncateAt)
         case .heading(let level, let runs):
             ReplyText(runs: runs, size: level == 1 ? ReplyStyle.bodySize + 2 : ReplyStyle.bodySize,
-                      weight: .medium, lineHeight: 24)
+                      weight: .medium, lineHeight: 24, truncateAt: truncateAt)
         case .code(let language, let source): ReplyCode(language: language, source: source)
         case .list(let items):
             ReplyListLayout {
@@ -260,6 +308,15 @@ extension EnvironmentValues {
     var replyLineHeight: CGFloat {
         get { self[ReplyLineHeightKey.self] }
         set { self[ReplyLineHeightKey.self] = newValue }
+    }
+}
+
+/// Live rows inject their reveal cursor; nil (and `Int.max`) render everything.
+private struct StreamRevealCursorKey: EnvironmentKey { static let defaultValue: RevealCursor? = nil }
+extension EnvironmentValues {
+    var streamRevealCursor: RevealCursor? {
+        get { self[StreamRevealCursorKey.self] }
+        set { self[StreamRevealCursorKey.self] = newValue }
     }
 }
 
@@ -358,11 +415,15 @@ private struct ReplyText: View {
     var followingParagraphs: [[ReplyInline]] = []
     var paragraphSpacing: CGFloat = 12
     var preservesSelectionOnAppend = false
+    /// Live reveal cap in UTF-16 units; nil renders the complete text.
+    var truncateAt: Int? = nil
     private var resolvedLineHeight: CGFloat { lineHeight ?? defaultLineHeight }
     private var attributed: NSAttributedString {
-        ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: size, weight: weight,
-                                      alignment: alignment, lineHeight: resolvedLineHeight,
-                                      paragraphSpacing: paragraphSpacing, ink: ink)
+        let full = ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: size, weight: weight,
+                                                  alignment: alignment, lineHeight: resolvedLineHeight,
+                                                  paragraphSpacing: paragraphSpacing, ink: ink)
+        guard let truncateAt, truncateAt < full.length else { return full }
+        return full.visiblePrefix(utf16Count: truncateAt)
     }
     var body: some View {
         SelectableReplyText(attributed: attributed, preservesSelectionOnAppend: preservesSelectionOnAppend)

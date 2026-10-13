@@ -56,12 +56,17 @@ fi
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/ConversationPresentationEnvironment.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/ConversationPresentationEnvironment.swift)
 fi
-# The historical baseline predates the extracted tool component.
-if [[ "$variant" == current ]]; then
+# The historical baseline predates the extracted tool component; probe so
+# recent baseline revisions (WORKBENCH_BASELINE_REF) carry it too.
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/ToolActivityView.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/ToolActivityView.swift)
-    if [[ -z "$source_ref" ]] || git cat-file -e "$source_ref:Sources/AgentWorkbench/ActivitySummaryController.swift" 2>/dev/null; then
-        app_files+=(Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift)
-    fi
+fi
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/ActivitySummaryController.swift" 2>/dev/null; then
+    app_files+=(Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift)
+fi
+# Revisions before the stream-reveal change do not carry the driver.
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/RevealFrameDriver.swift" 2>/dev/null; then
+    app_files+=(Sources/AgentWorkbench/RevealFrameDriver.swift)
 fi
 # Refresh only this fixture's copied source directory, never any checkout.
 rm -rf "$snapshot_root/Sources"
@@ -108,7 +113,15 @@ for target in Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$' | sort)
 done
 compile_flags=( -D PERFORMANCE_CURRENT )
-if [[ "$variant" == baseline ]]; then compile_flags=( -D PERFORMANCE_BASELINE ); fi
+if [[ "$variant" == baseline ]]; then
+    compile_flags=( -D PERFORMANCE_BASELINE )
+    # The historical compile path fits only the pinned September baseline.
+    # Recent baseline revisions already use the current hosting structure, so
+    # compile them through the current fixture path (variant stays "baseline").
+    if git cat-file -p "$baseline_ref:Sources/AgentWorkbench/WorkspaceSplitView.swift" 2>/dev/null | grep -q "newConversation"; then
+        compile_flags=( -D PERFORMANCE_CURRENT )
+    fi
+fi
 copied_app_files=()
 for path in "${app_files[@]}"; do copied_app_files+=("$snapshot_root/$path"); done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library "${compile_flags[@]}" -I "$module_dir" "${includes[@]}" \
