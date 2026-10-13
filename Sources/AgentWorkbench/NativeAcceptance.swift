@@ -1079,6 +1079,21 @@ private struct ReferenceComposerFixtureView: View {
         let original = model.sidebarProjection(filter: .all)
         let first = original.projects[0], second = original.projects[1]
         try await settle(window, "project tree mounted") { rows().count == 40 }
+        let host = model.connections[0].host
+        let roots = Dictionary(model.allSessions.map { ($0.directory, $0.directory) }, uniquingKeysWith: { first, _ in first })
+        var mergedRoots = roots
+        mergedRoots[second.location!.directory] = first.location!.directory
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: mergedRoots)
+        try await settle(window, "worktrees grouped by owning repository") {
+            guard let projects = self.probe.sidebarProjection?.projects else { return false }
+            return projects.count == original.projects.count - 1
+                && projects.first { $0.id == first.id }?.sessions.count == first.sessions.count + second.sessions.count
+        }
+        guard second.sessions.allSatisfy({ $0.directory == second.location!.directory }) else {
+            throw WorkbenchError("Grouping changed execution directories")
+        }
+        model.sidebarRepositories.acceptanceReplace(host: host, roots: roots)
+        try await settle(window, "repository projection restored") { self.probe.sidebarProjection?.projects.count == original.projects.count }
         let selectedBefore = model.tabs.selectedID
         defaults.set(String(decoding: try JSONEncoder().encode([first.id]), as: UTF8.self), forKey: key)
         try await settle(window, "project collapsed") { !rows().contains { first.sessions.contains($0.item) } }
@@ -1146,6 +1161,7 @@ private struct ReferenceComposerFixtureView: View {
         return ["project_identity_count": original.projects.count, "bounded_initial_rows": 40,
                 "collapse_preserves_selection": true, "pin_without_duplicate": true,
                 "manual_membership_and_reset": true, "selected_outside_limits_revealed": true,
+                "repository_metadata_regroups_without_changing_cwd": true,
                 "selected_scrolled_into_view": true,
                 "narrow_sidebar_selection": true,
                 "new_task_project_directory_and_repeated_requests": true,

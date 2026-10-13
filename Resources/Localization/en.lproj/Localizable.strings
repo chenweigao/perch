@@ -1167,7 +1167,7 @@
 
 "移动到项目" = "Move to project";
 
-"按工作目录归组" = "Group by working directory";
+"按所属仓库归组" = "Group by repository";
 
 "在此项目新建会话" = "New chat in this project";
 

@@ -124,6 +124,32 @@ func checkRemoteGitDiff() async throws {
                 repo.resolvingSymlinksInPath().path)
 
     try await git(["worktree", "add", "--quiet", "-b", "feature/linked", linked.path])
+    let nested = linked.appendingPathComponent("nested ; '$()\n项目")
+    try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+    let projectDirectories = [repo.path, linked.path, nested.path, root.path, missingPath]
+    let projectData = try await ProcessRunner.run("/bin/sh", ["-c", SidebarRepositoryCommand.command(directories: projectDirectories)])
+    let projectRoots = try SidebarRepositoryCommand.parse(projectData, directories: projectDirectories)
+    for directory in [repo.path, linked.path, nested.path] {
+        expectEqual(URL(fileURLWithPath: projectRoots[directory]!).resolvingSymlinksInPath().path,
+                    repo.resolvingSymlinksInPath().path)
+    }
+    expectEqual(projectRoots[root.path], "")
+    expectEqual(projectRoots[missingPath], "")
+    let projectHost = UUID()
+    let projectSessions = projectDirectories.enumerated().map { index, directory in
+        WorkspaceSession(reference: .init(hostID: projectHost, terminalID: String(index), kind: .codex),
+            title: String(index), directory: directory, hostName: "Local", detail: "", online: true,
+            section: .other, canMarkReviewed: false)
+    }
+    let projectLocations = Dictionary(uniqueKeysWithValues: projectSessions.map {
+        ($0.id, SidebarProjectLocation(hostID: projectHost, directory: projectRoots[$0.directory]!, hostName: "Local"))
+    })
+    let projects = SidebarProjection(sessions: projectSessions, starred: [], projectLocations: projectLocations).projects
+    expectEqual(projects.count, 2)
+    expectEqual(projects.first?.sessions.count, 3)
+    expectEqual(projects.last?.sessions.count, 2)
+    expectTrue(projects.last?.location == nil)
+    print("PASS: real Git main checkout, linked worktree and nested directory share one project; non-repositories stay temporary")
     try Data("changed only in linked worktree\n".utf8).write(to: linked.appendingPathComponent("stable.txt"))
 
     guard case .clean(_, let mainWorktrees) = try await status()

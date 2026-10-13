@@ -49,7 +49,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 onOpen()
             } label: {
                 HStack(alignment: .top, spacing: 9) {
-                    indicator.frame(width: compact ? 8 : 17, height: 16).accessibilityHidden(true)
+                    indicator.frame(width: 17, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
                         #if PERCH_ACCEPTANCE

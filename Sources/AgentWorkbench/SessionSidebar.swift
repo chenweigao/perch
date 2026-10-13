@@ -52,6 +52,12 @@ struct WorkbenchSidebar: View {
         }
         .onChange(of: model.tabs.selectedID) { _, _ in revealSelectedProject() }
         .onChange(of: model.workspace.sidebarProjectLocations) { _, _ in revealSelectedProject() }
+        .onChange(of: model.sidebarRepositories.revision) { _, _ in revealSelectedProject() }
+        #if !PERCH_ACCEPTANCE
+        .task(id: model.sidebarRepositoryRequests) {
+            await model.sidebarRepositories.resolve(model.sidebarRepositoryRequests)
+        }
+        #endif
         #if PERCH_ACCEPTANCE
         .background(NativeSidebarProbe(projection: projection))
         .onReceive(experiment.$sidebarFilter) { if let value = $0 { filter = value } }
@@ -331,7 +337,7 @@ struct SessionDirectoryView: View {
     @State private var search = SessionDirectorySearch()
     var body: some View {
         let result = search.update(model.allSessions, query: query, locale: L.locale,
-                                   projectLocations: model.workspace.sidebarProjectLocations)
+                                   projectLocations: model.sidebarProjectLocations)
         let sessions = result.sessions
         let index = model.groupIndex
         VStack(alignment: .leading, spacing: 16) {
@@ -423,10 +429,7 @@ private struct SessionSidebarRow: View {
                          onPin: { model.toggleStar(item.reference) },
                          onArchive: { model.setArchived(item, archived: !item.archived) }) {
             if compact {
-                if !item.online { Image(systemName: "wifi.slash").font(.system(size: 10)).foregroundStyle(.secondary) }
-                else if item.section == .running { Circle().fill(.blue).frame(width: 6, height: 6) }
-                else if item.section == .attention { RoundedRectangle(cornerRadius: 2).fill(.orange).frame(width: 6, height: 6) }
-                else { Color.clear.frame(width: 6, height: 6) }
+                SidebarAgentIndicator(item: item)
             } else { SessionStatusIndicator(item: item) }
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
@@ -469,7 +472,7 @@ struct SessionActionsMenu: View {
                 }
             }
             Divider()
-            Button("按工作目录归组") { model.moveSidebarSession(item, to: nil) }
+            Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
         }
         Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "folder") }
         Button { model.toggleTaskNotifications(item.id) } label: {
