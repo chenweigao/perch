@@ -1844,11 +1844,18 @@ private struct ProcessFoldRow: View {
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                               memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
                     }
-                }.padding(.top, 10)
+                }.padding(.top, 12).padding(.leading, 14)
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, 12)
+                    }
             }
         } label: {
-            Text(toolCalls > 0 ? "过程记录 · \(toolCalls) 次调用" : "过程记录 · \(rows.count) 条")
-                .font(.system(size: 12)).foregroundStyle(.secondary)
+            HStack(spacing: 7) {
+                Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
+                Text("思考与工具").fontWeight(.medium).foregroundStyle(Color.primary.opacity(0.75))
+                Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录"))
+                    .foregroundStyle(.secondary)
+            }.font(.system(size: 12)).foregroundStyle(Color.secondary)
         }.disclosureGroupStyle(WorkbenchDisclosureStyle())
             .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
     }
@@ -1896,7 +1903,7 @@ private struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
-    @RememberedExpansion("live-thought", initial: true) private var expanded
+    @RememberedExpansion("live-thought") private var expanded
     @State private var showFullText = false
     @State private var previewOverflows = false
     var body: some View {

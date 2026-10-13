@@ -39,7 +39,6 @@ struct KimiActivityView: View {
     var narrative: ActivityNarrative? = nil
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let grouped = entry.messages.count > 1 || items.isEmpty || narrative != nil
         #if TRANSCRIPT_CHECKS
         // Occurrences only, and a declaration because ViewBuilder rejects bare
         // expression statements. Records that a collapsed activity row still walks
@@ -49,8 +48,7 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         VStack(alignment: .leading, spacing: 2) {
-            if grouped {
-                DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
+            DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 8) {
                         if let narrative {
                             Text("\(narrative.headline) · \(items.count) 次调用").lineLimit(1).truncationMode(.tail)
@@ -66,7 +64,6 @@ struct KimiActivityView: View {
                         if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
                     }.font(.system(size: 12)).foregroundStyle(.secondary)
                 }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
-            }
             if expanded, let narrative {
                 ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, 20)
             }
@@ -74,10 +71,10 @@ struct KimiActivityView: View {
             // and tools originating in the same provider message without collisions.
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
-                    if !grouped || expanded || tool.staysVisible {
-                        KimiToolCard(tool: tool, onExpand: { if !grouped { expanded = true } })
+                    if expanded || tool.staysVisible || tool.status == .failed {
+                        KimiToolCard(tool: tool)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
-                            .padding(.leading, grouped && expanded ? 20 : 0)
+                            .padding(.leading, expanded ? 20 : 0)
                     }
                 } else if expanded {
                     KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)

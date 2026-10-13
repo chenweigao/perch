@@ -68,8 +68,8 @@ enum NativeAssistantContent {
                 guard allowsRichBlocks else { return nil }
                 flush()
                 result.append(.heading(ReplyTextAttributes.paragraphs([runs],
-                    size: level == 1 ? ReplyStyle.bodySize + 2 : ReplyStyle.bodySize,
-                    weight: .medium, lineHeight: 24)))
+                    size: ReplyStyle.headingSize(level),
+                    weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level))))
             case .code(let language, let code):
                 guard allowsRichBlocks else { return nil }
                 flush()

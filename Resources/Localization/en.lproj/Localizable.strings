@@ -1200,3 +1200,9 @@
 "搜索会话" = "Search chats";
 
 "没有可置顶的会话" = "No chats available to pin";
+
+"思考与工具" = "Thoughts and tools";
+
+"%lld 次调用" = "%lld calls";
+
+"%lld 条记录" = "%lld records";

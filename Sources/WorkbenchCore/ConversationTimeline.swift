@@ -117,9 +117,10 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
 /// rows stay fully intact and re-mount in place.
 public enum ConversationProcessFold {
     public static func foldable(_ row: ConversationPresentationModel.Row) -> Bool {
-        // A closed narrative anchor already summarizes its stage in place.
-        if let activity = row.activity, activity.isAnchor, activity.stageClosed,
-           row.entry.isNarrativeSource(for: activity.narrative) { return false }
+        // Reading-first history never conceals a failed, pending or uncertain tool.
+        if row.tools.values.contains(where: { $0.status != .succeeded && $0.status != .returned }) {
+            return false
+        }
         switch row.entry.presentation {
         case .activity, .commentary, .progress, .thinkingPreview, .thinkingDetails, .record, .thinkingRecord:
             return true

@@ -5,16 +5,18 @@ import WorkbenchCore
 
 /// Shared reading metrics keep Kimi, OMP and Qoder aligned with their composers.
 enum ReplyStyle {
-    static let readingWidth: CGFloat = 700
-    static let bodySize: CGFloat = 14
-    static let lineHeightRatio: CGFloat = 1.625
-    static let ink = Color.primary.opacity(0.88)
+    static let readingWidth: CGFloat = 720
+    static let bodySize: CGFloat = 15
+    static let lineHeightRatio: CGFloat = 1.7
+    static let ink = Color.primary.opacity(0.94)
+    static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 22 : level == 2 ? 18 : 16 }
+    static func headingLineHeight(_ level: Int) -> CGFloat { headingSize(level) * 1.4 }
     static let paper = Color.primary.opacity(0.035)
     // Preserve a dynamic color in cached attributed text. Applying alpha to
     // labelColor once can freeze the system appearance before the light window exists.
     static let nativeInk = NSColor(name: nil) { appearance in
         var ink = NSColor.labelColor
-        appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.88) }
+        appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.94) }
         return ink
     }
     static let tableCellSize: CGFloat = 13
@@ -24,7 +26,7 @@ enum ReplyStyle {
 }
 
 enum UserMessageStyle {
-    static let lineHeight: CGFloat = 20
+    static let lineHeight: CGFloat = 22
     static let horizontalPadding: CGFloat = 14
     static let verticalPadding: CGFloat = 8
     static let cornerRadius: CGFloat = 12
@@ -174,8 +176,8 @@ private struct ReplyBlockContent: View, Equatable {
         switch block {
         case .paragraph(let runs): ReplyText(runs: runs)
         case .heading(let level, let runs):
-            ReplyText(runs: runs, size: level == 1 ? ReplyStyle.bodySize + 2 : ReplyStyle.bodySize,
-                      weight: .medium, lineHeight: 24)
+            ReplyText(runs: runs, size: ReplyStyle.headingSize(level),
+                      weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level))
         case .code(let language, let source): ReplyCode(language: language, source: source)
         case .list(let items):
             ReplyListLayout {
