@@ -1009,17 +1009,24 @@ final class NavigationRunner {
         guard promptRow(in: scroll) === promptHost, contains("更新后的短问题", in: promptHost), promptHost.frame.height < wideHeight - 100 else {
             throw NavigationError("User bubble retained long-content geometry")
         }
-        // Same-ID edits can enter and leave the native prose path without
-        // replacing the outer row or keeping stale text/selection.
+        // Same-ID edits can enter and leave the native prose path without keeping
+        // stale text or a duplicate mounted row. A renderer switch replaces the
+        // root view: the direct native user root cannot adopt SwiftUI content.
+        func promptRowCount(in view: NSView) -> Int {
+            (view.identifier?.rawValue == promptHit.entryID ? 1 : 0) + view.subviews.reduce(0) { $0 + promptRowCount(in: $1) }
+        }
         try replacePrompt("```swift\nlet fallbackMarker = 1\n```")
         try await settle()
-        guard promptRow(in: scroll) === promptHost, contains("fallbackMarker", in: promptHost) else { throw NavigationError("Native user failed to switch to complex Markdown") }
+        guard let markdownHost = promptRow(in: scroll), contains("fallbackMarker", in: markdownHost),
+              promptRowCount(in: scroll) == 1 else { throw NavigationError("Native user failed to switch to complex Markdown") }
         try replacePrompt("恢复普通文本 native-again")
         try await settle()
-        guard promptRow(in: scroll) === promptHost, contains("native-again", in: promptHost), !contains("fallbackMarker", in: promptHost) else { throw NavigationError("User row kept obsolete complex content") }
+        guard let plainHost = promptRow(in: scroll), contains("native-again", in: plainHost),
+              !contains("fallbackMarker", in: plainHost),
+              promptRowCount(in: scroll) == 1 else { throw NavigationError("User row kept obsolete complex content") }
         try record("user_bubble_resize", ["same_host": true, "short_height": shortHeight,
                                         "long_narrow_height": narrowHeight, "long_wide_height": wideHeight,
-                                        "replacement_short_height": promptHost.frame.height])
+                                        "replacement_short_height": plainHost.frame.height])
 
         try record("failures", ["checks": failures])
         guard failures.isEmpty else { throw NavigationError("interaction failures: \(failures)") }
