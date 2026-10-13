@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="perch-naming-check-", dir=ROOT / ".buil
     compiled = work / "compiled"
     subprocess.run([
         "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library",
-        "-target", platform.machine() + "-apple-macosx14.0", *includes,
+        "-target", platform.machine() + "-apple-macosx26.0", *includes,
         *map(str, sources), str(ROOT / "Tests/NamingLifecycleChecks/App.swift"),
         *map(str, objects), str(ghostty / "libghostty.a"), "-lc++",
         "-framework", "Carbon", "-framework", "Metal", "-framework", "QuartzCore",

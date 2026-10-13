@@ -10,7 +10,7 @@ objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$')
 done
-swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
+swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \

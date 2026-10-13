@@ -3,7 +3,7 @@
 ## Decision
 
 Use Apple's Observation and Swift Concurrency as Perch's default feature foundation
-(macOS 14+). Preserve native SwiftUI/AppKit presentation and existing persistence.
+(macOS 26+). Preserve native SwiftUI/AppKit presentation and existing persistence.
 These migrations introduce state ownership and rendering boundaries; they are not
 a completed rewrite of every provider or a measured frame-rate improvement.
 

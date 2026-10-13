@@ -60,7 +60,7 @@ them. Existing Herdr sessions remain terminal sessions.
 
 ## Build and run
 
-Requires macOS 14+ and a Swift toolchain with the macOS 26 SDK (Xcode 26 or newer).
+Requires macOS 26+ and a Swift toolchain with the macOS 26 SDK (Xcode 26 or newer).
 The current build has been tested on Apple Silicon. A remote SSH host and the
 corresponding agent runtime are required for remote sessions.
 

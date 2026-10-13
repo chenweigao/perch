@@ -68,11 +68,6 @@ struct JointInteractionPreview: View {
                         await Task.yield()
                         if !Task.isCancelled && follow { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
-                    .onChange(of: model.step) { _, _ in
-                        if #unavailable(macOS 15) {
-                            if session == 0 && follow { proxy.scrollTo("bottom", anchor: .bottom) }
-                        }
-                    }
             }
             MessageComposer(text: Binding(get: { model.drafts[session] }, set: { model.drafts[session] = $0 }),
                             accessibilityLabel: "联合验收草稿", canSend: !model.drafts[session].isEmpty,

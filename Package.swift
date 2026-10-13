@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "AgentWorkbench",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("26.0")],
     products: [.executable(name: "AgentWorkbench", targets: ["AgentWorkbench"])],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.8.0"),

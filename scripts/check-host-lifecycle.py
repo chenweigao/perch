@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     compiled = work / "compiled"
     subprocess.run([
         "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library",
-        "-target", platform.machine() + "-apple-macosx14.0", *includes,
+        "-target", platform.machine() + "-apple-macosx26.0", *includes,
         *map(str, sources), *map(str, sorted((ROOT / "Tests/HostLifecycleChecks").glob("*.swift"))),
         *map(str, objects), str(ghostty / "libghostty.a"), "-lc++",
         "-framework", "Carbon", "-framework", "Metal", "-framework", "QuartzCore",

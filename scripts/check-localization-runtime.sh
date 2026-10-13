@@ -14,5 +14,5 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleLocalizations</key><array><string>zh-Hans</string><string>en</string></array>
 </dict></plist>
 PLIST
-swiftc -swift-version 5 Sources/WorkbenchCore/Localization.swift Tests/LocalizationChecks/main.swift -o "$app/Contents/MacOS/LocalizationChecks"
+swiftc -target "$(uname -m)-apple-macosx26.0" -swift-version 5 Sources/WorkbenchCore/Localization.swift Tests/LocalizationChecks/main.swift -o "$app/Contents/MacOS/LocalizationChecks"
 "$app/Contents/MacOS/LocalizationChecks"

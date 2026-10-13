@@ -10,7 +10,7 @@ objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
     while IFS= read -r file; do if [ "$target" != WorkbenchCore ] || [ -f "Sources/WorkbenchCore/$(basename "$file" .o)" ]; then objects+=("$file"); fi; done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$')
 done
-swiftc -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
+swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/AgentMark.swift Sources/AgentWorkbench/AgentMarkArtwork.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \

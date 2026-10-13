@@ -53,7 +53,7 @@ Claude Code 支持停止与下一轮消息排队；Herdr 中的现有会话继�
 
 ## 构建运行
 
-需要 macOS 14+，以及包含 macOS 26 SDK 的 Swift 工具链（Xcode 26 或更新版本）。
+需要 macOS 26+，以及包含 macOS 26 SDK 的 Swift 工具链（Xcode 26 或更新版本）。
 当前构建在 Apple Silicon 上验证。远程会话需要可连接的 SSH 主机及对应 Agent。
 
 ```sh

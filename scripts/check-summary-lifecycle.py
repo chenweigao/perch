@@ -29,7 +29,7 @@ with tempfile.TemporaryDirectory(prefix="perch-summary-check-", dir=ROOT / ".bui
     }))
     subprocess.run([
         "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library",
-        "-target", platform.machine() + "-apple-macosx14.0", *includes,
+        "-target", platform.machine() + "-apple-macosx26.0", *includes,
         str(ROOT / "Sources/AgentWorkbench/ActivitySummarySettings.swift"),
         str(ROOT / "Sources/AgentWorkbench/ActivitySummaryController.swift"),
         str(ROOT / "Tests/SummaryLifecycleChecks/App.swift"),

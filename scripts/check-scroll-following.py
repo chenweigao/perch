@@ -34,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix="perch-scroll-check-") as folder:
     }))
     compiled = work / "compiled"
     subprocess.run([
-        "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library", "-target", platform.machine() + "-apple-macosx14.0", *includes,
+        "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library", "-target", platform.machine() + "-apple-macosx26.0", *includes,
         *[str(ROOT / "Sources/AgentWorkbench" / (name + ".swift")) for name in files],
         str(ROOT / "Tests/ScrollFollowingChecks/App.swift"), *map(str, objects), "-o", str(compiled),
     ], cwd=ROOT, check=True)
