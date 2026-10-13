@@ -54,7 +54,7 @@ struct WorkbenchSidebar: View {
         .onChange(of: model.workspace.sidebarProjectLocations) { _, _ in revealSelectedProject() }
         .onChange(of: model.sidebarRepositories.revision) { _, _ in revealSelectedProject() }
         #if !PERCH_ACCEPTANCE
-        .task(id: model.sidebarRepositoryRequests) {
+        .task(id: SidebarRepositoryLoad(requests: model.sidebarRepositoryRequests, retry: model.sidebarRepositories.retryRevision)) {
             await model.sidebarRepositories.resolve(model.sidebarRepositoryRequests)
         }
         #endif
@@ -223,6 +223,14 @@ struct WorkbenchSidebar: View {
                 HStack {
                     Text("项目").font(.system(size: 11)).foregroundStyle(.secondary)
                     Spacer()
+                    if model.sidebarRepositories.isResolving {
+                        ProgressView().controlSize(.mini).help("正在识别项目…")
+                    }
+                    Button { model.sidebarRepositories.retry() } label: {
+                        Image(systemName: model.sidebarRepositories.failed ? "exclamationmark.arrow.circlepath" : "arrow.clockwise")
+                    }.buttonStyle(.plain).foregroundStyle(.secondary)
+                        .help(model.sidebarRepositories.failed ? "项目识别失败，点击重试" : "重新识别项目")
+                        .accessibilityLabel("重新识别项目")
                     recentActions
                 }.padding(.horizontal, 10).padding(.top, 18).padding(.bottom, 3)
             case .project(let project):

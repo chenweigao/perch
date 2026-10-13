@@ -1080,6 +1080,31 @@ private struct ReferenceComposerFixtureView: View {
         let first = original.projects[0], second = original.projects[1]
         try await settle(window, "project tree mounted") { rows().count == 40 }
         let host = model.connections[0].host
+        let resolver = SidebarRepositoryState()
+        let request = SidebarRepositoryRequest(host: host, directories: [first.sessions[0].directory])
+        resolver.read = { _, _ in .failure(WorkbenchError("fixture connection failure")) }
+        await resolver.resolve([request])
+        guard resolver.failed, !resolver.isResolving,
+              resolver.location(for: first.sessions[0], host: host).directory == first.sessions[0].directory else {
+            throw WorkbenchError("Failed repository lookup silently classified a known directory as temporary")
+        }
+        resolver.read = { _, directories in
+            let records = Data("worktree /fixture/recovered-project\0".utf8).base64EncodedString()
+            return .success(Data("\(directories[0])\0\(directories[0])\0\(records)\0".utf8))
+        }
+        resolver.retry()
+        await resolver.resolve([request])
+        guard !resolver.failed, !resolver.isResolving,
+              resolver.location(for: first.sessions[0], host: host).directory == "/fixture/recovered-project" else {
+            throw WorkbenchError("Repository retry did not recover project membership")
+        }
+        resolver.read = { _, _ in .failure(WorkbenchError("fixture refresh failure")) }
+        resolver.retry()
+        await resolver.resolve([request])
+        guard resolver.failed,
+              resolver.location(for: first.sessions[0], host: host).directory == "/fixture/recovered-project" else {
+            throw WorkbenchError("Failed refresh discarded the last known repository")
+        }
         let roots = Dictionary(model.allSessions.map { ($0.directory, $0.directory) }, uniquingKeysWith: { first, _ in first })
         var mergedRoots = roots
         mergedRoots[second.location!.directory] = first.location!.directory
@@ -1162,6 +1187,7 @@ private struct ReferenceComposerFixtureView: View {
                 "collapse_preserves_selection": true, "pin_without_duplicate": true,
                 "manual_membership_and_reset": true, "selected_outside_limits_revealed": true,
                 "repository_metadata_regroups_without_changing_cwd": true,
+                "repository_failure_retains_directory_and_retry_recovers": true,
                 "selected_scrolled_into_view": true,
                 "narrow_sidebar_selection": true,
                 "new_task_project_directory_and_repeated_requests": true,
