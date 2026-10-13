@@ -393,10 +393,10 @@ final class RemoteFileBrowser: ObservableObject {
     }
 
     func stageGitEntry(_ entry: RemoteGitEntry) {
-        runGitWrite(RemoteGitCommand.stageCommand(directory: gitDirectory, path: entry.path))
+        runGitWrite(RemoteGitCommand.stageCommand(directory: gitDirectory, path: entry.path, originalPath: entry.originalPath))
     }
     func unstageGitEntry(_ entry: RemoteGitEntry) {
-        runGitWrite(RemoteGitCommand.unstageCommand(directory: gitDirectory, path: entry.path))
+        runGitWrite(RemoteGitCommand.unstageCommand(directory: gitDirectory, path: entry.path, originalPath: entry.originalPath))
     }
     func commitGit() {
         let message = gitCommitMessage.trimmingCharacters(in: .whitespacesAndNewlines)

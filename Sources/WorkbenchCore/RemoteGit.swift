@@ -314,14 +314,18 @@ extension RemoteGitCommand {
         """
     }
 
-    public static func stageCommand(directory: String, path: String) -> String {
-        ["/bin/sh", "-c", writeScript("--literal-pathspecs add -- \"$2\""), "perch-git", directory, path]
+    public static func stageCommand(directory: String, path: String, originalPath: String? = nil) -> String {
+        let paths = [path] + (originalPath.map { [$0] } ?? [])
+        let arguments = originalPath == nil ? "\"$2\"" : "\"$2\" \"$3\""
+        return (["/bin/sh", "-c", writeScript("--literal-pathspecs add -- " + arguments), "perch-git", directory] + paths)
             .map(SSHCommand.quote).joined(separator: " ")
     }
     /// `reset -q` covers unborn HEAD too; `restore --staged` resolves HEAD and
     /// fails before the first commit.
-    public static func unstageCommand(directory: String, path: String) -> String {
-        ["/bin/sh", "-c", writeScript("--literal-pathspecs reset -q -- \"$2\""), "perch-git", directory, path]
+    public static func unstageCommand(directory: String, path: String, originalPath: String? = nil) -> String {
+        let paths = [path] + (originalPath.map { [$0] } ?? [])
+        let arguments = originalPath == nil ? "\"$2\"" : "\"$2\" \"$3\""
+        return (["/bin/sh", "-c", writeScript("--literal-pathspecs reset -q -- " + arguments), "perch-git", directory] + paths)
             .map(SSHCommand.quote).joined(separator: " ")
     }
     public static func commitCommand(directory: String, message: String) -> String {

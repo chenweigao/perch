@@ -96,6 +96,17 @@ func checkRemoteGitWrite() async throws {
         expectEqual(String(decoding: names, as: UTF8.self), name + "\0")
         expectEqual(try RemoteGitCommand.parseWrite(try await run(RemoteGitCommand.unstageCommand(directory: repo.path, path: name))), .ok)
     }
+    // A renamed row represents both paths; unstage must restore both index entries.
+    try await git(["mv", "a.swift", "renamed.swift"])
+    expectEqual(try RemoteGitCommand.parseWrite(try await run(RemoteGitCommand.unstageCommand(
+        directory: repo.path, path: "renamed.swift", originalPath: "a.swift"))), .ok)
+    let renamedIndex = try await ProcessRunner.run("/usr/bin/git", ["-C", repo.path, "diff", "--cached", "--name-only", "-z"])
+    expectEqual(renamedIndex.count, 0)
+    expectEqual(try RemoteGitCommand.parseWrite(try await run(RemoteGitCommand.stageCommand(
+        directory: repo.path, path: "renamed.swift", originalPath: "a.swift"))), .ok)
+    let renamedStatus = try RemoteGitCommand.parseStatus(try await run(RemoteGitCommand.statusCommand(directory: repo.path)))
+    guard case .changes(_, _, let renamedEntries) = renamedStatus else { fatalError("Expected rename") }
+    precondition(renamedEntries.contains { $0.path == "renamed.swift" && $0.originalPath == "a.swift" && $0.indexStatus == "R" })
     if let host = ProcessInfo.processInfo.environment["WORKBENCH_GIT_WRITE_HOST"] {
         try SSHCommand.validateDestination(host)
         func remote(_ command: String) async throws -> Data {
