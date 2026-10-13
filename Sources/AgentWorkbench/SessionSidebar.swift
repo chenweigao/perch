@@ -13,6 +13,7 @@ struct WorkbenchSidebar: View {
     @AppStorage("sidebar.projects.grouped") private var groupedByProject = true
     @State private var projectLimit = 8
     @State private var sessionLimit = 40
+    @State private var showPinPicker = false
     @State private var expandedProjects = Set<String>()
     private var collapsedProjects: Set<String> {
         Set((try? JSONDecoder().decode([String].self, from: Data(collapsedProjectsJSON.utf8))) ?? [])
@@ -54,6 +55,9 @@ struct WorkbenchSidebar: View {
         }
         .onChange(of: model.tabs.selectedID) { _, _ in revealSelectedProject() }
         .onChange(of: groupedByProject) { _, _ in revealSelectedProject() }
+        .onChange(of: model.workspace.starred) { old, new in
+            if new.count > old.count { favoritesExpanded = true }
+        }
         .onChange(of: model.workspace.sidebarProjectLocations) { _, _ in revealSelectedProject() }
         .onChange(of: model.sidebarRepositories.revision) { _, _ in revealSelectedProject() }
         #if !PERCH_ACCEPTANCE
@@ -186,10 +190,11 @@ struct WorkbenchSidebar: View {
         }
     }
     private enum ProjectEntry: Identifiable {
-        case favorites, projects, project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects, moreSessions(Int)
+        case favorites, emptyFavorites, projects, project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects, moreSessions(Int)
         var id: String {
             switch self {
             case .favorites: "header-favorites"
+            case .emptyFavorites: "empty-favorites"
             case .projects: "header-projects"
             case .project(let project): "project-" + project.id
             case .session(let item, _): "session-" + item.id
@@ -201,9 +206,10 @@ struct WorkbenchSidebar: View {
     }
     private func projectEntries(_ projection: SidebarProjection) -> [ProjectEntry] {
         var result: [ProjectEntry] = []
-        if !projection.favorites.isEmpty {
-            result.append(.favorites)
-            if favoritesExpanded { result += projection.favorites.map { .session($0, false) } }
+        result.append(.favorites)
+        if favoritesExpanded {
+            result += projection.favorites.map { .session($0, false) }
+            if projection.favorites.isEmpty { result.append(.emptyFavorites) }
         }
         result.append(.projects)
         let collapsed = collapsedProjects
@@ -235,19 +241,35 @@ struct WorkbenchSidebar: View {
     @ViewBuilder private func projectRows(_ projection: SidebarProjection, index: SessionGroupIndex) -> some View {
         ForEach(projectEntries(projection)) { entry in
             switch entry {
-            case .favorites: SidebarSection("置顶", id: "favorites") { EmptyView() }
+            case .favorites: pinnedHeader(count: projection.favorites.count)
+            case .emptyFavorites:
+                Button { showPinPicker = true } label: {
+                    Text("置顶常用会话，随时继续")
+                        .font(.system(size: 11)).foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10).padding(.vertical, 5)
+                }.buttonStyle(SidebarNavigationStyle()).accessibilityIdentifier("sidebar.pin.empty")
             case .projects:
                 HStack {
-                    Picker("会话视图", selection: $groupedByProject) {
-                        Text("按项目").tag(true)
-                        Text("平铺会话").tag(false)
-                    }.pickerStyle(.segmented).labelsHidden().controlSize(.small)
-                        .frame(maxWidth: 180).accessibilityIdentifier("sidebar.layout")
+                    Menu {
+                        Picker("会话视图", selection: $groupedByProject) {
+                            Label("按项目", systemImage: "folder").tag(true)
+                            Label("平铺会话", systemImage: "list.bullet").tag(false)
+                        }.pickerStyle(.inline)
+                        Divider()
+                        Button("重新识别项目") { model.sidebarRepositories.retry() }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(groupedByProject ? L("项目") : L("最近会话"))
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
+                        }.foregroundStyle(.secondary).frame(height: 26)
+                    }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .help("切换会话视图").accessibilityIdentifier("sidebar.layout")
                     Spacer()
                     if groupedByProject && model.sidebarRepositories.isResolving {
                         ProgressView().controlSize(.mini).help("正在识别项目…")
                     }
-                    if groupedByProject {
+                    if groupedByProject && model.sidebarRepositories.failed {
                         Button { model.sidebarRepositories.retry() } label: {
                             Image(systemName: model.sidebarRepositories.failed ? "exclamationmark.arrow.circlepath" : "arrow.clockwise")
                         }.buttonStyle(.plain).foregroundStyle(.secondary)
@@ -255,7 +277,7 @@ struct WorkbenchSidebar: View {
                             .accessibilityLabel("重新识别项目")
                     }
                     recentActions
-                }.padding(.horizontal, 10).padding(.top, 18).padding(.bottom, 3)
+                }.padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 3)
             case .project(let project):
                 SidebarProjectHeader(project: project, expanded: !collapsedProjects.contains(project.id),
                     canCreate: project.location.map { location in model.connections.contains { $0.id == location.hostID } } ?? true,
@@ -283,6 +305,27 @@ struct WorkbenchSidebar: View {
         if projection.projects.isEmpty && projection.favorites.isEmpty {
             Text("新任务会出现在这里").font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
         }
+    }
+
+    private func pinnedHeader(count: Int) -> some View {
+        HStack(spacing: 4) {
+            Button { favoritesExpanded.toggle() } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "pin.fill").font(.system(size: 10))
+                    Text("置顶").font(.system(size: 12, weight: .semibold))
+                    if count > 0 { Text("\(count)").font(.system(size: 11)).monospacedDigit() }
+                    Image(systemName: favoritesExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .medium))
+                    Spacer(minLength: 0)
+                }.frame(height: 28).contentShape(Rectangle())
+            }.buttonStyle(SidebarNavigationStyle()).accessibilityLabel("置顶")
+                .accessibilityValue(favoritesExpanded ? Text("已展开") : Text("已收起"))
+                .accessibilityIdentifier("sidebar.section.favorites")
+            Button { showPinPicker = true } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
+                .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
+                .accessibilityLabel("置顶会话").accessibilityIdentifier("sidebar.pin.add")
+                .popover(isPresented: $showPinPicker, arrowEdge: .trailing) { SidebarPinPicker(model: model) }
+        }.foregroundStyle(.secondary).padding(.horizontal, 10).padding(.top, 8)
     }
 
     private var groupSection: some View {
@@ -357,6 +400,46 @@ struct WorkbenchSidebar: View {
         SessionSidebarRow(model: model, item: item, groups: groups,
                           selected: !model.showDashboard && item.id == model.tabs.selectedID,
                           onOpen: { model.open(item) })
+    }
+}
+
+private struct SidebarPinPicker: View {
+    let model: WorkbenchModel
+    @State private var query = ""
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        let sessions = model.allSessions.filter {
+            !$0.archived && !model.workspace.starred.contains($0.reference) &&
+                (query.isEmpty || [$0.title, $0.directory, $0.hostName].contains { $0.localizedStandardContains(query) })
+        }
+        VStack(alignment: .leading, spacing: 10) {
+            Text("置顶会话").font(.headline)
+            TextField("搜索会话", text: $query).textFieldStyle(.roundedBorder).focused($searchFocused)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 3) {
+                    ForEach(sessions) { item in
+                        Button {
+                            model.toggleStar(item.reference)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 8) {
+                                SidebarAgentIndicator(item: item)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title).font(.system(size: 12)).lineLimit(1)
+                                    Text(item.hostName + " · " + item.directory).font(.system(size: 10))
+                                        .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "pin").foregroundStyle(.secondary)
+                            }.padding(6).contentShape(Rectangle())
+                        }.buttonStyle(SidebarNavigationStyle()).accessibilityLabel(item.title)
+                    }
+                    if sessions.isEmpty { Text("没有可置顶的会话").font(.caption).foregroundStyle(.secondary).padding(8) }
+                }
+            }.frame(height: 280)
+        }.padding(14).frame(width: 320).onAppear { searchFocused = true }
     }
 }
 

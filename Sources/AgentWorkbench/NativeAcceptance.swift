@@ -1141,6 +1141,16 @@ private struct ReferenceComposerFixtureView: View {
         try await settle(window, "project pin without duplicate") {
             rows().filter { $0.item.id == item.id }.count == 1 && rows().contains { $0.item.id == item.id && $0.starred }
         }
+        defaults.set(false, forKey: groupedKey)
+        try await settle(window, "flat view retains pinned session without duplicate") {
+            rows().count == 41 && rows().filter { $0.item.id == item.id }.count == 1
+                && rows().contains { $0.item.id == item.id && $0.starred }
+        }
+        defaults.set(true, forKey: groupedKey)
+        try await settle(window, "project view retains pinned session") {
+            rows().contains { $0.item.id == item.id && $0.starred }
+                && Set(rows().map { $0.item.id }) != Set(self.model.sidebarProjection(filter: .all).ungrouped.prefix(40).map(\.id) + [item.id])
+        }
         model.workspace.starred = []
         model.moveSidebarSession(item, to: second.location)
         try await settle(window, "project membership refreshed") {
@@ -1201,6 +1211,7 @@ private struct ReferenceComposerFixtureView: View {
                 "repository_failure_retains_directory_and_retry_recovers": true,
                 "operation_evidence_refines_same_cwd_sessions": true,
                 "project_flat_switch_preserves_catalog": true,
+                "pinned_session_preserved_across_views": true,
                 "selected_scrolled_into_view": true,
                 "narrow_sidebar_selection": true,
                 "new_task_project_directory_and_repeated_requests": true,
