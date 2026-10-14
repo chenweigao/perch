@@ -49,7 +49,8 @@ import WorkbenchCore
         .frame(width: 480).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading))
     window.contentView = fallback; window.setContentSize(NSSize(width: 720, height: 700)); window.makeKeyAndOrderFront(nil)
     try await Task.sleep(for: .milliseconds(450))
-    controlClick(window, x: 48, top: 234)
+    // The toggle sits 6 pt below the folded prompt and is 24 pt tall; click its middle.
+    controlClick(window, x: 48, top: UserMessageStyle.collapsedHeight + 6 + 12)
     try await Task.sleep(for: .milliseconds(200))
     precondition(memory.expansions["reading-controls:fallback:user-prompt"] == true, "Actual fallback button expands full Markdown")
 
