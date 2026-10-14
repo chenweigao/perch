@@ -87,7 +87,7 @@ final class RemoteSetupController: ObservableObject {
         case .omp: return "bun install -g @oh-my-pi/pi-coding-agent@18.1.16"
         case .qoder: return "npm install -g @qodercn-ai/qoderclicn@1.1.58"
         case .qoderintl: return "curl -fsSL https://qoder.com/install | bash"
-        case .codex: return "npm install -g @openai/codex@0.155.1"
+        case .codex: return "npm install -g @openai/codex"
         case .claude: return "npm install -g @anthropic-ai/claude-code@2.1.280"
         case .dsh, .terminal: return nil
         }
