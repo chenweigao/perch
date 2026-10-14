@@ -1281,3 +1281,35 @@
 "关闭提示" = "Dismiss notice";
 
 "计划文件已变化，请重新审阅。" = "The plan file changed. Review it again.";
+
+"收起目标详情" = "Collapse goal details";
+
+"展开目标详情" = "Expand goal details";
+
+"暂停续跑" = "Pause continuation";
+
+"继续目标" = "Resume goal";
+
+"暂停后不再自动续跑；当前这一轮仍可完成。" = "Pause future continuation; the current turn can still finish.";
+
+"继续按目标执行，保持当前权限设置。" = "Resume the goal with the current permission settings.";
+
+"取消目标" = "Cancel goal";
+
+"目标操作" = "Goal actions";
+
+"已用 %lld 轮" = "%lld turns used";
+
+"已用 %lld Token" = "%lld tokens used";
+
+"暂停或取消目标不会中断当前这一轮；如需中断，请使用输入区的停止按钮。" = "Pausing or cancelling the goal does not interrupt the current turn. Use Stop in the composer to interrupt it.";
+
+"待同步" = "Awaiting sync";
+
+"当前一轮正在执行" = "Current turn running";
+
+"待续跑" = "Awaiting continuation";
+
+"需处理" = "Needs attention";
+
+"重新同步目标" = "Refresh goal";

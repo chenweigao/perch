@@ -20,6 +20,8 @@ struct KimiWorkspaceView: View {
         #endif
         VStack(spacing: 0) {
             if let conversation = connection.conversation {
+                KimiGoalHeader(connection: connection, sessionID: conversation.snapshot.session.id)
+                    .id(conversation.snapshot.session.id)
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
                 if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
@@ -114,17 +116,6 @@ private struct KimiComposerView: View {
     @State private var recall = ComposerRecall()
     var body: some View {
         VStack(spacing: 10) {
-            if let goal = connection.goal {
-                HStack(spacing: 8) {
-                    Image(systemName: "flag").foregroundStyle(kimiAccent)
-                    Text(goal.objective).lineLimit(1).truncationMode(.tail).help(goal.objective)
-                    Spacer(minLength: 8)
-                    Text(goal.statusLine).foregroundStyle(.secondary)
-                }.font(.caption)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(L("目标"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
             if let feedback = connection.commandFeedback[sessionID] {
                 Text(feedback).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     .lineLimit(4).help(feedback)

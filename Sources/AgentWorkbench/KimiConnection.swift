@@ -77,6 +77,8 @@ final class KimiConnection {
     /// The selected session's active goal. A failed read keeps the last known
     /// value instead of presenting itself as a session error.
     private(set) var goal: KimiGoal?
+    private(set) var goalIsStale = true
+    @ObservationIgnored private var goalReadRevision = UUID()
     /// One subagent transcript at a time: the sheet that reads it owns the
     /// subscription, and closing it unsubscribes that agent again.
     private(set) var subagentTranscript: KimiSubagentTranscript?
@@ -262,7 +264,7 @@ final class KimiConnection {
         freshnessCheck?.cancel(); freshnessCheck = nil
         runtime = .unknown; staleRuntimeNotice = nil
         task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
-        snapshotReady = false; goal = nil
+        snapshotReady = false; goal = nil; goalIsStale = true
         subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
     }
@@ -415,7 +417,7 @@ final class KimiConnection {
     }
     private func loadSelected(_ id: String) {
         detail.cancelLoads(); let token = selectionGeneration
-        snapshotReady = false; actionError = nil; taskListError = nil; goal = nil
+        snapshotReady = false; actionError = nil; taskListError = nil; goal = nil; goalIsStale = true
         detail.loadSelection { [weak self] in
             guard let self else { return }
             do { try await refreshConversation(selectionToken: token); try await subscribe(id) }
@@ -569,12 +571,25 @@ final class KimiConnection {
     func refreshGoal(selectionToken: UUID? = nil) async {
         let token = selectionToken ?? selectionGeneration
         guard token == selectionGeneration, online, let api, let id = selectedId else { return }
+        _ = try? await readGoal(for: id, api: api)
+    }
+    private func readGoal(for id: String, api: KimiAPI) async throws -> KimiGoal? {
+        let token = selectionGeneration
+        let revision = UUID()
+        if id == selectedId { goalReadRevision = revision }
         do {
             let value = try await api.get(KimiGoal?.self, "/api/v1/sessions/\(id)/goal")
-            guard token == selectionGeneration, id == selectedId else { return }
-            goal = value
-        } catch is CancellationError {
-        } catch {}
+            try Task.checkCancellation()
+            if token == selectionGeneration, id == selectedId, revision == goalReadRevision {
+                goal = value
+                goalIsStale = false
+            }
+            return value
+        } catch {
+            if !Task.isCancelled, !(error is CancellationError), token == selectionGeneration,
+               id == selectedId, revision == goalReadRevision { goalIsStale = true }
+            throw error
+        }
     }
     private func scheduleGoalRefresh() {
         goalRefresh?.cancel()
@@ -724,7 +739,7 @@ final class KimiConnection {
         permissionChoices.removeValue(forKey: id)
         if selectedId == id {
             detail.cancelLoads()
-            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false; goal = nil
+            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false; goal = nil; goalIsStale = true
         }
         sessions.removeAll { $0.id == id }; onSessionsChanged?()
     }
@@ -987,14 +1002,31 @@ final class KimiConnection {
         timings.submitted(promptID)
         return try await api.post(KimiPrompt.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
     }
+    /// User-initiated controls share command serialization without touching drafts,
+    /// attachments, permission mode, or the current turn's Stop endpoint.
+    func controlGoal(_ control: String, for id: String) async {
+        guard id == selectedId, online, snapshotReady, !loading, !sending,
+              !goalIsStale, let goal, let api,
+              control == "cancel" || control == goal.continuationControl else { return }
+        let token = selectionGeneration
+        sendingSessions.insert(id)
+        commandErrors[id] = nil
+        defer { sendingSessions.remove(id) }
+        do {
+            _ = try await runCommand(.goalControl(control), for: id, api: api)
+        } catch {
+            guard token == selectionGeneration, id == selectedId else { return }
+            commandErrors[id] = error.localizedDescription
+        }
+    }
+
     private func runCommand(_ command: KimiCommand, for id: String, api: KimiAPI) async throws -> String? {
         let path = "/api/v1/sessions/\(id)"
         switch command {
         case .help:
             commandFeedback[id] = KimiCommand.helpText
         case .goalStatus:
-            let goal = try await api.get(KimiGoal?.self, path + "/goal")
-            if id == selectedId { self.goal = goal }
+            let goal = try await readGoal(for: id, api: api)
             if let goal {
                 commandFeedback[id] = "\(goal.objective)\n\(goal.statusLine)"
             } else { commandFeedback[id] = L("No active goal.") }
@@ -1007,6 +1039,8 @@ final class KimiConnection {
             if id == selectedId { await refreshGoal() }
             return objective
         case .goalControl(let control):
+            // A read issued before this mutation must not restore its old state.
+            if id == selectedId { goalReadRevision = UUID() }
             _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["goal_control": .string(control)])]))
             // The profile resume endpoint starts continuation itself. Do not send
             // a second prompt or change the user's existing permission mode.
