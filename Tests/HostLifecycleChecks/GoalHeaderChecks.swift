@@ -36,9 +36,7 @@ import WorkbenchCore
     click(x: 620, top: 43)
     precondition(controls == ["pause"], "Visible pause action controls continuation")
 
-    let output = URL(fileURLWithPath: "/private/tmp/perch-goal-header")
-    try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-    for (name, state, running, stale, width) in [
+    for (_, state, running, stale, width) in [
         ("running", "active", true, false, 720.0),
         ("paused", "paused", false, false, 720.0),
         ("paused-current-turn", "paused", true, false, 720.0),
@@ -48,14 +46,11 @@ import WorkbenchCore
         let preview = GoalHeaderBar(goal: KimiGoal(objective: objective, status: state, turnsUsed: 12, tokensUsed: 48320),
                                     isRunning: running, isStale: stale, controlsEnabled: true, onControl: { _ in })
             .frame(width: width).environment(\.locale, Locale(identifier: "zh-Hans"))
-        let renderer = ImageRenderer(content: preview)
-        renderer.scale = 2
-        guard let image = renderer.nsImage, let data = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: data), let png = bitmap.representation(using: .png, properties: [:]) else {
-            preconditionFailure("Goal header render failed")
-        }
-        precondition(image.size.height < 130, "Collapsed goal remains a compact header at narrow widths")
-        try png.write(to: output.appendingPathComponent(name + ".png"))
+        let layoutHost = NSHostingView(rootView: preview)
+        window.contentView = layoutHost
+        window.setContentSize(NSSize(width: width, height: 200))
+        try await Task.sleep(for: .milliseconds(100))
+        precondition(layoutHost.fittingSize.height > 40 && layoutHost.fittingSize.height < 130, "Collapsed goal remains a compact header at narrow widths")
     }
     print("PASS: goal header disclosure, direct pause, compact running/paused/complete/stale layouts")
 }

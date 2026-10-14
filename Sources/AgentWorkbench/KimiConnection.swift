@@ -78,6 +78,7 @@ final class KimiConnection {
     /// value instead of presenting itself as a session error.
     private(set) var goal: KimiGoal?
     private(set) var goalIsStale = true
+    @ObservationIgnored private var goalReadRevision = UUID()
     /// One subagent transcript at a time: the sheet that reads it owns the
     /// subscription, and closing it unsubscribes that agent again.
     private(set) var subagentTranscript: KimiSubagentTranscript?
@@ -570,14 +571,24 @@ final class KimiConnection {
     func refreshGoal(selectionToken: UUID? = nil) async {
         let token = selectionToken ?? selectionGeneration
         guard token == selectionGeneration, online, let api, let id = selectedId else { return }
+        _ = try? await readGoal(for: id, api: api)
+    }
+    private func readGoal(for id: String, api: KimiAPI) async throws -> KimiGoal? {
+        let token = selectionGeneration
+        let revision = UUID()
+        if id == selectedId { goalReadRevision = revision }
         do {
             let value = try await api.get(KimiGoal?.self, "/api/v1/sessions/\(id)/goal")
-            guard token == selectionGeneration, id == selectedId else { return }
-            goal = value
-            goalIsStale = false
-        } catch is CancellationError {
+            try Task.checkCancellation()
+            if token == selectionGeneration, id == selectedId, revision == goalReadRevision {
+                goal = value
+                goalIsStale = false
+            }
+            return value
         } catch {
-            if token == selectionGeneration, id == selectedId { goalIsStale = true }
+            if !Task.isCancelled, !(error is CancellationError), token == selectionGeneration,
+               id == selectedId, revision == goalReadRevision { goalIsStale = true }
+            throw error
         }
     }
     private func scheduleGoalRefresh() {
@@ -1015,8 +1026,7 @@ final class KimiConnection {
         case .help:
             commandFeedback[id] = KimiCommand.helpText
         case .goalStatus:
-            let goal = try await api.get(KimiGoal?.self, path + "/goal")
-            if id == selectedId { self.goal = goal; goalIsStale = false }
+            let goal = try await readGoal(for: id, api: api)
             if let goal {
                 commandFeedback[id] = "\(goal.objective)\n\(goal.statusLine)"
             } else { commandFeedback[id] = L("No active goal.") }
@@ -1029,6 +1039,8 @@ final class KimiConnection {
             if id == selectedId { await refreshGoal() }
             return objective
         case .goalControl(let control):
+            // A read issued before this mutation must not restore its old state.
+            if id == selectedId { goalReadRevision = UUID() }
             _ = try await api.post(JSONValue.self, path + "/profile", body: .object(["agent_config": .object(["goal_control": .string(control)])]))
             // The profile resume endpoint starts continuation itself. Do not send
             // a second prompt or change the user's existing permission mode.

@@ -28,6 +28,7 @@ private final class SelectionProtocol: URLProtocol {
     static func setMainTurnActive(_ value: Bool) { lock.lock(); defer { lock.unlock() }; mainTurnActive = value; sequence += 1 }
     static func setGoal(_ value: Bool) { lock.lock(); defer { lock.unlock() }; goalActive = value }
     static func hold(_ path: String) { lock.lock(); defer { lock.unlock() }; held.insert(path) }
+    static func unhold(_ path: String) { lock.lock(); defer { lock.unlock() }; held.remove(path) }
     static func fail(_ path: String, _ value: Bool) {
         lock.lock(); defer { lock.unlock() }
         if value { failed.insert(path) } else { failed.remove(path) }
@@ -147,7 +148,7 @@ func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "goal header controls", "task board", "subagent transcript", "disconnect"] {
+    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "goal header controls", "goal read ordering", "task board", "subagent transcript", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -243,6 +244,31 @@ func checkKimiSelectionIsolation() async throws {
                 precondition(client.drafts["a"] == "fix scrolling", "A created goal must not be created again when retrying its starter")
                 precondition(client.actionError != nil && client.pendingPrompts["a"]?.first?.status == "unknown")
                 precondition(SelectionProtocol.submitted("/api/v1/sessions/a/profile").count == 1)
+            case "goal read ordering":
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && client.goal != nil && !client.loading }
+                let path = "/api/v1/sessions/a/goal"
+                SelectionProtocol.hold(path)
+                let oldRead = Task { await client.refreshGoal() }
+                await ConnectionChecks.settle { SelectionProtocol.count(path) == 2 }
+                SelectionProtocol.unhold(path)
+                SelectionProtocol.setGoal(false)
+                await client.refreshGoal()
+                precondition(client.goal == nil && !client.goalIsStale)
+                SelectionProtocol.setGoal(true)
+                SelectionProtocol.release(path)
+                await oldRead.value
+                precondition(client.goal == nil, "An older successful read cannot restore a removed goal")
+                SelectionProtocol.hold(path)
+                let oldFailure = Task { await client.refreshGoal() }
+                await ConnectionChecks.settle { SelectionProtocol.count(path) == 4 }
+                SelectionProtocol.unhold(path)
+                await client.refreshGoal()
+                precondition(client.goal != nil && !client.goalIsStale)
+                SelectionProtocol.fail(path, true)
+                SelectionProtocol.release(path)
+                await oldFailure.value
+                precondition(!client.goalIsStale, "An older failed read cannot disable freshly synchronized controls")
             case "goal header controls":
                 client.select("a")
                 await ConnectionChecks.settle { client.snapshotReady && client.goal != nil && !client.loading }

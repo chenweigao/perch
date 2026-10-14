@@ -27,7 +27,8 @@ long objectives and dark mode. It neither loads nor changes real sessions.
 
 ConnectionChecks covers draft/attachment preservation, duplicate-click exclusion,
 no extra prompt/abort, stale-state gating and old-session action/error isolation.
+Goal reads also reject late success/failure from superseded refreshes.
 The host lifecycle goal-header phase clicks the real expansion/pause controls and
-checks collapsed/expanded geometry; it renders normal and narrow status fixtures.
+checks collapsed/expanded geometry; it measures mounted normal and narrow status fixtures.
 WorkbenchChecks covers the supported status-to-continuation mapping. Live Kimi
 service behavior is not established by these offline fixtures.
