@@ -141,17 +141,24 @@ private struct ActivityBarCheckFixture: View {
             }
         }
     }
-    window.appearance = NSAppearance(named: .aqua)
-    state.width = 720
-    for (name, expected) in [("pending", (reviews: 1, reconnects: 0)), ("offline", (reviews: 1, reconnects: 1))] {
-        state.phase = name
-        try await Task.sleep(for: .milliseconds(150))
-        host.layoutSubtreeIfNeeded()
-        // The explicit action is the trailing control of the bar.
-        click(CGPoint(x: state.barFrame.maxX - 16, y: state.barFrame.midY))
-        try await Task.sleep(for: .milliseconds(150))
-        precondition(state.reviews == expected.reviews && state.reconnects == expected.reconnects,
-                     "\(name) action did not reach its callback: reviews \(state.reviews), reconnects \(state.reconnects)")
+    for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+        window.appearance = NSAppearance(named: appearance)
+        for width in [CGFloat(720), 360] {
+            state.width = width
+            for name in ["pending", "offline"] {
+                let reviews = state.reviews
+                let reconnects = state.reconnects
+                state.phase = name
+                try await Task.sleep(for: .milliseconds(150))
+                host.layoutSubtreeIfNeeded()
+                // Exercise the real trailing button even after secondary facts fold.
+                click(CGPoint(x: state.barFrame.maxX - 16, y: state.barFrame.midY))
+                try await Task.sleep(for: .milliseconds(150))
+                precondition(state.reviews == reviews + (name == "pending" ? 1 : 0)
+                             && state.reconnects == reconnects + (name == "offline" ? 1 : 0),
+                             "\(name) action failed at \(width)pt in \(appearance)")
+            }
+        }
     }
     print("PASS: activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
 }

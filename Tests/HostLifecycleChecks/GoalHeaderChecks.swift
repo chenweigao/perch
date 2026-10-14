@@ -56,7 +56,7 @@ import WorkbenchCore
         if !stale { wideHeights[name] = layoutHost.fittingSize.height }
     }
     // The header sits above the transcript: a turn starting or ending must not
-    // change its height (the activity bar, not the goal, shows the running state).
+    // change its height when the running indicator replaces the waiting label.
     // A one-line objective lets the status column, not the text, set the height.
     for running in [true, false] {
         let preview = GoalHeaderBar(goal: KimiGoal(objective: "整理阅读画布", status: "active", turnsUsed: 1, tokensUsed: 900),
