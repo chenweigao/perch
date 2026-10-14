@@ -35,7 +35,6 @@ struct WorkbenchSidebar: View {
         let selectedProjectID = projection.projects.first { project in
             project.sessions.contains { $0.id == model.tabs.selectedID }
         }?.id
-        let selectedPinned = projection.favorites.contains { $0.id == model.tabs.selectedID }
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个环境"),
                               environmentNeedsAttention: environmentNeedsAttention,
@@ -45,8 +44,7 @@ struct WorkbenchSidebar: View {
                               onArchive: { model.showArchive() },
                               onAllSessions: { model.showAllSessions() },
                               onGroups: { model.clearScope(); model.showHome(); model.showAllTaskGroups = true },
-                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection),
-                              scrollContext: selectedPinned ? "favorites" : groupedByProject ? selectedProjectID ?? "projects" : "flat") {
+                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection)) {
             #if PERCH_ACCEPTANCE
             if experiment.sidebarVariant == "projects" { projectRows(projection, index: index) }
             else if usesTable { tableRows(projection, index: index) }

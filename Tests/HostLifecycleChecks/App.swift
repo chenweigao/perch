@@ -24,6 +24,8 @@ import WorkbenchCore
             try await checkGoalHeader()
         case "reading-controls":
             try await checkReadingControls()
+        case "sidebar-scroll":
+            try await checkSidebarScroll()
         case "reading-canvas":
             try await checkReadingCanvas()
         case "reading-design":
