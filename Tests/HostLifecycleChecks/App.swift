@@ -30,6 +30,8 @@ import WorkbenchCore
             try await checkReadingCanvas()
         case "reading-design":
             try await checkReadingDesign()
+        case "activity-bar":
+            try await checkActivityBar()
 
         case "architecture":
             UserDefaults.standard.removePersistentDomain(forName: domain)

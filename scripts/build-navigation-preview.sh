@@ -18,6 +18,7 @@ app_files=(
     Sources/AgentWorkbench/NativeAssistantBlocks.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
     Sources/AgentWorkbench/ConversationActivityBar.swift
+    Sources/AgentWorkbench/UILocalization.swift
     Sources/AgentWorkbench/WorkbenchGlass.swift
 
     Sources/AgentWorkbench/MessageComposer.swift

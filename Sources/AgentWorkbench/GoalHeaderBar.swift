@@ -75,6 +75,9 @@ struct GoalHeaderBar: View {
         .accessibilityIdentifier("goal-header")
     }
 
+    /// The activity bar above the input owns the running indicator; the goal shows
+    /// only its own state. The row keeps one height whether or not a turn runs, so
+    /// starting or finishing a turn never moves the transcript below the header.
     @ViewBuilder private var status: some View {
         if isStale {
             Button(action: onRefresh) {
@@ -83,9 +86,6 @@ struct GoalHeaderBar: View {
                 .disabled(!controlsEnabled).help("重新同步目标")
         } else {
             HStack(spacing: 6) {
-                if isRunning {
-                    ProgressView().controlSize(.mini).accessibilityLabel(L("当前一轮正在执行"))
-                }
                 switch goal.status {
                 case "active":
                     if !isRunning { Label("待续跑", systemImage: "clock").foregroundStyle(.secondary) }
@@ -94,7 +94,7 @@ struct GoalHeaderBar: View {
                 case "blocked": Label("需处理", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
                 default: Label("状态未知", systemImage: "questionmark.circle").foregroundStyle(.secondary)
                 }
-            }
+            }.frame(minHeight: 16)
         }
     }
 }

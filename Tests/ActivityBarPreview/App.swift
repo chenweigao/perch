@@ -204,6 +204,7 @@ private struct ActivityPreview: View {
                 online: phase != "Offline", isThinking: phase == "Thinking", isResponding: phase == "Responding",
                 pendingCount: phase == "Approval" ? 2 : 0, isStopping: phase == "Stopping"),
                 isRunning: busy, timing: clocks.turns["preview"], online: phase != "Offline",
+                offlineDetail: phase == "Offline" ? "ssh: connect to host fixture.invalid: Network is unreachable" : nil,
                 pendingCount: phase == "Approval" ? 2 : 0,
                 narrativeOverride: narrative,
                 externalFailureOverride: narrativeMode == "External failure" ? "Fixture timeout; the local title remains available." : nil,

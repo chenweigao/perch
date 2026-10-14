@@ -27,11 +27,17 @@ private struct BusySpinner: NSViewRepresentable {
 }
 
 /// Kept outside the transcript; only the clock subview refreshes every second.
+/// Every state uses the same transparent row height, so a run starting, waiting
+/// for input or failing never resizes the transcript above it. Attention adds
+/// color and an explicit action instead of a filled strip.
 struct ConversationActivityBar: View {
+    static let height: CGFloat = 32
     let activity: ConversationActivity
     let isRunning: Bool
     var timing: ConversationTiming? = nil
     var online = true
+    /// Last connection error; the details and the reconnect tooltip show it.
+    var offlineDetail: String? = nil
     var pendingCount = 0
     var narrativeSession: String? = nil
     var narrativeOverride: ActivityNarrative? = nil
@@ -54,6 +60,7 @@ struct ConversationActivityBar: View {
     var onTaskStop: (KimiTask) -> Void = { _ in }
     var onTasksRefresh: () -> Void = {}
     var onOpenTranscript: (KimiTask) -> Void = { _ in }
+    @UILocalization private var L
     @State private var expanded = false
     @State private var recapPresented = false
     @State private var pointerAnchor: CGRect?
@@ -77,96 +84,173 @@ struct ConversationActivityBar: View {
         else if let narrativeSession { narrativeStore.retry(session: narrativeSession, settings: summarySettings) }
     }
 
+    /// A lost connection and a pending decision stop progress and own the tone.
+    private var blocking: Bool { !online || pendingCount > 0 }
+    /// `activity.title` carries untranslated keys; compare the key itself.
+    private var stopping: Bool { activity.title == "Stopping…" }
+    private var turnEnded: Bool {
+        !isRunning && (timing?.endedAt != nil || narrative != nil || recapKey != nil || activity.edits != nil)
+    }
+    /// Uncertain tool results: failed without an exit code, missing, disconnected
+    /// or unconfirmed. A running agent may still recover, so they add a count
+    /// rather than recoloring the current action. Blocking states supersede them.
+    private var reviewCount: Int { blocking ? 0 : activity.attentionTools.count }
+
     var body: some View {
         ZStack {
             if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil || recapKey != nil || activity.edits != nil {
-                HStack(spacing: 10) {
-                    Button { pointerAnchor = nil; expanded.toggle() } label: {
-                        HStack(spacing: 9) {
-                            if activity.animates { ConversationBusyIndicator() }
-                            else {
-                                Image(systemName: activity.symbol).frame(width: 16)
-                                    .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
-                            }
-                            statusTitle
-                                .foregroundStyle(activity.needsAttention ? Color.orange : Color.secondary)
-                                .lineLimit(1).truncationMode(.tail)
-                                .contentTransition(.opacity)
-                                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.title)
-                            Spacer(minLength: 4)
-                            ViewThatFits(in: .horizontal) {
-                                HStack(spacing: 10) { counts; clock }
-                                counts
-                                EmptyView()
-                            }.font(.system(size: 11)).foregroundStyle(.secondary).layoutPriority(-1)
-                            Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-                        }.frame(minHeight: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel(Text("本轮活动"))
-                        .accessibilityValue(statusTitle).help("查看本轮活动与计划")
-                        .highPriorityGesture(SpatialTapGesture().onEnded { value in
-                            pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
-                            expanded.toggle()
-                        })
-                        .popover(isPresented: $expanded,
-                                 attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
-                                 arrowEdge: .top) { details }
-                    if let recapKey, !isRunning, pendingCount == 0 {
-                        Button { recapPresented = true } label: {
-                            Label("Recap", systemImage: "sparkles")
-                        }.buttonStyle(.borderless).controlSize(.small)
-                            .help("总结本次任务，不会向 Agent 发送消息")
-                            .popover(isPresented: $recapPresented, arrowEdge: .top) {
-                                TaskRecapPopover(key: recapKey, messages: recapMessages,
-                                                 stateOverride: recapStateOverride,
-                                                 configuredOverride: recapConfiguredOverride,
-                                                 onGenerateOverride: onRecapGenerateOverride)
-                            }
-                    }
-                    if !online {
-                        Button("重新连接", action: onReconnect).buttonStyle(.borderless)
-                    } else if pendingCount > 0 {
-                        Button("查看") { onReview() }.buttonStyle(.bordered).controlSize(.small).tint(.orange)
-                    }
+                HStack(spacing: 8) {
+                    summaryButton
+                    actions
                 }.font(.system(size: 12))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8).frame(height: activity.needsAttention ? 36 : 28)
-                    .background {
-                        if activity.needsAttention {
-                            RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.08))
-                        }
-                    }
+                    .padding(.horizontal, 2).frame(height: Self.height)
                     .transition(reduceMotion ? .identity : .opacity)
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
     }
 
-    private var statusTitle: Text {
-        if !online { return Text(LocalizedStringKey(activity.title)) }
-        if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
-        if !isRunning && (timing?.endedAt != nil || narrative != nil || recapKey != nil || activity.edits != nil) { return Text("本轮结束") }
-        if activity.needsAttention || activity.title == L("Stopping…") { return Text(LocalizedStringKey(activity.title)) }
-        if isRunning, let narrative { return Text(verbatim: narrative.headline) }
-        if let description = activity.operationDescription { return Text(verbatim: description) }
-        return Text(LocalizedStringKey(activity.title))
+    /// Priority from left to right: the current action, then elapsed time; plan
+    /// steps, session edits and concurrency fold away first in a narrow window.
+    /// The details popover always lists everything.
+    private var summaryButton: some View {
+        Button { pointerAnchor = nil; expanded.toggle() } label: {
+            HStack(spacing: 8) {
+                indicator
+                titleRow.layoutPriority(1)
+                if reviewCount > 0 {
+                    Text("\(reviewCount) 项需关注").foregroundStyle(Color.orange).fixedSize()
+                }
+                ViewThatFits(in: .horizontal) {
+                    metrics(upTo: 3)
+                    metrics(upTo: 2)
+                    metrics(upTo: 1)
+                    EmptyView()
+                }.font(.system(size: 11)).foregroundStyle(.tertiary).layoutPriority(-1)
+                // Lowest priority: the spacer takes only what the metrics leave.
+                Spacer(minLength: 6).layoutPriority(-2)
+                if let timing {
+                    ActivityTurnClock(timing: timing).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary).accessibilityHidden(true)
+            }.padding(.horizontal, 6).frame(height: 28).contentShape(Rectangle())
+        }.buttonStyle(WorkbenchDisclosureButtonStyle())
+            .accessibilityLabel(Text("本轮活动"))
+            .accessibilityValue(Text(verbatim: accessibilityValue))
+            .accessibilityHint(Text("查看本轮活动与计划"))
+            .help("查看本轮活动与计划")
+            .highPriorityGesture(SpatialTapGesture().onEnded { value in
+                pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
+                expanded.toggle()
+            })
+            .popover(isPresented: $expanded,
+                     attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
+                     arrowEdge: .top) { details }
     }
 
-    @ViewBuilder private var counts: some View {
+    /// Only real execution spins; every other state names itself with a symbol.
+    @ViewBuilder private var indicator: some View {
+        if activity.animates { ConversationBusyIndicator() }
+        else {
+            Image(systemName: symbol).font(.system(size: 12)).frame(width: 16, height: 16)
+                .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : Color.secondary)
+                .accessibilityHidden(true)
+        }
+    }
+    private var symbol: String {
+        if blocking || stopping { return activity.symbol }
+        if turnEnded { return reviewCount > 0 ? "exclamationmark.circle" : "checkmark.circle" }
+        return activity.symbol
+    }
+
+    private var titleRow: some View {
+        HStack(spacing: 6) {
+            Text(verbatim: title).fontWeight(blocking ? .medium : .regular)
+                .foregroundStyle(blocking ? Color.orange : isRunning ? Color.primary : Color.secondary)
+                .lineLimit(1).truncationMode(.tail).layoutPriority(1)
+            if let target = actionTarget {
+                Text(verbatim: target).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+            }
+        }.contentTransition(.opacity)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: title)
+    }
+
+    /// One localized title for the row, the details fallback and VoiceOver.
+    private var title: String {
+        if !online { return L(key: activity.title) }
+        if pendingCount > 0 { return L("等待你确认 · \(pendingCount) 项") }
+        if stopping { return L(key: activity.title) }
+        if turnEnded { return L("本轮结束") }
+        if isRunning, let narrative { return narrative.headline }
+        if let description = activity.operationDescription { return description }
+        return L(key: activity.title)
+    }
+
+    /// A generic running title names what the current tool touches, so the
+    /// action stays understandable without opening the details.
+    private var actionTarget: String? {
+        guard online, isRunning, pendingCount == 0, !stopping, narrative == nil,
+              activity.operationDescription == nil, let tool = activity.activeTools.first else { return nil }
+        let target = ToolPresentation.compactTarget(tool)
+        return target.isEmpty || target == tool.name ? nil : target
+    }
+
+    private var accessibilityValue: String {
+        var parts = [title]
+        if let actionTarget { parts.append(actionTarget) }
+        if reviewCount > 0 { parts.append(L("\(reviewCount) 项需关注")) }
+        if !activity.todos.isEmpty { parts.append(L("\(activity.completedSteps)/\(activity.todos.count) 步")) }
+        return parts.joined(separator: ", ")
+    }
+
+    @ViewBuilder private var actions: some View {
+        if let recapKey, !isRunning, pendingCount == 0 {
+            Button { recapPresented = true } label: {
+                Label("Recap", systemImage: "sparkles")
+            }.buttonStyle(.borderless).controlSize(.small)
+                .help("总结本次任务，不会向 Agent 发送消息")
+                .popover(isPresented: $recapPresented, arrowEdge: .top) {
+                    TaskRecapPopover(key: recapKey, messages: recapMessages,
+                                     stateOverride: recapStateOverride,
+                                     configuredOverride: recapConfiguredOverride,
+                                     onGenerateOverride: onRecapGenerateOverride)
+                }
+        }
+        if !online {
+            Button("重新连接", action: onReconnect).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+                .help(offlineDetail.map { Text(verbatim: $0) } ?? Text("重新连接"))
+        } else if pendingCount > 0 {
+            Button("查看") { onReview() }.buttonStyle(.bordered).controlSize(.small).tint(.orange)
+                .help("查看等待你确认的事项").accessibilityHint(Text("查看等待你确认的事项"))
+        } else if reviewCount > 0 && !isRunning {
+            Button("查看") { pointerAnchor = nil; expanded = true }
+                .buttonStyle(.bordered).controlSize(.small).tint(.orange)
+                .help("查看需要关注的工具结果").accessibilityHint(Text("查看需要关注的工具结果"))
+        }
+    }
+
+    /// Facts in fold order: plan steps, then session edits, then concurrency.
+    private func metrics(upTo level: Int) -> some View {
         HStack(spacing: 10) {
-            if !activity.todos.isEmpty { Text("\(activity.completedSteps)/\(activity.todos.count) steps") }
-            if !activity.activeTools.isEmpty { Text("\(activity.activeTools.count) \(activity.activeTools.count == 1 ? "tool" : "tools")") }
-            if board.runningCount > 0 { Text("\(board.runningCount) 运行中") }
-            if let edits = activity.edits {
+            if level >= 1, !activity.todos.isEmpty {
+                Text("\(activity.completedSteps)/\(activity.todos.count) 步")
+            }
+            if level >= 2, let edits = activity.edits {
                 // Odometer roll as the tally grows (ccgui RollingStat) —
                 // SwiftUI's numericText transition is the native equivalent.
                 EditStatText(stat: edits.total)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: edits.total)
             }
+            if level >= 3 {
+                // One running tool is already named by the title.
+                if activity.activeTools.count > 1 { Text("\(activity.activeTools.count) 个工具") }
+                if board.runningCount > 0 { Text("\(board.runningCount) 运行中") }
+            }
         }.fixedSize().monospacedDigit()
-    }
-    @ViewBuilder private var clock: some View {
-        if let timing { ActivityTurnClock(timing: timing) }
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -177,8 +261,14 @@ struct ConversationActivityBar: View {
                     .buttonStyle(.plain).accessibilityLabel(Text("关闭活动详情"))
             }
             if !online {
-                Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(.secondary)
-                Button("重新连接") { expanded = false; onReconnect() }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(.secondary)
+                    if let offlineDetail, !offlineDetail.isEmpty {
+                        Text(verbatim: offlineDetail).font(.system(size: 11)).foregroundStyle(.secondary)
+                            .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Button("重新连接") { expanded = false; onReconnect() }.buttonStyle(.bordered).tint(.orange)
             } else if pendingCount > 0 {
                 Label { Text("等待你确认 · \(pendingCount) 项") } icon: { Image(systemName: "hand.raised") }
                     .foregroundStyle(.orange)
@@ -212,7 +302,7 @@ struct ConversationActivityBar: View {
                         Text("当前操作").fontWeight(.semibold)
                         ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
                     } else if narrative == nil && online && pendingCount == 0 && activity.attentionTools.isEmpty {
-                        statusTitle.foregroundStyle(.secondary)
+                        Text(verbatim: title).foregroundStyle(.secondary)
                     }
                     if !activity.todos.isEmpty {
                         HStack {
