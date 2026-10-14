@@ -19,4 +19,4 @@ Mechanism: the content measures its natural height via `fixedSize` +
 height (0 → natural on open, natural → 0 on close), then returns to natural
 flow so streaming content keeps resizing without animating every token.
 
-Validation: the native interaction checks cover initial open/closed state, rapid close/reopen, remembered expansion, and Reduce Motion. A revision invalidates obsolete animation completions.
+Validation: the native interaction checks cover initial open/closed state, rapid close/reopen, remembered expansion, and Reduce Motion. A revision invalidates obsolete animation completions. The frame-level contract is regression-checked by the navigation fixture: `python3 scripts/run-navigation-check.py disclosure-animation --output <dir>` mounts probe content, toggles expand/collapse, samples the animated bottom edge per frame, and asserts intermediate frames, collapse-time mount retention (≈250ms) and the Reduce Motion bypass.
