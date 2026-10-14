@@ -26,6 +26,8 @@ enum ReplyStyle {
 }
 
 enum UserMessageStyle {
+    static let collapsedHeight: CGFloat = 220
+    static let foldThreshold: CGFloat = 264
     static let lineHeight: CGFloat = 22
     static let horizontalPadding: CGFloat = 14
     static let verticalPadding: CGFloat = 8
@@ -574,11 +576,27 @@ enum NativeParagraphContent {
 
 /// Plain-paragraph user messages need text selection and a right-aligned bubble,
 /// but no SwiftUI state graph. Complex Markdown/attachments keep their existing row.
+private final class UserPromptClipView: NSView { override var isFlipped: Bool { true } }
+
 final class NativeUserMessageView: NSView {
     private static var recycled: [NativeUserMessageView] = []
     private var texts: [ReplyTextView] = []
     private let links = SelectableReplyText.Coordinator()
     private let bubbleBackground = NSView()
+    private let promptClip = UserPromptClipView()
+    private let expandButton = NSButton()
+    var expansionKey: String?
+    var expansionWillChange: (() -> Void)?
+    var expansionDidChange: (() -> Void)?
+    private var expanded: Bool {
+        expansionKey.flatMap { ConversationReadingMemory.shared.expansions[$0 + ":user-prompt"] } ?? false
+    }
+    @objc private func togglePrompt() {
+        guard let expansionKey else { return }
+        expansionWillChange?()
+        ConversationReadingMemory.shared.expansions[expansionKey + ":user-prompt"] = !expanded
+        expansionDidChange?()
+    }
     /// Row identity for message-level menu actions; set by the hosting controller.
     var actionContext: ConversationActionContext?
     var sourceText = ""
@@ -601,6 +619,15 @@ final class NativeUserMessageView: NSView {
         bubbleBackground.wantsLayer = true
         bubbleBackground.layer?.cornerRadius = UserMessageStyle.cornerRadius
         addSubview(bubbleBackground)
+        promptClip.wantsLayer = true
+        promptClip.layer?.masksToBounds = true
+        addSubview(promptClip)
+        expandButton.bezelStyle = .inline
+        expandButton.font = .systemFont(ofSize: 12)
+        expandButton.target = self
+        expandButton.action = #selector(togglePrompt)
+        expandButton.identifier = NSUserInterfaceItemIdentifier("user-prompt-toggle")
+        addSubview(expandButton)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -614,6 +641,10 @@ final class NativeUserMessageView: NSView {
         view.removeFromSuperview()
         view.actionContext = nil
         view.sourceText = ""
+        view.expansionKey = nil
+        view.expansionWillChange = nil
+        view.expansionDidChange = nil
+        view.expandButton.isHidden = true
         view.bookmarkTurn = nil
         view.bookmarkSession = nil
         for text in view.texts { text.setSelectedRange(NSRange(location: 0, length: 0)); text.update(NSAttributedString(string: "")) }
@@ -643,7 +674,7 @@ final class NativeUserMessageView: NSView {
                 }
                 return items
             }
-            texts.append(text); addSubview(text)
+            texts.append(text); promptClip.addSubview(text)
         }
         for (text, value) in zip(texts, content) { text.update(value, preservingSelectionOnAppend: true) }
         needsDisplay = true
@@ -668,14 +699,27 @@ final class NativeUserMessageView: NSView {
         let sizes = measurements(width: width).sizes
         let textHeight = sizes.reduce(CGFloat.zero) { $0 + $1.height }
         let gaps = CGFloat(max(0, sizes.count - 1)) * UserMessageStyle.paragraphSpacing
-        return CGSize(width: width, height: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding * 2 + textHeight + gaps)
+        let natural = textHeight + gaps
+        let folds = natural > UserMessageStyle.foldThreshold
+        let visible = folds && !expanded ? UserMessageStyle.collapsedHeight : natural
+        return CGSize(width: width, height: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding * 2 + visible + (folds ? 30 : 0))
     }
     func place(width: CGFloat) {
         let layout = measurements(width: width)
         let x = width - layout.bubbleWidth
-        var y = UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding
+        let natural = layout.sizes.reduce(CGFloat.zero) { $0 + $1.height } + CGFloat(max(0, layout.sizes.count - 1)) * UserMessageStyle.paragraphSpacing
+        let folds = natural > UserMessageStyle.foldThreshold
+        let visible = folds && !expanded ? UserMessageStyle.collapsedHeight : natural
+        promptClip.frame = CGRect(x: x, y: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding,
+                                  width: layout.bubbleWidth, height: visible)
+        expandButton.isHidden = !folds
+        expandButton.title = L(expanded ? "收起问题" : "展开完整问题")
+        expandButton.setAccessibilityLabel(expandButton.title)
+        expandButton.frame = CGRect(x: x + UserMessageStyle.horizontalPadding,
+            y: promptClip.frame.maxY + 4, width: max(1, layout.bubbleWidth - UserMessageStyle.horizontalPadding * 2), height: 24)
+        var y: CGFloat = 0
         for (text, size) in zip(texts, layout.sizes) {
-            let frame = CGRect(x: x + UserMessageStyle.horizontalPadding, y: y,
+            let frame = CGRect(x: UserMessageStyle.horizontalPadding, y: y,
                                width: max(1, layout.bubbleWidth - UserMessageStyle.horizontalPadding * 2), height: size.height)
             if text.frame != frame { text.frame = frame }
             y += size.height + UserMessageStyle.paragraphSpacing
@@ -870,7 +914,11 @@ final class ReplyTextView: NSTextView {
 struct DisclosureReplyText: View {
     let text: String
     var attributes: [NSAttributedString.Key: Any]? = nil
-    @State private var showingAll = false
+    @State private var fullOverride: Bool?
+    @Environment(\.conversationMemoryKey) private var memoryKey
+    private var showingAll: Bool {
+        fullOverride ?? (!memoryKey.isEmpty && ConversationReadingMemory.shared.expansions[memoryKey + ":full-output"] == true)
+    }
     @State private var reader = LongOutputReaderHandle()
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
 
@@ -879,7 +927,7 @@ struct DisclosureReplyText: View {
             disclosureWillChange()
             var transaction = Transaction(animation: nil)
             transaction.disablesAnimations = true
-            withTransaction(transaction) { showingAll = value }
+            withTransaction(transaction) { fullOverride = value }
         })
     }
     private var usesViewport: Bool {

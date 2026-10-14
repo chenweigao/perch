@@ -249,6 +249,21 @@ func checkCompactionSummaryDisplay() {
 /// History folding collapses each completed turn's process into one row while
 /// prompts, final answers and the running turn's live process stay top-level.
 func checkConversationProcessFold() throws {
+    let pageIDs = (0..<19).map { "row-\($0)" }
+    let first = ConversationProcessPage(ids: pageIDs, anchor: nil)
+    precondition(first.range == 0..<8 && first.count == 3 && first.number == 1)
+    precondition(ConversationProcessPage(ids: pageIDs, anchor: "row-18").range == 16..<19)
+    precondition(ConversationProcessPage(ids: pageIDs, anchor: "removed").range == 0..<8)
+    precondition(ConversationProcessPage(ids: [], anchor: "removed").range.isEmpty)
+    let prepended = ["older"] + pageIDs
+    let retained = ConversationProcessPage(ids: prepended, anchor: "row-8")
+    precondition(Array(prepended[retained.range]).contains("row-8"))
+    let request: JSONValue = .object(["id": .string("tool"), "planReview": .object([
+        "revision": .string("v1"), "content": .string("计划"), "complete": .bool(true), "status": .string("awaiting_review")])])
+    let plan = NativePlanReview(request)!
+    precondition(plan.complete && !plan.deferred && plan.answer("approve", feedback: "")["planRevision"] == .string("v1"))
+    precondition(NativePlanReview(.object(["name": .string("ExitPlanMode")])) == nil)
+
     func messages(_ json: String) throws -> [KimiMessage] { try KimiWire.decoder().decode([KimiMessage].self, from: Data(json.utf8)) }
     func rows(_ entries: [ConversationTimelineEntry]) -> [ConversationPresentationModel.Row] {
         entries.map { ConversationPresentationModel.Row(entry: $0, tools: [:], activity: nil) }

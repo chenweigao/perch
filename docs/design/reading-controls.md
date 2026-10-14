@@ -1,0 +1,19 @@
+# Reading controls and plan review
+
+Long user prompts fold using their measured rendered height. Native paragraphs and the SwiftUI Markdown/attachment fallback share the same threshold (264 pt) and compact height (220 pt). Original text remains available for copying and search. Expansion is scoped to the conversation and entry; pooled native rows clear their identity and callbacks. Size changes use the existing reading-anchor path, including window reflow and late attachment layout.
+
+Completed process mounts eight existing timeline rows per page. Each timeline row already caps source parts at 24. Pages preserve the current entry anchor across remounts and history updates, and source rows remain complete. Search switches to the containing page, opens the relevant nested process, and selects the actual hit. Failed and pending tools retain the existing visible attention path.
+
+Claude `ExitPlanMode` requests use a dedicated review panel when the broker supplies a plan-review revision. The complete plan can be viewed and copied. Approve allows only that tool request; existing permissions remain unchanged. The worker reads plan text supplied by the SDK or a plan file written by the same query and agent under `.claude/plans/`. It re-reads that file before accepting approval; changes produce a new review revision. A stale `input.plan` is replaced by the reviewed text. Custom plan directories without inline text are not supported and cannot be approved. Request changes returns the user's feedback through the SDK denial response. Defer persists a pending decision without resolving the SDK callback; resume reopens it. Missing plan text disables approval. Other providers retain their existing protocol surfaces; Codex plan text alone is not an approval request.
+
+The broker validates request ID, revision and status before sending a decision, rejects old/duplicate/cancelled requests, and retains failed sends for retry. The UI preserves feedback and displays conflicts, including a request resolved in another client. Enter, Escape, closing the preview and changing sessions send no decision. A successful submission remains settled even if its follow-up read is stale.
+
+Validation is recorded with the PR: core paging/protocol checks, broker HTTP contracts, execution of the real Claude worker against a local SDK stub, and native interaction fixtures. SDK-stub tests do not constitute a live Claude model run.
+
+Protocol reference: [Claude SDK user input](https://code.claude.com/docs/en/agent-sdk/user-input).
+
+## Acceptance scope
+
+The native fixture exercises actual prompt and page buttons, pooled row reuse, search to a collapsed prompt tail, search to a later process page beyond the 4,000-character preview, and neutral approval keyboard behavior. The review state checks failed sends, feedback retention, a request handled by another client, and duplicate submission after a stale read. The worker contract executes the production JavaScript against an SDK stub, including plan-file changes, removal and subagent isolation.
+
+The full acceptance suite also covers the existing sidebar, pins, composer, scroll following, navigation, selection and disclosure interactions. The consolidated result is `.local/reading-controls-acceptance.json`: 44 macOS checks and seven portable groups passed. The first macOS run stopped at an old parity assertion that compared coordinates across different superviews. That assertion now converts coordinates and waits for geometry-driven controls to settle. All 12 navigation modes, the build/signature and native host interactions were rerun on the final sources in `.local/reading-controls-final`; unaffected earlier checks remain in `.local/reading-controls-macos`. Portable results are in `.local/reading-controls-portable-final`. This is offline/native-fixture evidence; live Claude sessions and frame rates are not certified.

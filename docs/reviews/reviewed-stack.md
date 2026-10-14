@@ -1,6 +1,6 @@
 # Reviewed feature delivery
 
-All PRs remain unmerged. The original feature branches remain available as the review baseline. Suggested review order: composer → update check → edit statistics → question/disclosure flow → stream reveal → Git writes → reading-first body.
+PRs #123–#129 were merged on 2026-10-14 after all checks passed at each current head. Local main was fast-forwarded to the final merge. The original feature branches remain available as the review baseline. Integration order: composer → update check → edit statistics → question/disclosure flow → stream reveal → Git writes → reading-first body.
 
 | Finding | Resolution | PR |
 | --- | --- | --- |

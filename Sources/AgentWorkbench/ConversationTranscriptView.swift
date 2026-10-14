@@ -59,6 +59,27 @@ private struct CompactionSummaryRow: View {
     }
 }
 
+struct LongUserPrompt<Content: View>: View {
+    @ViewBuilder let content: Content
+    @RememberedExpansion("user-prompt") private var expanded
+    @State private var naturalHeight: CGFloat = 0
+    private var folds: Bool { naturalHeight > UserMessageStyle.foldThreshold }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            content.fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight = $0 }
+                .frame(maxHeight: folds && !expanded ? UserMessageStyle.collapsedHeight : nil, alignment: .top)
+                .clipped()
+            if folds {
+                Button(expanded ? "收起问题" : "展开完整问题") { expanded.toggle() }
+                    .buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(.secondary)
+                    .frame(height: 24, alignment: .leading)
+                    .accessibilityIdentifier("user-prompt-toggle")
+            }
+        }
+    }
+}
+
 struct KimiMessageView: View {
     let message: KimiMessage
     let tools: [String: VisibleTool]
@@ -85,7 +106,9 @@ struct KimiMessageView: View {
     var body: some View {
         if isUserMessage {
             UserMessageLayout {
-                content.environment(\.replyLineHeight, UserMessageStyle.lineHeight)
+                LongUserPrompt {
+                    content.environment(\.replyLineHeight, UserMessageStyle.lineHeight)
+                }
                     .padding(.horizontal, UserMessageStyle.horizontalPadding)
                     .padding(.vertical, UserMessageStyle.verticalPadding)
                     .background(kimiPaper, in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
@@ -485,13 +508,23 @@ private final class ConversationDocumentView: NSView {
         let intent = readingIntent
         DispatchQueue.main.async { [weak self] in
             guard let self, self.readingIntent == intent, self.sessionId == target.session,
-                  let view = self.controllers[target.hit.entryID]?.view else { return }
+                  let view = self.controllers[target.hit.entryID]?.view ?? self.foldParents[target.hit.entryID].flatMap({ self.controllers[$0]?.view }) else { return }
             // A newly mounted host may not have created its native text views yet.
             // Complete that host's layout before looking for the selected range.
             view.layoutSubtreeIfNeeded()
             var remaining = target.hit.occurrence
+            func anchor(in node: NSView) -> NSView? {
+                if node.identifier?.rawValue == "process-entry:" + target.hit.entryID { return node }
+                return node.subviews.lazy.compactMap { anchor(in: $0) }.first
+            }
+            let targetBounds = anchor(in: view).map { $0.convert($0.bounds, to: view) }
+            let root = view
             func select(in view: NSView) -> Bool {
-                if let text = view as? ReplyTextView, text.isConversationBodyText {
+                if let text = view as? NSTextView, (text as? ReplyTextView)?.isConversationBodyText == true || text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" {
+                    // A long reader's text document extends beyond its viewport;
+                    // use the viewport to avoid selecting another row's hidden text.
+                    let region: NSView = text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" ? text.enclosingScrollView! : text
+                    if let targetBounds, !targetBounds.intersects(region.convert(region.bounds, to: root)) { return false }
                     let source = text.string as NSString
                     var search = NSRange(location: 0, length: source.length)
                     while search.length > 0 {
@@ -507,20 +540,38 @@ private final class ConversationDocumentView: NSView {
             _ = select(in: view)
         }
     }
+    private func invalidateRevealedRow(_ id: String) {
+        measuredSizes.removeValue(forKey: id)
+        if let controller = controllers.removeValue(forKey: id) {
+            controller.view.removeFromSuperview()
+            mounted.remove(id)
+            Self.retire([controller])
+        }
+        laidOutRange = nil
+    }
     private func revealEntry(_ id: String, highlight: Bool = false) {
         guard !suspended, let clip = observedClip else { return }
         var target = id
+        if let index = indices[id], contents[index].entry.messages.first?.isUserPrompt == true {
+            ConversationReadingMemory.shared.expansions[sessionId + ":" + id + ":user-prompt"] = true
+            invalidateRevealedRow(id)
+        }
         if indices[id] == nil, let fold = foldParents[id], indices[fold] != nil {
             // The hit sits inside a folded process group: expand it in place and
             // land on the fold row. The expanded content re-measures on mount.
-            ConversationReadingMemory.shared.expansions[sessionId + ":" + fold + ":process-fold"] = true
-            measuredSizes.removeValue(forKey: fold)
-            if let controller = controllers.removeValue(forKey: fold) {
-                controller.view.removeFromSuperview()
-                mounted.remove(fold)
-                Self.retire([controller])
+            let scope = sessionId + ":" + fold
+            ConversationReadingMemory.shared.expansions[scope + ":process-fold"] = true
+            ConversationReadingMemory.shared.processPages[scope] = id
+            for name in ["thought", "live-thought", "commentary", "expanded", "full-output"] {
+                ConversationReadingMemory.shared.expansions[scope + "/" + id + ":" + name] = true
             }
-            laidOutRange = nil
+            if let index = indices[fold], let row = contents[index].foldedRows?.first(where: { $0.entry.id == id }) {
+                for tool in row.tools.keys {
+                    ConversationReadingMemory.shared.expansions[scope + "/" + id + ":tool:" + tool + ":expanded"] = true
+                    ConversationReadingMemory.shared.expansions[scope + "/" + id + ":tool:" + tool + ":full-output"] = true
+                }
+            }
+            invalidateRevealedRow(fold)
             target = fold
         }
         guard let index = indices[target] else { return }
@@ -1574,6 +1625,16 @@ private final class ConversationEntryController: NSViewController {
                 nativeUser!.sourceText = user.source
                 nativeUser!.bookmarkTurn = self.content.entry.id
                 nativeUser!.bookmarkSession = self.content.memoryKey
+                nativeUser!.expansionKey = content.memoryKey
+                nativeUser!.expansionWillChange = { [weak self] in self?.disclosureChanged() }
+                nativeUser!.expansionDidChange = { [weak self] in
+                    guard let self else { return }
+                    self.sizes.removeAll(keepingCapacity: true)
+                    self.placedWidth = nil
+                    let width = self.view.bounds.width
+                    self.nativeUser?.place(width: width)
+                    self.report(self.measure(width: width), generation: self.generation)
+                }
                 nativeUser!.update(paragraphs, dark: appearance.colorScheme == .dark)
                 #if TRANSCRIPT_CHECKS
                 NavigationRenderMetrics.record("native_user_update", since: CACurrentMediaTime())
@@ -1899,12 +1960,33 @@ private struct ConversationEntryView: View, Equatable {
 
 /// A completed turn's folded process: one quiet disclosure that mounts the
 /// original rows in place when expanded. Expansion is remembered per fold row.
-private struct ProcessFoldRow: View {
+private struct ProcessFindAnchor: NSViewRepresentable {
+    let id: String
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        view.identifier = NSUserInterfaceItemIdentifier("process-entry:" + id)
+    }
+}
+
+struct ProcessFoldRow: View {
     let rows: [ConversationPresentationModel.Row]
     let api: KimiAPI?
     let sessionId: String
     @Environment(\.conversationMemoryKey) private var memoryKey
     @RememberedExpansion("process-fold") private var expanded
+    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    @State private var pageRevision = 0
+    private var page: ConversationProcessPage {
+        _ = pageRevision
+        return ConversationProcessPage(ids: rows.map(\.entry.id), anchor: ConversationReadingMemory.shared.processPages[memoryKey])
+    }
+    private func changePage(_ offset: Int) {
+        let start = page.range.lowerBound + offset * ConversationProcessPage.size
+        guard rows.indices.contains(start) else { return }
+        disclosureWillChange()
+        ConversationReadingMemory.shared.processPages[memoryKey] = rows[start].entry.id
+        pageRevision += 1
+    }
     private var toolCalls: Int {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
@@ -1912,9 +1994,21 @@ private struct ProcessFoldRow: View {
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(rows, id: \.entry.id) { row in
+                    if page.count > 1 {
+                        HStack(spacing: 12) {
+                            Button("上一页") { changePage(-1) }.disabled(page.number == 1)
+                                .accessibilityIdentifier("process-previous-page")
+                            Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
+                            Button("下一页") { changePage(1) }.disabled(page.number == page.count)
+                                .accessibilityIdentifier("process-next-page")
+                        }.buttonStyle(.borderless).font(.system(size: 12))
+                    }
+                    ForEach(Array(rows[page.range]), id: \.entry.id) { row in
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                               memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
+                            .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
+                            .environment(\.isConversationBodyText, true)
+                            .background(ProcessFindAnchor(id: row.entry.id))
                     }
                 }.padding(.top, 12).padding(.leading, 14)
                     .overlay(alignment: .leading) {
