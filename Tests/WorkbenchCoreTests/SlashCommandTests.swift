@@ -83,6 +83,9 @@ func checkSlashCommands() throws {
         do { _ = try KimiCommand.parse(invalid); preconditionFailure("Invalid command must retain the draft") }
         catch is WorkbenchError { }
     }
+    for (status, action) in [("active", "pause"), ("paused", "resume"), ("blocked", "resume"), ("complete", nil), ("future-status", nil)] {
+        precondition(KimiGoal(objective: "fixture", status: status, turnsUsed: 0, tokensUsed: 0).continuationControl == action)
+    }
     let noGoal = try KimiWire.decode(KimiGoal?.self, from: Data(#"{"code":0,"data":null}"#.utf8))
     precondition(noGoal == nil)
     print("PASS: runtime command parsing, palette open rules, subcommand completion, alias resolution and slash invocation")

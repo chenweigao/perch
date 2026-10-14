@@ -77,6 +77,7 @@ final class KimiConnection {
     /// The selected session's active goal. A failed read keeps the last known
     /// value instead of presenting itself as a session error.
     private(set) var goal: KimiGoal?
+    private(set) var goalIsStale = true
     /// One subagent transcript at a time: the sheet that reads it owns the
     /// subscription, and closing it unsubscribes that agent again.
     private(set) var subagentTranscript: KimiSubagentTranscript?
@@ -262,7 +263,7 @@ final class KimiConnection {
         freshnessCheck?.cancel(); freshnessCheck = nil
         runtime = .unknown; staleRuntimeNotice = nil
         task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
-        snapshotReady = false; goal = nil
+        snapshotReady = false; goal = nil; goalIsStale = true
         subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
     }
@@ -415,7 +416,7 @@ final class KimiConnection {
     }
     private func loadSelected(_ id: String) {
         detail.cancelLoads(); let token = selectionGeneration
-        snapshotReady = false; actionError = nil; taskListError = nil; goal = nil
+        snapshotReady = false; actionError = nil; taskListError = nil; goal = nil; goalIsStale = true
         detail.loadSelection { [weak self] in
             guard let self else { return }
             do { try await refreshConversation(selectionToken: token); try await subscribe(id) }
@@ -573,8 +574,11 @@ final class KimiConnection {
             let value = try await api.get(KimiGoal?.self, "/api/v1/sessions/\(id)/goal")
             guard token == selectionGeneration, id == selectedId else { return }
             goal = value
+            goalIsStale = false
         } catch is CancellationError {
-        } catch {}
+        } catch {
+            if token == selectionGeneration, id == selectedId { goalIsStale = true }
+        }
     }
     private func scheduleGoalRefresh() {
         goalRefresh?.cancel()
@@ -724,7 +728,7 @@ final class KimiConnection {
         permissionChoices.removeValue(forKey: id)
         if selectedId == id {
             detail.cancelLoads()
-            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false; goal = nil
+            selectedId = nil; conversation = nil; loading = false; loadingOlder = false; snapshotReady = false; goal = nil; goalIsStale = true
         }
         sessions.removeAll { $0.id == id }; onSessionsChanged?()
     }
@@ -987,6 +991,24 @@ final class KimiConnection {
         timings.submitted(promptID)
         return try await api.post(KimiPrompt.self, "/api/v1/sessions/\(id)/prompts", body: .object(body))
     }
+    /// User-initiated controls share command serialization without touching drafts,
+    /// attachments, permission mode, or the current turn's Stop endpoint.
+    func controlGoal(_ control: String, for id: String) async {
+        guard id == selectedId, online, snapshotReady, !loading, !sending,
+              !goalIsStale, let goal, let api,
+              control == "cancel" || control == goal.continuationControl else { return }
+        let token = selectionGeneration
+        sendingSessions.insert(id)
+        commandErrors[id] = nil
+        defer { sendingSessions.remove(id) }
+        do {
+            _ = try await runCommand(.goalControl(control), for: id, api: api)
+        } catch {
+            guard token == selectionGeneration, id == selectedId else { return }
+            commandErrors[id] = error.localizedDescription
+        }
+    }
+
     private func runCommand(_ command: KimiCommand, for id: String, api: KimiAPI) async throws -> String? {
         let path = "/api/v1/sessions/\(id)"
         switch command {
@@ -994,7 +1016,7 @@ final class KimiConnection {
             commandFeedback[id] = KimiCommand.helpText
         case .goalStatus:
             let goal = try await api.get(KimiGoal?.self, path + "/goal")
-            if id == selectedId { self.goal = goal }
+            if id == selectedId { self.goal = goal; goalIsStale = false }
             if let goal {
                 commandFeedback[id] = "\(goal.objective)\n\(goal.statusLine)"
             } else { commandFeedback[id] = L("No active goal.") }

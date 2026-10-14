@@ -20,6 +20,8 @@ import WorkbenchCore
             try await checkProductionStreamReveal()
         case "git-write":
             try await checkGitWriteLifecycle()
+        case "goal-header":
+            try await checkGoalHeader()
         case "reading-controls":
             try await checkReadingControls()
         case "reading-design":

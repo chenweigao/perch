@@ -147,7 +147,7 @@ func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "task board", "subagent transcript", "disconnect"] {
+    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "goal header controls", "task board", "subagent transcript", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -243,6 +243,41 @@ func checkKimiSelectionIsolation() async throws {
                 precondition(client.drafts["a"] == "fix scrolling", "A created goal must not be created again when retrying its starter")
                 precondition(client.actionError != nil && client.pendingPrompts["a"]?.first?.status == "unknown")
                 precondition(SelectionProtocol.submitted("/api/v1/sessions/a/profile").count == 1)
+            case "goal header controls":
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && client.goal != nil && !client.loading }
+                let profile = "/api/v1/sessions/a/profile"
+                client.drafts["a"] = "Keep this unsent instruction"
+                client.attachments["a"] = [URL(fileURLWithPath: "/fixture/unsent.txt")]
+                SelectionProtocol.hold(profile)
+                let request = Task { await client.controlGoal("resume", for: "a") }
+                await ConnectionChecks.settle { SelectionProtocol.count(profile) == 1 }
+                await client.controlGoal("resume", for: "a")
+                precondition(SelectionProtocol.count(profile) == 1, "A second click cannot enqueue duplicate continuation")
+                precondition(SelectionProtocol.submitted(profile).last == .object(["agent_config": .object(["goal_control": .string("resume")])]))
+                SelectionProtocol.release(profile)
+                await request.value
+                precondition(client.drafts["a"] == "Keep this unsent instruction" && client.attachments["a"]?.count == 1)
+                precondition(SelectionProtocol.count("/api/v1/sessions/a/prompts") == 1, "Only the initial queue read; resume must not send a prompt")
+                precondition(SelectionProtocol.count("/api/v1/sessions/a:abort") == 0)
+                SelectionProtocol.fail("/api/v1/sessions/a/goal", true)
+                await client.refreshGoal()
+                precondition(client.goalIsStale && client.goal != nil)
+                await client.controlGoal("resume", for: "a")
+                precondition(SelectionProtocol.count(profile) == 1, "Stale goal state disables direct controls")
+                SelectionProtocol.fail("/api/v1/sessions/a/goal", false)
+                await client.refreshGoal()
+                SelectionProtocol.hold(profile)
+                SelectionProtocol.fail(profile, true)
+                let late = Task { await client.controlGoal("cancel", for: "a") }
+                await ConnectionChecks.settle { SelectionProtocol.count(profile) == 2 }
+                client.select("b")
+                await ConnectionChecks.settle { client.snapshotReady && client.goal != nil && !client.loading }
+                SelectionProtocol.release(profile)
+                await late.value
+                precondition(client.commandErrors["b"] == nil && client.actionError == nil)
+                await client.controlGoal("cancel", for: "a")
+                precondition(SelectionProtocol.count(profile) == 2, "An old header cannot act on the newly selected session")
             case "goal status":
                 client.select("a")
                 await ConnectionChecks.settle { client.snapshotReady && client.goal != nil }

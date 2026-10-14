@@ -56,5 +56,12 @@ public struct KimiGoal: Decodable, Equatable, Sendable {
     public init(objective: String, status: String, turnsUsed: Int, tokensUsed: Int) {
         self.objective = objective; self.status = status; self.turnsUsed = turnsUsed; self.tokensUsed = tokensUsed
     }
+    public var continuationControl: String? {
+        switch status {
+        case "active": return "pause"
+        case "paused", "blocked": return "resume"
+        default: return nil
+        }
+    }
     public var statusLine: String { "\(status) · \(turnsUsed) turns · \(tokensUsed) tokens" }
 }
