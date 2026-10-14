@@ -48,3 +48,11 @@ Before sharing a source release:
 The offline [public demo](../Tests/PublicDemo/README.md) produces reproducible
 screenshots using production UI components and synthetic data. Native UI previews,
 unit checks, live agent acceptance and end-to-end performance are separate checks.
+
+## Update check
+
+The app checks the public repository's tags once a day (and on demand in
+Settings) and reports when a newer version exists. It never downloads or
+installs anything: there is no signed binary channel, so the update path stays
+pull + rebuild. A full in-app updater (Sparkle-style) requires a signing
+identity and binary release hosting first; revisit when those exist.

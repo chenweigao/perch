@@ -1,5 +1,14 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
+
+private extension URL {
+    /// Image files keep the attachment pipeline; everything else can become a
+    /// @-reference when the composer offers one.
+    var isImageFile: Bool {
+        (try? resourceValues(forKeys: [.contentTypeKey]).contentType?.conforms(to: .image)) ?? false
+    }
+}
 
 /// Keys the composer hands to an attached palette before acting on them itself.
 /// Kept minimal so the composer stays a text editor rather than a menu host.
@@ -16,6 +25,8 @@ struct MessageComposer: View {
     var onSend: () -> Void
     var onFiles: (([URL]) -> Void)? = nil
     var onError: ((String) -> Void)? = nil
+    /// Local projects turn pasted non-image files into @-references at the caret.
+    var fileReference: ((URL) -> String?)? = nil
     /// Lets an attached suggestion list claim navigation keys. Returning false leaves
     /// the key to normal editing, so the composer stays a text editor.
     var onKey: ((ComposerKey) -> Bool)? = nil
@@ -30,7 +41,7 @@ struct MessageComposer: View {
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
                        accessibilityLabel: accessibilityLabel, canSend: canSend,
-                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onLongPaste: onLongPaste, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
+                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onLongPaste: onLongPaste, fileReference: fileReference, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
             .frame(height: max(minimumHeight, height))
     }
 }
@@ -47,6 +58,7 @@ struct ComposerEditor: NSViewRepresentable {
     let onError: ((String) -> Void)?
     let onKey: ((ComposerKey) -> Bool)?
     var onLongPaste: ((String) -> String?)? = nil
+    var fileReference: ((URL) -> String?)? = nil
 
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
@@ -107,6 +119,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.onError = onError
         editor.onKey = onKey
         editor.onLongPaste = onLongPaste
+        editor.fileReference = fileReference
         editor.syncDraft(text, selection: selectionAfterReplacement)
         coordinator.measure()
     }
@@ -162,6 +175,10 @@ final class DraftTextView: NSTextView {
     var onLayout: (() -> Void)?
     var onKey: ((ComposerKey) -> Bool)?
     var onLongPaste: ((String) -> String?)?
+    /// Non-image pasted/dropped files become this reference token at the caret
+    /// instead of an attachment (local projects); nil keeps everything as
+    /// attachments (remote hosts, where a local path is meaningless).
+    var fileReference: ((URL) -> String?)?
 
     func syncDraft(_ value: String, selection: NSRange? = nil) {
         guard !hasMarkedText(), string != value else { return }
@@ -230,8 +247,21 @@ final class DraftTextView: NSTextView {
         guard let onFiles else { return super.readSelection(from: board, type: type) }
         if type == .fileURL,
            let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
-            onFiles(urls)
-            return true
+            // Paste and drop share this route (ccgui clipboard parity): images
+            // enter the attachment pipeline, other files become @-references
+            // when the composer offers fileReference, else attach as before.
+            var attached: [URL] = []
+            var referenced = false
+            for url in urls {
+                if !url.isImageFile, let token = fileReference?(url) {
+                    insertText(token, replacementRange: selectedRange())
+                    referenced = true
+                } else {
+                    attached.append(url)
+                }
+            }
+            if !attached.isEmpty { onFiles(attached) }
+            if referenced || !attached.isEmpty { return true }
         }
         if type == .png || type == .tiff,
            let data = board.data(forType: type),
