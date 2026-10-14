@@ -30,6 +30,7 @@ struct ProtocolTests {
         try checkConversationActivity()
         checkConversationTiming()
         checkStreamReveal()
+        checkSafeLink()
         try checkSessionEditStats()
         checkAppVersionCheck()
         try checkWorkflow()
