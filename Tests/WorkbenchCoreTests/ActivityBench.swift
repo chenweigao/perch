@@ -61,4 +61,30 @@ func benchConversationActivity() throws {
         }
         print("activity_bench turns=\(turns) messages=\(messages.count) edit_stats_median_ms=\(String(format: "%.3f", median(derive))) running_ids_median_ms=\(String(format: "%.3f", median(running))) activity_init_median_ms=\(String(format: "%.3f", median(activity))) checksum=\(checksum)")
     }
+    // One autonomous turn: the current-turn projection, not session history, grows.
+    for calls in [200, 1000] {
+        var raw: [[String: Any]] = [["id": "user", "role": "user", "created_at": "0",
+                                     "content": [["type": "text", "text": "持续执行目标"]]]]
+        for call in 0..<calls {
+            let id = String(format: "%05d", call)
+            raw.append(["id": "call-\(id)", "role": "assistant", "created_at": id, "content": [
+                ["type": "text", "text": "检查第 \(call) 步。"],
+                ["type": "tool_use", "tool_call_id": "bash-\(id)", "tool_name": "Bash",
+                 "input": ["command": "swift test --filter Case\(call)", "description": "Run case \(call)"]]]])
+            if call < calls - 1 {
+                raw.append(["id": "result-\(id)", "role": "user", "created_at": id, "content": [
+                    ["type": "tool_result", "tool_call_id": "bash-\(id)", "is_error": false, "output": "ok \(call)"]]])
+            }
+        }
+        let messages = try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
+        let ids = ToolVisibilityProjection.runningIDs(in: messages, busy: true)
+        var activity: [Double] = []
+        var active = 0
+        for _ in 0..<15 {
+            let t0 = CACurrentMediaTime()
+            active &+= ConversationActivity(messages: messages, isRunning: true, running: ids, online: true).activeTools.count
+            activity.append((CACurrentMediaTime() - t0) * 1000)
+        }
+        print("activity_bench single_turn_calls=\(calls) messages=\(messages.count) activity_init_median_ms=\(String(format: "%.3f", median(activity))) active=\(active)")
+    }
 }
