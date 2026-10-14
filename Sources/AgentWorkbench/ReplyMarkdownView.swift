@@ -329,11 +329,41 @@ extension EnvironmentValues {
 
 /// Both native user rows and SwiftUI Markdown share exact text attributes.
 enum ReplyTextAttributes {
+    /// Attributed paragraph text is a pure function of runs and style. The live
+    /// row's crossing group rebuilds it every reveal frame, including the file
+    /// reference scan; memoize so a frame only slices the cached string.
+    /// Render-thread only.
+    private struct ParagraphsKey: Hashable {
+        let paragraphs: [[ReplyInline]]
+        let size: CGFloat
+        let weight: CGFloat
+        let alignment: TextAlignment
+        let lineHeight: CGFloat
+        let paragraphSpacing: CGFloat
+        let ink: ObjectIdentifier
+    }
+    private static var paragraphsCache: [ParagraphsKey: NSAttributedString] = [:]
+    private static var paragraphsCacheOrder: [ParagraphsKey] = []
+    private static var paragraphsCacheCharacters = 0
+
     static func paragraphs(_ paragraphs: [[ReplyInline]], size: CGFloat = ReplyStyle.bodySize,
                            weight: NSFont.Weight = .regular, alignment: TextAlignment = .leading,
                            lineHeight: CGFloat? = nil, paragraphSpacing: CGFloat = 12,
                            ink: NSColor = ReplyStyle.nativeInk) -> NSAttributedString {
+        let key = ParagraphsKey(paragraphs: paragraphs, size: size, weight: weight.rawValue,
+                                alignment: alignment, lineHeight: lineHeight ?? size * ReplyStyle.lineHeightRatio,
+                                paragraphSpacing: paragraphSpacing, ink: ObjectIdentifier(ink))
+        if let cached = paragraphsCache[key] {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("paragraphs_cache_hit")
+            #endif
+            if let index = paragraphsCacheOrder.firstIndex(of: key) {
+                paragraphsCacheOrder.append(paragraphsCacheOrder.remove(at: index))
+            }
+            return cached
+        }
         #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count("paragraphs_cache_miss")
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("attributed_text", since: start) }
         #endif
@@ -377,6 +407,19 @@ enum ReplyTextAttributes {
             if result.attribute(.link, at: range.location, effectiveRange: nil) == nil {
                 result.addAttribute(.link, value: reference.url, range: range)
             }
+        }
+        let characters = result.length
+        if characters <= 512_000 {
+            while !paragraphsCacheOrder.isEmpty,
+                  paragraphsCacheOrder.count >= 96 || paragraphsCacheCharacters + characters > 512_000 {
+                let oldest = paragraphsCacheOrder.removeFirst()
+                if let evicted = paragraphsCache.removeValue(forKey: oldest) {
+                    paragraphsCacheCharacters -= evicted.length
+                }
+            }
+            paragraphsCache[key] = result
+            paragraphsCacheOrder.append(key)
+            paragraphsCacheCharacters += characters
         }
         return result
     }
