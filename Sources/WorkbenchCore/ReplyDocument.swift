@@ -19,7 +19,7 @@ public struct ReplyListItem: Equatable {
 
 public enum ReplyAlignment: Equatable { case leading, center, trailing }
 
-public struct ReplyInline: Equatable {
+public struct ReplyInline: Equatable, Hashable {
     public var text: String
     public var strong = false
     public var emphasis = false
