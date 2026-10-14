@@ -122,14 +122,15 @@ struct ConversationActivityBar: View {
                 if reviewCount > 0 {
                     Text("\(reviewCount) 项需关注").foregroundStyle(Color.orange).fixedSize()
                 }
+                // Lowest priority: the spacer takes only what the metrics leave.
+                // Facts stay right-aligned, so a changing title never shifts them.
+                Spacer(minLength: 6).layoutPriority(-2)
                 ViewThatFits(in: .horizontal) {
                     metrics(upTo: 3)
                     metrics(upTo: 2)
                     metrics(upTo: 1)
                     EmptyView()
                 }.font(.system(size: 11)).foregroundStyle(.tertiary).layoutPriority(-1)
-                // Lowest priority: the spacer takes only what the metrics leave.
-                Spacer(minLength: 6).layoutPriority(-2)
                 if let timing {
                     ActivityTurnClock(timing: timing).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
