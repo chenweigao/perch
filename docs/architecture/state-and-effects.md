@@ -244,8 +244,10 @@ and rationale are in [the experiment report](../performance/2026-09-29-sidebar-b
 The `sidebar-layout-*` acceptance modes separate title edits, permutations of the
 same rows, favorites-section/member changes, and status/subtitle/height changes.
 A no-op replay is the timing floor; `height-fixed` repeats identical status changes
-while reserving 48pt. Only acceptance builds can enable that height override.
-Production rows continue to use 34pt or 48pt according to their subtitle.
+while reserving the subtitle height. Only acceptance builds can enable that height
+override. Production rows use `SidebarMetrics.rowHeight` (32pt) or
+`subtitleRowHeight` (44pt) according to their subtitle; earlier reports measured
+the previous 34/48pt rows.
 
 Mounted row probes verify actual order and height as well as row values before
 ending each response sample. ID-based membership and top-edge changes are counted

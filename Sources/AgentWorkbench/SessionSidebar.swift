@@ -125,17 +125,23 @@ struct WorkbenchSidebar: View {
             var session: WorkspaceSession?
             switch entry {
             case .favorites:
-                height = 47; view = AnyView(SidebarSection("置顶", id: "favorites") { EmptyView() })
+                height = SidebarMetrics.sectionHeight; view = AnyView(SidebarSection("置顶", id: "favorites") { EmptyView() })
             case .recent:
-                height = 47; view = AnyView(SidebarSection("最近会话", id: "recent") { EmptyView() } actions: { recentActions })
+                height = SidebarMetrics.sectionHeight
+                view = AnyView(SidebarSection("最近会话", id: "recent") { EmptyView() } actions: { recentActions })
             case .groups:
-                height = groupsExpanded ? CGFloat(82 + model.groupShortcuts.count * 37) : 47
+                // Header, one row per group and the 26 pt “all groups” action, 2 pt apart.
+                height = groupsExpanded
+                    ? SidebarMetrics.sectionHeight + 28 + CGFloat(model.groupShortcuts.count) * (SidebarMetrics.rowHeight + 2)
+                    : SidebarMetrics.sectionHeight
                 view = AnyView(groupSection)
             case .footer:
-                height = projection.recent.isEmpty ? 72 : 36; view = AnyView(recentFooter(projection))
+                height = projection.recent.isEmpty ? 33 + SidebarMetrics.rowHeight : SidebarMetrics.rowHeight
+                view = AnyView(recentFooter(projection))
             case .session(let item):
                 session = item
-                height = experiment.fixedSidebarHeight || (!item.archived && (!item.online || item.section == .attention)) ? 48 : 34
+                height = experiment.fixedSidebarHeight || (!item.archived && (!item.online || item.section == .attention))
+                    ? SidebarMetrics.subtitleRowHeight : SidebarMetrics.rowHeight
                 view = AnyView(sessionRow(item, groups: index[item.id]))
             }
             return .init(id: entry.id, session: session, height: height,
@@ -247,11 +253,12 @@ struct WorkbenchSidebar: View {
             case .emptyFavorites:
                 Button { showPinPicker = true } label: {
                     Text("置顶常用会话，随时继续")
-                        .font(.system(size: 11)).foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10).padding(.vertical, 5)
+                        .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, SidebarMetrics.rowInset)
+                        .frame(height: 26)
                 }.buttonStyle(SidebarNavigationStyle()).accessibilityIdentifier("sidebar.pin.empty")
             case .projects:
-                HStack {
+                HStack(spacing: 6) {
                     Menu {
                         Picker("会话视图", selection: $groupedByProject) {
                             Label("按项目", systemImage: "folder").tag(true)
@@ -260,11 +267,9 @@ struct WorkbenchSidebar: View {
                         Divider()
                         Button("重新识别项目") { model.sidebarRepositories.retry() }
                     } label: {
-                        HStack(spacing: 5) {
-                            Text(groupedByProject ? L("项目") : L("最近会话"))
-                                .font(.system(size: 12, weight: .semibold))
-                            Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-                        }.foregroundStyle(.secondary).frame(height: 26)
+                        // The same section title as 置顶; the chevron marks a menu here.
+                        SidebarSectionTitle(title: Text(groupedByProject ? L("项目") : L("最近会话")), expanded: true)
+                            .frame(height: SidebarMetrics.sectionHeaderHeight)
                     }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                         .help("切换会话视图").accessibilityIdentifier("sidebar.layout")
                     Spacer()
@@ -279,7 +284,8 @@ struct WorkbenchSidebar: View {
                             .accessibilityLabel("重新识别项目")
                     }
                     recentActions
-                }.padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 3)
+                }.padding(.leading, SidebarMetrics.rowInset).padding(.trailing, 2)
+                    .padding(.top, SidebarMetrics.sectionTopSpacing).padding(.bottom, SidebarMetrics.sectionBottomSpacing)
             case .project(let project):
                 SidebarProjectHeader(project: project, expanded: !collapsedProjects.contains(project.id),
                     canCreate: project.location.map { location in model.connections.contains { $0.id == location.hostID } } ?? true,
@@ -291,42 +297,44 @@ struct WorkbenchSidebar: View {
             case .session(let item, let indented):
                 SessionSidebarRow(model: model, item: item, groups: index[item.id], compact: true,
                     selected: !model.showDashboard && item.id == model.tabs.selectedID,
-                    onOpen: { model.open(item) }).padding(.leading, indented ? 22 : 0).id(entry.id)
+                    onOpen: { model.open(item) }).padding(.leading, indented ? SidebarMetrics.childIndent : 0).id(entry.id)
             case .more(let project):
+                // Aligned with the titles of the project's sessions above it.
                 Button { expandedProjects.insert(project.id) } label: {
-                    Text("显示全部 \(project.sessions.count) 个会话").font(.system(size: 11)).foregroundStyle(.secondary)
-                }.buttonStyle(SidebarNavigationStyle()).padding(.leading, 32).padding(.vertical, 4)
+                    Text("显示全部 \(project.sessions.count) 个会话").font(.system(size: SidebarMetrics.detailSize))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, SidebarMetrics.childIndent + SidebarMetrics.titleOffset).frame(height: 26)
+                }.buttonStyle(SidebarNavigationStyle())
             case .moreProjects:
-                Button("更多项目") { projectLimit += 8 }
-                    .buttonStyle(SidebarNavigationStyle()).padding(.horizontal, 10).padding(.vertical, 6)
+                moreButton("更多项目") { projectLimit += 8 }
             case .moreSessions(let count):
-                Button("更多会话（共 \(count) 个）") { sessionLimit += 40 }
-                    .buttonStyle(SidebarNavigationStyle()).padding(.horizontal, 10).padding(.vertical, 6)
+                moreButton("更多会话（共 \(count) 个）") { sessionLimit += 40 }
             }
         }
         if projection.ungrouped.isEmpty && (filter != .all || projection.favorites.isEmpty) {
             Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
-                .font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
+                .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
+                .padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 12)
         }
     }
 
+    /// The first section header. It shares the other headers' style; the add
+    /// action stays a solid control so pinning never looks unavailable.
     private func pinnedHeader(count: Int) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Button { favoritesExpanded.toggle() } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "pin.fill").font(.system(size: 10))
-                    Text("置顶").font(.system(size: 12, weight: .semibold))
-                    if count > 0 { Text("\(count)").font(.system(size: 11)).monospacedDigit() }
-                    Image(systemName: favoritesExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .medium))
+                HStack(spacing: 0) {
+                    SidebarSectionTitle(title: Text("置顶"), count: count, expanded: favoritesExpanded)
                     Spacer(minLength: 0)
-                }.frame(height: 28).contentShape(Rectangle())
+                }.padding(.horizontal, SidebarMetrics.rowInset)
+                    .frame(height: SidebarMetrics.sectionHeaderHeight).contentShape(Rectangle())
             }.buttonStyle(SidebarNavigationStyle()).accessibilityLabel("置顶")
                 .accessibilityValue(favoritesExpanded ? Text("已展开") : Text("已收起"))
                 .accessibilityIdentifier("sidebar.section.favorites")
             Button { showPinPicker = true } label: {
-                Image(systemName: "plus").font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.primary).frame(width: 26, height: 26)
+                Image(systemName: "plus").font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.primary).frame(width: 22, height: 22)
                     .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 6))
             }
                 .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
@@ -334,7 +342,16 @@ struct WorkbenchSidebar: View {
                 .popover(isPresented: $showPinPicker, arrowEdge: .trailing) {
                     SidebarPinPicker(model: model).foregroundStyle(Color.primary)
                 }
-        }.foregroundStyle(Color.primary).padding(.horizontal, 10).padding(.top, 8)
+        }.padding(.trailing, 2).padding(.top, 6).padding(.bottom, SidebarMetrics.sectionBottomSpacing)
+    }
+
+    /// Secondary list actions sit under the row titles, quieter than rows.
+    private func moreButton(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, SidebarMetrics.titleOffset).frame(height: 26)
+        }.buttonStyle(SidebarNavigationStyle())
     }
 
     private var groupSection: some View {
@@ -342,14 +359,15 @@ struct WorkbenchSidebar: View {
             ForEach(model.groupShortcuts) { summary in
                 let group = summary.group
                 Button { model.showHome(groupID: group.id) } label: {
-                    HStack(spacing: WorkbenchChrome.labelSpacing) {
-                        Image(systemName: group.isPinned ? "pin" : "folder").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
-                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
+                    HStack(spacing: SidebarMetrics.labelSpacing) {
+                        Image(systemName: group.isPinned ? "pin" : "folder")
+                            .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: SidebarMetrics.iconWidth)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
                         if summary.attentionCount > 0 {
-                            Text("\(summary.attentionCount)").font(.system(size: 11)).foregroundStyle(.orange)
+                            Text("\(summary.attentionCount)").font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.orange)
                         }
-                    }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                    }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
                     .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
                     .contextMenu {
@@ -357,10 +375,9 @@ struct WorkbenchSidebar: View {
                         Button("编辑任务组") { model.editGroup(group) }
                     }
             }
-            Button("全部任务组") {
+            moreButton("全部任务组") {
                 model.clearScope(); model.showHome(); model.showAllTaskGroups = true
-            }.buttonStyle(.plain).foregroundStyle(.secondary)
-                .padding(.leading, 36).padding(.trailing, 10).padding(.vertical, 8)
+            }
         } actions: {
             Button { model.editGroup() } label: {
                 Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
@@ -370,11 +387,13 @@ struct WorkbenchSidebar: View {
     @ViewBuilder private func recentFooter(_ projection: SidebarProjection) -> some View {
         if projection.recent.isEmpty {
             Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
-                .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 26).padding(10)
+                .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
+                .padding(.leading, SidebarMetrics.titleOffset).padding(.vertical, 10)
         }
         Button { model.showAllSessions() } label: {
             HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
-                .padding(.leading, 26).padding(10).contentShape(Rectangle())
+                .padding(.leading, SidebarMetrics.titleOffset).padding(.trailing, SidebarMetrics.rowInset)
+                .frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
         }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
     }
     private var recentActions: some View {

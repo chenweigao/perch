@@ -950,13 +950,15 @@ private struct ReferenceComposerFixtureView: View {
                 let visible = table.visibleSessions
                 let actual = mounted().filter { row in visible.contains(where: { $0.id == row.0.item.id }) }
                 return actual.map { $0.0.item } == visible && actual.allSatisfy { row in
-                    abs(row.1.height - (probe.fixedSidebarHeight || row.0.item.section == .attention ? 48 : 34)) <= 0.5
+                    abs(row.1.height - (probe.fixedSidebarHeight || row.0.item.section == .attention
+                        ? SidebarMetrics.subtitleRowHeight : SidebarMetrics.rowHeight)) <= 0.5
                 }
             }
             let actual = mounted(), items = expected.favorites + expected.recent
             guard actual.count == items.count else { return false }
             return zip(actual, items).allSatisfy { row, item in
-                let height: CGFloat = probe.fixedSidebarHeight || item.section == .attention ? 48 : 34
+                let height: CGFloat = probe.fixedSidebarHeight || item.section == .attention
+                    ? SidebarMetrics.subtitleRowHeight : SidebarMetrics.rowHeight
                 return row.0.item == item && row.0.starred == expected.favorites.contains(where: { $0.id == item.id }) &&
                     row.0.selected == (item.id == base[0].id) && abs(row.1.height - height) <= 0.5
             }
@@ -1062,7 +1064,7 @@ private struct ReferenceComposerFixtureView: View {
                 "geometry": ["height_changes": changedHeights, "moved_rows": movedRows,
                              "inserted_rows": insertedRows, "removed_rows": removedRows], "initial_geometry_samples": samples,
                 "render_stages": NavigationRenderMetrics.report,
-                "layout_contract": probe.sidebarTable != nil ? "full native table data and visible row values/order/heights; offscreen rows unmounted; geometry counts cover mounted markers only" : unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 34/48pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
+                "layout_contract": probe.sidebarTable != nil ? "full native table data and visible row values/order/heights; offscreen rows unmounted; geometry counts cover mounted markers only" : unprobed ? "mounted sidebar projection after layout/display/CA flush; no row probes or geometry validation" : "mounted row values, physical order and 32/44pt height after layout/display/CA flush; fixture generation outside response samples; CPU includes generation and geometry accounting",
                 "fixed_height_is_diagnostic_only": probe.fixedSidebarHeight]
     }
     private func sidebarProjects(_ window: NSWindow) async throws -> [String: Any] {
