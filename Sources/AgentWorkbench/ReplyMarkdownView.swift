@@ -249,10 +249,29 @@ private struct ReplyBlockContent: View, Equatable {
             AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
                 .padding(.leading, 21).padding(.vertical, 7)
                 .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(0.16)).frame(width: 2) }
+        case .alert(let kind, let blocks):
+            ReplyAlertBlock(kind: kind, blocks: blocks, coalescesParagraphs: coalescesParagraphs)
         case .table(let headers, let rows, let alignments):
             ReplyTable(headers: headers, rows: rows, alignments: alignments)
         case .rule: Rectangle().fill(.primary.opacity(0.09)).frame(height: 1)
         }
+    }
+}
+
+/// GitHub-style alert (> [!NOTE] …): tinted bar, kind title, compact content.
+/// Layout mirrors the quote block so both sit identically in the reading column.
+private struct ReplyAlertBlock: View {
+    let kind: ReplyAlertKind
+    let blocks: [ReplyBlock]
+    var coalescesParagraphs = true
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(kind.title, systemImage: kind.symbol)
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(kind.tint)
+            AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
+        }
+        .padding(.leading, 21).padding(.vertical, 7)
+        .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: 2) }
     }
 }
 

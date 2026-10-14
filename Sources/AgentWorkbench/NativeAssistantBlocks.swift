@@ -83,7 +83,7 @@ enum NativeAssistantContent {
             case .list(let items):
                 guard allowsRichBlocks, let list = listItems(items, depth: 1) else { return nil }
                 flush(); result.append(.list(list))
-            case .table, .math:
+            case .table, .math, .alert:
                 return nil
             }
         }

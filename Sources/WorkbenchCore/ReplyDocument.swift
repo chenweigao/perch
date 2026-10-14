@@ -11,7 +11,37 @@ public enum ReplyBlock: Equatable {
     indirect case list([ReplyListItem])
     indirect case quote([ReplyBlock])
     case table(headers: [[ReplyInline]], rows: [[[ReplyInline]]], alignments: [ReplyAlignment])
+    /// GitHub-style alert quote (> [!NOTE] …): kind drives the tinted chrome.
+    case alert(kind: ReplyAlertKind, [ReplyBlock])
     case rule
+}
+
+public enum ReplyAlertKind: String, Equatable, CaseIterable {
+    case note, tip, important, warning, caution
+}
+
+/// `> [!NOTE]`-style alert detection (ccgui remark-github-alerts parity).
+public enum ReplyAlert {
+    /// The first line of a quote starts with [!TYPE]; the marker is consumed.
+    public static func rewrite(_ blocks: [ReplyBlock]) -> (ReplyAlertKind, [ReplyBlock])? {
+        guard case .paragraph(let runs) = blocks.first,
+              let first = runs.first, first.text.hasPrefix("[!"),
+              let close = first.text.firstIndex(of: "]") else { return nil }
+        let marker = first.text.dropFirst(2).prefix(upTo: close).lowercased()
+        guard let kind = ReplyAlertKind(rawValue: String(marker)) else { return nil }
+        var rest = runs
+        var head = first
+        head.text = String(first.text[first.text.index(after: close)...])
+            .trimmingCharacters(in: .init(charactersIn: " \n"))
+        if head.text.isEmpty { rest.removeFirst() } else { rest[0] = head }
+        // The soft break after the marker line is layout, not content.
+        if rest.first?.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true {
+            rest.removeFirst()
+        }
+        var inner = blocks
+        if rest.isEmpty { inner.removeFirst() } else { inner[0] = .paragraph(rest) }
+        return (kind, inner)
+    }
 }
 
 public struct ReplyListItem: Equatable {
@@ -57,7 +87,10 @@ public enum ReplyDocument {
                 return [.list(value.listItems.map { item in
                     ReplyListItem(marker: item.checkbox.map { $0 == .checked ? "☑" : "☐" } ?? "•", blocks: blocks(item))
                 })]
-            case let value as BlockQuote: return [.quote(blocks(value))]
+            case let value as BlockQuote:
+                let inner = blocks(value)
+                if let (kind, content) = ReplyAlert.rewrite(inner) { return [.alert(kind: kind, content)] }
+                return [.quote(inner)]
             case let value as Markdown.Table:
                 let alignments: [ReplyAlignment] = value.columnAlignments.map {
                     switch $0 { case .center: return .center; case .right: return .trailing; default: return .leading }
