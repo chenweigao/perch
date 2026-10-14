@@ -363,7 +363,15 @@ enum ReplyTextAttributes {
                     .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
                 ]
                 if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
-                if let link = run.link { attributes[.link] = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url ?? link }
+                if let link = run.link {
+                    // Render layer: only allowlisted schemes become clickable;
+                    // everything else stays plain text (SafeLink).
+                    if let reference = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url {
+                        attributes[.link] = reference
+                    } else if SafeLink.allowed(link) {
+                        attributes[.link] = link
+                    }
+                }
                 result.append(NSAttributedString(string: run.text, attributes: attributes))
             }
         }
@@ -474,9 +482,14 @@ struct SelectableReplyText: NSViewRepresentable {
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
-            guard let url = (link as? URL) ?? (link as? String).flatMap(URL.init(string:)), url.scheme == "perch-file" else { return false }
-            NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: url)
-            return true
+            guard let url = (link as? URL) ?? (link as? String).flatMap(URL.init(string:)) else { return false }
+            if url.scheme == "perch-file" {
+                NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: url)
+                return true
+            }
+            // Click layer defense in depth: non-allowlisted schemes are
+            // swallowed here even if some path missed the render allowlist.
+            return !SafeLink.allowed(url)
         }
     }
     // Dismantled paragraphs hold no message content or delegate. Reuse only after
