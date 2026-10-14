@@ -124,7 +124,7 @@ struct KimiMessageView: View {
         }
     }
     private var content: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
             ForEach(Array(message.content.enumerated()), id: \.offset) { _, part in
                 switch part.type {
                 case "text":
@@ -828,7 +828,8 @@ private final class ConversationDocumentView: NSView {
         geometry = ConversationRowGeometry(heights: heights, spacingAfter: contents.indices.map(spacing(after:)))
     }
     private func spacing(after index: Int) -> CGFloat {
-        index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess ? 6 : 18
+        index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess
+            ? ReplyStyle.processEntrySpacing : ReplyStyle.entrySpacing
     }
     private var viewportRect: CGRect {
         if let clip = observedClip {
@@ -1938,7 +1939,8 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.foldedRows == rhs.foldedRows
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // The native assistant row places its actions with the same gap.
+        VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
             if let activityNarrative, activityNarrative.isAnchor, activityNarrative.stageClosed,
                entry.isNarrativeSource(for: activityNarrative.narrative) {
                 ActivityNarrativeHistoryView(narrative: activityNarrative.narrative)
@@ -1951,7 +1953,7 @@ private struct ConversationEntryView: View, Equatable {
                                      })
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
-                        if commentaryExpanded { VStack(alignment: .leading, spacing: 12) {
+                        if commentaryExpanded { VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
                             ForEach(entry.messages) { message in
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
                                                 markdownPreparation: markdownPreparation)
@@ -2063,7 +2065,8 @@ struct ProcessFoldRow: View {
 private enum ThoughtTextStyle {    static let attributes: [NSAttributedString.Key: Any] = {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = 4
-        let font = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 13, weight: .light), toHaveTrait: .italicFontMask)
+        // A step below the 14 pt body; regular weight keeps secondary ink legible.
+        let font = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 12.5, weight: .regular), toHaveTrait: .italicFontMask)
         return [.font: font, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph]
     }()
 }

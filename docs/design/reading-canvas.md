@@ -1,15 +1,21 @@
 # Reading canvas
 
-The conversation keeps its centered 720-point reading column and existing native
-sidebar/composer glass. Typography now emphasizes a consistent reading rhythm:
+The conversation keeps a centered reading column and the existing native
+sidebar/composer glass. All metrics live in `ReplyStyle` (`ReplyMarkdownView.swift`);
+see [the visual refresh](visual-refresh.md) for the complete scale and rationale.
 
-- System body text: 16 pt with a 27 pt line height and 14 pt paragraph separation.
-- Ordinary Markdown headings: 16 pt semibold; H1: 18 pt. All use the same 27 pt
-  line height. Heading spacing, rather than a large type-size ladder, signals hierarchy.
-- Lists retain tighter inner spacing. Code and table text use 14 pt. User messages
-  share the body size with a slightly tighter 24 pt line height.
-- SwiftUI and native cached rows share the same text attributes and spacing.
-- List markers form one right-aligned column per list (at least 18 pt, as wide as the
+- System body text: 14 pt on a 22 pt line with 10 pt paragraph separation, in a
+  680-point column (about 48 CJK characters per line). 16 pt read as web-sized in a
+  native window.
+- Ordinary Markdown headings: 14 pt semibold; H1: 16 pt. All use the same 22 pt
+  line height. Heading spacing (20 pt above, 6 pt below), rather than a large
+  type-size ladder, signals hierarchy.
+- Lists, quotes and alerts use compact 6 pt paragraph gaps. Code uses 12.5 pt
+  monospaced text and tables 13 pt. User messages share the body size on a slightly
+  tighter 21 pt line.
+- SwiftUI and native cached rows share the same text attributes, block rhythm
+  (`ReplyStyle.blockSpacing`), code card, quote and list metrics.
+- List markers form one right-aligned column per list (at least 16 pt, as wide as the
   widest marker), computed by `ReplyListMetrics` for both renderers. Items of a ten-item
   ordered list start at one x, and a streamed reply does not shift when it settles into
   the native row. Strong text never lightens a semibold heading.
