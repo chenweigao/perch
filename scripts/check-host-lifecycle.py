@@ -19,7 +19,7 @@ ghostty = ROOT / ".build/artifacts/libghostty-spm/libghostty/GhosttyKit.xcframew
 includes += ["-I", str(ghostty / "Headers")]
 objects = []
 for target in ["WorkbenchCore", "Markdown", "CAtomic", "cmark_gfm", "cmark_gfm_extensions",
-               "GhosttyTerminal", "GhosttyKit", "MSDisplayLink"]:
+               "GhosttyTerminal", "GhosttyKit", "MSDisplayLink", "SwiftMath"]:
     objects += sorted((BIN / (target + ".build")).glob("*.o"))
 sources = sorted(path for path in (ROOT / "Sources/AgentWorkbench").glob("*.swift")
                  if path.name != "WorkbenchApp.swift")
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     shutil.copy2(compiled, executable)
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
     try:
-        for phase in ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header"]:
+        for phase in ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas"]:
             subprocess.run([str(executable), phase], check=True, timeout=30)
     finally:
         subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)

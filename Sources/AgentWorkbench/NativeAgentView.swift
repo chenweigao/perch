@@ -67,7 +67,15 @@ struct NativeAgentView: View {
                     // Load earlier pages only for a reader who scrolled up; an
                     // open session following the tail must not fetch eagerly.
                     if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] == false { connection.loadOlder() }
-                }) {
+                }, showsReturnToLatest: !follow,
+                   hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision),
+                   onReturnToLatest: {
+                       guard isCurrent(s) else { return }
+                       follow = true
+                       ConversationReadingMemory.shared.following[readingKey] = true
+                       ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision)
+                       proxy.scrollTo("bottom", anchor: .bottom)
+                   }) {
                     if s.hasOlder {
                         HStack(spacing: 6) {
                             if connection.loadingOlder {
@@ -101,10 +109,6 @@ struct NativeAgentView: View {
                             }.font(.caption).buttonStyle(.bordered)
                                 .disabled(connection.loadingOlder || !connection.online).padding(8)
                         }
-                    }
-                    .overlay(alignment: .bottomTrailing) {
-                        ReturnToLatestButton(isVisible: !follow, hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision)) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision); proxy.scrollTo("bottom", anchor: .bottom) }
-                            .padding(.trailing, 40).padding(.bottom, 10)
                     }
                     .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
                         if isCurrent(s), (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
