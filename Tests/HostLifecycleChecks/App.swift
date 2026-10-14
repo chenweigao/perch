@@ -16,6 +16,8 @@ import WorkbenchCore
         switch CommandLine.arguments[1] {
         case "stream-reveal":
             try await checkProductionStreamReveal()
+        case "interactions":
+            try await checkDisclosureAndQuestionInteractions()
 
         case "architecture":
             UserDefaults.standard.removePersistentDomain(forName: domain)
