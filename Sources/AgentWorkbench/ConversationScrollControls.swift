@@ -48,6 +48,14 @@ struct ConversationScrollObserver: NSViewRepresentable {
         /// Pause before AppKit moves the clip view. Otherwise a streamed height
         /// update can snap back to the bottom before the old 40-point threshold is crossed.
         func userScrolled(deltaY: CGFloat) {
+            // A downward event with the content already pinned at the tail cannot
+            // move anything. Dropping follow first would flash the return button
+            // and churn transcript state on every momentum tick; resume directly.
+            if deltaY < 0, let scroll = enclosingScrollView, let document = scroll.documentView,
+               document.bounds.maxY - scroll.documentVisibleRect.maxY <= 1 {
+                resumeIfAtBottom()
+                return
+            }
             wheelGeneration += 1
             let generation = wheelGeneration
             onScroll(false)
