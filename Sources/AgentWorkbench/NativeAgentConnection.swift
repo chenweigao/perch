@@ -418,18 +418,25 @@ final class NativeAgentConnection {
             nextCatalogRefresh = .distantPast
         }
         snapshot = next
-        purgeRecordedFailures()
+        purgeRecordedReceipts()
         return true
     }
-    /// A failure receipt can arrive before the snapshot that records the prompt.
-    /// Once the prompt is on screen, the transcript fully represents the failure;
-    /// the local copy is only an invisible blocker for everything queued behind it.
-    private func purgeRecordedFailures() {
+    /// A failure or interruption receipt can arrive before the snapshot that
+    /// records the prompt. Once the prompt is on screen, the transcript fully
+    /// represents the outcome; the local copy is only an invisible blocker for
+    /// everything queued behind it.
+    private func purgeRecordedReceipts() {
         guard let snapshot else { return }
         let visible = Set(snapshot.messages.map(\.id))
+        var purged = false
         for item in queue.allItems where item.session.terminalID == snapshot.id && visible.contains(item.id) {
-            if case .failed = item.state { _ = queue.removeFailed(item.id) }
+            switch item.state {
+            case .failed, .unknown: queue.markDelivered(item.id); purged = true
+            default: break
+            }
         }
+        // Whatever was queued behind the blocker delivers on its own now.
+        if purged { drainQueues() }
     }
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
@@ -651,7 +658,14 @@ final class NativeAgentConnection {
             }
             next = .failed(receipt.error ?? "运行时拒绝消息")
         case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
-        default: next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")
+        default:
+            // An interrupted turn whose prompt is already on screen is fully
+            // represented by the transcript; keeping the local copy would block
+            // every later send behind an entry nobody can see.
+            if snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
+                queue.markDelivered(receipt.id); return
+            }
+            next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")
         }
         if receipt.mode != "steer", ["submitting", "submitted", "accepted", "running"].contains(receipt.status) {
             timings.observe(sessionID: sessionID, turnID: receipt.activeTurnId, requestID: receipt.id,
