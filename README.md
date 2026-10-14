@@ -22,7 +22,7 @@ presentation only; no private conversations or live command results are shown.
 
 ## Why Perch
 
-- **Native conversations.** Streaming replies, Markdown, thinking and tool results, with details that expand when you need them.
+- **Native conversations.** Streaming replies, Markdown (including TeX math typeset natively by SwiftMath), thinking and tool results, with details that expand when you need them.
 - **Start with the right context.** Choose a local or remote environment, search recent projects, and select model, reasoning effort and permissions before sending.
 - **A workspace for your tasks.** Group sessions, pin important work, archive finished conversations and return to your previous workspace.
 - **Know what needs you.** See running tasks, pending questions and results waiting to be read, plus Kimi's subagents (including their own transcripts), background tasks with their output tails, and the session's edit churn (+/− per file) in the activity bar.

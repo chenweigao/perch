@@ -113,6 +113,12 @@ import SwiftUI
 
     [普通链接](https://example.com/)、**[强调链接](https://example.com/)** 和 [`代码链接`](https://example.com/) 保持可辨识，也能选择复制。
 
+    ## 数学公式
+
+    行内公式 $E=mc^2$ 与正文同排不错位，货币 $5 和 $10 不触发渲染。
+
+    $$\frac{1}{2}\sum_{i=1}^{n} x_i^2 + \sqrt{\alpha^2 + \beta^2}$$
+
     ---
 
     **到这里是完整回复的最后一段。** 缩窄窗口后仍应可读，没有裁切或重叠。
