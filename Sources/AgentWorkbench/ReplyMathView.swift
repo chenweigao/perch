@@ -9,13 +9,14 @@ import WorkbenchCore
 struct ReplyMathBlock: View {
     let latex: String
     var body: some View {
-        if let image = ReplyMathImage.image(latex: latex, size: 16, display: true) {
+        // Display math is set at the body size, as in typeset text.
+        if let image = ReplyMathImage.image(latex: latex, size: ReplyStyle.bodySize, display: true) {
             Image(nsImage: image)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 6)
         } else {
             // Unparseable TeX shows its source, never a blank hole.
-            SelectableReplyText(latex, font: .monospacedSystemFont(ofSize: 13, weight: .regular))
+            SelectableReplyText(latex, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular))
         }
     }
 }
