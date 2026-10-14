@@ -163,6 +163,11 @@ extension NavigationRunner {
                 ("引用前导。\n\n> 引用里的内容保持紧凑。\n\n---\n\n分隔之后。", ["引用前导", "引用里的内容", "分隔之后"]),
                 ("- 第一项内容\n- 第二项内容\n  - 嵌套项对齐检查\n- 第三项内容", ["第一项内容", "嵌套项对齐检查", "第三项内容"]),
                 ("1. 有序甲\n2. 有序乙\n\n正文跟随列表之后。", ["有序甲", "有序乙", "正文跟随列表之后"]),
+                // Two-digit markers widen the shared marker column for every item;
+                // single-digit rows must not keep a narrower SwiftUI column.
+                ((1...11).map { "\($0). 第\($0)项条目，中英文 mixed wrapping 的较长内容用于检查换行与对齐" }.joined(separator: "\n") + "\n\n列表之后的段落。",
+                 ["第1项条目", "第9项条目", "第10项条目", "第11项条目", "列表之后的段落"]),
+                ("## 标题里的 **强调** 不变细\n\n正文。", ["标题里的", "强调", "正文"]),
                 ("短行代码不换行：\n\n```\nlet veryLongLine = \"这是一段故意超长不会被换行的代码行，用来覆盖横向滚动的宽度计算路径 abcdefghijklmnopqrstuvwxyz0123456789\"\n```", ["短行代码", "abcdefghijklmnop"])
             ]
         }

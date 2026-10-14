@@ -76,7 +76,7 @@ public enum SessionEditStats {
 
     private static func patchStat(_ patch: String) -> SessionEditStat {
         var stat = SessionEditStat(additions: 0, deletions: 0)
-        for line in patch.split(separator: "\n", omittingEmptySubsequences: false) {
+        for line in lines(patch) {
             if line.hasPrefix("+++ ") || line.hasPrefix("--- ") { continue }
             if line.hasPrefix("+") { stat.additions += 1 }
             else if line.hasPrefix("-") { stat.deletions += 1 }
@@ -84,18 +84,51 @@ public enum SessionEditStats {
         return stat
     }
 
+    /// The derivation reruns for every snapshot the status bar renders, over the
+    /// whole loaded session. Splitting by Character grapheme-breaks every edit
+    /// payload; these UTF-8 scans produce the same lines without that cost.
+    /// `String.split(separator: "\n")` compares Characters, and CR LF is a single
+    /// Character, so only an LF that does not follow a CR separates lines. Such an
+    /// LF is always a grapheme boundary on both sides, so each returned substring
+    /// is exactly the Character-split line and line comparisons keep canonical
+    /// equivalence.
+    private static func lines(_ text: String) -> [Substring] {
+        var result: [Substring] = []
+        let utf8 = text.utf8
+        var start = utf8.startIndex
+        var index = start
+        var previous: UInt8 = 0
+        while index != utf8.endIndex {
+            let byte = utf8[index]
+            if byte == 0x0A && previous != 0x0D {
+                result.append(text[start..<index])
+                start = utf8.index(after: index)
+            }
+            previous = byte
+            utf8.formIndex(after: &index)
+        }
+        result.append(text[start...])
+        return result
+    }
+
     /// A trailing newline ends the last line rather than starting another —
     /// but keep parity with ccgui's JS split, which counts it.
     private static func lineCount(_ text: String) -> Int {
-        text.split(separator: "\n", omittingEmptySubsequences: false).count
+        var count = 1
+        var previous: UInt8 = 0
+        for byte in text.utf8 {
+            if byte == 0x0A && previous != 0x0D { count += 1 }
+            previous = byte
+        }
+        return count
     }
 
     /// Old/new diff counting only the changed middle: common prefix and suffix
     /// lines are context, not edits.
     private static func lineDiff(old: String?, new: String?) -> SessionEditStat? {
         guard old != nil || new != nil else { return nil }
-        let oldLines = old.map { $0.split(separator: "\n", omittingEmptySubsequences: false) } ?? []
-        let newLines = new.map { $0.split(separator: "\n", omittingEmptySubsequences: false) } ?? []
+        let oldLines = old.map(lines) ?? []
+        let newLines = new.map(lines) ?? []
         if old != nil && (new == nil || new!.isEmpty) {
             return SessionEditStat(additions: 0, deletions: oldLines.count)
         }

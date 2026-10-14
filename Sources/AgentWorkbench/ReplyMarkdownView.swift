@@ -237,6 +237,7 @@ private struct ReplyBlockContent: View, Equatable {
         case .code(let language, let source): ReplyCode(language: language, source: source)
         case .math(let latex): ReplyMathBlock(latex: latex)
         case .list(let items):
+            let markerWidth = ReplyListMetrics.columnWidth(items.map(\.marker))
             ReplyListLayout {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 9) {
@@ -245,7 +246,7 @@ private struct ReplyBlockContent: View, Equatable {
                             .alignmentGuide(.firstTextBaseline) { _ in
                                 ceil(NSFont.systemFont(ofSize: ReplyStyle.bodySize).ascender)
                             }
-                            .frame(minWidth: 18, alignment: .trailing)
+                            .frame(width: markerWidth, alignment: .trailing)
                         // Type erasure breaks the recursive SwiftUI view type, not the document hierarchy.
                         AnyView(ReplyBlocks(blocks: item.blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
                     }
@@ -278,6 +279,34 @@ private struct ReplyAlertBlock: View {
         }
         .padding(.leading, 21).padding(.vertical, 7)
         .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: 2) }
+    }
+}
+
+/// One right-aligned marker column per list, at least 18 pt wide, shared by the
+/// SwiftUI and native renderers. Item text starts at the same x for "9." and
+/// "10.", and a settled native row keeps the geometry of the streamed SwiftUI
+/// row it replaces. Widths are measured with the marker's own label metrics.
+@MainActor enum ReplyListMetrics {
+    static let minimumMarkerWidth: CGFloat = 18
+    private static let measuringField: NSTextField = {
+        let field = NSTextField(labelWithString: "")
+        field.font = .systemFont(ofSize: ReplyStyle.bodySize)
+        field.alignment = .right
+        field.lineBreakMode = .byClipping
+        return field
+    }()
+    /// Markers repeat ("•", "1." …); bounded independently of history length.
+    private static var widths: [String: CGFloat] = [:]
+    static func markerWidth(_ marker: String) -> CGFloat {
+        if let width = widths[marker] { return width }
+        measuringField.stringValue = marker
+        let width = measuringField.fittingSize.width
+        if widths.count >= 256 { widths.removeAll(keepingCapacity: true) }
+        widths[marker] = width
+        return width
+    }
+    static func columnWidth(_ markers: [String]) -> CGFloat {
+        max(minimumMarkerWidth, ceil(markers.map(markerWidth).max() ?? 0))
     }
 }
 
@@ -437,7 +466,8 @@ enum ReplyTextAttributes {
                     result.append(attachment)
                     continue
                 }
-                let runWeight: NSFont.Weight = run.strong ? .medium : weight
+                // Strong text is at least medium; it never lightens a semibold heading.
+                let runWeight: NSFont.Weight = run.strong && weight.rawValue < NSFont.Weight.medium.rawValue ? .medium : weight
                 var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
                                     : NSFont.systemFont(ofSize: size, weight: runWeight)
                 if run.emphasis { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }

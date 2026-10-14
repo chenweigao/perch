@@ -61,5 +61,22 @@ func checkSessionEditStats() throws {
     expectEqual(codexStats?.perFile["one.swift"], SessionEditStat(additions: 1, deletions: 1))
     expectEqual(codexStats?.perFile["two.swift"], SessionEditStat(additions: 2, deletions: 0))
     expectEqual(codexStats?.total, SessionEditStat(additions: 3, deletions: 1))
-    print("PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection")
+    // Line boundaries are Character boundaries: CR LF is one Character, so it does
+    // not separate lines, while a trailing LF still counts; equal lines compare by
+    // canonical equivalence, and a combining mark changes a patch line's marker.
+    do {
+        let crlf = try editMessage("crlf", "Write", #"{"path":"crlf.txt","content":"a\r\nb\r\nc"}"#)
+        expectEqual(SessionEditStats.derive(from: [crlf])?.perFile["crlf.txt"], SessionEditStat(additions: 1, deletions: 0))
+        let mixed = try editMessage("mixed", "Write", #"{"path":"mixed.txt","content":"a\rb\nc\r\n\nd\n"}"#)
+        expectEqual(SessionEditStats.derive(from: [mixed])?.perFile["mixed.txt"], SessionEditStat(additions: 4, deletions: 0))
+        let empty = try editMessage("empty-write", "Write", #"{"path":"empty.txt","content":""}"#)
+        expectEqual(SessionEditStats.derive(from: [empty])?.perFile["empty.txt"], SessionEditStat(additions: 1, deletions: 0))
+        let equivalent = try editMessage("nfc", "Edit", #"{"path":"nfc.txt","old_string":"café\n中文 👩🏽‍💻\nend","new_string":"café\n中文 👩🏽‍💻\nend"}"#)
+        expectEqual(SessionEditStats.derive(from: [equivalent])?.perFile["nfc.txt"], SessionEditStat(additions: 0, deletions: 0))
+        let windows = try editMessage("crlf-edit", "Edit", #"{"path":"w.txt","old_string":"same\r\nold\nkeep","new_string":"same\r\nnew\nkeep"}"#)
+        expectEqual(SessionEditStats.derive(from: [windows])?.perFile["w.txt"], SessionEditStat(additions: 1, deletions: 1))
+        let marked = try editMessage("marked", "apply_patch", #"{"path":"m.swift","patch":"+́combined\n+added\n-removed\n\n"}"#)
+        expectEqual(SessionEditStats.derive(from: [marked])?.perFile["m.swift"], SessionEditStat(additions: 1, deletions: 1))
+    }
+    print("PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection, Character line boundaries")
 }

@@ -15,6 +15,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/UILocalization.swift \
+    Sources/AgentWorkbench/ConversationReadingMemory.swift \
     Tests/ActivityBarPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ActivityBarPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'

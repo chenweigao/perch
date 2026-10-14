@@ -412,7 +412,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         }
     }
     private func markerWidth() -> CGFloat {
-        items.map { $0.marker.fittingSize.width }.max().map { max(18, ceil($0)) } ?? 18
+        ReplyListMetrics.columnWidth(items.map { $0.marker.stringValue })
     }
     private func rows(width: CGFloat) -> [CGFloat] {
         let contentWidth = max(1, width - markerWidth() - 9)

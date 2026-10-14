@@ -75,6 +75,7 @@ struct GoalHeaderBar: View {
         .accessibilityIdentifier("goal-header")
     }
 
+    /// Reserve status height so the running indicator never moves the transcript.
     @ViewBuilder private var status: some View {
         if isStale {
             Button(action: onRefresh) {
@@ -94,7 +95,7 @@ struct GoalHeaderBar: View {
                 case "blocked": Label("需处理", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
                 default: Label("状态未知", systemImage: "questionmark.circle").foregroundStyle(.secondary)
                 }
-            }
+            }.frame(minHeight: 16)
         }
     }
 }

@@ -36,8 +36,10 @@ import WorkbenchCore
     click(x: 620, top: 43)
     precondition(controls == ["pause"], "Visible pause action controls continuation")
 
-    for (_, state, running, stale, width) in [
+    var wideHeights: [String: CGFloat] = [:]
+    for (name, state, running, stale, width) in [
         ("running", "active", true, false, 720.0),
+        ("waiting", "active", false, false, 720.0),
         ("paused", "paused", false, false, 720.0),
         ("paused-current-turn", "paused", true, false, 720.0),
         ("complete", "complete", false, false, 720.0),
@@ -51,6 +53,25 @@ import WorkbenchCore
         window.setContentSize(NSSize(width: width, height: 200))
         try await Task.sleep(for: .milliseconds(100))
         precondition(layoutHost.fittingSize.height > 40 && layoutHost.fittingSize.height < 130, "Collapsed goal remains a compact header at narrow widths")
+        if !stale { wideHeights[name] = layoutHost.fittingSize.height }
     }
-    print("PASS: goal header disclosure, direct pause, compact running/paused/complete/stale layouts")
+    // The header sits above the transcript: a turn starting or ending must not
+    // change its height when the running indicator replaces the waiting label.
+    // A one-line objective lets the status column, not the text, set the height.
+    for running in [true, false] {
+        let preview = GoalHeaderBar(goal: KimiGoal(objective: "整理阅读画布", status: "active", turnsUsed: 1, tokensUsed: 900),
+                                    isRunning: running, isStale: false, controlsEnabled: true, onControl: { _ in })
+            .frame(width: 720).environment(\.locale, Locale(identifier: "zh-Hans"))
+        let layoutHost = NSHostingView(rootView: preview)
+        window.contentView = layoutHost
+        window.setContentSize(NSSize(width: 720, height: 200))
+        try await Task.sleep(for: .milliseconds(100))
+        wideHeights[running ? "short-running" : "short-waiting"] = layoutHost.fittingSize.height
+    }
+    let reference = wideHeights["running"]!
+    precondition(wideHeights.filter { !$0.key.hasPrefix("short") }.values.allSatisfy { abs($0 - reference) < 0.5 },
+                 "Goal header height changes with run state: \(wideHeights)")
+    precondition(abs(wideHeights["short-running"]! - wideHeights["short-waiting"]!) < 0.5,
+                 "Short goal header height changes when a turn starts: \(wideHeights)")
+    print("PASS: goal header disclosure, direct pause, compact running/paused/complete/stale layouts, run-state-independent height")
 }

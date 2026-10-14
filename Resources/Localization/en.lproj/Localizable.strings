@@ -328,6 +328,12 @@
 "查看" = "Review";
 "等待你确认 · %lld 项" = "Waiting for you · %lld items";
 "关闭活动详情" = "Close activity details";
+"%lld/%lld 步" = "%lld/%lld steps";
+"%lld 个工具" = "%lld tools";
+"查看等待你确认的事项" = "Review what is waiting for you";
+"查看需要关注的工具结果" = "Review tool results that need attention";
+"返回最新" = "Return to latest";
+"有新内容，返回最新" = "New content — return to latest";
 "连接已断开，以下为最后收到的工具状态。" = "Connection lost. Tool states below are the last received states.";
 "当前操作" = "Current activity";
 "任务计划" = "Task plan";
@@ -1315,3 +1321,10 @@
 "重新同步目标" = "Refresh goal";
 
 "有新内容" = "New content";
+
+/* Markdown alert headings. */
+"注意" = "Note";
+"提示" = "Tip";
+"重要" = "Important";
+"警告" = "Warning";
+"当心" = "Caution";
