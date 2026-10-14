@@ -61,6 +61,7 @@ struct ProtocolTests {
         try await checkRemoteFileViewer()
         try await checkRemoteGitDiff()
         try await checkRemoteGitComparison()
+        try await checkRemoteGitWrite()
         try await checkProjectFileReferences()
         let checks = ProtocolTests()
         checks.testPreviewAndPinnedTabs()

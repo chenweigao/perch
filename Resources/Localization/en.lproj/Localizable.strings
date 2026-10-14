@@ -1201,6 +1201,7 @@
 
 "没有可置顶的会话" = "No chats available to pin";
 
+"所选目录不是可用的 Git 工作树。" = "The selected directory is not an available Git worktree.";
 "确认本题并继续" = "Confirm and continue";
 
 "修改回答" = "Edit answer";

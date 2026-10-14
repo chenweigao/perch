@@ -14,6 +14,8 @@ import WorkbenchCore
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
         switch CommandLine.arguments[1] {
+        case "git-write":
+            try await checkGitWriteLifecycle()
         case "stream-reveal":
             try await checkProductionStreamReveal()
         case "interactions":

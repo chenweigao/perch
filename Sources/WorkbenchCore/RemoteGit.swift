@@ -277,3 +277,143 @@ public enum RemoteGitCommand {
         return .text(text, truncated: truncated)
     }
 }
+
+public struct RemoteGitCommit: Equatable, Identifiable, Sendable {
+    public let hash: String
+    public let subject: String
+    public let relativeDate: String
+    public let author: String
+    public var id: String { hash }
+}
+
+public struct RemoteGitBranches: Equatable, Sendable {
+    /// nil when HEAD is detached.
+    public let current: String?
+    public let names: [String]
+}
+
+public enum RemoteGitWrite: Equatable, Sendable {
+    case ok
+    case notARepository
+    case failed(String)
+}
+
+extension RemoteGitCommand {
+    /// Write and history invocations stay fixed scripts with user input passed
+    /// as quoted positional parameters. Unlike the read scripts they must NOT
+    /// export GIT_OPTIONAL_LOCKS=0: staging and committing require the lock.
+    private static func writeScript(_ action: String) -> String {
+        """
+        cd -- "$1" 2>/dev/null || { printf 'kind=notrepo\\n'; exit 0; }
+        if ! git \(safety) rev-parse --show-toplevel >/dev/null 2>&1; then printf 'kind=notrepo\\n'; exit 0; fi
+        if out=$(git \(safety) \(action) 2>&1); then
+          printf 'kind=write\\nok=1\\n--\\n'
+        else
+          printf 'kind=write\\nok=0\\n--\\n%s' "$out"
+        fi
+        """
+    }
+
+    public static func stageCommand(directory: String, path: String, originalPath: String? = nil) -> String {
+        let paths = [path] + (originalPath.map { [$0] } ?? [])
+        let arguments = originalPath == nil ? "\"$2\"" : "\"$2\" \"$3\""
+        return (["/bin/sh", "-c", writeScript("--literal-pathspecs add -- " + arguments), "perch-git", directory] + paths)
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+    /// `reset -q` covers unborn HEAD too; `restore --staged` resolves HEAD and
+    /// fails before the first commit.
+    public static func unstageCommand(directory: String, path: String, originalPath: String? = nil) -> String {
+        let paths = [path] + (originalPath.map { [$0] } ?? [])
+        let arguments = originalPath == nil ? "\"$2\"" : "\"$2\" \"$3\""
+        return (["/bin/sh", "-c", writeScript("--literal-pathspecs reset -q -- " + arguments), "perch-git", directory] + paths)
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+    public static func commitCommand(directory: String, message: String) -> String {
+        ["/bin/sh", "-c", writeScript("commit -m \"$2\""), "perch-git", directory, message]
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+    public static func switchCommand(directory: String, branch: String) -> String {
+        ["/bin/sh", "-c", writeScript("switch \"$2\""), "perch-git", directory, branch]
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+
+    /// Body: current branch (empty when detached) then one branch per line.
+    static func branchesScript() -> String {
+        """
+        \(guardScript)
+        printf 'kind=branches\\n--\\n'
+        git \(safety) symbolic-ref --short -q HEAD 2>/dev/null || printf '\\n'
+        git \(safety) for-each-ref --format='%(refname:short)' refs/heads
+        """
+    }
+    public static func branchesCommand(directory: String) -> String {
+        ["/bin/sh", "-c", branchesScript(), "perch-git", directory]
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+
+    /// Body: one commit per line, NUL-separated hash/subject/relative date/author.
+    static func logScript(limit: Int) -> String {
+        """
+        \(guardScript)
+        printf 'kind=log\\n--\\n'
+        git \(safety) log -n \(limit) --format='%h%x00%s%x00%cr%x00%an%x00'
+        """
+    }
+    public static func logCommand(directory: String, limit: Int = 40) -> String {
+        ["/bin/sh", "-c", logScript(limit: limit), "perch-git", directory]
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+
+    /// One commit's metadata and diff, sharing the kind=diff envelope with
+    /// parseDiff (truncation and binary handling included).
+    static func showScript(limit: Int) -> String {
+        """
+        \(guardScript)
+        printf 'kind=diff\\n--\\n'
+        git \(safety) show --no-ext-diff --no-textconv --format=medium "$2" \
+          | head -c \(limit + 1)
+        """
+    }
+    public static func showCommand(directory: String, commit: String, limit: Int = diffLimit) -> String {
+        ["/bin/sh", "-c", showScript(limit: limit), "perch-git", directory, commit]
+            .map(SSHCommand.quote).joined(separator: " ")
+    }
+
+    public static func parseWrite(_ data: Data) throws -> RemoteGitWrite {
+        let result = try body(data)
+        if result.kind == "notrepo" { return .notARepository }
+        guard result.kind == "write" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        if result.fields["ok"] == "1" { return .ok }
+        let message = String(decoding: result.body, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        return .failed(message.isEmpty ? "远端 Git 操作失败。" : message)
+    }
+
+    public static func parseBranches(_ data: Data) throws -> RemoteGitBranches? {
+        let result = try body(data)
+        if result.kind == "notrepo" { return nil }
+        guard result.kind == "branches" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        var lines = String(decoding: result.body, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+        let current = lines.isEmpty ? nil : lines.removeFirst()
+        return RemoteGitBranches(current: current?.isEmpty == false ? current : nil,
+                                 names: lines.filter { !$0.isEmpty })
+    }
+
+    public static func parseLog(_ data: Data) throws -> [RemoteGitCommit]? {
+        let result = try body(data)
+        if result.kind == "notrepo" { return nil }
+        guard result.kind == "log" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        return String(decoding: result.body, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.isEmpty }
+            .map { line in
+                let fields = line.split(separator: "\0", omittingEmptySubsequences: false)
+                return RemoteGitCommit(hash: String(fields[safe: 0] ?? ""), subject: String(fields[safe: 1] ?? ""),
+                                       relativeDate: String(fields[safe: 2] ?? ""), author: String(fields[safe: 3] ?? ""))
+            }
+            .filter { !$0.hash.isEmpty }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}
