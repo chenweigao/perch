@@ -1192,14 +1192,15 @@ private struct ReferenceComposerFixtureView: View {
                   let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
             return scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
         }
+        // Regrouping moves the row, not the reader: the sidebar keeps its scroll
+        // position (#142, covered by host-lifecycle sidebar-scroll). The moved
+        // session stays mounted and selected in its new project.
         for destination in [first.location, nil] {
             model.moveSidebarSession(outside, to: destination)
-            try await settle(window, "selected session stays visible after regrouping") {
-                guard let row = self.probe.sidebarRows.allObjects.first(where: { $0.window === window && $0.value?.item.id == outside.id }),
-                      let scroll = row.enclosingScrollView, let document = scroll.documentView else { return false }
+            try await settle(window, "selected session stays selected after regrouping") {
                 let project = self.probe.sidebarProjection?.projects.first { $0.sessions.contains { $0.id == outside.id } }
                 return project?.id == (destination?.id ?? original.projects[15].id)
-                    && scroll.documentVisibleRect.contains(row.convert(row.bounds, to: document))
+                    && rows().contains { $0.item.id == outside.id && $0.selected }
             }
         }
         func findSplit(_ view: NSView?) -> NSSplitView? {
