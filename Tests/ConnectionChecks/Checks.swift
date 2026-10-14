@@ -270,6 +270,7 @@ struct ConnectionChecks {
         try await checkKimiObservation()
         try await checkSendFailureIsolation()
         try await checkFailedTurnUnblocksQueue()
+        try await checkInterruptedReceiptUnblocksQueue()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
         try await checkNativeModelCatalog()
@@ -730,6 +731,42 @@ struct ConnectionChecks {
         precondition(client.queue.message("after-failure")?.state == .accepted)
         client.disconnect()
         print("PASS: failed turn pauses the queue, recorded failures are purged, explicit resume delivers parked drafts")
+    }
+
+    /// An interrupted turn keeps its receipt unknown forever; once the transcript
+    /// records the prompt, the entry must not invisibly block everything behind it.
+    @MainActor
+    static func checkInterruptedReceiptUnblocksQueue() async throws {
+        let fixture = TransportFixture()
+        let client = NativeAgentConnection(host: SSHHost(name: "Interrupt", destination: "fixture"), transport: fixture.request)
+        try await client.refresh(); client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        let a = client.reference("a")!
+        let body: [[String: Any]] = [["type": "text", "text": "被打断的一轮"]]
+
+        // The bridge restarts mid-turn: the receipt never resolves past unknown,
+        // and a later draft must not bypass the unconfirmed instruction.
+        client.queue.enqueue("被打断的一轮", for: a, mode: .now, id: "int-a")
+        client.resumeQueue(a)
+        await settle { fixture.prompts == ["a"] && !client.sending }
+        fixture.sessions["a"]?["busy"] = false
+        fixture.receipts["int-a"] = "unknown"
+        try await client.refresh()
+        if case .unknown = client.queue.message("int-a")?.state {} else { preconditionFailure("Interrupted receipt stays unknown") }
+        client.queue.enqueue("继续", for: a, mode: .now, id: "after-int")
+        client.resumeQueue(a)
+        try? await Task.sleep(for: .milliseconds(200))
+        precondition(fixture.prompts.count == 1, "An unconfirmed entry blocks later drafts")
+
+        // Once the transcript records the prompt, the entry is purged and the
+        // queued follow-up delivers without any manual retry.
+        fixture.recordedMessages["a"] = [["id": "int-a", "role": "user", "content": body, "created_at": ""]]
+        client.select("b"); client.select("a")
+        await settle { client.snapshot?.messages.contains { $0.id == "int-a" } == true }
+        precondition(client.queue.message("int-a") == nil, "Transcript-recorded interruption is purged")
+        await settle { fixture.prompts.count == 2 && !client.sending }
+        client.disconnect()
+        print("PASS: interrupted turn stays unknown until the transcript records the prompt, then the queue unblocks itself")
     }
 
     @MainActor
