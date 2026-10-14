@@ -79,6 +79,17 @@ import Foundation
         await settle()
         precondition(nearTopCalls == calls + 1, "below the prefetch margin no load is requested")
         precondition(!following)
+        // Momentum ticks at the tail must not drop and re-arm following; each
+        // pause/resume pair would flash the return button and churn the reader.
+        following = true
+        var scrollEvents: [Bool] = []
+        observer.onScroll = { value in scrollEvents.append(value); following = value }
+        move(bottom())
+        for _ in 0..<10 { observer.userScrolled(deltaY: -1) }
+        await settle()
+        precondition(following, "downward wheel ticks at the tail must keep following")
+        precondition(scrollEvents.allSatisfy { $0 }, "a tail tick must not pause following before resuming")
+        precondition(!scrollEvents.isEmpty, "a downward wheel at the tail still resumes explicitly")
         print("PASS: immediate wheel pause, streaming position retention, explicit tail resume, direction reversal, native scroll lifecycle and near-top history loading")
     }
     @MainActor static func settle() async { try? await Task.sleep(for: .milliseconds(20)) }
