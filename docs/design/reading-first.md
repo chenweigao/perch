@@ -1,0 +1,15 @@
+# Reading-first conversation body
+
+The reply is the primary reading surface. Process is available without dominating the page.
+
+- Shared native/SwiftUI typography: 15 pt body, 26 pt line height, 720 pt maximum column; headings 22/18/16 pt with semibold weight. Narrow windows wrap the same content. Dynamic system colors preserve dark mode.
+- User prompts retain their existing bubble, actions and full content. Code retains its language label, copy button, gutter and horizontal scrolling. No new global text cache or syntax engine.
+- Completed thoughts, intermediate commentary and successful tools share a clear “Thoughts and tools” disclosure with a count. The open group uses a simple leading rule. Expansion remains scoped to the conversation and row.
+- Live thoughts start collapsed; the activity bar still communicates progress. Successful single-tool stages now use the same disclosure as larger stages. Running, failed, pending and uncertain tools stay visible.
+- Existing copy/quote/regenerate, file links, search-to-fold navigation, bookmarks, turn navigation and manual scroll-follow intent remain connected to their current handlers. Sidebar and composer glass remain unchanged.
+
+## Verification
+
+Signed native checks cover wide/narrow and light/dark windows, full code text, selectable reply content, matching native/fallback heading metrics, actual mouse clicks to expand/read/collapse process, plus exported window images. Core checks protect attention visibility and preserve folded source content/order. Navigation reading and interaction fixtures exercise the existing rendering/selection paths. These are local synthetic interaction checks, not a live model session or an FPS measurement.
+
+The upstream comparison and rejected cache experiment are recorded in `../reviews/ccgui-followup.md`.

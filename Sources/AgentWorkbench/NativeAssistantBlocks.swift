@@ -68,8 +68,8 @@ enum NativeAssistantContent {
                 guard allowsRichBlocks else { return nil }
                 flush()
                 result.append(.heading(ReplyTextAttributes.paragraphs([runs],
-                    size: level == 1 ? ReplyStyle.bodySize + 2 : ReplyStyle.bodySize,
-                    weight: .medium, lineHeight: 24)))
+                    size: ReplyStyle.headingSize(level),
+                    weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level))))
             case .code(let language, let code):
                 guard allowsRichBlocks else { return nil }
                 flush()
@@ -417,7 +417,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
     private func rows(width: CGFloat) -> [CGFloat] {
         let contentWidth = max(1, width - markerWidth() - 9)
         return items.map { max($0.content.contentHeight(width: contentWidth),
-                              nativeContentFirstBaseline - nativeMarkerFont.ascender + $0.marker.fittingSize.height) }
+                              nativeContentFirstBaseline - ceil(nativeMarkerFont.ascender) + $0.marker.fittingSize.height) }
     }
     override func contentHeight(width: CGFloat) -> CGFloat {
         let rows = rows(width: width)
@@ -441,7 +441,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
                 let multiline = max(rows[index - 1], rows[index]) > ReplyStyle.bodySize * ReplyStyle.lineHeightRatio * 1.5
                 y += multiline ? 6 : 2
             }
-            let markerOffset = nativeContentFirstBaseline - nativeMarkerFont.ascender
+            let markerOffset = nativeContentFirstBaseline - ceil(nativeMarkerFont.ascender)
             let markerSize = item.marker.fittingSize
             let markerFrame = CGRect(x: 0, y: y + markerOffset, width: markerWidth, height: markerSize.height)
             if item.marker.frame != markerFrame { item.marker.frame = markerFrame }

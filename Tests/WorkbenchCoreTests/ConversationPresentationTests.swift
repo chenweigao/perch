@@ -271,6 +271,17 @@ func checkConversationProcessFold() throws {
     precondition(foldRow.foldedRows?.flatMap(\.entry.messages).flatMap(\.content).count
                  == entries.dropFirst().dropLast().flatMap(\.messages).flatMap(\.content).count,
                  "The fold preserves every source part")
+    // Attention remains visible even after a turn settles.
+    for status in [VisibleTool.Status.failed, .awaitingApproval, .missingResult, .disconnected, .running] {
+        let tool = VisibleTool(id: "t1", name: "read", input: nil, status: status)
+        let row = ConversationPresentationModel.Row(entry: entries[1], tools: [tool.id: tool], activity: nil)
+        precondition(!ConversationProcessFold.foldable(row), "Attention must not be hidden by a history fold")
+    }
+    for status in [VisibleTool.Status.succeeded, .returned] {
+        let tool = VisibleTool(id: "t1", name: "read", input: nil, status: status)
+        let row = ConversationPresentationModel.Row(entry: entries[1], tools: [tool.id: tool], activity: nil)
+        precondition(ConversationProcessFold.foldable(row))
+    }
     // Folding is idempotent; fold rows never re-fold.
     precondition(ConversationProcessFold.fold(rows: folded, isRunning: false) == folded)
     // A single process row folds as well: uniform collapsed history.

@@ -1201,11 +1201,13 @@
 
 "没有可置顶的会话" = "No chats available to pin";
 
-"所选目录不是可用的 Git 工作树。" = "The selected directory is not an available Git worktree.";
-"确认本题并继续" = "Confirm and continue";
+"上移，更早发送" = "Move up to send earlier";
 
-"修改回答" = "Edit answer";
-"编辑文件" = "Edited files";
+"上移" = "Move up";
+
+"下移，更晚发送" = "Move down to send later";
+
+"下移" = "Move down";
 "已是最新版本" = "Up to date";
 
 "有新版本 %@" = "Version %@ is available";
@@ -1225,10 +1227,13 @@
 "网络不可用" = "Network unavailable";
 
 "查询返回 %lld" = "Request returned %lld";
-"上移，更早发送" = "Move up to send earlier";
+"编辑文件" = "Edited files";
+"确认本题并继续" = "Confirm and continue";
 
-"上移" = "Move up";
+"修改回答" = "Edit answer";
+"所选目录不是可用的 Git 工作树。" = "The selected directory is not an available Git worktree.";
+"思考与工具" = "Thoughts and tools";
 
-"下移，更晚发送" = "Move down to send later";
+"%lld 次调用" = "%lld calls";
 
-"下移" = "Move down";
+"%lld 条记录" = "%lld records";
