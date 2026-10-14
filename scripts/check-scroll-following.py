@@ -15,12 +15,13 @@ files = ["RevealFrameDriver", "ToolActivityView", "ConversationTranscriptView", 
          "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel",
          "ActivitySummarySettings", "ActivitySummaryController",
          "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView",
+         "ReplyMathView", "ReplyAlertBlock",
          "ConversationActivityBar", "WorkbenchGlass", "WorkbenchTheme"]
 includes = ["-I", str(BIN / "Modules")]
 for path in ["swift-markdown/Sources/CAtomic/include", "swift-cmark/src/include", "swift-cmark/extensions/include"]:
     includes += ["-I", str(ROOT / ".build/checkouts" / path)]
 objects = []
-for target in ["WorkbenchCore", "Markdown", "CAtomic", "cmark_gfm", "cmark_gfm_extensions"]:
+for target in ["WorkbenchCore", "Markdown", "CAtomic", "cmark_gfm", "cmark_gfm_extensions", "SwiftMath"]:
     objects += sorted((BIN / (target + ".build")).glob("*.o"))
 with tempfile.TemporaryDirectory(prefix="perch-scroll-check-") as folder:
     work = pathlib.Path(folder)
