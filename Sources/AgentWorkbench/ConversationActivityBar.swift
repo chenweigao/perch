@@ -79,7 +79,7 @@ struct ConversationActivityBar: View {
 
     var body: some View {
         ZStack {
-            if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil || recapKey != nil {
+            if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil || recapKey != nil || activity.edits != nil {
                 HStack(spacing: 10) {
                     Button { pointerAnchor = nil; expanded.toggle() } label: {
                         HStack(spacing: 9) {
@@ -144,7 +144,7 @@ struct ConversationActivityBar: View {
     private var statusTitle: Text {
         if !online { return Text(LocalizedStringKey(activity.title)) }
         if pendingCount > 0 { return Text("等待你确认 · \(pendingCount) 项") }
-        if !isRunning && (timing?.endedAt != nil || narrative != nil || recapKey != nil) { return Text("本轮结束") }
+        if !isRunning && (timing?.endedAt != nil || narrative != nil || recapKey != nil || activity.edits != nil) { return Text("本轮结束") }
         if activity.needsAttention || activity.title == L("Stopping…") { return Text(LocalizedStringKey(activity.title)) }
         if isRunning, let narrative { return Text(verbatim: narrative.headline) }
         if let description = activity.operationDescription { return Text(verbatim: description) }
@@ -156,6 +156,13 @@ struct ConversationActivityBar: View {
             if !activity.todos.isEmpty { Text("\(activity.completedSteps)/\(activity.todos.count) steps") }
             if !activity.activeTools.isEmpty { Text("\(activity.activeTools.count) \(activity.activeTools.count == 1 ? "tool" : "tools")") }
             if board.runningCount > 0 { Text("\(board.runningCount) 运行中") }
+            if let edits = activity.edits {
+                // Odometer roll as the tally grows (ccgui RollingStat) —
+                // SwiftUI's numericText transition is the native equivalent.
+                EditStatText(stat: edits.total)
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: edits.total)
+            }
         }.fixedSize().monospacedDigit()
     }
     @ViewBuilder private var clock: some View {
@@ -223,6 +230,20 @@ struct ConversationActivityBar: View {
                                 .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
                         }
                     }
+                    if let edits = activity.edits {
+                        HStack {
+                            Text("编辑文件").fontWeight(.semibold)
+                            Spacer()
+                            EditStatText(stat: edits.total)
+                        }
+                        ForEach(edits.perFile.keys.sorted(), id: \.self) { path in
+                            HStack {
+                                Text((path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
+                                Spacer()
+                                EditStatText(stat: edits.perFile[path]!)
+                            }.help(path)
+                        }
+                    }
                     KimiTaskSections(board: board, loadingOutput: loadingTaskOutput, stopping: stoppingTasks,
                                      listError: taskListError, onLoadOutput: onTaskOutput,
                                      onStop: onTaskStop, onRefresh: onTasksRefresh,
@@ -243,6 +264,17 @@ struct ConversationActivityBar: View {
                 ActivityTurnClock(timing: timing, showsDetails: true)
             }
         }.font(.system(size: 12)).padding(16).frame(width: 390)
+    }
+}
+
+/// +/− tally in the quiet palette; shared by the bar pill and the per-file rows.
+private struct EditStatText: View {
+    let stat: SessionEditStat
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("+\(stat.additions)").foregroundStyle(Color.green.opacity(0.9))
+            Text("−\(stat.deletions)").foregroundStyle(Color.red.opacity(0.9))
+        }.monospacedDigit()
     }
 }
 
