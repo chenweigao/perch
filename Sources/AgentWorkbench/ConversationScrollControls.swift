@@ -92,14 +92,14 @@ struct ReturnToLatestButton: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: "arrow.down")
-                if hasNewReply { Text("New reply") }
+                if hasNewReply { Text("有新内容") }
             }.font(.system(size: 12, weight: .medium))
                 .padding(.horizontal, hasNewReply ? 12 : 0)
-                .frame(width: hasNewReply ? nil : 30, height: 30)
+                .frame(width: hasNewReply ? nil : 32, height: 32)
                 .workbenchFloatingSurface()
                 .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(0.08)))
                 .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
-        }.buttonStyle(.plain).help("Return to latest reply").accessibilityLabel("Return to latest reply")
+        }.buttonStyle(.plain).accessibilityIdentifier("return-to-latest").help("Return to latest reply").accessibilityLabel("Return to latest reply")
             .opacity(isVisible ? 1 : 0)
             .allowsHitTesting(isVisible).accessibilityHidden(!isVisible)
             .disabled(!isVisible)
@@ -115,6 +115,9 @@ struct ConversationScrollView<Content: View>: View {
     var onScroll: (Bool) -> Void = { _ in }
     var onContentSizeChange: () -> Void = {}
     var onNearTop: () -> Void = {}
+    var showsReturnToLatest = false
+    var hasNewReply = false
+    var onReturnToLatest: (() -> Void)? = nil
     @ViewBuilder let content: Content
     @State private var contentSize = CGSize.zero
     @State private var conversationViewport = ConversationViewport()
@@ -145,11 +148,19 @@ struct ConversationScrollView<Content: View>: View {
         }
     }
     var body: some View {
-        scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
-            contentSize = size
-        }.task(id: contentSize) {
-            await Task.yield()
-            if !Task.isCancelled { onContentSizeChange() }
+        VStack(spacing: 0) {
+            scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
+                contentSize = size
+            }.task(id: contentSize) {
+                await Task.yield()
+                if !Task.isCancelled { onContentSizeChange() }
+            }
+            if let onReturnToLatest {
+                // A stable navigation slot keeps the button off selectable text.
+                // Showing it never resizes the viewport or moves the reading anchor.
+                ReturnToLatestButton(isVisible: showsReturnToLatest, hasNewReply: hasNewReply, action: onReturnToLatest)
+                    .frame(maxWidth: .infinity).frame(height: 40)
+            }
         }
     }
 }

@@ -140,13 +140,13 @@ enum NativeAssistantContent {
     static func spacing(before block: NativeAssistantBlock, after previous: NativeAssistantBlock?, compact: Bool) -> CGFloat {
         guard let previous else { return 0 }
         if case .rule = previous { return 28 }
-        if case .heading = previous { return 7 }
-        if case .paragraphs = previous, case .paragraphs = block { return compact ? 8 : 12 }
+        if case .heading = previous { return 8 }
+        if case .paragraphs = previous, case .paragraphs = block { return compact ? 8 : ReplyStyle.paragraphSpacing }
         switch block {
-        case .heading: return compact ? 14 : 22
+        case .heading: return compact ? 14 : 24
         case .rule: return 28
         case .code: return compact ? 10 : 18
-        default: return compact ? 6 : 12
+        default: return compact ? 6 : ReplyStyle.paragraphSpacing
         }
     }
 }

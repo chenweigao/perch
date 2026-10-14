@@ -344,6 +344,11 @@ private struct KimiTimeline: View {
                 if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
             }, onNearTop: {
                 if ConversationReadingMemory.shared.following[readingKey] == false { connection.loadOlder() }
+            }, showsReturnToLatest: !follow, hasNewReply: hasNewReply, onReturnToLatest: {
+                follow = true
+                ConversationReadingMemory.shared.following[readingKey] = true
+                ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision
+                proxy.scrollTo("bottom", anchor: .bottom)
             }) {
                 if let c = connection.conversation {
                     if c.hasOlder {
@@ -393,10 +398,6 @@ private struct KimiTimeline: View {
                     ForEach(c.snapshot.pendingQuestions) { question in KimiQuestionView(question: question, connection: connection) }.id(c.snapshot.session.id)
                 }
                 Color.clear.frame(height: 1).id("bottom")
-            }
-            .overlay(alignment: .bottomTrailing) {
-                ReturnToLatestButton(isVisible: !follow, hasNewReply: hasNewReply) { follow = true; ConversationReadingMemory.shared.following[readingKey] = true; ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision; proxy.scrollTo("bottom", anchor: .bottom) }
-                    .padding(.trailing, 40).padding(.bottom, 10)
             }
             .task(id: displayedResult.map { "\($0.id):\($0.updatedAt)" }) {
                 // Reviewing changes the shared catalog and sidebar. Publish
