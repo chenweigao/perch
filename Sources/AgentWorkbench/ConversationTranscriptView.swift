@@ -1479,6 +1479,7 @@ private final class ConversationEntryController: NSViewController {
     }
     deinit {
         reveal?.cancel()
+        if let settleFlipObserver { NotificationCenter.default.removeObserver(settleFlipObserver) }
         if let nativeUser { NativeUserMessageView.recycle(nativeUser) }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant) }
     }
@@ -1603,6 +1604,26 @@ private final class ConversationEntryController: NSViewController {
         // the settled Markdown with a cursor from the preceding live snapshot.
         revealCursor.visible = Int.max
     }
+
+    /// Any descendant text view holding a non-empty selection blocks the
+    /// settle flip; the flip retries when that selection clears.
+    private static func hasLiveTextSelection(in view: NSView) -> Bool {
+        if let text = view as? NSTextView, text.selectedRange().length > 0 { return true }
+        return view.subviews.contains(where: { hasLiveTextSelection(in: $0) })
+    }
+
+    private var settleFlipObserver: NSObjectProtocol?
+    private func deferSettleFlip() {
+        guard settleFlipObserver == nil else { return }
+        settleFlipObserver = NotificationCenter.default.addObserver(
+            forName: NSTextView.didChangeSelectionNotification, object: nil, queue: .main) { [weak self] _ in
+                guard let self, let host = self.host,
+                      !Self.hasLiveTextSelection(in: host.view) else { return }
+                NotificationCenter.default.removeObserver(self.settleFlipObserver as Any)
+                self.settleFlipObserver = nil
+                self.setRoot()
+            }
+    }
     private func setRoot() {
         #if TRANSCRIPT_CHECKS
         // Covers native admission probing (parse + attributed construction), native
@@ -1662,6 +1683,16 @@ private final class ConversationEntryController: NSViewController {
         }
         if let assistant = nativeAssistantPreparation() {
             if let blocks = assistant.value.content {
+                // Settling .progress→.message swaps the hosted row for a native
+                // one. With a live text selection that swap loses it, so stay
+                // hosted until the selection clears (ccgui retains the reveal
+                // DOM shape on settle for the same reason).
+                if let host, Self.hasLiveTextSelection(in: host.view) {
+                    deferSettleFlip()
+                    finishReveal()
+                    markdownPreparation = fallbackPreparation(messageID: assistant.messageID, source: assistant.source,
+                                                              blocks: assistant.value.blocks)
+                } else {
                 if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
                 // A settled row shows everything: the reveal ends at the flip
                 // from .progress to .message, not when the drain happens to finish.
@@ -1677,6 +1708,7 @@ private final class ConversationEntryController: NSViewController {
                 NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
                 #endif
                 return
+                }
             }
             markdownPreparation = fallbackPreparation(messageID: assistant.messageID, source: assistant.source,
                                                        blocks: assistant.value.blocks)
