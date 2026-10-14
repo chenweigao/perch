@@ -18,10 +18,16 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     var onGroups: (() -> Void)? = nil
     var scrollRows = true
     var scrollTargetID: String? = nil
+    /// The selected row's container (favorites / project / flat). A change means
+    /// regrouping moved the selection; the shell then preserves its visibility.
+    var scrollContext = ""
+    /// The selected row's frame in `sidebarRowsCoordinateSpace`, reported by the owner.
+    var selectionFrame = CGRect.zero
     @ViewBuilder let rows: Rows
     @ViewBuilder let environments: Environments
     @State private var showSettings = false
     @State private var showEnvironments = false
+    @State private var rowsVisibleRect = CGRect.zero
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
@@ -46,12 +52,22 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 // eager layout when selection and catalog order change together.
                 VStack(alignment: .leading, spacing: 3) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
+                    .coordinateSpace(name: sidebarRowsCoordinateSpace)
             }.scrollIndicators(.hidden)
+                .onScrollGeometryChange(for: CGRect.self) { geometry in
+                    CGRect(origin: geometry.contentOffset, size: geometry.containerSize)
+                } action: { _, rect in rowsVisibleRect = rect }
                 .onChange(of: scrollTargetID, initial: true) { _, target in
                     // Visible selections stay under the pointer. Offscreen selections
                     // (for example from search) move only enough to become visible.
                     // Catalog regrouping alone must not pull the reader back here.
                     if let target { proxy.scrollTo(target) }
+                }
+                .onChange(of: scrollContext) { _, _ in
+                    // Regrouping moves the selected row itself. Follow it only when
+                    // it was visible; an offscreen selection stays put.
+                    guard rowsVisibleRect.intersects(selectionFrame), let target = scrollTargetID else { return }
+                    proxy.scrollTo(target)
                 }
             }
             } else { rows.padding(.horizontal, 10).padding(.bottom, 10) }
@@ -231,5 +247,22 @@ private struct SidebarNavigationBody: View {
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: opacity)
             }
             .onHover { hovered = $0 }
+    }
+}
+
+/// Shared coordinate space for sidebar row geometry: the owner reports the
+/// selected row's frame in it, the shell intersects it with the visible rect.
+let sidebarRowsCoordinateSpace = "sidebar-rows"
+
+extension View {
+    /// Only the selected row reports. Keying the value by `selected` makes the
+    /// selection change itself a geometry event, so a row that never moved can
+    /// not leave a stale frame behind.
+    func trackSelectionFrame(selected: Bool, into binding: Binding<CGRect>) -> some View {
+        onGeometryChange(for: CGRect?.self) { geometry in
+            selected ? geometry.frame(in: .named(sidebarRowsCoordinateSpace)) : nil
+        } action: { frame in
+            if let frame { binding.wrappedValue = frame }
+        }
     }
 }

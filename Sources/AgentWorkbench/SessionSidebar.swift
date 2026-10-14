@@ -15,6 +15,7 @@ struct WorkbenchSidebar: View {
     @State private var sessionLimit = 40
     @State private var showPinPicker = false
     @State private var expandedProjects = Set<String>()
+    @State private var selectionFrame = CGRect.zero
     private var collapsedProjects: Set<String> {
         Set((try? JSONDecoder().decode([String].self, from: Data(collapsedProjectsJSON.utf8))) ?? [])
     }
@@ -44,7 +45,10 @@ struct WorkbenchSidebar: View {
                               onArchive: { model.showArchive() },
                               onAllSessions: { model.showAllSessions() },
                               onGroups: { model.clearScope(); model.showHome(); model.showAllTaskGroups = true },
-                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection)) {
+                              scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection),
+                              scrollContext: projection.favorites.contains { $0.id == model.tabs.selectedID } ? "favorites"
+                                  : groupedByProject ? selectedProjectID ?? "projects" : "flat",
+                              selectionFrame: selectionFrame) {
             #if PERCH_ACCEPTANCE
             if experiment.sidebarVariant == "projects" { projectRows(projection, index: index) }
             else if usesTable { tableRows(projection, index: index) }
@@ -291,7 +295,9 @@ struct WorkbenchSidebar: View {
             case .session(let item, let indented):
                 SessionSidebarRow(model: model, item: item, groups: index[item.id], compact: true,
                     selected: !model.showDashboard && item.id == model.tabs.selectedID,
-                    onOpen: { model.open(item) }).padding(.leading, indented ? 22 : 0).id(entry.id)
+                    onOpen: { model.open(item) }).padding(.leading, indented ? 22 : 0)
+                    .trackSelectionFrame(selected: !model.showDashboard && item.id == model.tabs.selectedID,
+                                         into: $selectionFrame).id(entry.id)
             case .more(let project):
                 Button { expandedProjects.insert(project.id) } label: {
                     Text("显示全部 \(project.sessions.count) 个会话").font(.system(size: 11)).foregroundStyle(.secondary)
@@ -409,6 +415,7 @@ struct WorkbenchSidebar: View {
         SessionSidebarRow(model: model, item: item, groups: groups,
                           selected: !model.showDashboard && item.id == model.tabs.selectedID,
                           onOpen: { model.open(item) })
+            .trackSelectionFrame(selected: !model.showDashboard && item.id == model.tabs.selectedID, into: $selectionFrame)
     }
 }
 

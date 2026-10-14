@@ -5,6 +5,9 @@ import Observation
 @MainActor @Observable private final class SidebarScrollState {
     var selected: String?
     var revision = 0
+    var context = "a"
+    var moveSelectedToTop = false
+    var selectionFrame = CGRect.zero
 }
 private struct SidebarRowFrame: NSViewRepresentable {
     let id: String
@@ -19,19 +22,21 @@ private struct SidebarRowFrame: NSViewRepresentable {
     func updateNSView(_ nsView: Probe, context: Context) {}
 }
 private struct SidebarScrollFixture: View {
-    let state: SidebarScrollState
+    @Bindable var state: SidebarScrollState
     var body: some View {
         WorkspaceSidebarShell(page: .other, attentionCount: 0, environmentSummary: "Fixture",
             onSearch: {}, onNew: {}, onHome: {}, onInbox: {}, onArchive: {},
-            scrollTargetID: state.selected) {
-                ForEach(0..<100) { index in
-                    let id = "fixture-row-\(index)"
+            scrollTargetID: state.selected, scrollContext: state.context,
+            selectionFrame: state.selectionFrame) {
+                let selectedFirst = state.moveSelectedToTop ? [state.selected].compactMap { $0 } : []
+                ForEach(selectedFirst + (0..<100).map { "fixture-row-\($0)" }.filter { !selectedFirst.contains($0) }, id: \.self) { id in
                     Button { state.selected = id } label: {
-                        Text("会话 \(index) · 状态 \(state.revision)")
+                        Text("会话 \(id) · 状态 \(state.revision)")
                             .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .leading)
                             .contentShape(Rectangle())
                     }.buttonStyle(.plain).id(id)
                         .background(SidebarRowFrame(id: id))
+                        .trackSelectionFrame(selected: state.selected == id, into: $state.selectionFrame)
                 }
             } environments: { EmptyView() }
     }
@@ -88,5 +93,24 @@ private struct SidebarScrollFixture: View {
     try await Task.sleep(for: .milliseconds(150))
     precondition(abs(scroll.documentVisibleRect.minY - beforeUpdate.minY) < 1,
                  "Background status refresh must not reveal the offscreen selected session again")
-    print("PASS: actual sidebar clicks preserve position, external selections reveal minimally, background updates preserve browsing position")
+    // A regroup that moves a visible selection keeps it on screen.
+    state.selected = "fixture-row-50"
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(scroll.documentVisibleRect.contains(rowFrame(state.selected!)), "Selection must be revealed before regrouping")
+    state.moveSelectedToTop = true
+    state.context = "b"
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(scroll.documentVisibleRect.contains(rowFrame(state.selected!)),
+                 "Regrouping must follow the visible selection to its new position")
+    // The same regroup must not yank the reader when the selection is offscreen.
+    position(420)
+    try await Task.sleep(for: .milliseconds(100))
+    precondition(!scroll.documentVisibleRect.contains(rowFrame(state.selected!)), "Fixture must start from an offscreen selection")
+    let parked = scroll.documentVisibleRect
+    state.moveSelectedToTop = false
+    state.context = "c"
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(scroll.documentVisibleRect.minY == parked.minY,
+                 "Regrouping must not reveal an offscreen selection")
+    print("PASS: actual sidebar clicks preserve position, external selections reveal minimally, background updates preserve browsing position, regrouping follows only visible selections")
 }
