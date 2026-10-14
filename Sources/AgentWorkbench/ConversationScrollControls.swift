@@ -83,11 +83,15 @@ struct ConversationScrollObserver: NSViewRepresentable {
     }
 }
 
+/// The 32 pt pill is a capsule in every state: the glass surface (radius 16), its
+/// hairline and the hit shape share it, so clicks just outside the circle still
+/// reach the transcript text below.
 struct ReturnToLatestButton: View {
     let isVisible: Bool
     var hasNewReply = false
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
@@ -97,13 +101,19 @@ struct ReturnToLatestButton: View {
                 .padding(.horizontal, hasNewReply ? 12 : 0)
                 .frame(width: hasNewReply ? nil : 32, height: 32)
                 .workbenchFloatingSurface()
-                .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(0.08)))
+                .overlay(Capsule().fill(Color.primary.opacity(hovered && isVisible ? 0.05 : 0)))
+                .overlay(Capsule().strokeBorder(.primary.opacity(0.08)))
                 .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
-        }.buttonStyle(.plain).accessibilityIdentifier("return-to-latest").help("Return to latest reply").accessibilityLabel("Return to latest reply")
+                .contentShape(Capsule())
+        }.buttonStyle(.plain).accessibilityIdentifier("return-to-latest")
+            .help(hasNewReply ? Text("有新内容，返回最新") : Text("返回最新"))
+            .accessibilityLabel(hasNewReply ? Text("有新内容，返回最新") : Text("返回最新"))
+            .onHover { hovered = $0 }
             .opacity(isVisible ? 1 : 0)
             .allowsHitTesting(isVisible).accessibilityHidden(!isVisible)
             .disabled(!isVisible)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isVisible)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hasNewReply)
     }
 }
 
