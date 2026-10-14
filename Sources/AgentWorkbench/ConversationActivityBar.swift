@@ -125,11 +125,13 @@ struct ConversationActivityBar: View {
                 // Lowest priority: the spacer takes only what the metrics leave.
                 // Facts stay right-aligned, so a changing title never shifts them.
                 Spacer(minLength: 6).layoutPriority(-2)
+                // The zero-size last candidate always fits. EmptyView would add no
+                // candidate, and ViewThatFits shows its last child when none fits.
                 ViewThatFits(in: .horizontal) {
                     metrics(upTo: 3)
                     metrics(upTo: 2)
                     metrics(upTo: 1)
-                    EmptyView()
+                    Color.clear.frame(width: 0, height: 0)
                 }.font(.system(size: 11)).foregroundStyle(.tertiary).layoutPriority(-1)
                 if let timing {
                     ActivityTurnClock(timing: timing).font(.system(size: 11)).foregroundStyle(.secondary)
