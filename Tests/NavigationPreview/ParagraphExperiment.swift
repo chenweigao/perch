@@ -178,7 +178,9 @@ extension NavigationRunner {
                     let raw: [String: Any] = ["id": "native-row-parity", "role": role, "created_at": "fixture",
                         "content": [["type": "text", "text": source]]]
                     let message = try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: raw))
-                    let original = NSHostingController(rootView: VStack(alignment: .leading, spacing: 12) {
+                    // The SwiftUI side of a production entry: ConversationEntryView stacks the
+                    // reply and its actions with the same gap the native row uses.
+                    let original = NSHostingController(rootView: VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
                         KimiMessageView(message: message, tools: [:], api: nil, sessionId: "parity")
                         if assistant { ReplyCopyButton(text: source) }
                     }.frame(width: width).environment(\.colorScheme, dark ? .dark : .light)

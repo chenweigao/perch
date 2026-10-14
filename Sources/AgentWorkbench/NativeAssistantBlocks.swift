@@ -100,7 +100,8 @@ enum NativeAssistantContent {
         }
         guard !paragraphs.isEmpty else { return nil }
         return stride(from: 0, to: paragraphs.count, by: 8).map {
-            ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]), paragraphSpacing: 8)
+            ReplyTextAttributes.paragraphs(Array(paragraphs[$0..<min($0 + 8, paragraphs.count)]),
+                                           paragraphSpacing: ReplyStyle.compactParagraphSpacing)
         }
     }
 
@@ -113,7 +114,8 @@ enum NativeAssistantContent {
             func flush() {
                 guard !pending.isEmpty else { return }
                 for start in stride(from: 0, to: pending.count, by: 8) {
-                    blocks.append(.paragraphs(ReplyTextAttributes.paragraphs(Array(pending[start..<min(start + 8, pending.count)]), paragraphSpacing: 8)))
+                    blocks.append(.paragraphs(ReplyTextAttributes.paragraphs(Array(pending[start..<min(start + 8, pending.count)]),
+                                                                             paragraphSpacing: ReplyStyle.compactParagraphSpacing)))
                 }
                 pending = []
             }
@@ -136,17 +138,21 @@ enum NativeAssistantContent {
         return result
     }
 
-    /// Mirrors `ReplyBlocks.spacing(before:after:)`; spacing is applied above each block.
+    /// The SwiftUI renderer's rhythm (`ReplyStyle.blockSpacing`), applied above each block.
     static func spacing(before block: NativeAssistantBlock, after previous: NativeAssistantBlock?, compact: Bool) -> CGFloat {
-        guard let previous else { return 0 }
-        if case .rule = previous { return 28 }
-        if case .heading = previous { return 8 }
-        if case .paragraphs = previous, case .paragraphs = block { return compact ? 8 : ReplyStyle.paragraphSpacing }
+        ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
+                                after: previous.map { ReplyStyle.BlockKind($0) }, compact: compact)
+    }
+}
+
+extension ReplyStyle.BlockKind {
+    init(_ block: NativeAssistantBlock) {
         switch block {
-        case .heading: return compact ? 14 : 24
-        case .rule: return 28
-        case .code: return compact ? 10 : 18
-        default: return compact ? 6 : ReplyStyle.paragraphSpacing
+        case .paragraphs: self = .paragraph
+        case .heading: self = .heading
+        case .code: self = .code
+        case .rule: self = .rule
+        case .quote, .list: self = .other
         }
     }
 }
@@ -156,7 +162,7 @@ private let nativeMarkerFont = NSFont.systemFont(ofSize: ReplyStyle.bodySize)
 /// alignment guide so list markers align exactly with wrapped content.
 private let nativeContentFirstBaseline: CGFloat = {
     let natural = ceil(nativeMarkerFont.ascender - nativeMarkerFont.descender + nativeMarkerFont.leading)
-    return ceil(nativeMarkerFont.ascender) + max(0, ReplyStyle.bodySize * ReplyStyle.lineHeightRatio - natural)
+    return ceil(nativeMarkerFont.ascender) + max(0, ReplyStyle.lineHeight - natural)
 }()
 
 /// Every block view reports its own height and lays out inside an assigned frame.
@@ -230,7 +236,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     override init(links: SelectableReplyText.Coordinator) {
         copy = NSHostingView(rootView: ReplyCopyButton(text: "", label: "复制代码"))
         super.init(links: links)
-        label.font = .systemFont(ofSize: 11, weight: .medium)
+        label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
         label.textColor = .secondaryLabelColor
         label.lineBreakMode = .byTruncatingTail
         copy.sizingOptions = []
@@ -285,32 +291,38 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     }
     private func textSize() -> CGSize { codeText?.measure(width: nil) ?? .zero }
     private func gutterSize() -> CGSize { gutter?.measure(width: nil) ?? .zero }
-    override func contentHeight(width: CGFloat) -> CGFloat { 34 + 1 + textSize().height + 28 }
+    override func contentHeight(width: CGFloat) -> CGFloat {
+        ReplyStyle.Code.headerHeight + 1 + textSize().height + ReplyStyle.Code.inset * 2
+    }
     override func placeContent(width: CGFloat) {
+        typealias Card = ReplyStyle.Code
         let text = textSize()
         let gutter = gutterSize()
-        // With a gutter the code starts at 12 + gutter + 8, matching the
-        // SwiftUI card; without one the code keeps its original 14 pt inset.
-        let codeX = gutter.width > 0 ? 12 + gutter.width + 8 : 14
+        // With a gutter the code starts after it, matching the SwiftUI card;
+        // without one the code keeps the plain inset.
+        let codeX = gutter.width > 0 ? Card.gutterLeading + gutter.width + Card.gutterTrailing : Card.inset
         let labelSize = label.fittingSize
-        let labelFrame = CGRect(x: 14, y: 5 + (24 - labelSize.height) / 2,
-                                width: min(labelSize.width, max(0, width - 14 - 14 - 24 - 8)), height: labelSize.height)
+        let labelFrame = CGRect(x: Card.headerHorizontalPadding,
+                                y: Card.headerVerticalPadding + (Card.copyButtonSize - labelSize.height) / 2,
+                                width: min(labelSize.width, max(0, width - Card.headerHorizontalPadding * 2 - Card.copyButtonSize - 8)),
+                                height: labelSize.height)
         if label.frame != labelFrame { label.frame = labelFrame }
-        let copyFrame = CGRect(x: width - 14 - 24, y: 5, width: 24, height: 24)
+        let copyFrame = CGRect(x: width - Card.headerHorizontalPadding - Card.copyButtonSize, y: Card.headerVerticalPadding,
+                               width: Card.copyButtonSize, height: Card.copyButtonSize)
         if copy.frame != copyFrame { copy.frame = copyFrame }
-        let separatorFrame = CGRect(x: 0, y: 34, width: width, height: 1)
+        let separatorFrame = CGRect(x: 0, y: Card.headerHeight, width: width, height: 1)
         if separator.frame != separatorFrame { separator.frame = separatorFrame }
         separator.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.055).cgColor
-        let scrollFrame = CGRect(x: 0, y: 35, width: width, height: text.height + 28)
+        let scrollFrame = CGRect(x: 0, y: Card.headerHeight + 1, width: width, height: text.height + Card.inset * 2)
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
-        let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + 14, height: text.height + 28)
+        let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + Card.inset, height: text.height + Card.inset * 2)
         if document.frame != documentFrame { document.frame = documentFrame }
         if let gutterView = self.gutter {
-            let frame = CGRect(x: 12, y: 14, width: gutter.width, height: gutter.height)
+            let frame = CGRect(x: Card.gutterLeading, y: Card.inset, width: gutter.width, height: gutter.height)
             if gutterView.frame != frame { gutterView.frame = frame }
         }
         if let codeText {
-            let frame = CGRect(x: codeX, y: 14, width: text.width, height: text.height)
+            let frame = CGRect(x: codeX, y: Card.inset, width: text.width, height: text.height)
             if codeText.frame != frame { codeText.frame = frame }
         }
     }
@@ -330,10 +342,11 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     }
     override func textViews() -> [ReplyTextView] { codeText.map { [$0] } ?? [] }
     override func draw(_ dirtyRect: NSRect) {
+        let radius = ReplyStyle.Code.cornerRadius
         NSColor.labelColor.withAlphaComponent(0.035).setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
+        NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
         NSColor.labelColor.withAlphaComponent(0.055).setStroke()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 10, yRadius: 10).stroke()
+        NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius).stroke()
     }
 }
 
@@ -352,18 +365,19 @@ private final class NativeQuoteBlockView: NativeAssistantBlockView {
         }
         for (text, value) in zip(texts, groups) { text.update(value, preservingSelectionOnAppend: true) }
     }
-    private func textWidth(_ width: CGFloat) -> CGFloat { max(1, width - 21) }
+    private func textWidth(_ width: CGFloat) -> CGFloat { max(1, width - ReplyStyle.Quote.leadingInset) }
     override func contentHeight(width: CGFloat) -> CGFloat {
         let content = texts.reduce(0) { $0 + $1.measure(width: textWidth(width)).height }
-        return 14 + content + CGFloat(max(0, texts.count - 1)) * 8
+        return ReplyStyle.Quote.verticalInset * 2 + content
+            + CGFloat(max(0, texts.count - 1)) * ReplyStyle.compactParagraphSpacing
     }
     override func placeContent(width: CGFloat) {
-        var y: CGFloat = 7
+        var y = ReplyStyle.Quote.verticalInset
         for text in texts {
             let height = text.measure(width: textWidth(width)).height
-            let frame = CGRect(x: 21, y: y, width: textWidth(width), height: height)
+            let frame = CGRect(x: ReplyStyle.Quote.leadingInset, y: y, width: textWidth(width), height: height)
             if text.frame != frame { text.frame = frame }
-            y += height + 8
+            y += height + ReplyStyle.compactParagraphSpacing
         }
     }
     override func teardown() {
@@ -377,7 +391,8 @@ private final class NativeQuoteBlockView: NativeAssistantBlockView {
     override func textViews() -> [ReplyTextView] { texts }
     override func draw(_ dirtyRect: NSRect) {
         NSColor.labelColor.withAlphaComponent(0.16).setFill()
-        NSBezierPath(roundedRect: CGRect(x: 0, y: 0, width: 2, height: bounds.height), xRadius: 1, yRadius: 1).fill()
+        NSBezierPath(roundedRect: CGRect(x: 0, y: 0, width: ReplyStyle.Quote.barWidth, height: bounds.height),
+                     xRadius: 1, yRadius: 1).fill()
     }
 }
 
@@ -415,7 +430,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         ReplyListMetrics.columnWidth(items.map { $0.marker.stringValue })
     }
     private func rows(width: CGFloat) -> [CGFloat] {
-        let contentWidth = max(1, width - markerWidth() - 9)
+        let contentWidth = max(1, width - markerWidth() - ReplyStyle.ListLayout.markerGap)
         return items.map { max($0.content.contentHeight(width: contentWidth),
                               nativeContentFirstBaseline - ceil(nativeMarkerFont.ascender) + $0.marker.fittingSize.height) }
     }
@@ -423,29 +438,23 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         let rows = rows(width: width)
         var height: CGFloat = 0
         for (index, row) in rows.enumerated() {
-            if index > 0 {
-                let multiline = max(rows[index - 1], row) > ReplyStyle.bodySize * ReplyStyle.lineHeightRatio * 1.5
-                height += multiline ? 6 : 2
-            }
+            if index > 0 { height += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: row) }
             height += row
         }
         return height
     }
     override func placeContent(width: CGFloat) {
         let markerWidth = markerWidth()
-        let contentWidth = max(1, width - markerWidth - 9)
+        let contentWidth = max(1, width - markerWidth - ReplyStyle.ListLayout.markerGap)
         let rows = rows(width: width)
         var y: CGFloat = 0
         for (index, item) in items.enumerated() {
-            if index > 0 {
-                let multiline = max(rows[index - 1], rows[index]) > ReplyStyle.bodySize * ReplyStyle.lineHeightRatio * 1.5
-                y += multiline ? 6 : 2
-            }
+            if index > 0 { y += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: rows[index]) }
             let markerOffset = nativeContentFirstBaseline - ceil(nativeMarkerFont.ascender)
             let markerSize = item.marker.fittingSize
             let markerFrame = CGRect(x: 0, y: y + markerOffset, width: markerWidth, height: markerSize.height)
             if item.marker.frame != markerFrame { item.marker.frame = markerFrame }
-            let contentFrame = CGRect(x: markerWidth + 9, y: y, width: contentWidth, height: rows[index])
+            let contentFrame = CGRect(x: markerWidth + ReplyStyle.ListLayout.markerGap, y: y, width: contentWidth, height: rows[index])
             if item.content.frame != contentFrame { item.content.frame = contentFrame }
             item.content.place(width: contentWidth)
             y += rows[index]

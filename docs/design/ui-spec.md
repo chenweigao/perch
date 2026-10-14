@@ -28,6 +28,24 @@
   由底部「提交回答」统一提交；自由回答输入时不自动推进，已答摘要可「修改回答」。
 - **禁用要看得见**：排队调序按钮在两端禁用但保留位置（置灰），不用隐藏代替。
 
+## 正文刻度
+
+- **正文尺寸、行高与间距只取自 `ReplyStyle`**（`Sources/AgentWorkbench/ReplyMarkdownView.swift`）：
+  14pt 正文 / 22pt 行高 / 10pt 段距，680pt 阅读栏；H1 16pt，其余标题与正文同号，靠字重和留白分层。
+  视图里不写本地字号或间距数字。
+- **两种渲染共用节奏**：块间距统一走 `ReplyStyle.blockSpacing`，代码卡片、引用、列表分别用
+  `ReplyStyle.Code` / `Quote` / `ListLayout`；SwiftUI 行与原生缓存行必须从同一组常量取值，
+  流式结束切换渲染时不得跳动。详见 `docs/design/visual-refresh.md`。
+
+## 侧栏
+
+- **一套行几何**：导航、分区头、项目、会话共用 `SidebarMetrics`（`Sources/AgentWorkbench/SidebarMetrics.swift`）
+  的图标列、内边距、行高（32pt，带状态行 44pt）与高亮形状；分区标题从图标列开始。
+- **项目子会话图标在项目图标正下方**（缩进 `childIndent`），标题与项目标题对齐。
+- **分区头一种样式**：`SidebarSectionTitle`（11pt 半粗，62% 墨色，计数在后，箭头在后）。
+  置顶等分区头不能淡到像禁用；置顶的「+」保持实心控件。
+- 侧栏外层系统玻璃不变，只改内部行与标题。
+
 
 ## 状态条
 

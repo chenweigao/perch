@@ -40,7 +40,9 @@ def main():
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),
-            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 180),
+            # Compiles the whole app target before 15 phases (each capped at 30 s);
+            # passing CI runs took 118–171 s, so 180 s timed out on a slow runner.
+            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 300),
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
             ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
         ]

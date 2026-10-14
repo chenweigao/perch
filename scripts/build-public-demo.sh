@@ -16,7 +16,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
-    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift \
+    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
     Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionRowChrome.swift Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/CommandPalette.swift Tests/PublicDemo/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/PerchDemo"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'

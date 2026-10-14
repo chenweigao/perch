@@ -134,7 +134,7 @@ struct ConversationScrollView<Content: View>: View {
     private var scroll: some View {
         GeometryReader { viewport in
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) { content }
+                VStack(alignment: .leading, spacing: ReplyStyle.entrySpacing) { content }
                     .environment(\.conversationViewport, conversationViewport)
                     .padding(.vertical, 12)
                     .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 72)), alignment: .leading)

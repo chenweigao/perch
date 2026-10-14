@@ -3,39 +3,115 @@ import SwiftUI
 import Observation
 import WorkbenchCore
 
-/// Shared reading metrics keep Kimi, OMP and Qoder aligned with their composers.
+/// The reading scale. Kimi, OMP, Qoder and the other native agents share it with
+/// their composers, and both renderers read every size, line height and gap from
+/// here — SwiftUI rows while a reply streams, native cached rows once it settles —
+/// so a settled row keeps the geometry of the row it replaces.
+///
+/// A 14 pt system body on a 22 pt line (≈1.57) with an ~48-character CJK measure:
+/// the native macOS reading size rather than a web-sized one. Hierarchy comes from
+/// weight and space; only H1 steps up in size.
 enum ReplyStyle {
-    static let readingWidth: CGFloat = 720
-    static let bodySize: CGFloat = 16
-    static let lineHeightRatio: CGFloat = 27.0 / 16.0
-    static let paragraphSpacing: CGFloat = 14
-    static let codeSize: CGFloat = 14
-    static let ink = Color.primary.opacity(0.94)
-    static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 18 : bodySize }
-    static func headingLineHeight(_ level: Int) -> CGFloat { bodySize * lineHeightRatio }
+    static let readingWidth: CGFloat = 680
+    static let bodySize: CGFloat = 14
+    static let lineHeight: CGFloat = 22
+    static let lineHeightRatio: CGFloat = lineHeight / bodySize
+    static let paragraphSpacing: CGFloat = 10
+    /// Between paragraphs inside list items, quotes and alerts.
+    static let compactParagraphSpacing: CGFloat = 6
+    static let codeSize: CGFloat = 12.5
+    static let codeLineSpacing: CGFloat = 4
+    /// Between the parts of one transcript entry, and above a reply's actions.
+    static let entryPartSpacing: CGFloat = 10
+    /// Between transcript entries; consecutive process rows sit closer.
+    static let entrySpacing: CGFloat = 16
+    static let processEntrySpacing: CGFloat = 6
+    static let ink = Color.primary.opacity(0.9)
+    static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 16 : bodySize }
+    static func headingLineHeight(_ level: Int) -> CGFloat { lineHeight }
     static let paper = Color.primary.opacity(0.035)
     // Preserve a dynamic color in cached attributed text. Applying alpha to
     // labelColor once can freeze the system appearance before the light window exists.
     static let nativeInk = NSColor(name: nil) { appearance in
         var ink = NSColor.labelColor
-        appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.94) }
+        appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.9) }
         return ink
     }
-    static let tableCellSize: CGFloat = 14
+    static let tableCellSize: CGFloat = 13
     /// Column totals are arithmetic over estimated content widths, so a table
     /// never probes TextKit for widths and cannot feed the transcript layout.
     static let tableGeometry = ReplyTableGeometry(fontSize: tableCellSize)
+
+    /// Block categories that set vertical rhythm. Display math spaces like code.
+    enum BlockKind { case paragraph, heading, code, rule, other }
+    /// Space above a block, shared by both renderers. Compact applies inside list
+    /// items, quotes and alerts.
+    static func blockSpacing(before block: BlockKind, after previous: BlockKind?, compact: Bool) -> CGFloat {
+        guard let previous else { return 0 }
+        if previous == .rule { return 20 }
+        if previous == .heading { return 6 }
+        if previous == .paragraph && block == .paragraph { return compact ? compactParagraphSpacing : paragraphSpacing }
+        switch block {
+        case .heading: return compact ? 12 : 20
+        case .rule: return 20
+        case .code: return compact ? 8 : 14
+        case .paragraph, .other: return compact ? 4 : paragraphSpacing
+        }
+    }
+
+    /// Code card chrome; the native card and the SwiftUI card place text identically.
+    enum Code {
+        static let cornerRadius: CGFloat = 8
+        static let labelSize: CGFloat = 11
+        static let copyButtonSize: CGFloat = 24
+        static let headerHorizontalPadding: CGFloat = 12
+        static let headerVerticalPadding: CGFloat = 3
+        static var headerHeight: CGFloat { headerVerticalPadding * 2 + copyButtonSize }
+        /// Around the code text, and on its leading side when there is no gutter.
+        static let inset: CGFloat = 12
+        static let gutterLeading: CGFloat = 10
+        static let gutterTrailing: CGFloat = 8
+    }
+    enum ListLayout {
+        static let markerGap: CGFloat = 8
+        static let minimumMarkerWidth: CGFloat = 16
+        /// Rows taller than one and a half lines are separated a little more.
+        static let multilineRowGap: CGFloat = 4
+        static let singleLineRowGap: CGFloat = 2
+        static func rowGap(between previous: CGFloat, and next: CGFloat) -> CGFloat {
+            max(previous, next) > ReplyStyle.lineHeight * 1.5 ? multilineRowGap : singleLineRowGap
+        }
+    }
+    /// Quotes and alerts: a 2 pt rule with the text inset after it.
+    enum Quote {
+        static let leadingInset: CGFloat = 16
+        static let verticalInset: CGFloat = 4
+        static let barWidth: CGFloat = 2
+    }
+}
+
+extension ReplyStyle.BlockKind {
+    init(_ block: ReplyBlock) {
+        switch block {
+        case .paragraph: self = .paragraph
+        case .heading: self = .heading
+        case .code, .math: self = .code
+        case .rule: self = .rule
+        default: self = .other
+        }
+    }
 }
 
 enum UserMessageStyle {
-    static let collapsedHeight: CGFloat = 220
-    static let foldThreshold: CGFloat = 264
-    static let lineHeight: CGFloat = 24
-    static let horizontalPadding: CGFloat = 14
-    static let verticalPadding: CGFloat = 8
+    /// Nine lines of a folded long prompt; prompts past eleven lines fold.
+    static let collapsedHeight: CGFloat = 189
+    static let foldThreshold: CGFloat = 231
+    static let lineHeight: CGFloat = 21
+    static let horizontalPadding: CGFloat = 12
+    static let verticalPadding: CGFloat = 7
     static let cornerRadius: CGFloat = 12
     static let maxWidthRatio: CGFloat = 0.85
-    static let topSpacing: CGFloat = 10
+    static let topSpacing: CGFloat = 8
     static let paragraphSpacing: CGFloat = ReplyStyle.paragraphSpacing
 }
 
@@ -195,7 +271,8 @@ private struct ReplyBlocks: View {
         var truncateAt: Int? = nil
         @ViewBuilder var body: some View {
             if case .paragraph(let runs) = group.block {
-                ReplyText(runs: runs, followingParagraphs: group.following, paragraphSpacing: compact ? 8 : ReplyStyle.paragraphSpacing,
+                ReplyText(runs: runs, followingParagraphs: group.following,
+                          paragraphSpacing: compact ? ReplyStyle.compactParagraphSpacing : ReplyStyle.paragraphSpacing,
                           preservesSelectionOnAppend: coalescesParagraphs, truncateAt: truncateAt)
             } else {
                 ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs,
@@ -208,16 +285,8 @@ private struct ReplyBlocks: View {
     }
 
     private func spacing(before block: ReplyBlock, after previous: ReplyBlock?) -> CGFloat {
-        if case .rule = previous { return 28 }
-        if case .heading = previous { return 8 }
-        if case .paragraph = previous, case .paragraph = block { return compact ? 8 : ReplyStyle.paragraphSpacing }
-        switch block {
-        case .heading: return compact ? 14 : 24
-        case .rule: return 28
-        case .code: return compact ? 10 : 18
-        case .math: return compact ? 10 : 18
-        default: return compact ? 6 : ReplyStyle.paragraphSpacing
-        }
+        ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
+                                after: previous.map { ReplyStyle.BlockKind($0) }, compact: compact)
     }
 
 }
@@ -240,7 +309,7 @@ private struct ReplyBlockContent: View, Equatable {
             let markerWidth = ReplyListMetrics.columnWidth(items.map(\.marker))
             ReplyListLayout {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 9) {
+                    HStack(alignment: .firstTextBaseline, spacing: ReplyStyle.ListLayout.markerGap) {
                         ReplyListMarker(marker: item.marker)
                             .fixedSize()
                             .alignmentGuide(.firstTextBaseline) { _ in
@@ -254,8 +323,10 @@ private struct ReplyBlockContent: View, Equatable {
             }
         case .quote(let blocks):
             AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
-                .padding(.leading, 21).padding(.vertical, 7)
-                .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(0.16)).frame(width: 2) }
+                .padding(.leading, ReplyStyle.Quote.leadingInset).padding(.vertical, ReplyStyle.Quote.verticalInset)
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(0.16)).frame(width: ReplyStyle.Quote.barWidth)
+                }
         case .alert(let kind, let blocks):
             ReplyAlertBlock(kind: kind, blocks: blocks, coalescesParagraphs: coalescesParagraphs)
         case .table(let headers, let rows, let alignments):
@@ -277,17 +348,19 @@ private struct ReplyAlertBlock: View {
                 .font(.system(size: 12, weight: .semibold)).foregroundStyle(kind.tint)
             AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
         }
-        .padding(.leading, 21).padding(.vertical, 7)
-        .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: 2) }
+        .padding(.leading, ReplyStyle.Quote.leadingInset).padding(.vertical, ReplyStyle.Quote.verticalInset)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: ReplyStyle.Quote.barWidth)
+        }
     }
 }
 
-/// One right-aligned marker column per list, at least 18 pt wide, shared by the
+/// One right-aligned marker column per list, at least 16 pt wide, shared by the
 /// SwiftUI and native renderers. Item text starts at the same x for "9." and
 /// "10.", and a settled native row keeps the geometry of the streamed SwiftUI
 /// row it replaces. Widths are measured with the marker's own label metrics.
 @MainActor enum ReplyListMetrics {
-    static let minimumMarkerWidth: CGFloat = 18
+    static let minimumMarkerWidth: CGFloat = ReplyStyle.ListLayout.minimumMarkerWidth
     private static let measuringField: NSTextField = {
         let field = NSTextField(labelWithString: "")
         field.font = .systemFont(ofSize: ReplyStyle.bodySize)
@@ -347,8 +420,7 @@ private struct ReplyListLayout: Layout {
         var height: CGFloat = 0
         for index in rows.indices {
             if index > 0 {
-                let multiline = max(rows[index - 1].height, rows[index].height) > ReplyStyle.bodySize * ReplyStyle.lineHeightRatio * 1.5
-                height += multiline ? 6 : 2
+                height += ReplyStyle.ListLayout.rowGap(between: rows[index - 1].height, and: rows[index].height)
             }
             offsets.append(height)
             height += rows[index].height
@@ -383,7 +455,7 @@ private extension EnvironmentValues {
     }
 }
 private struct ReplyLineHeightKey: EnvironmentKey {
-    static let defaultValue = ReplyStyle.bodySize * ReplyStyle.lineHeightRatio
+    static let defaultValue = ReplyStyle.lineHeight
 }
 extension EnvironmentValues {
     var replyLineHeight: CGFloat {
@@ -424,8 +496,11 @@ enum ReplyTextAttributes {
                            weight: NSFont.Weight = .regular, alignment: TextAlignment = .leading,
                            lineHeight: CGFloat? = nil, paragraphSpacing: CGFloat = ReplyStyle.paragraphSpacing,
                            ink: NSColor = ReplyStyle.nativeInk) -> NSAttributedString {
+        // Body text uses the exact scale line height; other sizes keep its ratio.
+        let resolvedLineHeight = lineHeight
+            ?? (size == ReplyStyle.bodySize ? ReplyStyle.lineHeight : size * ReplyStyle.lineHeightRatio)
         let key = ParagraphsKey(paragraphs: paragraphs, size: size, weight: weight.rawValue,
-                                alignment: alignment, lineHeight: lineHeight ?? size * ReplyStyle.lineHeightRatio,
+                                alignment: alignment, lineHeight: resolvedLineHeight,
                                 paragraphSpacing: paragraphSpacing, ink: ObjectIdentifier(ink))
         if let cached = paragraphsCache[key] {
             #if TRANSCRIPT_CHECKS
@@ -443,7 +518,7 @@ enum ReplyTextAttributes {
         #endif
         let result = NSMutableAttributedString()
         let paragraph = NSMutableParagraphStyle()
-        paragraph.minimumLineHeight = lineHeight ?? size * ReplyStyle.lineHeightRatio
+        paragraph.minimumLineHeight = resolvedLineHeight
         // Wrap oversized paths/URLs in TextKit without altering selectable text.
         paragraph.lineBreakMode = .byWordWrapping
         paragraph.alignment = alignment == .trailing ? .right : alignment == .center ? .center : .left
@@ -517,7 +592,7 @@ enum ReplyTextAttributes {
     /// Matches `SelectableReplyText(_:font:lineSpacing:)` so native and SwiftUI code
     /// cards measure identical text.
     static func code(_ source: String) -> NSAttributedString {
-        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 5
+        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = ReplyStyle.codeLineSpacing
         return NSAttributedString(string: source, attributes: [
             .font: NSFont.monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular),
             .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
@@ -526,7 +601,7 @@ enum ReplyTextAttributes {
     /// Gutter numbers share the code font and line spacing so rows align
     /// exactly; only color and alignment differ.
     static func codeGutter(_ lines: Int) -> NSAttributedString {
-        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 5; paragraph.alignment = .right
+        let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = ReplyStyle.codeLineSpacing; paragraph.alignment = .right
         let numbers = (1...max(1, lines)).map(String.init).joined(separator: "\n")
         return NSAttributedString(string: numbers, attributes: [
             .font: NSFont.monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular),
@@ -939,14 +1014,14 @@ final class NativeAssistantMessageView: NSView {
     private var actionButtonCount = 1
     private var actionsWidth: CGFloat { CGFloat(actionButtonCount) * 24 + CGFloat(max(0, actionButtonCount - 1)) * 2 }
     func measure(width: CGFloat) -> CGSize {
-        CGSize(width: width, height: stack.contentHeight(width: width) + 12 + 24)
+        CGSize(width: width, height: stack.contentHeight(width: width) + ReplyStyle.entryPartSpacing + 24)
     }
     func place(width: CGFloat) {
         let content = stack.contentHeight(width: width)
         let stackFrame = CGRect(x: 0, y: 0, width: width, height: content)
         if stack.frame != stackFrame { stack.frame = stackFrame }
         stack.place(width: width)
-        let frame = CGRect(x: 0, y: content + 12, width: actionsWidth, height: 24)
+        let frame = CGRect(x: 0, y: content + ReplyStyle.entryPartSpacing, width: actionsWidth, height: 24)
         if actions.frame != frame { actions.frame = frame }
     }
     #if TRANSCRIPT_CHECKS
@@ -1276,27 +1351,29 @@ private struct ReplyCode: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(language.isEmpty ? "代码" : language).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                Text(language.isEmpty ? "代码" : language).font(.system(size: ReplyStyle.Code.labelSize, weight: .medium))
+                    .foregroundStyle(.secondary)
                 Spacer()
                 ReplyCopyButton(text: source, label: "复制代码")
-            }.padding(.horizontal, 14).padding(.vertical, 5)
+            }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: 0) {
                     if lineCount > 1 {
                         SelectableReplyText(attributed: ReplyTextAttributes.codeGutter(lineCount), selectable: false)
                             .fixedSize(horizontal: true, vertical: true)
-                            .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 14)
+                            .padding(.leading, ReplyStyle.Code.gutterLeading).padding(.trailing, ReplyStyle.Code.gutterTrailing)
+                            .padding(.vertical, ReplyStyle.Code.inset)
                     }
-                    SelectableReplyText(source, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular), lineSpacing: 5)
+                    SelectableReplyText(source, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular),
+                                        lineSpacing: ReplyStyle.codeLineSpacing)
                         .fixedSize(horizontal: true, vertical: true)
-                        .padding(lineCount > 1
-                                 ? EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 14)
-                                 : EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14))
+                        .padding(EdgeInsets(top: ReplyStyle.Code.inset, leading: lineCount > 1 ? 0 : ReplyStyle.Code.inset,
+                                            bottom: ReplyStyle.Code.inset, trailing: ReplyStyle.Code.inset))
                 }
             }
-        }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.055)))
+        }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }
 }
 
@@ -1347,7 +1424,7 @@ private struct ReplyTable: View {
     private func cell(_ runs: [ReplyInline], column: Int, header: Bool) -> some View {
         ReplyText(runs: runs, size: ReplyStyle.tableCellSize, weight: header ? .medium : .regular,
                   alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading)
-            .padding(.horizontal, ReplyStyle.tableGeometry.cellPadding).padding(.vertical, 10)
+            .padding(.horizontal, ReplyStyle.tableGeometry.cellPadding).padding(.vertical, 8)
     }
 }
 

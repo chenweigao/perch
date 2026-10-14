@@ -66,12 +66,13 @@ private struct ReadingDesignFixture: View {
         precondition(views.filter { $0.string.contains("正文清楚呈现") || $0.string.contains("let answer") }.allSatisfy { $0.isSelectable }, "Reply and code text must remain selectable")
         let heading = views.first { $0.string == "让回复成为阅读的主角" }!
         let headingFont = heading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
-        precondition(headingFont.pointSize == 18, "Native heading uses the shared hierarchy")
+        precondition(headingFont.pointSize == 16, "Native heading uses the shared hierarchy")
         let body = views.first { $0.string.contains("正文清楚呈现") }!
         let bodyFont = body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
         let paragraph = body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle
         let subheading = views.first { $0.string == "本次调整" }!
-        precondition(bodyFont.pointSize == 16 && paragraph.minimumLineHeight == 27)
+        precondition(bodyFont.pointSize == 14 && paragraph.minimumLineHeight == 22,
+                     "Body reads at 14 pt on a 22 pt line in both renderers")
         precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == bodyFont.pointSize,
                      "Ordinary headings keep the body size; hierarchy comes from weight and spacing")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot bitmap") }
@@ -104,6 +105,6 @@ private struct ReadingDesignFixture: View {
     window.contentView = fallback
     try await Task.sleep(for: .milliseconds(400))
     let fallbackHeading = readingTextViews(fallback).first { $0.string == "让回复成为阅读的主角" }!
-    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 18)
+    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 16)
     print("PASS: reading design wide/narrow/dark, collapsed process, complete code, selectable text and native/fallback heading parity; snapshots /private/tmp/perch-reading-design")
 }

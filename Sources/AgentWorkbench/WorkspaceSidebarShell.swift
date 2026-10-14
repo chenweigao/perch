@@ -26,25 +26,28 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 HStack(spacing: 4) {
+                    // A field-like target: tinted, never bordered, same height as rows.
                     navigation("搜索项目与会话", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
-                        .background(.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+                        .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
                         .accessibilityIdentifier("sidebar.search")
                     Button(action: onNew) {
-                        Image(systemName: "square.and.pencil").frame(width: 28, height: 34)
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: SidebarMetrics.rowHeight, height: SidebarMetrics.rowHeight)
                     }.buttonStyle(SidebarNavigationStyle()).help("新建会话")
                         .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
-                }.padding(.bottom, 9)
+                }.padding(.bottom, 8)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
-            }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 8)
+            }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 6)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
                 // Project rows are bounded until explicitly expanded. Keep stable
                 // eager layout when selection and catalog order change together.
-                VStack(alignment: .leading, spacing: 3) { rows }
+                VStack(alignment: .leading, spacing: 2) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
             }.scrollIndicators(.hidden)
                 .onChange(of: scrollTargetID, initial: true) { _, target in
@@ -69,16 +72,16 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                     showEnvironments = false
                     showSettings.toggle()
                 } label: {
-                    HStack(spacing: WorkbenchChrome.labelSpacing) {
-                        Image(systemName: "gearshape").font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
-                            .frame(width: WorkbenchChrome.sidebarSymbolWidth)
+                    HStack(spacing: SidebarMetrics.labelSpacing) {
+                        Image(systemName: "gearshape").font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                            .frame(width: SidebarMetrics.iconWidth)
                             .overlay(alignment: .topTrailing) {
                                 if environmentNeedsAttention {
                                     Circle().fill(.orange).frame(width: 6, height: 6)
                                 }
                             }
                         Text("设置与环境"); Spacer(); Text("⌘,").foregroundStyle(.tertiary)
-                    }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                    }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
                     .accessibilityIdentifier("sidebar.settings")
                     .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
@@ -112,13 +115,18 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,
                             count: Int = 0, shortcut: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: WorkbenchChrome.labelSpacing) {
-                Image(systemName: symbol).font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium)
-                    .frame(width: WorkbenchChrome.sidebarSymbolWidth)
+            HStack(spacing: SidebarMetrics.labelSpacing) {
+                Image(systemName: symbol).font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                    .frame(width: SidebarMetrics.iconWidth)
                 Text(title).lineLimit(1); Spacer(minLength: 4)
-                if count > 0 { Text("\(count)").font(.system(size: 11, weight: .medium)).monospacedDigit().foregroundStyle(.secondary) }
-                if let shortcut { Text(shortcut).foregroundStyle(.tertiary).fixedSize() }
-            }.padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                if count > 0 {
+                    Text("\(count)").font(.system(size: SidebarMetrics.detailSize, weight: .medium)).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                if let shortcut {
+                    Text(shortcut).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.tertiary).fixedSize()
+                }
+            }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
         }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
@@ -137,20 +145,27 @@ struct SidebarProjectHeader: View {
     var body: some View {
         HStack(spacing: 0) {
             Button(action: onToggle) {
-                HStack(spacing: 7) {
+                // Chevron, then the icon in the column its sessions use below it.
+                HStack(spacing: 0) {
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .medium)).frame(width: 10).foregroundStyle(.secondary)
+                        .font(.system(size: 9, weight: .semibold)).foregroundStyle(.tertiary)
+                        .frame(width: SidebarMetrics.disclosureWidth)
+                        .padding(.trailing, SidebarMetrics.disclosureSpacing)
                     Image(systemName: project.location == nil ? "bubble.left.and.bubble.right" : "folder")
-                        .font(.system(size: 13)).foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(project.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                        .font(.system(size: SidebarMetrics.iconSize)).imageScale(.medium).foregroundStyle(.secondary)
+                        .frame(width: SidebarMetrics.iconWidth)
+                        .padding(.trailing, SidebarMetrics.labelSpacing)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(project.title).font(.system(size: SidebarMetrics.titleSize, weight: .medium)).lineLimit(1)
                         if project.disambiguate, let detail = project.detail {
-                            Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(detail).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
                                 .lineLimit(1).truncationMode(.middle)
                         }
                     }
                     Spacer(minLength: 4)
-                }.padding(.leading, 9).frame(height: project.disambiguate ? 46 : 34).contentShape(Rectangle())
+                }.padding(.leading, SidebarMetrics.rowInset)
+                    .frame(height: project.disambiguate ? SidebarMetrics.subtitleRowHeight : SidebarMetrics.rowHeight)
+                    .contentShape(Rectangle())
             }.buttonStyle(SidebarNavigationStyle()).focused($focused, equals: .toggle)
                 .help(project.detail ?? project.title)
                 .accessibilityLabel(project.title)
@@ -158,15 +173,18 @@ struct SidebarProjectHeader: View {
                 .accessibilityIdentifier("sidebar.project.\(project.id)")
                 .contextMenu { Button("新建会话", action: onNew).disabled(!canCreate) }
             ZStack {
-                Text("\(project.sessions.count)").font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
+                Text("\(project.sessions.count)").font(.system(size: SidebarMetrics.detailSize)).monospacedDigit()
+                    .foregroundStyle(.tertiary)
                     .opacity(hovered || focused != nil ? 0 : 1).accessibilityHidden(true)
-                Button(action: onNew) { Image(systemName: "plus").frame(width: 28, height: 28) }
+                Button(action: onNew) {
+                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).frame(width: 26, height: 26)
+                }
                     .buttonStyle(SidebarNavigationStyle()).disabled(!canCreate)
                     .focused($focused, equals: .create)
                     .help("在此项目新建会话").accessibilityLabel("在此项目新建会话")
                     .opacity(hovered || focused != nil ? 1 : 0).allowsHitTesting(hovered || focused != nil)
             }.frame(width: 28)
-        }.padding(.top, 3).onHover { hovered = $0 }
+        }.padding(.top, 2).onHover { hovered = $0 }
     }
 }
 
@@ -189,22 +207,21 @@ struct SidebarSection<Content: View, Actions: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 0) {
                 Button { isExpanded.toggle() } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 9, weight: .medium)).frame(width: 10).accessibilityHidden(true)
-                        Text(title)
+                    HStack(spacing: 0) {
+                        SidebarSectionTitle(title: Text(title), expanded: isExpanded)
                         Spacer(minLength: 0)
-                    }.frame(height: 24).contentShape(Rectangle())
+                    }.padding(.horizontal, SidebarMetrics.rowInset)
+                        .frame(height: SidebarMetrics.sectionHeaderHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
                     .accessibilityLabel(Text(title))
                     .accessibilityValue(isExpanded ? Text("已展开") : Text("已收起"))
                     .accessibilityIdentifier("sidebar.section.\(id)")
                 actions
-            }.font(.system(size: 11)).foregroundStyle(.secondary)
-                .padding(.horizontal, 10).padding(.top, 16).padding(.bottom, 7)
+            }.font(.system(size: SidebarMetrics.sectionTitleSize)).foregroundStyle(.secondary)
+                .padding(.top, SidebarMetrics.sectionTopSpacing).padding(.bottom, SidebarMetrics.sectionBottomSpacing)
             if isExpanded { content }
         }
     }
@@ -223,11 +240,13 @@ private struct SidebarNavigationBody: View {
     let selected: Bool
     @State private var hovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var opacity: Double { configuration.isPressed ? 0.09 : selected ? 0.065 : hovered ? 0.03 : 0 }
+    private var opacity: Double {
+        SidebarMetrics.fill(selected: selected, hovered: hovered, pressed: configuration.isPressed)
+    }
     var body: some View {
         configuration.label.contentShape(Rectangle())
             .background {
-                RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(opacity))
+                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius).fill(Color.primary.opacity(opacity))
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: opacity)
             }
             .onHover { hovered = $0 }
