@@ -9,6 +9,10 @@ sidebar/composer glass. Typography now emphasizes a consistent reading rhythm:
 - Lists retain tighter inner spacing. Code and table text use 14 pt. User messages
   share the body size with a slightly tighter 24 pt line height.
 - SwiftUI and native cached rows share the same text attributes and spacing.
+- List markers form one right-aligned column per list (at least 18 pt, as wide as the
+  widest marker), computed by `ReplyListMetrics` for both renderers. Items of a ten-item
+  ordered list start at one x, and a streamed reply does not shift when it settles into
+  the native row. Strong text never lightens a semibold heading.
 
 Return to latest floats at the bottom center of the transcript, 8 points above the
 input-area activity controls. Only the small button has a glass surface; its
