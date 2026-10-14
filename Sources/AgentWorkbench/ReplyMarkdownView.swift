@@ -1357,6 +1357,11 @@ private struct ReplyCode: View {
                 ReplyCopyButton(text: source, label: "复制代码")
             }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
+            // The settled native card uses an overlay scroller that takes no height.
+            // When macOS shows legacy scrollers (a mouse is attached), a SwiftUI
+            // scroll view reserves a scroller band below an overflowing line once it
+            // is displayed, so this card would be taller than the native card it
+            // settles into. Never reserve it; trackpad and Shift-wheel still scroll.
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: 0) {
                     if lineCount > 1 {
@@ -1372,6 +1377,7 @@ private struct ReplyCode: View {
                                             bottom: ReplyStyle.Code.inset, trailing: ReplyStyle.Code.inset))
                 }
             }
+            .scrollIndicators(.never, axes: .horizontal)
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }
