@@ -12,6 +12,9 @@ struct ProtocolTests {
         case "presentation-token":
             try benchPresentationTokenUpdates()
             return
+        case "activity":
+            try benchConversationActivity()
+            return
         default:
             break
         }
