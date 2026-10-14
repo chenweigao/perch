@@ -914,8 +914,15 @@ final class ReplyTextView: NSTextView {
     private var measurements: [(width: CGFloat, size: CGSize)] = []
     func update(_ value: NSAttributedString, preservingSelectionOnAppend: Bool = false) {
         guard let storage = textStorage, !storage.isEqual(to: value) else { return }
-        let retainedSelection = preservingSelectionOnAppend && value.string.hasPrefix(storage.string) ? selectedRange() : nil
-        storage.setAttributedString(value)
+        let appending = value.string.hasPrefix(storage.string)
+        let retainedSelection = preservingSelectionOnAppend && appending ? selectedRange() : nil
+        if appending {
+            // Prefix growth (streaming, reveal frames): append only the delta so
+            // TextKit layout invalidates the tail, not the whole paragraph.
+            storage.append(value.attributedSubstring(from: NSRange(location: storage.length, length: value.length - storage.length)))
+        } else {
+            storage.setAttributedString(value)
+        }
         if let retainedSelection { setSelectedRange(retainedSelection) }
         measurements.removeAll(keepingCapacity: true)
         applyFindHighlight()
