@@ -438,9 +438,12 @@ extension NavigationRunner {
         host.rootView = root([try message(source)], running: true)
         try await settle()
         let live = ConversationPresentationModel(key: session).update(.init(messages: [try message(source)], isRunning: true, language: "en"))
-        guard live.rows.first?.entry.presentation == .progress, live.displayedRows(activity: { _ in nil }).isEmpty,
-              live.narrative.current?.source == .commentary, nativeRows().isEmpty, textViews().isEmpty else {
-            throw NavigationError("Live commentary did not retain its existing activity-bar projection")
+        let displayedLive = live.displayedRows(activity: { _ in nil })
+        let liveText = textViews().map(\.string).joined(separator: "\n")
+        guard live.rows.first?.entry.presentation == .progress, displayedLive.count == 1,
+              displayedLive.first?.activity == nil, live.narrative.current?.source == .commentary,
+              nativeRows().isEmpty, liveText.contains("Alpha bold 中文"), liveText.contains("Beta") else {
+            throw NavigationError("Live reply must stay visible while the activity bar retains its projection")
         }
         host.rootView = root([try message(source)])
         try await settle()
