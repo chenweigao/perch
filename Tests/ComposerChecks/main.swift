@@ -105,6 +105,28 @@ imageBoard.writeObjects(pasted.map { $0 as NSURL })
 let originalFiles = pasted
 check(editor.readSelection(from: imageBoard), "Finder file URLs must remain pasteable")
 check(Array(pasted.suffix(originalFiles.count)) == originalFiles, "Multiple pasted file URLs must be delivered together")
+// Non-image local files replace only the selection; images retain attachments.
+let fileFolder = FileManager.default.temporaryDirectory.appendingPathComponent("perch-reference-check-\(UUID())")
+try FileManager.default.createDirectory(at: fileFolder, withIntermediateDirectories: true)
+defer { try? FileManager.default.removeItem(at: fileFolder) }
+let textFile = fileFolder.appendingPathComponent("中文 file.txt")
+try "fixture".write(to: textFile, atomically: true, encoding: .utf8)
+editor.syncDraft("before replace after")
+editor.setSelectedRange((editor.string as NSString).range(of: "replace"))
+editor.fileReference = { url in url == textFile ? "@reference " : nil }
+let imageFile = pasted[0]
+let attachmentCount = pasted.count
+imageBoard.clearContents()
+imageBoard.writeObjects([textFile as NSURL, imageFile as NSURL])
+check(editor.readSelection(from: imageBoard, type: .fileURL), "Mixed local file paste is handled")
+check(editor.string == "before @reference  after", "Reference replaces the selection and preserves surrounding draft")
+check(pasted.count == attachmentCount + 1 && pasted.last == imageFile, "Image stays attached while text becomes a reference")
+editor.fileReference = nil
+imageBoard.clearContents(); imageBoard.writeObjects([textFile as NSURL])
+let remoteDraft = editor.string
+check(editor.readSelection(from: imageBoard, type: .fileURL), "Remote file paste is handled")
+check(pasted.last == textFile && editor.string == remoteDraft, "Remote hosts attach local files without changing draft")
+print("File reference paste checks passed: mixed image/text, selection replacement, remote attachment boundary")
 editor.onFiles = nil
 imageBoard.clearContents()
 imageBoard.setData(bitmap.representation(using: .png, properties: [:])!, forType: .png)
