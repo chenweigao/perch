@@ -10,9 +10,10 @@ sidebar/composer glass. Typography now emphasizes a consistent reading rhythm:
   share the body size with a slightly tighter 24 pt line height.
 - SwiftUI and native cached rows share the same text attributes and spacing.
 
-Return to latest is centered in a stable 40-point navigation slot between the
-scrolling transcript and the input-area activity controls. It cannot cover text;
-showing/hiding it or changing its label does not resize the reading viewport.
+Return to latest floats at the bottom center of the transcript, 8 points above the
+input-area activity controls. Only the small button has a glass surface; its
+surroundings remain transparent. It reserves no footer space, and showing/hiding
+it or changing its label does not resize the reading viewport.
 While reading history it shows an arrow, expanding to “New content” when the
 conversation revision changes. Clicking restores the existing follow-tail state;
 new content alone does not move the reader. Kimi and native agents share this layout.

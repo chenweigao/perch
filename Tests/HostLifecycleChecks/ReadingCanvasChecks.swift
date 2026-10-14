@@ -38,6 +38,8 @@ private struct CanvasNavigationFixture: View {
         window.makeKeyAndOrderFront(nil)
         try await Task.sleep(for: .milliseconds(250))
         guard let scroll = scrollViews(host).first else { preconditionFailure("Missing conversation scroll view") }
+        precondition(abs(scroll.frame.height - host.bounds.height) < 1,
+                     "Floating navigation must not reserve a footer or reduce the transcript height")
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 220))
         scroll.reflectScrolledClipView(scroll.contentView)
         let before = scroll.contentView.bounds
@@ -47,7 +49,7 @@ private struct CanvasNavigationFixture: View {
             try await Task.sleep(for: .milliseconds(100))
             precondition(scroll.contentView.bounds == before, "Showing navigation or changing its label must not move or resize the viewport")
         }
-        let point = host.convert(NSPoint(x: width / 2, y: host.isFlipped ? 580 : 20), to: nil)
+        let point = host.convert(NSPoint(x: width / 2, y: host.isFlipped ? 576 : 24), to: nil)
         for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             window.sendEvent(NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
                 windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: kind == .leftMouseDown ? 1 : 0)!)
@@ -59,5 +61,5 @@ private struct CanvasNavigationFixture: View {
                      "Return reaches the latest anchor, with only the outer padding beyond it")
         precondition(scroll.contentView.bounds.size == before.size, "Hiding the button preserves the viewport")
     }
-    print("PASS: centered return-to-latest wide/narrow clicks, actual tail navigation and unchanged reading viewport")
+    print("PASS: floating centered return-to-latest, full-height transcript, wide/narrow clicks and actual tail navigation")
 }

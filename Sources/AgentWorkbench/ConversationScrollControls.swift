@@ -148,18 +148,17 @@ struct ConversationScrollView<Content: View>: View {
         }
     }
     var body: some View {
-        VStack(spacing: 0) {
-            scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
-                contentSize = size
-            }.task(id: contentSize) {
-                await Task.yield()
-                if !Task.isCancelled { onContentSizeChange() }
-            }
+        scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
+            contentSize = size
+        }.task(id: contentSize) {
+            await Task.yield()
+            if !Task.isCancelled { onContentSizeChange() }
+        }.overlay(alignment: .bottom) {
             if let onReturnToLatest {
-                // A stable navigation slot keeps the button off selectable text.
-                // Showing it never resizes the viewport or moves the reading anchor.
+                // Only the button floats over the transcript; there is no reserved
+                // footer or full-width surface intercepting the reading area.
                 ReturnToLatestButton(isVisible: showsReturnToLatest, hasNewReply: hasNewReply, action: onReturnToLatest)
-                    .frame(maxWidth: .infinity).frame(height: 40)
+                    .padding(.bottom, 8)
             }
         }
     }
