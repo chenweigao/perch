@@ -37,8 +37,13 @@ struct NativeAgentView: View {
                     .accessibilityHidden(!isCurrent(s))
                     .overlay { if !isCurrent(s) { selectionPlaceholder } }
             } else { selectionPlaceholder }
-            if !connection.online { HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10) }
-            else { NativeStaleSyncHint(connection: connection) }
+            // A visible conversation reports disconnection in its activity bar,
+            // with the same reconnect action; keep this line for every other state.
+            if !connection.online {
+                if !(connection.conversation.presentationSnapshot.map(isCurrent) ?? false) {
+                    HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10)
+                }
+            } else { NativeStaleSyncHint(connection: connection) }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
@@ -137,7 +142,7 @@ struct NativeAgentView: View {
                 pendingCount: s.interactions.count, isStopping: connection.isStopping),
                 isRunning: s.busy,
                 timing: connection.timings.turns[s.id],
-                online: connection.online, pendingCount: s.interactions.count,
+                online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,
                 narrativeSession: readingKey,
                 recapKey: recapKey,
                 recapMessages: {

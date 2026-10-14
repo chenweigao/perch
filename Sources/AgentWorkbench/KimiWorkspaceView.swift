@@ -36,7 +36,7 @@ struct KimiWorkspaceView: View {
                     pendingCount: pending, isStopping: connection.isStopping),
                     isRunning: conversation.snapshot.session.isTurnRunning,
                     timing: connection.timings.turns[conversation.snapshot.session.id],
-                    online: connection.online, pendingCount: pending,
+                    online: connection.online, offlineDetail: connection.error, pendingCount: pending,
                     narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
                     recapKey: recapKey,
                     recapMessages: { try await connection.recapMessages(for: conversation.snapshot.session.id) },
@@ -70,7 +70,11 @@ struct KimiWorkspaceView: View {
                 if let problem = connection.actionError { errorBanner(problem) }
                 Spacer()
             }
-            if let problem = connection.error { errorBanner("连接中断，显示的是最近同步的内容。\n" + problem) }
+            // An open conversation reports disconnection, its detail and the
+            // reconnect action in the activity bar; do not repeat it below.
+            if let problem = connection.error, connection.online || connection.conversation == nil {
+                errorBanner("连接中断，显示的是最近同步的内容。\n" + problem)
+            }
             if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
             .tint(kimiAccent)
