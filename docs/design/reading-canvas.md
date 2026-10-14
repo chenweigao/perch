@@ -14,7 +14,10 @@ see [the visual refresh](visual-refresh.md) for the complete scale and rationale
   monospaced text and tables 13 pt. User messages share the body size on a slightly
   tighter 21 pt line.
 - SwiftUI and native cached rows share the same text attributes, block rhythm
-  (`ReplyStyle.blockSpacing`), code card, quote and list metrics.
+  (`ReplyStyle.blockSpacing`), code card, quote and list metrics. A code card's
+  horizontal scroller never takes height: the native card overlays it, and the
+  SwiftUI card hides it, so a long line does not make a streamed card taller than
+  its settled native row when macOS shows legacy scrollers.
 - List markers form one right-aligned column per list (at least 16 pt, as wide as the
   widest marker), computed by `ReplyListMetrics` for both renderers. Items of a ten-item
   ordered list start at one x, and a streamed reply does not shift when it settles into
