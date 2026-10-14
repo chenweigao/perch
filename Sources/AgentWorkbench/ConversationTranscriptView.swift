@@ -441,6 +441,38 @@ private final class ConversationDocumentView: NSView {
         guard indices[original[0].entry.id] == nil, heights.count == original.count - 1 else {
             throw WorkbenchError("Removal kept obsolete row geometry")
         }
+        // A refresh that shrinks the body below the clip (a settled fold) must
+        // pin the clip back into the body synchronously, not a display pass later.
+        apply(original, appearance)
+        _ = measure(width: columnWidth)
+        guard let clip = observedClip else { throw WorkbenchError("Shrink fixture lost the clip view") }
+        clip.scroll(to: NSPoint(x: 0, y: max(0, totalHeight - clip.bounds.height) + contentOriginY))
+        enclosingScrollView?.reflectScrolledClipView(clip)
+        refreshVisibleRows(source: .configure)
+        apply(Array(original.suffix(2)), appearance)
+        do {
+            let visibleNow = viewportRect
+            let covered = contents.indices.contains { index in
+                offsets[index] < visibleNow.maxY && offsets[index] + heights[index] > visibleNow.minY
+                    && mounted.contains(contents[index].entry.id)
+            }
+            guard visibleNow.minY <= max(0, totalHeight - visibleNow.height) + 1, covered else {
+                throw WorkbenchError("Shrink left the clip outside the body for a display pass")
+            }
+        }
+        // With a pending restore target the pin lands on the target row itself.
+        apply(original, appearance)
+        _ = measure(width: columnWidth)
+        clip.scroll(to: NSPoint(x: 0, y: max(0, totalHeight - clip.bounds.height) + contentOriginY))
+        enclosingScrollView?.reflectScrolledClipView(clip)
+        refreshVisibleRows(source: .configure)
+        let mid = original.count / 2
+        restoreTarget = .init(entry: original[mid].entry.id, index: mid, offset: 0)
+        defer { restoreTarget = nil }
+        apply(Array(original[(mid - 15)...(mid + 15)]), appearance)
+        guard let targetRow = indices[original[mid].entry.id], abs(viewportRect.minY - offsets[targetRow]) <= 1 else {
+            throw WorkbenchError("Shrink restore did not land on the reading anchor")
+        }
         // Reproduce the launch crash: separate folds from one persisted message
         // must survive the native unique-key indices and saved-height maps.
         let multipart = try KimiWire.decoder().decode([KimiMessage].self, from: Data("""
@@ -469,6 +501,7 @@ private final class ConversationDocumentView: NSView {
         return ["unchanged_replays": 40, "unchanged_reconciliations": 0, "unchanged_geometry_rebuilds": 0,
                 "unchanged_host_measurements": 0, "same_id_offscreen_and_visible_edits": true,
                 "appearance_invalidation": true, "external_summary_same_snapshot": true, "prepend_and_removal": true,
+                "shrink_clip_pin": true, "shrink_restore_pin": true,
                 "multipart_fold_reconciliation_and_heights": true]
     }
     fileprivate var navigator: ConversationTurnNavigation? { viewport?.navigator }
@@ -862,6 +895,22 @@ private final class ConversationDocumentView: NSView {
             // Lay out the incoming tail directly, not the outgoing clip position
             // or the top of a newly created scroll view. Keep estimates hidden.
             visible.origin.y = max(0, totalHeight - visible.height)
+        }
+        // A refresh can shrink the body below the clip (a settled turn folds its
+        // process rows). AppKit clamps the origin only after a blank display
+        // pass; pin the clip into the body now, at the pending restore target
+        // when one exists. The frame still lags the content in this window, so
+        // elastic overscroll (frame already matches) is left alone.
+        let bottom = max(0, totalHeight - visible.height)
+        if visible.minY > bottom, abs(bounds.height - totalHeight) >= 1, let clip = observedClip {
+            let pinned: CGFloat
+            if let target = restoreTarget {
+                let row = indices[target.entry] ?? min(target.index, contents.count - 1)
+                pinned = max(0, min(offsets[row] + target.offset, bottom))
+            } else { pinned = bottom }
+            clip.scroll(to: NSPoint(x: 0, y: pinned + contentOriginY))
+            enclosingScrollView?.reflectScrolledClipView(clip)
+            visible = viewportRect
         }
         // Mount exactly the visible range; wider speculative ranges measured as
         // pure overhead on whole-viewport steps and did not pay for themselves.
