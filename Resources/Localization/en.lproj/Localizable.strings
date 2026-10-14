@@ -1321,3 +1321,10 @@
 "重新同步目标" = "Refresh goal";
 
 "有新内容" = "New content";
+
+/* Markdown alert headings. */
+"注意" = "Note";
+"提示" = "Tip";
+"重要" = "Important";
+"警告" = "Warning";
+"当心" = "Caution";

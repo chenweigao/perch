@@ -7,6 +7,7 @@ app_dir="$PWD/build/Navigation Preview.app"
 # This fixture links SwiftPM object files directly. Use the native layout;
 # Xcode 27 defaults to Swift Build, whose Products directory has no .build objects.
 swift build --build-system native -c release --target WorkbenchCore
+swift build --build-system native -c release --target SwiftMath
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
@@ -15,6 +16,8 @@ app_files=(
      Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/ReplyMarkdownView.swift
+    Sources/AgentWorkbench/ReplyMathView.swift
+    Sources/AgentWorkbench/ReplyAlertBlock.swift
     Sources/AgentWorkbench/NativeAssistantBlocks.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
     Sources/AgentWorkbench/ConversationActivityBar.swift
@@ -26,13 +29,14 @@ app_files=(
 includes=( -I "$bin_dir/Modules" -I .build/checkouts/swift-markdown/Sources/CAtomic/include
            -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include )
 objects=()
-for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
+for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(find "$bin_dir/$target.build" -type f -name '*.o' | sort)
 done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -D TRANSCRIPT_CHECKS -parse-as-library "${includes[@]}" \
     "${app_files[@]}" Tests/PerformancePreview/Workload.swift \
     Tests/NavigationPreview/ToolCardExperiment.swift Tests/NavigationPreview/History.swift Tests/NavigationPreview/ParagraphExperiment.swift Tests/NavigationPreview/JointInteraction.swift Tests/NavigationPreview/DisclosureAnimationProbe.swift Tests/NavigationPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/NavigationPreview"
+cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 commit="$(git rev-parse HEAD)"
 cat > "$app_dir/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
