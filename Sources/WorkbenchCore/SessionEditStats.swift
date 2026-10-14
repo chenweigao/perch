@@ -1,0 +1,115 @@
+import Foundation
+
+/// One file's added/removed line tally from edit-class tool calls.
+public struct SessionEditStat: Equatable, Sendable {
+    public var additions: Int
+    public var deletions: Int
+    public init(additions: Int, deletions: Int) {
+        self.additions = additions
+        self.deletions = deletions
+    }
+}
+
+/// Added/removed line tally derived from the session's own edit-class tool
+/// calls — ported from ccgui's edit-line-stats.ts. Session-sourced instead of
+/// git-sourced: gitignored targets, non-repo workspaces and files committed
+/// mid-session stay counted. Repeated edits of one path accumulate: the
+/// session's total churn, not the last call's. The tool names are the ones
+/// Perch's runtimes actually emit (see ConversationActivity's title mapping).
+public enum SessionEditStats {
+    /// Whole-session tally; nil when no edit resolved a file, so the caller
+    /// hides the stats instead of showing zeros.
+    public static func derive(from messages: [KimiMessage]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
+        var perFile: [String: SessionEditStat] = [:]
+        for message in messages {
+            for part in message.content where part.type == "tool_use" {
+                guard let tool = part.toolName, let input = part.input else { continue }
+                let edits: [(stat: SessionEditStat, path: String?)]
+                if tool.lowercased() == "apply_patch", !input["changes"].array.isEmpty {
+                    // Codex fileChange is normalized by native-agent-service.py to
+                    // one changes array, with a path and unified diff per file.
+                    edits = input["changes"].array.compactMap { change in
+                        guard let path = change["path"].string, !path.contains("://"),
+                              let diff = change["diff"].string else { return nil }
+                        return (patchStat(diff), path)
+                    }
+                } else {
+                    edits = compute(tool: tool, input: input).map { [$0] } ?? []
+                }
+                for edit in edits {
+                    guard let path = edit.path else { continue }
+                    var accumulated = perFile[path] ?? SessionEditStat(additions: 0, deletions: 0)
+                    accumulated.additions += edit.stat.additions
+                    accumulated.deletions += edit.stat.deletions
+                    perFile[path] = accumulated
+                }
+            }
+        }
+        guard !perFile.isEmpty else { return nil }
+        let total = perFile.values.reduce(SessionEditStat(additions: 0, deletions: 0)) {
+            SessionEditStat(additions: $0.additions + $1.additions, deletions: $0.deletions + $1.deletions)
+        }
+        return (perFile, total)
+    }
+
+    // Derive from this snapshot only. Tool IDs are not globally unique and
+    // providers can publish revised inputs under the same ID.
+    private static func compute(tool: String, input: JSONValue) -> (stat: SessionEditStat, path: String?)? {
+        // Tool-call paths may be absolute; URL-ish values are never files.
+        let path = input["file_path"].string ?? input["filePath"].string ?? input["path"].string
+        if let path, path.contains("://") { return nil }
+        switch tool.lowercased() {
+        case "edit", "edit_file":
+            guard let stat = lineDiff(old: input["old_string"].string ?? input["oldString"].string,
+                                      new: input["new_string"].string ?? input["newString"].string) else { return nil }
+            return (stat, path)
+        case "write", "write_file":
+            guard let content = input["content"].string else { return nil }
+            return (SessionEditStat(additions: lineCount(content), deletions: 0), path)
+        case "apply_patch":
+            guard let patch = input["patch"].string ?? input["diff"].string else { return nil }
+            return (patchStat(patch), path)
+        default:
+            return nil
+        }
+    }
+
+    private static func patchStat(_ patch: String) -> SessionEditStat {
+        var stat = SessionEditStat(additions: 0, deletions: 0)
+        for line in patch.split(separator: "\n", omittingEmptySubsequences: false) {
+            if line.hasPrefix("+++ ") || line.hasPrefix("--- ") { continue }
+            if line.hasPrefix("+") { stat.additions += 1 }
+            else if line.hasPrefix("-") { stat.deletions += 1 }
+        }
+        return stat
+    }
+
+    /// A trailing newline ends the last line rather than starting another —
+    /// but keep parity with ccgui's JS split, which counts it.
+    private static func lineCount(_ text: String) -> Int {
+        text.split(separator: "\n", omittingEmptySubsequences: false).count
+    }
+
+    /// Old/new diff counting only the changed middle: common prefix and suffix
+    /// lines are context, not edits.
+    private static func lineDiff(old: String?, new: String?) -> SessionEditStat? {
+        guard old != nil || new != nil else { return nil }
+        let oldLines = old.map { $0.split(separator: "\n", omittingEmptySubsequences: false) } ?? []
+        let newLines = new.map { $0.split(separator: "\n", omittingEmptySubsequences: false) } ?? []
+        if old != nil && (new == nil || new!.isEmpty) {
+            return SessionEditStat(additions: 0, deletions: oldLines.count)
+        }
+        if new != nil && (old == nil || old!.isEmpty) {
+            return SessionEditStat(additions: newLines.count, deletions: 0)
+        }
+        var start = 0
+        while start < oldLines.count && start < newLines.count && oldLines[start] == newLines[start] { start += 1 }
+        var oldEnd = oldLines.count
+        var newEnd = newLines.count
+        while oldEnd > start && newEnd > start && oldLines[oldEnd - 1] == newLines[newEnd - 1] {
+            oldEnd -= 1
+            newEnd -= 1
+        }
+        return SessionEditStat(additions: newEnd - start, deletions: oldEnd - start)
+    }
+}

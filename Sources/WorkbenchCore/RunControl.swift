@@ -251,6 +251,21 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
         return true
     }
 
+    /// Reorder within a session's editable entries (ccgui message-queue parity).
+    /// The list reads earliest-first, so `up` means "send earlier". Only
+    /// editable entries swap: a submitted/accepted message keeps its position
+    /// and blocks nothing, since delivery always consults `nextPendingID`.
+    public mutating func move(_ id: String, up: Bool) -> Bool {
+        guard let index = messages.firstIndex(where: { $0.id == id }), messages[index].state.isEditable else { return false }
+        let session = messages[index].session
+        let editable = messages.indices.filter { messages[$0].session == session && messages[$0].state.isEditable }
+        guard let position = editable.firstIndex(of: index) else { return false }
+        let neighbor = up ? position - 1 : position + 1
+        guard editable.indices.contains(neighbor) else { return false }
+        messages.swapAt(index, editable[neighbor])
+        return true
+    }
+
     /// The next message to hand to the runtime, or nil while the queue is paused or
     /// the current turn is still streaming. A paused queue never auto-resumes, so a
     /// stop is not immediately followed by a new turn.

@@ -141,6 +141,7 @@ struct ProjectMessageComposer: View {
     private var editor: some View {
         MessageComposer(text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel,
                 canSend: canSend, onSend: onSend, onFiles: onFiles, onError: onError,
+                fileReference: host.isLocal ? { ProjectFileReference.token(path: $0.path) } : nil,
                 onKey: handle,
                 onLongPaste: pastes.map { store in { content in
                     guard DraftPaste.shouldFold(content) else { return nil as String? }

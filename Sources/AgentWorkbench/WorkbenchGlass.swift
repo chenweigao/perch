@@ -44,11 +44,85 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
                     .contentShape(Rectangle())
             }.buttonStyle(WorkbenchDisclosureButtonStyle())
                 .accessibilityValue(configuration.isExpanded ? Text("已展开") : Text("已收起"))
-            if configuration.isExpanded { configuration.content }
+            WorkbenchDisclosureContent(expanded: configuration.isExpanded) { configuration.content }
         }
     }
 }
 
+/// Disclosure content that opens and closes with a height transition, pushing
+/// siblings instead of flashing in (ccgui ui-ux-spec §2.4). Content stays
+/// mounted while the close animation runs and unmounts only after it ends;
+/// rows that remember an expanded state re-appear fully open without
+/// replaying the animation. Reduce Motion bypasses the transition entirely.
+struct WorkbenchDisclosureContent<Content: View>: View {
+    let expanded: Bool
+    @ViewBuilder var content: Content
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.conversationReduceMotion) private var conversationReduceMotion
+    @State private var naturalHeight: CGFloat = 0
+    @State private var mounted: Bool
+    /// Non-nil while animating: the clipped height growing 0→natural or
+    /// shrinking natural→0. Nil means the content flows at its natural height.
+    @State private var clippedHeight: CGFloat?
+    @State private var animationRevision = 0
+
+    init(expanded: Bool, @ViewBuilder content: () -> Content) {
+        self.expanded = expanded
+        self.content = content()
+        _mounted = State(initialValue: expanded)
+    }
+
+    private var reduceMotion: Bool { accessibilityReduceMotion || conversationReduceMotion }
+
+    var body: some View {
+        Group {
+            if mounted {
+                content
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight = $0 }
+                    .frame(height: clippedHeight, alignment: .top)
+                    .clipped()
+            }
+        }
+        .onChange(of: expanded) { _, now in
+                animationRevision += 1
+                let revision = animationRevision
+                guard !reduceMotion else { mounted = now; clippedHeight = nil; return }
+                if now {
+                    // Mount at zero height, then grow once the first layout pass
+                    // has measured the content.
+                    mounted = true
+                    clippedHeight = 0
+                    DispatchQueue.main.async {
+                        guard revision == animationRevision else { return }
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            clippedHeight = naturalHeight
+                        } completion: {
+                            if revision == animationRevision { clippedHeight = nil }
+                        }
+                    }
+                } else {
+                    clippedHeight = naturalHeight
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        clippedHeight = 0
+                    } completion: {
+                        if revision == animationRevision {
+                            mounted = false
+                            clippedHeight = nil
+                        }
+                    }
+                }
+            }
+        .onDisappear { animationRevision += 1 }
+        .onChange(of: reduceMotion) { _, reduced in
+            if reduced {
+                animationRevision += 1
+                mounted = expanded
+                clippedHeight = nil
+            }
+        }
+    }
+}
 struct WorkbenchDisclosureButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         DisclosureButtonBody(configuration: configuration)

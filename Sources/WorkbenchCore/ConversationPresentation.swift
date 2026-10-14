@@ -65,7 +65,16 @@ public final class ConversationPresentationModel {
         }
         /// External summaries stay live; they never become part of a cached input.
         public func displayedRows(activity: (String) -> ActivityNarrativeRow?) -> [Row] {
-            rows.compactMap { row in
+            // Keep the current reply visible. Its locally derived commentary
+            // summary is useful to the activity bar, but must not replace the
+            // actual streaming text in the transcript.
+            let liveReplyID = rows.last {
+                $0.entry.presentation == .progress && $0.activity?.stageClosed == false
+            }?.entry.id
+            return rows.compactMap { row in
+                if row.entry.id == liveReplyID {
+                    return Row(entry: row.entry, tools: row.tools, activity: nil)
+                }
                 let narrative = activity(row.entry.id) ?? row.activity
                 if let narrative, narrative.isAnchor, !narrative.stageClosed,
                    row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
