@@ -35,6 +35,8 @@ struct ProtocolTests {
         try checkWorkflow()
         checkConversationRowGeometry()
         checkReplyDocument()
+        checkReplyMath()
+        checkMathRendering()
         checkReplyTableGeometry()
         try checkNativeAgents()
         try checkIncrementalLoading()

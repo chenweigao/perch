@@ -213,6 +213,7 @@ private struct ReplyBlocks: View {
         case .heading: return compact ? 14 : 22
         case .rule: return 28
         case .code: return compact ? 10 : 18
+        case .math: return compact ? 10 : 18
         default: return compact ? 6 : 12
         }
     }
@@ -232,6 +233,7 @@ private struct ReplyBlockContent: View, Equatable {
             ReplyText(runs: runs, size: ReplyStyle.headingSize(level),
                       weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level), truncateAt: truncateAt)
         case .code(let language, let source): ReplyCode(language: language, source: source)
+        case .math(let latex): ReplyMathBlock(latex: latex)
         case .list(let items):
             ReplyListLayout {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
@@ -355,6 +357,13 @@ enum ReplyTextAttributes {
                 result.append(NSAttributedString(string: "\n", attributes: separator))
             }
             for run in paragraphRuns {
+                if let math = run.math {
+                    // Inline formula: one attachment char carrying the paragraph style.
+                    let attachment = NSMutableAttributedString(attributedString: ReplyMathAttachment.string(latex: math, size: size))
+                    attachment.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: attachment.length))
+                    result.append(attachment)
+                    continue
+                }
                 let runWeight: NSFont.Weight = run.strong ? .medium : weight
                 var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
                                     : NSFont.systemFont(ofSize: size, weight: runWeight)

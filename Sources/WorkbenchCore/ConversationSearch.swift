@@ -125,6 +125,8 @@ public final class ConversationSearch {
             switch block {
             case .paragraph(let runs), .heading(_, let runs): return runs.map(\.text).joined()
             case .code(_, let source): return source
+            // Math is searchable by its TeX source.
+            case .math(let latex): return latex
             case .list(let items): return items.map { renderedText($0.blocks) }.joined(separator: "\n")
             case .quote(let children): return renderedText(children)
             case .table(let headers, let rows, _): return (headers + rows.flatMap { $0 }).map { $0.map(\.text).joined() }.joined(separator: "\n")

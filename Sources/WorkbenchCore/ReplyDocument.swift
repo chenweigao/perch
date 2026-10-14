@@ -6,6 +6,8 @@ public enum ReplyBlock: Equatable {
     case paragraph([ReplyInline])
     case heading(Int, [ReplyInline])
     case code(language: String, source: String)
+    /// Display math ($$…$$ / \[…\]); the formula is one atomic block.
+    case math(String)
     indirect case list([ReplyListItem])
     indirect case quote([ReplyBlock])
     case table(headers: [[ReplyInline]], rows: [[[ReplyInline]]], alignments: [ReplyAlignment])
@@ -26,6 +28,8 @@ public struct ReplyInline: Equatable {
     public var code = false
     public var strikethrough = false
     public var link: URL?
+    /// Inline TeX ($…$ / \(…\)); the text carries the object replacement char.
+    public var math: String? = nil
 }
 
 public enum ReplyDocument {
@@ -36,7 +40,10 @@ public enum ReplyDocument {
     private static func blocks(_ parent: Markup) -> [ReplyBlock] {
         parent.children.flatMap { node -> [ReplyBlock] in
             switch node {
-            case let value as Paragraph: return [.paragraph(linkBareURLs(inlines(value)))]
+            case let value as Paragraph:
+                let runs = linkBareURLs(inlines(value))
+                if let latex = ReplyMath.displayContent(runs.map(\.text).joined()) { return [.math(latex)] }
+                return [.paragraph(ReplyMath.splitInline(runs))]
             case let value as Heading: return [.heading(value.level, linkBareURLs(inlines(value)))]
             case let value as CodeBlock:
                 // Remove the parser's terminal newline, preserving code indentation and blank lines.
@@ -55,7 +62,7 @@ public enum ReplyDocument {
                 let alignments: [ReplyAlignment] = value.columnAlignments.map {
                     switch $0 { case .center: return .center; case .right: return .trailing; default: return .leading }
                 }
-                return [.table(headers: value.head.cells.map { linkBareURLs(inlines($0)) }, rows: value.body.rows.map { $0.cells.map { linkBareURLs(inlines($0)) } }, alignments: alignments)]
+                return [.table(headers: value.head.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0))) }, rows: value.body.rows.map { $0.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0))) } }, alignments: alignments)]
             case is ThematicBreak: return [.rule]
             case let value as HTMLBlock: return [.paragraph([ReplyInline(text: value.rawHTML)])]
             default: return blocks(node)
