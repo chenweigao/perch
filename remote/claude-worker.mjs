@@ -1,5 +1,6 @@
 import {query} from '@anthropic-ai/claude-agent-sdk';
 import {readFileSync} from 'node:fs';
+import {isAbsolute, normalize, sep} from 'node:path';
 import readline from 'node:readline';
 const cfg = JSON.parse(process.argv[2]);
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
@@ -22,6 +23,19 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
     const permissionMode = cmd.permissionMode ?? 'default';
     const attachments = Array.isArray(cmd.attachments) ? cmd.attachments : [];
     let prompt = cmd.message;
+    // Track only this query's successful writes to Claude's plan directory.
+    // Never choose the newest file from another conversation.
+    const writtenPlanPaths = new Map();
+    const planPath = value => typeof value === 'string' && isAbsolute(value)
+      && normalize(value).includes(`${sep}.claude${sep}plans${sep}`) ? value : undefined;
+    const readPlan = (input, agentID) => {
+      const path = planPath(input.planFilePath) || writtenPlanPaths.get(agentID ?? "");
+      if (path) {
+        try { return {path, content:readFileSync(path, 'utf8')}; }
+        catch { return {path, content:''}; }
+      }
+      return {content:typeof input.plan === 'string' ? input.plan : ''};
+    };
     if (attachments.length) {
       const content = [];
       let note = '';
@@ -41,15 +55,38 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
       permissionMode, includePartialMessages: true, resume,
       ...(permissionMode === 'bypassPermissions' ? {allowDangerouslySkipPermissions: true} : {}),
       ...(cfg.model ? {model: cfg.model} : {}),
+      hooks: {PostToolUse:[{matcher:'Write|Edit', hooks:[async event => {
+        const path = planPath(event.tool_input?.file_path);
+        if (path) writtenPlanPaths.set(event.agent_id ?? "", path);
+        return {};
+      }]}]},
       canUseTool: async (name, input, context) => {
         const id = context.toolUseID;
-        const answer = await new Promise(resolve => {
-          pending.set(id, resolve);
-          context.signal.addEventListener('abort', () => {pending.delete(id); emit({type:'interaction_cancel', id}); resolve({allow:false});}, {once:true});
-          emit({type:'interaction', id, name, input, title:context.decisionReason});
-        });
-        if (!answer.allow) return {behavior:'deny', message:'用户拒绝此次操作'};
-        return {behavior:'allow', updatedInput: name === 'AskUserQuestion' ? {...input, answers:answer.answers} : input};
+        let changed = false;
+        while (true) {
+          if (context.signal.aborted) return {behavior:'deny', message:'操作已取消'};
+          const plan = name === 'ExitPlanMode' ? readPlan(input, context.agentID) : undefined;
+          let onAbort;
+          const answer = await new Promise(resolve => {
+            pending.set(id, resolve);
+            onAbort = () => {pending.delete(id); emit({type:'interaction_cancel', id}); resolve({allow:false});};
+            context.signal.addEventListener('abort', onAbort, {once:true});
+            emit({type:'interaction', id, name, input, title:context.decisionReason,
+              ...(plan ? {planContent:plan.content, planChanged:changed} : {})});
+          });
+          context.signal.removeEventListener('abort', onAbort);
+          if (context.signal.aborted) return {behavior:'deny', message:'操作已取消'};
+          if (plan && answer.allow) {
+            const current = readPlan(input, context.agentID);
+            if (!plan.content.trim() || current.content !== plan.content || current.path !== plan.path) {
+              changed = true;
+              continue;
+            }
+          }
+          if (!answer.allow) return {behavior:'deny', message:answer.feedback || '用户拒绝此次操作'};
+          return {behavior:'allow', updatedInput: name === 'AskUserQuestion' ? {...input, answers:answer.answers}
+            : plan && typeof input.plan === 'string' ? {...input, plan:plan.content} : input};
+        }
       }
     }});
     emit({type:'agent_start'});

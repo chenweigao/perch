@@ -90,7 +90,8 @@ struct NativeAgentView: View {
                                      ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id))
                     NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
                     Color.clear.frame(height: 1).id("pending-interactions")
-                    ForEach(s.interactions, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
+                    ForEach(s.interactions.filter { NativePlanReview($0) == nil }, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
+                    NativePlanReviewDock(connection: connection, sessionID: s.id).id("plan:" + s.id)
                     Color.clear.frame(height: 1).id("bottom")
                 }
                     .overlay(alignment: .topTrailing) {

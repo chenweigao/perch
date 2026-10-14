@@ -1012,6 +1012,50 @@ class HandlerContractTests(unittest.TestCase):
         return result[0]
     def prompt(self,key='one'):
         return self.request('/sessions/contract/prompt',{'text':'中文指令','requestId':key})
+    def plan(self, text='## Plan\nDo the scoped work.'):
+        self.s.state['provider']='claude'
+        self.s.event({'type':'interaction','id':'plan-tool','name':'ExitPlanMode','input':{'plan':text}})
+        return self.s.state['interactions'][0]['planReview']['revision']
+    def test_plan_defer_resume_and_approval_are_explicit(self):
+        revision=self.plan(); base={'id':'plan-tool','planRevision':revision}
+        for decision,status in [('defer','deferred'),('resume','awaiting_review')]:
+            code,_=self.request('/sessions/contract/answer',{**base,'decision':decision})
+            self.assertEqual(code,200); self.assertEqual(self.sent,[])
+            self.assertEqual(self.s.snapshot()['interactions'][0]['planReview']['status'],status)
+            self.assertEqual(json.loads(self.s.path.read_text())['interactions'][0]['planReview']['status'],status)
+        code,_=self.request('/sessions/contract/answer',{**base,'decision':'approve'})
+        self.assertEqual(code,200); self.assertEqual(self.sent,[{'type':'answer','id':'plan-tool','allow':True,'feedback':''}])
+        self.assertEqual(self.s.snapshot()['interactions'],[])
+        code,_=self.request('/sessions/contract/answer',{**base,'decision':'approve'})
+        self.assertEqual(code,409); self.assertEqual(len(self.sent),1)
+    def test_plan_revision_conflict_and_cancel_do_not_send(self):
+        old=self.plan('old'); current=self.plan('new')
+        self.assertNotEqual(old,current)
+        code,_=self.request('/sessions/contract/answer',{'id':'plan-tool','planRevision':old,'decision':'approve'})
+        self.assertEqual(code,409); self.assertEqual(self.sent,[])
+        code,_=self.request('/sessions/contract/answer',{'id':'plan-tool','allow':True})
+        self.assertEqual(code,409); self.assertEqual(self.sent,[])
+        self.s.event({'type':'interaction_cancel','id':'plan-tool'})
+        code,_=self.request('/sessions/contract/answer',{'id':'plan-tool','planRevision':current,'decision':'approve'})
+        self.assertEqual(code,409); self.assertEqual(self.sent,[])
+    def test_plan_changes_missing_content_and_wire_failure(self):
+        revision=self.plan(''); base={'id':'plan-tool','planRevision':revision}
+        code,_=self.request('/sessions/contract/answer',{**base,'decision':'approve'})
+        self.assertEqual(code,400); self.assertEqual(self.sent,[])
+        code,_=self.request('/sessions/contract/answer',{**base,'decision':'request_changes','feedback':'  '})
+        self.assertEqual(code,400)
+        with patch.object(self.s,'send',side_effect=BrokenPipeError('fixture disconnected')):
+            code,_=self.request('/sessions/contract/answer',{**base,'decision':'request_changes','feedback':'补充回滚方案'})
+        self.assertEqual(code,400); self.assertEqual(len(self.s.state['interactions']),1)
+        code,_=self.request('/sessions/contract/answer',{**base,'decision':'request_changes','feedback':'补充回滚方案'})
+        self.assertEqual(code,200); self.assertEqual(self.sent[-1]['feedback'],'补充回滚方案'); self.assertFalse(self.sent[-1]['allow'])
+        self.assertEqual(self.s.state['planReviewHistory'][-1]['status'],'request_changes')
+    def test_deferred_plan_cannot_be_approved_by_stale_client(self):
+        revision=self.plan(); base={'id':'plan-tool','planRevision':revision}
+        self.request('/sessions/contract/answer',{**base,'decision':'defer'})
+        code,_=self.request('/sessions/contract/answer',{**base,'decision':'approve'})
+        self.assertEqual(code,409); self.assertEqual(self.sent,[])
+
     def test_models_unwraps_omp_json_and_tags_the_runtime(self):
         # 18.1.16 answers ModelsJson, not a bare list, and one malformed entry must
         # not take the whole catalog down with it.

@@ -1237,3 +1237,47 @@
 "%lld 次调用" = "%lld calls";
 
 "%lld 条记录" = "%lld records";
+
+"展开完整问题" = "Show full question";
+
+"收起问题" = "Collapse question";
+
+"上一页" = "Previous page";
+
+"下一页" = "Next page";
+
+"第 %lld / %lld 页" = "Page %lld of %lld";
+
+"计划已更新，修改意见已保留，请核对后再提交。" = "The plan changed. Your feedback is preserved; review it before submitting.";
+
+"计划已变化或会话已切换，请重新查看。" = "The plan or chat changed. Review it again.";
+
+"计划已暂缓" = "Plan deferred";
+
+"审阅计划" = "Review plan";
+
+"尚未收到完整计划，请要求 Agent 补充后再批准。" = "The complete plan is unavailable. Ask the agent to provide it before approving.";
+
+"查看完整计划" = "View full plan";
+
+"Agent 仍在等待，继续审批后再决定。" = "The agent is still waiting. Resume the review when ready.";
+
+"继续审批" = "Resume review";
+
+"批准本次计划，工具权限沿用当前设置。" = "Approve this plan. Existing tool permissions still apply.";
+
+"填写修改意见" = "Describe the requested changes";
+
+"提交修改意见" = "Request changes";
+
+"返回" = "Back";
+
+"批准计划" = "Approve plan";
+
+"提出修改" = "Suggest changes";
+
+"稍后审批" = "Review later";
+
+"关闭提示" = "Dismiss notice";
+
+"计划文件已变化，请重新审阅。" = "The plan file changed. Review it again.";

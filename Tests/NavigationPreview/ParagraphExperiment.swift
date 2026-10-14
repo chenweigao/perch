@@ -148,6 +148,8 @@ extension NavigationRunner {
             (view as? ReplyTextView).map { [$0] } ?? view.subviews.flatMap(texts)
         }
         let role = assistant ? "assistant" : "user"
+        // Compare complete glyph layouts; folding itself has native interaction coverage.
+        ConversationReadingMemory.shared.expansions["row-parity:user-prompt"] = true
         var cases = [
             ("短问题 中文 👩🏽‍💻", ["短问题"]),
             ("Alpha **bold** *italic* ~~strike~~ `inline` [link](https://example.com/path).\n\nBeta 中文 👩🏽‍💻 é.  \nHardLine 保持换行。\n\nGamma /tmp/fixture.swift:42 结尾。", ["Alpha", "Beta", "HardLine", "Gamma"]),
@@ -174,12 +176,14 @@ extension NavigationRunner {
                     let original = NSHostingController(rootView: VStack(alignment: .leading, spacing: 12) {
                         KimiMessageView(message: message, tools: [:], api: nil, sessionId: "parity")
                         if assistant { ReplyCopyButton(text: source) }
-                    }.frame(width: width).environment(\.colorScheme, dark ? .dark : .light))
+                    }.frame(width: width).environment(\.colorScheme, dark ? .dark : .light)
+                        .environment(\.conversationMemoryKey, "row-parity"))
                     original.sizingOptions = []; original.safeAreaRegions = []
                     let attributed = assistant ? nil : NativeUserMessageView.content(source)
                     let blocks = assistant ? NativeAssistantContent.make(source) : nil
                     guard attributed != nil || blocks != nil else { throw NavigationError("Native \(role) fixture rejected admitted content") }
                     let userView = assistant ? nil : NativeUserMessageView.acquire()
+                    userView?.expansionKey = "row-parity"
                     let assistantView = assistant ? NativeAssistantMessageView.acquire() : nil
                     if let attributed { userView?.update(attributed, dark: dark) }
                     if let blocks { assistantView?.update(blocks, source: source, dark: dark) }
@@ -196,12 +200,19 @@ extension NavigationRunner {
                         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
                         window.contentView = view; window.orderFront(nil)
                         defer { window.close() }
-                        let size = isNative ? (assistantView?.measure(width: width) ?? userView!.measure(width: width)) : original.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+                        var size = isNative ? (assistantView?.measure(width: width) ?? userView!.measure(width: width)) : original.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
                         window.setContentSize(size)
                         if isNative { userView?.place(width: width); assistantView?.place(width: width) }
                         for _ in 0..<5 {
                             await withCheckedContinuation { c in DispatchQueue.main.async { c.resume() } }
                             view.layoutSubtreeIfNeeded(); view.displayIfNeeded(); CATransaction.flush()
+                        }
+                        // Geometry-driven controls appear after the first hosting pass.
+                        // Measure the settled view, as the transcript controller does.
+                        if !isNative {
+                            size = original.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+                            window.setContentSize(size)
+                            view.layoutSubtreeIfNeeded()
                         }
                         if isNative && !assistant {
                             guard let background = native.subviews.first(where: { $0.identifier?.rawValue == "native-user-bubble-background" }),
@@ -218,9 +229,9 @@ extension NavigationRunner {
                                       let text = texts(native).first,
                                       abs(style.minimumLineHeight - UserMessageStyle.lineHeight) <= 0.01,
                                       abs(background.frame.height - expectedHeight) <= 1,
-                                      abs(text.frame.minY - background.frame.minY - UserMessageStyle.verticalPadding) <= 1,
-                                      abs(background.frame.maxY - text.frame.maxY - UserMessageStyle.verticalPadding) <= 1 else {
-                                    throw NavigationError("Native user bubble lost its compact 20pt line height or symmetric 8pt insets")
+                                      abs(text.convert(text.bounds, to: native).minY - background.frame.minY - UserMessageStyle.verticalPadding) <= 1,
+                                      abs(background.frame.maxY - text.convert(text.bounds, to: native).maxY - UserMessageStyle.verticalPadding) <= 1 else {
+                                    throw NavigationError("Native user bubble lost its compact line height or symmetric 8pt insets")
                                 }
                             }
                         }

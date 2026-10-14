@@ -1185,7 +1185,16 @@ class Session:
             commands=[c for c in (e.get('commands') or []) if c.get('name')]
             if commands == s.get('commands'): return
             s['commands']=commands
-        elif provider in ('qoder','qoderintl','claude') and t == 'interaction': s['interactions'].append(e); durable=True
+        elif provider in ('qoder','qoderintl','claude') and t == 'interaction':
+            e=copy.deepcopy(e)
+            if provider=='claude' and e.get('name')=='ExitPlanMode':
+                content=e.get('planContent', (e.get('input') or {}).get('plan'))
+                content=content if isinstance(content,str) else ''
+                e['planReview']={'revision':uuid.uuid4().hex,'content':content,
+                                 'complete':bool(content.strip()),'status':'awaiting_review','changed':e.get('planChanged') is True}
+                # A replacement with the same tool ID invalidates the old revision.
+                s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]
+            s['interactions'].append(e); durable=True
         elif provider in ('qoder','qoderintl','claude') and t == 'interaction_cancel': s['interactions']=[x for x in s['interactions'] if x['id']!=e['id']]; durable=True
         elif provider in ('qoder','qoderintl','claude') and t in ('assistant','user'):
             message = e['message']
@@ -1311,6 +1320,33 @@ class Session:
             return
         else: return
         self.touch(durable)
+    def answer_plan(self, body):
+        item=next((x for x in self.state['interactions'] if x['id']==body.get('id') and (not x.get('expires') or x['expires']>time.time())),None)
+        plan=item.get('planReview') if item else None
+        if not plan or body.get('planRevision')!=plan['revision']:
+            raise PlanReviewConflict('计划已变化或已处理，请查看最新计划后再决定')
+        decision=body.get('decision')
+        if decision=='resume' and plan['status']=='deferred':
+            plan['status']='awaiting_review'; self.touch(True); return
+        if plan['status']!='awaiting_review':
+            raise PlanReviewConflict('计划已暂缓，请先继续审批')
+        if decision=='defer':
+            plan['status']='deferred'; self.touch(True); return
+        if decision not in ('approve','request_changes'):
+            raise ValueError('未知的计划审批操作')
+        feedback=body.get('feedback','')
+        if not isinstance(feedback,str): raise ValueError('请填写修改意见')
+        if decision=='request_changes' and not feedback.strip(): raise ValueError('请填写修改意见')
+        if decision=='approve' and not plan['complete']:
+            raise ValueError('尚未收到完整计划，请要求 Agent 补充后再批准')
+        # Only the current request can be answered; deferring never resolves the SDK callback.
+        self.send({'type':'answer','id':item['id'],'allow':decision=='approve',
+                   'feedback':feedback.strip() if decision=='request_changes' else ''})
+        self.state['planReviewHistory']=(self.state.get('planReviewHistory',[])+[
+            {'id':item['id'],**plan,'status':decision,'feedback':feedback.strip()}])[-20:]
+        self.state['interactions']=[x for x in self.state['interactions'] if x['id']!=item['id']]
+        self.touch(True)
+
     def snapshot(self, revision=None, turns=None, start=None, epoch=None, before=None):
         live=[x for x in self.state['interactions'] if not x.get('expires') or x['expires']>time.time()]
         if live != self.state['interactions']: self.state['interactions']=live; self.touch(True)
@@ -1364,6 +1400,9 @@ def load():
         if isinstance(s.get('commandResult'),dict) and s['commandResult'].get('status')=='running':
             s['commandResult'].update(status='unknown',error='服务曾中断，命令结果未知')
         restored.persist()
+
+class PlanReviewConflict(ValueError):
+    pass
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args): pass
@@ -1536,32 +1575,36 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'type':'abort','turnId':body['turnId']})
                                 s.state['stopRequested']=True; s.touch(True)
                         elif action=='answer':
-                            item=next(x for x in s.snapshot()['interactions'] if x['id']==body['id'])
-                            if s.state['provider']=='codex':
-                                s.codex_answer(body['id'],body)
-                            elif s.state['provider']=='omp':
-                                answer={'type':'extension_ui_response','id':body['id']}
-                                if body.get('cancelled'): answer['cancelled']=True
-                                elif item['method']=='confirm': answer['confirmed']=body.get('allow',False)
-                                else: answer['value']=body['value']
-                                s.send(answer)
-                            elif s.state['provider']=='dsh':
-                                pending = s.permission_options.get(body['id'])
-                                if not pending: raise ValueError('该审批已失效，请同步会话后重试')
-                                if body.get('cancelled'):
-                                    outcome = {'outcome':'cancelled'}
-                                else:
-                                    option_id = pending['map'].get(body.get('value'))
-                                    if option_id is None: raise ValueError('未知的审批选项')
-                                    outcome = {'outcome':'selected','optionId':option_id}
-                                # Pop only after the answer is accepted on the wire; a
-                                # rejected choice must not destroy the mapping.
-                                s.send({'jsonrpc':'2.0','id':pending['wireId'],'result':{'outcome':outcome}})
-                                s.permission_options.pop(body['id'], None)
+                            if 'planRevision' in body:
+                                s.answer_plan(body)
                             else:
-                                s.send({'type':'answer',**body})
-                            if s.state['provider']!='codex':
-                                s.state['interactions']=[x for x in s.state['interactions'] if x['id']!=body['id']]; s.touch(True)
+                                item=next(x for x in s.snapshot()['interactions'] if x['id']==body['id'])
+                                if item.get('planReview'): raise PlanReviewConflict('请更新客户端并查看计划后审批')
+                                if s.state['provider']=='codex':
+                                    s.codex_answer(body['id'],body)
+                                elif s.state['provider']=='omp':
+                                    answer={'type':'extension_ui_response','id':body['id']}
+                                    if body.get('cancelled'): answer['cancelled']=True
+                                    elif item['method']=='confirm': answer['confirmed']=body.get('allow',False)
+                                    else: answer['value']=body['value']
+                                    s.send(answer)
+                                elif s.state['provider']=='dsh':
+                                    pending = s.permission_options.get(body['id'])
+                                    if not pending: raise ValueError('该审批已失效，请同步会话后重试')
+                                    if body.get('cancelled'):
+                                        outcome = {'outcome':'cancelled'}
+                                    else:
+                                        option_id = pending['map'].get(body.get('value'))
+                                        if option_id is None: raise ValueError('未知的审批选项')
+                                        outcome = {'outcome':'selected','optionId':option_id}
+                                    # Pop only after the answer is accepted on the wire; a
+                                    # rejected choice must not destroy the mapping.
+                                    s.send({'jsonrpc':'2.0','id':pending['wireId'],'result':{'outcome':outcome}})
+                                    s.permission_options.pop(body['id'], None)
+                                else:
+                                    s.send({'type':'answer',**body})
+                                if s.state['provider']!='codex':
+                                    s.state['interactions']=[x for x in s.state['interactions'] if x['id']!=body['id']]; s.touch(True)
                         elif action=='archive':
                             if s.state['busy']: raise ValueError('请先停止或完成任务')
                             if s.state['provider']=='codex':
@@ -1581,6 +1624,7 @@ class Handler(BaseHTTPRequestHandler):
                         if action not in ('prompt','steer','permission'): result={'ok':True}
                 else: raise ValueError('未知路径')
             self.respond(200,result)
+        except PlanReviewConflict as e: self.respond(409,{'error':str(e)})
         except Exception as e: self.respond(400,{'error':str(e)})
     def respond(self,status,body):
         data=json.dumps(body,ensure_ascii=False).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
