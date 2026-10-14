@@ -16,6 +16,7 @@ struct WorkbenchApp: App {
                 .frame(minWidth: 940, minHeight: 620)
                 .environment(\.locale, appLanguage.resolvedLocale)
                 .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }
+                .task { await AppUpdateChecker.shared.checkThrottled() }
                 .onChange(of: appLanguage) { _, value in
                     AppLanguage.applyToSystem(value)
                     model.refreshLocalizedCatalog()

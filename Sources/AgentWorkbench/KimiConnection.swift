@@ -831,6 +831,7 @@ final class KimiConnection {
     }
     func editQueued(_ messageID: String, text: String) -> Bool { queue.edit(messageID, text: text) }
     func removeQueued(_ messageID: String) { _ = queue.remove(messageID) }
+    func moveQueued(_ messageID: String, up: Bool) { _ = queue.move(messageID, up: up) }
 
     /// Re-sends text as a new prompt. An in-progress draft is never replaced:
     /// the resend queues behind it instead.

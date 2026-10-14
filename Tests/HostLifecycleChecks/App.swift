@@ -16,6 +16,10 @@ import WorkbenchCore
         switch CommandLine.arguments[1] {
         case "git-write":
             try await checkGitWriteLifecycle()
+        case "stream-reveal":
+            try await checkProductionStreamReveal()
+        case "interactions":
+            try await checkDisclosureAndQuestionInteractions()
 
         case "architecture":
             UserDefaults.standard.removePersistentDomain(forName: domain)

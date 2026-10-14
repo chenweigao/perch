@@ -116,6 +116,7 @@ struct WorkbenchSettings: View {
                         .font(.caption2).foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 8)
+                    updateCheck
                 }
             }
         }.formStyle(.grouped).frame(width: 560, height: 740)
@@ -129,6 +130,34 @@ struct WorkbenchSettings: View {
         let version = info?["CFBundleShortVersionString"] as? String ?? ""
         let revision = info?["PerchSourceRevision"] as? String ?? ""
         return revision.isEmpty ? "Perch \(version)" : "Perch \(version) (\(revision))"
+    }
+
+    /// Version check against the public repository's tags. Never auto-installs:
+    /// Perch ships source, so the update path is pull + rebuild.
+    @ViewBuilder private var updateCheck: some View {
+        let checker = AppUpdateChecker.shared
+        HStack(spacing: 8) {
+            switch checker.state {
+            case .idle:
+                EmptyView()
+            case .checking:
+                ProgressView().controlSize(.mini)
+                Text("正在检查更新…").foregroundStyle(.secondary)
+            case .upToDate:
+                Label("已是最新版本", systemImage: "checkmark.circle").foregroundStyle(.secondary)
+            case .available(let latest):
+                Label("有新版本 \(latest)", systemImage: "arrow.down.circle").foregroundStyle(.orange)
+                Link("查看发布", destination: URL(string: "https://github.com/chenweigao/perch/releases")!)
+                    .font(.caption)
+                Text("此版本需手动更新").foregroundStyle(.tertiary)
+            case .failed(let reason):
+                Text(reason).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("检查更新") { Task { await checker.checkNow() } }
+                .disabled(checker.state == .checking)
+        }.font(.caption)
+        .task { await checker.checkThrottled() }
     }
 
     @ViewBuilder private var localAgentStatus: some View {

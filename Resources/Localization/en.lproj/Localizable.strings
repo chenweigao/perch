@@ -1202,3 +1202,33 @@
 "没有可置顶的会话" = "No chats available to pin";
 
 "所选目录不是可用的 Git 工作树。" = "The selected directory is not an available Git worktree.";
+"确认本题并继续" = "Confirm and continue";
+
+"修改回答" = "Edit answer";
+"编辑文件" = "Edited files";
+"已是最新版本" = "Up to date";
+
+"有新版本 %@" = "Version %@ is available";
+
+"查看发布" = "View release";
+
+"检查更新" = "Check for updates";
+
+"正在检查更新…" = "Checking for updates…";
+
+"此版本需手动更新" = "Update this build manually";
+
+"检查失败" = "Check failed";
+
+"发布页暂无可解析版本" = "No release version is available";
+
+"网络不可用" = "Network unavailable";
+
+"查询返回 %lld" = "Request returned %lld";
+"上移，更早发送" = "Move up to send earlier";
+
+"上移" = "Move up";
+
+"下移，更晚发送" = "Move down to send later";
+
+"下移" = "Move down";

@@ -4,6 +4,9 @@ import Foundation
 public struct ConversationActivity {
     public let tools: [VisibleTool]
     public let todos: [ConversationTodo]
+    /// Whole-session edit churn from the session's own edit-class tool calls;
+    /// nil when nothing resolved, so the bar stays hidden rather than showing zeros.
+    public let edits: (perFile: [String: SessionEditStat], total: SessionEditStat)?
     public let title: String
     public let operationDescription: String?
     public let symbol: String
@@ -24,6 +27,7 @@ public struct ConversationActivity {
         tools = projection.messages.flatMap(\.content).filter { $0.type == "tool_use" }
             .compactMap { projection.tools[$0.toolCallId ?? ""] }
         todos = ConversationTodo.floating(in: current, isRunning: isRunning)
+        edits = SessionEditStats.derive(from: messages)
         let active = tools.filter { $0.status == .running }
         let description = active.first?.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
         operationDescription = online && isRunning && pendingCount == 0 && !isStopping && description?.isEmpty == false

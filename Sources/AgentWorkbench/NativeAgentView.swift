@@ -368,6 +368,17 @@ struct NativeRunControls: View {
                                               mode: message.mode == .steer ? "Steer" : "Queue")
                         HStack(spacing: 10) {
                             if message.state.isEditable {
+                                let editable = pending.filter { $0.state.isEditable }
+                                if editable.count > 1, let position = editable.firstIndex(where: { $0.id == message.id }) {
+                                    Button { _ = connection.queue.move(message.id, up: true) } label: {
+                                        Image(systemName: "chevron.up").frame(width: 22, height: 22).contentShape(Rectangle())
+                                    }.buttonStyle(.plain).disabled(position == 0)
+                                        .help("上移，更早发送").accessibilityLabel("上移")
+                                    Button { _ = connection.queue.move(message.id, up: false) } label: {
+                                        Image(systemName: "chevron.down").frame(width: 22, height: 22).contentShape(Rectangle())
+                                    }.buttonStyle(.plain).disabled(position == editable.count - 1)
+                                        .help("下移，更晚发送").accessibilityLabel("下移")
+                                }
                                 Button("Edit") { editingMessage = message }.font(.caption2)
                                 Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
                             }
@@ -424,7 +435,16 @@ struct NativeInteractionView: View {
                     let question = q["question"].string ?? ""
                     Text(question)
                     ForEach(q["options"].array, id: \.display) { option in
-                        Button(option["label"].string ?? option.display) { answers[question] = option["label"].string ?? option.display }.buttonStyle(.bordered)
+                        let label = option["label"].string ?? option.display
+                        Button {
+                            answers[question] = label
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: answers[question] == label ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(answers[question] == label ? Color.accentColor : Color.secondary)
+                                Text(label).foregroundStyle(.primary)
+                            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
                     }
                     TextField("回答", text: Binding(get: { answers[question] ?? "" }, set: { answers[question] = $0 })).textFieldStyle(.roundedBorder)
                 }

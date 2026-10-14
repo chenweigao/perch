@@ -113,6 +113,16 @@ func checkRunControl() throws {
     precondition(queue.remove("m-c"))
     precondition(queue.items(for: session).map(\.id) == ["m-a", "m-b"])
 
+    // Reordering swaps editable entries inside one session only: up means
+    // "send earlier"; edge moves and foreign sessions are no-ops.
+    precondition(queue.move("m-b", up: true))
+    precondition(queue.items(for: session).map(\.id) == ["m-b", "m-a"])
+    precondition(!queue.move("m-b", up: true))
+    precondition(queue.move("m-b", up: false))
+    precondition(queue.items(for: session).map(\.id) == ["m-a", "m-b"])
+    precondition(!queue.move("m-x", up: false))
+    precondition(queue.items(for: sameIDElsewhere).map(\.id) == ["m-x"])
+
     // While streaming, only a steer message may be delivered.
     precondition(queue.nextDelivery(for: session, isStreaming: true) == nil)
     guard let steerMessage = queue.enqueue("运行中补充：文件末尾加一行", for: session, mode: .steer, id: "m-s") else { fatalError("enqueue") }
