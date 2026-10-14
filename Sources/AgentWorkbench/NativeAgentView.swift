@@ -368,6 +368,17 @@ struct NativeRunControls: View {
                                               mode: message.mode == .steer ? "Steer" : "Queue")
                         HStack(spacing: 10) {
                             if message.state.isEditable {
+                                let editable = pending.filter { $0.state.isEditable }
+                                if editable.count > 1, let position = editable.firstIndex(where: { $0.id == message.id }) {
+                                    Button { _ = connection.queue.move(message.id, up: true) } label: {
+                                        Image(systemName: "chevron.up").frame(width: 22, height: 22).contentShape(Rectangle())
+                                    }.buttonStyle(.plain).disabled(position == 0)
+                                        .help("上移，更早发送").accessibilityLabel("上移")
+                                    Button { _ = connection.queue.move(message.id, up: false) } label: {
+                                        Image(systemName: "chevron.down").frame(width: 22, height: 22).contentShape(Rectangle())
+                                    }.buttonStyle(.plain).disabled(position == editable.count - 1)
+                                        .help("下移，更晚发送").accessibilityLabel("下移")
+                                }
                                 Button("Edit") { editingMessage = message }.font(.caption2)
                                 Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
                             }
