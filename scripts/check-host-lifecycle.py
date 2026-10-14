@@ -19,7 +19,7 @@ ghostty = ROOT / ".build/artifacts/libghostty-spm/libghostty/GhosttyKit.xcframew
 includes += ["-I", str(ghostty / "Headers")]
 objects = []
 for target in ["WorkbenchCore", "Markdown", "CAtomic", "cmark_gfm", "cmark_gfm_extensions",
-               "GhosttyTerminal", "GhosttyKit", "MSDisplayLink"]:
+               "GhosttyTerminal", "GhosttyKit", "MSDisplayLink", "SwiftMath"]:
     objects += sorted((BIN / (target + ".build")).glob("*.o"))
 sources = sorted(path for path in (ROOT / "Sources/AgentWorkbench").glob("*.swift")
                  if path.name != "WorkbenchApp.swift")
