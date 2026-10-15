@@ -1134,6 +1134,7 @@ class Session:
             else: return
         elif t == 'agent_start':
             s['busy']=True; s['error']=None; s['updated']=time.time(); self.finish('running'); durable=True
+            if provider == 'claude': s['contextTokens'] = None
         elif t == 'stop_ack' and e.get('turnId')==s.get('turnId'):
             s['stopAcknowledged']=True; durable=True
         elif t == 'agent_end':
@@ -1204,6 +1205,13 @@ class Session:
                 for part in message['content']:
                     if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
             self.upsert(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))
+            if provider == 'claude' and t == 'assistant':
+                # Per-request usage of the latest main-loop reply: the live window
+                # fill. result.usage is the turn total summed across API requests and
+                # overstates the window whenever a turn makes more than one.
+                u = message.get('usage') or {}
+                tokens = u.get('input_tokens',0)+u.get('cache_read_input_tokens',0)+u.get('cache_creation_input_tokens',0)+u.get('output_tokens',0)
+                if tokens: s['contextTokens'] = tokens
             if t == 'assistant' or provider in ('qoder','qoderintl'): s.pop('partial',None)
             durable=True
         elif provider in ('qoder','qoderintl','claude') and t == 'stream_event':
@@ -1239,11 +1247,11 @@ class Session:
             s['resume']=e.get('session_id',s.get('resume')); durable=True
             if e.get('is_error') and not s.get('cancelled') and not s.get('stopAcknowledged'): s['error']='\n'.join(e.get('errors',[])) or e.get('result',('Qoder' if provider in ('qoder','qoderintl') else 'Claude')+' 执行失败')
             if provider == 'claude':
-                # Per-turn usage: input+cache is the live window fill; modelUsage is
-                # cumulative but its contextWindow is a static model property.
-                u=e.get('usage') or {}
-                tokens=u.get('input_tokens',0)+u.get('cache_read_input_tokens',0)+u.get('cache_creation_input_tokens',0)
+                # Report the latest per-request reading, not result.usage: that field
+                # is the turn total across API requests, not the window fill. A turn
+                # without any assistant reply keeps the previous reading.
                 windows=[m.get('contextWindow') for m in (e.get('modelUsage') or {}).values() if m.get('contextWindow')]
+                tokens=s.get('contextTokens')
                 if tokens and windows: s['context']={'tokens':tokens,'limit':max(windows),'reportedAt':time.time()}
         elif provider in ('qoder','qoderintl','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
