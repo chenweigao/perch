@@ -47,7 +47,11 @@ struct ContextMeter: View {
     let budget: ContextBudget?
     var reportedAt: Double? = nil
     var isStale = false
+    /// Present on Kimi sessions: the auto-compact toggle writes per-session settings.
+    var autoCompactHost: UUID? = nil
+    var autoCompactSession: String? = nil
     @State private var presented = false
+    @ObservedObject private var autoCompactStore = AutoCompactStore.shared
 
     private var summary: String {
         if isStale { return L("上下文用量未同步") }
@@ -104,6 +108,28 @@ struct ContextMeter: View {
                         }.font(.caption).foregroundStyle(.secondary)
                     } else {
                         Text(L("上报时间未提供")).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let autoCompactHost, let autoCompactSession {
+                        Divider()
+                        let settings = autoCompactStore.settings(host: autoCompactHost, session: autoCompactSession)
+                        Toggle(L("上下文将满时自动压缩"), isOn: Binding(
+                            get: { settings.enabled },
+                            set: { value in
+                                var next = settings; next.enabled = value
+                                autoCompactStore.set(host: autoCompactHost, session: autoCompactSession, next)
+                            }))
+                        if settings.enabled {
+                            Stepper(value: Binding(
+                                get: { settings.threshold },
+                                set: { value in
+                                    var next = settings; next.threshold = value
+                                    autoCompactStore.set(host: autoCompactHost, session: autoCompactSession, next)
+                                }), in: 50...95, step: 5) {
+                                Text(L("阈值 \(settings.threshold)%"))
+                            }
+                            Text(L("任务空闲且用量达到阈值时自动压缩，完成后继续任务。"))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }.font(.callout).padding(16).frame(width: 290, alignment: .leading)
             }

@@ -181,7 +181,8 @@ private struct KimiComposerView: View {
                         NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
                     }
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget,
-                                 isStale: !connection.online || !connection.snapshotReady)
+                                 isStale: !connection.online || !connection.snapshotReady,
+                                 autoCompactHost: connection.host.id, autoCompactSession: sessionID)
                     ComposerActionButton(isRunning: connection.conversation?.snapshot.session.isTurnRunning == true,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",

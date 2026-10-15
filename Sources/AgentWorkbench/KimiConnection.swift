@@ -68,6 +68,57 @@ final class KimiConnection {
     private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
     func historyEntries(for id: String) -> [String] { history[id] ?? [] }
     func reference(for id: String) -> SessionReference { SessionReference(hostID: host.id, terminalID: id, kind: .kimi) }
+
+    // MARK: - Auto-compact (threshold-triggered; decisions live in WorkbenchCore.AutoCompact)
+
+    /// Called after each applied event. Fires on the settle edge of the open
+    /// session only — usage is known where the conversation is loaded.
+    private func autoCompactTick() {
+        guard let conversation else { return }
+        let session = conversation.snapshot.session
+        let id = session.id
+        if session.isTurnRunning {
+            autoCompactWasRunning.insert(id)
+            return
+        }
+        // A compaction summary marks our in-flight request complete: resume the
+        // task only under the threshold guards (ccgui resume parity).
+        if autoCompacting.contains(id), conversation.messages.last?.isCompactionSummary == true {
+            autoCompacting.remove(id)
+            let reference = reference(for: id)
+            let queued = queue.items(for: reference).count
+            let parked = !conversation.snapshot.pendingApprovals.isEmpty || !conversation.snapshot.pendingQuestions.isEmpty
+            let interrupted = queue.isPaused(reference)
+            if AutoCompact.shouldResume(thresholdTriggered: true, failed: false,
+                                        interrupted: interrupted, queuedCount: queued, parked: parked) {
+                if queue.enqueue(L("继续"), for: reference, mode: .now) != nil { deliverQueued(id) }
+            }
+            return
+        }
+        // Settle edge only: a turn that never ran in this window is not one.
+        guard autoCompactWasRunning.remove(id) != nil else { return }
+        let percent = session.budget.map { Int((Double($0.used) * 100 / Double($0.limit)).rounded(.down)) }
+        let settings = AutoCompactStore.shared.settings(host: host.id, session: id)
+        guard AutoCompact.shouldCompact(settings: settings, usagePercent: percent, streaming: false,
+                                        compacting: autoCompacting.contains(id),
+                                        attemptedAtPercent: autoCompactAttempts[id]) else { return }
+        autoCompactAttempts[id] = percent ?? 0
+        autoCompacting.insert(id)
+        Task { [weak self] in await self?.runAutoCompact(for: id) }
+    }
+
+    private func runAutoCompact(for id: String) async {
+        guard let api else { autoCompacting.remove(id); return }
+        do {
+            _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id):compact",
+                                   body: .object(["instruction": .string("")]))
+            commandFeedback[id] = L("上下文达到阈值，已自动压缩。")
+        } catch {
+            // attemptedAt stays recorded: a failed compaction never spins.
+            autoCompacting.remove(id)
+            commandFeedback[id] = L("自动压缩失败：\(error.localizedDescription)")
+        }
+    }
     private(set) var aborting: Set<String> = []
     private(set) var loadingTaskOutput: Set<String> = []
     private(set) var stoppingTasks: Set<String> = []
@@ -115,6 +166,11 @@ final class KimiConnection {
     @ObservationIgnored private var folder: URL?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var listRefresh: Task<Void, Never>?
+    // Threshold auto-compact state, per session: usage at the last attempt
+    // (anti-spin), in-flight flag and running edge for settle detection.
+    @ObservationIgnored private var autoCompactAttempts: [String: Int] = [:]
+    @ObservationIgnored private var autoCompacting: Set<String> = []
+    @ObservationIgnored private var autoCompactWasRunning: Set<String> = []
     @ObservationIgnored private var taskRefresh: Task<Void, Never>?
     @ObservationIgnored private var goalRefresh: Task<Void, Never>?
     @ObservationIgnored private var freshnessCheck: Task<Void, Never>?
@@ -509,6 +565,7 @@ final class KimiConnection {
         if KimiTaskBoard.changesTaskList(event.type) { scheduleTaskRefresh() }
         if event.type == "goal.updated" { scheduleGoalRefresh() }
         let needsSnapshot = conversation!.apply(event)
+        autoCompactTick()
         if needsSnapshot {
             try await refreshConversation(selectionToken: selectionGeneration)
             if event.volatile == true, let id = selectedId { try await subscribe(id) }
