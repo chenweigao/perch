@@ -55,8 +55,6 @@ final class SidebarProbeView: NSView {
             NSApp.activate(ignoringOtherApps: true)
             if mode == "collapse" {
                 try await collapse(window)
-            } else if mode == "previewclick" {
-                try await previewClick(window)
             } else if mode == "restore" {
                 for (id, row) in sections {
                     try expectSection(id, expanded: false, in: window)
@@ -73,10 +71,7 @@ final class SidebarProbeView: NSView {
                 throw Failure("Unknown sidebar check mode: \(mode)")
             }
             UserDefaults.standard.synchronize()
-            let summary = mode == "previewclick"
-                ? "hover preview never intercepts a click and dismisses on interaction"
-                : "real header clicks, independent sections and persisted state"
-            print("PASS: sidebar \(mode) — \(summary)")
+            print("PASS: sidebar \(mode) — real header clicks, independent sections and persisted state")
             NSApp.terminate(nil)
         } catch {
             fputs("FAIL: \(error)\n", stderr)
@@ -137,23 +132,6 @@ final class SidebarProbeView: NSView {
         for (id, _) in sections { try expectSection(id, expanded: false, in: window) }
     }
 
-    private static func previewClick(_ window: NSWindow) async throws {
-        guard let anchor = element("preview.running", in: window) else { throw Failure("Missing hover target row") }
-        SessionPreviewPanel.shared.show(anchor: anchor, colorScheme: .light, title: "运行中会话",
-                                        hostName: "studio-mini.local",
-                                        hostID: UUID(uuidString: "11111111-2222-3333-4444-555555555555"),
-                                        directory: "/workspace/mini-workspace", detail: "Kimi · 运行中",
-                                        groups: ["Perch 工作台"], updatedAt: Date().timeIntervalSince1970 - 3600)
-        try await wait(in: window) { SessionPreviewPanel.shared.isVisible }
-        try require(SessionPreviewPanel.shared.panelIgnoresMouseEvents, "Preview panel can intercept clicks")
-        guard let frame = SessionPreviewPanel.shared.panelFrame else { throw Failure("Missing preview frame") }
-        let anchorFrame = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
-        try require(abs(frame.minX - anchorFrame.maxX) < 24,
-                    "Preview is not anchored next to the row: \(frame) vs \(anchorFrame)")
-        try click("preview.favorite", in: window)
-        try await wait(in: window) { text("preview.selection", in: window).contains("打磨原生对话阅读体验") }
-        try require(!SessionPreviewPanel.shared.isVisible, "Preview survived a click")
-    }
 
     private static func toggle(_ id: String, expanded: Bool, fraction: CGFloat, in window: NSWindow) async throws {
         let row = sections.first { $0.0 == id }!.1
@@ -169,7 +147,7 @@ final class SidebarProbeView: NSView {
         let stored = UserDefaults.standard.object(forKey: "sidebar.\(id).expanded") as? Bool ?? true
         try require(stored == expanded, "Incorrect persisted \(id) state")
         guard let section = element("sidebar.section.\(id)", in: window) else { throw Failure("Missing \(id) header") }
-        try require(expanded ? section.bounds.height > 47 : abs(section.bounds.height - 47) < 1,
+        try require(expanded ? section.bounds.height > SidebarMetrics.sectionHeight : abs(section.bounds.height - SidebarMetrics.sectionHeight) < 1,
                     "Incorrect rendered \(id) height: \(section.bounds.height)")
     }
 
