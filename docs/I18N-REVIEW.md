@@ -8,7 +8,9 @@ The initial bilingual sidebar change had three functional gaps:
 
 The two resource tables now have identical key sets; the checker rejects duplicate keys and placeholder type/order changes. System language selection uses language preferences rather than region formats. Switching back to System removes the app-specific AppleLanguages override. Standard macOS menu chrome may follow the new language after relaunch.
 
-Scope remains the sidebar, its settings/sheets, related header and app commands. This is not a complete translation of the transcript, composer, dashboard or agent-provided content.
+Scope was first the sidebar, its settings/sheets, related header and app commands. Since 2026-10-15 it covers the whole app: transcript and tool cards, find bar, composer and queue, file panel, dashboard batch actions, connection and archive messages, and the Core strings they show. Acceptance fixtures stay monolingual. Agent-provided content is never translated.
+
+`check-localization.py` now scans every app and Core source. Chinese literals need an English entry, and English text in a lookup position needs a Chinese translation. Lines that hold data rather than UI text (agent-output patterns, protocol values, example placeholders) carry `// l10n-ignore`. The checker cannot see labels built as `String` and shown verbatim (`Text(string)`, `.help(string)`), so those are fixed in review: pass `L(…)` or a `LocalizedStringKey`. Labels written in English keep their English text as the key, so preview apps without lproj still read the same text.
 
 ## Checks
 

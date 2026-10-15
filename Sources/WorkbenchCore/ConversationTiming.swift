@@ -22,9 +22,10 @@ public struct ConversationTiming: Equatable, Sendable {
         let seconds = max(0, Int(interval))
         let hours = seconds / 3600, minutes = seconds / 60 % 60, remainder = seconds % 60
         let paddedSeconds = String(format: "%02d", remainder)
+        // The caller picks the language from its locale; both branches are output, not keys.
         if chinese {
-            if hours > 0 { return "\(hours)小时\(minutes)分\(paddedSeconds)秒" }
-            return minutes > 0 ? "\(minutes)分\(paddedSeconds)秒" : "\(remainder)秒"
+            if hours > 0 { return "\(hours)小时\(minutes)分\(paddedSeconds)秒" } // l10n-ignore
+            return minutes > 0 ? "\(minutes)分\(paddedSeconds)秒" : "\(remainder)秒" // l10n-ignore
         }
         if hours > 0 { return "\(hours)h \(minutes)m \(remainder)s" }
         return minutes > 0 ? "\(minutes)m \(remainder)s" : "\(remainder)s"

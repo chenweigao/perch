@@ -287,7 +287,9 @@ enum ComposerAttachments {
         try png.write(to: file, options: .atomic)
         return file
     }
-    /// Returns a refusal reason, or nil when the file can be attached.
+    /// Returns the localization key of a refusal reason, or nil when the file can
+    /// be attached. This file compiles without WorkbenchCore (scripts/check-composer.sh),
+    /// so callers look the key up with `L(key:)`.
     static func refusal(for url: URL) -> String? {
         guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
               values.isRegularFile == true else { return "Only regular files can be attached." }

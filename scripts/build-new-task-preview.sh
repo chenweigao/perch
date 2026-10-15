@@ -20,10 +20,11 @@ swiftc -Onone -swift-version 5 -parse-as-library -target "$(uname -m)-apple-maco
     $(ls Sources/AgentWorkbench/*.swift | grep -v WorkbenchApp.swift) \
     Tests/NewTaskPreview/App.swift \
     "$bin_dir"/WorkbenchCore.build/*.o "$bin_dir"/Markdown.build/*.o "$bin_dir"/CAtomic.build/*.o \
-    "$bin_dir"/cmark_gfm.build/*.o "$bin_dir"/cmark_gfm_extensions.build/*.o \
+    "$bin_dir"/cmark_gfm.build/*.o "$bin_dir"/cmark_gfm_extensions.build/*.o "$bin_dir"/SwiftMath.build/*.o \
     "$bin_dir"/GhosttyTerminal.build/*.o "$bin_dir"/GhosttyKit.build/*.o "$bin_dir"/MSDisplayLink.build/*.o \
     "$ghostty/libghostty.a" -lc++ -framework Carbon -framework Metal -framework QuartzCore \
     -o "$app_dir/Contents/MacOS/NewTaskPreview"
+cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -730,7 +730,6 @@ private struct ReferenceComposerFixtureView: View {
         guard model.selectedGroupID == goal.id && model.search.isEmpty && model.scopeHost == nil else {
             throw WorkbenchError("Clearing session filters left the goal")
         }
-        model.toggleGroupPin(model.selectedGroup!)
         goal = model.selectedGroup!
         goal.criteria[0].completed = true; model.updateGroup(goal)
         guard model.selectedGroup?.stage == .active else { throw WorkbenchError("Criteria auto-completed goal") }
@@ -739,7 +738,7 @@ private struct ReferenceComposerFixtureView: View {
         model.addOutcome(GroupOutcome(title: "最终报告", source: first.reference), to: goal.id)
         let saved = try JSONEncoder().encode(model.workspace)
         let restored = try JSONDecoder().decode(LocalWorkspace.self, from: saved)
-        guard restored.groups[0].isPinned && restored.groups[0].stage == .completed && restored.groups[0].outcomes.last?.source == first.reference else { throw WorkbenchError("Goal persistence lost metadata") }
+        guard restored.groups[0].stage == .completed && restored.groups[0].outcomes.last?.source == first.reference else { throw WorkbenchError("Goal persistence lost metadata") }
         model.clearScope(); model.showHome()
         try await settle(window, "return global") { self.probe.dashboardGroupID == nil && self.probe.dashboardProjection == self.model.dashboardProjection }
         guard model.dashboardProjection.attention.items.count == 1 else { throw WorkbenchError("Global return retained hidden group") }
@@ -792,7 +791,7 @@ private struct ReferenceComposerFixtureView: View {
         model.workspace.starred = Array(sessions.suffix(3).map(\.reference)); try check()
         model.workspace.groups[0].name = "Renamed"; try check()
         model.workspace.groups[0].sessions = Array(sessions.suffix(8).map(\.reference)); try check()
-        model.workspace.groups[0].isPinned = true; try check()
+        model.workspace.groups[0].lastOpenedAt = 42; try check()
         let group = WorkItemGroup(name: "Selected", goal: "", nextStep: "", sessions: [])
         model.workspace.groups.append(group); try check()
         model.selectedGroupID = group.id; try check()

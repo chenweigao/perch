@@ -30,6 +30,8 @@ def main():
             ("model-metadata", [python, "-m", "unittest", "discover", "-s", "Tests/ModelMetadata"], 60),
             ("localization", [python, "scripts/check-localization.py"], 60),
             ("localization-tests", [python, "-m", "unittest", "discover", "-s", "Tests/Localization"], 60),
+            # Preview apps compile explicit source lists that CI never builds.
+            ("preview-sources", [python, "scripts/check-preview-sources.py"], 60),
             ("acceptance-supervisor", [python, "-m", "unittest", "discover", "-s", "Tests/Performance"], 60),
         ]
     else:

@@ -203,7 +203,7 @@ final class WorkbenchModel {
             if let selectedReference { selectedHostID = selectedReference.hostID }
         } catch {
             canSaveWorkspace = false
-            workspaceError = "本地工作台读取失败，原文件已保留：\(error.localizedDescription)"
+            workspaceError = L("本地工作台读取失败，原文件已保留：\(error.localizedDescription)")
         }
         if let reference = selectedReference { navigation.visit(reference.id) }
         notifications.start()
@@ -259,7 +259,7 @@ final class WorkbenchModel {
             roots: Dictionary(sessions.map { ($0.directory, $0.directory) }, uniquingKeysWith: { first, _ in first }))
         kimiEnvironments[host.id] = self.kimi; nativeEnvironments[host.id] = native
         workspace.starred = Array(sessions.prefix(4).map(\.reference))
-        workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "",
+        workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "", // l10n-ignore
                                           sessions: Array(sessions.prefix(12).map(\.reference)))]
     }
     func acceptanceUpdateCatalog(_ sessions: [WorkspaceSession]) { allSessions = sessions }
@@ -475,9 +475,10 @@ final class WorkbenchModel {
         return projection
     }
     func setScope(groupID: UUID?) {
-        let inbox = onlyAttention
+        // Changing the scope narrows the current page; it does not leave it.
+        let inbox = onlyAttention, allGroups = showAllTaskGroups
         showHome(groupID: groupID)
-        onlyAttention = inbox
+        onlyAttention = inbox; showAllTaskGroups = allGroups
     }
     func setScope(hostID: UUID?) { scopeHostID = hostID }
     /// Clears one facet, or both. A group filter and a machine filter answer
@@ -664,6 +665,9 @@ final class WorkbenchModel {
     func showHome(groupID: UUID? = nil) {
         onlyAttention = false; search = ""; showSessionDirectory = false
         showArchived = false; draftingNewTask = false
+        // Leaving for the workbench, inbox or session list closes the full group
+        // list; opening a group from that list keeps it for the way back.
+        if groupID == nil { showAllTaskGroups = false }
         selectedGroupID = groupID
         if let index = workspace.groups.firstIndex(where: { $0.id == groupID }) {
             workspace.groups[index].lastOpenedAt = Date().timeIntervalSince1970
@@ -704,9 +708,6 @@ final class WorkbenchModel {
     func updateGroup(_ group: WorkItemGroup) {
         guard let index = workspace.groups.firstIndex(where: { $0.id == group.id }) else { return }
         workspace.groups[index] = group; saveWorkspace()
-    }
-    func toggleGroupPin(_ group: WorkItemGroup) {
-        var updated = group; updated.isPinned.toggle(); updateGroup(updated)
     }
     func addOutcome(_ outcome: GroupOutcome, to groupID: UUID) {
         guard let index = workspace.groups.firstIndex(where: { $0.id == groupID }) else { return }
@@ -967,7 +968,7 @@ final class WorkbenchModel {
         result.retryFailures(); executeBatchArchive(result)
     }
     private func archiveRequest(_ reference: SessionReference, archived: Bool = true) async throws {
-        guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError("The task environment is unavailable") }
+        guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError(L("The task environment is unavailable")) }
         if reference.kind == .kimi { try await kimi.setArchived(reference.terminalID, archived: archived, refresh: false) }
         else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) {
             try await native.setArchived(reference.terminalID, archived: archived)
@@ -1327,7 +1328,11 @@ final class WorkbenchModel {
         saved.destination = showDashboard || saved.selectedTerminalID == nil ? .home : .session
         if saved != workspace { workspace = saved }
         workspaceWriter.save(saved) { [weak self] error in
-            if let error { Task { @MainActor in self?.workspaceError = "工作台保存失败：\(error)" } }
+            // LocalizationValue interpolates strings and numbers, not an arbitrary Error.
+            if let error {
+                let detail = String(describing: error)
+                Task { @MainActor in self?.workspaceError = L("工作台保存失败：\(detail)") }
+            }
         }
     }
     private func catalogChanged() {
@@ -1504,12 +1509,22 @@ final class WorkbenchModel {
         let backing = view.convertToBacking(view.bounds)
         let scale = view.window?.backingScaleFactor ?? 0
         let matches = abs(backing.width - Double(grid.widthPixels)) < 1 && abs(backing.height - Double(grid.heightPixels)) < 1
-        renderReport = "Menlo 14 pt\n窗口 backingScaleFactor: \(scale)\n视图逻辑尺寸: \(view.bounds.width) × \(view.bounds.height) pt\n视图 backing 尺寸: \(backing.width) × \(backing.height) px\nGhostty surface: \(grid.widthPixels) × \(grid.heightPixels) px\n终端网格: \(grid.columns) × \(grid.rows)\n像素尺寸一致: \(matches ? "是" : "否")"
-        renderReport += "\n\nGhostty 资源: \(GhosttyRuntimeResources.directoryURL?.path ?? "未找到")"
+        // Measurements keep their plain text form; only the labels around them are looked up.
+        let scaleText = "\(scale)", logical = "\(view.bounds.width) × \(view.bounds.height)"
+        let backingSize = "\(backing.width) × \(backing.height)", surface = "\(grid.widthPixels) × \(grid.heightPixels)"
+        let cells = "\(grid.columns) × \(grid.rows)", consistent = matches ? L("是") : L("否")
+        renderReport = L("Menlo 14 pt\n窗口 backingScaleFactor: \(scaleText)\n视图逻辑尺寸: \(logical) pt\n视图 backing 尺寸: \(backingSize) px\nGhostty surface: \(surface) px\n终端网格: \(cells)\n像素尺寸一致: \(consistent)")
+        if let resources = GhosttyRuntimeResources.directoryURL?.path {
+            renderReport += "\n\n" + L("Ghostty 资源: \(resources)")
+        } else {
+            renderReport += "\n\n" + L("Ghostty 资源: 未找到")
+        }
         if let layer = view.layer {
-            renderReport += "\n\n图层: \(type(of: layer))\ncontentsScale: \(layer.contentsScale)\nshouldRasterize: \(layer.shouldRasterize)"
+            let layerType = "\(type(of: layer))", layerScale = "\(layer.contentsScale)", rasterized = "\(layer.shouldRasterize)"
+            renderReport += "\n\n" + L("图层: \(layerType)\ncontentsScale: \(layerScale)\nshouldRasterize: \(rasterized)")
             for child in layer.sublayers ?? [] {
-                renderReport += "\n子图层: \(type(of: child)), scale=\(child.contentsScale), frame=\(child.frame)"
+                let childType = "\(type(of: child))", childScale = "\(child.contentsScale)", childFrame = "\(child.frame)"
+                renderReport += "\n" + L("子图层: \(childType), scale=\(childScale), frame=\(childFrame)")
             }
         }
         showRenderReport = true

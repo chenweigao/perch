@@ -17,21 +17,19 @@ func checkSidebarPerformance() {
         (0..<count).map { i in
             var group = WorkItemGroup(name: "Group \(i)", goal: "", nextStep: "",
                 sessions: (0..<20).map { sessions[(i * 17 + $0) % sessions.count].reference })
-            group.isPinned = i % 17 == 0
             group.lastOpenedAt = Double(i % 11)
             return group
         }
     }
     func ordered(_ groups: [WorkItemGroup]) -> [WorkItemGroup] {
         groups.enumerated().sorted {
-            if $0.element.isPinned != $1.element.isPinned { return $0.element.isPinned }
             if $0.element.lastOpenedAt != $1.element.lastOpenedAt { return $0.element.lastOpenedAt > $1.element.lastOpenedAt }
             return $0.offset < $1.offset
         }.map(\.element)
     }
     func legacyShortcuts(_ groups: [WorkItemGroup], _ sessions: [WorkspaceSession], _ selected: UUID?) -> [TaskGroupSummary] {
         let all = ordered(groups).map { TaskGroupSummary(group: $0, sessions: sessions) }
-        var result = all.filter { $0.group.isPinned } + all.filter { !$0.group.isPinned && ($0.group.lastOpenedAt > 0 || $0.id == selected) }.prefix(5)
+        var result = Array(all.filter { $0.group.lastOpenedAt > 0 || $0.id == selected }.prefix(5))
         if let item = all.first(where: { $0.id == selected }), !result.contains(where: { $0.id == selected }) { result.append(item) }
         return result
     }

@@ -61,13 +61,13 @@ extension ConversationActionContext {
     /// Right-click items for a user's own message, shared by the bubble menu
     /// and the text views inside it.
     func userMenuItems(copyText: String, sourceText: String) -> [NSMenuItem] {
-        let copy = NSMenuItem(title: "复制", action: #selector(CopyTextTarget.perform(_:)), keyEquivalent: "")
+        let copy = NSMenuItem(title: L("复制"), action: #selector(CopyTextTarget.perform(_:)), keyEquivalent: "")
         copy.target = CopyTextTarget.shared
         copy.representedObject = copyText
         var items = [copy, .separator()]
-        for (title, action) in [("引用到输入框", ConversationMessageAction.quote(sourceText)),
-                                ("编辑后重发", .editAndResend(sourceText)),
-                                ("再次发送", .resend(sourceText))] as [(String, ConversationMessageAction)] {
+        for (title, action) in [(L("引用到输入框"), ConversationMessageAction.quote(sourceText)),
+                                (L("编辑后重发"), .editAndResend(sourceText)),
+                                (L("再次发送"), .resend(sourceText))] as [(String, ConversationMessageAction)] {
             let item = NSMenuItem(title: title, action: #selector(ConversationMenuTarget.perform(_:)), keyEquivalent: "")
             item.target = ConversationMenuTarget.shared
             item.representedObject = ConversationActionPayload(context: self, action: action)
@@ -106,7 +106,7 @@ extension ConversationActionContext {
     /// reflects the current mark.
     @MainActor static func bookmarkMenuItem(turn: String, session: String) -> NSMenuItem {
         let marked = ConversationBookmarksStore.shared.isBookmarked(turn, in: session)
-        let item = NSMenuItem(title: marked ? "取消收藏此轮" : "收藏此轮",
+        let item = NSMenuItem(title: marked ? L("取消收藏此轮") : L("收藏此轮"),
                               action: #selector(BookmarkTurnTarget.perform(_:)), keyEquivalent: "")
         item.target = BookmarkTurnTarget.shared
         item.representedObject = BookmarkTurnTarget.Mark(turn: turn, session: session)

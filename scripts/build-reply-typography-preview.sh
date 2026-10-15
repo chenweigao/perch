@@ -2,18 +2,23 @@
 # Standalone native visual fixture. No hosts, workspace state, or remote agents are loaded.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+swift build --build-system native -c release --target SwiftMath
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 app_dir="$PWD/build/Reply Typography Preview.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 objects=()
-for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
+for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$')
 done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Tests/ReplyTypographyPreview/App.swift \
+    Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift \
+    Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/RevealFrameDriver.swift \
+    Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift \
+    Tests/ReplyTypographyPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ReplyTypographyPreview"
+cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

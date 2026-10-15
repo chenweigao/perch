@@ -31,18 +31,23 @@ func checkUnifiedWorkbench() throws {
     let global = DashboardProjection(sessions: catalog, subjects: [:], hasConfiguredEnvironment: true)
     precondition(global.attention.items.count == 1)
     precondition(TaskGroupSummary.ordered(groups: [group, second], sessions: catalog).first?.id == second.id)
-    group.isPinned = true
-    precondition(TaskGroupSummary.shortcuts(groups: [group, second], sessions: catalog, selectedID: nil).map(\.id) == [group.id, second.id])
+    // Shortcuts follow navigation recency; a goal never opened appears only while selected.
+    precondition(TaskGroupSummary.shortcuts(groups: [group, second], sessions: catalog, selectedID: nil).map(\.id) == [second.id])
+    precondition(TaskGroupSummary.shortcuts(groups: [group, second], sessions: catalog, selectedID: group.id).map(\.id) == [second.id, group.id])
     var neverVisited = WorkItemGroup(name: "Selected", goal: "", nextStep: "", sessions: [])
     neverVisited.stage = .completed
     precondition(TaskGroupSummary.shortcuts(groups: [neverVisited], sessions: [], selectedID: neverVisited.id).count == 1)
     // Old workspaces migrate without altering goal identity, membership or manual stage.
     let encoded = try JSONEncoder().encode(group)
     var object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
-    for key in ["criteria", "outcomes", "stage", "isPinned", "lastOpenedAt"] { object.removeValue(forKey: key) }
+    for key in ["criteria", "outcomes", "stage", "lastOpenedAt"] { object.removeValue(forKey: key) }
+    // Workspaces saved while goals could be pinned still decode.
+    object["isPinned"] = true
     let migrated = try JSONDecoder().decode(WorkItemGroup.self, from: JSONSerialization.data(withJSONObject: object))
     precondition(migrated.id == group.id && migrated.sessions == group.sessions)
-    precondition(migrated.stage == .active && migrated.criteria.isEmpty && migrated.outcomes.isEmpty && !migrated.isPinned)
+    precondition(migrated.stage == .active && migrated.criteria.isEmpty && migrated.outcomes.isEmpty)
+    let reencoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(migrated)) as! [String: Any]
+    precondition(reencoded["isPinned"] == nil)
     let roundTrip = try JSONDecoder().decode(WorkItemGroup.self, from: encoded)
     precondition(roundTrip == group)
     group.stage = .completed

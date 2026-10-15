@@ -2,6 +2,7 @@ import SwiftUI
 import WorkbenchCore
 
 struct ModelPicker: View {
+    @UILocalization private var L
     let models: [ModelOption]
     @Binding var selection: String
     var current = ""
@@ -31,7 +32,7 @@ struct ModelPicker: View {
                             .foregroundStyle(emphasizesSelection || compact ? .primary : .secondary)
                     }
                     if let thinkingModel, thinkingModel.supportsThinking {
-                        Text(thinkingModel.resolve(thinking)?.label ?? "Default")
+                        Text(thinkingModel.resolve(thinking)?.label ?? L("Default"))
                             .foregroundStyle(.secondary).fixedSize()
                     }
                     Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium))

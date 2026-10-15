@@ -34,7 +34,6 @@ struct TaskGroupOverview: View {
                     Button { model.showHome(groupID: summary.id) } label: {
                         VStack(alignment: .leading, spacing: 7) {
                             HStack(alignment: .firstTextBaseline) {
-                                if summary.group.isPinned { Image(systemName: "pin.fill").font(.system(size: 10)) }
                                 Text(summary.group.name).font(.system(size: 14, weight: .medium)).lineLimit(2)
                                 Spacer()
                                 Text(L(key: summary.group.stage.title)).foregroundStyle(.secondary)
@@ -59,7 +58,6 @@ struct TaskGroupOverview: View {
                     }.buttonStyle(GroupRowStyle())
                         .accessibilityIdentifier("workbench.group.\(summary.id)")
                         .contextMenu {
-                            Button(summary.group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(summary.group) }
                             Button("编辑任务组") { model.editGroup(summary.group) }
                         }
                     Divider()

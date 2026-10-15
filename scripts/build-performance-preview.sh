@@ -25,6 +25,7 @@ repo_root="$PWD"
 snapshot_root="$PWD/.local/performance-sources/$label"
 module_dir="$snapshot_root/Modules"
 app_dir="$PWD/build/Performance $title.app"
+swift build --build-system native -c release --target SwiftMath
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 mkdir -p "$module_dir" "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 app_files=(
@@ -43,8 +44,8 @@ if [[ "$variant" == baseline ]]; then theme_ref="$baseline_ref"; fi
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/NativeAssistantBlocks.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/NativeAssistantBlocks.swift)
 fi
-# Revisions before message actions/bookmarks/image preview do not carry these.
-for introduced in ConversationActions ConversationBookmarksStore ImagePreviewPanel; do
+# Revisions before message actions/bookmarks/image preview, math or alerts do not carry these.
+for introduced in ConversationActions ConversationBookmarksStore ImagePreviewPanel ReplyMathView ReplyAlertBlock; do
     if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/${introduced}.swift" 2>/dev/null; then
         app_files+=("Sources/AgentWorkbench/${introduced}.swift")
     fi
@@ -109,7 +110,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     -emit-module-path "$module_dir/WorkbenchCore.swiftmodule" \
     "${includes[@]}" "$snapshot_root"/Sources/WorkbenchCore/*.swift -o "$module_dir/WorkbenchCore.o"
 objects=( "$module_dir/WorkbenchCore.o" )
-for target in Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
+for target in Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$' | sort)
 done
 compile_flags=( -D PERFORMANCE_CURRENT )
@@ -127,6 +128,7 @@ for path in "${app_files[@]}"; do copied_app_files+=("$snapshot_root/$path"); do
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library "${compile_flags[@]}" -I "$module_dir" "${includes[@]}" \
     "${copied_app_files[@]}" Tests/PerformancePreview/Workload.swift Tests/PerformancePreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/PerformancePreview"
+cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

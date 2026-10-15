@@ -43,7 +43,6 @@ import WorkbenchCore
     }
     func startNewTask() { showNewKimi = true }
     func showHome(groupID: UUID? = nil) { selectedGroupID = groupID; search = ""; onlyAttention = false }
-    func toggleGroupPin(_ group: WorkItemGroup) { var changed = group; changed.isPinned.toggle(); updateGroup(changed) }
     func updateGroup(_ group: WorkItemGroup) {
         if let i = workspace.groups.firstIndex(where: { $0.id == group.id }) { workspace.groups[i] = group }
     }

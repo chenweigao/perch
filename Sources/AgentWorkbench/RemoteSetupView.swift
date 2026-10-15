@@ -79,7 +79,7 @@ struct AddHostSheet: View {
             DisclosureGroup("首次使用 SSH？") {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("端口、密钥与跳板机配置在 ~/.ssh/config。首次连接需在终端确认主机指纹；需要口令的密钥请先加入 SSH agent。")
-                    Text("Host my-server\n    HostName server.example.com\n    User developer")
+                    Text("Host my-server\n    HostName server.example.com\n    User developer") // l10n-ignore
                         .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                     Button("在终端连接") { setup.openTerminal() }.disabled(setup.destination.isEmpty)
                 }.font(.callout).padding(.top, 8)
@@ -97,7 +97,9 @@ struct AddHostSheet: View {
                 DisclosureGroup("高级设置", isExpanded: $advanced) {
                     VStack(alignment: .leading, spacing: 10) {
                         LabeledContent("远端端口") { TextField("58627", text: $setup.port).frame(width: 110) }
-                        LabeledContent("远端令牌文件") { TextField("~/.kimi-code/server.token", text: $setup.tokenPath) }
+                        LabeledContent("远端令牌文件") {
+                            TextField("~/.kimi-code/server.token", text: $setup.tokenPath) // l10n-ignore
+                        }
                         Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
                             .font(.caption).foregroundStyle(.secondary)
                     }.textFieldStyle(.roundedBorder).padding(.top, 8)

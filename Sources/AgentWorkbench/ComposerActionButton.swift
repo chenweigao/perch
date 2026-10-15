@@ -4,23 +4,25 @@ import WorkbenchCore
 /// The primary action follows runtime state, never the contents of the draft.
 /// A separate queue action preserves composing while the current turn runs.
 struct ComposerActionButton: View {
+    @UILocalization private var L
     let isRunning: Bool
     let isStopping: Bool
     let canSend: Bool
     let canStop: Bool
+    /// A localization key ("Queue", "Steer", "Run command").
     var queuedSendTitle = "Queue"
     let onSend: () -> Void
     let onStop: () -> Void
     var onQueue: (() -> Void)? = nil
 
     private var enabled: Bool { !isStopping && (isRunning ? canStop : canSend) }
-    private var title: String { isStopping ? "Stopping…" : isRunning ? "Stop task" : "Send" }
+    private var title: String { isStopping ? L("Stopping…") : isRunning ? L("Stop task") : L("Send") }
     var body: some View {
         HStack(spacing: 8) {
             if isRunning && canSend && !isStopping {
                 Button(L(key: queuedSendTitle), action: onSend).buttonStyle(.plain)
                     .font(.system(size: 11)).foregroundStyle(.secondary)
-                    .accessibilityLabel(queuedSendTitle == "Queue" ? "Queue message" : queuedSendTitle)
+                    .accessibilityLabel(queuedSendTitle == "Queue" ? L("Queue message") : L(key: queuedSendTitle))
                 if let onQueue {
                     Menu {
                         Button("Send next turn", action: onQueue)
@@ -41,12 +43,13 @@ struct ComposerActionButton: View {
                     }
                 }.frame(width: 32, height: 32)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)
-                .help(isRunning || isStopping ? title : "Return to send · Shift Return for a new line")
+                .help(isRunning || isStopping ? title : L("Return to send · Shift Return for a new line"))
         }
     }
 }
 
 struct ComposerAddButton: View {
+    @UILocalization private var L
     var supportsFiles: Bool
     var disabled = false
     var onChoose: () -> Void = {}
@@ -55,8 +58,8 @@ struct ComposerAddButton: View {
             Image(systemName: "plus").font(.system(size: 17)).frame(width: 28, height: 28).contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(.secondary)
             .disabled(disabled || !supportsFiles)
-            .help(supportsFiles ? "Add images or files" : "Attachments are not supported by this agent connection")
-            .accessibilityLabel(supportsFiles ? "Add images or files" : "Attachments unavailable")
+            .help(supportsFiles ? L("Add images or files") : L("Attachments are not supported by this agent connection"))
+            .accessibilityLabel(supportsFiles ? L("Add images or files") : L("Attachments unavailable"))
     }
 }
 struct ComposerDeliveryHint: View {
