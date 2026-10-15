@@ -264,7 +264,8 @@ struct NewTaskView: View {
                 referenceBrowser.cancel()
                 NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
             }) {
-                RemoteFilePanel(browser: referenceBrowser, onClose: { showReference = false })
+                // Its only exit is the panel's close button, so Escape closes the sheet.
+                RemoteFilePanel(browser: referenceBrowser, closeShortcut: .cancelAction, onClose: { showReference = false })
                     .frame(minWidth: 540, idealWidth: 680, minHeight: 400, idealHeight: 560)
             }
             .onChange(of: cwd) { _, _ in showReference = false; referenceBrowser.cancel() }

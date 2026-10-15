@@ -42,7 +42,7 @@ struct NewTerminalSheet: View {
                     }
                 }.keyboardShortcut(.defaultAction).disabled(creating || workspaceID.isEmpty || !cwd.hasPrefix("/"))
             }
-        }.padding(28).frame(width: 480)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 480)
             .onChange(of: connection.snapshot?.workspaces.first?.id) { _, id in
                 if workspaceID.isEmpty { workspaceID = id ?? "" }
             }

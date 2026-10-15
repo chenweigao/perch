@@ -128,7 +128,7 @@ struct ActivitySummarySettingsSheet: View {
                     }
                 }.keyboardShortcut(.defaultAction).disabled(testing || saving || !credentialLoaded || (configuration.enabled && !configuration.isValid))
             }
-        }.padding(24).frame(width: 540)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 540)
             .task {
                 configuration = settings.configuration
                 do { apiKey = try await settings.apiKey(allowInteraction: true); credentialLoaded = true }

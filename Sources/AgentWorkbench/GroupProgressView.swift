@@ -49,6 +49,8 @@ struct GroupProgressView: View {
                                 var updated = group; updated.outcomes.removeAll { $0.id == outcome.id }; model.updateGroup(updated)
                             }
                         } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).fixedSize()
+                            // Natural size: a 28 pt target would make the outcome's title row taller.
+                            .help("成果操作").accessibilityLabel("成果操作")
                     }
                     if !outcome.detail.isEmpty { Text(outcome.detail).textSelection(.enabled) }
                     if let url = outcome.webURL { Link(outcome.link, destination: url).lineLimit(2) }
@@ -94,6 +96,6 @@ private struct GroupOutcomeEditor: View {
                     dismiss()
                 }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).keyboardShortcut(.defaultAction)
             }
-        }.textFieldStyle(.roundedBorder).padding(24).frame(width: 540)
+        }.textFieldStyle(.roundedBorder).padding(WorkbenchTheme.Dialog.padding).frame(width: 540)
     }
 }

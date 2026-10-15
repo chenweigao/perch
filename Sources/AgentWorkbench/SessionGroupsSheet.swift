@@ -39,7 +39,7 @@ struct SessionGroupsSheet: View {
                     dismiss()
                 }.keyboardShortcut(.defaultAction)
             }
-        }.padding(26).frame(width: 440)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 440)
             .onAppear { selected = Set(model.workspace.groups.filter { $0.sessions.contains(item.reference) }.map(\.id)) }
     }
 }

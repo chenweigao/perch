@@ -50,17 +50,6 @@ public struct ReviewContext: Equatable, Sendable, Identifiable {
         excerpt = snippets.joined(separator: "\n")
     }
 
-    public static func sourceSelection(in source: String, rendered: String, selection: NSRange) -> NSRange {
-        let ns = rendered as NSString
-        guard selection.length > 0, selection.location < ns.length else { return NSRange(location: 0, length: 0) }
-        let end = min(NSMaxRange(selection), ns.length)
-        let first = ns.substring(to: selection.location).filter { $0 == "\n" }.count + 1
-        let last = ns.substring(to: end - 1).filter { $0 == "\n" }.count + 1
-        guard let startRange = RemoteFileContent.lineRange(in: source, line: first),
-              let endRange = RemoteFileContent.lineRange(in: source, line: last) else { return NSRange(location: 0, length: 0) }
-        return NSUnionRange(startRange, endRange)
-    }
-
     public var reference: String {
         var value = path
         if let lines { value += ":\(lines.lowerBound)-\(lines.upperBound)" }

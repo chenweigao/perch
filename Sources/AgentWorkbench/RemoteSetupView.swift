@@ -30,7 +30,7 @@ struct AddHostSheet: View {
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                     stepLabel("开始任务", step: .project)
                 }
-            }.padding(24)
+            }.padding(WorkbenchTheme.Dialog.padding)
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -40,10 +40,10 @@ struct AddHostSheet: View {
                     case .project: project
                     }
                     feedback
-                }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                }.padding(WorkbenchTheme.Dialog.padding).frame(maxWidth: .infinity, alignment: .leading)
             }.frame(minHeight: 340, maxHeight: 450)
             Divider()
-            footer.padding(20)
+            footer.padding(WorkbenchTheme.Dialog.padding)
         }.frame(width: 620)
             .onDisappear { setup.cancel() }
             .onChange(of: setup.provider) { _, _ in setup.invalidateAgent() }
@@ -269,12 +269,17 @@ struct AddHostSheet: View {
             Button("在终端处理 SSH 登录") { setup.openTerminal() }.disabled(setup.busy)
         }
     }
+    /// 上一步 stays leading; the alternative finish sits before 取消, which sits
+    /// before the step's primary action.
     private var footer: some View {
         HStack {
-            Button("取消") { setup.cancel(); dismiss() }.keyboardShortcut(.cancelAction)
             if setup.step != .machine { Button("上一步") { setup.back() }.disabled(setup.busy) }
             Spacer()
             if setup.busy { ProgressView().controlSize(.small) }
+            if setup.step == .project && onReady == nil {
+                Button("保存，稍后开始") { finish(start: false) }.disabled(!setup.canFinish)
+            }
+            Button("取消") { setup.cancel(); dismiss() }.keyboardShortcut(.cancelAction)
             switch setup.step {
             case .machine:
                 Button("验证 SSH 并继续") { setup.verifySSH() }
@@ -287,7 +292,6 @@ struct AddHostSheet: View {
                     Button("使用此环境") { finish(start: false) }
                         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(!setup.canFinish)
                 } else {
-                    Button("保存，稍后开始") { finish(start: false) }.disabled(!setup.canFinish)
                     Button("开始首个任务") { finish(start: true) }
                         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(!setup.canFinish)
                 }

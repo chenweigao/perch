@@ -6,9 +6,10 @@ func checkReviewContext() {
     let selected = (source as NSString).range(of: "👋")
     let file = ReviewContext(path: "/project/代码.swift", text: source, selection: selected)
     precondition(file.lines == 2...2 && file.excerpt == "中文 👋 text")
-    let rendered = "1 │ first\n2 │ 中文 👋 text\n3 │ last\n4 │ "
-    let mapped = ReviewContext.sourceSelection(in: source, rendered: rendered, selection: (rendered as NSString).range(of: "👋"))
-    precondition(ReviewContext(path: file.path, text: source, selection: mapped).lines == 2...2)
+    // The file viewer passes its text view's selection unchanged; a whole selected
+    // line ends at the next line's start, which is not part of the selection.
+    let wholeLine = (source as NSString).range(of: "中文 👋 text\n")
+    precondition(ReviewContext(path: file.path, text: source, selection: wholeLine).lines == 2...2)
     let diff = "diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -10,2 +10,2 @@\n-old\n+new\n same\n@@ -30 +31 @@\n-gone\n+added\n"
     let removed = ReviewContext(path: "/project/a", text: diff, selection: (diff as NSString).range(of: "-gone"), diff: true, scope: "unstaged")
     precondition(removed.lines == nil && removed.oldLines == 30...30 && removed.excerpt == "-gone")
