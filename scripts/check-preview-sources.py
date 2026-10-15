@@ -179,6 +179,28 @@ def check(script_path: Path) -> list[str]:
         return []  # wraps another preview build
     flags = set(re.findall(r"-D\s+(\w+)", script))
     app, tests, whole = compiled_files(script)
+    problems, sources = check_sources(app, tests, flags, whole)
+    imports = set().union(*(s.imports for s in sources)) if sources else set()
+    for library, markers in LIBRARIES.items():
+        if library in imports:
+            problems += [f"{library} is imported but the script never mentions {marker}" for marker in markers if marker not in script]
+    return problems
+
+
+def symlinked_targets() -> list[Path]:
+    """SwiftPM test targets that compile a subset of app sources through symlinks."""
+    return sorted({link.parent for link in (ROOT / "Tests").glob("*/*.swift")
+                   if link.is_symlink() and link.resolve().parent == APP})
+
+
+def check_target(folder: Path) -> list[str]:
+    files = sorted(folder.glob("*.swift"))
+    app = sorted({path.resolve() for path in files if path.is_symlink() and path.resolve().parent == APP})
+    tests = [path for path in files if not path.is_symlink()]
+    return check_sources(app, tests, set(), False)[0]
+
+
+def check_sources(app: list[Path], tests: list[Path], flags: set[str], whole: bool) -> tuple[list[str], list["Source"]]:
     every = {path: Source(path, flags) for path in sorted(APP.glob("*.swift"))}
     sources = [every[path] if path in every else Source(path, flags) for path in app]
     sources += [Source(path, flags) for path in tests if path.exists()]
@@ -222,27 +244,23 @@ def check(script_path: Path) -> list[str]:
         for app_source in app_sources:
             for name in sorted(test.provides["name"] & app_source.provides["name"]):
                 problems.append(f"{test.path.relative_to(ROOT)} redeclares {name} from {app_source.path.relative_to(ROOT)}")
-    imports = set().union(*(s.imports for s in sources)) if sources else set()
-    for library, markers in LIBRARIES.items():
-        if library in imports:
-            problems += [f"{library} is imported but the script never mentions {marker}" for marker in markers if marker not in script]
-    return problems
+    return problems, sources
 
 
 def main() -> int:
-    scripts = sorted((ROOT / "scripts").glob("build-*-preview.sh"))
+    builds = [(script.relative_to(ROOT), check(script)) for script in sorted((ROOT / "scripts").glob("build-*-preview.sh"))]
+    builds += [(folder.relative_to(ROOT), check_target(folder)) for folder in symlinked_targets()]
     failures = 0
-    for script in scripts:
-        problems = check(script)
+    for name, problems in builds:
         if problems:
             failures += 1
-            print(f"{script.relative_to(ROOT)}:")
+            print(f"{name}:")
             for problem in problems:
                 print(f"  - {problem}")
     if failures:
-        print(f"{failures} of {len(scripts)} preview scripts do not compile the sources they need.")
+        print(f"{failures} of {len(builds)} preview builds and partial test targets do not compile the sources they need.")
         return 1
-    print(f"OK: {len(scripts)} preview scripts compile the sources they need.")
+    print(f"OK: {len(builds)} preview builds and partial test targets compile the sources they need.")
     return 0
 
 
