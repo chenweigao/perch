@@ -172,18 +172,19 @@ public enum ActivityNarrativeProjection {
         var stages: [Builder] = []
         var entryStageIDs: [String: String] = [:]
 
+        // Keywords matched against agent text in either language, not UI labels.
         func phase(from text: String) -> ActivityNarrativePhase {
             let value = text.lowercased()
             if value.contains("fail") || value.contains("error") || value.contains("block")
-                || value.contains("失败") || value.contains("错误") || value.contains("受阻") { return .blocked }
+                || value.contains("失败") || value.contains("错误") || value.contains("受阻") { return .blocked } // l10n-ignore
             if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
-                || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating }
+                || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
             if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
-                || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing }
+                || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
             if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
-                || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating }
+                || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
             if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
-                || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring }
+                || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
             return .mixed
         }
 

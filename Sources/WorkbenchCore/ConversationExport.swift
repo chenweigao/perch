@@ -2,19 +2,20 @@ import Foundation
 
 /// Renders loaded conversation messages as a portable Markdown or JSON document.
 /// Export is a faithful local copy: visible text, thoughts, and tool calls,
-/// never re-fetched or re-phrased content.
+/// never re-fetched or re-phrased content. The Markdown headings are Perch's own
+/// labels and follow the UI language; message content is never translated.
 public enum ConversationExport {
     public static func markdown(_ messages: [KimiMessage]) -> String {
         var blocks: [String] = []
         for message in messages {
             if message.isUserPrompt {
                 let text = visibleText(message.content)
-                if !text.isEmpty { blocks.append("## 用户\n\n" + text) }
+                if !text.isEmpty { blocks.append("## " + L("用户") + "\n\n" + text) }
                 blocks += attachmentLines(message.content)
                 continue
             }
             if message.isCompactionSummary {
-                blocks.append("---\n\n**上下文已压缩**\n\n" + (CompactionSummaryDisplay.humanText(message.content.compactMap(\.text).joined())))
+                blocks.append("---\n\n**" + L("上下文已压缩") + "**\n\n" + (CompactionSummaryDisplay.humanText(message.content.compactMap(\.text).joined())))
                 continue
             }
             for part in message.content {
@@ -23,21 +24,21 @@ public enum ConversationExport {
                     if part.isRuntimeContext { continue }
                     let text = part.skillContextSplit?.prefix ?? part.text ?? ""
                     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
-                    blocks.append("## 助手\n\n" + text)
+                    blocks.append("## " + L("助手") + "\n\n" + text)
                 case "thinking":
                     guard let thinking = part.thinking, !thinking.isEmpty else { continue }
-                    blocks.append("<details><summary>思考</summary>\n\n" + thinking + "\n\n</details>")
+                    blocks.append("<details><summary>" + L("思考") + "</summary>\n\n" + thinking + "\n\n</details>")
                 case "tool_use":
-                    var block = "### 工具调用：`\(part.toolName ?? part.name ?? "tool")`"
+                    let tool = "`" + (part.toolName ?? part.name ?? "tool") + "`"
+                    var block = "### " + L("工具调用：\(tool)")
                     if let input = part.input?.display, !input.isEmpty { block += "\n\n```\n" + input + "\n```" }
                     blocks.append(block)
                 case "tool_result":
-                    var block = "### 工具结果"
-                    if part.isError == true { block += "（错误）" }
+                    var block = "### " + (part.isError == true ? L("工具结果（错误）") : L("工具结果"))
                     if let output = part.output?.display ?? part.text, !output.isEmpty { block += "\n\n```\n" + output + "\n```" }
                     blocks.append(block)
                 case "image", "file", "video":
-                    blocks.append("> 附件：\(part.name ?? part.fileId ?? part.type ?? "file")")
+                    blocks.append(attachmentLine(part))
                 default: continue
                 }
             }
@@ -80,7 +81,10 @@ public enum ConversationExport {
             .joined(separator: "\n\n")
     }
     private static func attachmentLines(_ parts: [KimiPart]) -> [String] {
-        parts.filter { ["image", "file", "video"].contains($0.type) }
-            .map { "> 附件：\($0.name ?? $0.fileId ?? $0.type ?? "file")" }
+        parts.filter { ["image", "file", "video"].contains($0.type) }.map(attachmentLine)
+    }
+    private static func attachmentLine(_ part: KimiPart) -> String {
+        let name = part.name ?? part.fileId ?? part.type
+        return "> " + L("附件：\(name)")
     }
 }

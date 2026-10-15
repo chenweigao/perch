@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Localization coverage check for Perch.
 
-The app keeps Simplified Chinese literals as localization keys. This script
-verifies that every user-facing Chinese string in the bilingual scope has an
-entry in Resources/Localization/en.lproj/Localizable.strings:
+Most localization keys are the Simplified Chinese source text; labels written
+in English keep their English text as the key. This script verifies, for every
+app and Core source except the acceptance fixtures:
 
-1. Every string literal containing CJK in the scoped Swift files (the sidebar
-   cluster and the surfaces it opens).
-2. Every literal passed to L(...) anywhere under Sources/, regardless of file.
+1. Every string literal containing CJK has an entry in
+   Resources/Localization/en.lproj/Localizable.strings.
+2. Every literal passed to L(...) anywhere under Sources/ has an entry.
+3. English text in a lookup position (Text, Button, Label, .help, L(...), ...)
+   has an entry whose Chinese value is a translation. Names that read the same
+   in both languages, example values and fragments are skipped.
+
+Lines marked `// l10n-ignore` hold data, not UI text, and are skipped. The check
+cannot see labels built as String values and shown verbatim; review those.
 
 Interpolation holes `\\(...)` in sources and `%@`/`%lld`/`%f` in the strings
 table are all normalized to `<P>` before comparison, for source coverage. Both tables must also have matching keys and preserve
@@ -23,46 +29,35 @@ ROOT = Path(__file__).resolve().parent.parent
 EN_TABLE = ROOT / "Resources/Localization/en.lproj/Localizable.strings"
 ZH_TABLE = ROOT / "Resources/Localization/zh-Hans.lproj/Localizable.strings"
 
-# Files whose user-facing literals are covered by the English table. Areas left
-# intentionally monolingual for now (composer, transcript, dashboard batch UI,
-# previews under Tests/) are not listed here.
-SCOPED_FILES = [
-    "Sources/AgentWorkbench/SessionSidebar.swift",
-    "Sources/AgentWorkbench/SessionGroupsSheet.swift",
-    "Sources/AgentWorkbench/WorkspaceSidebarShell.swift",
-    "Sources/AgentWorkbench/WorkItemGroupEditor.swift",
-    "Sources/AgentWorkbench/GroupProgressView.swift",
-    "Sources/AgentWorkbench/GroupSuggestionsSheet.swift",
-    "Sources/AgentWorkbench/WorkspaceActionDetail.swift",
-    "Sources/WorkbenchCore/WorkspaceProgress.swift",
-    "Sources/AgentWorkbench/TaskGroupPage.swift",
-    "Sources/AgentWorkbench/TaskGroupOverview.swift",
-    "Sources/AgentWorkbench/ModelPicker.swift",
-    "Sources/AgentWorkbench/ComposerModelPicker.swift",
-    "Sources/AgentWorkbench/ThinkingPicker.swift",
-    "Sources/AgentWorkbench/NewTaskView.swift",
-    "Sources/AgentWorkbench/NewTaskDirectoryPicker.swift",
-    "Sources/AgentWorkbench/ConversationActivityBar.swift",
-    "Sources/AgentWorkbench/KimiSubagentSheet.swift",
-    "Sources/AgentWorkbench/SessionRowChrome.swift",
-    "Sources/AgentWorkbench/RenameSessionSheet.swift",
-    "Sources/AgentWorkbench/ConnectionSheets.swift",
-    "Sources/AgentWorkbench/RemoteSetupView.swift",
-    "Sources/AgentWorkbench/LocalAgentSetupSheet.swift",
-    "Sources/AgentWorkbench/WorkbenchSettings.swift",
-    "Sources/AgentWorkbench/ActivitySummarySettings.swift",
-    "Sources/AgentWorkbench/ToolActivityView.swift",
-    "Sources/AgentWorkbench/WorkbenchView.swift",
-    "Sources/AgentWorkbench/WorkbenchApp.swift",
-    "Sources/AgentWorkbench/WorkbenchHeader.swift",
-    "Sources/AgentWorkbench/WorkbenchDashboard.swift",
-    "Sources/AgentWorkbench/WorkbenchGlass.swift",
-    "Sources/AgentWorkbench/WorkspaceSplitView.swift",
-    "Sources/AgentWorkbench/SelectionActions.swift",
-    # Core files whose raw values are rendered in the scoped UI via L().
-    "Sources/WorkbenchCore/Workspace.swift",
-    "Sources/WorkbenchCore/SidebarProjection.swift",
-]
+# Every app and Core source is bilingual. Acceptance fixtures drive synthetic
+# sessions that users never see, so they stay monolingual. Previews under Tests/
+# are not scanned. A literal that is data rather than UI text (a pattern matched
+# against agent output, a protocol value) carries `// l10n-ignore` on its line.
+MONOLINGUAL = {
+    "Sources/AgentWorkbench/NativeAcceptance.swift",
+    "Sources/AgentWorkbench/KimiAcceptance.swift",
+    "Sources/AgentWorkbench/InputAcceptance.swift",
+    "Sources/AgentWorkbench/AcceptanceSidebarTable.swift",
+    "Sources/AgentWorkbench/AcceptanceResponsiveness.swift",
+}
+SCOPED_FILES = sorted(
+    str(path.relative_to(ROOT))
+    for folder in ("Sources/AgentWorkbench", "Sources/WorkbenchCore")
+    for path in (ROOT / folder).glob("*.swift")
+    if str(path.relative_to(ROOT)) not in MONOLINGUAL
+)
+IGNORE = "l10n-ignore"
+# English text in a lookup position needs a Chinese translation. Names and
+# notation that read the same in both languages are allowed untranslated.
+UI_LITERAL = re.compile(
+    r'(?:\b(?:Text|Button|Label|Toggle|Menu|Section|Picker|TextField|SecureField|DisclosureGroup|LabeledContent|Link)\(\s*'
+    r'|\.(?:help|accessibilityLabel|accessibilityHint|navigationTitle)\(\s*'
+    r'|\bL\(\s*(?:key:\s*)?)"((?:[^"\\]|\\.)*)"')
+ENGLISH_WORD = re.compile(r"[A-Za-z]{2,}")
+SAME_IN_BOTH = {
+    "Agent", "Claude", "Claude Code", "Codex", "DeepSeek", "DSH", "Git", "GitHub", "HEAD", "Herdr", "Kimi",
+    "Markdown", "OMP", "OpenAI", "Perch", "Qoder", "Recap", "SSH", "Shell", "macOS", "Mac", "URL", "API", "TeX",
+}
 
 CJK = re.compile(r"[一-鿿]")
 # A Swift string literal on one line (interpolation contents may nest parens,
@@ -79,7 +74,8 @@ L_CALL = re.compile(r'L\(\s*(?:key:\s*)?"((?:[^"\\]|\\.)*)"')
 def normalize(key: str) -> str:
     key = HOLE.sub("<P>", key)
     key = FORMAT_SPEC.sub("<P>", key)
-    return key
+    # A literal percent sign is `%%` in a table key and `%` in source.
+    return key.replace("%%", "%")
 
 
 def format_signature(value: str) -> list[tuple[int, str]]:
@@ -101,14 +97,46 @@ def table_entries(path: Path) -> dict[str, str]:
     return entries
 
 
+def scoped_lines(rel: str) -> list[str]:
+    """Source lines that can carry UI text: comments and ignored data lines are dropped."""
+    lines = []
+    for line in (ROOT / rel).read_text(encoding="utf-8").splitlines():
+        if IGNORE in line or line.lstrip().startswith("//") or line.lstrip().startswith("///"):
+            continue
+        lines.append(line)
+    return lines
+
+
 def scoped_literals() -> dict[str, str]:
     found: dict[str, str] = {}
     for rel in SCOPED_FILES:
-        text = (ROOT / rel).read_text(encoding="utf-8")
-        for m in LITERAL.finditer(text):
-            raw = m.group(1)
-            if CJK.search(raw):
-                found.setdefault(normalize(raw), f"{rel}")
+        for line in scoped_lines(rel):
+            for m in LITERAL.finditer(line):
+                raw = m.group(1)
+                if CJK.search(raw):
+                    found.setdefault(normalize(raw), f"{rel}")
+    return found
+
+
+def code_like(raw: str) -> bool:
+    return bool(re.fullmatch(r"[\w.:/~\-@%+]+", raw)) and bool(re.search(r"[/:~_@]|\w\.\w", raw))
+
+
+def english_ui_literals() -> dict[str, str]:
+    """English literals in lookup positions: they are keys whose Chinese value must be a translation."""
+    found: dict[str, str] = {}
+    for rel in SCOPED_FILES:
+        for line in scoped_lines(rel):
+            for m in UI_LITERAL.finditer(line):
+                raw = m.group(1)
+                words = ENGLISH_WORD.findall(HOLE.sub("", raw))
+                if CJK.search(raw) or not words or raw in SAME_IN_BOTH or all(w in SAME_IN_BOTH for w in words):
+                    continue
+                # A literal nested in an interpolation ends the match early; such a
+                # fragment is not a key. Example values (URLs, paths, model ids) are not prose.
+                if raw.count("\\(") != len(HOLE.findall(raw)) or code_like(raw):
+                    continue
+                found.setdefault(normalize(raw), rel)
     return found
 
 
@@ -134,15 +162,24 @@ def main() -> int:
         print(error)
         return 1
     keys = {normalize(key) for key in en}
-    wanted = scoped_literals() | l_literals()
+    english = english_ui_literals()
+    wanted = scoped_literals() | l_literals() | english
     missing = sorted(set(wanted) - keys)
     for key in missing:
         print(f"MISSING  {wanted[key]}: {key}")
+    chinese = {normalize(key): value for key, value in zh.items()}
+    untranslated = sorted(key for key in english if key in chinese and not CJK.search(chinese[key]))
+    for key in untranslated:
+        print(f"NO-ZH    {english[key]}: {key}")
     unused = sorted(keys - set(wanted))
-    for key in unused:
-        print(f"unused?  {key}")
-    if missing:
-        print(f"\n{len(missing)} key(s) missing from {EN_TABLE.relative_to(ROOT)}")
+    if "--unused" in sys.argv:
+        for key in unused:
+            print(f"unused?  {key}")
+    if missing or untranslated:
+        if missing:
+            print(f"\n{len(missing)} key(s) missing from {EN_TABLE.relative_to(ROOT)}")
+        if untranslated:
+            print(f"{len(untranslated)} English key(s) without a Chinese translation in {ZH_TABLE.relative_to(ROOT)}")
         return 1
     print(f"OK: {len(wanted)} scoped/L() keys covered by en.lproj "
           f"({len(keys)} entries, {len(unused)} without a scoped source)")

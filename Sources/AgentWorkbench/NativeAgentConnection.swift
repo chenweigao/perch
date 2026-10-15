@@ -206,7 +206,7 @@ final class NativeAgentConnection {
             }
             throw WorkbenchError(L("桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。"))
         }
-        guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError("原生对话托管服务未安装或不可用") }
+        guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError(L("原生对话托管服务未安装或不可用")) }
         if host.isLocal {
             api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
             try await readBridgeHealth()
@@ -222,7 +222,7 @@ final class NativeAgentConnection {
         tunnel = p; try p.run()
         for _ in 0..<100 {
             try Task.checkCancellation()
-            if !p.isRunning { throw WorkbenchError("原生对话 SSH 转发失败") }
+            if !p.isRunning { throw WorkbenchError(L("原生对话 SSH 转发失败")) }
             if FileManager.default.fileExists(atPath: control) {
                 api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(local)")!, token: secret)
                 try await readBridgeHealth()
@@ -230,7 +230,7 @@ final class NativeAgentConnection {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
-        throw WorkbenchError("原生对话 SSH 转发超时")
+        throw WorkbenchError(L("原生对话 SSH 转发超时"))
     }
     /// The protocol gate plus the identity of the process actually serving: a
     /// hand-bumped version number does not say which source it is executing.
@@ -250,7 +250,7 @@ final class NativeAgentConnection {
         let data: Data
         if let requestTransport { data = try await requestTransport(path, body) }
         else {
-            guard let api else { throw WorkbenchError("请先连接原生对话服务") }
+            guard let api else { throw WorkbenchError(L("请先连接原生对话服务")) }
             data = try await api.request(path, method: body == nil ? "GET" : "POST", body: body)
         }
         return try await Self.decodeResponse(T.self, from: data)
@@ -460,7 +460,7 @@ final class NativeAgentConnection {
                 permissionMode: String? = nil) async throws -> NativeAgentSession {
         guard let selectedPermission = permissionMode ?? PermissionDefaults.mode(for: provider),
               PermissionCatalog.isValid(selectedPermission, for: provider) else {
-            throw WorkbenchError("当前 Agent 的权限模式无效")
+            throw WorkbenchError(L("当前 Agent 的权限模式无效"))
         }
         var body: [String: JSONValue] = [
             "provider": .string(provider.rawValue), "cwd": .string(cwd), "model": .string(model),
@@ -621,7 +621,7 @@ final class NativeAgentConnection {
                 let receipt: NativeRequestReceipt = try await request("/sessions/\(id)/\(message.mode == .steer ? "steer" : "prompt")", body: .object(fields))
                 apply(receipt)
                 nextCatalogRefresh = .distantPast
-                do { try await refresh() } catch { actionError = "操作已受理，同步失败：\(error.localizedDescription)" }
+                do { try await refresh() } catch { actionError = L("操作已受理，同步失败：\(error.localizedDescription)") }
             } catch {
                 queue.markUnknown(message.id, error.localizedDescription)
                 if selectedID == id { actionError = error.localizedDescription }
@@ -656,8 +656,8 @@ final class NativeAgentConnection {
             if snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
                 queue.markDelivered(receipt.id); return
             }
-            next = .failed(receipt.error ?? "运行时拒绝消息")
-        case "notFound": next = .failed("服务端没有受理记录，可移回草稿后发送")
+            next = .failed(receipt.error ?? L("运行时拒绝消息"))
+        case "notFound": next = .failed(L("服务端没有受理记录，可移回草稿后发送"))
         default:
             // An interrupted turn whose prompt is already on screen is fully
             // represented by the transcript; keeping the local copy would block
@@ -665,7 +665,7 @@ final class NativeAgentConnection {
             if snapshot?.messages.contains(where: { $0.id == receipt.id }) == true {
                 queue.markDelivered(receipt.id); return
             }
-            next = .unknown(receipt.error ?? "请同步并核对会话，暂勿重复提交")
+            next = .unknown(receipt.error ?? L("请同步并核对会话，暂勿重复提交"))
         }
         if receipt.mode != "steer", ["submitting", "submitted", "accepted", "running"].contains(receipt.status) {
             timings.observe(sessionID: sessionID, turnID: receipt.activeTurnId, requestID: receipt.id,
@@ -748,11 +748,11 @@ final class NativeAgentConnection {
     /// anything else is refused rather than quietly sent as a prompt.
     func run(_ command: AgentCommand, arguments: String, for id: String, draft: String) {
         guard command.name == "compact" else {
-            actionError = "暂不支持在 Perch 中执行 /\(command.name)，请在终端使用"
+            actionError = L("暂不支持在 Perch 中执行 /\(command.name)，请在终端使用")
             return
         }
         guard arguments.isEmpty else {
-            actionError = "当前版本不支持 /compact 参数；草稿已保留，请调整后发送"
+            actionError = L("当前版本不支持 /compact 参数；草稿已保留，请调整后发送")
             return
         }
         guard !sendingSessions.contains(id) else { return }
@@ -808,7 +808,7 @@ final class NativeAgentConnection {
                 case "stopped": stops.resolve(reference, turn: session.turnId, evidence: .runtimeAborted)
                 case "completed": stops.resolve(reference, turn: session.turnId, evidence: .completedBeforeStop)
                 case "failed", "unknown":
-                    if !attempt.phase.isSettled { stops.timedOut(attempt.requestID, session.error ?? "终止结果未知，请核对会话") }
+                    if !attempt.phase.isSettled { stops.timedOut(attempt.requestID, session.error ?? L("终止结果未知，请核对会话")) }
                 default: break
                 }
             }
@@ -825,7 +825,7 @@ final class NativeAgentConnection {
             drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
         }
         // A successful mutation stays successful if only the following read fails.
-        do { try await refresh() } catch { self.actionError = "操作已受理，同步失败：\(error.localizedDescription)" }
+        do { try await refresh() } catch { self.actionError = L("操作已受理，同步失败：\(error.localizedDescription)") }
     }
     func setArchived(_ id: String, archived: Bool) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/archive", body: .object(["archived": .bool(archived)]))

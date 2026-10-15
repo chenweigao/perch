@@ -38,6 +38,7 @@ final class ComposerTemplatesStore {
 /// Composer toolbar menu: pick a template to append to the draft, save the
 /// current draft as a template, or delete stale ones.
 struct ComposerTemplatesMenu: View {
+    @UILocalization private var L
     let draft: String
     /// Insert into the draft; an empty draft becomes the template, otherwise
     /// the template appends after a blank line.
@@ -47,7 +48,7 @@ struct ComposerTemplatesMenu: View {
     var body: some View {
         Menu {
             ForEach(store.templates, id: \.self) { template in
-                Button(template.components(separatedBy: .newlines).first.map { String($0.prefix(60)) } ?? "模板") {
+                Button(template.components(separatedBy: .newlines).first.map { String($0.prefix(60)) } ?? L("模板")) {
                     insert(template)
                 }.help(template)
             }
@@ -57,7 +58,7 @@ struct ComposerTemplatesMenu: View {
             if !store.templates.isEmpty {
                 Menu("删除模板") {
                     ForEach(store.templates, id: \.self) { template in
-                        Button(template.components(separatedBy: .newlines).first.map { String($0.prefix(60)) } ?? "模板") {
+                        Button(template.components(separatedBy: .newlines).first.map { String($0.prefix(60)) } ?? L("模板")) {
                             store.remove(template)
                         }.help(template)
                     }

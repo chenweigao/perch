@@ -259,7 +259,7 @@ final class KimiConnection {
                     let ws = try api.webSocket(); socket = ws; ws.resume()
                     let (hello, _) = try await receive(ws)
                     guard hello.type == "server_hello", hello.payload["protocol_version"].int == 2 else {
-                        throw WorkbenchError("此 Kimi Web 的事件协议尚未支持")
+                        throw WorkbenchError(L("此 Kimi Web 的事件协议尚未支持"))
                     }
                     try await sendFrame(ws, type: "client_hello", payload: ["client_id": .string("agent-workbench")])
                     online = true; stateMessage = "已连接"; error = nil; delay = 1
@@ -347,7 +347,7 @@ final class KimiConnection {
             command: "cat " + RemoteSetup.remotePath(host.kimiTokenPath)))
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !secret.isEmpty else { throw WorkbenchError("远端 Kimi Web 凭证为空") }
+        guard !secret.isEmpty else { throw WorkbenchError(L("远端 Kimi Web 凭证为空")) }
         let localPort = try KimiAPI.availableLoopbackPort()
         let directory = URL(fileURLWithPath: "/tmp/awb-kimi-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -368,7 +368,7 @@ final class KimiConnection {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
-        throw WorkbenchError("Kimi SSH 转发建立超时")
+        throw WorkbenchError(L("Kimi SSH 转发建立超时"))
     }
 
     /// Compares the package installed on the host with the process that is serving
@@ -407,7 +407,7 @@ final class KimiConnection {
     }
 
     func refreshSessions() async throws {
-        guard let api else { throw WorkbenchError("请先连接 Kimi Web") }
+        guard let api else { throw WorkbenchError(L("请先连接 Kimi Web")) }
         let token = generation
         var all: [KimiSession] = []; var before: String?
         repeat {
@@ -543,11 +543,11 @@ final class KimiConnection {
             return
         }
         if event.type == "error", event.sessionId == nil {
-            actionError = event.payload["msg"].string ?? "Kimi 事件通道出错"
+            actionError = event.payload["msg"].string ?? L("Kimi 事件通道出错")
             if event.payload["fatal"] == .bool(true) { throw WorkbenchError(actionError!) }
             return
         }
-        if event.type == "ack", let code = event.payload["code"].int, code != 0 { throw WorkbenchError(event.payload["msg"].string ?? "Kimi 订阅失败") }
+        if event.type == "ack", let code = event.payload["code"].int, code != 0 { throw WorkbenchError(event.payload["msg"].string ?? L("Kimi 订阅失败")) }
         if event.type == "ping", let socket { try await sendFrame(socket, type: "pong", payload: [:]); return }
         if ["session.meta.updated", "event.session.created", "event.session.archived", "event.session.work_changed", "event.session.status_changed"].contains(event.type),
            !(archivingBatch && event.type == "event.session.archived") {
@@ -576,7 +576,7 @@ final class KimiConnection {
     private func receive(_ ws: URLSessionWebSocketTask) async throws -> (KimiEvent, Data) {
         let message = try await ws.receive()
         let data: Data
-        switch message { case .data(let d): data = d; case .string(let s): data = Data(s.utf8); @unknown default: throw WorkbenchError("未知 WebSocket 消息") }
+        switch message { case .data(let d): data = d; case .string(let s): data = Data(s.utf8); @unknown default: throw WorkbenchError(L("未知 WebSocket 消息")) }
         return (try KimiWire.decodeEvent(from: data), data)
     }
     private func sendFrame(_ ws: URLSessionWebSocketTask, type: String, payload: [String: JSONValue]) async throws {
@@ -681,10 +681,10 @@ final class KimiConnection {
             defer { stoppingTasks.remove(task.id) }
             do {
                 let result = try await api.post(JSONValue.self, "/api/v1/sessions/\(id)/tasks/\(task.id):cancel")
-                guard result["cancelled"] == .bool(true) else { throw WorkbenchError("服务端未确认停止") }
+                guard result["cancelled"] == .bool(true) else { throw WorkbenchError(L("服务端未确认停止")) }
                 await refreshTasks()
             } catch {
-                if id == selectedId { taskListError = "停止未确认：" + error.localizedDescription }
+                if id == selectedId { taskListError = L("停止未确认：\(error.localizedDescription)") }
             }
         }
     }
@@ -768,29 +768,29 @@ final class KimiConnection {
         }
     }
     func setArchived(_ id: String, archived: Bool, refresh: Bool = true) async throws {
-        guard online, let api else { throw WorkbenchError("请先连接 Kimi") }
+        guard online, let api else { throw WorkbenchError(L("请先连接 Kimi")) }
         if archived {
             let current = try await api.get(KimiSession.self, "/api/v1/sessions/\(id)")
-            guard !current.busy else { throw WorkbenchError("此会话正在运行，请完成或停止后再归档") }
+            guard !current.busy else { throw WorkbenchError(L("此会话正在运行，请完成或停止后再归档")) }
             let result = try await api.post(JSONValue.self, "/api/v1/sessions/\(id):archive")
-            guard result["archived"] == .bool(true) else { throw WorkbenchError("服务端未确认归档") }
+            guard result["archived"] == .bool(true) else { throw WorkbenchError(L("服务端未确认归档")) }
         } else {
             let result = try await api.post(JSONValue.self, "/api/v2/sessions:restore", body: .object(["ids": .array([.string(id)])]))
             guard let item = result["results"].array.first(where: { $0["id"].string == id }), item["ok"] == .bool(true) else {
-                throw WorkbenchError(result["results"].array.first?["error"]["message"].string ?? "恢复归档失败")
+                throw WorkbenchError(result["results"].array.first?["error"]["message"].string ?? L("恢复归档失败"))
             }
         }
         if refresh {
             do { try await refreshSessions() }
-            catch { actionError = "归档操作已受理，同步失败：\(error.localizedDescription)" }
+            catch { actionError = L("归档操作已受理，同步失败：\(error.localizedDescription)") }
         }
     }
     func deleteSession(_ id: String) async throws {
-        guard online, let api else { throw WorkbenchError("请先连接 Kimi") }
+        guard online, let api else { throw WorkbenchError(L("请先连接 Kimi")) }
         let current = try await api.get(KimiSession.self, "/api/v1/sessions/\(id)")
-        guard !current.busy else { throw WorkbenchError("此会话正在运行，请完成或停止后再删除") }
+        guard !current.busy else { throw WorkbenchError(L("此会话正在运行，请完成或停止后再删除")) }
         let result = try await api.post(JSONValue.self, "/api/v1/sessions/\(id):delete")
-        guard result["deleted"] == .bool(true) else { throw WorkbenchError("服务端未确认删除") }
+        guard result["deleted"] == .bool(true) else { throw WorkbenchError(L("服务端未确认删除")) }
         cachedConversations.remove(id)
         drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
         permissionChoices.removeValue(forKey: id)
@@ -804,9 +804,9 @@ final class KimiConnection {
     @discardableResult
     func createSession(title: String, cwd: String, initialPrompt: String? = nil, model: String? = nil,
                        thinking: ThinkingLevel? = nil, permissionMode: String? = nil) async throws -> KimiSession {
-        guard let api else { throw WorkbenchError("请先连接 Kimi Web") }
+        guard let api else { throw WorkbenchError(L("请先连接 Kimi Web")) }
         if let permissionMode, !PermissionCatalog.isValid(permissionMode, for: .kimi) {
-            throw WorkbenchError("Kimi 权限模式无效")
+            throw WorkbenchError(L("Kimi 权限模式无效"))
         }
         let initialPermission = permissionMode ?? PermissionDefaults.mode(for: .kimi)
         var body: [String: JSONValue] = ["metadata": .object(["cwd": .string(cwd)])]
@@ -1010,7 +1010,7 @@ final class KimiConnection {
             for file in files {
                 let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
                 let uploaded = try await api.upload(file, mediaType: mime)
-                guard let fileId = uploaded["id"].string else { throw WorkbenchError("附件上传响应缺少文件标识") }
+                guard let fileId = uploaded["id"].string else { throw WorkbenchError(L("附件上传响应缺少文件标识")) }
                 if mime.hasPrefix("image/") {
                     content.append(.object(["type": .string("image"), "source": .object(["kind": .string("file"), "file_id": .string(fileId)]), "name": .string(file.lastPathComponent)]))
                 } else {
@@ -1038,7 +1038,7 @@ final class KimiConnection {
                 await steerPrompt(promptID, for: id)
             }
         } catch {
-            let message = "发送未确认，草稿已保留。请检查会话后再发送。\n" + error.localizedDescription
+            let message = L("发送未确认，草稿已保留。请检查会话后再发送。\n\(error.localizedDescription)")
             if startingGoal { commandFeedback[id] = L("Goal created; the first message is unconfirmed. Check the conversation before sending again.") }
             updatePrompt(promptID, for: id, status: "unknown", error: message)
             if selectedId == id { actionError = message }
@@ -1047,7 +1047,7 @@ final class KimiConnection {
     /// One text-only POST shared by the direct send and the offline-queue drain.
     /// The prompt id is the caller's idempotency key in both paths.
     private func submit(id promptID: String, session id: String, text: String, mode: DeliveryMode) async throws -> KimiPrompt {
-        guard let api else { throw WorkbenchError("请先连接 Kimi。") }
+        guard let api else { throw WorkbenchError(L("请先连接 Kimi")) }
         var body: [String: JSONValue] = [
             "prompt_id": .string(promptID),
             "content": .array([.object(["type": .string("text"), "text": .string(text)])])
@@ -1129,7 +1129,7 @@ final class KimiConnection {
             // The queued prompt may have started while the request was in flight.
             // Keep its accepted identity and re-read the queue/history, never replay.
             updatePrompt(promptID, for: id, status: "queued",
-                         error: "引导未确认；消息已接收。" + error.localizedDescription)
+                         error: L("引导未确认；消息已接收。\(error.localizedDescription)"))
         }
         if selectedId == id {
             do { try await refreshConversation(selectionToken: selectionGeneration) }
@@ -1155,7 +1155,7 @@ final class KimiConnection {
             defer { aborting.remove(id) }
             do { _ = try await api.post(JSONValue.self, "/api/v1/sessions/\(id):abort") }
             catch {
-                if selectedId == id { actionError = "Stop request not confirmed: \(error.localizedDescription)" }
+                if selectedId == id { actionError = L("Stop request not confirmed: \(error.localizedDescription)") }
             }
             // The snapshot, not this HTTP acknowledgement, decides when the send
             // arrow returns. A still-busy session continues to offer Stop.

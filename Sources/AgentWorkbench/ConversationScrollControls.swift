@@ -287,6 +287,7 @@ private struct ConversationTurnNavigator: View {
 /// first bookmark exists so quiet conversations gain no chrome.
 private struct ConversationBookmarksMenu: View {
     @ObservedObject var navigator: ConversationTurnNavigation
+    @UILocalization private var L
     private var store: ConversationBookmarksStore { .shared }
     var body: some View {
         let session = navigator.snapshot.session
@@ -294,7 +295,8 @@ private struct ConversationBookmarksMenu: View {
         if !marked.isEmpty, !session.isEmpty {
             Menu {
                 ForEach(marked) { turn in
-                    Button(turn.prompt.isEmpty ? "附件轮次" : String(turn.prompt.prefix(80))) {
+                    // The turn rail's preview names an attachment-only turn the same way.
+                    Button(turn.prompt.isEmpty ? L("Attachment") : String(turn.prompt.prefix(80))) {
                         if let index = navigator.snapshot.turns.firstIndex(where: { $0.id == turn.id }) {
                             navigator.select(index)
                         }

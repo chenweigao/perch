@@ -10,11 +10,12 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     public static var current: AppLanguage {
         AppLanguage(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "") ?? .system
     }
+    /// Each language names itself, so these labels read the same in either UI.
     public var displayName: String {
         switch self {
-        case .system: return "跟随系统 / System"
-        case .zhHans: return "中文"
-        case .en: return "English"
+        case .system: return "跟随系统 / System" // l10n-ignore
+        case .zhHans: return "中文" // l10n-ignore
+        case .en: return "English" // l10n-ignore
         }
     }
     public var localization: String {

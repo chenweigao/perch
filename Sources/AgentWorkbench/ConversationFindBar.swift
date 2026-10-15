@@ -11,6 +11,7 @@ struct ConversationFindBar: View {
     @State private var result = ConversationFindResult.empty
     @State private var search = ConversationSearch()
     @FocusState private var focused: Bool
+    @UILocalization private var L
     private var hits: [ConversationSearchHit] { result.hits }
     private var messages: [KimiMessage] { model.showKimi ? kimi.conversation?.displayMessages ?? [] : native.snapshot?.messages ?? [] }
     private var hasOlder: Bool { model.showKimi ? kimi.conversation?.hasOlder == true : native.snapshot?.hasOlder == true }
@@ -43,7 +44,7 @@ struct ConversationFindBar: View {
                 .onSubmit { move(1) }.onChange(of: query) { _, _ in index = 0; updateSearch(preservingSelection: false); reveal(); publishHighlight() }
             optionToggles
             roleMenu
-            Text(hits.isEmpty ? "0 matches" : "\(min(index + 1, hits.count))/\(hits.count)").monospacedDigit()
+            Text(hits.isEmpty ? L("0 matches") : "\(min(index + 1, hits.count))/\(hits.count)").monospacedDigit()
             Button { move(-1) } label: { Image(systemName: "chevron.up") }.help("Previous match · ⇧⌘G").accessibilityLabel("Previous match").disabled(hits.isEmpty)
             Button { move(1) } label: { Image(systemName: "chevron.down") }.help("Next match · ⌘G").accessibilityLabel("Next match").disabled(hits.isEmpty)
             if hasOlder {
@@ -56,8 +57,8 @@ struct ConversationFindBar: View {
     }
     private var optionToggles: some View {
         HStack(spacing: 2) {
-            FindOptionToggle(label: "Aa", help: "Case sensitive", on: $options.caseSensitive) { refreshOptions() }
-            FindOptionToggle(label: ".*", help: "Regular expression", on: $options.regex) { refreshOptions() }
+            FindOptionToggle(label: "Aa", help: Text("Case sensitive"), on: $options.caseSensitive) { refreshOptions() }
+            FindOptionToggle(label: ".*", help: Text("Regular expression"), on: $options.regex) { refreshOptions() }
         }
     }
     private var roleMenu: some View {
@@ -74,10 +75,10 @@ struct ConversationFindBar: View {
     }
     private func roleTitle(_ role: ConversationFindOptions.Role) -> String {
         switch role {
-        case .all: return "All"
-        case .user: return "User"
-        case .assistant: return "Replies"
-        case .tool: return "Tools"
+        case .all: return L("All")
+        case .user: return L("User")
+        case .assistant: return L("Replies")
+        case .tool: return L("Tools")
         }
     }
     private func refreshOptions() {
@@ -123,8 +124,9 @@ struct ConversationFindBar: View {
 }
 
 private struct FindOptionToggle: View {
+    /// Notation only; `help` names what the toggle does for the tooltip and VoiceOver.
     let label: String
-    let help: String
+    let help: Text
     @Binding var on: Bool
     let onChange: () -> Void
     var body: some View {
@@ -134,5 +136,7 @@ private struct FindOptionToggle: View {
                 .background(on ? Color.primary.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 5))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(on ? .primary : .secondary).help(help)
+            .accessibilityLabel(help)
+            .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

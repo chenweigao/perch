@@ -38,7 +38,7 @@ public enum SessionNaming {
             return echoes(trimmed, of: first)
         case .omp, .qoder, .qoderintl, .dsh, .codex, .claude:
             // The bridge's default title is a literal, not a localized string.
-            if trimmed.isEmpty || trimmed == "新对话" { return true }
+            if trimmed.isEmpty || trimmed == "新对话" { return true } // l10n-ignore: bridge protocol value
             guard let first = firstUserText else { return false }
             return trimmed.count <= 60 && first.hasPrefix(trimmed)
         }

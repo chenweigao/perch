@@ -436,7 +436,8 @@ struct NewTaskView: View {
     }
     private func addAttachments(_ files: [URL]) {
         for file in files where !attachments.contains(file) {
-            if let refusal = ComposerAttachments.refusal(for: file) ?? (inlineAttachments ? InlineAttachments.sizeRefusal(for: file) : nil) {
+            // The general refusal is a key; the inline size refusal is already localized.
+            if let refusal = ComposerAttachments.refusal(for: file).map({ L(key: $0) }) ?? (inlineAttachments ? InlineAttachments.sizeRefusal(for: file) : nil) {
                 error = "\(file.lastPathComponent): \(refusal)"
                 continue
             }

@@ -58,7 +58,7 @@ public enum KimiWire {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             if try container.decode(String.self, forKey: .type) == "ack",
                let code = try container.decodeIfPresent(Int.self, forKey: .code), code != 0 {
-                throw WorkbenchError(try container.decodeIfPresent(String.self, forKey: .msg) ?? "Kimi 控制请求失败")
+                throw WorkbenchError(try container.decodeIfPresent(String.self, forKey: .msg) ?? L("Kimi 控制请求失败"))
             }
             value = try KimiEvent(from: decoder)
         }
@@ -70,7 +70,7 @@ public enum KimiWire {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             // Errors need not have the success payload's shape.
             guard try container.decodeIfPresent(Int.self, forKey: .code) == 0 else {
-                throw WorkbenchError(try container.decodeIfPresent(String.self, forKey: .msg) ?? "Kimi 返回了无法识别的响应")
+                throw WorkbenchError(try container.decodeIfPresent(String.self, forKey: .msg) ?? L("Kimi 返回了无法识别的响应"))
             }
             value = try container.decode(T.self, forKey: .data)
         }
@@ -338,7 +338,9 @@ public struct KimiConversation: Sendable {
             }
             return false
         case "turn.step.retrying":
-            notice = "服务端将在 \((p["delayMs"].int ?? 0) / 1000) 秒后重试：" + (p["errorMessage"].string ?? "模型请求失败")
+            let seconds = (p["delayMs"].int ?? 0) / 1000
+            let reason = p["errorMessage"].string ?? L("模型请求失败")
+            notice = L("服务端将在 \(seconds) 秒后重试：\(reason)")
             return false
         case "error": error = p["error"]["message"].string ?? p["message"].string; return true
         case "turn.started", "turn.ended", "turn.step.started", "turn.step.completed", "turn.step.interrupted", "tool.call.started", "tool.result",

@@ -134,7 +134,7 @@ public struct DashboardProjection: Equatable, Sendable {
         Array(other.sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }.prefix(6))
     }
     public var archiveCount: Int { archivePlan.count }
-    public var archiveActionTitle: String { "归档已完成 \(archiveCount)" }
+    public var archiveActionTitle: String { L("归档已完成 \(archiveCount)") }
 
     /// Explains what the batch will leave behind, so the count is not mistaken for
     /// "everything finished".
@@ -142,6 +142,7 @@ public struct DashboardProjection: Equatable, Sendable {
         guard !blocked.isEmpty else { return nil }
         let parts = blocked.sorted { $0.value == $1.value ? $0.key.rawValue < $1.key.rawValue : $0.value > $1.value }
             .map { "\($0.key.reason) \($0.value)" }
-        return "不会归档：" + parts.joined(separator: " · ")
+        let list = parts.joined(separator: " · ")
+        return L("不会归档：\(list)")
     }
 }
