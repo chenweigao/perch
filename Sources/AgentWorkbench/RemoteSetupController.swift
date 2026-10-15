@@ -393,15 +393,21 @@ final class RemoteSetupController: ObservableObject {
             self.ready = true
         }
     }
+    /// Shared installer: no provider argument updates every component (service,
+    /// workers and all SDKs); the settings sheet keeps its per-provider install.
+    static func runBridgeInstaller(destination: String, provider: SessionKind? = nil) async throws {
+        guard let root = Bundle.main.resourceURL?.appendingPathComponent("RemoteSetup"),
+              FileManager.default.fileExists(atPath: root.appendingPathComponent("scripts/install-native-service.sh").path) else {
+            throw WorkbenchError(L("此构建缺少安装组件。请使用 scripts/build.sh 打包的 Perch.app。"))
+        }
+        try SSHCommand.validateDestination(destination)
+        var arguments = [root.appendingPathComponent("scripts/install-native-service.sh").path, destination]
+        if let provider { arguments.append("--provider=" + provider.rawValue) }
+        _ = try await SetupCommandRunner.run("/bin/bash", arguments, timeout: 180)
+    }
     func installBridge() {
         run {
-            guard let root = Bundle.main.resourceURL?.appendingPathComponent("RemoteSetup"),
-                  FileManager.default.fileExists(atPath: root.appendingPathComponent("scripts/install-native-service.sh").path) else {
-                throw WorkbenchError(L("此构建缺少安装组件。请使用 scripts/build.sh 打包的 Perch.app。"))
-            }
-            try SSHCommand.validateDestination(self.destination)
-            let arguments = [root.appendingPathComponent("scripts/install-native-service.sh").path, self.destination, "--provider=" + self.provider.rawValue]
-            _ = try await SetupCommandRunner.run("/bin/bash", arguments, timeout: 180)
+            try await Self.runBridgeInstaller(destination: self.destination, provider: self.provider)
             try Task.checkCancellation()
             self.hint = L("组件已安装。请重新检查；Perch 会在旧服务空闲时自动安全重启，且不会中断运行中的任务。")
         }

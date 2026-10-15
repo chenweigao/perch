@@ -1339,3 +1339,6 @@
 "阈值 %@%" = "Threshold %@%";
 "上下文达到阈值，已自动压缩。" = "Threshold reached; compacted automatically.";
 "自动压缩失败：%@" = "Auto-compact failed: %@";
+"原生 Agent · %lld" = "Native Agents · %lld";
+"更新组件" = "Update Components";
+"远端桥接组件版本过旧；更新全部组件并自动重连" = "The remote bridge components are outdated; update everything and reconnect.";

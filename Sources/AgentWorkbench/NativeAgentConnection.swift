@@ -52,6 +52,10 @@ final class NativeAgentConnection {
     /// The bridge process actually serving this connection: its source digest and
     /// start time, not the files currently deployed on the host.
     private(set) var runtime = RunningRuntime.unknown
+    /// The serving bridge is older than this build expects; the sidebar row offers
+    /// an in-place component update. A newer bridge sets no flag: that needs a
+    /// newer Perch, not a reinstall.
+    private(set) var needsBridgeUpdate = false
     @ObservationIgnored var onOnlineChanged: (() -> Void)?
     @ObservationIgnored var onSnapshotChanged: ((NativeAgentSnapshot?) -> Void)?
     @ObservationIgnored var onSessionsChanged: (() -> Void)?
@@ -241,8 +245,11 @@ final class NativeAgentConnection {
             throw WorkbenchError(L("无法读取远端桥接服务的版本。请重新安装桥接组件后重试。"))
         }
         guard version == expected else {
+            // Only an older bridge can be fixed in place; a newer one needs a newer Perch.
+            needsBridgeUpdate = version < expected
             throw WorkbenchError(L("远端桥接服务是 v\(version)，此 Perch 需要 v\(expected)。请在主机设置中安装 / 更新桥接组件。"))
         }
+        needsBridgeUpdate = false
         runtime = RunningRuntime(version: health["implementation"].string,
                                  startedAt: health["startedAt"].string)
     }

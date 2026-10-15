@@ -707,8 +707,11 @@ private struct ConnectionControls: View {
                             agentStatus("Kimi", online: kimi.online, error: kimi.error) { kimi.connect() }
                         }
                         if connection.host.hasNativeAgents {
-                            agentStatus(connection.host.enabledAgents.filter { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) }.map(\.label).joined(separator: " · "),
-                                        online: native.online, error: native.error) { native.connect() }
+                            let providers = connection.host.enabledAgents.filter { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) }
+                            agentStatus("原生 Agent · \(providers.count)",
+                                        online: native.online, error: bridgeUpdateError ?? native.error,
+                                        needsBridgeUpdate: native.needsBridgeUpdate, updating: bridgeUpdating,
+                                        update: { updateBridge(destination: connection.host.destination) }) { native.connect() }
                         }
                         if connection.host.enabledAgents.contains(.terminal) {
                             agentStatus("Herdr", online: connection.online, error: connection.error) { connection.connect() }
@@ -718,12 +721,37 @@ private struct ConnectionControls: View {
             }
         }.font(.system(size: 11)).padding(15).background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
     }
-    private func agentStatus(_ name: String, online: Bool, error: String?, reconnect: @escaping () -> Void) -> some View {
+    @State private var bridgeUpdating = false
+    @State private var bridgeUpdateError: String?
+    /// One click from the row: update every bridge component, then reconnect so
+    /// the ensure path restarts an idle service and re-reads its version.
+    private func updateBridge(destination: String) {
+        bridgeUpdateError = nil; bridgeUpdating = true
+        Task {
+            do {
+                try await RemoteSetupController.runBridgeInstaller(destination: destination)
+                native.connect()
+            } catch {
+                bridgeUpdateError = error.localizedDescription
+            }
+            bridgeUpdating = false
+        }
+    }
+    private func agentStatus(_ name: String, online: Bool, error: String?,
+                             needsBridgeUpdate: Bool = false, updating: Bool = false,
+                             update: (() -> Void)? = nil, reconnect: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Circle().fill(online ? .green : .orange).frame(width: 5, height: 5)
                 Text(name); Spacer()
                 Text(LocalizedStringKey(online ? "已连接" : error == nil ? "未连接" : "需要处理")).foregroundStyle(.secondary)
+                if updating {
+                    ProgressView().controlSize(.mini).frame(width: 24, height: 24)
+                } else if needsBridgeUpdate, let update {
+                    Button(action: update) { Text("更新组件").font(.system(size: 11)).frame(height: 24).contentShape(Rectangle()) }
+                        .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+                        .help("远端桥接组件版本过旧；更新全部组件并自动重连")
+                }
                 Button(action: reconnect) { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }
                     .buttonStyle(.plain).help("重新连接")
             }
