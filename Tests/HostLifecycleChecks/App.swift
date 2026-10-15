@@ -32,6 +32,8 @@ import WorkbenchCore
             try await checkReadingDesign()
         case "activity-bar":
             try await checkActivityBar()
+        case "reply-selection":
+            try await checkCrossViewSelection()
 
         case "architecture":
             UserDefaults.standard.removePersistentDomain(forName: domain)

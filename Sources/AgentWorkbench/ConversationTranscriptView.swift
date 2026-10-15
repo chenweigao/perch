@@ -1392,6 +1392,8 @@ private final class ConversationEntryController: NSViewController {
     private var host: NSHostingController<HostedConversationEntry>?
     private var nativeUser: NativeUserMessageView?
     private var nativeAssistant: NativeAssistantMessageView?
+    /// The assistant reply's Markdown for "copy as plain text"; nil for other rows.
+    private var replySource: String?
     /// Live-tail reveal: the cursor object is always injected; `reveal` exists
     /// only while a .progress assistant text row is pacing its tail.
     private let revealCursor = RevealCursor()
@@ -1465,6 +1467,7 @@ private final class ConversationEntryController: NSViewController {
         container.identifier = NSUserInterfaceItemIdentifier(content.entry.id)
         container.wantsLayer = true
         container.layer?.masksToBounds = true
+        container.replySourceProvider = { [weak self] in self?.replySource }
         if let nativeUser { container.addSubview(nativeUser) }
         if let nativeAssistant { container.addSubview(nativeAssistant) }
         if let host { addChild(host); container.addSubview(host.view) }
@@ -1686,6 +1689,7 @@ private final class ConversationEntryController: NSViewController {
         defer { NavigationRenderMetrics.record("set_root", since: rootStart) }
         #endif
         placedWidth = nil
+        replySource = nil
         var markdownPreparation: ReplyMarkdownPreparation?
         if let user = nativeUserPreparation() {
             if let paragraphs = user.value.content {
@@ -1726,6 +1730,7 @@ private final class ConversationEntryController: NSViewController {
                 container.frame = nativeUser.frame
                 container.wantsLayer = true
                 container.layer?.masksToBounds = true
+                container.replySourceProvider = { [weak self] in self?.replySource }
                 nativeUser.widthChanged = nil
                 nativeUser.superview?.replaceSubview(nativeUser, with: container)
                 container.widthChanged = { [weak self] in self?.committedWidthChanged() }
@@ -1735,6 +1740,7 @@ private final class ConversationEntryController: NSViewController {
             self.nativeUser = nil
         }
         if let assistant = nativeAssistantPreparation() {
+            replySource = assistant.source
             if let blocks = assistant.value.content {
                 // Settling .progress→.message swaps the hosted row for a native
                 // one. With a live text selection that swap loses it, so stay
@@ -1768,6 +1774,7 @@ private final class ConversationEntryController: NSViewController {
         }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
         if content.entry.presentation == .progress, let live = liveAssistantPreparation() {
+            replySource = live.source
             // Parse once here (cached) so the reveal cursor and the hosted
             // Markdown share the same blocks.
             markdownPreparation = .reuse(sessionID: content.sessionId, messageID: live.messageID,
@@ -1961,9 +1968,12 @@ struct ConversationViewportView: NSViewRepresentable {
 
 /// The document alone mounts visible rows. Keep a row's hosting subtree attached
 /// while its frame changes so disclosure layout cannot blank it for one pass.
-private final class ConversationEntryContainer: NSView {
+private final class ConversationEntryContainer: NSView, ReplySelectionScope {
     override var isFlipped: Bool { true }
     var widthChanged: (() -> Void)?
+    /// The row's assistant Markdown, read when its context menu opens.
+    var replySourceProvider: (() -> String?)?
+    var replySource: String? { replySourceProvider?() }
     override func setFrameSize(_ newSize: NSSize) {
         let previousWidth = bounds.width
         super.setFrameSize(newSize)
