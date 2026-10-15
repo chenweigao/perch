@@ -36,9 +36,11 @@ enum AgentMarkArtwork {
         drawGlyph(kind, context: cg)
         cg.restoreGState()
 
-        // Hairline edge keeps dark badges readable on dark glass.
+        // Hairline edge keeps dark badges readable on dark glass; the light
+        // codex badge takes a dark hairline for the same reason.
         cg.saveGState()
-        cg.setStrokeColor(CGColor(gray: 1, alpha: 0.13))
+        cg.setStrokeColor(kind == .codex ? CGColor(gray: 0, alpha: 0.18)
+                                         : CGColor(gray: 1, alpha: 0.13))
         cg.setLineWidth(0.5 * u)
         cg.addPath(CGPath(roundedRect: badge.insetBy(dx: 0.25 * u, dy: 0.25 * u),
                           cornerWidth: 5.4 * u, cornerHeight: 5.4 * u, transform: nil))
@@ -53,7 +55,7 @@ enum AgentMarkArtwork {
         case .qoder: return rgb(0xF4760C)
         case .qoderintl: return rgb(0x6D54F0)
         case .dsh: return rgb(0x3E6BF2)
-        case .codex: return rgb(0x16171B)
+        case .codex: return rgb(0xF2F2F5)
         case .claude: return rgb(0xD97757)
         }
     }
@@ -62,12 +64,14 @@ enum AgentMarkArtwork {
         switch kind {
         // Solid badges: the Kimi crescent is punched with the badge color and a
         // flat black tile matches the brand; other marks carry a subtle lift.
+        // Codex inverts the set: a white tile with the knot in ink, so it no
+        // longer collides with Kimi's black badge.
         case .kimi: return nil
         case .omp: return gradient(0xF4BC55, 0xDE9526)
         case .qoder: return gradient(0xFF8D41, 0xEC6608)
         case .qoderintl: return gradient(0x8A77FF, 0x5843E3)
         case .dsh: return gradient(0x5A88FF, 0x2C55DC)
-        case .codex: return gradient(0x2A2C33, 0x101114)
+        case .codex: return gradient(0xFFFFFF, 0xE9E9EE)
         case .claude: return gradient(0xE28A60, 0xC96043)
         }
     }
@@ -96,8 +100,8 @@ enum AgentMarkArtwork {
             cg.strokePath()
         case .codex:
             // OpenAI knot, simplified to a six-blade pinwheel: each blade is one
-            // hexagon chord folding into a radial spoke.
-            cg.setStrokeColor(white)
+            // hexagon chord folding into a radial spoke. Ink on the white badge.
+            cg.setStrokeColor(rgb(0x101114))
             cg.setLineWidth(1.9)
             for i in 0..<6 {
                 let a = CGFloat(i) * .pi / 3 - .pi / 2
