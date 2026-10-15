@@ -228,6 +228,9 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private let separator = NSView()
     private let scroll = NSScrollView()
     private let document = NSView()
+    /// Masks the viewport while the code overflows, like the SwiftUI card's
+    /// `ReplyOverflowFade`: opaque, then clear across the trailing fade width.
+    private let fade = CAGradientLayer()
     private var codeText: ReplyTextView?
     private var gutter: ReplyTextView?
     private var source = ""
@@ -249,6 +252,10 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         scroll.borderType = .noBorder
         scroll.verticalScrollElasticity = .none
         scroll.documentView = document
+        scroll.wantsLayer = true
+        fade.startPoint = CGPoint(x: 0, y: 0.5)
+        fade.endPoint = CGPoint(x: 1, y: 0.5)
+        fade.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
         for view in [label, copy, separator, scroll] { addSubview(view) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -318,6 +325,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
         let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + Card.inset, height: text.height + Card.inset * 2)
         if document.frame != documentFrame { document.frame = documentFrame }
+        updateFade(overflows: documentFrame.width > scrollFrame.width + 0.5)
         if let gutterView = self.gutter {
             let frame = CGRect(x: Card.gutterLeading, y: Card.inset, width: gutter.width, height: gutter.height)
             if gutterView.frame != frame { gutterView.frame = frame }
@@ -326,6 +334,22 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
             let frame = CGRect(x: codeX, y: Card.inset, width: text.width, height: text.height)
             if codeText.frame != frame { codeText.frame = frame }
         }
+    }
+    /// A layer mask on the viewport: frames and hit testing stay as they are.
+    private func updateFade(overflows: Bool) {
+        guard let layer = scroll.layer else { return }
+        let size = scroll.bounds.size
+        guard overflows, size.width > ReplyStyle.overflowFadeWidth else {
+            if layer.mask != nil { layer.mask = nil }
+            return
+        }
+        // A standalone layer animates implicitly; the fade must track the frame.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fade.frame = CGRect(origin: .zero, size: size)
+        fade.locations = [0, NSNumber(value: Double(1 - ReplyStyle.overflowFadeWidth / size.width)), 1]
+        if layer.mask !== fade { layer.mask = fade }
+        CATransaction.commit()
     }
     override func teardown() {
         if let gutter {
