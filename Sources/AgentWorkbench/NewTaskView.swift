@@ -55,8 +55,8 @@ struct NewTaskView: View {
     /// Files added under Kimi can exceed the inline limits after switching agents.
     private var inlineAttachmentBlocker: String? {
         guard inlineAttachments else { return nil }
-        if attachments.count > ComposerAttachments.maximumInlineCount { return L("附件一次最多 5 个") }
-        if let file = attachments.first(where: { ComposerAttachments.inlineRefusal(for: $0) != nil }) {
+        if attachments.count > InlineAttachments.maximumCount { return L("附件一次最多 5 个") }
+        if let file = attachments.first(where: { InlineAttachments.sizeRefusal(for: $0) != nil }) {
             return L("附件为空或超过 10MB：\(file.lastPathComponent)")
         }
         return nil
@@ -436,11 +436,11 @@ struct NewTaskView: View {
     }
     private func addAttachments(_ files: [URL]) {
         for file in files where !attachments.contains(file) {
-            if let refusal = inlineAttachments ? ComposerAttachments.inlineRefusal(for: file) : ComposerAttachments.refusal(for: file) {
+            if let refusal = ComposerAttachments.refusal(for: file) ?? (inlineAttachments ? InlineAttachments.sizeRefusal(for: file) : nil) {
                 error = "\(file.lastPathComponent): \(refusal)"
                 continue
             }
-            if inlineAttachments && attachments.count >= ComposerAttachments.maximumInlineCount {
+            if inlineAttachments && attachments.count >= InlineAttachments.maximumCount {
                 error = L("附件一次最多 5 个")
                 return
             }

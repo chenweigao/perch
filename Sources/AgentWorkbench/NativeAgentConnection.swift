@@ -550,7 +550,7 @@ final class NativeAgentConnection {
                 actionError = L("当前 Agent 不支持发送附件")
                 return
             }
-            guard files.count <= ComposerAttachments.maximumInlineCount else { actionError = L("附件一次最多 5 个"); return }
+            guard files.count <= InlineAttachments.maximumCount else { actionError = L("附件一次最多 5 个"); return }
         }
         // Folded pastes rejoin the prompt here; a lost paste file must not
         // silently send a prompt with a dead token in it.
@@ -576,7 +576,7 @@ final class NativeAgentConnection {
         for file in files {
             do {
                 let data = try Data(contentsOf: file)
-                guard !data.isEmpty, data.count <= ComposerAttachments.maximumInlineBytes else {
+                guard !data.isEmpty, data.count <= InlineAttachments.maximumBytes else {
                     actionError = L("附件为空或超过 10MB：\(file.lastPathComponent)")
                     return
                 }
@@ -833,13 +833,14 @@ final class NativeAgentConnection {
 }
 
 /// Claude and Codex receive attachments inline with the prompt. Their limits are
-/// checked when a file is added, so a draft never fails only at send.
-extension ComposerAttachments {
-    static let maximumInlineBytes = 10_485_760
-    static let maximumInlineCount = 5
-    static func inlineRefusal(for url: URL) -> String? {
-        if let refusal = refusal(for: url) { return refusal }
+/// checked when a file is added, so a draft never fails only at send. Kept apart
+/// from ComposerAttachments: ConnectionChecks compiles this file without the composer.
+enum InlineAttachments {
+    static let maximumBytes = 10_485_760
+    static let maximumCount = 5
+    /// The inline size rule; callers apply the general attachment checks first.
+    static func sizeRefusal(for url: URL) -> String? {
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-        return size > 0 && size <= maximumInlineBytes ? nil : L("附件为空或超过 10MB")
+        return size > 0 && size <= maximumBytes ? nil : L("附件为空或超过 10MB")
     }
 }
