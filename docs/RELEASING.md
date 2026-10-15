@@ -70,6 +70,11 @@ Cut a release:
 
 1. Follow the source-release checklist above (version bump, checks, review).
 2. Tag the reviewed commit `v<version>` and push the tag.
+
+or let the script drive the same gates end to end: `scripts/release.sh patch|minor|major`
+on a clean, synced main. It bumps the plist, runs the gate suite (build,
+WorkbenchChecks, ConnectionChecks, localization, public-source, publication),
+asks for one confirmation, then pushes main and the tag.
 3. The workflow attaches `Perch-<version>-<revision>.zip` and its SHA-256 to
    the Release. Optionally add `docs/release-notes/<tag>.md` before tagging to
    control the notes; otherwise they are generated.
