@@ -261,7 +261,7 @@ struct ConversationActivityBar: View {
                 Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: 13, weight: .semibold))
                 Spacer()
                 Button { expanded = false } label: { Image(systemName: "xmark").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).accessibilityLabel(Text("关闭活动详情"))
+                    .buttonStyle(.plain).help("关闭活动详情").accessibilityLabel(Text("关闭活动详情"))
             }
             if !online {
                 VStack(alignment: .leading, spacing: 6) {
@@ -403,7 +403,7 @@ struct TaskRecapPopover: View {
                 Spacer()
                 if configured {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                        .buttonStyle(.plain).accessibilityLabel(Text("配置 Recap 服务"))
+                        .buttonStyle(.plain).help("配置 Recap 服务").accessibilityLabel(Text("配置 Recap 服务"))
                 }
             }
             content
