@@ -709,9 +709,6 @@ final class WorkbenchModel {
         guard let index = workspace.groups.firstIndex(where: { $0.id == group.id }) else { return }
         workspace.groups[index] = group; saveWorkspace()
     }
-    func toggleGroupPin(_ group: WorkItemGroup) {
-        var updated = group; updated.isPinned.toggle(); updateGroup(updated)
-    }
     func addOutcome(_ outcome: GroupOutcome, to groupID: UUID) {
         guard let index = workspace.groups.firstIndex(where: { $0.id == groupID }) else { return }
         workspace.groups[index].outcomes.append(outcome); saveWorkspace()

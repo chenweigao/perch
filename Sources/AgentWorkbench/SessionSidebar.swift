@@ -360,7 +360,7 @@ struct WorkbenchSidebar: View {
                 let group = summary.group
                 Button { model.showHome(groupID: group.id) } label: {
                     HStack(spacing: SidebarMetrics.labelSpacing) {
-                        Image(systemName: group.isPinned ? "pin" : "folder")
+                        Image(systemName: "folder")
                             .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
                             .frame(width: SidebarMetrics.iconWidth)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
@@ -371,7 +371,6 @@ struct WorkbenchSidebar: View {
                 }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
                     .help("\(summary.attentionCount) 项等你处理 · \(summary.unsyncedCount) 项状态未同步")
                     .contextMenu {
-                        Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }
                         Button("编辑任务组") { model.editGroup(group) }
                     }
             }

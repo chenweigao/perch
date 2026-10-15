@@ -10,7 +10,6 @@ struct GroupWorkbenchHeader: View {
                 HStack {
                     Label("目标与下一步", systemImage: "target").foregroundStyle(.secondary)
                     Spacer()
-                    Button(group.isPinned ? "取消置顶" : "置顶任务组") { model.toggleGroupPin(group) }.buttonStyle(QuietLinkStyle())
                     Button("编辑目标") { model.editGroup(group) }.buttonStyle(QuietLinkStyle())
                 }.font(.system(size: 12))
                 if group.goal.isEmpty {
