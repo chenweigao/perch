@@ -580,6 +580,9 @@ struct RemoteFilePanel: View {
     @State private var feedbackContext: ReviewContext?
     @State private var feedback = ""
     @State private var contextAdded = false
+    /// A branch switch rewrites the remote worktree under any agent working there.
+    @State private var pendingBranch: String?
+    private var pendingBranchName: String { pendingBranch ?? "" }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
@@ -664,7 +667,7 @@ struct RemoteFilePanel: View {
                         if let branches = browser.gitBranches {
                             Menu {
                                 ForEach(branches.names, id: \.self) { name in
-                                    Button { browser.switchGitBranch(name) } label: {
+                                    Button { pendingBranch = name } label: {
                                         HStack {
                                             Text(name)
                                             if name == branches.current { Image(systemName: "checkmark") }
@@ -677,6 +680,21 @@ struct RemoteFilePanel: View {
                             }.menuStyle(.borderlessButton).fixedSize()
                                 .help("切换分支，直接作用于远端工作区")
                                 .disabled(browser.gitWriting)
+                                .alert(L("切换到分支“\(pendingBranchName)”？"), isPresented: Binding(
+                                    get: { pendingBranch != nil },
+                                    set: { if !$0 { pendingBranch = nil } }
+                                )) {
+                                    Button(L("取消"), role: .cancel) { pendingBranch = nil }
+                                    // Capture the branch: dismissal may clear the state before the action runs.
+                                    if let branch = pendingBranch {
+                                        Button(L("切换分支")) {
+                                            pendingBranch = nil
+                                            browser.switchGitBranch(branch)
+                                        }
+                                    }
+                                } message: {
+                                    Text(L("将在 \(browser.gitDirectory) 执行 git switch，直接改动远端工作区的文件。正在此目录工作的 Agent 会读到切换后的代码。"))
+                                }
                         }
                         if browser.gitWriting { ProgressView().controlSize(.mini) }
                     }

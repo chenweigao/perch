@@ -53,6 +53,9 @@
 "可选多个任务组；取消全部选择即移出分组。不会共享对话上下文。" = "Select multiple groups; deselecting all removes the session from every group. Conversation context is never shared.";
 "保存" = "Save";
 "取消" = "Cancel";
+"切换分支" = "Switch Branch";
+"切换到分支“%@”？" = "Switch to branch “%@”?";
+"将在 %@ 执行 git switch，直接改动远端工作区的文件。正在此目录工作的 Agent 会读到切换后的代码。" = "Perch will run git switch in %@, changing files in the remote workspace. Agents working in this directory will see the switched code.";
 
 /* Archived sessions page */
 "Kimi 归档与服务端同步；终端归档只整理本机列表，不结束远端进程。" = "Kimi archiving syncs with the server; terminal archiving only tidies the local list and leaves remote processes running.";
