@@ -99,8 +99,8 @@ public struct Pane: Decodable, Identifiable, Sendable {
     public var id: String { terminalID }
     public var directory: String { foregroundCwd ?? cwd }
     public var displayTitle: String {
-        [title, name, tabLabel, terminalTitleStripped, agent, "终端"]
-            .compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }!
+        [title, name, tabLabel, terminalTitleStripped, agent]
+            .compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? L("终端")
     }
     public var status: String { agentStatus ?? "unknown" }
     enum CodingKeys: String, CodingKey {
@@ -129,7 +129,7 @@ public enum Wire {
     public static func decode<Result: Decodable>(_ type: Result.Type, from data: Data) throws -> Result {
         let envelope = try JSONDecoder().decode(Envelope<Result>.self, from: data)
         if let error = envelope.error { throw WorkbenchError(error.message) }
-        guard let result = envelope.result else { throw WorkbenchError("Herdr 未返回结果") }
+        guard let result = envelope.result else { throw WorkbenchError(L("Herdr 未返回结果")) }
         return result
     }
     private struct Envelope<Result: Decodable>: Decodable {

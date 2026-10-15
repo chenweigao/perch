@@ -73,7 +73,7 @@ public final class ToolVisibilityProjection {
             if let result {
                 status = result.isError == true ? .failed : result.isError == false ? .succeeded : .returned
             } else { status = !online ? .disconnected : active ? .running : .missingResult }
-            let name = call?.toolName ?? known?.name ?? "工具结果"
+            let name = call?.toolName ?? known?.name ?? L("工具结果")
             let input = call?.input ?? known?.args
             tools[id] = VisibleTool(id: id, name: name, input: input, output: result?.output,
                                     progress: known?.lastProgress, status: status, hasCall: call != nil || known != nil)

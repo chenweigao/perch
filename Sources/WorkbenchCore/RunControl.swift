@@ -9,9 +9,9 @@ public enum SteerSupport: String, Sendable, Equatable {
     public var allowsSteering: Bool { self != .unsupported }
     public var label: String {
         switch self {
-        case .unsupported: return "下一轮发送"
-        case .commandPresentEffectUnverified: return "引导当前任务（未实机验证）"
-        case .verified: return "引导当前任务"
+        case .unsupported: return L("下一轮发送")
+        case .commandPresentEffectUnverified: return L("引导当前任务（未实机验证）")
+        case .verified: return L("引导当前任务")
         }
     }
 }
@@ -67,12 +67,12 @@ public enum StopPhase: Equatable, Sendable {
     }
     public var label: String {
         switch self {
-        case .idle: return "停止"
-        case .requested, .stopping: return "正在停止…"
-        case .stopped: return "已停止"
-        case .completedBeforeStop: return "停止前已结束"
-        case .failed(let message): return "停止失败：\(message)"
-        case .unknown(let message): return "停止结果未知：\(message)"
+        case .idle: return L("停止")
+        case .requested, .stopping: return L("正在停止…")
+        case .stopped: return L("已停止")
+        case .completedBeforeStop: return L("停止前已结束")
+        case .failed(let message): return L("停止失败：\(message)")
+        case .unknown(let message): return L("停止结果未知：\(message)")
         }
     }
     /// Only an unknown or failed stop offers a retry; a settled stop must not invite
@@ -127,7 +127,7 @@ public struct StopController: Equatable, Sendable {
         switch evidence {
         case .runtimeAborted, .turnInterrupted: attempt.phase = .stopped
         case .completedBeforeStop: attempt.phase = .completedBeforeStop
-        case .processGone: attempt.phase = .unknown("远端进程已退出，副作用可能已发生")
+        case .processGone: attempt.phase = .unknown(L("远端进程已退出，副作用可能已发生"))
         }
         attempts[session.id] = attempt
     }
@@ -138,7 +138,7 @@ public struct StopController: Equatable, Sendable {
     }
 
     /// No terminal evidence arrived. The session must not fall back to looking idle.
-    public mutating func timedOut(_ requestID: String, _ message: String = "未收到协议终止状态，请重新同步") {
+    public mutating func timedOut(_ requestID: String, _ message: String = L("未收到协议终止状态，请重新同步")) {
         guard let key = key(for: requestID), !(attempts[key]?.phase.isSettled ?? true) else { return }
         attempts[key]?.phase = .unknown(message)
     }
@@ -346,14 +346,14 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
             switch messages[index].state {
             case .draftQueued: messages[index].state = .stoppedBeforeDelivery
             case .submitting, .accepted, .running:
-                messages[index].state = .unknown("Restored after restart. Sync the receipt before retrying.")
+                messages[index].state = .unknown(L("Restored after restart. Sync the receipt before retrying."))
             default: break
             }
         }
     }
     public func unsentWarning(for session: SessionReference) -> String? {
         let count = items(for: session).filter { $0.state.needsExitWarning }.count
-        return count == 0 ? nil : "\(count) pending messages are saved locally."
+        return count == 0 ? nil : L("\(count) pending messages are saved locally.")
     }
     public var allPendingCount: Int { messages.count }
     public var exitWarningCount: Int { messages.filter { $0.state.needsExitWarning }.count }

@@ -30,14 +30,14 @@ public enum JSONSocket {
                 return result
             }
             result.append(contentsOf: buffer[..<count])
-            guard result.count < 16 * 1024 * 1024 else { throw WorkbenchError("Herdr 响应超过 16 MB") }
+            guard result.count < 16 * 1024 * 1024 else { throw WorkbenchError(L("Herdr 响应超过 16 MB")) }
         }
     }
 
     private static func connect(path: String) throws -> Int32 {
         var address = sockaddr_un()
         guard path.utf8.count < MemoryLayout.size(ofValue: address.sun_path) else {
-            throw WorkbenchError("本地 socket 路径过长")
+            throw WorkbenchError(L("本地 socket 路径过长"))
         }
         address.sun_family = sa_family_t(AF_UNIX)
         address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
@@ -61,7 +61,10 @@ public enum JSONSocket {
         return fd
     }
 
-    private static func failure(_ action: String) -> WorkbenchError {
-        WorkbenchError("\(action)：\(String(cString: strerror(errno)))")
+    private static func failure(_ action: String.LocalizationValue) -> WorkbenchError {
+        // Read errno before the table lookups below can overwrite it.
+        let reason = String(cString: strerror(errno))
+        let step = L(action)
+        return WorkbenchError(L("\(step)：\(reason)"))
     }
 }

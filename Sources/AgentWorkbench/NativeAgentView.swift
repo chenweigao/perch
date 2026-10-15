@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 import WorkbenchCore
 
 struct NativeAgentView: View {
+    @UILocalization private var L
     let connection: NativeAgentConnection
     let onResultDisplayed: (NativeAgentSnapshot) -> Void
     @State private var appActive = NSApp.isActive
@@ -41,7 +42,7 @@ struct NativeAgentView: View {
             // with the same reconnect action; keep this line for every other state.
             if !connection.online {
                 if !(connection.conversation.presentationSnapshot.map(isCurrent) ?? false) {
-                    HStack { Text(connection.error ?? "正在连接远端服务"); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10)
+                    HStack { Text(connection.error ?? L("正在连接远端服务")); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10)
                 }
             } else { NativeStaleSyncHint(connection: connection) }
         }
@@ -160,7 +161,7 @@ struct NativeAgentView: View {
             if let command = s.commandResult {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }
-                    Text(command.status == "running" ? "正在压缩上下文…" : command.error ?? "上下文压缩完成")
+                    Text(command.status == "running" ? L("正在压缩上下文…") : command.error ?? L("上下文压缩完成"))
                         .font(.caption).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                 }.padding(6)
             }
@@ -189,6 +190,7 @@ private struct NativeStaleSyncHint: View {
 
 /// Draft and palette updates are local to the input area, not the long transcript.
 private struct NativeComposerView: View {
+    @UILocalization private var L
     let connection: NativeAgentConnection
     let s: NativeAgentSnapshot
     @State private var palette = CommandPaletteState()
@@ -216,7 +218,7 @@ private struct NativeComposerView: View {
                                               set: { connection.drafts[s.id] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: s.cwd,
                                 placeholder: L("继续此任务…"),
-                                accessibilityLabel: "Message \(s.provider.label)",
+                                accessibilityLabel: L("Message \(s.provider.label)"),
                                 canSend: canSend(s),
                                 onSend: { send(defaultMode(s)) },
                                 onFiles: supportsAttachments ? { addAttachments($0) } : nil,
@@ -260,7 +262,8 @@ private struct NativeComposerView: View {
     }
     private func addAttachments(_ files: [URL]) {
         for file in files where !(connection.attachments[s.id] ?? []).contains(file) {
-            if let refusal = ComposerAttachments.refusal(for: file) ?? InlineAttachments.sizeRefusal(for: file) {
+            // The general refusal is a key; the inline size refusal is already localized.
+            if let refusal = ComposerAttachments.refusal(for: file).map({ L(key: $0) }) ?? InlineAttachments.sizeRefusal(for: file) {
                 connection.actionError = "\(file.lastPathComponent): \(refusal)"
                 continue
             }
@@ -430,6 +433,7 @@ struct NativeRunControls: View {
 }
 
 struct NativeInteractionView: View {
+    @UILocalization private var L
     let connection: NativeAgentConnection
     let request: JSONValue
     var sessionID: String? = nil
@@ -450,7 +454,7 @@ struct NativeInteractionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("等你处理", systemImage: "hand.raised").font(.headline)
-            Text(request["title"].string ?? request["name"].string ?? "回答问题").textSelection(.enabled)
+            Text(request["title"].string ?? request["name"].string ?? L("回答问题")).textSelection(.enabled)
             if let message = request["message"].string { Text(message).font(.callout).textSelection(.enabled) }
             if request["name"].string == "AskUserQuestion" {
                 ForEach(request["input"]["questions"].array, id: \.display) { q in
@@ -473,7 +477,7 @@ struct NativeInteractionView: View {
                 Button("提交回答") { submit(["allow": .bool(true), "answers": .object(answers.mapValues(JSONValue.string))]) }
                     .disabled(request["input"]["questions"].array.contains { (answers[$0["question"].string ?? ""] ?? "").isEmpty })
             } else if request["type"].string == "interaction" {
-                KimiToolCard(tool: VisibleTool(id: request["id"].string ?? "approval", name: request["name"].string ?? "工具", input: request["input"], status: .awaitingApproval))
+                KimiToolCard(tool: VisibleTool(id: request["id"].string ?? "approval", name: request["name"].string ?? L("工具"), input: request["input"], status: .awaitingApproval))
                 HStack { Button("仅允许本次") { submit(["allow": .bool(true)]) }; Button("拒绝") { submit(["allow": .bool(false)]) } }
             } else if request["method"].string == "select" {
                 ForEach(request["options"].array, id: \.display) { option in Button(option.string ?? option.display) { submit(["value": option]) } }
@@ -482,7 +486,7 @@ struct NativeInteractionView: View {
                 HStack { Button("确认") { submit(["allow": .bool(true)]) }; Button("拒绝") { submit(["allow": .bool(false)]) } }
             } else {
                 TextField("填写回答", text: $text).textFieldStyle(.roundedBorder)
-                HStack { Button("提交") { submit(["value": .string(text)]) }; Button("取消") { submit(["cancelled": .bool(true)]) } }
+                HStack { Button("提交回答") { submit(["value": .string(text)]) }; Button("取消") { submit(["cancelled": .bool(true)]) } }
             }
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(.orange.opacity(0.06), in: RoundedRectangle(cornerRadius: 10)).disabled(!connection.online || submitting)
     }

@@ -19,7 +19,7 @@ public enum ExecutionEnvironment: Equatable, Sendable {
     }
     public var name: String {
         switch self {
-        case .local: return "本机"
+        case .local: return L("本机")
         case .ssh(let host): return host.name
         }
     }
@@ -161,7 +161,7 @@ public struct AgentEndpoint: Equatable, Sendable, Identifiable {
             resume: probe.sessionFile)
         return AgentEndpoint(environment: .local, kind: .omp, capabilities: capabilities,
                              runtimeVersion: version,
-                             verificationNote: "omp \(version)：RPC 命令存在性已实测，运行中注入与审批未实机验证")
+                             verificationNote: L("omp \(version)：RPC 命令存在性已实测，运行中注入与审批未实机验证"))
     }
 }
 

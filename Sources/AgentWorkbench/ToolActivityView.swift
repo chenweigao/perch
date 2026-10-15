@@ -92,19 +92,6 @@ struct KimiToolCard: View {
     @RememberedExpansion("expanded") private var expanded
     // A failed tool's structured output is serialized by exitCodeReport.
     // Resolve it once per body evaluation and share it across the label.
-    private func label(exitReport: Int?) -> String {
-        switch tool.status {
-        case .running: return "Running"
-        case .succeeded: return "Completed"
-        case .returned: return "Returned"
-        case .failed:
-            if let code = exitReport { return "Exit code \(code)" }
-            return "Failed"
-        case .missingResult: return "Result not received"
-        case .disconnected: return "Disconnected · Status unknown"
-        case .awaitingApproval: return "Needs approval"
-        }
-    }
     private func symbol(exitReport: Int?) -> String {
         switch tool.status {
         case .running: return "circle.dotted"
@@ -137,8 +124,8 @@ struct KimiToolCard: View {
         let summary = ToolPresentation.compactTarget(tool)
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention(exitReport: exitReport)
-        let plainLabel = label(exitReport: exitReport)
-        let statusLabel = tool.hasCall ? plainLabel : "\(plainLabel) · Call record missing"
+        // The activity details name the same states with the same words.
+        let statusLabel = ConversationActivity.status(of: tool, exitCode: exitReport)
         #if TRANSCRIPT_CHECKS
         // A declaration, not an expression statement: ViewBuilder rejects the latter.
         let _ = NavigationRenderMetrics.count("tool_card_body")
@@ -150,7 +137,7 @@ struct KimiToolCard: View {
                     if let input = tool.input { Text("Input").foregroundStyle(.secondary); DisclosureReplyText(text: input.display) }
                     if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
                     if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
-                    if tool.input == nil && tool.output == nil && tool.progress == nil { Text("暂无Input或返回内容").foregroundStyle(.secondary) }
+                    if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(.secondary) }
                 }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
                     .padding(10)
                     .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))

@@ -59,16 +59,22 @@ public struct ConversationActivity {
             ?? tool.input?["file_path"].string ?? tool.input?["path"].string ?? tool.name
     }
     public static func status(of tool: VisibleTool) -> String {
+        status(of: tool, exitCode: tool.exitCodeReport)
+    }
+    /// The tool card's words, shared by the activity details. The card resolves
+    /// the exit code once per body evaluation and passes it in.
+    public static func status(of tool: VisibleTool, exitCode: Int?) -> String {
+        let state: String
         switch tool.status {
-        case .running: return "Running"
-        case .succeeded: return "Completed"
-        case .returned: return "Returned"
+        case .running: state = L("Running")
+        case .succeeded: state = L("Completed")
+        case .returned: state = L("Returned")
         case .failed:
-            if let code = tool.exitCodeReport { return "Exit code \(code)" }
-            return "Failed"
-        case .missingResult: return "Result missing"
-        case .disconnected: return "Status unknown"
-        case .awaitingApproval: return "Awaiting approval"
+            if let exitCode { state = L("Exit code \(exitCode)") } else { state = L("Failed") }
+        case .missingResult: state = L("Result not received")
+        case .disconnected: state = L("Disconnected · Status unknown")
+        case .awaitingApproval: state = L("Needs approval")
         }
+        return tool.hasCall ? state : L("\(state) · Call record missing")
     }
 }

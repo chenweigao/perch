@@ -1290,7 +1290,7 @@ private struct LongOutputViewport: NSViewRepresentable {
         view.textContainer?.containerSize = NSSize(width: 600, height: CGFloat.greatestFiniteMagnitude)
         view.enabledTextCheckingTypes = 0
         view.find = { [weak handle] in handle?.showFindBar() }
-        view.setAccessibilityLabel(NSLocalizedString("完整内容", comment: "Full output reader"))
+        view.setAccessibilityLabel(L("完整内容"))
         scroll.documentView = view
         handle.textView = view
         return scroll
@@ -1326,7 +1326,7 @@ private struct LongOutputViewport: NSViewRepresentable {
 
 struct ReplyCopyButton: View {
     let text: String
-    var label = "复制回复"
+    var label: LocalizedStringKey = "复制回复"
     @State private var copied = false
     var body: some View {
         Button {
@@ -1351,7 +1351,8 @@ private struct ReplyCode: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(language.isEmpty ? "代码" : language).font(.system(size: ReplyStyle.Code.labelSize, weight: .medium))
+                // NativeCodeCardView shows the same label once the reply settles.
+                Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, weight: .medium))
                     .foregroundStyle(.secondary)
                 Spacer()
                 ReplyCopyButton(text: source, label: "复制代码")

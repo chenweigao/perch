@@ -44,6 +44,7 @@ struct ThinkingPicker: View {
 
 /// A quiet indicator of the latest reported context, with details on demand.
 struct ContextMeter: View {
+    @UILocalization private var L
     let budget: ContextBudget?
     var reportedAt: Double? = nil
     var isStale = false
