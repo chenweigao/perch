@@ -12,7 +12,10 @@ private extension URL {
 
 /// Keys the composer hands to an attached palette before acting on them itself.
 /// Kept minimal so the composer stays a text editor rather than a menu host.
-enum ComposerKey { case up, down, enter, tab, escape }
+/// Arrows say whether the caret is on the draft's first (Up) or last (Down)
+/// visual line: suggestion lists move either way, while prompt recall leaves the
+/// draft only from that edge line so the caret can move through the text.
+enum ComposerKey: Equatable { case up(fromFirstLine: Bool), down(fromLastLine: Bool), enter, tab, escape }
 
 
 /// AppKit owns the editing buffer while the input method is composing. Streaming
@@ -23,6 +26,9 @@ struct MessageComposer: View {
     var accessibilityLabel = "Message"
     var canSend: Bool
     var onSend: () -> Void
+    /// The next-turn send that ⌘Return takes while a turn runs. Nil keeps
+    /// ⌘Return the same as Return.
+    var onQueue: (() -> Void)? = nil
     var onFiles: (([URL]) -> Void)? = nil
     var onError: ((String) -> Void)? = nil
     /// Local projects turn pasted non-image files into @-references at the caret.
@@ -41,7 +47,7 @@ struct MessageComposer: View {
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
                        accessibilityLabel: accessibilityLabel, canSend: canSend,
-                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onLongPaste: onLongPaste, fileReference: fileReference, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
+                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onQueue: onQueue, onLongPaste: onLongPaste, fileReference: fileReference, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
             .frame(height: max(minimumHeight, height))
     }
 }
@@ -57,6 +63,7 @@ struct ComposerEditor: NSViewRepresentable {
     let onFiles: (([URL]) -> Void)?
     let onError: ((String) -> Void)?
     let onKey: ((ComposerKey) -> Bool)?
+    var onQueue: (() -> Void)? = nil
     var onLongPaste: ((String) -> String?)? = nil
     var fileReference: ((URL) -> String?)? = nil
 
@@ -118,6 +125,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.onFiles = onFiles
         editor.onError = onError
         editor.onKey = onKey
+        editor.onQueue = onQueue
         editor.onLongPaste = onLongPaste
         editor.fileReference = fileReference
         editor.syncDraft(text, selection: selectionAfterReplacement)
@@ -167,9 +175,19 @@ struct ComposerEditor: NSViewRepresentable {
 final class DraftTextView: NSTextView {
     private let draftUndoManager = UndoManager()
     override var undoManager: UndoManager? { draftUndoManager }
-    var placeholder = ""
+    /// Follows the run state (it says what Return does), so a change redraws an
+    /// empty draft and reaches VoiceOver, which cannot see the drawn text.
+    var placeholder = "" {
+        didSet {
+            guard placeholder != oldValue else { return }
+            setAccessibilityPlaceholderValue(placeholder)
+            if string.isEmpty { needsDisplay = true }
+        }
+    }
     var canSend = false
     var onSend: (() -> Void)?
+    /// ⌘Return's next-turn send; nil sends ⌘Return through `onSend`.
+    var onQueue: (() -> Void)?
     var onFiles: (([URL]) -> Void)?
     var onError: ((String) -> Void)?
     var onLayout: (() -> Void)?
@@ -202,12 +220,45 @@ final class DraftTextView: NSTextView {
         }
     }
     /// Returns false during composition so Return stays with the input method.
+    /// ⌘Return takes the next-turn send when there is one, otherwise the same send
+    /// as Return; either way one key press calls exactly one of them.
     func handleReturn(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> Bool {
         guard keyCode == 36 || keyCode == 76 else { return false }
         guard isEditable, !hasMarkedText() else { return false }
         if modifiers.contains(.shift) || modifiers.contains(.option) { return false }
-        if canSend { onSend?() }
+        guard canSend else { return true }
+        if modifiers.contains(.command), let onQueue { onQueue() } else { onSend?() }
         return true
+    }
+    /// Whether an empty-selection caret is on the draft's first and last visual
+    /// lines, read from this view's layout so a soft-wrapped line counts as a line.
+    /// An empty draft is on both; a selection is on neither. The composer lays out
+    /// with TextKit 1: `Coordinator.measure()` reads `layoutManager`, which moves
+    /// an NSTextView out of TextKit 2, and this reads the same layout manager.
+    func caretLine() -> (isFirst: Bool, isLast: Bool) {
+        let text = string as NSString
+        guard text.length > 0 else { return (true, true) }
+        let caret = selectedRange()
+        guard caret.length == 0 else { return (false, false) }
+        guard let layout = layoutManager, let container = textContainer else { return (true, true) }
+        layout.ensureLayout(for: container)
+        let glyphs = layout.numberOfGlyphs
+        guard glyphs > 0 else { return (true, true) }
+        // A final line break leaves an empty extra line below the last glyph.
+        let endsWithEmptyLine = layout.extraLineFragmentTextContainer != nil
+        if caret.location >= text.length && endsWithEmptyLine { return (false, true) }
+        // The caret is on the line of the character after it. At the end of the
+        // text, and upstream at a soft wrap (drawn at the end of the earlier line),
+        // it is on the line of the character before it.
+        var character = min(caret.location, text.length - 1)
+        if caret.location > 0 && caret.location < text.length && selectionAffinity == .upstream {
+            let previous = Unicode.Scalar(text.character(at: caret.location - 1))
+            let afterLineBreak = previous.map { CharacterSet.newlines.contains($0) } ?? false
+            if !afterLineBreak { character = caret.location - 1 }
+        }
+        var line = NSRange(location: 0, length: 0)
+        _ = layout.lineFragmentRect(forGlyphAt: layout.glyphIndexForCharacter(at: character), effectiveRange: &line)
+        return (line.location == 0, !endsWithEmptyLine && NSMaxRange(line) >= glyphs)
     }
     /// An attached suggestion list sees navigation keys first, but never while the
     /// input method is composing, so Return still commits Chinese text.
@@ -217,8 +268,8 @@ final class DraftTextView: NSTextView {
         let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
         guard modifiers.isEmpty else { return false }
         switch event.keyCode {
-        case 126: return onKey(.up)
-        case 125: return onKey(.down)
+        case 126: return onKey(.up(fromFirstLine: caretLine().isFirst))
+        case 125: return onKey(.down(fromLastLine: caretLine().isLast))
         case 36, 76: return onKey(.enter)
         case 48: return onKey(.tab)
         case 53: return onKey(.escape)
@@ -312,6 +363,7 @@ struct ComposerAttachment: View {
             Text(file.lastPathComponent).font(.system(size: 11)).lineLimit(1).frame(maxWidth: 130)
             Button(action: onRemove) { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove attachment")
+                .accessibilityLabel("Remove attachment")
         }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
     }
 }

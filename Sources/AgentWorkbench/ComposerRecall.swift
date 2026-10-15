@@ -2,7 +2,9 @@ import Foundation
 
 /// Up-arrow recall of sent prompts, one per composer. Recall starts only from an
 /// empty draft, owns Up/Down/Escape while active, and ends on any edit that did
-/// not come from recall itself. Return keeps its send meaning.
+/// not come from recall itself. Return keeps its send meaning. Up and Down swap
+/// drafts only from the draft's first or last visual line; elsewhere they move
+/// the caret, so a recalled multi-line prompt can be read and edited.
 struct ComposerRecall: Equatable {
     /// The draft recall most recently applied; a different incoming edit ends recall.
     private(set) var applied: String?
@@ -15,7 +17,8 @@ struct ComposerRecall: Equatable {
     mutating func handle(_ key: ComposerKey, draft: String, entries: [String]) -> String? {
         guard !entries.isEmpty else { applied = nil; return nil }
         switch key {
-        case .up:
+        case .up(let fromFirstLine):
+            guard fromFirstLine || draft.isEmpty else { return nil }
             if let applied, let current = entries.firstIndex(of: applied), current > 0 {
                 index = current - 1
             } else if applied != nil {
@@ -26,8 +29,8 @@ struct ComposerRecall: Equatable {
             }
             applied = entries[index]
             return applied
-        case .down:
-            guard let applied, let current = entries.firstIndex(of: applied) else { return nil }
+        case .down(let fromLastLine):
+            guard fromLastLine, let applied, let current = entries.firstIndex(of: applied) else { return nil }
             if current + 1 < entries.count {
                 index = current + 1
                 self.applied = entries[index]
