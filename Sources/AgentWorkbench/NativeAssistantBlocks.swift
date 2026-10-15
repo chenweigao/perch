@@ -230,7 +230,6 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private let document = NSView()
     private var codeText: ReplyTextView?
     private var gutter: ReplyTextView?
-    private var language = ""
     private var source = ""
 
     override init(links: SelectableReplyText.Coordinator) {
@@ -256,7 +255,9 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
 
     override func update(_ block: NativeAssistantBlock) {
         guard case .code(let language, let source, let text) = block else { return }
-        if language != self.language { self.language = language; label.stringValue = language.isEmpty ? "代码" : language }
+        // The SwiftUI card's label, including a fresh card whose block has no language.
+        let title = language.isEmpty ? L("代码") : language
+        if label.stringValue != title { label.stringValue = title }
         if source != self.source {
             self.source = source
             copy.rootView = ReplyCopyButton(text: source, label: "复制代码")

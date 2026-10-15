@@ -3,8 +3,11 @@ import WorkbenchCore
 
 /// Pending text stays in the transcript at full length until the runtime echoes it.
 struct PendingMessageContent: View {
+    @UILocalization private var L
     let text: String
+    /// A localization key or already localized text; both display through lookup.
     let status: String
+    /// A localization key ("Steer", "Queue").
     var mode: String? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -19,6 +22,7 @@ struct PendingMessageContent: View {
 
 /// Editing a not-yet-accepted queue entry; save failure keeps the typed revision.
 struct PendingMessageEditor: View {
+    @UILocalization private var L
     let message: OutboundMessage
     let save: (String) -> Bool
     @Environment(\.dismiss) private var dismiss
@@ -34,7 +38,7 @@ struct PendingMessageEditor: View {
                 Spacer()
                 Button("保存") {
                     if save(text) { dismiss() }
-                    else { messageError = "消息已经提交，修改未保存。可复制这里的文字作为新的补充。" }
+                    else { messageError = L("消息已经提交，修改未保存。可复制这里的文字作为新的补充。") }
                 }
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }

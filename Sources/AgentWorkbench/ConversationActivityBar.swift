@@ -320,7 +320,7 @@ struct ConversationActivityBar: View {
                                 Text(item.title).fontWeight(item.status == .inProgress ? .medium : .regular)
                                     .foregroundStyle(item.status == .done ? .secondary : .primary)
                             }.accessibilityElement(children: .combine)
-                                .accessibilityLabel("\(item.status == .done ? "Completed" : item.status == .inProgress ? "In progress" : "Pending"): \(item.title)")
+                                .accessibilityLabel(Text(verbatim: "\(todoState(item.status)): \(item.title)"))
                         }
                     }
                     if let edits = activity.edits {
@@ -358,6 +358,13 @@ struct ConversationActivityBar: View {
             }
         }.font(.system(size: 12)).padding(16).frame(width: 390)
     }
+    private func todoState(_ status: ConversationTodo.Status) -> String {
+        switch status {
+        case .done: return L("Completed")
+        case .inProgress: return L("In progress")
+        case .pending: return L("Pending")
+        }
+    }
 }
 
 /// +/− tally in the quiet palette; shared by the bar pill and the per-file rows.
@@ -381,6 +388,7 @@ struct TaskRecapPopover: View {
     @ObservedObject private var settings = ActivitySummarySettings.shared
     @State private var showSettings = false
     @State private var copied = false
+    @UILocalization private var L
 
     private var state: TaskRecapState { stateOverride ?? store.state(for: key) }
     private var configured: Bool {
@@ -490,8 +498,9 @@ struct TaskRecapPopover: View {
 
     private func copy(_ result: TaskRecapResult) {
         var blocks = [result.outcome]
-        for (title, items) in [("主要改动", result.changes), ("验证", result.validation),
-                               ("遗留", result.remaining), ("下一步", result.nextSteps)] where !items.isEmpty {
+        // The copied headings match the section titles shown above.
+        for (title, items) in [(L("主要改动"), result.changes), (L("验证"), result.validation),
+                               (L("遗留"), result.remaining), (L("下一步"), result.nextSteps)] where !items.isEmpty {
             blocks.append(title + "\n" + items.map { "- " + $0 }.joined(separator: "\n"))
         }
         let pasteboard = NSPasteboard.general
@@ -556,7 +565,7 @@ private struct ActivityToolDetails: View {
                 HStack {
                     Text(tool.name).fontWeight(.medium)
                     Spacer()
-                    Text(tool.hasCall ? ConversationActivity.status(of: tool) : "Call record missing")
+                    Text(verbatim: ConversationActivity.status(of: tool))
                         .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : Color.secondary)
                 }
                 let summary = ConversationActivity.summary(of: tool)

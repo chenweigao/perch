@@ -73,7 +73,7 @@ struct KimiWorkspaceView: View {
             // An open conversation reports disconnection, its detail and the
             // reconnect action in the activity bar; do not repeat it below.
             if let problem = connection.error, connection.online || connection.conversation == nil {
-                errorBanner("连接中断，显示的是最近同步的内容。\n" + problem)
+                errorBanner(L("连接中断，显示的是最近同步的内容。") + "\n" + problem)
             }
             if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
@@ -145,7 +145,7 @@ private struct KimiComposerView: View {
                                               set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: connection.conversation?.snapshot.session.cwd ?? "",
                                 placeholder: L("继续此任务…"),
-                                accessibilityLabel: "Message Kimi", canSend: canSend,
+                                accessibilityLabel: L("Message Kimi"), canSend: canSend,
                                 onSend: { connection.sendPrompt() },
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 },
@@ -248,7 +248,7 @@ private struct KimiComposerView: View {
     }
     private func addAttachments(_ files: [URL], to sessionID: String) {
         for file in files where !(connection.attachments[sessionID] ?? []).contains(file) {
-            if let refusal = ComposerAttachments.refusal(for: file) {
+            if let refusal = ComposerAttachments.refusal(for: file).map({ L(key: $0) }) {
                 connection.actionError = "\(file.lastPathComponent): \(refusal)"
                 continue
             }

@@ -393,7 +393,7 @@ private final class ConversationDocumentView: NSView {
         func replacement(_ index: Int, id: String? = nil) throws -> ConversationEntryView {
             let row = original[index], message = row.entry.messages[0]
             let raw: [String: Any] = ["id": id ?? message.id, "role": message.role, "created_at": message.createdAt,
-                "content": [["type": "text", "text": String(repeating: "same-ID changed content 中文 ", count: 30)]]]
+                "content": [["type": "text", "text": String(repeating: "same-ID changed content 中文 ", count: 30)]]] // l10n-ignore
             let changed = try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: raw))
             return ConversationEntryView(entry: ConversationTimelineEntry.make([changed])[0], tools: row.tools,
                 api: row.api, sessionId: row.sessionId, memoryKey: row.memoryKey, activityNarrative: row.activityNarrative)
@@ -475,11 +475,14 @@ private final class ConversationDocumentView: NSView {
         }
         // Reproduce the launch crash: separate folds from one persisted message
         // must survive the native unique-key indices and saved-height maps.
+        // Fixture prose sits outside the JSON literal, which cannot hold a marker.
+        let prompt = "分析并回答", firstThought = "第一段思考", firstAnswer = "第一段回答" // l10n-ignore
+        let secondThought = "第二段思考", secondAnswer = "第二段回答" // l10n-ignore
         let multipart = try KimiWire.decoder().decode([KimiMessage].self, from: Data("""
-        [{"id":"fold-user","role":"user","created_at":"1","content":[{"type":"text","text":"分析并回答"}]},
+        [{"id":"fold-user","role":"user","created_at":"1","content":[{"type":"text","text":"\(prompt)"}]},
          {"id":"fold-answer","role":"assistant","created_at":"2","content":[
-           {"type":"thinking","thinking":"第一段思考"},{"type":"text","text":"第一段回答"},
-           {"type":"thinking","thinking":"第二段思考"},{"type":"text","text":"第二段回答"}]}]
+           {"type":"thinking","thinking":"\(firstThought)"},{"type":"text","text":"\(firstAnswer)"},
+           {"type":"thinking","thinking":"\(secondThought)"},{"type":"text","text":"\(secondAnswer)"}]}]
         """.utf8))
         let projection = ConversationPresentationModel(key: "fold-regression")
         let snapshot = projection.update(.init(messages: multipart, language: "en"))
@@ -2129,11 +2132,12 @@ private struct ThoughtText: View {
 }
 
 private struct ThoughtToggle: View {
-    let title: String
+    /// A looked-up `Text`, so callers pass `Text("…")` rather than a raw string.
+    let title: Text
     @Binding var expanded: Bool
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-            Text(title).font(.system(size: 12)).foregroundStyle(.secondary)
+            title.font(.system(size: 12)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
     }
 }
@@ -2143,7 +2147,7 @@ struct ThoughtDisclosure: View {
     @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: "Thoughts", expanded: $expanded)
+            ThoughtToggle(title: Text("Thoughts"), expanded: $expanded)
             if expanded { ThoughtText(text: text) }
         }
     }
@@ -2159,7 +2163,7 @@ private struct ThoughtOutput: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                ThoughtToggle(title: finished ? "Thoughts · No response" : "Thinking", expanded: $expanded)
+                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"), expanded: $expanded)
                 if expanded && !finished && previewOverflows {
                     Button { showFullText = true } label: {
                         Label("View full thoughts", systemImage: "arrow.up.right")

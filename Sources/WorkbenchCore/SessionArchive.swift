@@ -8,17 +8,17 @@ public enum ArchiveBlock: String, Sendable, Equatable {
 
     public var reason: String {
         switch self {
-        case .alreadyArchived: return "已在归档中"
-        case .offline: return "未连接，状态未知"
-        case .running: return "正在运行"
-        case .pendingInteraction: return "等你处理"
-        case .failed: return "上一轮出错"
-        case .stopped: return "已主动停止"
-        case .starred: return "已置顶"
-        case .neverRan: return "从未运行"
-        case .unreviewed: return "结果还没查看"
-        case .queued: return "还有待发消息"
-        case .noCompletionSignal: return "没有完成语义"
+        case .alreadyArchived: return L("已在归档中")
+        case .offline: return L("未连接，状态未知")
+        case .running: return L("正在运行")
+        case .pendingInteraction: return L("等你处理")
+        case .failed: return L("上一轮出错")
+        case .stopped: return L("已主动停止")
+        case .starred: return L("已置顶")
+        case .neverRan: return L("从未运行")
+        case .unreviewed: return L("结果还没查看")
+        case .queued: return L("还有待发消息")
+        case .noCompletionSignal: return L("没有完成语义")
         }
     }
 }
@@ -84,8 +84,8 @@ public enum ArchiveSkip: Equatable, Sendable {
     case disappeared, changed, blocked(ArchiveBlock)
     public var reason: String {
         switch self {
-        case .disappeared: return "会话已不存在"
-        case .changed: return "开始前状态已变化"
+        case .disappeared: return L("会话已不存在")
+        case .changed: return L("开始前状态已变化")
         case .blocked(let block): return block.reason
         }
     }
@@ -195,11 +195,11 @@ public struct BatchArchiveRun: Equatable, Sendable {
         failures.isEmpty ? nil : BatchArchivePlan(candidates: failures.map(\.candidate), concurrencyLimit: plan.concurrencyLimit)
     }
     public var summary: String {
-        var parts = ["已归档 \(archived.count)"]
-        if !skipped.isEmpty { parts.append("跳过 \(skipped.count)") }
-        if !failures.isEmpty { parts.append("失败 \(failures.count)") }
-        if restoredCount > 0 { parts.append("已恢复 \(restoredCount)") }
-        if !undoFailures.isEmpty { parts.append("恢复失败 \(undoFailures.count)") }
+        var parts = [L("已归档 \(archived.count)")]
+        if !skipped.isEmpty { parts.append(L("跳过 \(skipped.count)")) }
+        if !failures.isEmpty { parts.append(L("失败 \(failures.count)")) }
+        if restoredCount > 0 { parts.append(L("已恢复 \(restoredCount)")) }
+        if !undoFailures.isEmpty { parts.append(L("恢复失败 \(undoFailures.count)")) }
         return parts.joined(separator: " · ")
     }
 }

@@ -8,7 +8,7 @@ public enum SSHCommand {
     public static func validateDestination(_ value: String) throws {
         guard !value.isEmpty, !value.hasPrefix("-"),
               !value.contains(where: { $0.isWhitespace || $0.isNewline || $0.asciiValue == 0 }) else {
-            throw WorkbenchError("请输入 SSH 配置别名或 user@host；端口和跳板机请配置在 ~/.ssh/config 中。")
+            throw WorkbenchError(L("请输入 SSH 配置别名或 user@host；端口和跳板机请配置在 ~/.ssh/config 中。"))
         }
     }
 

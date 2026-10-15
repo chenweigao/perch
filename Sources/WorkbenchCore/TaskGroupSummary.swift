@@ -32,7 +32,6 @@ public struct TaskGroupSummary: Identifiable, Equatable, Sendable {
 
     private static func orderedGroups(_ groups: [WorkItemGroup]) -> [WorkItemGroup] {
         groups.enumerated().sorted { lhs, rhs in
-            if lhs.element.isPinned != rhs.element.isPinned { return lhs.element.isPinned }
             if lhs.element.lastOpenedAt != rhs.element.lastOpenedAt { return lhs.element.lastOpenedAt > rhs.element.lastOpenedAt }
             return lhs.offset < rhs.offset
         }.map(\.element)
@@ -51,9 +50,8 @@ public struct TaskGroupSummary: Identifiable, Equatable, Sendable {
 
     public static func shortcuts(groups: [WorkItemGroup], sessions: [WorkspaceSession], selectedID: UUID?) -> [Self] {
         let ordered = orderedGroups(groups)
-        let pinned = ordered.filter(\.isPinned)
-        let recent = ordered.filter { !$0.isPinned && ($0.lastOpenedAt > 0 || $0.id == selectedID) }
-        var visible = pinned + recent.prefix(5)
+        let recent = ordered.filter { $0.lastOpenedAt > 0 || $0.id == selectedID }
+        var visible = Array(recent.prefix(5))
         if let selected = ordered.first(where: { $0.id == selectedID }), !visible.contains(where: { $0.id == selectedID }) {
             visible.append(selected)
         }

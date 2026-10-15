@@ -23,7 +23,7 @@ public final class KimiAPI: @unchecked Sendable {
         try beginRequest()
         defer { endRequest() }
         let (data, response) = try await session.data(for: request)
-        if let response = response as? HTTPURLResponse, response.statusCode == 401 { throw WorkbenchError("Kimi 访问凭证失效，请重新连接。") }
+        if let response = response as? HTTPURLResponse, response.statusCode == 401 { throw WorkbenchError(L("Kimi 访问凭证失效，请重新连接。")) }
         if let response = response as? HTTPURLResponse, !(200..<300).contains(response.statusCode) {
             let envelope = try? JSONDecoder().decode(JSONValue.self, from: data)
             throw WorkbenchError(envelope?["error"].string ?? envelope?["msg"].string ?? "HTTP \(response.statusCode)")
@@ -93,15 +93,15 @@ public final class KimiAPI: @unchecked Sendable {
     }
     public static func availableLoopbackPort() throws -> UInt16 {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
-        guard fd >= 0 else { throw WorkbenchError("无法创建本地连接") }
+        guard fd >= 0 else { throw WorkbenchError(L("无法创建本地连接")) }
         defer { close(fd) }
         var addr = sockaddr_in(); addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         addr.sin_family = sa_family_t(AF_INET); addr.sin_addr.s_addr = inet_addr("127.0.0.1")
         let result = withUnsafePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) } }
-        guard result == 0 else { throw WorkbenchError("无法分配本地端口") }
+        guard result == 0 else { throw WorkbenchError(L("无法分配本地端口")) }
         var length = socklen_t(MemoryLayout<sockaddr_in>.size)
         let status = withUnsafeMutablePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(fd, $0, &length) } }
-        guard status == 0 else { throw WorkbenchError("无法读取本地端口") }
+        guard status == 0 else { throw WorkbenchError(L("无法读取本地端口")) }
         return UInt16(bigEndian: addr.sin_port)
     }
 }

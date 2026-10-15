@@ -7,7 +7,7 @@ struct WorkbenchHeader: View {
     @Bindable var model: WorkbenchModel
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var title: String {
-        if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? L("工作台") }
+        if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? (model.showAllTaskGroups ? L("任务组") : L("工作台")) }
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
@@ -16,7 +16,10 @@ struct WorkbenchHeader: View {
                 if let item {
                     AgentMark(kind: item.reference.kind, size: 15)
                 } else {
-                    Image(systemName: model.showArchived ? "archivebox" : model.onlyAttention ? "tray" : model.showSessionDirectory ? "list.bullet" : model.selectedGroup == nil ? "square.grid.2x2" : "folder")
+                    // The same symbols as the sidebar destinations.
+                    Image(systemName: model.showArchived ? "archivebox" : model.onlyAttention ? "tray"
+                          : model.showSessionDirectory ? "bubble.left.and.bubble.right"
+                          : model.selectedGroup != nil ? "folder" : model.showAllTaskGroups ? "square.stack.3d.up" : "square.grid.2x2")
                         .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
                 }
             }.frame(width: WorkbenchChrome.sidebarSymbolWidth)

@@ -8,7 +8,7 @@ import WorkbenchCore
 enum RemotePanelMode: String, CaseIterable, Identifiable {
     case file, git
     var id: String { rawValue }
-    var label: String { self == .file ? "文件" : "Git 变更" }
+    var label: LocalizedStringKey { self == .file ? "文件" : "Git 变更" }
 }
 
 enum GitReviewRange: String { case unstaged, staged, branch }
@@ -45,7 +45,7 @@ final class RemoteFileBrowser: ObservableObject {
     private var reader: RemoteReader?
     private var task: Task<Void, Never>?
 
-    var hostName: String { host?.name ?? "未选择主机" }
+    var hostName: String { host?.name ?? L("未选择主机") }
 
     /// Switching sessions must never leave another host's path or content on screen.
     func configure(host: SSHHost?, cwd: String, directoryHints: [String] = []) {
@@ -87,7 +87,7 @@ final class RemoteFileBrowser: ObservableObject {
     func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false) {
         targetLine = line
         mode = .file
-        guard let host else { error = "当前会话没有可用的执行环境。"; return }
+        guard let host else { error = L("当前会话没有可用的执行环境。"); return }
         let resolved: String
         let command: String
         do {
@@ -130,7 +130,7 @@ final class RemoteFileBrowser: ObservableObject {
     }
 
     func loadGitStatus() {
-        guard host != nil else { error = "当前会话没有可用的执行环境。"; return }
+        guard host != nil else { error = L("当前会话没有可用的执行环境。"); return }
         if !gitDirectory.isEmpty {
             loadGitStatus(directories: [gitDirectory], allowSuggestion: false)
             return
@@ -140,7 +140,7 @@ final class RemoteFileBrowser: ObservableObject {
         candidates = candidates.filter { !$0.isEmpty }.reduce(into: []) { values, value in
             if !values.contains(value) { values.append(value) }
         }
-        guard !candidates.isEmpty else { error = "当前会话没有工作目录。"; return }
+        guard !candidates.isEmpty else { error = L("当前会话没有工作目录。"); return }
         loadGitStatus(directories: candidates, allowSuggestion: !gitSelectionExplicit)
     }
 
@@ -515,7 +515,7 @@ final class RemoteReader: @unchecked Sendable {
         process.standardOutput = output
         process.standardError = errors
         lock.lock()
-        if cancelled { lock.unlock(); return .failure(WorkbenchError("已取消读取。")) }
+        if cancelled { lock.unlock(); return .failure(WorkbenchError(L("已取消读取。"))) }
         self.process = process
         lock.unlock()
         do { try process.run() } catch { return .failure(error) }
@@ -526,10 +526,10 @@ final class RemoteReader: @unchecked Sendable {
         let wasCancelled = cancelled
         self.process = nil
         lock.unlock()
-        if wasCancelled { return .failure(WorkbenchError("已取消读取。")) }
+        if wasCancelled { return .failure(WorkbenchError(L("已取消读取。"))) }
         guard process.terminationStatus == 0 else {
             let message = String(decoding: failure, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-            return .failure(WorkbenchError(message.isEmpty ? "远端连接失败或已断开。" : message))
+            return .failure(WorkbenchError(message.isEmpty ? L("远端连接失败或已断开。") : message))
         }
         return .success(data)
     }
@@ -570,6 +570,7 @@ private struct DiffText: View {
 }
 
 struct RemoteFilePanel: View {
+    @UILocalization private var L
     @ObservedObject var browser: RemoteFileBrowser
     var fullWidth = false
     var onToggleWidth: (() -> Void)? = nil
@@ -580,6 +581,9 @@ struct RemoteFilePanel: View {
     @State private var feedbackContext: ReviewContext?
     @State private var feedback = ""
     @State private var contextAdded = false
+    /// A branch switch rewrites the remote worktree under any agent working there.
+    @State private var pendingBranch: String?
+    private var pendingBranchName: String { pendingBranch ?? "" }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
@@ -599,7 +603,8 @@ struct RemoteFilePanel: View {
             VStack(alignment: .leading, spacing: 9) {
                 Text("\(browser.hostName)\(browser.cwd.isEmpty ? "" : " · \(browser.cwd)")")
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    .help("在当前执行环境中只读查看文件。")
+                    .help(browser.mode == .git ? L("暂存、提交与切换分支会直接修改远端工作区；差异与比较仍为只读。")
+                                               : L("在当前执行环境中只读查看文件。"))
                 Picker("", selection: $browser.mode) {
                     ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
                 }.pickerStyle(.segmented).labelsHidden()
@@ -664,7 +669,7 @@ struct RemoteFilePanel: View {
                         if let branches = browser.gitBranches {
                             Menu {
                                 ForEach(branches.names, id: \.self) { name in
-                                    Button { browser.switchGitBranch(name) } label: {
+                                    Button { pendingBranch = name } label: {
                                         HStack {
                                             Text(name)
                                             if name == branches.current { Image(systemName: "checkmark") }
@@ -672,11 +677,26 @@ struct RemoteFilePanel: View {
                                     }.disabled(name == branches.current)
                                 }
                             } label: {
-                                Label(branches.current ?? "游离 HEAD", systemImage: "arrow.triangle.branch")
+                                Label(branches.current ?? L("游离 HEAD"), systemImage: "arrow.triangle.branch")
                                     .font(.system(size: 12))
                             }.menuStyle(.borderlessButton).fixedSize()
                                 .help("切换分支，直接作用于远端工作区")
                                 .disabled(browser.gitWriting)
+                                .alert(L("切换到分支“\(pendingBranchName)”？"), isPresented: Binding(
+                                    get: { pendingBranch != nil },
+                                    set: { if !$0 { pendingBranch = nil } }
+                                )) {
+                                    Button(L("取消"), role: .cancel) { pendingBranch = nil }
+                                    // Capture the branch: dismissal may clear the state before the action runs.
+                                    if let branch = pendingBranch {
+                                        Button(L("切换分支")) {
+                                            pendingBranch = nil
+                                            browser.switchGitBranch(branch)
+                                        }
+                                    }
+                                } message: {
+                                    Text(L("将在 \(browser.gitDirectory) 执行 git switch，直接改动远端工作区的文件。正在此目录工作的 Agent 会读到切换后的代码。"))
+                                }
                         }
                         if browser.gitWriting { ProgressView().controlSize(.mini) }
                     }
@@ -835,13 +855,13 @@ struct RemoteFilePanel: View {
         } else {
             switch browser.gitStatus {
             case .notARepository:
-                notice("所选目录不是可用的 Git 工作树。", symbol: "questionmark.folder", tint: .secondary)
+                notice(L("所选目录不是可用的 Git 工作树。"), symbol: "questionmark.folder", tint: .secondary)
             case .clean:
-                notice("所选工作树干净，没有未提交的改动。", symbol: "checkmark.circle", tint: .secondary)
+                notice(L("所选工作树干净，没有未提交的改动。"), symbol: "checkmark.circle", tint: .secondary)
             case .changes(_, _, let entries):
                 gitChanges(entries)
             case nil:
-                notice("读取当前项目 Git 工作树的改动。", symbol: "arrow.triangle.branch", tint: .secondary)
+                notice(L("读取当前项目 Git 工作树的改动。"), symbol: "arrow.triangle.branch", tint: .secondary)
             }
         }
     }
@@ -911,11 +931,11 @@ struct RemoteFilePanel: View {
                     onSaveOffset: browser.rememberReviewOffset())
                     .id("diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitRange.rawValue)")
             }
-        case .binary: notice("二进制文件差异，不做预览。", symbol: "doc.zipper", tint: .secondary)
-        case .empty: notice("该文件在当前范围内没有差异。", symbol: "equal.circle", tint: .secondary)
-        case .untracked: notice("未跟踪文件，没有 tracked diff；可在「文件」页查看内容。", symbol: "plus.circle", tint: .secondary)
-        case .notARepository: notice("所选工作树不再是 Git 仓库。", symbol: "questionmark.folder", tint: .secondary)
-        case nil: notice("选择一个文件查看差异。", symbol: "doc.text.magnifyingglass", tint: .secondary)
+        case .binary: notice(L("二进制文件差异，不做预览。"), symbol: "doc.zipper", tint: .secondary)
+        case .empty: notice(L("该文件在当前范围内没有差异。"), symbol: "equal.circle", tint: .secondary)
+        case .untracked: notice(L("未跟踪文件，没有 tracked diff；可在「文件」页查看内容。"), symbol: "plus.circle", tint: .secondary)
+        case .notARepository: notice(L("所选工作树不再是 Git 仓库。"), symbol: "questionmark.folder", tint: .secondary)
+        case nil: notice(L("选择一个文件查看差异。"), symbol: "doc.text.magnifyingglass", tint: .secondary)
         }
     }
 
@@ -947,7 +967,7 @@ struct RemoteFilePanel: View {
                     }
                 }.padding(.vertical, 8)
             case .directory(let entries):
-                if entries.isEmpty { notice("空目录。", symbol: "folder", tint: .secondary) }
+                if entries.isEmpty { notice(L("空目录。"), symbol: "folder", tint: .secondary) }
                 else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 1) {
@@ -969,7 +989,8 @@ struct RemoteFilePanel: View {
                     HStack(spacing: 8) {
                         Text(byteLabel(size)).font(.system(size: 11)).foregroundStyle(.secondary)
                         if let line = browser.targetLine {
-                            Text(line <= text.split(separator: "\n", omittingEmptySubsequences: false).count ? "Line \(line)" : "Line \(line) is outside the loaded content")
+                            Text(line <= text.split(separator: "\n", omittingEmptySubsequences: false).count
+                                 ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         if truncated {
@@ -984,24 +1005,25 @@ struct RemoteFilePanel: View {
 
                 }
             case .binary(let size):
-                notice("这是二进制文件（\(byteLabel(size))），不做预览。", symbol: "doc.zipper", tint: .secondary)
+                notice(L("这是二进制文件（\(byteLabel(size))），不做预览。"), symbol: "doc.zipper", tint: .secondary)
             case .denied:
-                notice("没有读取权限。", symbol: "lock", tint: .orange)
+                notice(L("没有读取权限。"), symbol: "lock", tint: .orange)
             case .missing:
-                notice("路径不存在。", symbol: "questionmark.folder", tint: .orange)
+                notice(L("路径不存在。"), symbol: "questionmark.folder", tint: .orange)
             case nil:
-                notice("输入文件路径后打开。只读查看，不修改文件。", symbol: "doc.text", tint: .secondary)
+                notice(L("输入文件路径后打开。只读查看，不修改文件。"), symbol: "doc.text", tint: .secondary)
             }
         }
     }
 
     private func worktreeLabel(_ worktree: RemoteGitWorktree) -> String {
         let directory = (worktree.path as NSString).lastPathComponent
-        let revision = worktree.branchName ?? (worktree.detached ? "detached \(worktree.head.prefix(8))" : "无分支")
+        let head = String(worktree.head.prefix(8))
+        let revision = worktree.branchName ?? (worktree.detached ? L("detached \(head)") : L("无分支"))
         var states: [String] = []
-        if worktree.current { states.append("当前") }
-        if worktree.locked { states.append("已锁定") }
-        if worktree.prunable { states.append("不可用") }
+        if worktree.current { states.append(L("当前")) }
+        if worktree.locked { states.append(L("已锁定")) }
+        if worktree.prunable { states.append(L("不可用")) }
         if worktree.bare { states.append("bare") }
         let suffix = states.isEmpty ? "" : " · " + states.joined(separator: " · ")
         return "\(revision) · \(directory)\(suffix)"
@@ -1031,7 +1053,7 @@ struct RemoteFilePanel: View {
             scope: "\(browser.hostName) · \(truncated ? "loaded file prefix" : "file")")
     }
     private func byteLabel(_ size: Int) -> String {
-        size < 1024 ? "\(size) 字节" : size < 1_048_576
+        size < 1024 ? L("\(size) 字节") : size < 1_048_576
             ? String(format: "%.1f KiB", Double(size) / 1024)
             : String(format: "%.1f MiB", Double(size) / 1_048_576)
     }

@@ -99,8 +99,10 @@ struct ActivitySummarySettingsSheet: View {
                 Toggle("自动命名会话", isOn: $configuration.nameSessions)
                     .disabled(!configuration.enabled)
                     .help("会话标题仍是占位值（未命名、新对话或首条消息截断）时生成一次短标题，写入本机显示名；手动重命名优先。")
-                TextField("Base URL（含 /v1）", text: $configuration.baseURL, prompt: Text("http://localhost:8000/v1"))
-                TextField("模型名称", text: $configuration.model, prompt: Text("qwen3.8-flash-next"))
+                TextField("Base URL（含 /v1）", text: $configuration.baseURL,
+                          prompt: Text("http://localhost:8000/v1")) // l10n-ignore
+                TextField("模型名称", text: $configuration.model,
+                          prompt: Text("qwen3.8-flash-next")) // l10n-ignore
                 SecureField("API Key（可选，保存在钥匙串）", text: $apiKey)
                 Toggle("附带工具输出摘录", isOn: $configuration.includeToolOutput)
                     .disabled(!configuration.enabled)

@@ -202,18 +202,19 @@ struct ProjectMessageComposer: View {
 
 /// The chip keeps the draft readable; the full paste is one click away.
 private struct PastePreviewButton: View {
+    @UILocalization private var L
     let paste: DraftPaste
     let store: DraftPasteStore
     let stats: DraftPasteStore.Stats?
     @State private var previewing = false
     var body: some View {
         Button { previewing = true } label: {
-            Label(stats.map { "粘贴 · \($0.lines) 行" } ?? "粘贴内容", systemImage: "doc.on.clipboard")
+            Label(stats.map { L("粘贴 · \($0.lines) 行") } ?? L("粘贴内容"), systemImage: "doc.on.clipboard")
                 .lineLimit(1)
-        }.help(stats.map { "粘贴文本 · \($0.lines) 行 · \($0.bytes) 字节" } ?? "粘贴文本")
+        }.help(stats.map { L("粘贴文本 · \($0.lines) 行 · \($0.bytes) 字节") } ?? L("粘贴文本"))
         .popover(isPresented: $previewing, arrowEdge: .bottom) {
             ScrollView {
-                Text(store.text(for: paste.id) ?? "粘贴内容已不存在，发送时将缺失这段文字。")
+                Text(store.text(for: paste.id) ?? L("粘贴内容已不存在，发送时将缺失这段文字。"))
                     .font(.system(size: 11, design: .monospaced))
                     .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(12)
             }.frame(width: 420, height: 260)

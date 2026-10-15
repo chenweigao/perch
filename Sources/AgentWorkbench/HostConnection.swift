@@ -87,7 +87,7 @@ final class HostConnection: ObservableObject, Identifiable {
         guard generation == token else { throw CancellationError() }
         let status = try JSONDecoder().decode(RemoteStatus.self, from: data)
         guard status.server.running, let remoteSocket = status.server.socket else {
-            throw WorkbenchError("远端 Herdr 未运行，请先在远端终端启动 Herdr。")
+            throw WorkbenchError(L("远端 Herdr 未运行，请先在远端终端启动 Herdr。"))
         }
         binary = status.client.binary
         let folder = URL(fileURLWithPath: "/tmp/awb-\(UUID().uuidString.prefix(12))")
@@ -115,12 +115,12 @@ final class HostConnection: ObservableObject, Identifiable {
             guard generation == token else { throw CancellationError() }
             if !tunnel.isRunning {
                 let message = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-                throw WorkbenchError(message.isEmpty ? "SSH 隧道已退出" : message)
+                throw WorkbenchError(message.isEmpty ? L("SSH 隧道已退出") : message)
             }
             if FileManager.default.fileExists(atPath: socketPath) { return }
             try await Task.sleep(for: .milliseconds(100))
         }
-        throw WorkbenchError("SSH 转发建立超时")
+        throw WorkbenchError(L("SSH 转发建立超时"))
     }
 
     func refresh() async {
@@ -144,10 +144,10 @@ final class HostConnection: ObservableObject, Identifiable {
     }
 
     func closeTerminal(_ terminalID: String) async throws {
-        guard online else { throw WorkbenchError("请先连接远端") }
+        guard online else { throw WorkbenchError(L("请先连接远端")) }
         let token = generation
         try await refresh(token: token)
-        guard let pane = snapshot?.panes.first(where: { $0.terminalID == terminalID }) else { throw WorkbenchError("此终端已不在远端列表中") }
+        guard let pane = snapshot?.panes.first(where: { $0.terminalID == terminalID }) else { throw WorkbenchError(L("此终端已不在远端列表中")) }
         let command = "exec \(SSHCommand.quote(binary)) pane close \(SSHCommand.quote(pane.paneID))"
         let data = try await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-S", controlPath, host.destination, command])
         _ = try Wire.decode(JSONValue.self, from: data)
@@ -155,7 +155,7 @@ final class HostConnection: ObservableObject, Identifiable {
     }
 
     func createTerminal(workspaceID: String, cwd: String, label: String) async throws -> Pane {
-        guard online else { throw WorkbenchError("请先连接远端") }
+        guard online else { throw WorkbenchError(L("请先连接远端")) }
         let token = generation
         let path = socketPath
         let created = try await Task.detached {

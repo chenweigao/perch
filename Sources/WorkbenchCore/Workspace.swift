@@ -78,9 +78,9 @@ public struct WorkItemGroup: Codable, Identifiable, Equatable, Sendable {
     public var criteria: [GroupCriterion] = []
     public var outcomes: [GroupOutcome] = []
     public var stage: GroupStage = .active
-    public var isPinned = false
     public var lastOpenedAt: Double = 0
-    private enum CodingKeys: String, CodingKey { case id, name, goal, nextStep, sessions, criteria, outcomes, stage, isPinned, lastOpenedAt }
+    // Groups are no longer pinned; an `isPinned` key in older workspaces is ignored.
+    private enum CodingKeys: String, CodingKey { case id, name, goal, nextStep, sessions, criteria, outcomes, stage, lastOpenedAt }
     public init(from decoder: Decoder) throws {
         let v = try decoder.container(keyedBy: CodingKeys.self)
         id = try v.decode(UUID.self, forKey: .id)
@@ -90,7 +90,6 @@ public struct WorkItemGroup: Codable, Identifiable, Equatable, Sendable {
         sessions = try v.decode([SessionReference].self, forKey: .sessions)
         criteria = try v.decodeIfPresent([GroupCriterion].self, forKey: .criteria) ?? []
         outcomes = try v.decodeIfPresent([GroupOutcome].self, forKey: .outcomes) ?? []
-        isPinned = try v.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         lastOpenedAt = try v.decodeIfPresent(Double.self, forKey: .lastOpenedAt) ?? 0
         stage = try v.decodeIfPresent(GroupStage.self, forKey: .stage) ?? .active
     }

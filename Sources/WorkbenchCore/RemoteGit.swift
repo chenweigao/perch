@@ -10,11 +10,12 @@ public struct RemoteGitEntry: Equatable, Identifiable, Sendable {
     public var hasStaged: Bool { !untracked && indexStatus != " " }
     public var hasUnstaged: Bool { !untracked && worktreeStatus != " " }
     public var label: String {
-        if untracked { return "未跟踪" }
-        let staged = Self.name(indexStatus).map { "暂存：\($0)" }
-        let unstaged = Self.name(worktreeStatus).map { "未暂存：\($0)" }
+        if untracked { return L("未跟踪") }
+        let staged = Self.name(indexStatus).map { L("暂存：\(L(key: $0))") }
+        let unstaged = Self.name(worktreeStatus).map { L("未暂存：\(L(key: $0))") }
         return [staged, unstaged].compactMap { $0 }.joined(separator: " · ")
     }
+    /// A lookup key; the review list localizes it where it is shown.
     public var changeLabel: String { Self.name(worktreeStatus) ?? "" }
     private static func name(_ code: Character) -> String? {
         switch code {
@@ -22,7 +23,7 @@ public struct RemoteGitEntry: Equatable, Identifiable, Sendable {
         case "A": return "新增"
         case "D": return "已删除"
         case "R": return "重命名"
-        case "C": return "复制"
+        case "C": return "已复制"
         case "T": return "类型变更"
         case "U": return "冲突"
         default: return nil
@@ -184,7 +185,7 @@ public enum RemoteGitCommand {
     private static func body(_ data: Data) throws -> (kind: String, fields: [String: String], body: Data) {
         guard let separator = data.range(of: Data("\n--\n".utf8)) else {
             let header = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard header == "kind=notrepo" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+            guard header == "kind=notrepo" else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
             return ("notrepo", [:], Data())
         }
         var fields: [String: String] = [:]
@@ -192,19 +193,19 @@ public enum RemoteGitCommand {
             let parts = line.split(separator: "=", maxSplits: 1)
             if parts.count == 2 { fields[String(parts[0])] = String(parts[1]) }
         }
-        guard let kind = fields["kind"] else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        guard let kind = fields["kind"] else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
         return (kind, fields, Data(data[separator.upperBound...]))
     }
 
     public static func parseStatus(_ data: Data) throws -> RemoteGitStatus {
         let result = try body(data)
         if result.kind == "notrepo" { return .notARepository }
-        guard result.kind == "status-v2" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        guard result.kind == "status-v2" else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
         let records = result.body.split(separator: 0, omittingEmptySubsequences: false)
             .map { String(decoding: $0, as: UTF8.self) }
         guard let root = records.first, !root.isEmpty,
               let separator = records.dropFirst().firstIndex(where: \.isEmpty) else {
-            throw WorkbenchError("远端返回了无法识别的结果。")
+            throw WorkbenchError(L("远端返回了无法识别的结果。"))
         }
         let entries = parseEntries(Array(records[1..<separator]))
         let worktrees = parseWorktrees(Array(records[records.index(after: separator)...]), currentRoot: root)
@@ -263,7 +264,7 @@ public enum RemoteGitCommand {
     public static func parseDiff(_ data: Data, limit: Int = diffLimit) throws -> RemoteGitDiff {
         let result = try body(data)
         if result.kind == "notrepo" { return .notARepository }
-        guard result.kind == "diff" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        guard result.kind == "diff" else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
         guard !result.body.isEmpty else { return .empty }
         var bytes = result.body
         let truncated = bytes.count > limit
@@ -382,16 +383,16 @@ extension RemoteGitCommand {
     public static func parseWrite(_ data: Data) throws -> RemoteGitWrite {
         let result = try body(data)
         if result.kind == "notrepo" { return .notARepository }
-        guard result.kind == "write" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        guard result.kind == "write" else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
         if result.fields["ok"] == "1" { return .ok }
         let message = String(decoding: result.body, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        return .failed(message.isEmpty ? "远端 Git 操作失败。" : message)
+        return .failed(message.isEmpty ? L("远端 Git 操作失败。") : message)
     }
 
     public static func parseBranches(_ data: Data) throws -> RemoteGitBranches? {
         let result = try body(data)
         if result.kind == "notrepo" { return nil }
-        guard result.kind == "branches" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        guard result.kind == "branches" else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
         var lines = String(decoding: result.body, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false)
             .map(String.init)
         let current = lines.isEmpty ? nil : lines.removeFirst()
@@ -402,7 +403,7 @@ extension RemoteGitCommand {
     public static func parseLog(_ data: Data) throws -> [RemoteGitCommit]? {
         let result = try body(data)
         if result.kind == "notrepo" { return nil }
-        guard result.kind == "log" else { throw WorkbenchError("远端返回了无法识别的结果。") }
+        guard result.kind == "log" else { throw WorkbenchError(L("远端返回了无法识别的结果。")) }
         return String(decoding: result.body, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false)
             .filter { !$0.isEmpty }
             .map { line in

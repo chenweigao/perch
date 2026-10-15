@@ -11,6 +11,7 @@ struct KimiAttachmentView: View {
     @State private var rawData: Data?
     @State private var error: String?
     @Environment(\.displayScale) private var displayScale
+    @UILocalization private var L
     private var fileId: String? { part.source?["file_id"].string ?? part.fileId }
     private struct ImageRequest: Equatable {
         let fileId: String?
@@ -21,12 +22,12 @@ struct KimiAttachmentView: View {
             if let image {
                 Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 340).frame(maxWidth: 600, alignment: .leading)
                     .onTapGesture {
-                        if let rawData { ImagePreviewPanel.show(data: rawData, name: part.name ?? "图片附件") }
+                        if let rawData { ImagePreviewPanel.show(data: rawData, name: part.name ?? L("图片附件")) }
                     }
                     .help("点击预览大图")
             }
             HStack {
-                Label(part.name ?? (part.type == "image" ? "图片附件" : "文件附件"), systemImage: part.type == "image" ? "photo" : "doc").font(.system(size: 12))
+                Label(part.name ?? (part.type == "image" ? L("图片附件") : L("文件附件")), systemImage: part.type == "image" ? "photo" : "doc").font(.system(size: 12))
                 if let fileId, let api {
                     Button("存储附件") {
                         let panel = NSSavePanel(); panel.nameFieldStringValue = part.name ?? fileId
@@ -53,7 +54,7 @@ struct KimiAttachmentView: View {
                 image = decoded
             } catch is CancellationError {
                 // Leaving history or switching sessions must not publish stale images.
-            } catch { self.error = "图片读取失败：" + error.localizedDescription }
+            } catch { self.error = L("图片读取失败：\(error.localizedDescription)") }
         }
     }
     private func mediaPath(_ id: String) -> String {

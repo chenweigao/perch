@@ -35,13 +35,13 @@ public enum RemoteFilePath {
     /// them through URL/FileManager, which would resolve against the local disk.
     public static func resolve(_ input: String, cwd: String) throws -> String {
         let raw = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { throw WorkbenchError("请输入远端路径。") }
-        guard !raw.contains("\0") else { throw WorkbenchError("路径包含无效字符。") }
+        guard !raw.isEmpty else { throw WorkbenchError(L("请输入远端路径。")) }
+        guard !raw.contains("\0") else { throw WorkbenchError(L("路径包含无效字符。")) }
         let base: String
         if raw.hasPrefix("/") { base = raw }
         else if raw == "~" || raw.hasPrefix("~/") { base = raw }
         else {
-            guard cwd.hasPrefix("/") else { throw WorkbenchError("当前会话没有远端工作目录，请输入绝对路径。") }
+            guard cwd.hasPrefix("/") else { throw WorkbenchError(L("当前会话没有远端工作目录，请输入绝对路径。")) }
             base = cwd + "/" + raw
         }
         // A leading ~ is expanded by the remote shell, so its components stay as typed.
@@ -189,7 +189,7 @@ public enum RemoteFileCommand {
             let header = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
             if header == "kind=denied" { return .denied }
             if header == "kind=missing" { return .missing }
-            throw WorkbenchError("远端返回了无法识别的结果。")
+            throw WorkbenchError(L("远端返回了无法识别的结果。"))
         }
         let header = String(decoding: data[..<separator.lowerBound], as: UTF8.self)
         let body = data[separator.upperBound...]
@@ -228,7 +228,7 @@ public enum RemoteFileCommand {
             guard let text = String(data: bytes, encoding: .utf8) else { return .binary(size: size) }
             return .text(text, truncated: truncated, size: size)
         default:
-            throw WorkbenchError("远端返回了无法识别的结果。")
+            throw WorkbenchError(L("远端返回了无法识别的结果。"))
         }
     }
 }

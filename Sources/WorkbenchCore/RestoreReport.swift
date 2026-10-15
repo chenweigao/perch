@@ -9,12 +9,12 @@ public enum RestoreOutcome: String, Equatable, Sendable {
 
     public var label: String {
         switch self {
-        case .resumed: return "仍在运行"
-        case .completedAway: return "已完成"
-        case .attentionRequired: return "等待你处理"
-        case .failed: return "出错"
-        case .interrupted: return "已中断"
-        case .missing: return "会话已不在"
+        case .resumed: return L("仍在运行")
+        case .completedAway: return L("已完成")
+        case .attentionRequired: return L("等你处理")
+        case .failed: return L("出错")
+        case .interrupted: return L("已中断")
+        case .missing: return L("会话已不存在")
         }
     }
 
