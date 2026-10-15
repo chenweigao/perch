@@ -152,7 +152,11 @@ struct NativeAgentView: View {
                 onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                 .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                 .frame(maxWidth: .infinity).padding(.vertical, 6)
-            if let error = connection.actionError ?? s.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled).padding(10) }
+            if let error = connection.actionError ?? s.error {
+                // Long upstream errors scroll instead of displacing the conversation.
+                ScrollView { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                    .frame(maxHeight: 128).padding(10)
+            }
             if let command = s.commandResult {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }

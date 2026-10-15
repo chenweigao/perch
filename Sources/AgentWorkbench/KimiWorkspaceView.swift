@@ -91,8 +91,9 @@ struct KimiWorkspaceView: View {
     private func errorBanner(_ text: String, canRetry: Bool = false) -> some View {
         HStack(alignment: .top) {
             Image(systemName: "exclamationmark.circle")
-            Text(text).textSelection(.enabled)
-            Spacer()
+            // Long upstream errors scroll instead of displacing the conversation.
+            ScrollView { Text(text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                .frame(maxHeight: 128)
             if canRetry {
                 Button("Retry") { connection.reloadSelected() }.disabled(!connection.online || connection.loading)
             }
