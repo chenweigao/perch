@@ -14,7 +14,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/CommandPalette.swift Sources/AgentWorkbench/ModelPicker.swift \
-    Sources/AgentWorkbench/ThinkingPicker.swift Sources/AgentWorkbench/PermissionPicker.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ComposerActionButton.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
+    Sources/AgentWorkbench/ThinkingPicker.swift Sources/AgentWorkbench/AutoCompactStore.swift Sources/AgentWorkbench/PermissionPicker.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ComposerActionButton.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
     Sources/AgentWorkbench/ComposerModelPicker.swift Sources/AgentWorkbench/ComposerToolbarLayout.swift Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/AgentMark.swift Sources/AgentWorkbench/AgentMarkArtwork.swift \
     Tests/ComposerToolbarPreview/*.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ComposerToolbarPreview"
