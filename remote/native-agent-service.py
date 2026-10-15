@@ -1253,6 +1253,11 @@ class Session:
                 windows=[m.get('contextWindow') for m in (e.get('modelUsage') or {}).values() if m.get('contextWindow')]
                 tokens=s.get('contextTokens')
                 if tokens and windows: s['context']={'tokens':tokens,'limit':max(windows),'reportedAt':time.time()}
+        elif provider == 'claude' and t == 'context_usage':
+            # The SDK's resolved autocompact window (e.g. the 200K policy boundary on
+            # 1M models), not the model's declared limit; overrides the estimate above.
+            if e.get('limit'):
+                s['context']={'tokens':e.get('tokens'),'limit':e['limit'],'reportedAt':time.time()}; durable=True
         elif provider in ('qoder','qoderintl','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
             if e.get('error'):

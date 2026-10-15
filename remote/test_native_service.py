@@ -317,6 +317,21 @@ class ProtocolTests(unittest.TestCase):
         s.event({'type':'result','session_id':'sess','usage':{'input_tokens':999},
             'modelUsage':{'claude-opus-4-7':{'contextWindow':200000}}})
         self.assertEqual(s.state['context']['tokens'],9380)
+    def test_claude_context_usage_event_resolves_window(self):
+        s=self.session('claude')
+        s.event({'type':'agent_start'})
+        s.event({'type':'assistant','uuid':'a1','message':{'role':'assistant','content':[{'type':'text','text':'答'}],
+            'usage':{'input_tokens':100,'cache_read_input_tokens':8000,'cache_creation_input_tokens':200,'output_tokens':50}}})
+        s.event({'type':'result','session_id':'sess','usage':{'input_tokens':90000},
+            'modelUsage':{'claude-opus-4-7':{'contextWindow':1000000}}})
+        self.assertEqual((s.state['context']['tokens'],s.state['context']['limit']),(8350,1000000))
+        # The resolved autocompact window replaces the model's declared limit.
+        s.event({'type':'context_usage','model':'claude-opus-4-7','tokens':8350,'limit':200000})
+        self.assertEqual((s.state['context']['tokens'],s.state['context']['limit']),(8350,200000))
+        self.assertTrue(s.state['context']['reportedAt'])
+        # A missing limit never clobbers a valid reading.
+        s.event({'type':'context_usage','model':'claude-opus-4-7','tokens':8350})
+        self.assertEqual(s.state['context']['limit'],200000)
     def test_claude_tool_link_and_stream(self):
         s=self.session('claude')
         s.event({'type':'stream_event','event':{'type':'message_start'}})
