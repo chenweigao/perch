@@ -95,6 +95,21 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
         if (message.isReplay) continue;
         if (message.session_id) resume = message.session_id;
         emit(message);
+        if (message.type === 'result') {
+          // result.usage totals every API request of the turn, and modelUsage's
+          // contextWindow is the model's declared limit — neither is the resolved
+          // autocompact window (e.g. the 200K policy boundary on 1M models). The
+          // control reply carries both real numbers; keep the emitted result
+          // readings as the fallback when an older CLI cannot answer.
+          try {
+            const usage = await Promise.race([
+              active.getContextUsage({detail:'summary'}),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('getContextUsage timeout')), 3000)),
+            ]);
+            if (usage?.raw_max_tokens) emit({type:'context_usage', model:usage.model,
+              tokens:usage.total_tokens, limit:usage.raw_max_tokens});
+          } catch {}
+        }
       }
     } catch (error) {emit({type:'worker_error', message:error.message});}
     finally {active = null; activeTurn = null; pending.clear(); emit({type:'agent_end', resume});}
