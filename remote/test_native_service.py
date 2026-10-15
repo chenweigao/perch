@@ -295,16 +295,28 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(message['content'],[{'type':'text','text':'[图片]'}])
     def test_claude_result_reports_context_usage(self):
         s=self.session('claude')
-        s.event({'type':'result','session_id':'sess','usage':{'input_tokens':120,
-            'cache_read_input_tokens':8000,'cache_creation_input_tokens':200,'output_tokens':50},
+        s.event({'type':'agent_start'})
+        # The window fill is the latest reply's per-request usage, not the turn total.
+        s.event({'type':'assistant','uuid':'a1','message':{'role':'assistant','content':[{'type':'text','text':'先想'}],
+            'usage':{'input_tokens':100,'cache_read_input_tokens':8000,'cache_creation_input_tokens':200,'output_tokens':50}}})
+        s.event({'type':'assistant','uuid':'a2','message':{'role':'assistant','content':[{'type':'text','text':'再答'}],
+            'usage':{'input_tokens':120,'cache_read_input_tokens':9000,'cache_creation_input_tokens':200,'output_tokens':60}}})
+        # result.usage sums every API request of the turn; it must not feed the meter.
+        s.event({'type':'result','session_id':'sess','usage':{'input_tokens':120000,
+            'cache_read_input_tokens':2500000,'cache_creation_input_tokens':90000,'output_tokens':50},
             'modelUsage':{'claude-opus-4-7':{'contextWindow':200000}}})
         ctx=s.state['context']
-        self.assertEqual((ctx['tokens'],ctx['limit']),(8320,200000))
+        self.assertEqual((ctx['tokens'],ctx['limit']),(9380,200000))
         self.assertTrue(ctx['reportedAt'])
-        self.assertEqual(s.summary()['context']['tokens'],8320)
+        self.assertEqual(s.summary()['context']['tokens'],9380)
         # A zeroed (crashed) result must not overwrite a real reading.
         s.event({'type':'result','session_id':'sess','usage':{},'modelUsage':{}})
-        self.assertEqual(s.state['context']['tokens'],8320)
+        self.assertEqual(s.state['context']['tokens'],9380)
+        # A turn without any assistant reply keeps the previous reading.
+        s.event({'type':'agent_start'})
+        s.event({'type':'result','session_id':'sess','usage':{'input_tokens':999},
+            'modelUsage':{'claude-opus-4-7':{'contextWindow':200000}}})
+        self.assertEqual(s.state['context']['tokens'],9380)
     def test_claude_tool_link_and_stream(self):
         s=self.session('claude')
         s.event({'type':'stream_event','event':{'type':'message_start'}})
