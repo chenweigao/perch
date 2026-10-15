@@ -42,7 +42,8 @@ struct NativeAgentView: View {
             // with the same reconnect action; keep this line for every other state.
             if !connection.online {
                 if !(connection.conversation.presentationSnapshot.map(isCurrent) ?? false) {
-                    HStack { Text(connection.error ?? L("正在连接远端服务")); Button("重新连接") { connection.connect() } }.font(.caption).foregroundStyle(.orange).padding(10)
+                    ConversationNotice(text: connection.error ?? L("正在连接远端服务"), symbol: "wifi.exclamationmark",
+                                       action: ConversationNotice.Action(title: L("重新连接")) { connection.connect() })
                 }
             } else { NativeStaleSyncHint(connection: connection) }
         }
@@ -153,11 +154,8 @@ struct NativeAgentView: View {
                 onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
                 .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                 .frame(maxWidth: .infinity).padding(.vertical, 6)
-            if let error = connection.actionError ?? s.error {
-                // Long upstream errors scroll instead of displacing the conversation.
-                ScrollView { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-                    .frame(maxHeight: 128).padding(10)
-            }
+            // Long upstream errors scroll inside the notice instead of displacing the conversation.
+            if let error = connection.actionError ?? s.error { ConversationNotice(text: error) }
             if let command = s.commandResult {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }
@@ -175,14 +173,13 @@ struct NativeAgentView: View {
 /// the connection still looks live. Past the idle cadence's slowest gap, show how
 /// stale the screen is instead of presenting it as current.
 private struct NativeStaleSyncHint: View {
+    @UILocalization private var L
     let connection: NativeAgentConnection
     var body: some View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
             if let last = connection.lastSyncAt, context.date.timeIntervalSince(last) > 15 {
-                HStack {
-                    Text("数据同步中断，界面可能不是最新。")
-                    Button("重新连接") { connection.connect() }
-                }.font(.caption).foregroundStyle(.orange).padding(10)
+                ConversationNotice(text: L("数据同步中断，界面可能不是最新。"), symbol: "exclamationmark.arrow.circlepath",
+                                   action: ConversationNotice.Action(title: L("重新连接")) { connection.connect() })
             }
         }
     }
@@ -386,38 +383,34 @@ struct NativeRunControls: View {
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
-                    VStack(alignment: .leading, spacing: 8) {
-                        PendingMessageContent(text: message.text,
-                                              status: message.mode == .steer && message.state == .accepted
-                                                ? "Accepted · waiting for context" : message.state.label,
-                                              mode: message.mode == .steer ? "Steer" : "Queue")
-                        HStack(spacing: 10) {
-                            if message.state.isEditable {
-                                let editable = pending.filter { $0.state.isEditable }
-                                if editable.count > 1, let position = editable.firstIndex(where: { $0.id == message.id }) {
-                                    Button { _ = connection.queue.move(message.id, up: true) } label: {
-                                        Image(systemName: "chevron.up").frame(width: 22, height: 22).contentShape(Rectangle())
-                                    }.buttonStyle(.plain).disabled(position == 0)
-                                        .help("上移，更早发送").accessibilityLabel("上移")
-                                    Button { _ = connection.queue.move(message.id, up: false) } label: {
-                                        Image(systemName: "chevron.down").frame(width: 22, height: 22).contentShape(Rectangle())
-                                    }.buttonStyle(.plain).disabled(position == editable.count - 1)
-                                        .help("下移，更晚发送").accessibilityLabel("下移")
-                                }
-                                Button("Edit") { editingMessage = message }.font(.caption2)
-                                Button("Remove") { _ = connection.queue.remove(message.id) }.font(.caption2)
+                    PendingMessageContent(text: message.text,
+                                          status: message.mode == .steer && message.state == .accepted
+                                            ? "Accepted · waiting for context" : message.state.label,
+                                          mode: message.mode == .steer ? "Steer" : "Queue") {
+                        if message.state.isEditable {
+                            let editable = pending.filter { $0.state.isEditable }
+                            if editable.count > 1, let position = editable.firstIndex(where: { $0.id == message.id }) {
+                                Button { _ = connection.queue.move(message.id, up: true) } label: {
+                                    Image(systemName: "chevron.up").frame(width: 22, height: 22).contentShape(Rectangle())
+                                }.buttonStyle(.plain).disabled(position == 0)
+                                    .help("上移，更早发送").accessibilityLabel("上移")
+                                Button { _ = connection.queue.move(message.id, up: false) } label: {
+                                    Image(systemName: "chevron.down").frame(width: 22, height: 22).contentShape(Rectangle())
+                                }.buttonStyle(.plain).disabled(position == editable.count - 1)
+                                    .help("下移，更晚发送").accessibilityLabel("下移")
                             }
-                            switch message.state {
-                            case .unknown:
-                                Button("核对并重试") { connection.retry(message.id) }.font(.caption2)
-                                Text("先核对原请求的接收状态，避免重复执行。")
-                                    .font(.caption2).foregroundStyle(.secondary)
-                            case .failed:
-                                Button("Move to draft") { connection.restoreFailed(message) }.font(.caption2)
-                            default: EmptyView()
-                            }
+                            Button("Edit") { editingMessage = message }
+                            Button("Remove") { _ = connection.queue.remove(message.id) }
                         }
-                    }.padding(.vertical, 8)
+                        switch message.state {
+                        case .unknown:
+                            Button("核对并重试") { connection.retry(message.id) }
+                            Text("先核对原请求的接收状态，避免重复执行。")
+                        case .failed:
+                            Button("Move to draft") { connection.restoreFailed(message) }
+                        default: EmptyView()
+                        }
+                    }
                 }
                 if let warning = connection.queue.unsentWarning(for: reference) {
                     Text(warning).font(.caption2).foregroundStyle(.secondary)

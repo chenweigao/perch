@@ -23,7 +23,9 @@ struct KimiWorkspaceView: View {
                 KimiGoalHeader(connection: connection, sessionID: conversation.snapshot.session.id)
                     .id(conversation.snapshot.session.id)
                 KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
-                if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error { errorBanner(problem, canRetry: !connection.snapshotReady) }
+                if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error {
+                    ConversationNotice(text: problem, action: connection.snapshotReady ? nil : reloadAction)
+                }
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
                 let recapKey = conversation.taskRecapRevision.map {
                     "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
@@ -67,15 +69,19 @@ struct KimiWorkspaceView: View {
                 Text(connection.loading ? "正在读取会话…" : "继续你的 Kimi 对话").font(.system(size: 23, weight: .semibold)).padding(.top, 16)
                 Text("选择已有会话，或从一个项目目录开始。") .foregroundStyle(.secondary).padding(.top, 3)
                 Button("新建会话") { onNew() }.buttonStyle(.borderedProminent).padding(.top, 18).disabled(!connection.online)
-                if let problem = connection.actionError { errorBanner(problem) }
+                if let problem = connection.actionError { ConversationNotice(text: problem) }
                 Spacer()
             }
             // An open conversation reports disconnection, its detail and the
             // reconnect action in the activity bar; do not repeat it below.
             if let problem = connection.error, connection.online || connection.conversation == nil {
-                errorBanner(L("连接中断，显示的是最近同步的内容。") + "\n" + problem)
+                ConversationNotice(text: L("连接中断，显示的是最近同步的内容。") + "\n" + problem, symbol: "wifi.exclamationmark")
             }
-            if let notice = connection.staleRuntimeNotice { runtimeNotice(notice) }
+            // An upgraded package with an older service still running. Informational:
+            // the session keeps working, and restarting that service stays the user's call.
+            if let notice = connection.staleRuntimeNotice {
+                ConversationNotice(text: notice, symbol: "info.circle", tint: .secondary)
+            }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
             .tint(kimiAccent)
             .onChange(of: connection.selectedId) { _, _ in
@@ -88,26 +94,11 @@ struct KimiWorkspaceView: View {
 
     }
 
-    private func errorBanner(_ text: String, canRetry: Bool = false) -> some View {
-        HStack(alignment: .top) {
-            Image(systemName: "exclamationmark.circle")
-            // Long upstream errors scroll instead of displacing the conversation.
-            ScrollView { Text(text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-                .frame(maxHeight: 128)
-            if canRetry {
-                Button("Retry") { connection.reloadSelected() }.disabled(!connection.online || connection.loading)
-            }
-        }.font(.system(size: 12)).foregroundStyle(.orange).padding(12).background(.orange.opacity(0.06)).padding(.horizontal, 28)
-    }
-    /// An upgraded package with an older service still running. Informational: the
-    /// session keeps working, and restarting that service stays the user's call.
-    private func runtimeNotice(_ text: String) -> some View {
-        HStack(alignment: .top) {
-            Image(systemName: "info.circle")
-            Text(text).textSelection(.enabled)
-            Spacer()
-        }.font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
-            .background(Color.secondary.opacity(0.06)).padding(.horizontal, 28)
+    /// Offered with an error while the selected session's snapshot is not ready.
+    private var reloadAction: ConversationNotice.Action {
+        ConversationNotice.Action(title: L("Retry"), isDisabled: !connection.online || connection.loading) {
+            connection.reloadSelected()
+        }
     }
 }
 
@@ -288,37 +279,33 @@ private struct KimiQueuedMessages: View {
                 .disabled(!connection.online)
         }
         ForEach(items) { message in
-            VStack(alignment: .leading, spacing: 8) {
-                PendingMessageContent(text: message.text, status: message.state.label,
-                                      mode: message.mode == .steer ? "Steer" : "Queue")
-                HStack(spacing: 10) {
-                    if message.state.isEditable {
-                        // Reorder like ccgui's queue rows: arrows stay visible
-                        // at both ends and disable instead of disappearing.
-                        let editable = items.filter { $0.state.isEditable }
-                        if editable.count > 1, let position = editable.firstIndex(where: { $0.id == message.id }) {
-                            Button { connection.moveQueued(message.id, up: true) } label: {
-                                Image(systemName: "chevron.up").frame(width: 22, height: 22).contentShape(Rectangle())
-                            }.buttonStyle(.plain).disabled(position == 0)
-                                .help("上移，更早发送").accessibilityLabel("上移")
-                            Button { connection.moveQueued(message.id, up: false) } label: {
-                                Image(systemName: "chevron.down").frame(width: 22, height: 22).contentShape(Rectangle())
-                            }.buttonStyle(.plain).disabled(position == editable.count - 1)
-                                .help("下移，更晚发送").accessibilityLabel("下移")
-                        }
-                        Button("Edit") { editing = message }.font(.caption2)
-                        Button("Remove") { connection.removeQueued(message.id) }.font(.caption2)
+            PendingMessageContent(text: message.text, status: message.state.label,
+                                  mode: message.mode == .steer ? "Steer" : "Queue") {
+                if message.state.isEditable {
+                    // Reorder like ccgui's queue rows: arrows stay visible
+                    // at both ends and disable instead of disappearing.
+                    let editable = items.filter { $0.state.isEditable }
+                    if editable.count > 1, let position = editable.firstIndex(where: { $0.id == message.id }) {
+                        Button { connection.moveQueued(message.id, up: true) } label: {
+                            Image(systemName: "chevron.up").frame(width: 22, height: 22).contentShape(Rectangle())
+                        }.buttonStyle(.plain).disabled(position == 0)
+                            .help("上移，更早发送").accessibilityLabel("上移")
+                        Button { connection.moveQueued(message.id, up: false) } label: {
+                            Image(systemName: "chevron.down").frame(width: 22, height: 22).contentShape(Rectangle())
+                        }.buttonStyle(.plain).disabled(position == editable.count - 1)
+                            .help("下移，更晚发送").accessibilityLabel("下移")
                     }
-                    if case .unknown = message.state {
-                        Button("核对并重试") { connection.retryQueued(message.id) }.font(.caption2)
-                        Text("先核对原请求的接收状态，避免重复执行。")
-                            .font(.caption2).foregroundStyle(.secondary)
-                    }
-                    if case .failed = message.state {
-                        Button("Move to draft") { connection.restoreQueued(message) }.font(.caption2)
-                    }
+                    Button("Edit") { editing = message }
+                    Button("Remove") { connection.removeQueued(message.id) }
                 }
-            }.padding(.vertical, 8)
+                if case .unknown = message.state {
+                    Button("核对并重试") { connection.retryQueued(message.id) }
+                    Text("先核对原请求的接收状态，避免重复执行。")
+                }
+                if case .failed = message.state {
+                    Button("Move to draft") { connection.restoreQueued(message) }
+                }
+            }
         }
         .sheet(item: $editing) { message in
             PendingMessageEditor(message: message) { connection.editQueued(message.id, text: $0) }
@@ -378,14 +365,13 @@ private struct KimiTimeline: View {
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: c.snapshot.session.id))
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
-                        VStack(alignment: .leading, spacing: 8) {
-                            PendingMessageContent(text: prompt.text, status: prompt.label)
+                        PendingMessageContent(text: prompt.text, status: prompt.label) {
                             if ["queued", "blocked"].contains(prompt.status) && c.snapshot.session.isTurnRunning {
                                 Button("Steer") {
                                     Task { await connection.steerPrompt(prompt.id, for: c.snapshot.session.id) }
-                                }.font(.caption).disabled(!connection.online || connection.isStopping)
+                                }.disabled(!connection.online || connection.isStopping)
                             }
-                        }.padding(.vertical, 8)
+                        }
                     }
                     KimiQueuedMessages(connection: connection, sessionID: c.snapshot.session.id)
                     if let notice = c.notice { Text(notice).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
