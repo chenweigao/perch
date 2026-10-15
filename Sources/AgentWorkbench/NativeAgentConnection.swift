@@ -550,7 +550,7 @@ final class NativeAgentConnection {
                 actionError = L("当前 Agent 不支持发送附件")
                 return
             }
-            guard files.count <= 5 else { actionError = L("附件一次最多 5 个"); return }
+            guard files.count <= ComposerAttachments.maximumInlineCount else { actionError = L("附件一次最多 5 个"); return }
         }
         // Folded pastes rejoin the prompt here; a lost paste file must not
         // silently send a prompt with a dead token in it.
@@ -576,7 +576,7 @@ final class NativeAgentConnection {
         for file in files {
             do {
                 let data = try Data(contentsOf: file)
-                guard !data.isEmpty, data.count <= 10_485_760 else {
+                guard !data.isEmpty, data.count <= ComposerAttachments.maximumInlineBytes else {
                     actionError = L("附件为空或超过 10MB：\(file.lastPathComponent)")
                     return
                 }
@@ -829,5 +829,17 @@ final class NativeAgentConnection {
     }
     func setArchived(_ id: String, archived: Bool) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/archive", body: .object(["archived": .bool(archived)]))
+    }
+}
+
+/// Claude and Codex receive attachments inline with the prompt. Their limits are
+/// checked when a file is added, so a draft never fails only at send.
+extension ComposerAttachments {
+    static let maximumInlineBytes = 10_485_760
+    static let maximumInlineCount = 5
+    static func inlineRefusal(for url: URL) -> String? {
+        if let refusal = refusal(for: url) { return refusal }
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+        return size > 0 && size <= maximumInlineBytes ? nil : L("附件为空或超过 10MB")
     }
 }

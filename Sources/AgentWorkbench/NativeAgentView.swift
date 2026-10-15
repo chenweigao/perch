@@ -260,6 +260,14 @@ private struct NativeComposerView: View {
     }
     private func addAttachments(_ files: [URL]) {
         for file in files where !(connection.attachments[s.id] ?? []).contains(file) {
+            if let refusal = ComposerAttachments.inlineRefusal(for: file) {
+                connection.actionError = "\(file.lastPathComponent): \(refusal)"
+                continue
+            }
+            guard (connection.attachments[s.id] ?? []).count < ComposerAttachments.maximumInlineCount else {
+                connection.actionError = L("附件一次最多 5 个")
+                return
+            }
             connection.attachments[s.id, default: []].append(file)
         }
     }

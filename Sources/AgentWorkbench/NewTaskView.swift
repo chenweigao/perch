@@ -22,7 +22,6 @@ struct NewTaskView: View {
     @State private var attachments: [URL] = []
     @State private var chooseFiles = false
     @State private var showSetup = false
-    @State private var showConfiguration = false
     @State private var showCustomModel = false
     @State private var showDirectory = false
     @State private var showConnectionDetails = false
@@ -51,6 +50,17 @@ struct NewTaskView: View {
         availableModels.map { "\($0.provider):\($0.id):\($0.thinking.map(\.rawValue).joined(separator: ","))" }.joined(separator: "|")
     }
     private var supportsAttachments: Bool { [.kimi, .claude, .codex].contains(provider) }
+    /// Claude and Codex take attachments inline, with tighter limits than Kimi's uploads.
+    private var inlineAttachments: Bool { [.claude, .codex].contains(provider) }
+    /// Files added under Kimi can exceed the inline limits after switching agents.
+    private var inlineAttachmentBlocker: String? {
+        guard inlineAttachments else { return nil }
+        if attachments.count > ComposerAttachments.maximumInlineCount { return L("附件一次最多 5 个") }
+        if let file = attachments.first(where: { ComposerAttachments.inlineRefusal(for: $0) != nil }) {
+            return L("附件为空或超过 10MB：\(file.lastPathComponent)")
+        }
+        return nil
+    }
     private var hasInitialContent: Bool {
         !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (supportsAttachments && !attachments.isEmpty)
     }
@@ -61,6 +71,7 @@ struct NewTaskView: View {
         if !cwd.hasPrefix("/") { return L("请选择项目目录后再开始。") }
         if provider == .codex && selectedAgentModel == nil { return L("请选择可用的 Codex 模型后再开始。") }
         if !supportsAttachments && !attachments.isEmpty { return L("当前 Agent 不支持附件，请切换 Agent 或移除附件后再开始。") }
+        if let inlineAttachmentBlocker { return inlineAttachmentBlocker }
         return nil
     }
     private var sendHint: String? {
@@ -187,11 +198,13 @@ struct NewTaskView: View {
                         ComposerAddButton(supportsFiles: supportsAttachments, disabled: creating) { chooseFiles = true }
                         agentMenu
                         modelControl
+                        // The session composer's control: elevated and dangerous
+                        // defaults show their color and name before the task starts.
+                        PermissionPicker(provider: provider, capability: permissionCapability,
+                                         disabled: creating, allowsSelection: provider != .dsh) { mode in
+                            permissionMode = mode
+                        }
                         Spacer(minLength: 0)
-                        Button { showConfiguration.toggle() } label: {
-                            Image(systemName: "slider.horizontal.3").frame(width: 24, height: 28).contentShape(Rectangle())
-                        }.buttonStyle(.plain).help("权限").accessibilityLabel("权限")
-                            .popover(isPresented: $showConfiguration) { configuration }
                         ComposerActionButton(isRunning: false, isStopping: creating, canSend: canStart, canStop: false,
                                              onSend: start, onStop: {})
                             .help(sendHint ?? L("Return 发送，Shift Return 换行"))
@@ -208,8 +221,8 @@ struct NewTaskView: View {
                     Label(directoryWarning, systemImage: "exclamationmark.triangle")
                         .font(.caption).foregroundStyle(.orange)
                 }
-                if provider != .kimi {
-                    Text("附件当前仅支持 Kimi；可在消息中提供运行环境中的文件路径。")
+                if !supportsAttachments {
+                    Text("当前 Agent 不支持附件；可在消息中提供运行环境中的文件路径。")
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -421,22 +434,15 @@ struct NewTaskView: View {
             thinking = nil
         }
     }
-    private var configuration: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("权限").font(.headline)
-            PermissionPicker(provider: provider, capability: permissionCapability,
-                             disabled: creating, allowsSelection: provider != .dsh, showsTitle: true) { mode in
-                permissionMode = mode
-            }
-            Button("完成") { showConfiguration = false }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }.padding(18).frame(width: 360).disabled(creating)
-    }
     private func addAttachments(_ files: [URL]) {
         for file in files where !attachments.contains(file) {
-            if let refusal = ComposerAttachments.refusal(for: file) {
+            if let refusal = inlineAttachments ? ComposerAttachments.inlineRefusal(for: file) : ComposerAttachments.refusal(for: file) {
                 error = "\(file.lastPathComponent): \(refusal)"
                 continue
+            }
+            if inlineAttachments && attachments.count >= ComposerAttachments.maximumInlineCount {
+                error = L("附件一次最多 5 个")
+                return
             }
             attachments.append(file)
         }
