@@ -53,6 +53,28 @@ unit checks, live agent acceptance and end-to-end performance are separate check
 
 The app checks the public repository's tags once a day (and on demand in
 Settings) and reports when a newer version exists. It never downloads or
-installs anything: there is no signed binary channel, so the update path stays
-pull + rebuild. A full in-app updater (Sparkle-style) requires a signing
-identity and binary release hosting first; revisit when those exist.
+installs anything itself: there is no signing identity, so the update path is
+a manual download from the Releases page (or pull + rebuild for source users).
+A full in-app updater (Sparkle-style) requires a signing identity and binary
+release hosting with update signing keys; revisit when those exist.
+
+## Binary releases (ad-hoc signed)
+
+Releases carry a zipped, ad-hoc signed `Perch.app` built by the
+`release` workflow (push a `v<version>` tag to run it). No Apple Developer
+identity or notarization is involved; Gatekeeper asks first-time users to
+right-click → Open once. Homebrew users can `brew install --no-quarantine`
+equivalents when a cask exists.
+
+Cut a release:
+
+1. Follow the source-release checklist above (version bump, checks, review).
+2. Tag the reviewed commit `v<version>` and push the tag.
+3. The workflow attaches `Perch-<version>-<revision>.zip` and its SHA-256 to
+   the Release. Optionally add `docs/release-notes/<tag>.md` before tagging to
+   control the notes; otherwise they are generated.
+4. Verify the artifact on a clean machine: download, unzip, right-click → Open,
+   and confirm the version line in Settings.
+
+Local rehearsal without publishing: `scripts/build-release.sh` produces the
+same zip under `build/release/`, verifies the signature, and prints the path.
