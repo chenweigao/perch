@@ -60,6 +60,15 @@ struct NativePlanReviewDock: View {
     }
 }
 
+/// The plan's first lines as plain text, without Markdown syntax or blank lines.
+/// Equatable, so typing review feedback does not parse the plan again.
+private struct PlanPreviewText: View, Equatable {
+    let content: String
+    var body: some View {
+        Text(verbatim: ReplyPlainText.text(from: content).split(whereSeparator: \.isNewline).joined(separator: "\n"))
+    }
+}
+
 struct PlanReviewPanel: View {
     @Bindable var state: PlanReviewState
     let online: Bool
@@ -77,8 +86,10 @@ struct PlanReviewPanel: View {
                     Spacer()
                     if state.submitting { ProgressView().controlSize(.small) }
                 }
-                Text(plan.content.isEmpty ? L("尚未收到完整计划，请要求 Agent 补充后再批准。") : plan.content)
-                    .font(.callout).foregroundStyle(.secondary).lineLimit(3).textSelection(.enabled)
+                Group {
+                    if plan.content.isEmpty { Text("尚未收到完整计划，请要求 Agent 补充后再批准。") }
+                    else { PlanPreviewText(content: plan.content).equatable() }
+                }.font(.callout).foregroundStyle(.secondary).lineLimit(3).textSelection(.enabled)
                 HStack {
                     Button("查看完整计划") { showPlan = true }.disabled(plan.content.isEmpty)
                     ReplyCopyButton(text: plan.content, label: "复制计划").disabled(plan.content.isEmpty)
@@ -89,10 +100,10 @@ struct PlanReviewPanel: View {
                     if !state.canDecide { Button("关闭提示") { state.dismissNotice() } }
                 }
                 if plan.deferred {
-                    Text("Agent 仍在等待，继续审批后再决定。").font(.caption).foregroundStyle(.secondary)
+                    Text("Agent 仍在等待，继续审批后再决定。").font(.subheadline).foregroundStyle(.secondary)
                     Button("继续审批") { submit("resume") }.disabled(!state.canDecide || !online)
                 } else {
-                    Text("批准本次计划，工具权限沿用当前设置。").font(.caption).foregroundStyle(.secondary)
+                    Text("批准本次计划，工具权限沿用当前设置。").font(.subheadline).foregroundStyle(.secondary)
                     if state.editing {
                         TextField("填写修改意见", text: $state.feedback, axis: .vertical)
                             .lineLimit(3...8).textFieldStyle(.roundedBorder).focused($focused)

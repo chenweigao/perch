@@ -49,8 +49,8 @@ private struct CompactionSummaryRow: View {
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
             if expanded {
                 KimiMarkdown(text: CompactionSummaryDisplay.humanText(text))
-                    .font(.system(size: 12)).foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                    .environment(\.replyTone, .quiet)
+                    .padding(.horizontal, ReplyStyle.Process.nestedIndent)
             }
         }
     }
@@ -98,7 +98,12 @@ struct KimiMessageView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
     private func runtimeContext(_ text: String) -> some View {
-        DisclosureGroup("运行上下文") { KimiMarkdown(text: text) }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0)).font(.system(size: 12)).foregroundStyle(.secondary)
+        DisclosureGroup {
+            KimiMarkdown(text: text).environment(\.replyTone, .quiet)
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+        } label: {
+            Text("运行上下文").font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+        }.disclosureGroupStyle(ProcessDisclosureStyle())
     }
     private func compactionSummary(_ text: String) -> some View {
         CompactionSummaryRow(text: text)
@@ -1281,6 +1286,8 @@ private struct ConversationEntryAppearance: Equatable {
     let reduceMotion: Bool
     let isEnabled: Bool
     let actionContext: ConversationActionContext?
+    /// Hosted rows are separate SwiftUI roots; the app language reaches them only here.
+    let locale: Locale
     init(_ environment: EnvironmentValues) {
         colorScheme = environment.colorScheme
         layoutDirection = environment.layoutDirection
@@ -1289,6 +1296,7 @@ private struct ConversationEntryAppearance: Equatable {
         reduceMotion = environment.accessibilityReduceMotion || environment.conversationReduceMotion
         isEnabled = environment.isEnabled
         actionContext = environment.conversationActionContext
+        locale = environment.locale
     }
 }
 
@@ -1313,6 +1321,7 @@ private struct HostedConversationEntry: View {
             .environment(\.conversationReduceMotion, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
             .environment(\.conversationActionContext, appearance.actionContext)
+            .environment(\.locale, appearance.locale)
             // Match Perch's ink and monochrome disclosure/control tint in both appearances.
             .foregroundStyle(WorkbenchTheme.ink)
             .tint(WorkbenchTheme.accent)
@@ -1562,6 +1571,12 @@ private final class ConversationEntryController: NSViewController {
         if contentChanged { NavigationRenderMetrics.count("host_content_update") }
         if appearanceChanged { NavigationRenderMetrics.count("host_appearance_update") }
         #endif
+        // A settled reply skips equal blocks, so its looked-up labels would keep
+        // the previous language. Rebuild it from the pool; user rows re-place.
+        if appearance.locale != nextAppearance.locale, let nativeAssistant {
+            NativeAssistantMessageView.recycle(nativeAssistant)
+            self.nativeAssistant = nil
+        }
         content = next
         appearance = nextAppearance
         generation += 1
@@ -2020,8 +2035,9 @@ private struct ConversationEntryView: View, Equatable {
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
                                                 markdownPreparation: markdownPreparation)
                             }
-                        }.padding(.top, 10) }
-                    }.disclosureGroupStyle(WorkbenchDisclosureStyle()).font(.system(size: 12)).foregroundStyle(.secondary)
+                        }.padding(.top, 10).padding(.leading, ReplyStyle.Process.nestedIndent) }
+                    }.disclosureGroupStyle(ProcessDisclosureStyle())
+                        .font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
                 case .thinkingDetails:
                     ThoughtDisclosure(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"))
                 case .thinkingPreview, .thinkingRecord:
@@ -2068,6 +2084,7 @@ struct ProcessFoldRow: View {
     let rows: [ConversationPresentationModel.Row]
     let api: KimiAPI?
     let sessionId: String
+    @UILocalization private var L
     @Environment(\.conversationMemoryKey) private var memoryKey
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
@@ -2089,7 +2106,7 @@ struct ProcessFoldRow: View {
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
                     if page.count > 1 {
                         HStack(spacing: 12) {
                             Button("上一页") { changePage(-1) }.disabled(page.number == 1)
@@ -2097,7 +2114,7 @@ struct ProcessFoldRow: View {
                             Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
                             Button("下一页") { changePage(1) }.disabled(page.number == page.count)
                                 .accessibilityIdentifier("process-next-page")
-                        }.buttonStyle(.borderless).font(.system(size: 12))
+                        }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
                     }
                     ForEach(Array(rows[page.range]), id: \.entry.id) { row in
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
@@ -2106,19 +2123,19 @@ struct ProcessFoldRow: View {
                             .environment(\.isConversationBodyText, true)
                             .background(ProcessFindAnchor(id: row.entry.id))
                     }
-                }.padding(.top, 12).padding(.leading, 14)
+                }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
                     .overlay(alignment: .leading) {
-                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, 12)
+                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
                     }
             }
         } label: {
+            // Secondary ink at regular weight, like the live process rows it replaces.
             HStack(spacing: 7) {
                 Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
-                Text("思考与工具").fontWeight(.medium).foregroundStyle(Color.primary.opacity(0.75))
+                Text("思考与工具")
                 Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录"))
-                    .foregroundStyle(.secondary)
-            }.font(.system(size: 12)).foregroundStyle(Color.secondary)
-        }.disclosureGroupStyle(WorkbenchDisclosureStyle())
+            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+        }.disclosureGroupStyle(ProcessDisclosureStyle())
             .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
     }
 }
@@ -2133,11 +2150,13 @@ private enum ThoughtTextStyle {    static let attributes: [NSAttributedString.Ke
     }()
 }
 
+/// Expanded thoughts sit under their toggle's label, like every nested process row.
 private struct ThoughtText: View {
     let text: String
     var body: some View {
         DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, ReplyStyle.Process.nestedIndent)
     }
 }
 
@@ -2147,8 +2166,8 @@ private struct ThoughtToggle: View {
     @Binding var expanded: Bool
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-            title.font(.system(size: 12)).foregroundStyle(.secondary)
-        }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
+            title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+        }.disclosureGroupStyle(ProcessDisclosureStyle())
     }
 }
 
@@ -2184,6 +2203,7 @@ private struct ThoughtOutput: View {
                 ThoughtText(text: fullText)
             } else if expanded {
                 ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
+                    .padding(.leading, ReplyStyle.Process.nestedIndent)
             }
         }
         .popover(isPresented: $showFullText, arrowEdge: .top) {
