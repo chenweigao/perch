@@ -247,9 +247,31 @@ def check_sources(app: list[Path], tests: list[Path], flags: set[str], whole: bo
     return problems, sources
 
 
+def python_list_builds() -> list[tuple[Path, list[str]]]:
+    """Check scripts that compile `files = ["Name", ...]` from Sources/AgentWorkbench
+    with swiftc (scripts/check-scroll-following.py)."""
+    builds = []
+    for script in sorted((ROOT / "scripts").glob("check-*.py")):
+        text = script.read_text(encoding="utf-8")
+        listed = re.search(r"^files\s*=\s*\[(.*?)\]", text, re.S | re.M)
+        if script.name == Path(__file__).name or '"Sources/AgentWorkbench"' not in text or not listed:
+            continue
+        app = sorted({APP / f"{name}.swift" for name in re.findall(r'"(\w+)"', listed.group(1))})
+        tests = sorted({ROOT / "Tests" / folder / f"{name}.swift"
+                        for folder, name in re.findall(r"Tests/(\w+)/(\w+)\.swift", text)})
+        problems, sources = check_sources(app, tests, set(), False)
+        imports = set().union(*(s.imports for s in sources)) if sources else set()
+        # A check links objects but shows no rendering, so it needs no font bundle.
+        problems += [f"{library} is imported but the script never links it"
+                     for library in LIBRARIES if library in imports and library not in text]
+        builds.append((script.relative_to(ROOT), problems))
+    return builds
+
+
 def main() -> int:
     builds = [(script.relative_to(ROOT), check(script)) for script in sorted((ROOT / "scripts").glob("build-*-preview.sh"))]
     builds += [(folder.relative_to(ROOT), check_target(folder)) for folder in symlinked_targets()]
+    builds += python_list_builds()
     failures = 0
     for name, problems in builds:
         if problems:

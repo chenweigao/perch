@@ -700,6 +700,7 @@ struct SelectableReplyText: NSViewRepresentable {
     #endif
     static func dismantleNSView(_ view: ReplyTextView, coordinator: Coordinator) { recycle(view) }
     static func recycle(_ view: ReplyTextView) {
+        ReplySelection.shared.forget(view)
         view.delegate = nil
         view.setSelectedRange(NSRange(location: 0, length: 0))
         view.update(NSAttributedString(string: ""))
@@ -1048,7 +1049,46 @@ final class ReplyTextView: NSTextView {
             if !menu.items.isEmpty { menu.addItem(.separator()) }
             extra.forEach { menu.addItem($0) }
         }
+        // The whole reply without Markdown syntax, whichever paragraph was clicked.
+        if let source = ReplySelection.scope(of: self)?.replySource, !source.isEmpty {
+            if !menu.items.isEmpty { menu.addItem(.separator()) }
+            let item = NSMenuItem(title: L("复制整条回复（纯文本）"), action: #selector(CopyTextTarget.perform(_:)), keyEquivalent: "")
+            item.target = CopyTextTarget.shared
+            item.representedObject = ReplyPlainText.text(from: source)
+            menu.addItem(item)
+        }
         return menu
+    }
+
+    // A selection can span the entry's text views (ReplySelection). AppKit's own
+    // tracking still runs the drag; these hooks extend it and read the whole span.
+    override func mouseDown(with event: NSEvent) {
+        ReplySelection.shared.begin(self, event: event)
+        super.mouseDown(with: event)
+        ReplySelection.shared.end(self)
+    }
+    override func setSelectedRanges(_ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting flag: Bool) {
+        super.setSelectedRanges(ReplySelection.shared.track(self, proposed: ranges), affinity: affinity, stillSelecting: flag)
+        ReplySelection.shared.selectionChanged(self)
+    }
+    override func copy(_ sender: Any?) {
+        guard let text = ReplySelection.shared.text(from: self) else { return super.copy(sender) }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+    override func selectAll(_ sender: Any?) {
+        super.selectAll(sender)
+        ReplySelection.shared.selectAll(from: self)
+    }
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        ReplySelection.shared.refreshHighlight()
+        return accepted
+    }
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        ReplySelection.shared.refreshHighlight()
+        return resigned
     }
     /// Background-color is not part of reply styling, so clearing it here
     /// cannot disturb content. Works in text attributes, never layout.
