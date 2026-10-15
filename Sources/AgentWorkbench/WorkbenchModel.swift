@@ -475,9 +475,10 @@ final class WorkbenchModel {
         return projection
     }
     func setScope(groupID: UUID?) {
-        let inbox = onlyAttention
+        // Changing the scope narrows the current page; it does not leave it.
+        let inbox = onlyAttention, allGroups = showAllTaskGroups
         showHome(groupID: groupID)
-        onlyAttention = inbox
+        onlyAttention = inbox; showAllTaskGroups = allGroups
     }
     func setScope(hostID: UUID?) { scopeHostID = hostID }
     /// Clears one facet, or both. A group filter and a machine filter answer
@@ -664,6 +665,9 @@ final class WorkbenchModel {
     func showHome(groupID: UUID? = nil) {
         onlyAttention = false; search = ""; showSessionDirectory = false
         showArchived = false; draftingNewTask = false
+        // Leaving for the workbench, inbox or session list closes the full group
+        // list; opening a group from that list keeps it for the way back.
+        if groupID == nil { showAllTaskGroups = false }
         selectedGroupID = groupID
         if let index = workspace.groups.firstIndex(where: { $0.id == groupID }) {
             workspace.groups[index].lastOpenedAt = Date().timeIntervalSince1970
