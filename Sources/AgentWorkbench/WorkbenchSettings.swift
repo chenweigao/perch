@@ -110,14 +110,15 @@ struct WorkbenchSettings: View {
             } header: {
                 SettingsSectionHeader("界面", systemImage: "paintbrush", tint: .purple)
             } footer: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
-                    Text(verbatim: versionLabel)
-                        .font(.caption2).foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
-                    updateCheck
-                }
+                Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+            }
+            Section {
+                LabeledContent("版本", value: versionLabel)
+                LabeledContent("更新") { updateCheck }
+            } header: {
+                SettingsSectionHeader("关于", systemImage: "info.circle", tint: .gray)
+            } footer: {
+                Text("Perch 从源码构建发布；有新版本时拉取最新代码并重新构建。")
             }
         }.formStyle(.grouped).frame(width: 560, height: 740)
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
@@ -142,18 +143,14 @@ struct WorkbenchSettings: View {
                 EmptyView()
             case .checking:
                 ProgressView().controlSize(.mini)
-                Text("正在检查更新…").foregroundStyle(.secondary)
             case .upToDate:
                 Label("已是最新版本", systemImage: "checkmark.circle").foregroundStyle(.secondary)
             case .available(let latest):
                 Label("有新版本 \(latest)", systemImage: "arrow.down.circle").foregroundStyle(.orange)
                 Link("查看发布", destination: URL(string: "https://github.com/chenweigao/perch/releases")!)
-                    .font(.caption)
-                Text("此版本需手动更新").foregroundStyle(.tertiary)
             case .failed(let reason):
                 Text(reason).foregroundStyle(.secondary)
             }
-            Spacer()
             Button("检查更新") { Task { await checker.checkNow() } }
                 .disabled(checker.state == .checking)
         }.font(.caption)
