@@ -6,7 +6,12 @@ import WorkbenchCore
 ///
 /// Selection is observed through AppKit's shared notification rather than by
 /// modifying the reply views, so the transcript keeps its own layout, measurement
-/// and selection behaviour untouched.
+/// and selection behaviour untouched. A selection that spans several text views of
+/// an entry (ReplySelection) is read as one.
+///
+/// The bar appears once a selection settles: after the mouse button is released,
+/// or shortly after a keyboard change. It is built once and only moved afterwards,
+/// and it steps aside while the transcript scrolls instead of trailing it.
 @MainActor
 final class SelectionActionsController: NSObject {
     static let shared = SelectionActionsController()
@@ -16,8 +21,13 @@ final class SelectionActionsController: NSObject {
     var quoteAvailable: (() -> Bool)?
 
     private var panel: NSPanel?
+    private var hosting: NSHostingView<AnyView>?
+    /// What the hosted bar was built for; it is rebuilt only when these change.
+    private var hostedCanQuote: Bool?
+    private var hostedLocale: Locale?
     private var observers: [NSObjectProtocol] = []
     private weak var source: NSTextView?
+    private var pending: DispatchWorkItem?
 
     func start() {
         guard observers.isEmpty else { return }
@@ -25,10 +35,19 @@ final class SelectionActionsController: NSObject {
         observe(center, NSTextView.didChangeSelectionNotification) { [weak self] note in
             self?.selectionChanged(note.object as? NSTextView)
         }
-        // Scrolling and resizing move the text under a panel that is positioned in
-        // screen coordinates, so the anchor is recomputed instead of left behind.
-        observe(center, NSView.boundsDidChangeNotification) { [weak self] _ in self?.reanchor() }
-        observe(center, NSWindow.didResizeNotification) { [weak self] _ in self?.reanchor() }
+        // A span across views changes without its anchor's selection changing.
+        observe(center, ReplySelection.didChange) { [weak self] note in
+            self?.selectionChanged(note.object as? NSTextView)
+        }
+        // The panel lives in screen coordinates while the text scrolls under it.
+        // Following every scroll step lags a frame behind, so step aside instead
+        // and come back once the transcript is still.
+        observe(center, NSView.boundsDidChangeNotification) { [weak self] note in
+            guard let self, let clip = note.object as? NSClipView, let source = self.source,
+                  source.isDescendant(of: clip) else { return }
+            self.suspend()
+        }
+        observe(center, NSWindow.didResizeNotification) { [weak self] _ in self?.suspend() }
         observe(center, NSWindow.didResignKeyNotification) { [weak self] note in
             guard (note.object as? NSWindow) !== self?.panel else { return }
             self?.hide()
@@ -47,14 +66,43 @@ final class SelectionActionsController: NSObject {
     private func selectionChanged(_ textView: NSTextView?) {
         guard let textView, textView.identifier?.rawValue != "PerchReviewSource", !textView.isEditable, textView.isSelectable else { hide(); return }
         guard textView.selectedRange().length > 0, !selectedText(in: textView).isEmpty else {
-            if textView === source { hide() }
+            if textView === source { hide(); source = nil }
             return
         }
         source = textView
-        show(for: textView)
+        // During a drag the selection changes on every pointer step; the bar waits.
+        if Self.mouseIsDown { suspend() } else { schedule(after: 0.12) }
+    }
+
+    private static var mouseIsDown: Bool { NSEvent.pressedMouseButtons & 1 != 0 }
+
+    private func schedule(after delay: TimeInterval) {
+        pending?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.showIfSettled() }
+        }
+        pending = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
+    private func showIfSettled() {
+        pending = nil
+        guard let source, source.selectedRange().length > 0 else { return }
+        // Still dragging: look again shortly; the bar appears once the button is up.
+        if Self.mouseIsDown { schedule(after: 0.1); return }
+        show(for: source)
+    }
+
+    /// Text and quote read the selection when an action runs, so the bar does not
+    /// need rebuilding as the selection changes.
+    private func currentText() -> String? {
+        guard let source, source.selectedRange().length > 0 else { return nil }
+        let text = selectedText(in: source)
+        return text.isEmpty ? nil : text
     }
 
     private func selectedText(in textView: NSTextView) -> String {
+        if let span = ReplySelection.shared.text(from: textView) { return span }
         let range = textView.selectedRange()
         guard range.length > 0, range.upperBound <= (textView.string as NSString).length else { return "" }
         return (textView.string as NSString).substring(with: range)
@@ -66,37 +114,68 @@ final class SelectionActionsController: NSObject {
     private func anchor(for textView: NSTextView) -> NSRect? {
         let range = textView.selectedRange()
         guard range.length > 0, !textView.isHiddenOrHasHiddenAncestor, let window = textView.window else { return nil }
-        let rect = textView.firstRect(forCharacterRange: range, actualRange: nil)
+        let rect = ReplySelection.shared.firstLineRect(from: textView)
+            ?? textView.firstRect(forCharacterRange: range, actualRange: nil)
         let visible = window.convertToScreen(textView.convert(textView.visibleRect, to: nil))
-        guard rect.width > 0 || rect.height > 0, visible.intersects(rect) else { return nil }
+        let transcript = textView.enclosingScrollView.map { window.convertToScreen($0.convert($0.bounds, to: nil)) } ?? visible
+        guard rect.width > 0 || rect.height > 0, transcript.intersects(rect) || visible.intersects(rect) else { return nil }
         return rect
     }
 
     private func show(for textView: NSTextView) {
-        guard let rect = anchor(for: textView) else { hide(); return }
-        let text = selectedText(in: textView)
-        guard !text.isEmpty else { hide(); return }
-        let bar = SelectionActionsBar(
-            canQuote: quoteAvailable?() ?? false,
-            onCopy: { [weak self] in
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(text, forType: .string)
-                self?.hide()
-            },
-            onQuote: { [weak self] in
-                self?.quoteHandler?(text)
-                self?.hide()
-            })
-        let hosting = NSHostingView(rootView: bar.environment(\.locale, AppLanguage.current.resolvedLocale))
-        hosting.layout()
-        let size = hosting.fittingSize
-
+        guard let rect = anchor(for: textView), currentText() != nil, let window = textView.window else { hide(); return }
         let panel = self.panel ?? makePanel()
         self.panel = panel
-        panel.contentView = hosting
-        panel.setFrame(NSRect(origin: origin(above: rect, size: size), size: size), display: true)
-        if !panel.isVisible { textView.window?.addChildWindow(panel, ordered: .above) }
+        let hosting = hostedBar()
+        if panel.contentView !== hosting { panel.contentView = hosting }
+        let size = hosting.fittingSize
+        let frame = NSRect(origin: origin(above: rect, size: size), size: size)
+        if panel.isVisible && panel.parent === window {
+            if panel.frame != frame { panel.setFrame(frame, display: false) }
+            return
+        }
+        panel.parent?.removeChildWindow(panel)
+        panel.setFrame(frame, display: false)
+        panel.alphaValue = 0
+        window.addChildWindow(panel, ordered: .above)
         panel.orderFront(nil)
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            panel.alphaValue = 1
+        } else {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.12
+                panel.animator().alphaValue = 1
+            }
+        }
+    }
+
+    /// One hosting view, rebuilt only when quoting availability or the language changes.
+    private func hostedBar() -> NSHostingView<AnyView> {
+        let canQuote = quoteAvailable?() ?? false
+        let locale = AppLanguage.current.resolvedLocale
+        if let hosting, hostedCanQuote == canQuote, hostedLocale == locale { return hosting }
+        let bar = SelectionActionsBar(canQuote: canQuote,
+                                      onCopy: { [weak self] in self?.copySelection() },
+                                      onQuote: { [weak self] in self?.quoteSelection() })
+        let view = NSHostingView(rootView: AnyView(bar.environment(\.locale, locale)))
+        view.layout()
+        hosting = view
+        hostedCanQuote = canQuote
+        hostedLocale = locale
+        return view
+    }
+
+    private func copySelection() {
+        if let text = currentText() {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        }
+        hide()
+    }
+
+    private func quoteSelection() {
+        if let text = currentText() { quoteHandler?(text) }
+        hide()
     }
 
     private func origin(above rect: NSRect, size: NSSize) -> NSPoint {
@@ -126,13 +205,19 @@ final class SelectionActionsController: NSObject {
         return panel
     }
 
-    private func reanchor() {
-        guard let panel, panel.isVisible, let source else { return }
-        guard source.selectedRange().length > 0, let rect = anchor(for: source) else { hide(); return }
-        panel.setFrameOrigin(origin(above: rect, size: panel.frame.size))
+    /// Out of the way while the text moves; back after a short pause.
+    private func suspend() {
+        if let panel, panel.isVisible {
+            panel.parent?.removeChildWindow(panel)
+            panel.orderOut(nil)
+        }
+        guard source != nil else { return }
+        schedule(after: 0.15)
     }
 
     func hide() {
+        pending?.cancel()
+        pending = nil
         guard let panel, panel.isVisible else { return }
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
