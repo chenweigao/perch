@@ -58,6 +58,11 @@ or question for an explicit response. Qoder CN / dsh / Claude Code support stopp
 queueing. Pending messages appear in the conversation until runtime history confirms
 them. Existing Herdr sessions remain terminal sessions.
 
+## Download
+
+Grab the zipped app from [Releases](https://github.com/chenweigao/perch/releases). The
+app is ad-hoc signed (no Apple notarization): on first launch, right-click → Open.
+
 ## Build and run
 
 Requires macOS 26+ and a Swift toolchain with the macOS 26 SDK (Xcode 26 or newer).

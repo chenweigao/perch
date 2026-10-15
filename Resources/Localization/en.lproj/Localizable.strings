@@ -1333,7 +1333,7 @@
 "版本" = "Version";
 "更新" = "Update";
 "关于" = "About";
-"Perch 从源码构建发布；有新版本时拉取最新代码并重新构建。" = "Perch ships as source builds; when a newer version exists, pull the latest code and rebuild.";
+"有新版本时可在发布页下载安装包，或拉取最新代码重新构建。" = "When a newer version exists, download the package from Releases, or pull the latest code and rebuild.";
 "上下文将满时自动压缩" = "Auto-compact when context is nearly full";
 "任务空闲且用量达到阈值时自动压缩，完成后继续任务。" = "Compacts automatically when idle past the threshold, then resumes the task.";
 "阈值 %@%" = "Threshold %@%";

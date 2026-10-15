@@ -118,7 +118,7 @@ struct WorkbenchSettings: View {
             } header: {
                 SettingsSectionHeader("关于", systemImage: "info.circle", tint: .gray)
             } footer: {
-                Text("Perch 从源码构建发布；有新版本时拉取最新代码并重新构建。")
+                Text("有新版本时可在发布页下载安装包，或拉取最新代码重新构建。")
             }
         }.formStyle(.grouped).frame(width: 560, height: 740)
             .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }

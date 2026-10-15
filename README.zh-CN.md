@@ -51,6 +51,11 @@
 app-server 发起的每个审批与提问都会显示并等待明确回答，不会自动允许或静默拒绝。Qoder CN / dsh /
 Claude Code 支持停止与下一轮消息排队；Herdr 中的现有会话继续使用终端。
 
+## 下载
+
+从 [Releases](https://github.com/chenweigao/perch/releases) 下载 zip 安装包。应用为 ad-hoc
+签名（未经 Apple 公证）：首次打开请右键 → 打开。
+
 ## 构建运行
 
 需要 macOS 26+，以及包含 macOS 26 SDK 的 Swift 工具链（Xcode 26 或更新版本）。
