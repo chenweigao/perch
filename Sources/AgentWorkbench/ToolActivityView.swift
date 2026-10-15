@@ -53,7 +53,7 @@ struct KimiActivityView: View {
                         if let narrative {
                             Text("\(narrative.headline) · \(items.count) 次调用").lineLimit(1).truncationMode(.tail)
                         } else if entry.isExploration { Text("读取与搜索 · \(items.count) 次调用").fixedSize() }
-                        else if !items.isEmpty { Text("过程记录 · \(items.count) 次调用").fixedSize() }
+                        else if !items.isEmpty { Text("思考与工具 · \(items.count) 次调用").fixedSize() }
                         else { Text("运行上下文").fixedSize() }
                         if !expanded {
                             Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)

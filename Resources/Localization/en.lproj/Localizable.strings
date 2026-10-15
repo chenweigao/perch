@@ -1636,3 +1636,4 @@
 "远端桥接组件版本过旧；更新全部组件并自动重连" = "The remote bridge components are outdated; update everything and reconnect.";
 "原生 Agent · %lld" = "Native Agents · %lld";
 "有新版本时可在发布页下载安装包，或拉取最新代码重新构建。" = "When a newer version is available, download the package from the release page, or pull the latest code and rebuild.";
+"思考与工具 · %lld 次调用" = "Thoughts and tools · %lld calls";
