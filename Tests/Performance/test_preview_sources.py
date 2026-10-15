@@ -45,6 +45,9 @@ class PreviewSourceTests(unittest.TestCase):
         (self.repo / THEME).write_text("// working tree theme\n")
         (self.repo / PRESENTATION).write_text("// presentation environment\n")
         (app / "RevealFrameDriver.swift").write_text("// working tree reveal driver\n")
+        # Math and alert blocks exist only in the working tree: historical refs skip them.
+        for name in ("ReplyMathView", "ReplyAlertBlock"):
+            (app / f"{name}.swift").write_text("// working tree reply block\n")
         stubs = self.repo / "stubs"
         stubs.mkdir()
         # Stop immediately after source export, before metadata or compilation.

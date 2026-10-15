@@ -38,11 +38,12 @@ private struct SidebarPreview: View {
                 }.sidebarProbe("sidebar.section.favorites")
                 SidebarSection("任务组", id: "groups") {
                     Button { title = "Perch 开源"; page = .other } label: {
-                        HStack(spacing: 9) {
-                            Image(systemName: "folder").frame(width: 17)
+                        HStack(spacing: SidebarMetrics.labelSpacing) {
+                            Image(systemName: "folder").font(.system(size: SidebarMetrics.iconSize)).imageScale(.medium)
+                                .frame(width: SidebarMetrics.iconWidth)
                             Text("Perch 开源")
                             Spacer()
-                        }.padding(.horizontal, 10).frame(height: 34)
+                        }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight)
                     }.buttonStyle(SidebarNavigationStyle(selected: title == "Perch 开源"))
                         .sidebarProbe("preview.group")
                 } actions: {
@@ -62,8 +63,12 @@ private struct SidebarPreview: View {
                                  symbol: index == 1 ? "exclamationmark.circle" : "checkmark.circle")
                         }
                     }
-                    Button("全部会话 →") { title = "全部会话"; page = .other }
-                        .buttonStyle(SidebarNavigationStyle()).padding(.leading, 26).padding(10)
+                    // Mirrors the production recent-list footer.
+                    Button { title = "全部会话"; page = .other } label: {
+                        HStack { Text("全部会话"); Spacer(); Image(systemName: "arrow.right").font(.system(size: 10)) }
+                            .padding(.leading, SidebarMetrics.titleOffset).padding(.trailing, SidebarMetrics.rowInset)
+                            .frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+                    }.buttonStyle(SidebarNavigationStyle()).foregroundStyle(.secondary)
                         .sidebarProbe("preview.allSessions")
                 } actions: {
                     Menu {
