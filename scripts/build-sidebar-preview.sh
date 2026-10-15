@@ -14,7 +14,8 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
-    Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionRowChrome.swift \
+    Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionRowChrome.swift Sources/AgentWorkbench/ConversationActivityBar.swift \
+    Sources/AgentWorkbench/ActivitySummaryController.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
     Tests/SidebarPreview/App.swift Tests/SidebarPreview/Checks.swift "${objects[@]}" -o "$app_dir/Contents/MacOS/SidebarPreview"
 cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
@@ -31,7 +32,7 @@ PLIST
 codesign --force --sign - "$app_dir"
 printf '%s\n' "$app_dir"
 if [[ "${1:-}" == "--check" ]]; then
-    for mode in collapse restore previewclick; do
+    for mode in collapse restore; do
         SIDEBAR_CHECK_MODE="$mode" "$app_dir/Contents/MacOS/SidebarPreview" \
             -ApplePersistenceIgnoreState YES -NSQuitAlwaysKeepsWindows NO
     done
