@@ -45,7 +45,7 @@ if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/N
     app_files+=(Sources/AgentWorkbench/NativeAssistantBlocks.swift)
 fi
 # Revisions before message actions/bookmarks/image preview, math or alerts do not carry these.
-for introduced in ConversationActions ConversationBookmarksStore ImagePreviewPanel ReplyMathView ReplyAlertBlock ReplySelection ReplyProcessStyle; do
+for introduced in ConversationActions ConversationBookmarksStore ImagePreviewPanel ReplyMathView ReplyMermaid ReplyAlertBlock ReplySelection ReplyProcessStyle; do
     if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/${introduced}.swift" 2>/dev/null; then
         app_files+=("Sources/AgentWorkbench/${introduced}.swift")
     fi

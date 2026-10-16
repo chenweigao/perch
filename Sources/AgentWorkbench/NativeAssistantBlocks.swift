@@ -71,7 +71,9 @@ enum NativeAssistantContent {
                     size: ReplyStyle.headingSize(level),
                     weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level))))
             case .code(let language, let code):
-                guard allowsRichBlocks else { return nil }
+                // Mermaid renders asynchronously as a rasterized image; the
+                // message keeps the SwiftUI renderer, as tables and math do.
+                guard allowsRichBlocks, !MermaidSupport.isMermaid(language) else { return nil }
                 flush()
                 result.append(.code(language: language, source: code, text: ReplyTextAttributes.code(code)))
             case .rule:

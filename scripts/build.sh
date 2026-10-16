@@ -21,6 +21,19 @@ for bundle in "$bin_dir"/*.bundle; do
     cp -R "$bundle" "$app_dir/Contents/Resources/"
 done
 cp -R "$PWD/Resources/Localization/"*.lproj "$app_dir/Contents/Resources/"
+# mermaid.min.js is not committed (a minified blob trips the source audit);
+# fetch the pinned release on demand and verify its digest. Without it mermaid
+# blocks degrade to plain code cards.
+mermaid_js="Resources/Mermaid/mermaid.min.js"
+if [ ! -f "$mermaid_js" ]; then
+    curl -sL -o "$mermaid_js" https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.min.js || true
+fi
+if [ -f "$mermaid_js" ] && [ "$(shasum -a 256 "$mermaid_js" | cut -d ' ' -f 1)" = "198b19442f86f0b46a17e56d3abf744c3a28a3427e66fa8dada3b589a77babcc" ]; then
+    cp "$mermaid_js" "$app_dir/Contents/Resources/mermaid.min.js"
+else
+    rm -f "$mermaid_js"
+    echo "warning: Resources/Mermaid/mermaid.min.js unavailable or corrupt; mermaid diagrams render as code" >&2
+fi
 cp Resources/Brand/Perch.icns "$app_dir/Contents/Resources/Perch.icns"
 cp Resources/Info.plist "$app_dir/Contents/Info.plist"
 # The marketing version lives in Resources/Info.plist; the build identity is stamped
@@ -43,6 +56,7 @@ cp .build/checkouts/libghostty-spm/LICENSE "$app_dir/Contents/Resources/Licenses
 cp .build/checkouts/MSDisplayLink/LICENSE "$app_dir/Contents/Resources/Licenses/MSDisplayLink.txt"
 cp .build/checkouts/swift-markdown/LICENSE.txt "$app_dir/Contents/Resources/Licenses/SwiftMarkdown.txt"
 cp .build/checkouts/SwiftMath/LICENSE "$app_dir/Contents/Resources/Licenses/SwiftMath.txt"
+cp Resources/Mermaid/LICENSE "$app_dir/Contents/Resources/Licenses/Mermaid.txt"
 cp .build/checkouts/swift-cmark/COPYING "$app_dir/Contents/Resources/Licenses/SwiftCMark.txt"
 cp THIRD_PARTY.md "$app_dir/Contents/Resources/Licenses/THIRD_PARTY.md"
 cp LICENSE "$app_dir/Contents/Resources/Licenses/Perch.txt"
