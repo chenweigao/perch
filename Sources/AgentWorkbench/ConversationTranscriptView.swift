@@ -1582,6 +1582,12 @@ private final class ConversationEntryController: NSViewController {
         generation += 1
         publishedHeight = nil
         sizes.removeAll(keepingCapacity: true)
+        // The settle edge: a reply that just finished pre-renders its diagrams
+        // offscreen so scrolling to them does not wait on the renderer.
+        if contentChanged, content.entry.presentation == .progress, next.entry.presentation == .message,
+           let source = next.entry.messages.first?.content.first?.text {
+            MermaidRenderer.shared.prewarmSources(in: source, dark: nextAppearance.colorScheme == .dark)
+        }
         setRoot()
     }
     private func nativeUserPreparation() -> (messageID: String, source: String, value: NativeParagraphContent.Preparation)? {
