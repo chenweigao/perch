@@ -170,8 +170,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.action = #selector(NSSplitViewController.toggleSidebar(_:))
                 item.isBordered = false
             } else if id == composeID {
-                item.label = L("新建任务")
-                item.toolTip = L("新建任务 · ⌘N")
+                item.label = L("新建会话")
+                item.toolTip = L("新建会话 · ⌘N")
                 item.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: item.label)
                 item.target = self
                 item.action = #selector(compose)
@@ -199,7 +199,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 case backID: item.label = L("Back"); item.toolTip = item.label + " · ⌘["
                 case forwardID: item.label = L("Forward"); item.toolTip = item.label + " · ⌘]"
                 case toggleID: item.label = L("切换侧栏"); item.toolTip = L("显示或隐藏侧栏")
-                case composeID: item.label = L("新建任务"); item.toolTip = L("新建任务 · ⌘N")
+                case composeID: item.label = L("新建会话"); item.toolTip = L("新建会话 · ⌘N")
                 case titleID: item.label = L("当前会话")
                 case actionsID: item.label = L("会话操作")
                 default: break

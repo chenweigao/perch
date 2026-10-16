@@ -28,7 +28,7 @@ struct AddHostSheet: View {
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                     stepLabel("准备 Agent", step: .agent)
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
-                    stepLabel("开始任务", step: .project)
+                    stepLabel("开始会话", step: .project)
                 }
             }.padding(WorkbenchTheme.Dialog.padding)
             Divider()
@@ -70,7 +70,7 @@ struct AddHostSheet: View {
                 Text("SSH 地址").font(.callout.weight(.medium))
                 TextField("SSH 别名或 user@host", text: $setup.destination).textFieldStyle(.roundedBorder)
                     .disabled(setup.original != nil)
-                if setup.original != nil { Text("要连接另一台机器，请添加新环境。").font(.caption).foregroundStyle(.secondary) }
+                if setup.original != nil { Text("要连接另一台机器，请添加新机器。").font(.caption).foregroundStyle(.secondary) }
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("显示名称").font(.callout.weight(.medium))
@@ -292,7 +292,7 @@ struct AddHostSheet: View {
                     Button("使用此环境") { finish(start: false) }
                         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(!setup.canFinish)
                 } else {
-                    Button("开始首个任务") { finish(start: true) }
+                    Button("开始首个会话") { finish(start: true) }
                         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(!setup.canFinish)
                 }
             }

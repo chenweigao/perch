@@ -29,7 +29,7 @@ struct LocalAgentSetupSheet: View {
                             Text(version).font(.callout)
                             Text(path).font(.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
                             if !LocalAgentDiscovery.supported.contains(kind) {
-                                Text("已安装，尚未接入本机对话").font(.caption).foregroundStyle(.secondary)
+                                Text("已安装，尚未接入本机会话").font(.caption).foregroundStyle(.secondary)
                             }
                         case .unusable(_, let reason):
                             Text(reason).font(.caption).foregroundStyle(.orange).lineLimit(3)
@@ -51,7 +51,7 @@ struct LocalAgentSetupSheet: View {
                 Button("重新检测") { model.discoverLocalAgents() }.disabled(model.probingLocal)
                 Spacer()
                 Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("连接并新建任务") {
+                Button("连接并新建会话") {
                     do { try model.connectLocalAgents(LocalAgentDiscovery.supported.filter { selected.contains($0) }); dismiss() }
                     catch { self.error = error.localizedDescription }
                 }.disabled(model.probingLocal || !selected.contains { model.localAgents[$0]?.executablePath != nil })

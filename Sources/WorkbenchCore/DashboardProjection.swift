@@ -47,7 +47,7 @@ public struct ActiveScope: Equatable, Sendable {
         public enum Kind: Hashable, Sendable { case group, host }
         public let kind: Kind
         public let name: String
-        public var symbol: String { kind == .group ? "folder" : "server.rack" }
+        public var symbol: String { kind == .group ? "square.stack.3d.up" : "server.rack" }
     }
 
     public let facets: [Facet]
