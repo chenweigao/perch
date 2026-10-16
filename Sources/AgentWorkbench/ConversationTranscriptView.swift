@@ -2105,6 +2105,13 @@ struct ProcessFoldRow: View {
     }
     /// Failed or unresolved tools the fold conceals; the header keeps the signal.
     private var failures: Int { ConversationProcessFold.unresolvedCount(rows) }
+    /// Line churn from the folded rows' own edit-class tool calls (session-sourced,
+    /// not git): nil when nothing resolved a file, so the header stays quiet.
+    private var editStat: (files: Int, additions: Int, deletions: Int)? {
+        SessionEditStats.derive(from: rows.flatMap(\.entry.messages)).map {
+            (files: $0.perFile.count, additions: $0.total.additions, deletions: $0.total.deletions)
+        }
+    }
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
@@ -2136,6 +2143,10 @@ struct ProcessFoldRow: View {
                 Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
                 Text("思考与工具")
                 Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录"))
+                if let editStat {
+                    Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
+                        .monospacedDigit()
+                }
                 if failures > 0 {
                     Text(L("· \(failures) 次失败")).foregroundStyle(.orange)
                 }
