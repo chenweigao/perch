@@ -9,6 +9,12 @@
   machine and used through its public API; no Herdr binary is bundled.
 - [Swift Markdown](https://github.com/swiftlang/swift-markdown), 0.8.0,
   Apache-2.0 with Swift Runtime Library Exception; parses native conversation replies.
+- [Mermaid](https://github.com/mermaid-js/mermaid), 11.12.1, MIT; renders
+  ```` ```mermaid ```` reply blocks offscreen. The minified upstream build is not
+  committed: `scripts/build.sh` fetches
+  `https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.min.js`
+  (sha256 `198b19442f86f0b46a17e56d3abf744c3a28a3427e66fa8dada3b589a77babcc`)
+  into `Resources/Mermaid/` on demand and verifies the digest.
 - [swift-cmark](https://github.com/swiftlang/swift-cmark), 0.8.0, BSD-2-Clause
   and upstream notices in COPYING; Swift Markdown's CommonMark/GFM parser.
 - The system OpenSSH client and Apple frameworks are used from macOS.

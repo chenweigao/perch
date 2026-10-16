@@ -337,7 +337,12 @@ private struct ReplyBlockContent: View, Equatable {
         case .heading(let level, let runs):
             ReplyText(runs: runs, size: ReplyStyle.headingSize(level),
                       weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level), truncateAt: truncateAt)
-        case .code(let language, let source): ReplyCode(language: language, source: source)
+        case .code(let language, let source):
+            if MermaidSupport.isMermaid(language) {
+                ReplyMermaid(source: source)
+            } else {
+                ReplyCode(language: language, source: source)
+            }
         case .math(let latex): ReplyMathBlock(latex: latex)
         case .list(let items):
             let markerWidth = ReplyListMetrics.columnWidth(items.map(\.marker))
@@ -1457,10 +1462,32 @@ struct ReplyCopyButton: View {
     }
 }
 
-private struct ReplyCode: View {
-    let language: String
+/// The code card's scrolling text area, shared by the mermaid card's source view.
+struct ReplyCodeBody: View {
     let source: String
     private var lineCount: Int { CodeLineNumbers.count(in: source) }
+    var body: some View {
+        ReplyHorizontalScroll {
+            HStack(alignment: .top, spacing: 0) {
+                if lineCount > 1 {
+                    SelectableReplyText(attributed: ReplyTextAttributes.codeGutter(lineCount), selectable: false)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .padding(.leading, ReplyStyle.Code.gutterLeading).padding(.trailing, ReplyStyle.Code.gutterTrailing)
+                        .padding(.vertical, ReplyStyle.Code.inset)
+                }
+                SelectableReplyText(source, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular),
+                                    lineSpacing: ReplyStyle.codeLineSpacing)
+                    .fixedSize(horizontal: true, vertical: true)
+                    .padding(EdgeInsets(top: ReplyStyle.Code.inset, leading: lineCount > 1 ? 0 : ReplyStyle.Code.inset,
+                                        bottom: ReplyStyle.Code.inset, trailing: ReplyStyle.Code.inset))
+            }
+        }
+    }
+}
+
+struct ReplyCode: View {
+    let language: String
+    let source: String
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -1471,21 +1498,7 @@ private struct ReplyCode: View {
                 ReplyCopyButton(text: source, label: "复制代码")
             }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
-            ReplyHorizontalScroll {
-                HStack(alignment: .top, spacing: 0) {
-                    if lineCount > 1 {
-                        SelectableReplyText(attributed: ReplyTextAttributes.codeGutter(lineCount), selectable: false)
-                            .fixedSize(horizontal: true, vertical: true)
-                            .padding(.leading, ReplyStyle.Code.gutterLeading).padding(.trailing, ReplyStyle.Code.gutterTrailing)
-                            .padding(.vertical, ReplyStyle.Code.inset)
-                    }
-                    SelectableReplyText(source, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular),
-                                        lineSpacing: ReplyStyle.codeLineSpacing)
-                        .fixedSize(horizontal: true, vertical: true)
-                        .padding(EdgeInsets(top: ReplyStyle.Code.inset, leading: lineCount > 1 ? 0 : ReplyStyle.Code.inset,
-                                            bottom: ReplyStyle.Code.inset, trailing: ReplyStyle.Code.inset))
-                }
-            }
+            ReplyCodeBody(source: source)
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }
