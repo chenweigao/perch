@@ -112,8 +112,8 @@ struct ReturnToLatestButton: View {
                     .padding(.horizontal, hasNewReply ? 12 : 0)
                     .frame(width: hasNewReply ? nil : 32, height: 32)
                     .workbenchFloatingSurface()
-                    .overlay(Capsule().fill(Color.primary.opacity(hovered && isVisible ? 0.05 : 0)))
-                    .overlay(Capsule().strokeBorder(.primary.opacity(0.08)))
+                    .overlay(Capsule().fill(Color.primary.opacity(hovered && isVisible ? WorkbenchTheme.Fill.hover : 0)))
+                    .overlay(Capsule().strokeBorder(.primary.opacity(WorkbenchTheme.Stroke.hairline)))
                     .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
                     .contentShape(Capsule())
             }.buttonStyle(.plain).accessibilityIdentifier("return-to-latest")
@@ -306,7 +306,7 @@ private struct ConversationBookmarksMenu: View {
                 Image(systemName: "bookmark.fill").font(.system(size: 12))
                     .frame(width: 30, height: 30)
                     .workbenchFloatingSurface()
-                    .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(0.08)))
+                    .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(WorkbenchTheme.Stroke.hairline)))
                     .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
             }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .help("已收藏的轮次").accessibilityLabel("已收藏的轮次")
@@ -376,8 +376,9 @@ private struct ConversationTurnRail: View {
                     }
                     .transaction { $0.animation = nil } // Neighbor text changes without crossfading.
                     .padding(12).frame(width: min(340, availableWidth), height: 136, alignment: .topLeading)
-                    .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.06)))
+                    .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+                    .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
+                        .strokeBorder(.primary.opacity(WorkbenchTheme.Stroke.hairline)))
                     .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
                     .offset(x: railWidth, y: min(max(0, previewY - 28), max(0, height - 136)))
                     .allowsHitTesting(false).accessibilityHidden(true)
@@ -423,20 +424,20 @@ private struct ConversationTurnMarks: View {
                 }
                 if let hovered, hovered != selected {
                     let y = layout.y(for: hovered)
-                    context.fill(Path(roundedRect: CGRect(x: 4, y: y - 6, width: 24, height: 14), cornerRadius: 5),
-                                 with: .color(.primary.opacity(0.045)))
+                    context.fill(Path(roundedRect: CGRect(x: 4, y: y - 6, width: 24, height: 14), cornerRadius: WorkbenchTheme.Radius.chip),
+                                 with: .color(.primary.opacity(WorkbenchTheme.Fill.hover)))
                     tick(y: y, width: 14, opacity: 0.55)
                 }
                 tick(y: layout.y(for: current), width: 20, opacity: 0.85)
                 if keyboardFocused {
                     let y = layout.y(for: selected ?? current)
-                    context.stroke(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: 5),
+                    context.stroke(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: WorkbenchTheme.Radius.chip),
                                    with: .color(.primary.opacity(0.18)), lineWidth: 1)
                 }
                 if let selected {
                     let y = layout.y(for: selected)
-                    context.fill(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: 5),
-                                 with: .color(.primary.opacity(0.09)))
+                    context.fill(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: WorkbenchTheme.Radius.chip),
+                                 with: .color(.primary.opacity(WorkbenchTheme.Fill.selected)))
                     tick(y: y, width: 20, opacity: 1, height: 2.5)
                 }
             }

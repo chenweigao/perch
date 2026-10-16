@@ -54,6 +54,28 @@ extension WorkbenchTheme {
     enum Dialog { static let padding: CGFloat = 24 }
 }
 
+extension WorkbenchTheme {
+    /// Row and control highlights, at the sidebar's strengths: pressed > selected > hovered.
+    /// Keyboard selection is `selected`, so it never reads as a hover.
+    enum Fill {
+        static let hover: Double = 0.045
+        static let selected: Double = 0.08
+        static let pressed: Double = 0.11
+        /// A grouped, static surface behind content (cards, chips).
+        static let surface: Double = 0.035
+    }
+    enum Stroke {
+        /// Hairline borders of panels and cards.
+        static let hairline: Double = 0.08
+    }
+    /// Corner radii of highlights and containers. Glass surfaces and reply blocks keep their own.
+    enum Radius {
+        static let row: CGFloat = 7
+        static let chip: CGFloat = 5
+        static let card: CGFloat = 10
+    }
+}
+
 /// Appearance override from settings; `system` leaves the scheme to macOS.
 enum AppAppearance: String, CaseIterable, Identifiable {
     case system

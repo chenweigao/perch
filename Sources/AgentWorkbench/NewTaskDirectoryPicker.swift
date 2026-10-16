@@ -53,8 +53,7 @@ struct NewTaskDirectoryPicker: View {
                                     if path == cwd { Image(systemName: "checkmark").font(.system(size: 11)) }
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(8).contentShape(Rectangle())
-                            }.buttonStyle(WorkbenchDisclosureButtonStyle()).help(path)
-                                .background(path == highlightedPath ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 6))
+                            }.buttonStyle(WorkbenchDisclosureButtonStyle(selected: path == highlightedPath)).help(path)
                                 .accessibilityAddTraits(path == highlightedPath ? .isSelected : [])
                                 .id(path)
                         }

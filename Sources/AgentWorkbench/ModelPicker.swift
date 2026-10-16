@@ -154,8 +154,10 @@ struct ModelPickerRow: View {
                 Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold))
                     .opacity(selected ? 1 : 0).accessibilityHidden(true)
             }.padding(.horizontal, 10).padding(.vertical, 8).contentShape(Rectangle())
-                .background(hovered || selected ? Color.primary.opacity(0.06) : .clear,
-                            in: RoundedRectangle(cornerRadius: 6))
+                // The chosen row outranks the pointer's, so hover never reads as a second choice.
+                .background(Color.primary.opacity(selected ? WorkbenchTheme.Fill.selected
+                                                  : hovered ? WorkbenchTheme.Fill.hover : 0),
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .accessibilityAddTraits(selected ? .isSelected : [])
     }

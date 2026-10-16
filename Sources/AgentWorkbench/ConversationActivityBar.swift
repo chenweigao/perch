@@ -730,7 +730,8 @@ private struct KimiTaskRow: View {
                 }
             }
         }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
-            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 6))
+            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                        in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .padding(.leading, 10).padding(.top, 5)
     }
 
