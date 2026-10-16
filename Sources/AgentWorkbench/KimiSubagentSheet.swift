@@ -16,11 +16,13 @@ struct KimiSubagentTranscriptSheet: View {
         return value
     }
 
+    /// Header, transcript and footer run edge to edge between dividers; the dialog
+    /// padding is their shared horizontal inset.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            ScrollView { content.padding(16) }
+            ScrollView { content.padding(.horizontal, WorkbenchTheme.Dialog.padding).padding(.vertical, 16) }
                 .scrollPosition(id: $visibleRow)
             Divider()
             footer
@@ -41,7 +43,7 @@ struct KimiSubagentTranscriptSheet: View {
             Text([subject.subagentType, subject.model, subject.phaseLabel, agentId]
                 .compactMap { $0 }.joined(separator: " · "))
                 .font(.system(size: 11)).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.middle)
-        }.padding(16)
+        }.padding(.horizontal, WorkbenchTheme.Dialog.padding).padding(.vertical, 16)
     }
 
     @ViewBuilder private var content: some View {
@@ -165,7 +167,7 @@ struct KimiSubagentTranscriptSheet: View {
             Spacer()
             Button("重新读取") { Task { await connection.openSubagentTranscript(agentId) } }
                 .disabled(!connection.online || connection.loadingSubagentTranscript)
-        }.padding(.horizontal, 16).padding(.vertical, 10)
+        }.padding(.horizontal, WorkbenchTheme.Dialog.padding).padding(.vertical, 10)
     }
 
     private func turnSymbol(_ state: String?) -> String {

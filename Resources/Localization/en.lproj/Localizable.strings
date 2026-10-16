@@ -289,7 +289,6 @@
 
 /* Model selection */
 "默认模型" = "Default model";
-"选择模型，用于下一条消息" = "Choose a model for your next message";
 "选择模型" = "Choose model";
 "搜索模型或渠道" = "Search models or providers";
 "渠道" = "Provider";
@@ -300,7 +299,6 @@
 "当前连接尚未提供模型列表，可沿用会话或默认模型。" = "This connection has not supplied a model list. You can keep the session or default model.";
 "没有匹配的模型" = "No matching models";
 "请调整搜索词或渠道筛选。" = "Try another search or provider filter.";
-"用于下一条消息" = "Applies to your next message";
 "找到多个同名文件，请选择：" = "Multiple files match. Choose a path:";
 
 "View full thoughts" = "View full thoughts";
@@ -777,9 +775,7 @@
 
 "开启自动连接后立即连接，并在 Perch 启动时连接。关闭会断开当前连接；也可用按钮临时连接或断开，不改变启动偏好。远端任务继续运行。" = "Enable automatic connection to connect now and whenever Perch starts. Turning it off disconnects now. The buttons connect or disconnect temporarily without changing your startup preference. Remote tasks keep running.";
 
-"启动时自动连接" = "Connect automatically at launch";
 
-"%@ 启动时自动连接" = "Connect %@ automatically at launch";
 
 "断开" = "Disconnect";
 
@@ -1638,3 +1634,16 @@
 "原生 Agent · %lld" = "Native Agents · %lld";
 "有新版本时可在发布页下载安装包，或拉取最新代码重新构建。" = "When a newer version is available, download the package from the release page, or pull the latest code and rebuild.";
 "思考与工具 · %lld 次调用" = "Thoughts and tools · %lld calls";
+
+/* Composer keys, panels, accessibility and settings copy (2026-10-15) */
+"选择新任务的默认模型" = "Choose the default model for new tasks";
+"新任务默认使用此模型" = "New tasks use this model by default";
+"自动连接" = "Connect automatically";
+"%@ 自动连接" = "Connect %@ automatically";
+"回车引导当前轮，⌘回车排到下一轮…" = "Return to steer · ⌘Return for next turn…";
+"回车排到下一轮发送…" = "Return to send next turn…";
+"回车引导当前轮 · ⌘回车排到下一轮" = "Return to steer this turn · ⌘Return for next turn";
+"回车引导当前轮" = "Return to steer this turn";
+"回车排到下一轮发送" = "Return to send next turn";
+"回车执行命令" = "Return to run the command";
+"成果操作" = "Outcome actions";

@@ -43,7 +43,7 @@ struct WorkspaceActionDetail: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
-        }.padding(24).frame(width: 640, height: 620)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 640, height: 620)
     }
 }
 

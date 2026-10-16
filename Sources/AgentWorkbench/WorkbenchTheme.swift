@@ -49,6 +49,11 @@ enum WorkbenchTheme {
     }
 }
 
+extension WorkbenchTheme {
+    /// Sheets and dialogs share one outer padding.
+    enum Dialog { static let padding: CGFloat = 24 }
+}
+
 /// Appearance override from settings; `system` leaves the scheme to macOS.
 enum AppAppearance: String, CaseIterable, Identifiable {
     case system

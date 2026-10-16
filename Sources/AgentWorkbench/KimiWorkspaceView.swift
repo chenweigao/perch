@@ -135,9 +135,10 @@ private struct KimiComposerView: View {
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[sessionID] ?? "" },
                                               set: { onInput(); connection.drafts[sessionID] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: connection.conversation?.snapshot.session.cwd ?? "",
-                                placeholder: L("继续此任务…"),
+                                placeholder: placeholder,
                                 accessibilityLabel: L("Message Kimi"), canSend: canSend,
                                 onSend: { connection.sendPrompt() },
+                                onQueue: nextTurnSend,
                                 onFiles: { files in addAttachments(files, to: sessionID) },
                                 onError: { connection.actionError = $0 },
                                 onKey: { handle($0, for: sessionID) },
@@ -175,11 +176,11 @@ private struct KimiComposerView: View {
                     ContextMeter(budget: connection.conversation?.snapshot.session.budget,
                                  isStale: !connection.online || !connection.snapshotReady,
                                  autoCompactHost: connection.host.id, autoCompactSession: sessionID)
-                    ComposerActionButton(isRunning: connection.conversation?.snapshot.session.isTurnRunning == true,
+                    ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
-                                         onQueue: isCommandDraft ? nil : { connection.sendPrompt(mode: .nextTurn) })
+                                         onQueue: nextTurnSend)
                 }
             }.padding(12).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
@@ -249,6 +250,17 @@ private struct KimiComposerView: View {
     private var isCommandDraft: Bool {
         let draft = connection.drafts[connection.selectedId ?? ""] ?? ""
         return SlashCommands.invocation(in: draft, from: KimiCommand.catalog) != nil
+    }
+    private var isRunning: Bool { connection.conversation?.snapshot.session.isTurnRunning == true }
+    /// Return steers a running turn; ⌘Return and the send menu queue the prompt
+    /// for the next turn without steering. Commands run at once: no next turn.
+    private var nextTurnSend: (() -> Void)? {
+        guard isRunning, !isCommandDraft else { return nil }
+        return { connection.sendPrompt(mode: .nextTurn) }
+    }
+    /// Says what Return does. It shows only over an empty draft, never a command.
+    private var placeholder: String {
+        isRunning ? L("回车引导当前轮，⌘回车排到下一轮…") : L("Continue this task, or type / for commands…")
     }
     private var canSend: Bool {
         let id = connection.selectedId ?? ""

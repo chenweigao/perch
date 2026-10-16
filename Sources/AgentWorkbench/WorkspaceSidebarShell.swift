@@ -177,7 +177,8 @@ struct SidebarProjectHeader: View {
                     .foregroundStyle(.tertiary)
                     .opacity(hovered || focused != nil ? 0 : 1).accessibilityHidden(true)
                 Button(action: onNew) {
-                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).frame(width: 26, height: 26)
+                    // Fills the 28 pt trailing column; the row stays taller than the button.
+                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).frame(width: 28, height: 28)
                 }
                     .buttonStyle(SidebarNavigationStyle()).disabled(!canCreate)
                     .focused($focused, equals: .create)

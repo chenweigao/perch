@@ -76,10 +76,10 @@ struct GroupSuggestionsSheet: View {
                         let count = model.applyGroupSuggestions(state.suggestions.filter { state.selected.contains($0.id) })
                         state.applied = count > 0
                         if !state.applied { state.error = L("关联已变化，请重新生成建议。") }
-                    }.disabled(state.selected.isEmpty || state.applied || state.loading)
+                    }.keyboardShortcut(.defaultAction).disabled(state.selected.isEmpty || state.applied || state.loading)
                 }
             }
-        }.padding(24).frame(width: 650, height: 600)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 650, height: 600)
             .sheet(isPresented: $showSettings) { ActivitySummarySettingsSheet() }
             .task(id: state.request?.id) {
                 guard let request = state.request else { return }

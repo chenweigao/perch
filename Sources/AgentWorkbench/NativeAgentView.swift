@@ -214,10 +214,11 @@ private struct NativeComposerView: View {
                 ProjectMessageComposer(text: Binding(get: { connection.drafts[s.id] ?? "" },
                                               set: { connection.drafts[s.id] = $0; palette.draftChanged($0); recall.draftChanged($0) }),
                                 host: connection.host, cwd: s.cwd,
-                                placeholder: L("继续此任务…"),
+                                placeholder: placeholder,
                                 accessibilityLabel: L("Message \(s.provider.label)"),
                                 canSend: canSend(s),
                                 onSend: { send(defaultMode(s)) },
+                                onQueue: nextTurnSend,
                                 onFiles: supportsAttachments ? { addAttachments($0) } : nil,
                                 onError: { connection.actionError = $0 },
                                 onKey: { key in handle(key, for: s) },
@@ -247,7 +248,7 @@ private struct NativeComposerView: View {
                                          queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
                                          onSend: { send(defaultMode(s)) },
                                          onStop: { if isCurrent { connection.stop() } },
-                                         onQueue: defaultMode(s) == .steer ? { send(.nextTurn) } : nil)
+                                         onQueue: nextTurnSend)
                 }
             }.padding(12).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
@@ -290,6 +291,20 @@ private struct NativeComposerView: View {
         if !(connection.attachments[s.id] ?? []).isEmpty,
            let queued = modes.first(where: { $0 != .steer }) { return queued }
         return modes.first ?? .now
+    }
+    /// Only a steering Return needs a separate next-turn send (⌘Return and the
+    /// send menu); otherwise Return already sends now or for the next turn, and
+    /// ⌘Return does the same.
+    private var nextTurnSend: (() -> Void)? {
+        defaultMode(s) == .steer ? { send(.nextTurn) } : nil
+    }
+    /// Says what Return does; it shows only while the draft is empty.
+    private var placeholder: String {
+        switch defaultMode(s) {
+        case .steer: return L("回车引导当前轮，⌘回车排到下一轮…")
+        case .nextTurn: return L("回车排到下一轮发送…")
+        case .now: return (s.commands ?? []).isEmpty ? L("继续此任务…") : L("Continue this task, or type / for commands…")
+        }
     }
     /// The palette claims navigation keys only while it is showing suggestions;
     /// otherwise every key falls through to normal editing and Return still sends.

@@ -1,6 +1,8 @@
 import SwiftUI
 import WorkbenchCore
 
+/// Onboarding's model choice, which becomes the default for new tasks.
+/// Composers use ComposerModelPicker.
 struct ModelPicker: View {
     @UILocalization private var L
     let models: [ModelOption]
@@ -40,7 +42,7 @@ struct ModelPicker: View {
                 }.font(.system(size: 12))
                     .padding(.vertical, 6).contentShape(Rectangle())
             }.buttonStyle(.plain)
-                .help(Text("选择模型，用于下一条消息"))
+                .help(Text("选择新任务的默认模型"))
                 .accessibilityLabel(Text("选择模型"))
                 .accessibilityValue(effective)
                 .popover(isPresented: $presented, arrowEdge: .top) {
@@ -124,7 +126,7 @@ private struct ModelPickerPanel: View {
                 }.padding(6)
             }.frame(height: 280)
             Divider()
-            Text("用于下一条消息").font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
+            Text("新任务默认使用此模型").font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
         }.frame(width: 360)
             .onAppear { searchFocused = true }
             .onExitCommand(perform: dismiss)

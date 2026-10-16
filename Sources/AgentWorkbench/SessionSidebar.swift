@@ -380,7 +380,7 @@ struct WorkbenchSidebar: View {
         } actions: {
             Button { model.editGroup() } label: {
                 Image(systemName: "plus").frame(width: 24, height: 24).contentShape(Rectangle())
-            }.buttonStyle(.plain).help("新建任务组")
+            }.buttonStyle(.plain).help("新建任务组").accessibilityLabel("新建任务组")
         }
     }
     @ViewBuilder private func recentFooter(_ projection: SidebarProjection) -> some View {
@@ -405,6 +405,7 @@ struct WorkbenchSidebar: View {
                 .frame(width: 24, height: 24).contentShape(Rectangle())
         }
             .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
+            .accessibilityLabel("筛选最近会话：\(L(key: filter.rawValue))")
     }
     #if PERCH_ACCEPTANCE
     // Original structural parents retained only as an experiment control.
@@ -507,7 +508,7 @@ struct SessionDirectoryView: View {
                 }
                 .onChange(of: selection) { _, value in if let value { proxy.scrollTo(value) } }
             }
-        }.padding(24).frame(maxWidth: 950, maxHeight: .infinity, alignment: .topLeading)
+        }.padding(isSearchSheet ? WorkbenchTheme.Dialog.padding : 24).frame(maxWidth: 950, maxHeight: .infinity, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onAppear { if isSearchSheet { focused = true }; selection = result.online.first?.id }
             .onChange(of: query) { _, _ in selection = result.online.first?.id }
@@ -673,7 +674,7 @@ private struct ConnectionControls: View {
             HStack {
                 Text("环境与 Agent").foregroundStyle(.secondary); Spacer()
                 Button { dismiss(); model.configureHost() } label: { Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).help("添加 SSH 机器")
+                    .buttonStyle(.plain).help("添加 SSH 机器").accessibilityLabel("添加 SSH 机器")
             }
             Button { dismiss(); model.showLocalSetup = true } label: {
                 Label { Text("本机 Agent…") } icon: { HostIdentityIcon(hostID: ExecutionEnvironment.localHostID) }
@@ -696,7 +697,7 @@ private struct ConnectionControls: View {
                         }.buttonStyle(.plain)
                         Spacer()
                         Button { dismiss(); model.configureHost(connection.host) } label: { Image(systemName: "gearshape") }
-                            .buttonStyle(.plain).help("配置与检查 Agent")
+                            .buttonStyle(.plain).help("配置与检查 Agent").accessibilityLabel("配置与检查 Agent")
                     }.contextMenu {
                         Button("配置与检查 Agent") { dismiss(); model.configureHost(connection.host) }
                         Button("移除机器…", role: .destructive) { dismiss(); model.pendingHostRemoval = connection.host }
@@ -752,7 +753,7 @@ private struct ConnectionControls: View {
                         .help("远端桥接组件版本过旧；更新全部组件并自动重连")
                 }
                 Button(action: reconnect) { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).help("重新连接")
+                    .buttonStyle(.plain).help("重新连接").accessibilityLabel("重新连接")
             }
             if let error, !online { Text(error).font(.caption).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled) }
         }.padding(.leading, 12)

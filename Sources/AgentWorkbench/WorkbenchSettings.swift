@@ -259,9 +259,10 @@ private struct HostConnectionControls: View {
                     if requested { Text("断开") } else { Text("连接") }
                 }.buttonStyle(.bordered)
             }
-            Toggle("启动时自动连接", isOn: autoConnect)
+            // Flipping it connects or disconnects now, and sets the launch preference.
+            Toggle("自动连接", isOn: autoConnect)
                 .toggleStyle(.switch).controlSize(.mini)
-                .accessibilityLabel(Text("\(title) 启动时自动连接"))
+                .accessibilityLabel(Text("\(title) 自动连接"))
         }.font(.caption)
     }
 }

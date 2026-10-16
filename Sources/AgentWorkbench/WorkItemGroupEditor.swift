@@ -69,7 +69,7 @@ struct WorkItemGroupEditor: View {
                     model.saveGroup(group); dismiss()
                 }.keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-        }.padding(28).frame(width: 600)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 600)
             .onAppear {
                 if let group = model.editingGroup {
                     criteria = group.criteria.map(\.title).joined(separator: "\n"); stage = group.stage

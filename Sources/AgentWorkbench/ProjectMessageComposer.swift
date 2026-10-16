@@ -39,6 +39,8 @@ struct ProjectMessageComposer: View {
     let accessibilityLabel: String
     let canSend: Bool
     let onSend: () -> Void
+    /// ⌘Return's next-turn send while a turn runs; nil keeps ⌘Return like Return.
+    var onQueue: (() -> Void)? = nil
     var onFiles: (([URL]) -> Void)? = nil
     var onError: ((String) -> Void)? = nil
     var onKey: ((ComposerKey) -> Bool)? = nil
@@ -107,8 +109,9 @@ struct ProjectMessageComposer: View {
                                     Label((reference.path as NSString).lastPathComponent, systemImage: "doc.text")
                                         .lineLimit(1)
                                 }.help(reference.path)
+                                // Kept at glyph size: a larger target would grow the chip row.
                                 Button { remove(reference) } label: { Image(systemName: "xmark.circle.fill") }
-                                    .help("移除文件引用")
+                                    .help("移除文件引用").accessibilityLabel("移除文件引用")
                             }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
                                 .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5))
                         }
@@ -124,7 +127,7 @@ struct ProjectMessageComposer: View {
                             HStack(spacing: 4) {
                                 PastePreviewButton(paste: paste, store: store, stats: stats)
                                 Button { remove(paste) } label: { Image(systemName: "xmark.circle.fill") }
-                                    .help("移除粘贴内容")
+                                    .help("移除粘贴内容").accessibilityLabel("移除粘贴内容")
                             }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
                                 .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5))
                         }
@@ -140,7 +143,7 @@ struct ProjectMessageComposer: View {
 
     private var editor: some View {
         MessageComposer(text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel,
-                canSend: canSend, onSend: onSend, onFiles: onFiles, onError: onError,
+                canSend: canSend, onSend: onSend, onQueue: onQueue, onFiles: onFiles, onError: onError,
                 fileReference: host.isLocal ? { ProjectFileReference.token(path: $0.path) } : nil,
                 onKey: handle,
                 onLongPaste: pastes.map { store in { content in

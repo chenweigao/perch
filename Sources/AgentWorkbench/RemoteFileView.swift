@@ -536,7 +536,8 @@ final class RemoteReader: @unchecked Sendable {
 }
 
 /// Monospaced diff with added/removed lines tinted. Colour is supplementary: the
-/// original +/- markers stay in the text so the diff is readable without it.
+/// original +/- markers stay in the text so the diff is readable without it. Size
+/// and line spacing are the reply code style's, as for files in the same panel.
 private struct DiffText: View {
     let diff: String
     init(_ diff: String) { self.diff = diff }
@@ -545,8 +546,8 @@ private struct DiffText: View {
     }
     static func attributed(_ diff: String) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = 3
-        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        paragraph.lineSpacing = ReplyStyle.codeLineSpacing
+        let font = NSFont.monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular)
         let result = NSMutableAttributedString()
         for line in diff.split(separator: "\n", omittingEmptySubsequences: false) {
             let colour: NSColor
@@ -576,6 +577,9 @@ struct RemoteFilePanel: View {
     var onToggleWidth: (() -> Void)? = nil
     var onAddContext: ((String) -> Void)? = nil
     var onShowDraft: (() -> Void)? = nil
+    /// Set where the panel is a sheet of its own. The side panel leaves Escape to
+    /// its window, so its close button has no shortcut.
+    var closeShortcut: KeyboardShortcut? = nil
     let onClose: () -> Void
     @State private var selection = NSRange(location: 0, length: 0)
     @State private var feedbackContext: ReviewContext?
@@ -595,9 +599,11 @@ struct RemoteFilePanel: View {
                         Image(systemName: fullWidth ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                             .frame(width: 28, height: 28).contentShape(Rectangle())
                     }.buttonStyle(.plain).help(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
+                        .accessibilityLabel(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
                 }
                 Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板")
+                    .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板").accessibilityLabel("关闭文件面板")
+                    .keyboardShortcut(closeShortcut)
             }.padding(.horizontal, 14).frame(height: WorkbenchChrome.headerHeight)
             Divider()
             VStack(alignment: .leading, spacing: 9) {
@@ -625,7 +631,7 @@ struct RemoteFilePanel: View {
                     if !browser.path.isEmpty {
                         HStack(spacing: 7) {
                             Button { browser.openParent() } label: { Image(systemName: "arrow.up").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                                .buttonStyle(.plain).foregroundStyle(.secondary).help("上一级目录")
+                                .buttonStyle(.plain).foregroundStyle(.secondary).help("上一级目录").accessibilityLabel("上一级目录")
                                 .disabled(RemoteFilePath.parent(of: browser.path) == nil)
                             Text(browser.path).font(.system(size: 11, design: .monospaced))
                                 .lineLimit(1).truncationMode(.head).textSelection(.enabled)
@@ -743,7 +749,8 @@ struct RemoteFilePanel: View {
                                         }
                                     }
                                 } label: { Image(systemName: "arrow.triangle.branch") }
-                                    .help("选择已有分支")
+                                    // Natural size: a 28 pt target would make the target-branch row taller.
+                                    .help("选择已有分支").accessibilityLabel("选择已有分支")
                             }
                             TextField("目标分支或提交，如 origin/main", text: $browser.gitBaseInput)
                                 .textFieldStyle(.roundedBorder).font(.system(size: 12))
@@ -796,7 +803,7 @@ struct RemoteFilePanel: View {
                     HStack {
                         Text("\(commit.hash) · \(commit.subject)").font(.headline).lineLimit(1)
                         Spacer()
-                        Button("关闭") { browser.gitCommitSheet = nil }
+                        Button("关闭") { browser.gitCommitSheet = nil }.keyboardShortcut(.cancelAction)
                     }
                     Text("\(commit.author) · \(commit.relativeDate)").font(.caption).foregroundStyle(.secondary)
                     switch browser.gitCommitDiff {
@@ -811,7 +818,7 @@ struct RemoteFilePanel: View {
                     case .some(.untracked), .some(.notARepository): EmptyView()
                     case nil: ProgressView().controlSize(.small)
                     }
-                }.padding(20).frame(width: 640, height: 520)
+                }.padding(WorkbenchTheme.Dialog.padding).frame(width: 640, height: 520)
             }
             .sheet(item: $feedbackContext) { context in
                 VStack(alignment: .leading, spacing: 12) {
@@ -824,14 +831,15 @@ struct RemoteFilePanel: View {
                     TextField("希望如何修改？", text: $feedback, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder)
                     Text("加入当前任务草稿，检查后再发送。").font(.caption).foregroundStyle(.secondary)
                     HStack {
-                        Button("取消") { feedbackContext = nil }.keyboardShortcut(.cancelAction)
                         Spacer()
+                        Button("取消") { feedbackContext = nil }.keyboardShortcut(.cancelAction)
                         Button("加入草稿") {
                             onAddContext?(context.prompt(feedback: feedback)); contextAdded = true
                             feedbackContext = nil
-                        }.disabled(feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }.keyboardShortcut(.defaultAction)
+                            .disabled(feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                }.padding(20).frame(width: 520)
+                }.padding(WorkbenchTheme.Dialog.padding).frame(width: 520)
             }
     }
 
@@ -989,7 +997,8 @@ struct RemoteFilePanel: View {
                     HStack(spacing: 8) {
                         Text(byteLabel(size)).font(.system(size: 11)).foregroundStyle(.secondary)
                         if let line = browser.targetLine {
-                            Text(line <= text.split(separator: "\n", omittingEmptySubsequences: false).count
+                            // Counted as the gutter numbers lines.
+                            Text(line <= RemoteSourceStyle.lineCount(text)
                                  ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
@@ -1066,6 +1075,11 @@ struct RemoteFilePanel: View {
     }
 }
 
+/// File and diff text in the reply code style. The text view holds exactly the
+/// source, so selection, copy, quotes and feedback all read source offsets. Line
+/// numbers are a separate, unselectable column in the scroll view's vertical ruler:
+/// the scroll view tiles it beside the clip view, so it scrolls vertically with the
+/// code but never sideways, and no frame of ours follows the scroll position.
 struct RemoteSourceText: NSViewRepresentable {
     let text: String
     let line: Int?
@@ -1074,15 +1088,17 @@ struct RemoteSourceText: NSViewRepresentable {
     var onSelection: ((NSRange) -> Void)? = nil
     var initialOffset: Double? = nil
     var onSaveOffset: ((Double) -> Void)? = nil
+    /// Diffs carry their own line numbers in hunk headers.
+    private var showsGutter: Bool { numbered && !diff }
     final class Coordinator: NSObject, NSTextViewDelegate {
         var onSaveOffset: ((Double) -> Void)?
-        var rendered = ""
-        var source = ""
+        var text: String?
+        var diff = false
         var line: Int?
         var onSelection: ((NSRange) -> Void)?
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let view = notification.object as? NSTextView else { return }
-            let range = ReviewContext.sourceSelection(in: source, rendered: rendered, selection: view.selectedRange())
+            let range = view.selectedRange()
             let callback = onSelection
             DispatchQueue.main.async { callback?(range) }
         }
@@ -1094,35 +1110,55 @@ struct RemoteSourceText: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
-        let view = NSTextView(); view.isEditable = false; view.isSelectable = true
+        // TextKit 1 from the start: sizing below and the gutter read its layout.
+        let view = NSTextView(usingTextLayoutManager: false); view.isEditable = false; view.isSelectable = true
         view.identifier = NSUserInterfaceItemIdentifier("PerchReviewSource")
         view.delegate = context.coordinator
-        view.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-        view.textContainerInset = NSSize(width: 14, height: 14)
-        view.isHorizontallyResizable = true; view.isVerticallyResizable = true
+        // The vertical ruler is the gutter; the text view must not claim it.
+        view.usesRuler = false
+        view.textContainer?.lineFragmentPadding = 0
+        // Code never wraps. The view is sized to its laid-out text in updateNSView.
+        view.isHorizontallyResizable = false; view.isVerticallyResizable = false
         view.textContainer?.widthTracksTextView = false
-        view.textContainer?.containerSize = NSSize(width: 1_000_000, height: 1_000_000)
+        view.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         scroll.documentView = view
+        scroll.verticalRulerView = RemoteSourceGutter(scrollView: scroll, source: view)
+        scroll.hasVerticalRuler = true
+        scroll.rulersVisible = false
         return scroll
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? NSTextView else { return }
-        context.coordinator.onSelection = onSelection
-        context.coordinator.onSaveOffset = onSaveOffset
-        let rendered = numbered ? text.split(separator: "\n", omittingEmptySubsequences: false).enumerated().map { "\($0.offset + 1) │ \($0.element)" }.joined(separator: "\n") : text
-        guard context.coordinator.rendered != rendered || context.coordinator.line != line else { return }
-        context.coordinator.rendered = rendered; context.coordinator.source = text; context.coordinator.line = line
-        if diff { view.textStorage?.setAttributedString(DiffText.attributed(text)) }
-        else { view.string = rendered }
-        // A newly mounted split pane can still have a zero-sized viewport here.
-        // Size from laid-out glyphs so text is visible before a later window resize.
-        if let layout = view.layoutManager, let container = view.textContainer {
-            layout.ensureLayout(for: container)
-            let used = layout.usedRect(for: container)
-            view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + 2 * view.textContainerInset.width),
-                                     height: max(scroll.contentSize.height, used.height + 2 * view.textContainerInset.height)))
+        let coordinator = context.coordinator
+        coordinator.onSelection = onSelection
+        coordinator.onSaveOffset = onSaveOffset
+        let textChanged = coordinator.text != text || coordinator.diff != diff
+        let gutterChanged = scroll.rulersVisible != showsGutter
+        guard textChanged || gutterChanged || coordinator.line != line else { return }
+        if textChanged {
+            coordinator.text = text; coordinator.diff = diff
+            view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : RemoteSourceStyle.code(text))
         }
-        guard let line, let range = RemoteFileContent.lineRange(in: rendered, line: line) else {
+        if textChanged || gutterChanged {
+            // Numbers are built once per text, and only while shown.
+            if showsGutter { (scroll.verticalRulerView as? RemoteSourceGutter)?.showNumbers(for: text) }
+            scroll.rulersVisible = showsGutter
+            // Beside the gutter its trailing padding is the gap before the code.
+            view.textContainerInset = NSSize(width: showsGutter ? 0 : RemoteSourceMetrics.inset, height: RemoteSourceMetrics.inset)
+            scroll.tile()
+            // A newly mounted split pane can still have a zero-sized viewport here.
+            // Size from laid-out glyphs so text is visible before a later window resize.
+            if let layout = view.layoutManager, let container = view.textContainer {
+                layout.ensureLayout(for: container)
+                let used = layout.usedRect(for: container), inset = view.textContainerInset
+                view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + inset.width + RemoteSourceMetrics.inset),
+                                         height: max(scroll.contentSize.height, used.height + 2 * inset.height)))
+            }
+        }
+        // Showing or hiding the numbers keeps the reader's place and selection.
+        guard textChanged || coordinator.line != line else { return }
+        coordinator.line = line
+        guard let line, let range = RemoteFileContent.lineRange(in: text, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
             if let initialOffset {
                 let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
@@ -1133,8 +1169,116 @@ struct RemoteSourceText: NSViewRepresentable {
         }
         view.setSelectedRange(range)
         DispatchQueue.main.async {
-            guard context.coordinator.rendered == rendered, context.coordinator.line == line else { return }
+            guard coordinator.text == text, coordinator.line == line else { return }
             view.scrollRangeToVisible(range)
         }
     }
+}
+
+/// File panel code geometry; the gutter takes the reply code card's paddings.
+private enum RemoteSourceMetrics {
+    /// Around the code, and before it while the gutter is hidden.
+    static let inset: CGFloat = 14
+}
+
+/// The reply code and gutter styles with one fixed line height. A line set in a
+/// fallback font (CJK, emoji) is otherwise taller than its number, and the two
+/// columns drift apart down the file.
+@MainActor private enum RemoteSourceStyle {
+    static let lineHeight: CGFloat = {
+        guard let font = ReplyTextAttributes.code(" ").attribute(.font, at: 0, effectiveRange: nil) as? NSFont else { return 0 }
+        return NSLayoutManager().defaultLineHeight(for: font)
+    }()
+    static func code(_ text: String) -> NSAttributedString { fixed(ReplyTextAttributes.code(text)) }
+    /// Clipped, never wrapped: the column is exactly as wide as the widest number.
+    static func gutter(_ lines: Int) -> NSAttributedString { fixed(ReplyTextAttributes.codeGutter(lines), clipping: true) }
+    /// Lines as TextKit and `RemoteFileContent.lineRange` break them: LF, CR, CRLF,
+    /// U+2028. A final terminator ends the last line instead of starting one, as in
+    /// `CodeLineNumbers`, which cannot count files: CRLF is one Swift `Character`.
+    static func lineCount(_ text: String) -> Int {
+        let source = text as NSString
+        var count = 0, location = 0
+        while location < source.length {
+            location = NSMaxRange(source.lineRange(for: NSRange(location: location, length: 0)))
+            count += 1
+        }
+        return max(1, count)
+    }
+    private static func fixed(_ attributed: NSAttributedString, clipping: Bool = false) -> NSAttributedString {
+        guard attributed.length > 0 else { return attributed }
+        let base = attributed.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
+        guard let style = base?.mutableCopy() as? NSMutableParagraphStyle else { return attributed }
+        style.minimumLineHeight = lineHeight
+        style.maximumLineHeight = lineHeight
+        if clipping { style.lineBreakMode = .byClipping }
+        let result = NSMutableAttributedString(attributedString: attributed)
+        result.addAttribute(.paragraphStyle, value: style, range: NSRange(location: 0, length: result.length))
+        return result
+    }
+}
+
+/// `RemoteSourceText`'s numbers: one `ReplyTextAttributes.codeGutter` string per
+/// text, laid out once in its own column and drawn at the rows the code occupies.
+/// Drawing only reads the code view's position, so it cannot move any frame.
+private final class RemoteSourceGutter: NSRulerView {
+    private weak var codeView: NSTextView?
+    private let numberStorage = NSTextStorage()
+    private let numberLayout = NSLayoutManager()
+    private let numberColumn = NSTextContainer(size: .zero)
+    private var numberedText: String?
+
+    init(scrollView: NSScrollView, source: NSTextView) {
+        codeView = source
+        super.init(scrollView: scrollView, orientation: .verticalRuler)
+        numberColumn.lineFragmentPadding = 0
+        numberLayout.addTextContainer(numberColumn)
+        numberStorage.addLayoutManager(numberLayout)
+        reservedThicknessForMarkers = 0
+        reservedThicknessForAccessoryView = 0
+        clipsToBounds = true
+        // Drawn numbers are not text a reader can reach; the code view holds the source.
+        setAccessibilityElement(false)
+        // The scroll view redraws its rulers as it scrolls; this keeps the rows in
+        // step with any scroll that only moves the clip view.
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(self, selector: #selector(clipDidScroll(_:)),
+                                               name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
+    }
+    required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var isFlipped: Bool { true }
+
+    /// Right-aligned numbers in a column as wide as the widest one.
+    func showNumbers(for text: String) {
+        guard numberedText != text else { return }
+        numberedText = text
+        let lines = RemoteSourceStyle.lineCount(text)
+        let numbers = RemoteSourceStyle.gutter(lines)
+        numberStorage.setAttributedString(numbers)
+        let widest = NSAttributedString(string: String(lines), attributes: numbers.attributes(at: 0, effectiveRange: nil))
+        let width = ceil(widest.size().width)
+        numberColumn.size = NSSize(width: width, height: CGFloat.greatestFiniteMagnitude)
+        ruleThickness = ReplyStyle.Code.gutterLeading + width + ReplyStyle.Code.gutterTrailing
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let area = dirtyRect.intersection(bounds)
+        (codeView?.backgroundColor ?? .textBackgroundColor).setFill()
+        area.fill()
+        guard let codeView else { return }
+        // Row 1 sits at the code's container origin, which moves as the clip view scrolls.
+        let origin = convert(codeView.textContainerOrigin, from: codeView)
+        let rows = NSRect(x: 0, y: area.minY - origin.y, width: numberColumn.size.width, height: area.height)
+        let glyphs = numberLayout.glyphRange(forBoundingRect: rows, in: numberColumn)
+        guard glyphs.length > 0 else { return }
+        numberLayout.drawGlyphs(forGlyphRange: glyphs, at: NSPoint(x: ReplyStyle.Code.gutterLeading, y: origin.y))
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
+    @objc private func clipDidScroll(_ notification: Notification) { needsDisplay = true }
 }

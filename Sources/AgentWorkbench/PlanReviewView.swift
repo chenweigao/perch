@@ -127,7 +127,7 @@ struct PlanReviewPanel: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack { Text("审阅计划").font(.headline); Spacer(); Button("关闭") { showPlan = false }.keyboardShortcut(.cancelAction) }
                         ScrollView { KimiMarkdown(text: plan.content).frame(maxWidth: .infinity, alignment: .leading).padding(8) }
-                    }.padding(20).frame(minWidth: 480, idealWidth: 680, minHeight: 360, idealHeight: 640)
+                    }.padding(WorkbenchTheme.Dialog.padding).frame(minWidth: 480, idealWidth: 680, minHeight: 360, idealHeight: 640)
                 }
         }
     }

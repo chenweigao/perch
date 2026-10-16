@@ -16,8 +16,11 @@ struct WorkbenchView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("终端显示信息").font(.headline)
                     Text(model.renderReport).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                    Button("关闭") { model.showRenderReport = false }.keyboardShortcut(.cancelAction)
-                }.padding(26).frame(minWidth: 550)
+                    HStack {
+                        Spacer()
+                        Button("关闭") { model.showRenderReport = false }.keyboardShortcut(.cancelAction)
+                    }
+                }.padding(WorkbenchTheme.Dialog.padding).frame(minWidth: 550)
             }
             .sheet(item: $model.inspectingSession, onDismiss: model.endInspection) { item in
                 WorkspaceActionDetail(model: model, item: item).id(item.id)
@@ -139,7 +142,9 @@ private struct WorkbenchDetail: View {
                         Label("\(notice.message) · \(notice.title)", systemImage: notice.kind == .completed ? "checkmark.circle" : "exclamationmark.circle").lineLimit(1)
                     }.buttonStyle(.plain)
                     Spacer()
+                    // Natural size: a 28 pt target would make the notice bar taller.
                     Button { model.taskNotice = nil } label: { Image(systemName: "xmark") }
+                        .help("关闭提示").accessibilityLabel("关闭提示")
                 }.font(.system(size: 12)).padding(10).background(.orange.opacity(0.06))
             }
             if !model.draftingNewTask && model.showConversationFind && (model.showKimi || model.showNative) {

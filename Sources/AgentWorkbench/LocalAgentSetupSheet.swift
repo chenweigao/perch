@@ -57,7 +57,7 @@ struct LocalAgentSetupSheet: View {
                 }.disabled(model.probingLocal || !selected.contains { model.localAgents[$0]?.executablePath != nil })
                     .keyboardShortcut(.defaultAction)
             }
-        }.padding(26).frame(width: 580)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 580)
             .onAppear {
                 if let host = model.connections.first(where: { $0.host.isLocal })?.host { selected = Set(host.enabledAgents) }
                 model.discoverLocalAgents()

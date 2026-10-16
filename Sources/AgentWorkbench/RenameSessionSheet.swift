@@ -45,7 +45,7 @@ struct RenameSessionSheet: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-        }.padding(24).frame(width: 420)
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 420)
             .onAppear { title = item.title; focused = true; loadSuggestion() }
             .onDisappear { suggestionTask?.cancel() }
     }

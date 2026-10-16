@@ -17,17 +17,31 @@ struct ComposerActionButton: View {
 
     private var enabled: Bool { !isStopping && (isRunning ? canStop : canSend) }
     private var title: String { isStopping ? L("Stopping…") : isRunning ? L("Stop task") : L("Send") }
+    /// The hint does what Return does; its tooltip names that key and ⌘Return.
+    private var queuedSendHelp: String {
+        switch queuedSendTitle {
+        case "Steer": return onQueue == nil ? L("回车引导当前轮") : L("回车引导当前轮 · ⌘回车排到下一轮")
+        case "Run command": return L("回车执行命令")
+        default: return L("回车排到下一轮发送")
+        }
+    }
     var body: some View {
         HStack(spacing: 8) {
             if isRunning && canSend && !isStopping {
                 Button(L(key: queuedSendTitle), action: onSend).buttonStyle(.plain)
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                     .accessibilityLabel(queuedSendTitle == "Queue" ? L("Queue message") : L(key: queuedSendTitle))
+                    .help(queuedSendHelp)
                 if let onQueue {
+                    // ⌘↩ is text, not a key equivalent: the composer already handles
+                    // ⌘Return, and a pop-up button can fire its items' equivalents
+                    // while closed, even when focus is elsewhere or mid-composition.
+                    // The chevron keeps its size; it sits in the toolbar layout's send slot.
                     Menu {
-                        Button("Send next turn", action: onQueue)
+                        Button(L("Send next turn") + "  ⌘↩", action: onQueue)
                     } label: { Image(systemName: "chevron.down") }
                         .menuStyle(.borderlessButton).fixedSize().help("Send next turn")
+                        .accessibilityLabel(L("Send next turn"))
                 }
             }
             Button {

@@ -93,14 +93,15 @@ struct PendingMessageEditor: View {
             TextEditor(text: $text).frame(minHeight: 140)
             if let messageError { Text(messageError).font(.caption).foregroundStyle(.orange) }
             HStack {
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()
+                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("保存") {
                     if save(text) { dismiss() }
                     else { messageError = L("消息已经提交，修改未保存。可复制这里的文字作为新的补充。") }
                 }
+                    .keyboardShortcut(.defaultAction)
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-        }.padding(22).frame(width: 460).onAppear { text = message.text }
+        }.padding(WorkbenchTheme.Dialog.padding).frame(width: 460).onAppear { text = message.text }
     }
 }

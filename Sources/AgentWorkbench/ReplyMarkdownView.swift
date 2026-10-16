@@ -1345,9 +1345,12 @@ struct LongOutputReader: View {
                         .textFieldStyle(.roundedBorder).focused($searchFocused)
                         .onSubmit { handle.find() }
                     if handle.found == false { Text("未找到").foregroundStyle(.secondary) }
-                    Button { handle.find(backwards: true) } label: { Image(systemName: "chevron.up") }.help("上一个匹配")
-                    Button { handle.find() } label: { Image(systemName: "chevron.down") }.help("下一个匹配")
-                    Button { handle.searchVisible = false } label: { Image(systemName: "xmark") }.help("关闭查找")
+                    Button { handle.find(backwards: true) } label: { Image(systemName: "chevron.up") }
+                        .help("上一个匹配").accessibilityLabel("上一个匹配")
+                    Button { handle.find() } label: { Image(systemName: "chevron.down") }
+                        .help("下一个匹配").accessibilityLabel("下一个匹配")
+                    Button { handle.searchVisible = false } label: { Image(systemName: "xmark") }
+                        .help("关闭查找").accessibilityLabel("关闭查找")
                 }.font(.system(size: 11)).frame(height: 28)
             }
             LongOutputViewport(text: text, attributes: attributes, handle: handle)
