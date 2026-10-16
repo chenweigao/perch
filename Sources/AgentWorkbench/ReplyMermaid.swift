@@ -40,6 +40,10 @@ final class MermaidRenderer {
 
     private var memory: [Key: Diagram] = [:]
     private var memoryOrder: [Key] = []
+    /// Byte-budgeted: a 3000pt diagram costs a hundred times a small one.
+    private var memoryBytes = 0
+    private static let maxMemoryEntries = 64
+    private static let maxMemoryBytes = 48 * 1024 * 1024
     private var failed: Set<Key> = []
     private var inFlight: [Key: Task<Diagram?, Never>] = [:]
     /// Renders serialize on the one web view; each task awaits its predecessor.
@@ -254,6 +258,35 @@ final class MermaidRenderer {
         }
     }
 
+    // MARK: Prewarm
+
+    /// A freshly settled reply pre-renders its diagrams so scrolling to them is
+    /// instant. The fence scan is textual, not a Markdown parse: a false positive
+    /// just renders and caches a diagram nobody views, bounded by the usual caps.
+    static let maxPrewarmPerMessage = 4
+
+    func prewarmSources(in text: String, dark: Bool) {
+        guard text.contains("```") else { return }
+        var sources: [String] = []
+        var rest = text[...]
+        while let open = rest.range(of: "```"), sources.count < Self.maxPrewarmPerMessage {
+            let afterOpen = rest[open.upperBound...]
+            guard let fenceEnd = afterOpen.firstIndex(of: "\n") else { break }
+            let language = afterOpen[..<fenceEnd].trimmingCharacters(in: .whitespaces)
+            guard MermaidSupport.isMermaid(language),
+                  let close = afterOpen[fenceEnd...].range(of: "\n```") else {
+                rest = afterOpen
+                continue
+            }
+            let source = String(afterOpen[afterOpen.index(after: fenceEnd)..<close.lowerBound])
+            sources.append(source)
+            rest = afterOpen[close.upperBound...]
+        }
+        for source in sources {
+            Task { @MainActor in _ = await self.diagram(source: source, dark: dark) }
+        }
+    }
+
     // MARK: Caches
 
     private func touch(_ key: Key) {
@@ -263,10 +296,14 @@ final class MermaidRenderer {
     }
 
     private func storeMemory(_ key: Key, _ diagram: Diagram) {
+        // A single diagram bigger than the budget is served but never cached.
+        guard diagram.png.count <= Self.maxMemoryBytes else { return }
         if memory[key] == nil { memoryOrder.append(key) }
         memory[key] = diagram
-        while memoryOrder.count > 64 {
-            memory.removeValue(forKey: memoryOrder.removeFirst())
+        memoryBytes += diagram.png.count
+        while memoryOrder.count > Self.maxMemoryEntries || memoryBytes > Self.maxMemoryBytes {
+            let oldest = memoryOrder.removeFirst()
+            if let evicted = memory.removeValue(forKey: oldest) { memoryBytes -= evicted.png.count }
         }
     }
 
