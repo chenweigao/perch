@@ -12,7 +12,7 @@ BIN = pathlib.Path(subprocess.check_output(
     ["swift", "build", "--build-system", "native", "-c", "release", "--show-bin-path"],
     cwd=ROOT, text=True).strip())
 files = ["RevealFrameDriver", "ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory", "ConversationPresentationEnvironment",
-         "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel", "ReplyMermaid",
+         "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel", "ReplyMermaid", "PerfDiagnostics",
          "ActivitySummarySettings", "ActivitySummaryController",
          "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView",
          "ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle",
