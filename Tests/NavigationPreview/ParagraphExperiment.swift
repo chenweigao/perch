@@ -172,6 +172,7 @@ extension NavigationRunner {
             ]
         }
         var observations: [[String: Any]] = []
+        var foldToggles = 0
         for width in [CGFloat(700), 340] {
             for dark in [false, true] {
                 for (source, markers) in cases {
@@ -241,6 +242,20 @@ extension NavigationRunner {
                                     throw NavigationError("Native user bubble lost its compact line height or symmetric 8pt insets")
                                 }
                             }
+                            // The fold toggle reads like LongUserPrompt's plain button: borderless,
+                            // left-aligned at the text inset, toggleSpacing below the prompt. The
+                            // height it adds is covered by the height comparison below.
+                            if let toggle = native.subviews.first(where: { $0.identifier?.rawValue == "user-prompt-toggle" }) as? NSButton,
+                               !toggle.isHidden {
+                                guard let text = texts(native).last, let prompt = text.superview,
+                                      !toggle.isBordered, toggle.alignment == .left,
+                                      abs(toggle.frame.minX - text.convert(text.bounds, to: native).minX) <= 0.5,
+                                      abs(toggle.frame.minY - prompt.convert(prompt.bounds, to: native).maxY
+                                          - UserMessageStyle.toggleSpacing) <= 0.5 else {
+                                    throw NavigationError("Native fold toggle is not a borderless, left-aligned label \(UserMessageStyle.toggleSpacing) pt below the prompt")
+                                }
+                                foldToggles += 1
+                            }
                         }
                         heights.append(size.height)
                         var positions: [String: CGPoint] = [:]
@@ -277,10 +292,14 @@ extension NavigationRunner {
                 throw NavigationError("Rich blocks were admitted with the A/B switch off")
             }
         }
+        // Long fixtures fold at both widths; a vacuous toggle check must not pass.
+        guard assistant || foldToggles > 0 else { throw NavigationError("No folded user fixture exercised the native fold toggle") }
         var report: [String: Any] = ["cases": observations, "complex_markdown_retains_swiftui": true, "links_and_unicode_copy": true]
         if !assistant {
             report["user_line_height"] = UserMessageStyle.lineHeight
             report["single_line_bubble_height"] = UserMessageStyle.lineHeight + UserMessageStyle.verticalPadding * 2
+            report["fold_toggle"] = ["checked": foldToggles, "borderless": true, "left_aligned": true,
+                                     "spacing": UserMessageStyle.toggleSpacing] as [String: Any]
         }
         return report
     }

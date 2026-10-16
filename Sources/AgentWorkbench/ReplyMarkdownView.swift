@@ -37,6 +37,15 @@ enum ReplyStyle {
         appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.9) }
         return ink
     }
+    /// `ReplyTone.quiet`: compaction notes and runtime context read one step down,
+    /// in secondary ink. Weight still marks headings and strong text.
+    static let quietSize: CGFloat = 12
+    static let quietLineHeight: CGFloat = 18
+    static let quietInk = NSColor.secondaryLabelColor
+    /// Code and tables wider than the column fade out over this trailing width.
+    /// No wider than their 12 pt trailing inset (`Code.inset`, table cell padding),
+    /// so scrolled to the end no glyph fades.
+    static let overflowFadeWidth: CGFloat = 12
     static let tableCellSize: CGFloat = 13
     /// Column totals are arithmetic over estimated content widths, so a table
     /// never probes TextKit for widths and cannot feed the transcript layout.
@@ -88,6 +97,26 @@ enum ReplyStyle {
         static let verticalInset: CGFloat = 4
         static let barWidth: CGFloat = 2
     }
+    /// Table cells and rules; horizontal cell padding lives in `tableGeometry`.
+    enum Table {
+        static let cellVerticalPadding: CGFloat = 8
+        /// The rule under the header reads stronger than the rules between rows.
+        static let headerRuleOpacity: Double = 0.12
+        static let rowRuleOpacity: Double = 0.06
+    }
+}
+
+/// How prose in a reply reads: the body, or quiet secondary notes (compaction notes, runtime context).
+enum ReplyTone: Equatable { case body, quiet }
+private struct ReplyToneKey: EnvironmentKey { static let defaultValue = ReplyTone.body }
+extension EnvironmentValues {
+    /// `.quiet` sets `ReplyText` (and list markers) at `ReplyStyle.quietSize` on
+    /// `quietLineHeight` in `quietInk`. SwiftUI rows only: native rows never admit
+    /// quiet content. Set with `.environment(\.replyTone, .quiet)`.
+    var replyTone: ReplyTone {
+        get { self[ReplyToneKey.self] }
+        set { self[ReplyToneKey.self] = newValue }
+    }
 }
 
 extension ReplyStyle.BlockKind {
@@ -113,6 +142,11 @@ enum UserMessageStyle {
     static let maxWidthRatio: CGFloat = 0.85
     static let topSpacing: CGFloat = 8
     static let paragraphSpacing: CGFloat = ReplyStyle.paragraphSpacing
+    /// The fold toggle under a long prompt, as `LongUserPrompt` sets it: 12 pt
+    /// secondary text on a 24 pt row, 6 pt below the prompt.
+    static let toggleFontSize: CGFloat = 12
+    static let toggleSpacing: CGFloat = 6
+    static let toggleHeight: CGFloat = 24
 }
 
 enum ReplyParagraphLayout {
@@ -311,10 +345,6 @@ private struct ReplyBlockContent: View, Equatable {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: ReplyStyle.ListLayout.markerGap) {
                         ReplyListMarker(marker: item.marker)
-                            .fixedSize()
-                            .alignmentGuide(.firstTextBaseline) { _ in
-                                ceil(NSFont.systemFont(ofSize: ReplyStyle.bodySize).ascender)
-                            }
                             .frame(width: markerWidth, alignment: .trailing)
                         // Type erasure breaks the recursive SwiftUI view type, not the document hierarchy.
                         AnyView(ReplyBlocks(blocks: item.blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
@@ -344,8 +374,12 @@ private struct ReplyAlertBlock: View {
     var coalescesParagraphs = true
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(kind.title, systemImage: kind.symbol)
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(kind.tint)
+            // The bar and icon carry the kind's tint; the title has its own ink.
+            Label {
+                Text(kind.title).foregroundStyle(kind.titleInk)
+            } icon: {
+                Image(systemName: kind.symbol).foregroundStyle(kind.tint)
+            }.font(.system(size: 12, weight: .semibold))
             AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
         }
         .padding(.leading, ReplyStyle.Quote.leadingInset).padding(.vertical, ReplyStyle.Quote.verticalInset)
@@ -385,17 +419,36 @@ private struct ReplyAlertBlock: View {
 
 /// Use the same marker metrics as native transcript rows. SwiftUI Text's rounded
 /// baseline can otherwise add a pixel to every list item at some font sizes.
-private struct ReplyListMarker: NSViewRepresentable {
+/// Quiet prose sets its markers like its text: quiet size, secondary ink.
+private struct ReplyListMarker: View {
     let marker: String
+    @Environment(\.replyTone) private var tone
+    var body: some View {
+        let quiet = tone == .quiet
+        let size = quiet ? ReplyStyle.quietSize : ReplyStyle.bodySize
+        ReplyListMarkerLabel(marker: marker, size: size, ink: quiet ? ReplyStyle.quietInk : ReplyStyle.nativeInk)
+            .fixedSize()
+            .alignmentGuide(.firstTextBaseline) { _ in ceil(NSFont.systemFont(ofSize: size).ascender) }
+    }
+}
+
+private struct ReplyListMarkerLabel: NSViewRepresentable {
+    let marker: String
+    let size: CGFloat
+    let ink: NSColor
     func makeNSView(context: Context) -> NSTextField {
         let field = NSTextField(labelWithString: marker)
-        field.font = .systemFont(ofSize: ReplyStyle.bodySize)
-        field.textColor = ReplyStyle.nativeInk
+        field.font = .systemFont(ofSize: size)
+        field.textColor = ink
         field.alignment = .right
         field.lineBreakMode = .byClipping
         return field
     }
-    func updateNSView(_ field: NSTextField, context: Context) { field.stringValue = marker }
+    func updateNSView(_ field: NSTextField, context: Context) {
+        field.stringValue = marker
+        if field.font?.pointSize != size { field.font = .systemFont(ofSize: size) }
+        if field.textColor !== ink { field.textColor = ink }
+    }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSTextField, context: Context) -> CGSize {
         nsView.fittingSize
     }
@@ -445,15 +498,6 @@ private struct ReplyListLayout: Layout {
     }
 }
 
-private struct ReplyInkKey: EnvironmentKey {
-    static let defaultValue = ReplyStyle.nativeInk
-}
-private extension EnvironmentValues {
-    var replyInk: NSColor {
-        get { self[ReplyInkKey.self] }
-        set { self[ReplyInkKey.self] = newValue }
-    }
-}
 private struct ReplyLineHeightKey: EnvironmentKey {
     static let defaultValue = ReplyStyle.lineHeight
 }
@@ -620,7 +664,7 @@ enum CodeLineNumbers {
 }
 
 private struct ReplyText: View {
-    @Environment(\.replyInk) private var ink
+    @Environment(\.replyTone) private var tone
     @Environment(\.replyLineHeight) private var defaultLineHeight
     let runs: [ReplyInline]
     var size: CGFloat = ReplyStyle.bodySize
@@ -632,9 +676,15 @@ private struct ReplyText: View {
     var preservesSelectionOnAppend = false
     /// Live reveal cap in UTF-16 units; nil renders the complete text.
     var truncateAt: Int? = nil
-    private var resolvedLineHeight: CGFloat { lineHeight ?? defaultLineHeight }
+    /// Quiet prose sets every run, headings and table cells included, at the quiet
+    /// size and line height in secondary ink; weight still marks the hierarchy.
+    private var resolvedSize: CGFloat { tone == .quiet ? ReplyStyle.quietSize : size }
+    private var resolvedLineHeight: CGFloat {
+        tone == .quiet ? ReplyStyle.quietLineHeight : (lineHeight ?? defaultLineHeight)
+    }
+    private var ink: NSColor { tone == .quiet ? ReplyStyle.quietInk : ReplyStyle.nativeInk }
     private var attributed: NSAttributedString {
-        let full = ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: size, weight: weight,
+        let full = ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: resolvedSize, weight: weight,
                                                   alignment: alignment, lineHeight: resolvedLineHeight,
                                                   paragraphSpacing: paragraphSpacing, ink: ink)
         guard let truncateAt, truncateAt < full.length else { return full }
@@ -643,7 +693,7 @@ private struct ReplyText: View {
     var body: some View {
         SelectableReplyText(attributed: attributed, preservesSelectionOnAppend: preservesSelectionOnAppend)
             .alignmentGuide(.firstTextBaseline) { _ in
-                let font = NSFont.systemFont(ofSize: size)
+                let font = NSFont.systemFont(ofSize: resolvedSize)
                 let naturalHeight = ceil(font.ascender - font.descender + font.leading)
                 // TextKit adds minimum-line-height leading above the glyph baseline.
                 return ceil(font.ascender) + max(0, resolvedLineHeight - naturalHeight)
@@ -836,8 +886,11 @@ final class NativeUserMessageView: NSView {
         promptClip.wantsLayer = true
         promptClip.layer?.masksToBounds = true
         addSubview(promptClip)
-        expandButton.bezelStyle = .inline
-        expandButton.font = .systemFont(ofSize: 12)
+        // LongUserPrompt's plain button: secondary text at the prompt's text inset,
+        // no bezel. `place` sets the title in secondary ink.
+        expandButton.isBordered = false
+        expandButton.alignment = .left
+        expandButton.font = .systemFont(ofSize: UserMessageStyle.toggleFontSize)
         expandButton.target = self
         expandButton.action = #selector(togglePrompt)
         expandButton.identifier = NSUserInterfaceItemIdentifier("user-prompt-toggle")
@@ -916,7 +969,8 @@ final class NativeUserMessageView: NSView {
         let natural = textHeight + gaps
         let folds = natural > UserMessageStyle.foldThreshold
         let visible = folds && !expanded ? UserMessageStyle.collapsedHeight : natural
-        return CGSize(width: width, height: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding * 2 + visible + (folds ? 30 : 0))
+        let toggle = folds ? UserMessageStyle.toggleSpacing + UserMessageStyle.toggleHeight : 0
+        return CGSize(width: width, height: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding * 2 + visible + toggle)
     }
     func place(width: CGFloat) {
         let layout = measurements(width: width)
@@ -927,10 +981,26 @@ final class NativeUserMessageView: NSView {
         promptClip.frame = CGRect(x: x, y: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding,
                                   width: layout.bubbleWidth, height: visible)
         expandButton.isHidden = !folds
-        expandButton.title = L(expanded ? "收起问题" : "展开完整问题")
-        expandButton.setAccessibilityLabel(expandButton.title)
-        expandButton.frame = CGRect(x: x + UserMessageStyle.horizontalPadding,
-            y: promptClip.frame.maxY + 4, width: max(1, layout.bubbleWidth - UserMessageStyle.horizontalPadding * 2), height: 24)
+        if folds {
+            let title = L(expanded ? "收起问题" : "展开完整问题")
+            if expandButton.title != title {
+                let paragraph = NSMutableParagraphStyle(); paragraph.alignment = .left
+                expandButton.attributedTitle = NSAttributedString(string: title, attributes: [
+                    .font: NSFont.systemFont(ofSize: UserMessageStyle.toggleFontSize),
+                    .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph
+                ])
+                expandButton.setAccessibilityLabel(title)
+            }
+            // At the text inset, toggleSpacing below the prompt, on the row
+            // LongUserPrompt gives its button. It hugs its title like that button,
+            // so the bubble's blank corner is no hit target.
+            let textWidth = max(1, layout.bubbleWidth - UserMessageStyle.horizontalPadding * 2)
+            let titleWidth = expandButton.intrinsicContentSize.width
+            expandButton.frame = CGRect(x: x + UserMessageStyle.horizontalPadding,
+                                        y: promptClip.frame.maxY + UserMessageStyle.toggleSpacing,
+                                        width: titleWidth > 0 ? min(titleWidth, textWidth) : textWidth,
+                                        height: UserMessageStyle.toggleHeight)
+        }
         var y: CGFloat = 0
         for (text, size) in zip(texts, layout.sizes) {
             let frame = CGRect(x: UserMessageStyle.horizontalPadding, y: y,
@@ -1398,12 +1468,7 @@ private struct ReplyCode: View {
                 ReplyCopyButton(text: source, label: "复制代码")
             }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
-            // The settled native card uses an overlay scroller that takes no height.
-            // When macOS shows legacy scrollers (a mouse is attached), a SwiftUI
-            // scroll view reserves a scroller band below an overflowing line once it
-            // is displayed, so this card would be taller than the native card it
-            // settles into. Never reserve it; trackpad and Shift-wheel still scroll.
-            ScrollView(.horizontal) {
+            ReplyHorizontalScroll {
                 HStack(alignment: .top, spacing: 0) {
                     if lineCount > 1 {
                         SelectableReplyText(attributed: ReplyTextAttributes.codeGutter(lineCount), selectable: false)
@@ -1418,9 +1483,46 @@ private struct ReplyCode: View {
                                             bottom: ReplyStyle.Code.inset, trailing: ReplyStyle.Code.inset))
                 }
             }
-            .scrollIndicators(.never, axes: .horizontal)
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
+    }
+}
+
+/// Sideways scrolling for code cards and tables wider than the column. While the
+/// content is wider than the viewport, its trailing edge fades out so a cut-off
+/// line reads as continuing; `NativeCodeCardView` draws the same fade. The fade is
+/// a mask, so layout and hit testing are untouched, and the flag it keeps feeds no
+/// layout: it cannot start a geometry loop.
+private struct ReplyHorizontalScroll<Content: View>: View {
+    @ViewBuilder let content: Content
+    @State private var overflows = false
+    var body: some View {
+        // The settled native card uses an overlay scroller that takes no height.
+        // When macOS shows legacy scrollers (a mouse is attached), a SwiftUI
+        // scroll view reserves a scroller band below an overflowing line once it
+        // is displayed, so a card would be taller than the native card it settles
+        // into. Never reserve it; trackpad and Shift-wheel still scroll.
+        ScrollView(.horizontal) {
+            content.onGeometryChange(for: Bool.self) { proxy in
+                proxy.size.width > (proxy.bounds(of: .scrollView)?.width ?? proxy.size.width) + 0.5
+            } action: { overflows = $0 }
+        }
+        .scrollIndicators(.never, axes: .horizontal)
+        .mask { ReplyOverflowFade(active: overflows) }
+    }
+}
+
+/// Opaque, then clear across the trailing `overflowFadeWidth`; fully opaque while inactive.
+private struct ReplyOverflowFade: View {
+    let active: Bool
+    var body: some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(Color.black)
+            LinearGradient(colors: [Color.black, active ? Color.clear : Color.black],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: ReplyStyle.overflowFadeWidth)
+                .flipsForRightToLeftLayoutDirection(true)
+        }
     }
 }
 
@@ -1443,7 +1545,7 @@ private struct ReplyTable: View {
 
     var body: some View {
         // Fit the viewport first; only the minimum column widths can cause overflow.
-        ScrollView(.horizontal) {
+        ReplyHorizontalScroll {
             ReplyTableLayout(contents: contents, geometry: ReplyStyle.tableGeometry, columnCount: headers.count) {
                 cells
             }
@@ -1455,13 +1557,15 @@ private struct ReplyTable: View {
     }
 
     /// Header cells first, then one separator and one row of cells per data row:
-    /// the order `ReplyTableLayout` walks.
+    /// the order `ReplyTableLayout` walks. The first separator is the header rule.
     @ViewBuilder private var cells: some View {
         ForEach(Array(headers.indices), id: \.self) { column in
             cell(headers[column], column: column, header: true)
         }
-        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-            Rectangle().fill(.primary.opacity(0.06)).frame(height: 1)
+        ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+            Rectangle()
+                .fill(.primary.opacity(index == 0 ? ReplyStyle.Table.headerRuleOpacity : ReplyStyle.Table.rowRuleOpacity))
+                .frame(height: 1)
             ForEach(Array(headers.indices), id: \.self) { column in
                 cell(column < row.count ? row[column] : [], column: column, header: false)
             }
@@ -1471,7 +1575,8 @@ private struct ReplyTable: View {
     private func cell(_ runs: [ReplyInline], column: Int, header: Bool) -> some View {
         ReplyText(runs: runs, size: ReplyStyle.tableCellSize, weight: header ? .medium : .regular,
                   alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading)
-            .padding(.horizontal, ReplyStyle.tableGeometry.cellPadding).padding(.vertical, 8)
+            .padding(.horizontal, ReplyStyle.tableGeometry.cellPadding)
+            .padding(.vertical, ReplyStyle.Table.cellVerticalPadding)
     }
 }
 

@@ -29,6 +29,9 @@ private struct WorkbenchGlassSurface: ViewModifier {
 struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
     var minHeight: CGFloat = 28
     var horizontalPadding: CGFloat = 8
+    /// Extends the hover wash past the header's leading edge without moving the
+    /// header: padding inside the wash, the same negative padding outside it.
+    var leadingWashOutset: CGFloat = 0
 
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -40,9 +43,11 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
                     configuration.label
                     Spacer(minLength: 0)
                 }.padding(.horizontal, horizontalPadding)
+                    .padding(.leading, leadingWashOutset)
                     .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
                     .contentShape(Rectangle())
             }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                .padding(.leading, -leadingWashOutset)
                 .accessibilityValue(configuration.isExpanded ? Text("已展开") : Text("已收起"))
             WorkbenchDisclosureContent(expanded: configuration.isExpanded) { configuration.content }
         }

@@ -15,7 +15,7 @@ files = ["RevealFrameDriver", "ToolActivityView", "ConversationTranscriptView", 
          "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel",
          "ActivitySummarySettings", "ActivitySummaryController",
          "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView",
-         "ReplyMathView", "ReplyAlertBlock", "ReplySelection",
+         "ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle",
          "ConversationActivityBar", "UILocalization", "WorkbenchGlass", "WorkbenchTheme"]
 includes = ["-I", str(BIN / "Modules")]
 for path in ["swift-markdown/Sources/CAtomic/include", "swift-cmark/src/include", "swift-cmark/extensions/include"]:

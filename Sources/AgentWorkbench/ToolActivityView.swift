@@ -11,7 +11,7 @@ struct ActivityNarrativeHistoryView: View {
                 .foregroundStyle(narrative.phase == .blocked ? Color.orange : Color.secondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
-                Text(narrative.headline).font(.system(size: 12, weight: .medium))
+                Text(narrative.headline).font(.system(size: ReplyStyle.Process.labelSize, weight: .medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = narrative.detail, !detail.isEmpty {
@@ -31,6 +31,9 @@ struct ActivityNarrativeHistoryView: View {
 /// failed and uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
+    /// Core lookups (recent targets) read the app language; depending on the
+    /// locale re-runs them when the language changes.
+    @Environment(\.locale) private var locale
     @RememberedExpansion("expanded") private var expanded
     let entry: ConversationTimelineEntry
     let tools: [String: VisibleTool]
@@ -62,10 +65,10 @@ struct KimiActivityView: View {
                         Spacer(minLength: 0)
                         let attention = items.filter { $0.staysVisible && $0.status != .running }.count
                         if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
-                    }.font(.system(size: 12)).foregroundStyle(.secondary)
-                }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
+                    }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+                }.disclosureGroupStyle(ProcessDisclosureStyle())
             if expanded, let narrative {
-                ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, 20)
+                ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, ReplyStyle.Process.nestedIndent)
             }
             // Each phase contains one part. Offset identity also handles thoughts
             // and tools originating in the same provider message without collisions.
@@ -74,12 +77,12 @@ struct KimiActivityView: View {
                     if expanded || tool.staysVisible || tool.status == .failed {
                         KimiToolCard(tool: tool)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
-                            .padding(.leading, expanded ? 20 : 0)
+                            .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
                     }
                 } else if expanded {
                     KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
                         .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
-                        .padding(.leading, 20)
+                        .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
             }
         }
@@ -89,6 +92,9 @@ struct KimiActivityView: View {
 struct KimiToolCard: View {
     let tool: VisibleTool
     var onExpand: (() -> Void)? = nil
+    /// Action and status names come from core lookups in the app language;
+    /// depending on the locale re-runs them when the language changes.
+    @Environment(\.locale) private var locale
     @RememberedExpansion("expanded") private var expanded
     // A failed tool's structured output is serialized by exitCodeReport.
     // Resolve it once per body evaluation and share it across the label.
@@ -141,22 +147,22 @@ struct KimiToolCard: View {
                 }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
                     .padding(10)
                     .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
-                    .padding(.leading, 10).padding(.top, 5)
+                    .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
             }
         } label: {
             HStack(spacing: 8) {
-                Text(ToolPresentation.action(tool.name)).font(.system(size: 12)).lineLimit(1)
+                Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
                 Spacer(minLength: 0)
                 if showsAttention || tool.status == .running || exitReport != nil {
                     Image(systemName: symbol(exitReport: exitReport)).font(.system(size: 11)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: 11)).fixedSize()
                 }
-            }.font(.system(size: 12)).foregroundStyle(showsAttention ? Color.orange : Color.secondary)
+            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : Color.secondary)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
                 .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
-        }.disclosureGroupStyle(WorkbenchDisclosureStyle(horizontalPadding: 0))
+        }.disclosureGroupStyle(ProcessDisclosureStyle())
             .onChange(of: expanded) { _, value in if value { onExpand?() } }
     }
 }
