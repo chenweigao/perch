@@ -2103,6 +2103,8 @@ struct ProcessFoldRow: View {
     private var toolCalls: Int {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
+    /// Failed or unresolved tools the fold conceals; the header keeps the signal.
+    private var failures: Int { ConversationProcessFold.unresolvedCount(rows) }
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
@@ -2134,6 +2136,9 @@ struct ProcessFoldRow: View {
                 Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
                 Text("思考与工具")
                 Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录"))
+                if failures > 0 {
+                    Text(L("· \(failures) 次失败")).foregroundStyle(.orange)
+                }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
             .accessibilityValue(Text(expanded ? "已展开" : "已收起"))

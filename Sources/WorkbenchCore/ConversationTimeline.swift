@@ -115,12 +115,16 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
 /// text) behind one disclosure, leaving prompts and final answers visible.
 /// The running turn keeps its live process. Expansion is view state; folded
 /// rows stay fully intact and re-mount in place.
+///
+/// Folding is decided per turn: once a turn produced its final answer, every
+/// process row folds — including failed tools, whose count the fold header
+/// reports — because the agent has already absorbed the outcome. A turn that
+/// ended without a final answer (interrupted, disconnected) keeps its failed
+/// or unresolved tools visible: there the process itself is the diagnosis.
 public enum ConversationProcessFold {
+    /// Presentation shape only: whether a row can fold into a process group.
+    /// Tool outcomes are weighed by `fold`, which knows the turn's completion.
     public static func foldable(_ row: ConversationPresentationModel.Row) -> Bool {
-        // Reading-first history never conceals a failed, pending or uncertain tool.
-        if row.tools.values.contains(where: { $0.status != .succeeded && $0.status != .returned }) {
-            return false
-        }
         switch row.entry.presentation {
         case .activity, .commentary, .progress, .thinkingPreview, .thinkingDetails, .record, .thinkingRecord:
             return true
@@ -129,9 +133,39 @@ public enum ConversationProcessFold {
         }
     }
 
+    /// Failed, pending or uncertain tools in a row the agent never read to completion.
+    public static func unresolvedCount(_ row: ConversationPresentationModel.Row) -> Int {
+        row.tools.values.filter { $0.status != .succeeded && $0.status != .returned }.count
+    }
+
+    public static func unresolvedCount(_ rows: [ConversationPresentationModel.Row]) -> Int {
+        rows.reduce(0) { $0 + unresolvedCount($1) }
+    }
+
+    private static func isUserPrompt(_ row: ConversationPresentationModel.Row) -> Bool {
+        row.entry.presentation == .message && row.entry.messages.first?.isUserPrompt == true
+    }
+
+    /// A final assistant answer: the settled message row, or a compaction boundary
+    /// (which ends the prior turn). A trailing record or empty output means the turn
+    /// never concluded with an answer — there, failures stay visible.
+    private static func completesTurn(_ row: ConversationPresentationModel.Row) -> Bool {
+        row.entry.presentation == .message && !isUserPrompt(row)
+    }
+
     public static func fold(rows: [ConversationPresentationModel.Row], isRunning: Bool) -> [ConversationPresentationModel.Row] {
-        let lastPrompt = rows.lastIndex {
-            $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true
+        let lastPrompt = rows.lastIndex(where: isUserPrompt)
+        // For each index, whether its turn (back to the preceding prompt) ended
+        // with a final answer. Computed backwards: an answer covers the rows
+        // between it and its prompt.
+        var turnCompleted = [Bool](repeating: false, count: rows.count)
+        var seenAnswer = false
+        if !rows.isEmpty {
+            for index in stride(from: rows.count - 1, through: 0, by: -1) {
+                if completesTurn(rows[index]) { seenAnswer = true }
+                turnCompleted[index] = seenAnswer
+                if isUserPrompt(rows[index]) { seenAnswer = false }
+            }
         }
         var result: [ConversationPresentationModel.Row] = []
         var pending: [ConversationPresentationModel.Row] = []
@@ -143,7 +177,10 @@ public enum ConversationProcessFold {
         }
         for (index, row) in rows.enumerated() {
             let live = isRunning && lastPrompt != nil && index > lastPrompt!
-            if foldable(row), !live {
+            // Completed turns fold every process row; in an interrupted turn a
+            // failed or unresolved tool row remains visible on its own.
+            let foldable = foldable(row) && (turnCompleted[index] || unresolvedCount(row) == 0)
+            if foldable, !live {
                 pending.append(row)
             } else {
                 flush()
