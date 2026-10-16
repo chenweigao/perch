@@ -21,7 +21,9 @@ enum SidebarMetrics {
     static let labelSpacing: CGFloat = 8
     static let titleSize: CGFloat = 13
     static let detailSize: CGFloat = 11
-    static let cornerRadius: CGFloat = 7
+    /// Keyboard shortcut hints after a row title (⌘K, ⌘,): one size everywhere.
+    static let shortcutSize: CGFloat = 11
+    static let cornerRadius: CGFloat = WorkbenchTheme.Radius.row
     /// Project disclosure chevron column and the gap after it.
     static let disclosureWidth: CGFloat = 12
     static let disclosureSpacing: CGFloat = 4
@@ -39,18 +41,49 @@ enum SidebarMetrics {
     static let sectionBottomSpacing: CGFloat = 2
     static let sectionHeight: CGFloat = sectionTopSpacing + sectionHeaderHeight + sectionBottomSpacing
 
+    /// Compact status badge past the agent mark's bottom-trailing corner: symbol
+    /// size, the unread dot, its offset, and the gap ring cut out of the mark so
+    /// the badge reads on any brand color.
+    static let badgeSize: CGFloat = 7
+    static let badgeDotSize: CGFloat = 5
+    static let badgeOffset = CGSize(width: 3, height: 2)
+    static let badgeGap: CGFloat = 1.25
+
+    /// Hover fades: row highlights and the actions they reveal.
+    static let highlightDuration: Double = 0.1
+
     /// Row highlight strength: pressed > selected > hovered.
     static func fill(selected: Bool, hovered: Bool, pressed: Bool = false) -> Double {
-        pressed ? 0.11 : selected ? 0.08 : hovered ? 0.045 : 0
+        pressed ? WorkbenchTheme.Fill.pressed
+            : selected ? WorkbenchTheme.Fill.selected
+            : hovered ? WorkbenchTheme.Fill.hover : 0
     }
 }
 
-/// A section header title in the shared style, with an optional count and the
-/// disclosure chevron after it.
+/// The highlight behind every sidebar row and header control: one shape, the
+/// three strengths and one fade. It tints the glass; it never replaces it.
+struct SidebarHighlight: View {
+    var selected = false
+    var hovered = false
+    var pressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let opacity = SidebarMetrics.fill(selected: selected, hovered: hovered, pressed: pressed)
+        RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius).fill(Color.primary.opacity(opacity))
+            .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: opacity)
+    }
+}
+
+/// A section header title in the shared style, with an optional count and, after
+/// it, the disclosure chevron of a folding section or the ellipsis of a header
+/// that opens a menu.
 struct SidebarSectionTitle: View {
     let title: Text
     var count: Int? = nil
     var expanded: Bool? = nil
+    /// The header opens a menu instead of folding its section.
+    var menu = false
     var body: some View {
         HStack(spacing: 4) {
             title.font(.system(size: SidebarMetrics.sectionTitleSize, weight: .semibold))
@@ -63,6 +96,11 @@ struct SidebarSectionTitle: View {
             if let expanded {
                 Image(systemName: expanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 8, weight: .semibold)).foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            if menu {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: SidebarMetrics.sectionTitleSize, weight: .semibold)).foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
         }

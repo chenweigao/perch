@@ -6,18 +6,51 @@ struct SidebarAgentIndicator: View {
     let item: WorkspaceSession
 
     var body: some View {
-        AgentMark(kind: item.reference.kind, size: 13)
-            .overlay(alignment: .bottomTrailing) {
-                Group {
-                    if !item.online {
-                        Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
-                    } else if item.section == .attention {
-                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
-                    } else if item.section == .review {
-                        Circle().fill(.blue).frame(width: 5, height: 5)
+        let mark = AgentMark(kind: item.reference.kind, size: SidebarMetrics.iconSize)
+        if let badge = SidebarStatusBadge(item) {
+            // A gap ring cut out of the mark around the badge, so the badge reads on
+            // every brand color (several are orange or blue). The cut shows whatever
+            // is behind the row, the glass or the row highlight; nothing is painted.
+            mark.mask {
+                Rectangle().fill(Color.black)
+                    .overlay(alignment: .bottomTrailing) {
+                        badge.background { Capsule().fill(Color.black).padding(-SidebarMetrics.badgeGap) }
+                            .offset(SidebarMetrics.badgeOffset)
+                            .blendMode(.destinationOut)
                     }
-                }.font(.system(size: 7, weight: .bold)).offset(x: 3, y: 2)
+                    .compositingGroup()
             }
+            .overlay(alignment: .bottomTrailing) { badge.offset(SidebarMetrics.badgeOffset) }
+        } else {
+            mark
+        }
+    }
+}
+
+/// The compact rows' status: offline (the same symbol as the full indicator),
+/// waiting for input, or unread. Other states show the agent mark alone.
+private struct SidebarStatusBadge: View {
+    private enum Kind { case offline, attention, review }
+    private let kind: Kind
+
+    init?(_ item: WorkspaceSession) {
+        if !item.online { kind = .offline }
+        else if item.section == .attention { kind = .attention }
+        else if item.section == .review { kind = .review }
+        else { return nil }
+    }
+
+    var body: some View {
+        Group {
+            switch kind {
+            case .offline:
+                Image(systemName: "wifi.slash").foregroundStyle(.secondary)
+            case .attention:
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+            case .review:
+                Circle().fill(.blue).frame(width: SidebarMetrics.badgeDotSize, height: SidebarMetrics.badgeDotSize)
+            }
+        }.font(.system(size: SidebarMetrics.badgeSize, weight: .bold))
     }
 }
 

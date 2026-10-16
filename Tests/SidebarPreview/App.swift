@@ -25,7 +25,7 @@ private struct SidebarPreview: View {
     @State private var groupCreations = 0
     @State private var filter = SidebarRecentFilter.all
     var body: some View {
-        WorkspaceSplitView(newConversation: { title = "新建任务"; page = .other }) {
+        WorkspaceSplitView(newConversation: { title = "新建会话"; page = .other }) {
             WorkspaceSidebarShell(page: page, attentionCount: 2, environmentSummary: "1 个 SSH",
                                   onSearch: { showSearch = true },
                                   onNew: { title = "新建会话"; page = .other },
@@ -106,7 +106,7 @@ private struct SidebarPreview: View {
             }.padding(36).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.sheet(isPresented: $showSearch) {
             VStack(alignment: .leading, spacing: 20) {
-                Text("搜索任务").font(.title2)
+                Text("搜索项目与会话").font(.title2)
                 TextField("标题、Agent、环境或目录", text: $query).textFieldStyle(.roundedBorder)
                 Button("完成") { showSearch = false }.keyboardShortcut(.cancelAction)
             }.padding(24).frame(width: 480)

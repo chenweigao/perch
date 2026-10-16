@@ -19,8 +19,9 @@ struct HostIdentityIcon: View {
         return Image(nsImage: image).renderingMode(.original)
     }
 
+    /// This Mac, or a remote machine. `globe` stays the language symbol in settings.
     private static func symbol(for hostID: UUID?) -> String {
-        hostID == ExecutionEnvironment.localHostID ? "desktopcomputer" : "globe"
+        hostID == ExecutionEnvironment.localHostID ? "desktopcomputer" : "server.rack"
     }
 
     private static func color(for hostID: UUID?) -> NSColor {

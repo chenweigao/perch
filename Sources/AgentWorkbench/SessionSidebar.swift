@@ -35,6 +35,8 @@ struct WorkbenchSidebar: View {
         let selectedProjectID = projection.projects.first { project in
             project.sessions.contains { $0.id == model.tabs.selectedID }
         }?.id
+        // The dashboard's first-run signal: no machine list set up yet, this Mac included.
+        let addMachine: (() -> Void)? = model.configuredEnvironment ? nil : { model.configureHost() }
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个环境"),
                               environmentNeedsAttention: environmentNeedsAttention,
@@ -44,6 +46,7 @@ struct WorkbenchSidebar: View {
                               onArchive: { model.showArchive() },
                               onAllSessions: { model.showAllSessions() },
                               onGroups: { model.clearScope(); model.showHome(); model.showAllTaskGroups = true },
+                              onAddMachine: addMachine,
                               scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection)) {
             #if PERCH_ACCEPTANCE
             if experiment.sidebarVariant == "projects" { projectRows(projection, index: index) }
@@ -217,7 +220,11 @@ struct WorkbenchSidebar: View {
         result.append(.favorites)
         if favoritesExpanded {
             result += projection.favorites.map { .session($0, false) }
-            if projection.favorites.isEmpty { result.append(.emptyFavorites) }
+            // The invitation to pin needs something to pin. On a first run the picker
+            // it opens would be empty, so it waits for the first session.
+            if projection.favorites.isEmpty && model.allSessions.contains(where: { !$0.archived }) {
+                result.append(.emptyFavorites)
+            }
         }
         result.append(.projects)
         let collapsed = collapsedProjects
@@ -259,19 +266,9 @@ struct WorkbenchSidebar: View {
                 }.buttonStyle(SidebarNavigationStyle()).accessibilityIdentifier("sidebar.pin.empty")
             case .projects:
                 HStack(spacing: 6) {
-                    Menu {
-                        Picker("会话视图", selection: $groupedByProject) {
-                            Label("按项目", systemImage: "folder").tag(true)
-                            Label("平铺会话", systemImage: "list.bullet").tag(false)
-                        }.pickerStyle(.inline)
-                        Divider()
-                        Button("重新识别项目") { model.sidebarRepositories.retry() }
-                    } label: {
-                        // The same section title as 置顶; the chevron marks a menu here.
-                        SidebarSectionTitle(title: Text(groupedByProject ? L("项目") : L("最近会话")), expanded: true)
-                            .frame(height: SidebarMetrics.sectionHeaderHeight)
-                    }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                        .help("切换会话视图").accessibilityIdentifier("sidebar.layout")
+                    SidebarViewOptionsMenu(title: Text(groupedByProject ? L("项目") : L("最近会话")),
+                                           groupedByProject: $groupedByProject,
+                                           onRefresh: { model.sidebarRepositories.retry() })
                     Spacer()
                     if groupedByProject && model.sidebarRepositories.isResolving {
                         ProgressView().controlSize(.mini).help("正在识别项目…")
@@ -284,7 +281,7 @@ struct WorkbenchSidebar: View {
                             .accessibilityLabel("重新识别项目")
                     }
                     recentActions
-                }.padding(.leading, SidebarMetrics.rowInset).padding(.trailing, 2)
+                }.padding(.trailing, 2)
                     .padding(.top, SidebarMetrics.sectionTopSpacing).padding(.bottom, SidebarMetrics.sectionBottomSpacing)
             case .project(let project):
                 SidebarProjectHeader(project: project, expanded: !collapsedProjects.contains(project.id),
@@ -313,7 +310,7 @@ struct WorkbenchSidebar: View {
             }
         }
         if projection.ungrouped.isEmpty && (filter != .all || projection.favorites.isEmpty) {
-            Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
+            Text(L(key: filter == .all ? "新会话会出现在这里" : "没有符合筛选的会话"))
                 .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
                 .padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 12)
         }
@@ -335,7 +332,8 @@ struct WorkbenchSidebar: View {
             Button { showPinPicker = true } label: {
                 Image(systemName: "plus").font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.primary).frame(width: 22, height: 22)
-                    .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 6))
+                    .background(Color.primary.opacity(WorkbenchTheme.Fill.selected),
+                                in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
             }
                 .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
                 .accessibilityLabel("置顶会话").accessibilityIdentifier("sidebar.pin.add")
@@ -360,7 +358,7 @@ struct WorkbenchSidebar: View {
                 let group = summary.group
                 Button { model.showHome(groupID: group.id) } label: {
                     HStack(spacing: SidebarMetrics.labelSpacing) {
-                        Image(systemName: "folder")
+                        Image(systemName: "square.stack.3d.up")
                             .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
                             .frame(width: SidebarMetrics.iconWidth)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
@@ -385,7 +383,7 @@ struct WorkbenchSidebar: View {
     }
     @ViewBuilder private func recentFooter(_ projection: SidebarProjection) -> some View {
         if projection.recent.isEmpty {
-            Text(L(key: filter == .all ? "新任务会出现在这里" : "没有符合筛选的会话"))
+            Text(L(key: filter == .all ? "新会话会出现在这里" : "没有符合筛选的会话"))
                 .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
                 .padding(.leading, SidebarMetrics.titleOffset).padding(.vertical, 10)
         }
@@ -428,6 +426,36 @@ struct WorkbenchSidebar: View {
         SessionSidebarRow(model: model, item: item, groups: groups,
                           selected: !model.showDashboard && item.id == model.tabs.selectedID,
                           onOpen: { model.open(item) })
+    }
+}
+
+/// The 项目 header's title opens the view options. The ellipsis marks a menu, so it
+/// never reads as 置顶's fold chevron. Hover state lives here, not in the sidebar.
+private struct SidebarViewOptionsMenu: View {
+    let title: Text
+    @Binding var groupedByProject: Bool
+    let onRefresh: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Menu {
+            Picker("会话视图", selection: $groupedByProject) {
+                Label("按项目", systemImage: "folder").tag(true)
+                Label("平铺会话", systemImage: "list.bullet").tag(false)
+            }.pickerStyle(.inline)
+            Divider()
+            Button("重新识别项目", action: onRefresh)
+        } label: {
+            // The section title starts at the icon column, inside the hover fill.
+            SidebarSectionTitle(title: title, menu: true)
+                .padding(.horizontal, SidebarMetrics.rowInset)
+                .frame(height: SidebarMetrics.sectionHeaderHeight).contentShape(Rectangle())
+        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            // Drawn behind the menu control, so it does not depend on how AppKit renders the label.
+            .background { SidebarHighlight(hovered: hovered) }
+            .onHover { hovered = $0 }
+            .help("项目视图选项").accessibilityLabel("项目视图选项")
+            .accessibilityIdentifier("sidebar.layout")
     }
 }
 
@@ -487,7 +515,7 @@ struct SessionDirectoryView: View {
         let index = model.groupIndex
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(L(key: isSearchSheet ? "搜索任务" : "全部会话")).font(.title2.weight(.semibold))
+                Text(L(key: isSearchSheet ? "搜索项目与会话" : "全部会话")).font(.title2.weight(.semibold))
                 Spacer()
                 if isSearchSheet { Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
             }
@@ -620,7 +648,7 @@ struct SessionActionsMenu: View {
             Divider()
             Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
         }
-        Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "folder") }
+        Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "square.stack.3d.up") }
         Button { model.toggleTaskNotifications(item.id) } label: {
             Label(model.mutedTasks.contains(item.id) ? L("恢复任务通知") : L("静音任务通知"),
                   systemImage: model.mutedTasks.contains(item.id) ? "bell" : "bell.slash")
@@ -674,7 +702,7 @@ private struct ConnectionControls: View {
             HStack {
                 Text("环境与 Agent").foregroundStyle(.secondary); Spacer()
                 Button { dismiss(); model.configureHost() } label: { Image(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).help("添加 SSH 机器").accessibilityLabel("添加 SSH 机器")
+                    .buttonStyle(.plain).help("添加机器…").accessibilityLabel("添加机器…")
             }
             Button { dismiss(); model.showLocalSetup = true } label: {
                 Label { Text("本机 Agent…") } icon: { HostIdentityIcon(hostID: ExecutionEnvironment.localHostID) }
@@ -719,7 +747,9 @@ private struct ConnectionControls: View {
                     }
                 }.padding(.vertical, 6)
             }
-        }.font(.system(size: 11)).padding(15).background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 10)).padding(10)
+        }.font(.system(size: 11)).padding(15)
+            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+            .padding(10)
     }
     @State private var bridgeUpdating = false
     @State private var bridgeUpdateError: String?
@@ -742,7 +772,11 @@ private struct ConnectionControls: View {
                              update: (() -> Void)? = nil, reconnect: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Circle().fill(online ? .green : .orange).frame(width: 5, height: 5)
+                // Offline uses the one offline symbol; a column keeps the names aligned.
+                Group {
+                    if online { Circle().fill(.green).frame(width: 5, height: 5) }
+                    else { Image(systemName: "wifi.slash").foregroundStyle(.orange) }
+                }.frame(width: SidebarMetrics.iconWidth)
                 Text(name); Spacer()
                 Text(LocalizedStringKey(online ? "已连接" : error == nil ? "未连接" : "需要处理")).foregroundStyle(.secondary)
                 if updating {

@@ -114,18 +114,15 @@ struct SessionRowChrome<Indicator: View>: View {
                 }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
                     .frame(width: actionWidth, alignment: .trailing).clipped()
                     .background {
-                        if compact && showActions { RoundedRectangle(cornerRadius: 6).fill(.regularMaterial) }
+                        if compact && showActions {
+                            RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip).fill(.regularMaterial)
+                        }
                     }
                     .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: showActions)
+                    .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: showActions)
             }.frame(width: trailingWidth, alignment: .trailing)
         }.padding(.trailing, 5).frame(height: rowHeight)
-            .background {
-                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius)
-                    .fill(Color.primary.opacity(SidebarMetrics.fill(selected: selected, hovered: hovered)))
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: selected)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: hovered)
-            }
+            .background { SidebarHighlight(selected: selected, hovered: hovered) }
             .contentShape(Rectangle()).onHover { hovered = $0 }
             // Native tooltip carries what the row cannot show: the full title
             // plus host and directory. A custom card covered the reading area.
