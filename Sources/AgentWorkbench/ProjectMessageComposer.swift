@@ -81,7 +81,8 @@ struct ProjectMessageComposer: View {
                                         Button { choose(path) } label: {
                                             Text(path).font(.system(size: 11, design: .monospaced)).lineLimit(1).truncationMode(.middle)
                                                 .frame(maxWidth: .infinity, alignment: .leading).frame(height: 23).padding(.horizontal, 5)
-                                                .background(index == choice ? Color.primary.opacity(0.07) : .clear)
+                                                .background(index == choice ? Color.primary.opacity(WorkbenchTheme.Fill.selected) : .clear,
+                                                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
                                                 .contentShape(Rectangle())
                                         }.buttonStyle(.plain).help(path).id(index)
                                     }
@@ -92,7 +93,8 @@ struct ProjectMessageComposer: View {
                     }
                     Text("↑↓ 选择 · Return / Tab 引用 · Esc 关闭，不会发送消息")
                         .font(.system(size: 10)).foregroundStyle(.secondary)
-                }.padding(8).background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 8))
+                }.padding(8).background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             }
             let references = ProjectFileReference.references(in: text)
             if !references.isEmpty {
@@ -113,7 +115,8 @@ struct ProjectMessageComposer: View {
                                 Button { remove(reference) } label: { Image(systemName: "xmark.circle.fill") }
                                     .help("移除文件引用").accessibilityLabel("移除文件引用")
                             }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
-                                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5))
+                                .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
                         }
                     }
                 }
@@ -129,7 +132,8 @@ struct ProjectMessageComposer: View {
                                 Button { remove(paste) } label: { Image(systemName: "xmark.circle.fill") }
                                     .help("移除粘贴内容").accessibilityLabel("移除粘贴内容")
                             }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
-                                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5))
+                                .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
                         }
                     }
                 }

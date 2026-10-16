@@ -59,7 +59,7 @@ struct KimiWorkspaceView: View {
                 VStack(spacing: 14) {
                     if connection.loading { ProgressView("正在读取会话…") }
                     else {
-                        Text(connection.actionError ?? L("Unable to load this conversation.")).foregroundStyle(.secondary).textSelection(.enabled)
+                        Text(connection.actionError ?? L("无法读取此会话。")).foregroundStyle(.secondary).textSelection(.enabled)
                         Button("Retry") { connection.select(id) }.disabled(!connection.online)
                     }
                 }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -397,7 +397,7 @@ private struct KimiTimeline: View {
                                 Button("仅允许本次") { connection.resolve(approval, decision: "approved") }.buttonStyle(.borderedProminent)
                                 Button("拒绝") { connection.resolve(approval, decision: "rejected") }
                             }.disabled(!connection.online || !connection.snapshotReady || connection.resolving.contains(approval.id))
-                        }.padding(16).background(.orange.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+                        }.padding(16).background(.orange.opacity(0.05), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                     }
                     ForEach(c.snapshot.pendingQuestions) { question in KimiQuestionView(question: question, connection: connection) }.id(c.snapshot.session.id)
                 }
@@ -527,14 +527,14 @@ struct KimiQuestionView: View {
                 }
                 .padding(10)
                 .background(isCurrent ? Color.accentColor.opacity(0.06) : .clear,
-                            in: RoundedRectangle(cornerRadius: 8))
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
             }
             Button("提交回答") {
                 guard sessionID == nil || sessionID == connection.selectedId else { return }
                 connection.answer(question, answers: answers)
             }.buttonStyle(.borderedProminent)
                 .disabled(!submittable || !connection.online || !connection.snapshotReady || connection.resolving.contains(question.id))
-        }.padding(16).background(kimiAccent.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+        }.padding(16).background(kimiAccent.opacity(0.05), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
     }
 
     private func selected(_ option: String, in q: KimiQuestion.Item) -> Bool {

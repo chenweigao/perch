@@ -140,7 +140,7 @@ func checkDashboard() throws {
     let scoped = DashboardContext(scope: ActiveScope(groupName: "Perch", hostName: "dev-env"))
     precondition(scoped.scope.facets.map(\.name) == ["Perch", "dev-env"])
     precondition(scoped.scope.facets.map(\.kind) == [.group, .host])
-    precondition(scoped.scope.facets.map(\.symbol) == ["folder", "server.rack"])
+    precondition(scoped.scope.facets.map(\.symbol) == ["square.stack.3d.up", "server.rack"])
     precondition(ActiveScope().isEmpty && ActiveScope().facets.isEmpty)
     precondition(ActiveScope(groupName: "Perch").facets.map(\.kind) == [.group])
     precondition(ActiveScope(hostName: "dev-env").facets.map(\.kind) == [.host])

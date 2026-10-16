@@ -13,7 +13,7 @@ defaults.set(["zh-Hans"], forKey: "AppleLanguages")
 for language in [AppLanguage.en, .zhHans, .en] {
     defaults.set(language.rawValue, forKey: AppLanguage.defaultsKey)
     let count = 3
-    precondition(L("工作台") == (language == .en ? "Workspace" : "工作台"))
+    precondition(L("工作台") == (language == .en ? "Workbench" : "工作台"))
     precondition(L("\(count) 个 SSH") == (language == .en ? "3 SSH" : "3 个 SSH"))
     precondition(L("\(count) 秒后重连") == (language == .en ? "Reconnecting in 3 s" : "3 秒后重连"))
     precondition(L("About Perch") == (language == .en ? "About Perch" : "关于 Perch"))

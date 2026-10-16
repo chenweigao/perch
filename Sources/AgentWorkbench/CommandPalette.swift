@@ -31,8 +31,9 @@ struct CommandPalette: View {
             Text("↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭")
                 .font(.system(size: 10)).foregroundStyle(.secondary).padding(10)
         }.frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary.opacity(0.08)))
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
+                .strokeBorder(Color.primary.opacity(WorkbenchTheme.Stroke.hairline)))
             .accessibilityLabel("命令建议，\(completion.matches.count) 项")
     }
 }
@@ -58,8 +59,10 @@ private struct CommandPaletteRow: View {
                     Text("\(command.children.count) 个子命令").font(.system(size: 10)).foregroundStyle(.tertiary)
                 }
             }.padding(.horizontal, 10).padding(.vertical, 7).contentShape(Rectangle())
-                .background(selected || hovered ? Color.primary.opacity(0.06) : .clear,
-                            in: RoundedRectangle(cornerRadius: 6))
+                // The keyboard row outranks the pointer's, so hover never reads as a second selection.
+                .background(Color.primary.opacity(selected ? WorkbenchTheme.Fill.selected
+                                                  : hovered ? WorkbenchTheme.Fill.hover : 0),
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .accessibilityAddTraits(selected ? .isSelected : [])
     }

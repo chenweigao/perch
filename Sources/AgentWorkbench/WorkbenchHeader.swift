@@ -19,7 +19,7 @@ struct WorkbenchHeader: View {
                     // The same symbols as the sidebar destinations.
                     Image(systemName: model.showArchived ? "archivebox" : model.onlyAttention ? "tray"
                           : model.showSessionDirectory ? "bubble.left.and.bubble.right"
-                          : model.selectedGroup != nil ? "folder" : model.showAllTaskGroups ? "square.stack.3d.up" : "square.grid.2x2")
+                          : model.selectedGroup != nil || model.showAllTaskGroups ? "square.stack.3d.up" : "square.grid.2x2")
                         .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
                 }
             }.frame(width: WorkbenchChrome.sidebarSymbolWidth)
@@ -136,7 +136,7 @@ struct WorkbenchHeaderActions: View {
                         .buttonStyle(.plain).help("编辑任务组").accessibilityLabel("编辑任务组")
                 }
                 Menu {
-                    Button("原生对话…") { model.startNewTask() }
+                    Button("会话…") { model.startNewTask() }
                     Button("远端终端…") { model.showNewTerminal = true }.disabled(model.selectedConnection?.online != true)
                     Button("任务组…") { model.editGroup() }
                 } label: { WorkbenchToolbarSymbol(name: "plus").workbenchControlSurface() }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()

@@ -359,7 +359,7 @@ struct NewTaskView: View {
                         icon: { HostIdentityIcon.menuImage(for: kimi.host.id) }
                 }
             }.menuStyle(.borderlessButton).menuIndicator(.hidden)
-                .fixedSize(horizontal: false, vertical: true).accessibilityLabel("运行环境")
+                .fixedSize(horizontal: false, vertical: true).accessibilityLabel("机器")
             Rectangle().fill(.quaternary).frame(width: 1, height: 14)
             Button { showDirectory.toggle() } label: {
                 DraftMenuLabel {
@@ -397,7 +397,7 @@ struct NewTaskView: View {
                         ProgressView().controlSize(.mini)
                         Text("正在连接所选 Agent…")
                     } else {
-                        Label("尚未连接所选 Agent。", systemImage: "network")
+                        Label("尚未连接所选 Agent。", systemImage: "wifi.slash")
                         Spacer(minLength: 0)
                         Button("连接") { if provider == .kimi { kimi.connect() } else { native.connect() } }
                     }

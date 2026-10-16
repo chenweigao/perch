@@ -91,7 +91,7 @@ private struct DashboardPreview: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("任务组").font(.caption).foregroundStyle(.secondary)
                     ForEach(demoGroups) { group in
-                        Label(group.name, systemImage: "folder")
+                        Label(group.name, systemImage: "square.stack.3d.up")
                     }
                 }.padding(16)
             } environments: { Text("离线示例数据").padding() }

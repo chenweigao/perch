@@ -129,18 +129,27 @@ struct WorkbenchDisclosureContent<Content: View>: View {
     }
 }
 struct WorkbenchDisclosureButtonStyle: ButtonStyle {
+    /// The keyboard highlight of a list built from these buttons. A press
+    /// outranks it, and it outranks hover, so one row never shows two fills.
+    var selected = false
+
     func makeBody(configuration: Configuration) -> some View {
-        DisclosureButtonBody(configuration: configuration)
+        DisclosureButtonBody(configuration: configuration, selected: selected)
     }
 
     private struct DisclosureButtonBody: View {
         let configuration: ButtonStyle.Configuration
+        let selected: Bool
         @State private var hovered = false
         var body: some View {
             configuration.label
-                .background(Color.primary.opacity(configuration.isPressed ? 0.05 : hovered ? 0.025 : 0),
-                            in: RoundedRectangle(cornerRadius: 6))
+                .background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6))
                 .onHover { hovered = $0 }
+        }
+        private var wash: Double {
+            configuration.isPressed ? WorkbenchTheme.Fill.pressed
+                : selected ? WorkbenchTheme.Fill.selected
+                : hovered ? WorkbenchTheme.Fill.hover : 0
         }
     }
 }

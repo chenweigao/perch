@@ -496,6 +496,6 @@ struct NativeInteractionView: View {
                 TextField("填写回答", text: $text).textFieldStyle(.roundedBorder)
                 HStack { Button("提交回答") { submit(["value": .string(text)]) }; Button("取消") { submit(["cancelled": .bool(true)]) } }
             }
-        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(.orange.opacity(0.06), in: RoundedRectangle(cornerRadius: 10)).disabled(!connection.online || submitting)
+        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(.orange.opacity(0.06), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)).disabled(!connection.online || submitting)
     }
 }

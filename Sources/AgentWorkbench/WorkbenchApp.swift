@@ -35,13 +35,13 @@ struct WorkbenchApp: App {
                 }
             }
             CommandGroup(replacing: .newItem) {
-                Button(L("新建任务")) { model.startNewTask() }.keyboardShortcut("n")
+                Button(L("新建会话")) { model.startNewTask() }.keyboardShortcut("n")
                 Button(L("添加机器…")) { model.configureHost() }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button(L("新建远端终端…")) { model.showNewTerminal = true }.keyboardShortcut("t")
                     .disabled(model.selectedConnection?.online != true)
             }
             CommandMenu(L("Conversation")) {
-                Button(L("搜索任务")) { model.showSessionSearch = true }.keyboardShortcut("k")
+                Button(L("搜索项目与会话")) { model.showSessionSearch = true }.keyboardShortcut("k")
                 Button(L("Find in conversation")) {
                     model.showConversationFind = true
                     NotificationCenter.default.post(name: .init("PerchFocusFind"), object: nil)
@@ -56,7 +56,7 @@ struct WorkbenchApp: App {
                 Divider()
                 Button(L("Back")) { model.navigate(-1) }.keyboardShortcut("[", modifiers: .command).disabled(!model.canNavigate(-1))
                 Button(L("Forward")) { model.navigate(1) }.keyboardShortcut("]", modifiers: .command).disabled(!model.canNavigate(1))
-                Button(L("Next task needing attention")) { model.nextAttentionTask() }.keyboardShortcut("j", modifiers: [.command, .shift])
+                Button(L("下一个待处理会话")) { model.nextAttentionTask() }.keyboardShortcut("j", modifiers: [.command, .shift])
             }
             CommandGroup(after: .help) {
                 Button(L("终端显示信息…")) { model.inspectRendering() }.disabled(model.selectedTerminal == nil)

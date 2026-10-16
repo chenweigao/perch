@@ -43,7 +43,7 @@ struct WorkbenchSettings: View {
                     }
                 }
                 Button { editingHost = nil; showSSH = true } label: {
-                    Label("添加 SSH 环境…", systemImage: "plus")
+                    Label("添加机器…", systemImage: "plus")
                         .padding(.horizontal, 6).padding(.vertical, 4)
                         .contentShape(Rectangle())
                 }
@@ -191,7 +191,7 @@ private struct SettingsSectionHeader: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 20, height: 20)
-                .background(tint.gradient, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .background(tint.gradient, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
         }
     }
 }
@@ -297,8 +297,8 @@ private struct SettingsRow<Content: View, Trailing: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(Color.primary.opacity(hovered ? 0.05 : 0),
-                    in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .background(Color.primary.opacity(hovered ? WorkbenchTheme.Fill.hover : 0),
+                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
         .onHover { hovered = $0 }
         .accessibilityElement(children: .combine)
     }

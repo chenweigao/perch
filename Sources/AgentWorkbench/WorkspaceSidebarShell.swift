@@ -16,6 +16,8 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let onArchive: () -> Void
     var onAllSessions: (() -> Void)? = nil
     var onGroups: (() -> Void)? = nil
+    /// Set while no machine is configured: the footer then offers the add-machine sheet.
+    var onAddMachine: (() -> Void)? = nil
     var scrollRows = true
     var scrollTargetID: String? = nil
     @ViewBuilder let rows: Rows
@@ -30,7 +32,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 HStack(spacing: 4) {
                     // A field-like target: tinted, never bordered, same height as rows.
                     navigation("搜索项目与会话", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
-                        .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
+                        .background(.primary.opacity(WorkbenchTheme.Fill.surface), in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
                         .accessibilityIdentifier("sidebar.search")
                     Button(action: onNew) {
                         Image(systemName: "square.and.pencil")
@@ -68,6 +70,11 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         .accessibilityIdentifier("sidebar.groups")
                 }
                 Divider().padding(.vertical, 6)
+                if let onAddMachine {
+                    // First run: adding a machine is one visible row, not only ⚙ → 环境管理 → +.
+                    navigation("添加机器…", symbol: "server.rack", shortcut: "⇧⌘N", action: onAddMachine)
+                        .accessibilityIdentifier("sidebar.addMachine")
+                }
                 Button {
                     showEnvironments = false
                     showSettings.toggle()
@@ -80,7 +87,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                     Circle().fill(.orange).frame(width: 6, height: 6)
                                 }
                             }
-                        Text("设置与环境"); Spacer(); Text("⌘,").foregroundStyle(.tertiary)
+                        Text("设置与环境"); Spacer(); shortcutHint("⌘,")
                     }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
                     .accessibilityIdentifier("sidebar.settings")
@@ -90,7 +97,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                             environments
                         } else {
                             VStack(spacing: 3) {
-                                navigation("环境管理", symbol: "desktopcomputer") { showEnvironments = true }
+                                navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
                                     .help(environmentSummary)
                                 if environmentNeedsAttention {
                                     Text("环境需要处理").font(.caption).foregroundStyle(.orange)
@@ -123,11 +130,14 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                     Text("\(count)").font(.system(size: SidebarMetrics.detailSize, weight: .medium)).monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
-                if let shortcut {
-                    Text(shortcut).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.tertiary).fixedSize()
-                }
+                if let shortcut { shortcutHint(shortcut) }
             }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
         }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// ⌘K, ⌘, and the like: verbatim, one size and tone in every row.
+    private func shortcutHint(_ shortcut: String) -> some View {
+        Text(shortcut).font(.system(size: SidebarMetrics.shortcutSize)).foregroundStyle(.tertiary).fixedSize()
     }
 }
 
@@ -139,10 +149,13 @@ struct SidebarProjectHeader: View {
     let onToggle: () -> Void
     let onNew: () -> Void
     @State private var hovered = false
+    @State private var pressed = false
     private enum Focus { case toggle, create }
     @FocusState private var focused: Focus?
 
     var body: some View {
+        // One highlight spans the whole row, the count / + column included, like the
+        // other rows. + keeps its own hit target and hover inside it.
         HStack(spacing: 0) {
             Button(action: onToggle) {
                 // Chevron, then the icon in the column its sessions use below it.
@@ -166,12 +179,12 @@ struct SidebarProjectHeader: View {
                 }.padding(.leading, SidebarMetrics.rowInset)
                     .frame(height: project.disambiguate ? SidebarMetrics.subtitleRowHeight : SidebarMetrics.rowHeight)
                     .contentShape(Rectangle())
-            }.buttonStyle(SidebarNavigationStyle()).focused($focused, equals: .toggle)
+            }.buttonStyle(SidebarPressStyle(pressed: $pressed)).focused($focused, equals: .toggle)
                 .help(project.detail ?? project.title)
                 .accessibilityLabel(project.title)
                 .accessibilityValue(expanded ? Text("已展开") : Text("已收起"))
                 .accessibilityIdentifier("sidebar.project.\(project.id)")
-                .contextMenu { Button("新建会话", action: onNew).disabled(!canCreate) }
+                .contextMenu { Button("在此项目新建会话", action: onNew).disabled(!canCreate) }
             ZStack {
                 Text("\(project.sessions.count)").font(.system(size: SidebarMetrics.detailSize)).monospacedDigit()
                     .foregroundStyle(.tertiary)
@@ -185,7 +198,18 @@ struct SidebarProjectHeader: View {
                     .help("在此项目新建会话").accessibilityLabel("在此项目新建会话")
                     .opacity(hovered || focused != nil ? 1 : 0).allowsHitTesting(hovered || focused != nil)
             }.frame(width: 28)
-        }.padding(.top, 2).onHover { hovered = $0 }
+        }.background { SidebarHighlight(hovered: hovered, pressed: pressed) }
+            .contentShape(Rectangle()).onHover { hovered = $0 }
+            .padding(.top, 2)
+    }
+}
+
+/// The main button of a row that draws its own full-width highlight: it reports
+/// the press to the row instead of drawing a background of its own.
+private struct SidebarPressStyle: ButtonStyle {
+    @Binding var pressed: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.onChange(of: configuration.isPressed) { _, isPressed in pressed = isPressed }
     }
 }
 
@@ -240,16 +264,9 @@ private struct SidebarNavigationBody: View {
     let configuration: ButtonStyleConfiguration
     let selected: Bool
     @State private var hovered = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var opacity: Double {
-        SidebarMetrics.fill(selected: selected, hovered: hovered, pressed: configuration.isPressed)
-    }
     var body: some View {
         configuration.label.contentShape(Rectangle())
-            .background {
-                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius).fill(Color.primary.opacity(opacity))
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: opacity)
-            }
+            .background { SidebarHighlight(selected: selected, hovered: hovered, pressed: configuration.isPressed) }
             .onHover { hovered = $0 }
     }
 }

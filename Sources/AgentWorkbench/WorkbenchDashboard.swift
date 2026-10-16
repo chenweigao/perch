@@ -154,13 +154,14 @@ struct WorkbenchDashboard<RowActions: View>: View {
             if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.caption).foregroundStyle(.secondary) }
         }.font(.system(size: 12))
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                        in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
     }
 
     private var title: LocalizedStringKey {
         if attentionOnly { return "等你处理" }
         if let group { return LocalizedStringKey(group.name) }
-        if projection.emptyState == .noEnvironment || projection.emptyState == .noSessions { return "开始第一段会话" }
+        if projection.emptyState == .noEnvironment || projection.emptyState == .noSessions { return "开始首个会话" }
         return "工作台"
     }
 
@@ -202,7 +203,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         Text(facet.name).font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
                         Image(systemName: "xmark.circle.fill").font(.system(size: 10)).foregroundStyle(.tertiary)
                     }.padding(.horizontal, 9).frame(minHeight: 28)
-                        .background(Color.primary.opacity(0.05), in: Capsule()).contentShape(Capsule())
+                        .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule()).contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
@@ -278,7 +279,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
             Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
                 HStack(spacing: 10) {
-                    Button("连接远程机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
+                    Button("添加机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
                         .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
                     Button("检测本机 Agent…", action: onStartLocal)
                 }.padding(.top, 4)
@@ -349,7 +350,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
             .font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
     }
 
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
@@ -381,7 +382,12 @@ struct QueueRow<Actions: View>: View {
     let onMarkReviewed: () -> Void
     let actions: Actions
     @State private var hovered = false
+    /// The row's own target and each control on it. Focus on any of them shows the
+    /// hover actions, so the keyboard reaches 已查看 and 管理归属 as the pointer does.
+    private enum Focus { case open, group, otherGroups, manage, reviewed }
+    @FocusState private var focus: Focus?
 
+    private var showActions: Bool { hovered || focus != nil }
     private var groupBadge: String? { SessionGroupIndex.label(groups.map(\.name)) }
     private var tooltip: String {
         var lines = [item.title]
@@ -398,9 +404,10 @@ struct QueueRow<Actions: View>: View {
         HStack(alignment: .top, spacing: 12) {
             SessionStatusIndicator(item: item).frame(width: 17, height: 16).padding(.top, 2).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                // The row's button reads the title and metadata, so the text is not read twice.
+                Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2).accessibilityHidden(true)
                 HStack(spacing: 6) {
-                    Text(metadata).lineLimit(1).truncationMode(.middle).layoutPriority(-1)
+                    Text(metadata).lineLimit(1).truncationMode(.middle).layoutPriority(-1).accessibilityHidden(true)
                     membershipControls
                 }.font(.system(size: 11)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
@@ -409,30 +416,71 @@ struct QueueRow<Actions: View>: View {
                     .foregroundStyle(waiting ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
                     .fixedSize()
                     .padding(.top, 2)
-                    .opacity(hovered && showsHoverAction ? 0 : 1)
+                    .opacity(showActions && showsHoverAction ? 0 : 1)
+                    .accessibilityHidden(true)
             }
             if showsHoverAction {
                 Button("已查看", action: onMarkReviewed)
                     .font(.system(size: 11))
                     .padding(.horizontal, 8).padding(.vertical, 2)
-                    .background(Color.primary.opacity(0.06), in: Capsule())
+                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule())
                     .padding(.top, 1).fixedSize()
-                    .opacity(hovered ? 1 : 0)
+                    .focused($focus, equals: .reviewed)
+                    .opacity(showActions ? 1 : 0)
             }
         }.padding(.horizontal, 10).padding(.vertical, 11)
             .opacity(item.online ? 1 : 0.55)
             .contentShape(Rectangle())
-            .onTapGesture { if item.online { onOpen() } }
-            .background(hovered && item.online ? Color.primary.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 8))
+            .onTapGesture { openIfOnline() }
+            .background { openTarget }
             .overlay(alignment: .bottom) { Divider().padding(.leading, 39).opacity(0.5) }
             .onHover { hovered = $0 }
-            .contextMenu { actions }
+            .contextMenu {
+                if showsHoverAction {
+                    Button("标为已查看", action: onMarkReviewed)
+                    Divider()
+                }
+                actions
+            }
             .help(tooltip)
             .accessibilityElement(children: .contain)
-            .accessibilityAction(named: Text("打开会话")) { if item.online { onOpen() } }
     }
 
     private var showsHoverAction: Bool { item.canMarkReviewed && item.online }
+
+    private func openIfOnline() { if item.online { onOpen() } }
+
+    /// Keyboard focus reads as selection, never as a hover.
+    private var highlight: Double {
+        guard item.online else { return 0 }
+        if focus == .open { return WorkbenchTheme.Fill.selected }
+        return hovered ? WorkbenchTheme.Fill.hover : 0
+    }
+
+    private var accessibilityDetail: String {
+        [metadata, time ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// The row's button, drawn behind the content so the membership controls stay
+    /// separate targets. A plain Button joins the key view loop only with Keyboard
+    /// Navigation on; this target is focusable either way, Return or Space opens it,
+    /// and VoiceOver reads it as a button. The pointer opens the row through the tap above.
+    private var openTarget: some View {
+        RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row)
+            .fill(Color.primary.opacity(highlight))
+            .focusable(item.online)
+            .focused($focus, equals: .open)
+            .focusEffectDisabled()
+            .onKeyPress(.return) { openIfOnline(); return .handled }
+            .onKeyPress(.space) { openIfOnline(); return .handled }
+            .accessibilityElement()
+            .accessibilityLabel(item.title)
+            .accessibilityValue(accessibilityDetail)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { openIfOnline() }
+            .modifier(MarkReviewedAccessibilityAction(isAvailable: showsHoverAction, action: onMarkReviewed))
+            .disabled(!item.online)
+    }
 
     /// Group membership rides the metadata line instead of a full-width third row;
     /// every row still states its group, and ungrouped rows keep a visible action.
@@ -440,11 +488,12 @@ struct QueueRow<Actions: View>: View {
         if let first = groups.first {
             Button { onOpenGroup(first.id) } label: {
                 HStack(spacing: 3) {
-                    Image(systemName: "folder").font(.system(size: 9)).accessibilityHidden(true)
+                    Image(systemName: "square.stack.3d.up").font(.system(size: 9)).accessibilityHidden(true)
                     Text(first.name).lineLimit(1).truncationMode(.middle).frame(maxWidth: 140)
                 }
             }.buttonStyle(QuietLinkStyle()).fixedSize().help(first.name)
                 .accessibilityLabel("打开任务组：\(first.name)")
+                .focused($focus, equals: .group)
             if groups.count > 1 {
                 Menu {
                     ForEach(groups.dropFirst()) { group in
@@ -452,16 +501,33 @@ struct QueueRow<Actions: View>: View {
                     }
                 } label: { Text("另 \(groups.count - 1) 组") }
                     .menuStyle(.borderlessButton).fixedSize()
+                    .focused($focus, equals: .otherGroups)
             }
             Button("管理归属", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
-                .opacity(hovered ? 1 : 0)
+                .focused($focus, equals: .manage)
+                .opacity(showActions ? 1 : 0)
         } else {
             Text("未归组").foregroundStyle(.tertiary)
-            Text("·").foregroundStyle(.quaternary)
+            Text("·").foregroundStyle(.quaternary).accessibilityHidden(true)
             Button("关联任务组", action: onManageGroups).buttonStyle(QuietLinkStyle()).fixedSize()
+                .focused($focus, equals: .manage)
         }
     }
 
+}
+
+/// 已查看 is a hover action on screen; VoiceOver gets it as a named action of the row's button.
+private struct MarkReviewedAccessibilityAction: ViewModifier {
+    let isAvailable: Bool
+    let action: () -> Void
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if isAvailable {
+            content.accessibilityAction(named: Text("标为已查看"), action)
+        } else {
+            content
+        }
+    }
 }
 
 /// The one actionable stat is a button; the capsule only deepens on hover.
@@ -495,7 +561,7 @@ private extension DashboardEmptyState {
     var symbol: String {
         switch self {
         case .noEnvironment: return "server.rack"
-        case .noSessions: return "plus.message"
+        case .noSessions: return "square.and.pencil"
         case .nothingPending: return "checkmark.circle"
         case .noMatches: return "line.3.horizontal.decrease.circle"
         }
@@ -508,8 +574,9 @@ private struct ChangeRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding(.horizontal, 6).padding(.vertical, 1)
-            .background(Color.primary.opacity(configuration.isPressed ? 0.07 : hovered ? 0.04 : 0),
-                        in: RoundedRectangle(cornerRadius: 6))
+            .background(Color.primary.opacity(configuration.isPressed ? WorkbenchTheme.Fill.pressed
+                                              : hovered ? WorkbenchTheme.Fill.hover : 0),
+                        in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
             .onHover { hovered = $0 }
     }
 }

@@ -968,7 +968,7 @@ final class WorkbenchModel {
         result.retryFailures(); executeBatchArchive(result)
     }
     private func archiveRequest(_ reference: SessionReference, archived: Bool = true) async throws {
-        guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError(L("The task environment is unavailable")) }
+        guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError(L("当前会话没有可用的执行环境。")) }
         if reference.kind == .kimi { try await kimi.setArchived(reference.terminalID, archived: archived, refresh: false) }
         else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) {
             try await native.setArchived(reference.terminalID, archived: archived)

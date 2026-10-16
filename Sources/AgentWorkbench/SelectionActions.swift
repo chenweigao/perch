@@ -261,7 +261,8 @@ private struct SelectionActionButton: View {
                 Image(systemName: systemImage).font(.system(size: 11))
                 Text(title).font(.system(size: 12))
             }.padding(.horizontal, 9).padding(.vertical, 6).contentShape(Rectangle())
-                .background(hovered ? Color.primary.opacity(0.07) : .clear, in: RoundedRectangle(cornerRadius: 7))
+                .background(hovered ? Color.primary.opacity(WorkbenchTheme.Fill.hover) : .clear,
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .accessibilityLabel(title)
     }
