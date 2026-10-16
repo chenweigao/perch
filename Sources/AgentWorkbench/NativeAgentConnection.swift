@@ -576,7 +576,7 @@ final class NativeAgentConnection {
             return
         }
         if SlashCommands.invocation(in: text, from: [AgentCommand(name: "goal")]) != nil {
-            actionError = L("This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation.")
+            actionError = L("此 Agent 尚未向 Perch 开放 /goal，请在其终端或 Kimi 会话中使用。")
             return
         }
         var payload: [OutboundAttachment] = []

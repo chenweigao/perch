@@ -9,9 +9,8 @@
 */
 
 /* Sidebar navigation (WorkspaceSidebarShell) */
-"搜索任务" = "Search Tasks";
 "新建会话" = "New Session";
-"工作台" = "Workspace";
+"工作台" = "Workbench";
 "待处理" = "Inbox";
 "已归档" = "Archived";
 "环境" = "Environment";
@@ -19,15 +18,14 @@
 
 /* Sidebar headings and lists (SessionSidebar) */
 "置顶" = "Pinned";
-"任务组" = "Groups";
-"新建任务组" = "New Group";
-"编辑任务组" = "Edit Group";
-"创建任务组…" = "New Group…";
+"任务组" = "Task Groups";
+"新建任务组" = "New Task Group";
+"编辑任务组" = "Edit Task Group";
+"创建任务组…" = "New Task Group…";
 "最近会话" = "Recent";
 "全部会话" = "All Sessions";
 "筛选最近会话" = "Filter Recent Sessions";
 "筛选最近会话：%@" = "Filter recent sessions: %@";
-"新任务会出现在这里" = "New tasks show up here";
 "没有符合筛选的会话" = "No sessions match the filter";
 "没有找到会话" = "No sessions found";
 "标题、Agent、环境或目录" = "Title, agent, environment, or directory";
@@ -49,8 +47,8 @@
 
 /* Session groups sheet */
 "会话分组" = "Session Groups";
-"先在侧栏新建任务组，再关联会话。" = "Create a group in the sidebar first, then assign sessions to it.";
-"可选多个任务组；取消全部选择即移出分组。不会共享对话上下文。" = "Select multiple groups; deselecting all removes the session from every group. Conversation context is never shared.";
+"先在侧栏新建任务组，再关联会话。" = "Create a task group in the sidebar first, then assign sessions to it.";
+"可选多个任务组；取消全部选择即移出分组。不会共享对话上下文。" = "Select multiple task groups; deselecting all removes the session from every task group. Conversation context is never shared.";
 "保存" = "Save";
 "取消" = "Cancel";
 "切换分支" = "Switch Branch";
@@ -63,7 +61,6 @@
 
 /* Sidebar environment popover */
 "环境与 Agent" = "Environments & Agents";
-"添加 SSH 机器" = "Add SSH Machine";
 "本机 Agent…" = "Local Agent…";
 "重新连接 Kimi" = "Reconnect Kimi";
 "原生对话" = "Native Conversations";
@@ -125,7 +122,7 @@
 
 /* Local agent setup sheet */
 "本机 Agent" = "Local Agent";
-"本机执行环境与远程 SSH 主机分开：本机工具在你选择的 Mac 目录执行，不通过 ssh localhost。" = "The local environment is separate from remote SSH hosts: local tools run in a Mac directory you choose, not through ssh localhost.";
+"本机执行环境与远程 SSH 主机分开：本机工具在你选择的 Mac 目录执行，不通过 ssh localhost。" = "The local environment is separate from remote SSH machines: local tools run in a Mac directory you choose, not through ssh localhost.";
 "已找到 omp %@" = "Found omp %@";
 "已读取版本；此检测没有验证 RPC、工具审批或运行中引导。" = "Version read; this check did not exercise RPC, tool approvals, or live steering.";
 "找到了可执行文件，但无法使用" = "Found the executable, but it is unusable";
@@ -147,7 +144,6 @@
 "浅色" = "Light";
 "深色" = "Dark";
 "Agent 与执行环境" = "Agent & Environments";
-"添加 SSH 环境…" = "Add SSH Environment…";
 "远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。" = "Remote connections reuse this Mac's SSH configuration. Connect, reconnect and remove machines from the environment menu in the sidebar.";
 "界面" = "Appearance";
 "侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
@@ -167,7 +163,7 @@
 "结束终端" = "End Terminal";
 "删除会话" = "Delete Session";
 "将从 Kimi 服务删除「%@」及其历史，无法撤销。只想收起时，请使用归档。" = "This deletes \"%@\" and its history from the Kimi service, and cannot be undone. To simply tuck it away, archive it instead.";
-"将删除工作台中的「%@」及对话记录。Agent 自身保存的历史仍保留。" = "This removes \"%@\" and its conversation record from the workspace. History kept by the agent itself is preserved.";
+"将删除工作台中的「%@」及对话记录。Agent 自身保存的历史仍保留。" = "This removes \"%@\" and its conversation record from the workbench. History kept by the agent itself is preserved.";
 "将关闭「%@」的远端进程，运行中的任务会中断。只想整理列表时，请使用本机归档。" = "This closes the remote process for \"%@\", interrupting any running task. To tidy the list instead, archive it locally.";
 "移除机器？" = "Remove Machine?";
 "移除机器" = "Remove Machine";
@@ -180,7 +176,7 @@
 "等待恢复会话" = "Waiting to Resume the Session";
 "连接后读取原会话；已不可用的会话不会自动新建。" = "The original session loads once connected; sessions that no longer exist are not recreated.";
 "连接后接回原终端；已结束的会话不会自动新建。" = "The original terminal reattaches once connected; ended sessions are not recreated.";
-"返回工作台" = "Back to Workspace";
+"返回工作台" = "Back to Workbench";
 "正在连接远端 Kimi 服务" = "Connecting to the remote Kimi service";
 "终端显示信息" = "Terminal Rendering Info";
 "终端连接已结束；可重新接入仍在运行的会话。" = "The terminal connection has ended; you can reattach to sessions that are still running.";
@@ -223,15 +219,13 @@
 "搜索要关联的对话或终端" = "Search conversations or terminals to link";
 "未连接或已结束的%@：%@" = "Offline or ended %@: %@";
 "已选 %lld 个会话 · 保存在本机" = "%lld selected · Saved locally";
-"保存任务组" = "Save Group";
+"保存任务组" = "Save Task Group";
 
 "切换侧栏" = "Toggle Sidebar";
 
 "显示或隐藏侧栏" = "Show or Hide Sidebar";
 
-"新建任务" = "New Task";
 
-"新建任务 · ⌘N" = "New Task · ⌘N";
 
 "当前会话" = "Current Session";
 
@@ -243,7 +237,7 @@
 
 "查看远端文件" = "View Remote Files";
 
-"同步会话" = "Refresh Conversation";
+"同步会话" = "Refresh Session";
 
 "重新连接" = "Reconnect";
 
@@ -258,7 +252,6 @@
 "Previous match" = "Previous match";
 "Back" = "Back";
 "Forward" = "Forward";
-"Next task needing attention" = "Next task needing attention";
 "Drafts could not be saved" = "Drafts could not be saved";
 "Keep Perch open" = "Keep Perch open";
 "Quit anyway" = "Quit anyway";
@@ -266,8 +259,7 @@
 "Notify when Perch is in the background" = "Notify when Perch is in the background";
 "Completed responses, requests for input, and failures. Click a notification to open the task." = "Completed responses, requests for input, and failures. Click a notification to open the task.";
 "Stop task" = "Stop task";
-"任务组…" = "Group…";
-"原生对话…" = "Native Conversation…";
+"任务组…" = "Task Group…";
 "新建" = "New";
 "远端终端…" = "Remote Terminal…";
 
@@ -281,7 +273,7 @@
 "清除搜索" = "Clear Search";
 "另有 %lld 个关联会话尚未同步，可在关联管理中查看。" = "%lld other linked sessions have not synced yet. Find them in Link Existing Sessions.";
 "归档已完成 %lld" = "Archive Completed %lld";
-"任务组操作" = "Group Actions";
+"任务组操作" = "Task Group Actions";
 "正在归档…" = "Archiving…";
 "状态未同步" = "State not synced";
 "需要处理" = "Needs Attention";
@@ -388,7 +380,7 @@
 "Paused" = "Paused";
 
 "接着做" = "Pick up where you left off";
-"全部任务组" = "All groups";
+"全部任务组" = "All task groups";
 "打开任务组" = "Open a task group";
 "工作台操作" = "Workbench actions";
 "归档已查看结果 · %lld" = "Archive reviewed results · %lld";
@@ -408,18 +400,16 @@
 "断开或离开前正在运行的任务，重新连接后的状态：" = "Tasks running before the disconnect, as found after reconnecting:";
 "连接后才能确认这些会话的当前状态。" = "Reconnect to check the current status of these sessions.";
 "远程 Agent 沿用你的 SSH 配置。本机环境目前仅支持安装检测。" = "Remote agents use your SSH configuration. Local environments currently support installation detection only.";
-"连接远程机器…" = "Connect a remote machine…";
 "检测本机 Agent…" = "Detect local agents…";
 "连接后查看最新进展" = "Reconnect to see the latest activity";
 "先连接一台运行 Agent 的机器" = "Connect a machine running an agent";
 "选择 Agent 和工作目录后开始" = "Choose an agent and working directory to begin";
-"开始第一段会话" = "Start your first conversation";
 
 "%lld 个关联 · %lld 个未归档 · %lld 个已归档" = "%lld linked · %lld unarchived · %lld archived";
 "上次会话尚未连接" = "The last session is not connected";
-"从一段新会话开始，或把已有会话关联到这个目标。" = "Start a conversation or link existing sessions to this goal.";
+"从一段新会话开始，或把已有会话关联到这个目标。" = "Start a session or link existing sessions to this goal.";
 "已归档 · %lld" = "Archived · %lld";
-"归档会话仍保留在任务组中，恢复后可继续。" = "Archived sessions remain linked to this group. Restore them to continue.";
+"归档会话仍保留在任务组中，恢复后可继续。" = "Archived sessions remain linked to this task group. Restore them to continue.";
 "本组会话" = "Group sessions";
 "添加目标：做到什么程度算完成？" = "Add a goal: what does success look like?";
 "管理关联" = "Manage linked sessions";
@@ -430,7 +420,6 @@
 
 "%lld 个未归档 · %lld 个已归档 · %lld 个尚未同步" = "%lld unarchived · %lld archived · %lld not synced";
 "Retry" = "Retry";
-"Unable to load this conversation." = "Unable to load this conversation.";
 "Choose Kimi or remove the attachments to start this task." = "Choose Kimi or remove the attachments to start this task.";
 
 /* Composer commands */
@@ -452,11 +441,9 @@
 "Goal resume requested." = "Goal resume requested.";
 "Plan mode enabled." = "Plan mode enabled.";
 "Plan mode disabled." = "Plan mode disabled.";
-"This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation." = "This agent does not expose /goal to Perch. Use its terminal or a Kimi conversation.";
 "↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭" = "↑↓ Choose · Tab Complete · Return Run a complete command · Esc Close";
 "Run command" = "Run command";
 "Goal created. First message accepted." = "Goal created. First message accepted.";
-"Goal created; the first message is unconfirmed. Check the conversation before sending again." = "Goal created; the first message is unconfirmed. Check the conversation before sending again.";
 "Choose a model before starting a goal." = "Choose a model before starting a goal.";
 "Continue this task, or type / for commands…" = "Continue this task, or type / for commands…";
 
@@ -511,8 +498,6 @@
 "安装或更新 Perch 桥接组件后重新检查。空闲的旧服务会自动安全重启；有任务运行时会等待任务结束。" = "Install or update the Perch bridge and check again. An idle old service restarts automatically; a busy service waits for its tasks to finish.";
 "安装说明" = "Installation guide";
 "已检测到远端凭据；模型目录在首次 ACP 会话握手时读取，鉴权在发送时验证。" = "Remote credentials are present. Models are read during the first ACP session handshake; authentication is verified when sending.";
-"开始任务" = "Start task";
-"开始首个任务" = "Start first task";
 "打开远端终端" = "Open remote terminal";
 "服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。" = "The service is reached through SSH at remote 127.0.0.1. Enter the file path; the token is not saved in Mac settings.";
 "服务连接" = "Service connection";
@@ -525,7 +510,7 @@
 "远端未安装 Perch 桥接组件。请安装桥接组件后重新检查。" = "The Perch bridge is not installed on the remote machine. Install it, then check again.";
 "远端桥接组件是 v%lld，此 Perch 需要 v%lld。请安装 / 更新桥接组件后重新检查。" = "The remote bridge is v%lld, but this Perch needs v%lld. Install / update the bridge, then check again.";
 "远端桥接组件是 v%lld，比此 Perch 支持的 v%lld 更新。请升级 Perch；不要降级远端组件，其他客户端可能正在使用它。" = "The remote bridge is v%lld, newer than the v%lld this Perch supports. Update Perch; do not downgrade the remote bridge, because other clients may be using it.";
-"远端桥接服务是 v%lld，此 Perch 需要 v%lld。请在主机设置中安装 / 更新桥接组件。" = "The remote bridge service is v%lld, but this Perch needs v%lld. Install / update the bridge in the host settings.";
+"远端桥接服务是 v%lld，此 Perch 需要 v%lld。请在主机设置中安装 / 更新桥接组件。" = "The remote bridge service is v%lld, but this Perch needs v%lld. Install / update the bridge in the machine settings.";
 "无法读取远端桥接组件的版本。请重新安装桥接组件后检查。" = "Could not read the remote bridge's version. Reinstall the bridge, then check again.";
 "无法读取远端桥接服务的版本。请重新安装桥接组件后重试。" = "Could not read the remote bridge service's version. Reinstall the bridge and retry.";
 "检查 Agent" = "Check agent";
@@ -564,7 +549,6 @@
 "继续后即可填写首个任务；机器、Agent、目录与模型会自动带入。" = "Continue to write your first task. The machine, agent, directory and model are carried over.";
 "缺少 Qoder SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。" = "Qoder SDK or Node.js is missing. Install the bridge and Node.js, then retry.";
 "缺少 Claude Code SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。" = "Claude Code SDK or Node.js is missing. Install the bridge and Node.js, then retry.";
-"要连接另一台机器，请添加新环境。" = "Add another environment to connect a different machine.";
 "请在远端安装并启动 Herdr，然后重新检查。" = "Install and start Herdr on the remote machine, then check again.";
 "请输入远端已存在且当前用户可访问的目录。" = "Enter an existing remote directory accessible to the current user.";
 "请输入远端项目的绝对路径。" = "Enter the absolute path of the remote project.";
@@ -761,8 +745,8 @@
 "上报时间未提供" = "Report time unavailable";
 "Load all turns" = "Load all turns";
 "Loaded conversation turns" = "Loaded conversation turns";
-"任务组：%@" = "Groups: %@";
-"打开任务组 %@" = "Open group %@";
+"任务组：%@" = "Task groups: %@";
+"打开任务组 %@" = "Open task group %@";
 "机器" = "Machine";
 "全部机器" = "All machines";
 "筛选工作台" = "Filter the workbench";
@@ -838,7 +822,7 @@
 "尚未读取到模型目录，可继续使用会话模型。" = "The model catalog is not available yet. You can keep using the session model.";
 "尚未读取到当前模型的思考档位。" = "Thinking levels for the current model are not available yet.";
 "连接恢复后可修改设置。" = "Settings can be changed after reconnecting.";
-"正在同步会话，请稍候。" = "Syncing the conversation. Please wait.";
+"正在同步会话，请稍候。" = "Syncing the session. Please wait.";
 "消息发送中，请稍候。" = "Sending the message. Please wait.";
 "正在更新模型设置…" = "Updating model settings…";
 "任务运行中，完成或停止后可修改。" = "Settings can be changed after the running task finishes or stops.";
@@ -859,7 +843,6 @@
 
 "已发现 %lld 个本机 Agent" = "Found %lld local agents";
 
-"已安装，尚未接入本机对话" = "Installed; local conversations not yet connected";
 
 "未找到可执行文件" = "Executable not found";
 
@@ -881,7 +864,6 @@
 
 "连接会复用或启动本机服务；关闭 Perch 不会停止正在执行的任务。" = "Connecting reuses or starts local services. Closing Perch leaves running tasks active.";
 
-"连接并新建任务" = "Connect and create task";
 
 "连接本机已安装的 Agent，在你选择的 Mac 项目目录执行。" = "Connect installed agents to work in a Mac project directory you choose.";
 
@@ -895,9 +877,9 @@
 
 "查看文件（只读）" = "View files (read-only)";
 
-"当前会话没有可用的执行环境。" = "This conversation has no execution environment.";
+"当前会话没有可用的执行环境。" = "This session has no execution environment.";
 
-"当前会话没有工作目录。" = "This conversation has no working directory.";
+"当前会话没有工作目录。" = "This session has no working directory.";
 
 "文件路径，可用绝对路径或相对当前目录" = "File path, absolute or relative to the working directory";
 
@@ -908,7 +890,7 @@
 "在当前执行环境中只读查看文件。" = "Browse files read-only in the current execution environment.";
 
 "仅通知需要我处理的任务" = "Only notify for tasks that need my attention";
-"完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。" = "Completion notifications are grouped. Approvals, questions and failures notify immediately. Mute individual tasks from their context menu.";
+"完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。" = "Completion notifications are grouped. Approvals, questions and failures notify immediately. Mute individual sessions from their context menu.";
 "恢复任务通知" = "Unmute task notifications";
 "静音任务通知" = "Mute task notifications";
 "通知未开启，请在系统设置 → 通知中允许 Perch。" = "Notifications are disabled. Allow Perch in System Settings → Notifications.";
@@ -937,7 +919,7 @@
 "下一项" = "Next item";
 "不关联" = "None";
 "仅允许本次" = "Allow once";
-"保存到任务组成果" = "Save to group outcomes";
+"保存到任务组成果" = "Save to task group outcomes";
 "其余变化可在下方对应分区查看。" = "See the sections below for the remaining changes.";
 "固定结论、PR 或报告，并保留来源会话。" = "Keep conclusions, pull requests, and reports with their source sessions.";
 "处理完成后进入下一项" = "Advance after resolving";
@@ -956,12 +938,12 @@
 "撤销上次归组" = "Undo last grouping";
 "新进展 · %lld" = "New activity · %lld";
 "最近回复" = "Latest reply";
-"本批最多 40 个未归档会话、24 个进行中的任务组。" = "Each batch includes up to 40 unarchived sessions and 24 active groups.";
+"本批最多 40 个未归档会话、24 个进行中的任务组。" = "Each batch includes up to 40 unarchived sessions and 24 active task groups.";
 "来源会话" = "Source session";
 "来源会话尚未同步" = "Source session has not synchronized";
 "来源：%@" = "Source: %@";
 "查看 Recap" = "View Recap";
-"查看本批内容 · %lld 个会话 · %lld 个任务组" = "Preview this batch · %lld sessions · %lld groups";
+"查看本批内容 · %lld 个会话 · %lld 个任务组" = "Preview this batch · %lld sessions · %lld task groups";
 "标为已查看" = "Mark reviewed";
 "标题" = "Title";
 "正在生成归组建议…" = "Generating grouping suggestions…";
@@ -972,7 +954,7 @@
 "添加成果" = "Add outcome";
 "添加成果与决策" = "Add outcome or decision";
 "点击生成后，将以下标题、目录末三级、已有归属、组名、目标与示例标题发送到你配置的摘要服务；不发送对话正文或工具输出。" = "Generating sends the titles, last three directory components, memberships, group names, goals, and example titles below to your configured summary service. Conversation text and tool output are excluded.";
-"现有信息不足以建议新的关联。可以补充任务组目标或会话标题后重试。" = "There is not enough evidence for new memberships. Add group goals or clearer session titles and try again.";
+"现有信息不足以建议新的关联。可以补充任务组目标或会话标题后重试。" = "There is not enough evidence for new memberships. Add task group goals or clearer session titles and try again.";
 "生成建议" = "Generate suggestions";
 "确认看过这些变化" = "Acknowledge these changes";
 "移除成果" = "Remove outcome";
@@ -1018,10 +1000,10 @@
 "常用任务组" = "Frequent task groups";
 "恢复" = "Restore";
 "编辑目标" = "Edit goal";
-"收起任务组" = "Show active groups";
+"收起任务组" = "Show active task groups";
 "正在推进的任务组" = "Active task groups";
 "搜索任务组" = "Search task groups";
-"把共同目标和相关会话放在一起，也可以直接开始会话。" = "Organize related sessions around a goal, or start a conversation directly.";
+"把共同目标和相关会话放在一起，也可以直接开始会话。" = "Organize related sessions around a goal, or start a session directly.";
 "没有匹配的任务组" = "No matching task groups";
 "暂无进行中的任务组" = "No active task groups";
 "下一步：%@" = "Next: %@";
@@ -1039,10 +1021,10 @@
 "管理归属" = "Manage groups";
 "管理任务组归属…" = "Manage task groups…";
 "任务组归属" = "Task group membership";
-"还没有任务组。在下方填写名称，保存后会创建并关联此会话。" = "No task groups yet. Enter a name below to create one and link this conversation when you save.";
+"还没有任务组。在下方填写名称，保存后会创建并关联此会话。" = "No task groups yet. Enter a name below to create one and link this session when you save.";
 "新建并关联任务组" = "Create and link a task group";
 "任务组名称（可选）" = "Task group name (optional)";
-"可选多个任务组；取消全部选择且不新建，保存后即移出所有任务组。不会共享对话上下文。" = "Select multiple groups if needed. Clear all selections and leave the name empty to remove all memberships when saving. Conversation context is not shared.";
+"可选多个任务组；取消全部选择且不新建，保存后即移出所有任务组。不会共享对话上下文。" = "Select multiple task groups if needed. Clear all selections and leave the name empty to remove all memberships when saving. Conversation context is not shared.";
 
 "分支改动" = "Branch changes";
 
@@ -1140,7 +1122,6 @@
 "全部处理完了" = "All Caught Up";
 "没有等待确认、回答或处理的事项；查看结果请到工作台。" = "Nothing is waiting for confirmation, an answer, or a fix. Results are in the workbench.";
 "共 %lld 项 · 确认、回答或处理错误；查看结果请到工作台。" = "%lld pending · approvals, questions, and errors appear here. Results are in the workbench.";
-"打开会话" = "Open Session";
 "粘贴内容已丢失，请重新粘贴后再发送。" = "The pasted content is gone. Paste it again before sending.";
 "附件需要在线上传，连接恢复后再发送。" = "Attachments upload online only; send after the connection returns.";
 "命令需要连接后执行，请等待恢复在线。" = "Commands run online only; wait for the connection to return.";
@@ -1148,8 +1129,8 @@
 "找不到这条回复对应的提问，无法重新生成。" = "No user prompt found for this reply; cannot regenerate.";
 "这条回复对应的提问没有文字内容。" = "The prompt for this reply has no text to resend.";
 "无效正则表达式" = "Invalid regular expression";
-"导出当前会话（Markdown）…" = "Export Current Conversation (Markdown)…";
-"导出当前会话（JSON）…" = "Export Current Conversation (JSON)…";
+"导出当前会话（Markdown）…" = "Export Current Session (Markdown)…";
+"导出当前会话（JSON）…" = "Export Current Session (JSON)…";
 "当前 Agent 不支持发送附件" = "This agent does not support attachments.";
 "当前 Agent 不支持附件，请切换 Agent 或移除附件后再开始。" = "This agent does not support attachments. Switch agents or remove them before starting.";
 "读取附件失败：%@" = "Failed to read attachment: %@";
@@ -1160,21 +1141,21 @@
 
 "项目" = "Projects";
 
-"临时会话" = "Temporary chats";
+"临时会话" = "Temporary sessions";
 
-"搜索项目与会话" = "Search projects and chats";
+"搜索项目与会话" = "Search projects and sessions";
 
 "设置与环境" = "Settings & environments";
 
 "更多项目" = "More projects";
 
-"显示全部 %lld 个会话" = "Show all %lld chats";
+"显示全部 %lld 个会话" = "Show all %lld sessions";
 
 "移动到项目" = "Move to project";
 
 "按所属仓库归组" = "Group by repository";
 
-"在此项目新建会话" = "New chat in this project";
+"在此项目新建会话" = "New Session in This Project";
 
 "刚刚" = "now";
 
@@ -1190,21 +1171,20 @@
 
 "重新识别项目" = "Refresh projects";
 
-"会话视图" = "Chat view";
+"会话视图" = "Session view";
 
 "按项目" = "By project";
 
 "平铺会话" = "Flat list";
 
-"更多会话（共 %lld 个）" = "More chats (%lld total)";
+"更多会话（共 %lld 个）" = "More sessions (%lld total)";
 
-"置顶常用会话，随时继续" = "Pin frequent chats to pick up anytime";
+"置顶常用会话，随时继续" = "Pin frequent sessions to pick up anytime";
 
-"切换会话视图" = "Switch chat view";
 
-"搜索会话" = "Search chats";
+"搜索会话" = "Search sessions";
 
-"没有可置顶的会话" = "No chats available to pin";
+"没有可置顶的会话" = "No sessions available to pin";
 
 "上移，更早发送" = "Move up to send earlier";
 
@@ -1255,7 +1235,7 @@
 
 "计划已更新，修改意见已保留，请核对后再提交。" = "The plan changed. Your feedback is preserved; review it before submitting.";
 
-"计划已变化或会话已切换，请重新查看。" = "The plan or chat changed. Review it again.";
+"计划已变化或会话已切换，请重新查看。" = "The plan or session changed. Review it again.";
 
 "计划已暂缓" = "Plan deferred";
 
@@ -1464,7 +1444,7 @@
 "服务端未确认删除" = "The server did not confirm the deletion.";
 "Kimi 权限模式无效" = "The permission mode is not valid for Kimi.";
 "附件上传响应缺少文件标识" = "The attachment upload response has no file ID.";
-"发送未确认，草稿已保留。请检查会话后再发送。\n%@" = "Send unconfirmed; your draft was kept. Check the conversation before sending again.\n%@";
+"发送未确认，草稿已保留。请检查会话后再发送。\n%@" = "Send unconfirmed; your draft was kept. Check the session before sending again.\n%@";
 "引导未确认；消息已接收。%@" = "Steering unconfirmed; the message was accepted. %@";
 "Stop request not confirmed: %@" = "Stop request not confirmed: %@";
 "原生对话托管服务未安装或不可用" = "The native conversation service is not installed or not available.";
@@ -1475,10 +1455,10 @@
 "操作已受理，同步失败：%@" = "Action accepted; sync failed: %@";
 "运行时拒绝消息" = "The runtime rejected the message.";
 "服务端没有受理记录，可移回草稿后发送" = "The server has no record of this request. Move it back to the draft and send again.";
-"请同步并核对会话，暂勿重复提交" = "Sync and check the conversation. Do not resend yet.";
+"请同步并核对会话，暂勿重复提交" = "Sync and check the session. Do not resend yet.";
 "暂不支持在 Perch 中执行 /%@，请在终端使用" = "Perch does not support running /%@ yet. Use it in the terminal.";
 "当前版本不支持 /compact 参数；草稿已保留，请调整后发送" = "This version does not support /compact arguments. Your draft was kept; edit it and send again.";
-"终止结果未知，请核对会话" = "Stop result unknown. Check the conversation.";
+"终止结果未知，请核对会话" = "Stop result unknown. Check the session.";
 "0 matches" = "0 matches";
 "All" = "All";
 "User" = "User";
@@ -1552,7 +1532,7 @@
 "%lld 天" = "%lld d";
 "文件" = "Files";
 "Git 变更" = "Git changes";
-"未选择主机" = "No host selected";
+"未选择主机" = "No machine selected";
 "已取消读取。" = "Loading cancelled.";
 "远端连接失败或已断开。" = "The remote connection failed or was closed.";
 "关闭文件面板" = "Close file panel";
@@ -1608,9 +1588,8 @@
 "SSH 转发建立超时" = "Timed out setting up SSH forwarding.";
 "请先连接远端" = "Connect to the remote machine first.";
 "此终端已不在远端列表中" = "This terminal is no longer listed on the remote machine.";
-"本地工作台读取失败，原文件已保留：%@" = "Could not read the local workspace; the original file was kept: %@";
-"工作台保存失败：%@" = "Could not save the workspace: %@";
-"The task environment is unavailable" = "The task environment is unavailable";
+"本地工作台读取失败，原文件已保留：%@" = "Could not read the local workbench; the original file was kept: %@";
+"工作台保存失败：%@" = "Could not save the workbench: %@";
 "Menlo 14 pt\n窗口 backingScaleFactor: %@\n视图逻辑尺寸: %@ pt\n视图 backing 尺寸: %@ px\nGhostty surface: %@ px\n终端网格: %@\n像素尺寸一致: %@" = "Menlo 14 pt\nWindow backingScaleFactor: %@\nView logical size: %@ pt\nView backing size: %@ px\nGhostty surface: %@ px\nTerminal grid: %@\nPixel sizes match: %@";
 "是" = "Yes";
 "否" = "No";
@@ -1621,7 +1600,7 @@
 "不会归档：%@" = "Won't archive: %@";
 "请输入远端路径。" = "Enter a remote path.";
 "路径包含无效字符。" = "The path contains invalid characters.";
-"当前会话没有远端工作目录，请输入绝对路径。" = "This conversation has no remote working directory. Enter an absolute path.";
+"当前会话没有远端工作目录，请输入绝对路径。" = "This session has no remote working directory. Enter an absolute path.";
 "远端返回了无法识别的结果。" = "The remote machine returned an unrecognized result.";
 "未跟踪" = "Untracked";
 "暂存：%@" = "Staged: %@";
@@ -1647,3 +1626,18 @@
 "回车排到下一轮发送" = "Return to send next turn";
 "回车执行命令" = "Return to run the command";
 "成果操作" = "Outcome actions";
+
+/* Sidebar and workbench consistency: canonical session, machine and task group terms (2026-10-16) */
+"下一个待处理会话" = "Next Session Needing Attention";
+"无法读取此会话。" = "Unable to load this session.";
+"此 Agent 尚未向 Perch 开放 /goal，请在其终端或 Kimi 会话中使用。" = "This agent does not expose /goal to Perch. Use its terminal or a Kimi session.";
+"目标已创建，但首条消息尚未确认。请检查会话后再发送。" = "Goal created; the first message is unconfirmed. Check the session before sending again.";
+"项目视图选项" = "Project View Options";
+"新会话会出现在这里" = "New sessions show up here";
+"新建会话 · ⌘N" = "New Session · ⌘N";
+"会话…" = "Session…";
+"开始首个会话" = "Start First Session";
+"开始会话" = "Start session";
+"连接并新建会话" = "Connect and Start Session";
+"已安装，尚未接入本机会话" = "Installed; not yet available for local sessions";
+"要连接另一台机器，请添加新机器。" = "To connect a different machine, add a new one.";

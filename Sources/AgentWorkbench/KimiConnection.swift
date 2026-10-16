@@ -1039,7 +1039,7 @@ final class KimiConnection {
             }
         } catch {
             let message = L("发送未确认，草稿已保留。请检查会话后再发送。\n\(error.localizedDescription)")
-            if startingGoal { commandFeedback[id] = L("Goal created; the first message is unconfirmed. Check the conversation before sending again.") }
+            if startingGoal { commandFeedback[id] = L("目标已创建，但首条消息尚未确认。请检查会话后再发送。") }
             updatePrompt(promptID, for: id, status: "unknown", error: message)
             if selectedId == id { actionError = message }
         }
