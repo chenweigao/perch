@@ -117,7 +117,7 @@ private struct KimiComposerView: View {
                     .lineLimit(4).help(feedback)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if let completion = palette.completion(for: connection.drafts[sessionID] ?? "", in: KimiCommand.catalog) {
+            if let completion = palette.completion(for: connection.drafts[sessionID] ?? "", in: commands) {
                 CommandPalette(completion: completion, selection: palette.selection) { command in
                     apply(command, completion, to: sessionID)
                 }
@@ -189,6 +189,10 @@ private struct KimiComposerView: View {
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
         }
+        // Project commands appear once the session's working directory is known.
+        .task(id: connection.conversation?.snapshot.session.cwd ?? "") {
+            connection.loadProjectCommands(for: sessionID)
+        }
         // Images dragged from browsers arrive as image data, not file URLs.
         .dropDestination(for: NSImage.self) { images, _ in
             var accepted = false
@@ -213,13 +217,15 @@ private struct KimiComposerView: View {
     }
     private func handle(_ key: ComposerKey, for id: String) -> Bool {
         let draft = connection.drafts[id] ?? ""
-        if let completion = palette.completion(for: draft, in: KimiCommand.catalog) {
+        if let completion = palette.completion(for: draft, in: commands) {
             switch key {
             case .up: palette.move(-1, count: completion.matches.count)
             case .down: palette.move(1, count: completion.matches.count)
             case .enter, .tab:
                 guard let command = palette.choice(in: completion) else { return false }
-                if key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
+                // Runtime commands fully typed run on Return; project commands
+                // expand into the draft instead (the runtime does not know them).
+                if command.prompt == nil, key == .enter && (completion.filter == command.name || (command.aliases ?? []).contains(completion.filter)) { return false }
                 apply(command, completion, to: id)
             case .escape: palette.dismiss(draft)
             }
@@ -234,7 +240,8 @@ private struct KimiComposerView: View {
     }
     private func apply(_ command: AgentCommand, _ completion: CommandCompletion, to id: String) {
         onInput()
-        let draft = SlashCommands.draft(applying: command, to: completion)
+        let draft = command.prompt != nil ? ProjectCommandCatalog.expand(command, arguments: "")
+            : SlashCommands.draft(applying: command, to: completion)
         connection.drafts[id] = draft
         palette.draftChanged(draft)
     }
@@ -250,6 +257,11 @@ private struct KimiComposerView: View {
     private var isCommandDraft: Bool {
         let draft = connection.drafts[connection.selectedId ?? ""] ?? ""
         return SlashCommands.invocation(in: draft, from: KimiCommand.catalog) != nil
+    }
+    /// The runtime's catalog plus the session's project commands (loaded lazily
+    /// once the working directory is known).
+    private var commands: [AgentCommand] {
+        KimiCommand.catalog + (connection.projectCommands[sessionID] ?? [])
     }
     private var isRunning: Bool { connection.conversation?.snapshot.session.isTurnRunning == true }
     /// Return steers a running turn; ⌘Return and the send menu queue the prompt

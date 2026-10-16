@@ -59,6 +59,15 @@ final class KimiConnection {
         return reported
     }
     var drafts: [String: String] = [:] { didSet { persistDrafts(coalescing: true) } }
+    /// Project slash commands (`.claude/commands` 等) per session, loaded once per
+    /// launch. They expand into the draft before sending; the runtime never sees them.
+    private(set) var projectCommands: [String: [AgentCommand]] = [:]
+    var projectCommandsLoading: Set<String> = []
+    /// Stores the parsed result; the loader lives in ProjectCommandsLoader.swift.
+    func setProjectCommands(_ commands: [AgentCommand], for id: String) {
+        projectCommands[id] = commands
+        projectCommandsLoading.remove(id)
+    }
     private(set) var pendingPrompts: [String: [KimiPrompt]] = [:]
     var attachments: [String: [URL]] = [:] { didSet { persistDrafts() } }
     /// Instructions written while offline. They deliver only after a reconnect,
@@ -955,6 +964,12 @@ final class KimiConnection {
             return
         }
         var text = expansion.text
+        // A draft naming a project command expands to its template; the runtime
+        // only knows its own commands, so the file content is the actual prompt.
+        if let invocation = SlashCommands.invocation(in: text, from: projectCommands[id] ?? []),
+           invocation.command.prompt != nil {
+            text = ProjectCommandCatalog.expand(invocation.command, arguments: invocation.arguments)
+        }
         commandErrors[id] = nil
         do {
             if let command = try KimiCommand.parse(text) {
