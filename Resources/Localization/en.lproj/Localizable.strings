@@ -1221,6 +1221,7 @@
 
 "%lld 次调用" = "%lld calls";
 "· %lld 次失败" = "· %lld failed";
+"· %lld 个文件 +%lld −%lld" = "· %lld files +%lld −%lld";
 
 "%lld 条记录" = "%lld records";
 
