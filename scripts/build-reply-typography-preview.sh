@@ -15,7 +15,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
     Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift \
     Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/ReplySelection.swift \
-    Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/ImagePreviewPanel.swift \
+    Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift Sources/AgentWorkbench/ImagePreviewPanel.swift \
     Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift \
     Tests/ReplyTypographyPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/ReplyTypographyPreview"

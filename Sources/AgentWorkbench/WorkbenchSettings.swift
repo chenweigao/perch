@@ -6,6 +6,7 @@ struct WorkbenchSettings: View {
     @State private var showLocal = false
     @State private var showSSH = false
     @State private var showSummary = false
+    @State private var diagnosticsOn = PerfDiagnostics.shared.enabled
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @State private var editingHost: SSHHost?
     @State private var permissionModes: [SessionKind: String] = [:]
@@ -111,6 +112,16 @@ struct WorkbenchSettings: View {
                 SettingsSectionHeader("界面", systemImage: "paintbrush", tint: .purple)
             } footer: {
                 Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+            }
+            Section {
+                Toggle("性能诊断", isOn: $diagnosticsOn)
+                    .onChange(of: diagnosticsOn) { _, on in PerfDiagnostics.shared.setEnabled(on) }
+                Button("导出诊断报告…") { PerfDiagnostics.shared.exportReport() }
+                    .disabled(!diagnosticsOn)
+            } header: {
+                SettingsSectionHeader("诊断", systemImage: "stethoscope", tint: .indigo)
+            } footer: {
+                Text("开启后记录正文渲染各阶段耗时，可用 Instruments 的 Points of Interest 查看 signpost；关闭即清空并停止记录。")
             }
             Section {
                 LabeledContent("版本", value: versionLabel)

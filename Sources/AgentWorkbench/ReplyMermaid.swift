@@ -92,6 +92,8 @@ final class MermaidRenderer {
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("mermaid_render", since: start) }
         #endif
+        let perfProbe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("mermaid_render", perfProbe) }
         guard await ensureReady(), let webView else { return nil }
         guard let report = await evaluate(webView, source: source, dark: key.dark) else {
             // Timeout or a wedged page: reload to a known state for the next job.

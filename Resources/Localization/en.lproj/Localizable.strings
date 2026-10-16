@@ -1507,6 +1507,10 @@
 "已收藏的轮次" = "Bookmarked turns";
 "复制回复" = "Copy reply";
 "复制代码" = "Copy code";
+"性能诊断" = "Performance diagnostics";
+"导出诊断报告…" = "Export diagnostics report…";
+"诊断" = "Diagnostics";
+"开启后记录正文渲染各阶段耗时，可用 Instruments 的 Points of Interest 查看 signpost；关闭即清空并停止记录。" = "Records per-stage reply rendering costs and Instruments Points of Interest signposts while on; turning it off clears and stops recording.";
 "查看源码" = "View source";
 "查看图表" = "View diagram";
 "Mermaid 图表" = "Mermaid diagram";

@@ -18,7 +18,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift \
     Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/ReplySelection.swift \
     Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift \
-    Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/ImagePreviewPanel.swift \
+    Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift Sources/AgentWorkbench/ImagePreviewPanel.swift \
     Tests/MermaidPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/MermaidPreview"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"

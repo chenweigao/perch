@@ -565,6 +565,8 @@ enum ReplyTextAttributes {
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("attributed_text", since: start) }
         #endif
+        let perfProbe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("attributed_text", perfProbe) }
         let result = NSMutableAttributedString()
         let paragraph = NSMutableParagraphStyle()
         paragraph.minimumLineHeight = resolvedLineHeight
@@ -1222,6 +1224,8 @@ final class ReplyTextView: NSTextView {
             return cached.size
         }
         guard let storage = textStorage else { return .zero }
+        let perfProbe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("text_measure", perfProbe) }
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer {
