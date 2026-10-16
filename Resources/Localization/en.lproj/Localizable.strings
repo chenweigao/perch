@@ -1220,6 +1220,7 @@
 "思考与工具" = "Thoughts and tools";
 
 "%lld 次调用" = "%lld calls";
+"· %lld 次失败" = "· %lld failed";
 
 "%lld 条记录" = "%lld records";
 

@@ -286,17 +286,51 @@ func checkConversationProcessFold() throws {
     precondition(foldRow.foldedRows?.flatMap(\.entry.messages).flatMap(\.content).count
                  == entries.dropFirst().dropLast().flatMap(\.messages).flatMap(\.content).count,
                  "The fold preserves every source part")
-    // Attention remains visible even after a turn settles.
-    for status in [VisibleTool.Status.failed, .awaitingApproval, .missingResult, .disconnected, .running] {
+    // Foldability is presentation-only; tool outcomes are weighed per turn by fold().
+    for status in [VisibleTool.Status.failed, .awaitingApproval, .missingResult, .disconnected, .running,
+                   .succeeded, .returned] {
         let tool = VisibleTool(id: "t1", name: "read", input: nil, status: status)
         let row = ConversationPresentationModel.Row(entry: entries[1], tools: [tool.id: tool], activity: nil)
-        precondition(!ConversationProcessFold.foldable(row), "Attention must not be hidden by a history fold")
+        precondition(ConversationProcessFold.foldable(row), "Process rows fold; the turn's completion decides")
     }
-    for status in [VisibleTool.Status.succeeded, .returned] {
-        let tool = VisibleTool(id: "t1", name: "read", input: nil, status: status)
-        let row = ConversationPresentationModel.Row(entry: entries[1], tools: [tool.id: tool], activity: nil)
-        precondition(ConversationProcessFold.foldable(row))
+    // A completed turn folds failed tools too — the outcome is already in the
+    // answer — and the fold keeps the failure count for its header.
+    let settled: [ConversationPresentationModel.Row] = entries.map { entry in
+        guard entry.messages.contains(where: { $0.content.contains { $0.toolCallId == "t1" } }) else {
+            return ConversationPresentationModel.Row(entry: entry, tools: [:], activity: nil)
+        }
+        let tool = VisibleTool(id: "t1", name: "read", input: nil, status: .failed)
+        return ConversationPresentationModel.Row(entry: entry, tools: [tool.id: tool], activity: nil)
     }
+    let settledFold = ConversationProcessFold.fold(rows: settled, isRunning: false)
+    precondition(settledFold.map(\.entry.presentation) == [.message, .processFold, .message],
+                 "A completed turn conceals failed tools: \(settledFold.map(\.entry.presentation))")
+    precondition(ConversationProcessFold.unresolvedCount(settledFold[1].foldedRows ?? []) == 1,
+                 "The fold reports its concealed failures")
+    // An interrupted turn (no final answer) keeps failed and uncertain tools visible.
+    let interrupted = try messages("""
+    [{"id":"i1","role":"user","created_at":"1","content":[{"type":"text","text":"跑到一半"}]},
+     {"id":"i2","role":"assistant","created_at":"2","content":[{"type":"tool_use","tool_call_id":"t9","tool_name":"read"}]},
+     {"id":"i3","role":"assistant","created_at":"3","content":[{"type":"tool_use","tool_call_id":"t10","tool_name":"edit"}]}]
+    """)
+    let interruptedEntries = ConversationTimelineEntry.make(interrupted)
+    let interruptedRows: [ConversationPresentationModel.Row] = interruptedEntries.map { entry in
+        guard entry.presentation == .activity else {
+            return ConversationPresentationModel.Row(entry: entry, tools: [:], activity: nil)
+        }
+        let tool = VisibleTool(id: "t9", name: "read", input: nil, status: .failed)
+        return ConversationPresentationModel.Row(entry: entry, tools: [tool.id: tool], activity: nil)
+    }
+    let interruptedFold = ConversationProcessFold.fold(rows: interruptedRows, isRunning: false)
+    precondition(interruptedFold.contains { $0.entry.presentation == .activity },
+                 "An interrupted turn never conceals a failed tool")
+    // The same unfinished turn folds rows whose tools all succeeded.
+    let cleanInterrupted = interruptedRows.map { row in
+        ConversationPresentationModel.Row(entry: row.entry, tools: [:], activity: row.activity)
+    }
+    let cleanFold = ConversationProcessFold.fold(rows: cleanInterrupted, isRunning: false)
+    precondition(!cleanFold.contains { $0.entry.presentation == .activity },
+                 "Successful process folds even without a final answer")
     // Folding is idempotent; fold rows never re-fold.
     precondition(ConversationProcessFold.fold(rows: folded, isRunning: false) == folded)
     // A single process row folds as well: uniform collapsed history.
