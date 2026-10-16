@@ -13,14 +13,18 @@ public struct AgentCommand: Decodable, Identifiable, Equatable, Sendable {
     public let subcommands: [AgentCommand]?
     public let input: Input?
     public let source: String?
+    /// Project commands carry their prompt template; runtime commands leave it nil.
+    public let prompt: String?
     public var id: String { name }
     public var hint: String? { input?.hint }
     public var children: [AgentCommand] { subcommands ?? [] }
 
     public init(name: String, description: String? = nil, aliases: [String]? = nil,
-                subcommands: [AgentCommand]? = nil, input: Input? = nil, source: String? = nil) {
+                subcommands: [AgentCommand]? = nil, input: Input? = nil, source: String? = nil,
+                prompt: String? = nil) {
         self.name = name; self.description = description; self.aliases = aliases
         self.subcommands = subcommands; self.input = input; self.source = source
+        self.prompt = prompt
     }
 
     func matches(_ filter: String) -> Bool {

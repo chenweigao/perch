@@ -36,6 +36,7 @@ struct ProtocolTests {
         checkAutoCompact()
         checkSafeLink()
         try checkSessionEditStats()
+        try checkProjectCommands()
         checkAppVersionCheck()
         try checkWorkflow()
         checkConversationRowGeometry()
