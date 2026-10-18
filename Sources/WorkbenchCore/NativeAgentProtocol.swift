@@ -47,6 +47,8 @@ public struct NativeAgentSession: Decodable, Identifiable, Equatable {
     public let turnId: String?
     public let turnState: String?
     public let steer: Bool?
+    /// Subagents still queued or running. Absent from bridges before protocol 7.
+    public let runningSubagents: Int?
     public var status: String { pending > 0 ? L("等你处理") : busy ? L("运行中") : error != nil ? L("出错") : cancelled == true ? L("已停止") : L("就绪") }
     public var budget: ContextBudget? { ContextBudget(used: context?.tokens, limit: context?.limit) }
 }
@@ -78,6 +80,12 @@ public struct NativeAgentSnapshot: Decodable {
     /// runtime that announced an empty list.
     public let commands: [AgentCommand]?
     public let commandResult: NativeCommandResult?
+    /// The live subagent roster (bridge protocol 7): at most 32 entries ordered by
+    /// start, covering the latest main turn, anything still queued or running and
+    /// anything a pending interaction names. nil from older bridges. A response
+    /// that carries the key replaces the roster wholesale; `applying(to:)` keeps
+    /// the previous roster when the key is absent.
+    public private(set) var subagents: [NativeSubagent]?
     public var budget: ContextBudget? { ContextBudget(used: context?.tokens, limit: context?.limit) }
 }
 
@@ -107,29 +115,42 @@ public struct NativeHistoryWindow: Decodable {
     public let end: Int
     public let indices: [Int]?
     public let baseRevision: Int?
+
+    /// Patches `window`, the messages held from absolute index `start`, with
+    /// `changes` in ascending index order: an index inside the window replaces,
+    /// the index just past it appends. The result is cut to `total` and must end
+    /// exactly there. Session snapshots and subagent transcripts share these checks.
+    static func merge(_ window: [KimiMessage], start: Int, total: Int,
+                      changes: [(index: Int, message: KimiMessage)]) throws -> [KimiMessage] {
+        guard total >= start else { throw WorkbenchError("Invalid transcript delta base") }
+        var combined = Array(window.prefix(total - start))
+        var last = start - 1
+        for (index, message) in changes {
+            guard index > last, index >= start, index < total,
+                  index - start <= combined.count else { throw WorkbenchError("Invalid transcript delta position") }
+            let offset = index - start
+            if offset == combined.count { combined.append(message) } else { combined[offset] = message }
+            last = index
+        }
+        guard combined.count == total - start else { throw WorkbenchError("Incomplete transcript delta") }
+        return combined
+    }
 }
 
 extension NativeAgentSnapshot {
     public var hasOlder: Bool { (history?.start ?? 0) > 0 }
 
     public func applying(to previous: NativeAgentSnapshot?) throws -> NativeAgentSnapshot {
-        guard let window = history, let indices = window.indices else { return self }
+        var result = self
+        // Only a response that carries the roster replaces it.
+        if result.subagents == nil, let previous, previous.id == id { result.subagents = previous.subagents }
+        guard let window = history, let indices = window.indices else { return result }
         guard let previous, previous.id == id, let old = previous.history,
               old.epoch == window.epoch, previous.revision == window.baseRevision,
               old.start == window.start, window.total >= old.start,
               indices.count == messages.count else { throw WorkbenchError("Invalid transcript delta base") }
-        var combined = Array(previous.messages.prefix(window.total - old.start))
-        var last = old.start - 1
-        for (index, message) in zip(indices, messages) {
-            guard index > last, index >= old.start, index < window.total,
-                  index - old.start <= combined.count else { throw WorkbenchError("Invalid transcript delta position") }
-            let offset = index - old.start
-            if offset == combined.count { combined.append(message) } else { combined[offset] = message }
-            last = index
-        }
-        guard combined.count == window.total - old.start else { throw WorkbenchError("Incomplete transcript delta") }
-        var result = self
-        result.messages = combined
+        result.messages = try NativeHistoryWindow.merge(previous.messages, start: old.start, total: window.total,
+                                                        changes: zip(indices, messages).map { ($0, $1) })
         result.history?.start = old.start
         return result
     }
@@ -142,7 +163,13 @@ extension NativeAgentSnapshot {
         var result = self
         result.messages = page.messages + messages
         result.history?.start = window.start
-        // Keep our revision: the next delta reconciles edits that raced this page.
+        // Keep our revision and roster: the page only extends history, and the
+        // next delta reconciles edits that raced it.
         return result
+    }
+
+    /// The roster entry `key` names: its id, its task id or one of its tool use ids.
+    public func subagent(matching key: String) -> NativeSubagent? {
+        subagents?.first { $0.matches(key) }
     }
 }

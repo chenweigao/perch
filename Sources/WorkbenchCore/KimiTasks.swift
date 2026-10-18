@@ -24,13 +24,22 @@ public struct KimiTask: Decodable, Identifiable, Equatable, Sendable {
     public let swarmIndex: Int?
     public let runInBackground: Bool?
     public let outputBytes: Int?
+    /// Native roster extras, nil on Kimi records: tokens and tool calls used so
+    /// far, the name of the most recent tool, and whether this one task can be
+    /// stopped on its own. Optional so a record without them still decodes.
+    public let tokenCount: Int?
+    public let toolUseCount: Int?
+    public let latestActivity: String?
+    public let stoppable: Bool?
 
     public init(id: String, kind: String, description: String, status: String,
                 createdAt: String? = nil, startedAt: String? = nil, completedAt: String? = nil,
                 subagentPhase: String? = nil, suspendedReason: String? = nil, outputPreview: String? = nil,
                 command: String? = nil, model: String? = nil, thinkingEffort: String? = nil,
                 agentId: String? = nil, subagentType: String? = nil, parentToolCallId: String? = nil,
-                swarmIndex: Int? = nil, runInBackground: Bool? = nil, outputBytes: Int? = nil) {
+                swarmIndex: Int? = nil, runInBackground: Bool? = nil, outputBytes: Int? = nil,
+                tokenCount: Int? = nil, toolUseCount: Int? = nil, latestActivity: String? = nil,
+                stoppable: Bool? = nil) {
         self.id = id; self.kind = kind; self.description = description; self.status = status
         self.createdAt = createdAt; self.startedAt = startedAt; self.completedAt = completedAt
         self.subagentPhase = subagentPhase; self.suspendedReason = suspendedReason
@@ -38,6 +47,8 @@ public struct KimiTask: Decodable, Identifiable, Equatable, Sendable {
         self.thinkingEffort = thinkingEffort; self.agentId = agentId; self.subagentType = subagentType
         self.parentToolCallId = parentToolCallId; self.swarmIndex = swarmIndex
         self.runInBackground = runInBackground; self.outputBytes = outputBytes
+        self.tokenCount = tokenCount; self.toolUseCount = toolUseCount
+        self.latestActivity = latestActivity; self.stoppable = stoppable
     }
 
     public var kindLabel: String {
@@ -54,6 +65,8 @@ public struct KimiTask: Decodable, Identifiable, Equatable, Sendable {
         case "completed": return L("已完成")
         case "failed": return L("失败")
         case "cancelled": return L("已取消")
+        // A native entry whose outcome the bridge could not observe.
+        case "unknown": return L("状态未知")
         default: return status
         }
     }
