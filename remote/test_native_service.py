@@ -1606,6 +1606,63 @@ class ClaudeSubagentTests(unittest.TestCase):
         self.assertLessEqual(transcript['bytes'],3000*3//4); self.assertNotEqual(trimmed['epoch'],page['epoch'])
         self.assertEqual(transcript['bytes'],sum(broker.json_size(m) for m in transcript['messages']))
 
+    def test_tool_inputs_are_clipped_string_by_string(self):
+        self.started('task-I','toolu_I')
+        inputs={'command':'x'*40000,'nested':{'list':['y'*50000,'short',7],'flag':True},'note':'短','key'*10:'v'}
+        self.child('toolu_I','i1',[{'type':'tool_use','id':'big-call','name':'Write','input':inputs}])
+        value=self.s.subagent_page('task-I')['messages'][0]['content'][0]['input']
+        for text in (value['command'],value['nested']['list'][0]):
+            self.assertLessEqual(len(text.encode()),broker.SUBAGENT_PART_LIMIT); self.assertIn('…[已截断，原文',text)
+        self.assertTrue(value['command'].startswith('x'*1000))
+        self.assertEqual((value['nested']['list'][1:],value['nested']['flag'],value['note'],value['key'*10]),(['short',7],True,'短','v'))
+        self.assertEqual(len(inputs['command']),40000)
+
+    def test_one_oversized_message_becomes_a_notice_so_the_trim_holds(self):
+        self.started('task-O','toolu_O')
+        # Every part fits its cap, yet together they pass the trim target.
+        self.child('toolu_O','huge',[{'type':'text','text':'z'*32000} for _ in range(100)])
+        huge=self.s.subagent_page('task-O')['messages'][0]
+        self.assertEqual((huge['id'],huge['role'],len(huge['content'])),('huge','assistant',1))
+        self.assertIn('消息过大',huge['content'][0]['text'])
+        # However large single messages get, every append leaves the transcript in budget.
+        with patch.object(broker,'SUBAGENT_BYTE_LIMIT',200000):
+            for i in range(12):
+                parts=10 if i % 3 == 0 else 2
+                self.child('toolu_O','m%d' % i,[{'type':'tool_use','id':'c%d-%d' % (i, n),'name':'Write','input':{'content':'w'*32000}} for n in range(parts)])
+                transcript=self.s.subagent_transcripts['task-O']; last=transcript['messages'][-1]
+                self.assertLessEqual(transcript['bytes'],200000)
+                self.assertEqual(transcript['bytes'],sum(broker.json_size(m) for m in transcript['messages']))
+                if parts == 10: self.assertIn('消息过大',last['content'][0]['text'])
+                else: self.assertEqual([p['input']['content'] for p in last['content']],['w'*32000]*2)
+        self.assertGreater(transcript['truncated'],0)
+
+    def test_only_live_and_recently_read_finished_transcripts_stay_loaded(self):
+        self.started('live','toolu_live'); self.child('toolu_live','l1','还在跑')
+        live=self.s.subagent_transcripts['live']
+        finished=lambda: [key for key in self.s.subagent_transcripts if key!='live']
+        for i in range(10):
+            self.started('t%d' % i,'u%d' % i); self.child('u%d' % i,'m','第 %d 个' % i)
+            self.task('task_notification','t%d' % i,status='completed',summary='完成',output_file='')
+        self.assertEqual(len(finished()),8)
+        first=self.s.subagent_page('t0')
+        for i in range(10): self.assertEqual(self.request(self.path('u%d' % i))[0],200)
+        self.assertEqual(len(finished()),8); self.assertNotIn('t0',self.s.subagent_transcripts)
+        # An evicted transcript reloads from its file unchanged and under its epoch,
+        # so a client following it is not reset.
+        code,again=self.request(self.path('t0'))
+        self.assertEqual({k:again[k] for k in ('epoch','revision','total','messages')},{k:first[k] for k in ('epoch','revision','total','messages')})
+        self.assertEqual(self.request(self.path('t0')+'?epoch=%s&revision=%d' % (first['epoch'],first['revision'])),(200,{'unchanged':True}))
+        # A dirty transcript is written before it leaves memory.
+        self.child('u9','late','迟到的消息')
+        self.assertIn('t9',self.s.subagent_dirty)
+        for i in range(8): self.request(self.path('u%d' % i))
+        self.assertNotIn('t9',self.s.subagent_transcripts); self.assertNotIn('t9',self.s.subagent_dirty)
+        self.assertEqual([m['id'] for m in json.loads(self.s.subagent_path('t9').read_text())['messages']],['m','late'])
+        self.assertEqual([m['id'] for m in self.s.subagent_page('t9')['messages']],['m','late'])
+        # The live transcript, though the oldest, was never evicted.
+        self.assertIs(self.s.subagent_transcripts['live'],live)
+        self.assertLessEqual(len(finished()),8)
+
     def test_transcripts_are_debounced_written_on_finish_and_restored_lazily(self):
         sid=self.s.state['id']; folder=broker.ROOT/'subagents'/sid
         self.started('task-R','toolu_R'); self.child('toolu_R','r1','第一条')

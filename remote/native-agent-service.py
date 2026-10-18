@@ -27,6 +27,8 @@ SUBAGENT_BYTE_LIMIT = 4 * 1024 * 1024
 SUBAGENT_PART_LIMIT = 32 * 1024
 SUBAGENT_WINDOW = 200
 SUBAGENT_SAVE_DELAY = 2.0
+# Live transcripts stay in memory; finished ones only while recently read.
+SUBAGENT_RECENT_LIMIT = 8
 
 def source_fingerprint(path=None):
     """Identity of the code a service is executing. SERVICE_VERSION is bumped by
@@ -450,11 +452,25 @@ def clip_output(value):
         budget -= json_size(result[-1])
     return result
 
+def clip_value(value):
+    """Every string anywhere inside a tool input, each at most one part limit."""
+    if isinstance(value, str): return clip_bytes(value)
+    if isinstance(value, list): return [clip_value(item) for item in value]
+    if isinstance(value, dict): return {key:clip_value(item) for key, item in value.items()}
+    return value
+
 def clip_subagent_message(message):
     for part in message['content']:
         kind = part.get('type')
         if kind in ('text', 'thinking') and isinstance(part.get(kind), str): part[kind] = clip_bytes(part[kind])
         elif kind == 'tool_result': part['output'] = clip_output(part.get('output'))
+        elif kind == 'tool_use': part['input'] = clip_value(part.get('input'))
+    # Many capped parts can still make one huge message. Past the trim target it
+    # would keep its transcript over budget however much else is trimmed, so it
+    # becomes a notice; the trim then always reaches its target.
+    size = json_size(message)
+    if size > SUBAGENT_BYTE_LIMIT * 3 // 4:
+        message['content'] = [{'type':'text', 'text':'…[消息过大，已省略，原文 %d 字节]' % size}]
     return message
 
 def tool_result_text(content):
@@ -529,6 +545,9 @@ class Session:
         # Transcripts load on first use; the roster in state is their only index.
         self.subagent_transcripts = {}; self.subagent_dirty = set(); self.subagent_timer = None
         self.subagent_calls = {}; self.subagent_ignored = set()
+        # Finished transcripts in memory, least recently used first, and the epoch
+        # each evicted one was flushed under.
+        self.subagent_recent = {}; self.subagent_written = {}
         self.index_subagents()
         self.reset_history_index()
         # Version 1 stored command results as plain strings in existing histories.
@@ -1602,7 +1621,7 @@ class Session:
         return entry
     def subagent_finish(self, entry, status, ended=None):
         entry['status'] = status; entry['endedAt'] = ended or iso_time()
-        self.subagent_bump(entry); self.subagent_write(entry['id'])
+        self.subagent_bump(entry); self.subagent_write(entry['id']); self.subagent_keep(entry)
     def subagent_prune(self):
         roster = self.state.get('subagentRoster') or []
         excess = len(roster) - SUBAGENT_ROSTER_LIMIT
@@ -1616,6 +1635,7 @@ class Session:
         self.subagent_aliases = {alias:key for alias, key in self.subagent_aliases.items() if key not in gone}
         for key in gone:
             self.subagent_entries.pop(key, None); self.subagent_transcripts.pop(key, None); self.subagent_dirty.discard(key)
+            self.subagent_recent.pop(key, None); self.subagent_written.pop(key, None)
             try: self.subagent_path(key).unlink(missing_ok=True)
             except OSError: pass
     def subagent_view(self, entry):
@@ -1642,20 +1662,35 @@ class Session:
     def subagent_path(self, key):
         return ROOT / 'subagents' / self.state['id'] / subagent_filename(key)
     def subagent_transcript(self, entry):
-        transcript = self.subagent_transcripts.get(entry['id'])
-        if transcript is not None: return transcript
-        revision = 0
-        try:
-            data = json.loads(self.subagent_path(entry['id']).read_text())
-            versions = {int(k):int(v) for k, v in (data.get('versions') or {}).items()}
-            # A file from an earlier service can lag what a client already read, so
-            # its positions restart under a new epoch, as main history does.
-            transcript = subagent_transcript_state(data['messages'], int(data.get('truncated') or 0), versions)
-            revision = int(data.get('revision') or 0)
-        except Exception: transcript = subagent_transcript_state()
-        entry['revision'] = max(entry['revision'], revision); entry['messageCount'] = len(transcript['messages'])
-        self.subagent_transcripts[entry['id']] = transcript
+        key = entry['id']; transcript = self.subagent_transcripts.get(key)
+        if transcript is None:
+            revision = 0; flushed = self.subagent_written.pop(key, None)
+            try:
+                data = json.loads(self.subagent_path(key).read_text())
+                versions = {int(k):int(v) for k, v in (data.get('versions') or {}).items()}
+                transcript = subagent_transcript_state(data['messages'], int(data.get('truncated') or 0), versions)
+                revision = int(data.get('revision') or 0)
+                # This service wrote the whole transcript before evicting it, so its
+                # positions still hold. A file from an earlier service can lag what a
+                # client already read; it restarts under a new epoch, as main history does.
+                if flushed is not None and data.get('epoch') == flushed: transcript['epoch'] = flushed
+            except Exception: transcript = subagent_transcript_state()
+            entry['revision'] = max(entry['revision'], revision); entry['messageCount'] = len(transcript['messages'])
+            self.subagent_transcripts[key] = transcript
+        self.subagent_keep(entry)
         return transcript
+    def subagent_keep(self, entry):
+        """Live transcripts stay in memory; finished ones share a small LRU."""
+        key = entry['id']; self.subagent_recent.pop(key, None)
+        if entry['status'] in SUBAGENT_LIVE or key not in self.subagent_transcripts: return
+        self.subagent_recent[key] = None
+        for old in list(self.subagent_recent)[:-SUBAGENT_RECENT_LIMIT]: self.subagent_evict(old)
+    def subagent_evict(self, key):
+        # A transcript leaves memory only once its file holds all of it; while a
+        # write fails it stays loaded.
+        if (key in self.subagent_dirty or not self.subagent_path(key).exists()) and not self.subagent_write(key): return
+        transcript = self.subagent_transcripts.pop(key, None); self.subagent_recent.pop(key, None)
+        if transcript is not None: self.subagent_written[key] = transcript['epoch']
     def subagent_append(self, entry, value):
         transcript = self.subagent_transcript(entry)
         index = transcript['index'].get(value['id']); size = json_size(value)
@@ -1698,17 +1733,18 @@ class Session:
         for key in list(self.subagent_dirty): self.subagent_write(key)
     def subagent_write(self, key):
         entry = self.subagent_entries.get(key); transcript = self.subagent_transcripts.get(key)
-        if self.deleted or entry is None or transcript is None: self.subagent_dirty.discard(key); return
+        if self.deleted or entry is None or transcript is None: self.subagent_dirty.discard(key); return False
         try:
             folder = ROOT / 'subagents' / self.state['id']
             folder.parent.mkdir(exist_ok=True); folder.mkdir(exist_ok=True)
             save(folder / subagent_filename(key), {'epoch':transcript['epoch'], 'revision':entry['revision'],
                  'truncated':transcript['truncated'], 'messages':transcript['messages'], 'versions':transcript['versions']})
-        except (OSError, ValueError): return  # stays dirty; the next change or turn end retries
+        except (OSError, ValueError): return False  # stays dirty; the next change or turn end retries
         self.subagent_dirty.discard(key)
+        return True
     def subagent_discard(self):
         if self.subagent_timer is not None: self.subagent_timer.cancel(); self.subagent_timer = None
-        self.subagent_dirty.clear(); self.subagent_transcripts.clear()
+        self.subagent_dirty.clear(); self.subagent_transcripts.clear(); self.subagent_recent.clear(); self.subagent_written.clear()
         shutil.rmtree(ROOT / 'subagents' / self.state['id'], ignore_errors=True)
     def subagent_recover(self):
         """At service start the worker of a queued or running child is gone with the
@@ -1806,7 +1842,7 @@ class Session:
                                          background=background if isinstance(background, bool) else None)
         if not changed: return None
         self.subagent_bump(entry)
-        if finished: self.subagent_write(entry['id'])
+        if finished: self.subagent_write(entry['id']); self.subagent_keep(entry)
         self.subagent_relabel()
         return finished
     def subagent_stop_result(self, e):
@@ -1824,9 +1860,10 @@ class Session:
         # The turn is over, so a child its worker never reported on did not end on
         # its own terms: stopped when the turn was cancelled, otherwise unknown.
         status = 'stopped' if self.state.get('cancelled') or self.state.get('stopAcknowledged') else 'unknown'
-        for entry in self.state.get('subagentRoster') or []:
-            if entry['status'] in SUBAGENT_LIVE: entry['status'] = status; entry['endedAt'] = iso_time(); self.subagent_bump(entry)
+        settled = [x for x in self.state.get('subagentRoster') or [] if x['status'] in SUBAGENT_LIVE]
+        for entry in settled: entry['status'] = status; entry['endedAt'] = iso_time(); self.subagent_bump(entry)
         self.subagent_flush()
+        for entry in settled: self.subagent_keep(entry)
     def subagent_stop(self, key):
         entry = self.subagent_find(key)
         if entry is None: raise SubagentNotFound('未找到该子 Agent')
