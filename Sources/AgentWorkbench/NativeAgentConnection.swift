@@ -6,6 +6,8 @@ import WorkbenchCore
 @MainActor @Observable
 final class NativeAgentConnection {
     let conversation = NativeConversationState()
+    /// The open subagent sheet and the roster's stop state (bridge protocol 7).
+    let subagents = NativeSubagentState()
     private(set) var host: SSHHost
     private(set) var sessions: [NativeAgentSession] = []
     private(set) var snapshot: NativeAgentSnapshot? {
@@ -144,7 +146,7 @@ final class NativeAgentConnection {
         }
     }
     func disconnect() {
-        generation = UUID(); conversation.cancelLoads()
+        generation = UUID(); conversation.cancelLoads(); subagents.reset()
         task?.cancel(); task = nil
         nextCatalogRefresh = .distantPast
         nextIdleSnapshotRefresh = .distantPast
@@ -317,7 +319,7 @@ final class NativeAgentConnection {
                            running: session.busy, waiting: session.pending > 0)
         }
         if clocks != timings { timings = clocks }
-        if let id = selectedID, !next.contains(where: { $0.id == id }) { conversation.select(nil) }
+        if let id = selectedID, !next.contains(where: { $0.id == id }) { conversation.select(nil); subagents.present(nil) }
         let changed = next != sessions
         if changed { sessions = next }
         // The first successful read of this connection generation settles the
@@ -381,6 +383,8 @@ final class NativeAgentConnection {
     func select(_ id: String) {
         guard selectedID != id || (snapshot == nil && !conversation.isSelecting) else { return }
         if let snapshot, let window = snapshot.history { historyWindows[snapshot.id] = (window.start, window.epoch) }
+        // A subagent sheet belongs to the session it was opened from.
+        if selectedID != id { subagents.present(nil) }
         conversation.select(id); nextIdleSnapshotRefresh = .distantPast; idleSnapshotInterval = 2
         wakePolling()
         guard online else { return }
@@ -406,6 +410,8 @@ final class NativeAgentConnection {
         } else if let window = historyWindows[id] {
             suffix = "?start=\(window.start)&epoch=\(window.epoch)&turns=50"
         } else { suffix = "?turns=50" }
+        // A stop accepted before this read was issued shows its outcome in it.
+        let issuedAt = Date()
         let response: NativeSnapshotResponse = try await request("/sessions/\(id)\(suffix)")
         try Task.checkCancellation()
         // Delta reads that answer "unchanged" are still proof the sync is alive.
@@ -425,6 +431,7 @@ final class NativeAgentConnection {
             nextCatalogRefresh = .distantPast
         }
         snapshot = next
+        if let roster = next.subagents { subagents.reconcileStops(roster, session: id, readAt: issuedAt) }
         purgeRecordedReceipts()
         return true
     }
@@ -461,6 +468,117 @@ final class NativeAgentConnection {
                 if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
             } while all
         }
+    }
+
+    // MARK: Subagents (bridge protocol 7)
+
+    /// Opens the transcript sheet of a subagent of the selected session, named
+    /// by its entry id, its task id or the Agent/Task call that started it. A
+    /// Claude subagent the snapshot no longer lists (an earlier turn's) is still
+    /// read under that alias; a bridge without a roster opens nothing.
+    func openSubagent(_ key: String, in sessionID: String) {
+        guard sessionID == selectedID, let current = snapshot, current.id == sessionID,
+              current.subagents != nil else { return }
+        if let entry = current.subagent(matching: key) {
+            subagents.present(NativeSubagentSubject(sessionID: sessionID, key: entry.id))
+        } else if current.opensSubagents {
+            subagents.present(NativeSubagentSubject(sessionID: sessionID, key: key))
+        }
+    }
+
+    /// The entry an open sheet describes: as its transcript last reported it,
+    /// else as the selected snapshot's roster lists it.
+    func subagentEntry(for subject: NativeSubagentSubject) -> NativeSubagent? {
+        if subagents.presented == subject, let entry = subagents.transcript?.entry { return entry }
+        guard let current = snapshot, current.id == subject.sessionID else { return nil }
+        return current.subagent(matching: subject.key)
+    }
+
+    /// Follows the presented subagent's transcript while its sheet shows it: a
+    /// full read, then deltas every second while the entry is live and every four
+    /// seconds otherwise. Older pages are read in the same sequence, so no two
+    /// reads of one transcript ever overlap. Each answer lands only while the
+    /// sheet, the selection and this connection are the ones it was asked for.
+    /// Returns when the sheet closes, the selection changes or the connection
+    /// is replaced; it never stops the subagent. Runs in the sheet's `.task(id:)`.
+    func followSubagent(_ subject: NativeSubagentSubject) async {
+        let state = subagents, connectionToken = generation
+        guard let follower = state.beginFollowing(subject) else { return }
+        func current() -> Bool {
+            !Task.isCancelled && connectionToken == generation && selectedID == subject.sessionID
+                && state.isFollowing(follower)
+        }
+        while current() {
+            // Offline, the last transcript stays on screen until the tunnel returns.
+            if online {
+                let older = state.takeOlderQuery(follower)
+                do {
+                    if let older {
+                        let window: NativeSubagentWindow = try await request(subject.path + older)
+                        guard current() else { return }
+                        state.prepend(.older(window), follower: follower)
+                    } else {
+                        let page: NativeSubagentPage = try await request(subject.path + state.followQuery(follower))
+                        guard current() else { return }
+                        state.apply(page, follower: follower)
+                    }
+                } catch {
+                    guard current() else { return }
+                    if !(error is CancellationError) {
+                        state.fail(error.localizedDescription, older: older != nil, follower: follower)
+                    }
+                }
+            } else {
+                // An older page asked for before the tunnel dropped is not read now;
+                // the pause below must not be cut short for it.
+                state.cancelOlder()
+            }
+            let live = subagentEntry(for: subject)?.status.isLive ?? false
+            do { try await state.pause(live ? state.cadence.live : state.cadence.idle, follower: follower) }
+            catch { return }
+        }
+    }
+
+    /// The open sheet's page before its held window, read after the read in flight.
+    func loadOlderSubagent() {
+        guard online, let subject = subagents.presented, subject.sessionID == selectedID else { return }
+        subagents.requestOlder()
+    }
+
+    /// Stops one subagent of the selected session; the main turn keeps running.
+    /// Its row reads 停止中 until the roster shows the entry finished, the bridge
+    /// reports a stop error, or `stopTimeout` passes.
+    func stopSubagent(_ id: String, in sessionID: String) {
+        guard online, sessionID == selectedID, let current = snapshot, current.id == sessionID,
+              let entry = current.subagent(matching: id), entry.canStop, entry.status.isLive,
+              let attempt = subagents.beginStop(entry.id, session: sessionID) else { return }
+        let token = generation
+        let key = entry.id
+        let path = NativeSubagentRoute.path(session: sessionID, key: key) + "/stop"
+        Task {
+            do {
+                let _: JSONValue = try await request(path, body: .object([:]))
+                guard token == generation else { return }
+                subagents.acceptStop(key, attempt: attempt)
+            } catch {
+                guard token == generation else { return }
+                subagents.failStop(key, attempt: attempt, message: error.localizedDescription)
+            }
+        }
+        let timeout = subagents.stopTimeout
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(timeout))
+            self?.subagents.expireStop(key, attempt: attempt)
+        }
+    }
+
+    /// Stop failures for the roster rows of `snapshot`, by entry id.
+    func subagentStopErrors(in snapshot: NativeAgentSnapshot) -> [String: String] {
+        var errors: [String: String] = [:]
+        for entry in snapshot.subagents ?? [] {
+            if let message = subagents.stopError(for: entry) { errors[entry.id] = message }
+        }
+        return errors
     }
 
     func create(provider: SessionKind, cwd: String, model: String, thinking: ThinkingLevel? = nil,
@@ -828,7 +946,7 @@ final class NativeAgentConnection {
     func action(_ id: String, _ action: String, _ body: [String: JSONValue] = [:]) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/\(action)", body: .object(body))
         if action == "delete" {
-            if selectedID == id { conversation.select(nil) }
+            if selectedID == id { conversation.select(nil); subagents.present(nil) }
             drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
         }
         // A successful mutation stays successful if only the following read fails.

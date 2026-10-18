@@ -1650,3 +1650,12 @@
 "连接并新建会话" = "Connect and Start Session";
 "已安装，尚未接入本机会话" = "Installed; not yet available for local sessions";
 "要连接另一台机器，请添加新机器。" = "To connect a different machine, add a new one.";
+
+/* Native subagents: roster, transcript sheet and stop (2026-10-18) */
+"停止中" = "Stopping";
+"只停止这个子 Agent，主会话继续运行" = "Stops only this subagent; the main session keeps running";
+"单独停止失败：%@。可以停止整轮。" = "Could not stop this subagent alone: %@. You can stop the whole turn instead.";
+"最近工具：%@" = "Last tool: %@";
+"来自子 Agent" = "From a subagent";
+"来自子 Agent：%@" = "From subagent: %@";
+"这个子 Agent 还没有可见的过程。" = "This subagent has no visible activity yet.";

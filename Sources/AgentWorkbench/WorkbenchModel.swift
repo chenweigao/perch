@@ -1027,6 +1027,10 @@ final class WorkbenchModel {
             if let failure {
                 if isKimi { kimi?.actionError = failure } else { native?.actionError = failure }
             }
+        case .openSubagent(let toolCallId):
+            // A sheet over the conversation; the composer is not the target.
+            if !isKimi { native?.openSubagent(toolCallId, in: id) }
+            return
         }
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
     }
