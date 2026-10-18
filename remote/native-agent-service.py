@@ -1,13 +1,32 @@
 #!/usr/bin/env python3
 """SSH-only loopback broker. Owns Agent stdin independently of any Mac client."""
-import argparse, bisect, base64, copy, datetime, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, urllib.request, uuid, warnings
+import argparse, bisect, base64, copy, datetime, fcntl, hashlib, hmac, json, os, pathlib, queue, secrets, shutil, signal, subprocess, sys, threading, time, traceback, urllib.request, uuid, warnings
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-workbench/native')).expanduser()
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 6
+SERVICE_VERSION = 7
+# Subagent text and thinking stay off until a probe shows that their stream events
+# carry a parent id; otherwise they would write into the main reply's streaming
+# tail. Tool calls and results inside a subagent are forwarded either way.
+CLAUDE_FORWARD_SUBAGENT_TEXT = False
+SUBAGENT_TOOLS = ('Agent', 'Task')
+SUBAGENT_LIVE = ('queued', 'running')
+SUBAGENT_TASK_EVENTS = ('task_started', 'task_progress', 'task_updated', 'task_notification')
+SUBAGENT_PATCH_STATUS = {'pending':'queued', 'running':'running', 'paused':'running',
+                         'completed':'completed', 'failed':'failed', 'killed':'stopped'}
+SUBAGENT_KEYS = ('id', 'kind', 'taskId', 'toolUseIds', 'turnId', 'description', 'subagentType', 'status', 'background',
+                 'startedAt', 'updatedAt', 'endedAt', 'usage', 'lastToolName', 'summary', 'error',
+                 'canStop', 'stopRequested', 'stopError', 'messageCount', 'revision')
+SUBAGENT_ROSTER_LIMIT = 64
+SUBAGENT_SNAPSHOT_LIMIT = 32
+SUBAGENT_MESSAGE_LIMIT = 2000
+SUBAGENT_BYTE_LIMIT = 4 * 1024 * 1024
+SUBAGENT_PART_LIMIT = 32 * 1024
+SUBAGENT_WINDOW = 200
+SUBAGENT_SAVE_DELAY = 2.0
 
 def source_fingerprint(path=None):
     """Identity of the code a service is executing. SERVICE_VERSION is bumped by
@@ -392,6 +411,92 @@ def is_user_prompt(message):
         return False
     return message['role'] == 'user' and message.get('metadata', {}).get('origin', {}).get('kind') != 'compaction_summary' and not all(p.get('type') == 'tool_result' or context(p) for p in message['content'])
 
+def iso_time(value=None):
+    """UTC with milliseconds and Z: what the client's KimiTask date parser reads."""
+    value = time.time() if value is None else value
+    return datetime.datetime.fromtimestamp(value, datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+
+def clip_chars(value, limit):
+    if not isinstance(value, str) or not value.strip(): return None
+    value = value.strip()
+    return value if len(value) <= limit else value[:limit-1] + '…'
+
+def json_size(value):
+    # Runtime text may hold lone surrogates; a size estimate must not fail on them.
+    return len(json.dumps(value, ensure_ascii=False).encode('utf-8', 'surrogatepass'))
+
+def clip_bytes(text, limit=SUBAGENT_PART_LIMIT):
+    if len(text) <= limit // 4: return text
+    data = text.encode('utf-8', 'surrogatepass')
+    if len(data) <= limit: return text
+    marker = '\n…[已截断，原文 %d 字节]' % len(data)
+    return data[:max(0, limit - len(marker.encode()))].decode('utf-8', 'ignore') + marker
+
+def clip_output(value):
+    """Tool output of a subagent transcript, at most one part limit in total."""
+    if isinstance(value, str): return clip_bytes(value)
+    size = json_size(value)
+    if size <= SUBAGENT_PART_LIMIT: return value
+    if not isinstance(value, list): return '…[已截断，原文 %d 字节]' % size
+    result = []; budget = SUBAGENT_PART_LIMIT
+    for item in value:
+        text = item.get('text') if isinstance(item, dict) and item.get('type') == 'text' else None
+        if budget <= 256:
+            result.append({'type':'text', 'text':'…[已截断，原文 %d 字节]' % size}); break
+        if isinstance(text, str):
+            text = clip_bytes(text, budget); result.append(dict(item, text=text))
+        elif json_size(item) <= budget: result.append(item)
+        else: result.append({'type':'text', 'text':'[已省略 %d 字节的内容]' % json_size(item)})
+        budget -= json_size(result[-1])
+    return result
+
+def clip_subagent_message(message):
+    for part in message['content']:
+        kind = part.get('type')
+        if kind in ('text', 'thinking') and isinstance(part.get(kind), str): part[kind] = clip_bytes(part[kind])
+        elif kind == 'tool_result': part['output'] = clip_output(part.get('output'))
+    return message
+
+def tool_result_text(content):
+    if isinstance(content, str): return content
+    if not isinstance(content, list): return ''
+    return '\n'.join(p['text'] for p in content if isinstance(p, dict) and p.get('type') == 'text' and isinstance(p.get('text'), str))
+
+def subagent_call(value):
+    """What the main thread's Agent/Task tool_use says about the child it spawns."""
+    value = value if isinstance(value, dict) else {}
+    prompt = value.get('prompt') if isinstance(value.get('prompt'), str) else ''
+    description = clip_chars(value.get('description'), 200) or clip_chars(next((line for line in prompt.splitlines() if line.strip()), ''), 200)
+    kind = value.get('subagent_type')
+    background = value.get('run_in_background')
+    return {'description':description, 'subagentType':kind if isinstance(kind, str) and kind else None,
+            'background':background if isinstance(background, bool) else None}
+
+def subagent_usage(value):
+    if not isinstance(value, dict): return None
+    def number(key):
+        item = value.get(key)
+        return int(item) if isinstance(item, (int, float)) and not isinstance(item, bool) else 0
+    return {'totalTokens':number('total_tokens'), 'toolUses':number('tool_uses'), 'durationMs':number('duration_ms')}
+
+def subagent_filename(key):
+    # Keys come from the runtime; anything outside a plain id becomes a digest so it
+    # can never leave the session's folder. Digests start with "_", plain ids cannot.
+    if 0 < len(key) <= 120 and key[0].isascii() and key[0].isalnum() and all(c.isascii() and (c.isalnum() or c in '_-') for c in key):
+        return key + '.json'
+    return '_' + hashlib.sha256(key.encode('utf-8', 'surrogatepass')).hexdigest()[:32] + '.json'
+
+def subagent_transcript_state(messages=(), truncated=0, versions=None):
+    # Positions of a transcript belong to one epoch, exactly as main history does.
+    messages = list(messages); sizes = [json_size(m) for m in messages]
+    return {'epoch':uuid.uuid4().hex, 'truncated':truncated, 'messages':messages, 'versions':dict(versions or {}),
+            'index':{m['id']:i for i, m in enumerate(messages)}, 'sizes':sizes, 'bytes':sum(sizes),
+            'tools':{p.get('tool_call_id') for m in messages for p in m['content'] if p.get('type') == 'tool_use'}}
+
+def subagent_label(agent_id, entry):
+    return {'id':entry['id'] if entry else None, 'agentId':agent_id,
+            'title':entry['description'] if entry else None, 'type':entry['subagentType'] if entry else None}
+
 def codex_permission_params(mode, turn=False):
     mode = permission_mode('codex', mode)
     policy, sandbox, turn_sandbox = {
@@ -421,6 +526,10 @@ class Session:
         self.acp_blocks = {}; self.permission_options = {}
         self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
         self.codex_interactions = {}
+        # Transcripts load on first use; the roster in state is their only index.
+        self.subagent_transcripts = {}; self.subagent_dirty = set(); self.subagent_timer = None
+        self.subagent_calls = {}; self.subagent_ignored = set()
+        self.index_subagents()
         self.reset_history_index()
         # Version 1 stored command results as plain strings in existing histories.
         previous=state.get('commandResult')
@@ -445,7 +554,8 @@ class Session:
             'thinking':self.state.get('thinking'), 'context':self.state.get('context'),
             'permission':permission_capability(self.state),
             'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState'),
-            'steer':self.state['provider'] in ('omp','codex')}
+            'steer':self.state['provider'] in ('omp','codex'),
+            'runningSubagents':sum(1 for x in self.state.get('subagentRoster') or [] if x.get('status') in SUBAGENT_LIVE)}
     def active_receipt(self):
         turn = self.state.get('turnId')
         direct = self.state.get('requests',{}).get(turn)
@@ -562,6 +672,7 @@ class Session:
             worker = 'qoder-worker.mjs' if s['provider'] in QODER_SDK else 'claude-worker.mjs'
             cfg = {'cwd':s['cwd'],'model':s['model'],'resume':s.get('resume'),'binary':shutil.which(cli)}
             if s['provider'] in QODER_SDK: cfg['sdk'] = QODER_SDK[s['provider']]
+            else: cfg['forwardSubagentText'] = CLAUDE_FORWARD_SUBAGENT_TEXT
             if not cfg['binary']: raise ValueError('未找到 ' + cli)
             args = ['node',str(ROOT/worker),json.dumps(cfg)]
             # The Claude CLI also phones home (feature flags, telemetry) outside the
@@ -1039,7 +1150,7 @@ class Session:
                 if self.deleted: return
                 if self.state['busy']: self.state['error'] = self.state['error'] or '远端进程退出，任务未完成；可重新发送继续历史'
                 if self.state['busy']: self.finish('unknown')
-                self.state['busy'] = False; self.state['interactions'] = []; self.touch(True)
+                self.state['busy'] = False; self.state['interactions'] = []; self.subagent_guard(self.subagent_settle); self.touch(True)
     def upsert(self, message, identity):
         value = copy.deepcopy(normalize(message,identity))
         index = self.message_indices.get(identity)
@@ -1089,8 +1200,10 @@ class Session:
     def event(self,e):
         s = self.state; t = e.get('type'); provider = s['provider']; durable = False
         # Child messages belong to the Agent tool, whose result remains visible.
-        # They must not create main-session turns or replace its streaming tail.
+        # They must not create main-session turns or replace its streaming tail, so
+        # they go to that subagent's own transcript; child stream events are dropped.
         if provider == 'claude' and t in ('assistant', 'user', 'stream_event') and e.get('parent_tool_use_id'):
+            if t != 'stream_event': self.subagent_guard(self.subagent_message, e)
             return
         if t == 'ready':
             self.ready.set()
@@ -1141,6 +1254,7 @@ class Session:
             if e.get('isTerminal') is False: return
             if provider in ('qoder','qoderintl','claude') and s.get('stopAcknowledged'): s['cancelled']=True
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
+            if provider == 'claude': self.subagent_guard(self.subagent_settle)
             if not s.get('cancelled') and not s['error']: s['completed']+=1
             self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
             for receipt in s.get('requests',{}).values():
@@ -1188,6 +1302,11 @@ class Session:
             s['commands']=commands
         elif provider in ('qoder','qoderintl','claude') and t == 'interaction':
             e=copy.deepcopy(e)
+            if provider=='claude':
+                # Approvals raised inside a subagent name it; one the roster cannot
+                # resolve yet keeps its agent id and is labelled once an event does.
+                agent=e.pop('agentId',None)
+                if agent: e['subagent']=subagent_label(agent,self.subagent_guard(self.subagent_resolve,agent,e.get('id')))
             if provider=='claude' and e.get('name')=='ExitPlanMode':
                 content=e.get('planContent', (e.get('input') or {}).get('plan'))
                 content=content if isinstance(content,str) else ''
@@ -1205,6 +1324,7 @@ class Session:
                 for part in message['content']:
                     if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
             self.upsert(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))
+            if provider == 'claude': self.subagent_guard(self.subagent_main, message)
             if provider == 'claude' and t == 'assistant':
                 # Per-request usage of the latest main-loop reply: the live window
                 # fill. result.usage is the turn total summed across API requests and
@@ -1259,6 +1379,15 @@ class Session:
             if e.get('limit'):
                 s['context']={'tokens':e.get('tokens'),'limit':e['limit'],'reportedAt':time.time()}; durable=True
         elif provider in ('qoder','qoderintl','claude') and t == 'system' and e.get('subtype')=='init': s['resume']=e.get('session_id'); s['model']=e.get('model',s['model']); durable=True
+        elif provider == 'claude' and t == 'system' and e.get('subtype') in SUBAGENT_TASK_EVENTS:
+            # background_tasks_changed is a level signal whose order against these
+            # edges is unspecified, so it never decides a subagent's status.
+            finished=self.subagent_guard(self.subagent_task, e)
+            if finished is None: return
+            durable=finished
+        elif provider == 'claude' and t == 'task_stop_result':
+            if not self.subagent_guard(self.subagent_stop_result, e): return
+            durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
             if e.get('error'):
                 s['error']='dsh 握手失败：'+str(e['error'].get('message','initialize 被拒绝'))
@@ -1366,9 +1495,10 @@ class Session:
         paged = turns is not None or start is not None or before is not None
         if not paged:
             if revision == str(self.state['revision']): return {'unchanged':True}
-            s=copy.deepcopy({k:v for k,v in self.state.items() if k!='requests'})
+            s=copy.deepcopy({k:v for k,v in self.state.items() if k not in ('requests','subagentRoster')})
             s['permission']=permission_capability(self.state)
             if s.get('partial'): s['messages'].append(normalize(s.pop('partial'),'live'))
+            s['subagents']=self.subagent_live()
             return s
         count = len(self.state['messages'])
         partial = normalize(self.state['partial'], 'live') if self.state.get('partial') else None
@@ -1390,7 +1520,7 @@ class Session:
         if delta and since == self.state['revision']: return {'unchanged':True}
         # Copy metadata and only the requested page/changed messages. Completed
         # history is neither deep-copied nor serialized for every stream tick.
-        s=copy.deepcopy({k:v for k,v in self.state.items() if k not in ('requests','messages','partial')})
+        s=copy.deepcopy({k:v for k,v in self.state.items() if k not in ('requests','messages','partial','subagentRoster')})
         s['permission']=permission_capability(self.state)
         if delta:
             indices = sorted(i for i, version in self.message_versions.items() if first <= i < count and version > since)
@@ -1399,7 +1529,334 @@ class Session:
         else: indices = range(first, end)
         s['messages'] = [copy.deepcopy(self.state['messages'][i]) if i < count else partial for i in indices]
         s['history'] = history
+        s['subagents'] = self.subagent_live()
         return s
+
+    # Claude subagents. Roster entries live in state['subagentRoster'] and their
+    # changes touch() the session. Each transcript keeps its own epoch, revision and
+    # per-index versions, so a busy child leaves the main snapshot poll quiet.
+    def index_subagents(self):
+        self.subagent_entries = {}; self.subagent_aliases = {}
+        for entry in self.state.get('subagentRoster') or []:
+            self.subagent_entries[entry['id']] = entry
+            for alias in [entry['id'], entry.get('taskId')] + list(entry.get('toolUseIds') or []):
+                if alias: self.subagent_aliases.setdefault(alias, entry['id'])
+    def subagent_guard(self, action, *args):
+        # A child event of an unexpected shape must never stop the main stream.
+        try: return action(*args)
+        except Exception:
+            traceback.print_exc()
+            return None
+    def subagent_find(self, alias):
+        return self.subagent_entries.get(self.subagent_aliases.get(alias)) if alias else None
+    def subagent_resolve(self, agent_id, tool_use_id=None):
+        """The entry an approval came from: its agent id once that is an alias, or
+        the transcript that already holds the tool call being approved."""
+        entry = self.subagent_find(agent_id)
+        if entry is None and tool_use_id:
+            key = next((k for k, t in self.subagent_transcripts.items() if tool_use_id in t['tools']), None)
+            entry = self.subagent_entries.get(key)
+            if entry is not None and agent_id: self.subagent_aliases.setdefault(agent_id, entry['id'])
+        return entry
+    def subagent_relabel(self):
+        changed = False
+        for interaction in self.state['interactions']:
+            label = interaction.get('subagent')
+            if not isinstance(label, dict): continue
+            entry = (self.subagent_entries.get(label['id']) if label.get('id')
+                     else self.subagent_resolve(label.get('agentId'), interaction.get('id')))
+            fresh = subagent_label(label.get('agentId'), entry)
+            if fresh != label: interaction['subagent'] = fresh; changed = True
+        return changed
+    def subagent_named(self):
+        return {x['subagent']['id'] for x in self.state['interactions'] if isinstance(x.get('subagent'), dict) and x['subagent'].get('id')}
+    def subagent_adopt(self, entry, task_id=None, tool_use_id=None):
+        changed = False
+        if task_id and not entry['taskId']: entry['taskId'] = task_id; changed = True
+        if tool_use_id and tool_use_id not in entry['toolUseIds']: entry['toolUseIds'].append(tool_use_id); changed = True
+        for alias in (task_id, tool_use_id):
+            if alias: self.subagent_aliases.setdefault(alias, entry['id'])
+        return changed
+    def subagent_set(self, entry, **values):
+        # None means "not reported", which never erases what is already known.
+        changed = False
+        for key, value in values.items():
+            if value is not None and entry.get(key) != value: entry[key] = value; changed = True
+        return changed
+    def subagent_bump(self, entry):
+        # Entry changes also reach a client that follows the transcript.
+        entry['revision'] += 1; entry['updatedAt'] = iso_time()
+    def subagent_create(self, key, task_id=None, tool_use_id=None):
+        now = iso_time()
+        entry = {'id':key, 'kind':'claude', 'taskId':None, 'toolUseIds':[], 'turnId':self.state.get('turnId'),
+                 'description':None, 'subagentType':None, 'status':'running', 'background':None,
+                 'startedAt':now, 'updatedAt':now, 'endedAt':None, 'usage':None, 'lastToolName':None,
+                 'summary':None, 'error':None, 'canStop':False, 'stopRequested':False, 'stopError':None,
+                 'messageCount':0, 'revision':0}
+        self.state.setdefault('subagentRoster', []).append(entry)
+        self.subagent_entries[key] = entry; self.subagent_aliases[key] = key
+        self.subagent_adopt(entry, task_id, tool_use_id)
+        self.subagent_set(entry, **(self.subagent_calls.get(tool_use_id) or {}))
+        self.subagent_transcripts[key] = subagent_transcript_state()
+        self.subagent_prune()
+        return entry
+    def subagent_finish(self, entry, status, ended=None):
+        entry['status'] = status; entry['endedAt'] = ended or iso_time()
+        self.subagent_bump(entry); self.subagent_write(entry['id'])
+    def subagent_prune(self):
+        roster = self.state.get('subagentRoster') or []
+        excess = len(roster) - SUBAGENT_ROSTER_LIMIT
+        if excess <= 0: return
+        # Only finished entries go, oldest first, never one a pending approval names.
+        named = self.subagent_named()
+        finished = sorted((x for x in roster if x['status'] not in SUBAGENT_LIVE and x['id'] not in named), key=lambda x: x['startedAt'])
+        gone = {x['id'] for x in finished[:excess]}
+        if not gone: return
+        self.state['subagentRoster'] = [x for x in roster if x['id'] not in gone]
+        self.subagent_aliases = {alias:key for alias, key in self.subagent_aliases.items() if key not in gone}
+        for key in gone:
+            self.subagent_entries.pop(key, None); self.subagent_transcripts.pop(key, None); self.subagent_dirty.discard(key)
+            try: self.subagent_path(key).unlink(missing_ok=True)
+            except OSError: pass
+    def subagent_view(self, entry):
+        view = {key:entry.get(key) for key in SUBAGENT_KEYS}
+        view['toolUseIds'] = list(entry.get('toolUseIds') or [])
+        view['usage'] = dict(entry['usage']) if isinstance(entry.get('usage'), dict) else None
+        view['stopRequested'] = bool(entry.get('stopRequested'))
+        view['canStop'] = (entry.get('kind') == 'claude' and entry.get('status') in SUBAGENT_LIVE and bool(entry.get('taskId'))
+                           and bool(self.state.get('busy')) and bool(self.state.get('turnId')))
+        return view
+    def subagent_live(self):
+        roster = self.state.get('subagentRoster') or []
+        if not roster: return []
+        named = self.subagent_named(); turn = self.state.get('turnId'); ranked = []
+        for position, entry in enumerate(roster):
+            rank = (0 if entry.get('id') in named else 1 if entry.get('status') in SUBAGENT_LIVE
+                    else 2 if turn and entry.get('turnId') == turn else None)
+            if rank is not None: ranked.append((rank, entry.get('startedAt') or '', position, entry))
+        # Over the cap, approvals and running children win over finished ones and
+        # newer over older; the list itself reads in start order.
+        ranked.sort(key=lambda x: (x[1], x[2]), reverse=True)
+        ranked.sort(key=lambda x: x[0])
+        return [self.subagent_view(x[3]) for x in sorted(ranked[:SUBAGENT_SNAPSHOT_LIMIT], key=lambda x: (x[1], x[2]))]
+    def subagent_path(self, key):
+        return ROOT / 'subagents' / self.state['id'] / subagent_filename(key)
+    def subagent_transcript(self, entry):
+        transcript = self.subagent_transcripts.get(entry['id'])
+        if transcript is not None: return transcript
+        revision = 0
+        try:
+            data = json.loads(self.subagent_path(entry['id']).read_text())
+            versions = {int(k):int(v) for k, v in (data.get('versions') or {}).items()}
+            # A file from an earlier service can lag what a client already read, so
+            # its positions restart under a new epoch, as main history does.
+            transcript = subagent_transcript_state(data['messages'], int(data.get('truncated') or 0), versions)
+            revision = int(data.get('revision') or 0)
+        except Exception: transcript = subagent_transcript_state()
+        entry['revision'] = max(entry['revision'], revision); entry['messageCount'] = len(transcript['messages'])
+        self.subagent_transcripts[entry['id']] = transcript
+        return transcript
+    def subagent_append(self, entry, value):
+        transcript = self.subagent_transcript(entry)
+        index = transcript['index'].get(value['id']); size = json_size(value)
+        if index is None:
+            index = len(transcript['messages']); transcript['index'][value['id']] = index
+            transcript['messages'].append(value); transcript['sizes'].append(size); transcript['bytes'] += size
+        elif transcript['messages'][index] == value: return False
+        else:
+            transcript['bytes'] += size - transcript['sizes'][index]
+            transcript['messages'][index] = value; transcript['sizes'][index] = size
+        entry['revision'] += 1; transcript['versions'][index] = entry['revision']
+        transcript['tools'].update(p['tool_call_id'] for p in value['content'] if p.get('type') == 'tool_use')
+        self.subagent_trim(transcript)
+        entry['messageCount'] = len(transcript['messages']); entry['updatedAt'] = iso_time()
+        self.subagent_mark(entry['id'])
+        return True
+    def subagent_trim(self, transcript):
+        messages = transcript['messages']; sizes = transcript['sizes']
+        if len(messages) <= SUBAGENT_MESSAGE_LIMIT and transcript['bytes'] <= SUBAGENT_BYTE_LIMIT: return
+        drop = max(0, len(messages) - SUBAGENT_MESSAGE_LIMIT * 3 // 4); kept = transcript['bytes'] - sum(sizes[:drop])
+        while drop < len(messages) - 1 and kept > SUBAGENT_BYTE_LIMIT * 3 // 4:
+            kept -= sizes[drop]; drop += 1
+        if not drop: return
+        # Every position moves, so the transcript starts a new epoch.
+        messages = messages[drop:]
+        transcript.update(epoch=uuid.uuid4().hex, truncated=transcript['truncated'] + drop, messages=messages,
+                          sizes=sizes[drop:], bytes=kept, versions={}, index={m['id']:i for i, m in enumerate(messages)},
+                          tools={p.get('tool_call_id') for m in messages for p in m['content'] if p.get('type') == 'tool_use'})
+    def subagent_mark(self, key):
+        # A busy transcript is written about every two seconds; a finished entry
+        # and the end of the turn write at once.
+        self.subagent_dirty.add(key)
+        if self.subagent_timer is None and not self.deleted:
+            self.subagent_timer = threading.Timer(SUBAGENT_SAVE_DELAY, self.subagent_timer_fired)
+            self.subagent_timer.daemon = True; self.subagent_timer.start()
+    def subagent_timer_fired(self):
+        with LOCK:
+            self.subagent_timer = None; self.subagent_flush()
+    def subagent_flush(self):
+        for key in list(self.subagent_dirty): self.subagent_write(key)
+    def subagent_write(self, key):
+        entry = self.subagent_entries.get(key); transcript = self.subagent_transcripts.get(key)
+        if self.deleted or entry is None or transcript is None: self.subagent_dirty.discard(key); return
+        try:
+            folder = ROOT / 'subagents' / self.state['id']
+            folder.parent.mkdir(exist_ok=True); folder.mkdir(exist_ok=True)
+            save(folder / subagent_filename(key), {'epoch':transcript['epoch'], 'revision':entry['revision'],
+                 'truncated':transcript['truncated'], 'messages':transcript['messages'], 'versions':transcript['versions']})
+        except (OSError, ValueError): return  # stays dirty; the next change or turn end retries
+        self.subagent_dirty.discard(key)
+    def subagent_discard(self):
+        if self.subagent_timer is not None: self.subagent_timer.cancel(); self.subagent_timer = None
+        self.subagent_dirty.clear(); self.subagent_transcripts.clear()
+        shutil.rmtree(ROOT / 'subagents' / self.state['id'], ignore_errors=True)
+    def subagent_recover(self):
+        """At service start the worker of a queued or running child is gone with the
+        previous service, and a transcript no roster entry names is an orphan."""
+        roster = self.state.get('subagentRoster') or []
+        for entry in roster:
+            if entry.get('status') in SUBAGENT_LIVE:
+                entry.update(status='unknown', endedAt=entry.get('endedAt') or entry.get('updatedAt'), revision=entry.get('revision', 0) + 1)
+        folder = ROOT / 'subagents' / self.state['id']
+        if not folder.is_dir(): return
+        keep = {subagent_filename(x['id']) for x in roster}
+        for child in folder.iterdir():
+            if child.name in keep: continue
+            try: shutil.rmtree(child) if child.is_dir() and not child.is_symlink() else child.unlink()
+            except OSError: pass
+    def subagent_message(self, e):
+        message = e.get('message'); parent = e.get('parent_tool_use_id')
+        if not isinstance(message, dict) or not isinstance(parent, str): return
+        entry = self.subagent_find(parent); created = entry is None
+        if created: entry = self.subagent_create(parent, tool_use_id=parent)
+        if e.get('type') == 'user' and e.get('isSynthetic'):
+            message = copy.deepcopy(message)
+            message['content'] = text_parts(message.get('content'))
+            for part in message['content']:
+                if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
+        for part in text_parts(message.get('content')):
+            # A nested spawn describes the grandchild its own messages create.
+            if isinstance(part, dict) and part.get('type') == 'tool_use' and part.get('name') in SUBAGENT_TOOLS and part.get('id'):
+                self.subagent_calls[part['id']] = subagent_call(part.get('input'))
+        value = clip_subagent_message(copy.deepcopy(normalize(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))))
+        appended = self.subagent_append(entry, value)
+        labelled = appended and any(isinstance(x.get('subagent'), dict) for x in self.state['interactions']) and self.subagent_relabel()
+        if created or labelled: self.touch()
+    def subagent_main(self, message):
+        """Main-thread Agent/Task calls describe the entries their child messages
+        create; a call's tool_result ends its entry only when no task event ever
+        reported on it, because a background child's result arrives while it runs."""
+        changed = False
+        for part in text_parts(message.get('content')):
+            if not isinstance(part, dict): continue
+            if part.get('type') == 'tool_use' and part.get('name') in SUBAGENT_TOOLS and part.get('id'):
+                call = self.subagent_calls[part['id']] = subagent_call(part.get('input'))
+                entry = self.subagent_find(part['id'])
+                if entry and self.subagent_set(entry, **{k:v for k, v in call.items() if entry.get(k) is None}):
+                    self.subagent_bump(entry); changed = True
+            elif part.get('type') == 'tool_result':
+                entry = self.subagent_find(part.get('tool_use_id'))
+                if entry and not entry['taskId'] and entry['status'] in SUBAGENT_LIVE:
+                    text = clip_chars(tool_result_text(part.get('content')), 600); failed = part.get('is_error') is True
+                    self.subagent_set(entry, error=text if failed else None, summary=None if failed else text)
+                    self.subagent_finish(entry, 'failed' if failed else 'completed'); changed = True
+        if changed: self.subagent_relabel()
+    def subagent_task(self, e):
+        """Apply one task_* event. None when nothing changed, else whether the entry
+        has just finished."""
+        kind = e.get('subtype'); task_id = e.get('task_id'); task_type = e.get('task_type')
+        tool = e.get('tool_use_id') if isinstance(e.get('tool_use_id'), str) and e.get('tool_use_id') else None
+        if not isinstance(task_id, str) or not task_id or task_id in self.subagent_ignored: return None
+        # Subagents only: other task kinds, housekeeping and hidden tasks stay out.
+        if e.get('ambient') or e.get('skip_transcript') or (task_type and task_type != 'local_agent'):
+            self.subagent_ignored.add(task_id); return None
+        entry = self.subagent_find(task_id) or self.subagent_find(tool)
+        if entry is None:
+            if not task_type and tool not in self.subagent_calls:
+                if kind == 'task_started': self.subagent_ignored.add(task_id)
+                return None
+            entry = self.subagent_create(task_id, task_id, tool); changed = True
+        else: changed = self.subagent_adopt(entry, task_id, tool)
+        live = entry['status'] in SUBAGENT_LIVE; finished = False
+        if kind == 'task_notification':
+            status = e.get('status') if e.get('status') in ('completed', 'failed', 'stopped') else None
+            changed |= self.subagent_set(entry, status=status, summary=clip_chars(e.get('summary'), 600), usage=subagent_usage(e.get('usage')),
+                                         endedAt=(entry['endedAt'] or iso_time()) if status else None)
+            finished = live and status is not None
+        elif not live: pass  # A finished entry never revives from a late event.
+        elif kind == 'task_started':
+            kind_name = e.get('subagent_type'); background = e.get('is_backgrounded')
+            changed |= self.subagent_set(entry, status='running',
+                                         description=subagent_call({'description':e.get('description'), 'prompt':e.get('prompt')})['description'],
+                                         subagentType=kind_name if isinstance(kind_name, str) and kind_name else None,
+                                         background=background if isinstance(background, bool) else None)
+        elif kind == 'task_progress':
+            kind_name = e.get('subagent_type'); tool_name = e.get('last_tool_name')
+            changed |= self.subagent_set(entry, description=clip_chars(e.get('description'), 200),
+                                         subagentType=kind_name if isinstance(kind_name, str) and kind_name else None,
+                                         usage=subagent_usage(e.get('usage')), summary=clip_chars(e.get('summary'), 600),
+                                         lastToolName=tool_name if isinstance(tool_name, str) and tool_name else None)
+        else:
+            patch = e.get('patch') if isinstance(e.get('patch'), dict) else {}
+            status = SUBAGENT_PATCH_STATUS.get(patch.get('status')); ended = patch.get('end_time'); background = patch.get('is_backgrounded')
+            finished = status is not None and status not in SUBAGENT_LIVE
+            if finished: ended = iso_time(ended / 1000 if ended > 1e11 else ended) if isinstance(ended, (int, float)) and not isinstance(ended, bool) and 0 < ended < 1e14 else iso_time()
+            changed |= self.subagent_set(entry, status=status, description=clip_chars(patch.get('description'), 200),
+                                         error=clip_chars(patch.get('error'), 600), endedAt=ended if finished else None,
+                                         background=background if isinstance(background, bool) else None)
+        if not changed: return None
+        self.subagent_bump(entry)
+        if finished: self.subagent_write(entry['id'])
+        self.subagent_relabel()
+        return finished
+    def subagent_stop_result(self, e):
+        entry = self.subagent_find(e.get('taskId'))
+        if entry is None or entry['status'] not in SUBAGENT_LIVE: return False
+        if e.get('ok') is True:
+            if entry['stopError'] is None: return False
+            entry['stopError'] = None
+        else:
+            entry['stopRequested'] = False
+            entry['stopError'] = clip_chars(str(e.get('error') or ''), 600) or '停止子 Agent 失败'
+        self.subagent_bump(entry)
+        return True
+    def subagent_settle(self):
+        # The turn is over, so a child its worker never reported on did not end on
+        # its own terms: stopped when the turn was cancelled, otherwise unknown.
+        status = 'stopped' if self.state.get('cancelled') or self.state.get('stopAcknowledged') else 'unknown'
+        for entry in self.state.get('subagentRoster') or []:
+            if entry['status'] in SUBAGENT_LIVE: entry['status'] = status; entry['endedAt'] = iso_time(); self.subagent_bump(entry)
+        self.subagent_flush()
+    def subagent_stop(self, key):
+        entry = self.subagent_find(key)
+        if entry is None: raise SubagentNotFound('未找到该子 Agent')
+        if not self.subagent_view(entry)['canStop']: raise ValueError('该子 Agent 当前无法单独停止')
+        if entry['stopRequested']: return
+        self.send({'type':'stop_task', 'taskId':entry['taskId'], 'turnId':self.state['turnId']})
+        entry['stopRequested'] = True; entry['stopError'] = None
+        self.subagent_bump(entry); self.touch(True)
+    def subagent_page(self, key, epoch=None, revision=None, before=None, limit=None):
+        entry = self.subagent_find(key)
+        if entry is None: raise SubagentNotFound('未找到该子 Agent')
+        transcript = self.subagent_transcript(entry); messages = transcript['messages']; count = len(messages)
+        current = epoch == transcript['epoch']
+        if before is None and revision is not None and current and int(revision) == entry['revision']: return {'unchanged':True}
+        page = {'entry':self.subagent_view(entry), 'epoch':transcript['epoch'], 'revision':entry['revision'],
+                'total':count, 'truncated':transcript['truncated']}
+        if before is not None:
+            if not current: raise ValueError('History changed; reopen the conversation')
+            size = int(limit) if limit is not None else 100
+            if not 1 <= size <= SUBAGENT_WINDOW: raise ValueError('Invalid history page size')
+            end = int(before)
+            if not 0 <= end <= count: raise ValueError('Invalid history cursor')
+            first = max(0, end - size)
+            return page | {'start':first, 'messages':copy.deepcopy(messages[first:end])}
+        if revision is not None and current and 0 <= int(revision) < entry['revision']:
+            since = int(revision)
+            indices = sorted(i for i, version in transcript['versions'].items() if version > since and i < count)
+            return page | {'changes':[{'index':i, 'message':copy.deepcopy(messages[i])} for i in indices]}
+        first = max(0, count - SUBAGENT_WINDOW)
+        return page | {'start':first, 'messages':copy.deepcopy(messages[first:])}
 
 def load():
     for path in (ROOT/'sessions').glob('*.json'):
@@ -1412,9 +1869,20 @@ def load():
         if s.get('turnState') in ('submitting','submitted','accepted','running'): restored.finish('unknown')
         if isinstance(s.get('commandResult'),dict) and s['commandResult'].get('status')=='running':
             s['commandResult'].update(status='unknown',error='服务曾中断，命令结果未知')
+        restored.subagent_recover()
         restored.persist()
+    # Transcript folders of sessions that no longer exist are orphans.
+    folder=ROOT/'subagents'
+    if folder.is_dir():
+        for child in folder.iterdir():
+            if child.name in SESSIONS: continue
+            try: shutil.rmtree(child) if child.is_dir() and not child.is_symlink() else child.unlink()
+            except OSError: pass
 
 class PlanReviewConflict(ValueError):
+    pass
+
+class SubagentNotFound(LookupError):
     pass
 
 class Handler(BaseHTTPRequestHandler):
@@ -1482,12 +1950,17 @@ class Handler(BaseHTTPRequestHandler):
                     s=SESSIONS[path[2]]
                     if not post and len(path)==5 and path[3]=='requests':
                         result=copy.deepcopy(s.state.get('requests',{}).get(path[4],{'id':path[4],'status':'notFound'}))
+                    elif not post and len(path)==5 and path[3]=='subagents':
+                        query=parse_qs(urlparse(self.path).query)
+                        result=s.subagent_page(unquote(path[4]),**{k:query[k][0] for k in ('epoch','revision','before','limit') if k in query})
                     elif not post:
                         query=parse_qs(urlparse(self.path).query)
                         result=s.snapshot(**{k:query[k][0] for k in ('revision','turns','start','epoch','before') if k in query})
                     else:
                         action=path[3]
-                        if action=='prompt':
+                        if action=='subagents' and len(path)==6 and path[5]=='stop':
+                            s.subagent_stop(unquote(path[4]))
+                        elif action=='prompt':
                             result=s.prompt(body)
                         elif action=='steer':
                             result=s.steer(body)
@@ -1633,11 +2106,13 @@ class Handler(BaseHTTPRequestHandler):
                             if s.process and s.process.poll() is None: s.process.stdin.close()
                             s.path.unlink(missing_ok=True); del SESSIONS[s.state['id']]
                             shutil.rmtree(ROOT/'attachments'/s.state['id'], ignore_errors=True)
+                            s.subagent_discard()
                         else: raise ValueError('未知操作')
                         if action not in ('prompt','steer','permission'): result={'ok':True}
                 else: raise ValueError('未知路径')
             self.respond(200,result)
         except PlanReviewConflict as e: self.respond(409,{'error':str(e)})
+        except SubagentNotFound as e: self.respond(404,{'error':str(e)})
         except Exception as e: self.respond(400,{'error':str(e)})
     def respond(self,status,body):
         data=json.dumps(body,ensure_ascii=False).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
@@ -1655,8 +2130,10 @@ def running_endpoint(path):
     except Exception: return None, None
 
 def active_session(session):
-    command=session.get('commandResult')
-    return bool(session.get('busy') or session.get('pending') or
+    # A summary reports running subagents as a count, a snapshot as its live list.
+    command=session.get('commandResult'); subagents=session.get('subagents')
+    return bool(session.get('busy') or session.get('pending') or session.get('runningSubagents') or
+        isinstance(subagents,list) and any(isinstance(x,dict) and x.get('status') in SUBAGENT_LIVE for x in subagents) or
         session.get('turnState') in ('submitting','submitted','accepted','running') or
         isinstance(command,dict) and command.get('status')=='running')
 

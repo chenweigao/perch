@@ -17,6 +17,18 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
       }
       return;
     }
+    if (cmd.type === 'stop_task') {
+      // A control request like interrupt(): it may stop a child of the running
+      // turn only, and the bridge hears back either way.
+      const target = active;
+      let error;
+      if (target && cmd.turnId === activeTurn) {
+        try { await target.stopTask(cmd.taskId); }
+        catch (failure) { error = failure?.message || String(failure); }
+      } else error = '子 Agent 所在的轮次已结束';
+      emit({type:'task_stop_result', taskId:cmd.taskId, ok:!error, ...(error ? {error} : {})});
+      return;
+    }
     if (cmd.type === 'answer') { pending.get(cmd.id)?.(cmd); pending.delete(cmd.id); return; }
     if (cmd.type !== 'prompt' || active) throw new Error('会话正在运行');
     activeTurn = cmd.id;
@@ -53,6 +65,9 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
     active = query({prompt, options: {
       pathToClaudeCodeExecutable: cfg.binary, cwd: cfg.cwd,
       permissionMode, includePartialMessages: true, resume,
+      // Subagent text is only forwarded once the bridge knows it cannot reach the
+      // main streaming tail; tool calls and results arrive either way.
+      forwardSubagentText: cfg.forwardSubagentText === true,
       ...(permissionMode === 'bypassPermissions' ? {allowDangerouslySkipPermissions: true} : {}),
       ...(cfg.model ? {model: cfg.model} : {}),
       hooks: {PostToolUse:[{matcher:'Write|Edit', hooks:[async event => {
@@ -71,7 +86,7 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
             pending.set(id, resolve);
             onAbort = () => {pending.delete(id); emit({type:'interaction_cancel', id}); resolve({allow:false});};
             context.signal.addEventListener('abort', onAbort, {once:true});
-            emit({type:'interaction', id, name, input, title:context.decisionReason,
+            emit({type:'interaction', id, name, input, title:context.decisionReason, agentId:context.agentID ?? null,
               ...(plan ? {planContent:plan.content, planChanged:changed} : {})});
           });
           context.signal.removeEventListener('abort', onAbort);
@@ -93,7 +108,8 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
     try {
       for await (const message of active) {
         if (message.isReplay) continue;
-        if (message.session_id) resume = message.session_id;
+        // Only the main thread names the session to resume; a child must not.
+        if (message.session_id && !message.parent_tool_use_id) resume = message.session_id;
         emit(message);
         if (message.type === 'result') {
           // result.usage totals every API request of the turn, and modelUsage's
