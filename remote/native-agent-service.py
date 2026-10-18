@@ -8,10 +8,11 @@ ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
 SERVICE_VERSION = 7
-# Subagent text and thinking stay off until a probe shows that their stream events
-# carry a parent id; otherwise they would write into the main reply's streaming
-# tail. Tool calls and results inside a subagent are forwarded either way.
-CLAUDE_FORWARD_SUBAGENT_TEXT = False
+# Subagent text and thinking are forwarded into each subagent's own transcript.
+# Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
+# message carried parent_tool_use_id, and no unparented stream delta held
+# subagent-only text, so the main reply's streaming tail stays clean.
+CLAUDE_FORWARD_SUBAGENT_TEXT = True
 SUBAGENT_TOOLS = ('Agent', 'Task')
 SUBAGENT_LIVE = ('queued', 'running')
 SUBAGENT_TASK_EVENTS = ('task_started', 'task_progress', 'task_updated', 'task_notification')
