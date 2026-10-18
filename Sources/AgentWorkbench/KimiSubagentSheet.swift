@@ -65,98 +65,16 @@ struct KimiSubagentTranscriptSheet: View {
                 Text("这个子 Agent 还没有可见的轮次。").foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 80)
             }
-            LazyVStack(alignment: .leading, spacing: 8) {
-                // Flatten the turn/step hierarchy before building lazy children:
-                // one long turn must not become one enormous layout unit.
-                ForEach(rows(in: transcript)) { row in
-                    switch row {
-                    case .header(let turn):
-                        turnHeader(turn).padding(.top, turn.id == transcript.turns.first?.id ? 0 : 10)
-                    case .frame(let frame): frameView(frame)
-                    case .error(_, let text):
-                        Text(text).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
-                    }
-                }
-            }.scrollTargetLayout()
+            // The turn/step hierarchy is flattened before building lazy children:
+            // one long turn must not become one enormous layout unit.
+            SubagentTranscriptList(rows: SubagentTranscriptRow.rows(from: transcript),
+                                   memoryScope: "subagent:\(agentId)")
         } else if connection.loadingSubagentTranscript {
             ProgressView().frame(maxWidth: .infinity, minHeight: 120)
         }
         if let error = connection.subagentTranscriptError {
             Text(error).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
                 .padding(.top, 10)
-        }
-    }
-
-    private enum Row: Identifiable {
-        case header(KimiTranscriptItem)
-        case frame(KimiTranscriptFrame)
-        case error(String, String)
-        var id: String {
-            switch self {
-            case .header(let turn): return "turn:" + turn.id
-            case .frame(let frame): return "frame:" + frame.frameId
-            case .error(let id, _): return "error:" + id
-            }
-        }
-    }
-    private func rows(in transcript: KimiSubagentTranscript) -> [Row] {
-        transcript.turns.flatMap { turn in
-            var rows: [Row] = [.header(turn)]
-            rows += (turn.steps ?? []).flatMap { ($0.frames ?? []).map(Row.frame) }
-            if let error = turn.error, !error.isEmpty { rows.append(.error(turn.id, error)) }
-            return rows
-        }
-    }
-
-    private func turnHeader(_ turn: KimiTranscriptItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: turnSymbol(turn.state))
-                    .font(.system(size: 11))
-                    .foregroundStyle(turn.state == "failed" ? Color.orange : Color.secondary)
-                    .accessibilityHidden(true)
-                Text("第 \(turn.ordinal ?? 0) 轮").font(.system(size: 12, weight: .medium))
-                if let state = turn.state, state != "completed" {
-                    Text(turnStateLabel(state)).font(.system(size: 11)).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }.accessibilityElement(children: .combine)
-
-        }
-    }
-
-    /// Each frame needs its own expansion scope: tool cards and thoughts remember
-    /// their state by key, so one shared scope would open them all together.
-    private func frameView(_ frame: KimiTranscriptFrame) -> some View {
-        frameContent(frame)
-            .environment(\.conversationMemoryKey, "subagent:\(agentId):\(frame.frameId)")
-    }
-
-    @ViewBuilder private func frameContent(_ frame: KimiTranscriptFrame) -> some View {
-        switch frame.kind {
-        case "tool":
-            if let tool = frame.tool { KimiToolCard(tool: tool) }
-        case "thinking":
-            if let text = frame.text, !text.isEmpty { ThoughtDisclosure(text: text) }
-        case "notice":
-            if let message = frame.message, !message.isEmpty {
-                Label {
-                    Text(message).textSelection(.enabled)
-                } icon: {
-                    Image(systemName: "exclamationmark.circle")
-                }.font(.system(size: 12))
-                    .foregroundStyle(frame.level == "error" ? Color.orange : Color.secondary)
-            }
-        default:
-            if let text = frame.text, !text.isEmpty {
-                if frame.role == "user" {
-                    Text(text).font(.system(size: 12)).foregroundStyle(.secondary).textSelection(.enabled)
-                        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
-                } else {
-                    KimiMarkdown(text: text).environment(\.isConversationBodyText, true)
-                }
-            }
         }
     }
 
@@ -168,24 +86,5 @@ struct KimiSubagentTranscriptSheet: View {
             Button("重新读取") { Task { await connection.openSubagentTranscript(agentId) } }
                 .disabled(!connection.online || connection.loadingSubagentTranscript)
         }.padding(.horizontal, WorkbenchTheme.Dialog.padding).padding(.vertical, 10)
-    }
-
-    private func turnSymbol(_ state: String?) -> String {
-        switch state {
-        case "running": return "circle.dotted"
-        case "queued": return "clock"
-        case "failed": return "exclamationmark.circle"
-        case "cancelled": return "xmark.circle"
-        default: return "checkmark"
-        }
-    }
-    private func turnStateLabel(_ state: String) -> String {
-        switch state {
-        case "queued": return L("排队中")
-        case "running": return L("运行中")
-        case "failed": return L("失败")
-        case "cancelled": return L("已取消")
-        default: return state
-        }
     }
 }

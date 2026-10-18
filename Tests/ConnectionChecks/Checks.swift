@@ -262,6 +262,7 @@ struct ConnectionChecks {
         try await checkIdleSnapshotBackoff()
         try await checkNativeLoading()
         try await checkNativeObservation()
+        try await checkNativeSubagentConnection()
         try await checkKimiTaskLaunch()
         try await checkKimiSteering()
         try await checkKimiPendingSettle()

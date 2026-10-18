@@ -47,6 +47,7 @@ struct ProtocolTests {
         checkReplySelection()
         checkReplyTableGeometry()
         try checkNativeAgents()
+        try checkNativeSubagents()
         try checkIncrementalLoading()
         try checkKimiProtocol()
         try checkKimiTasks()

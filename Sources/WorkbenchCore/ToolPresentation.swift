@@ -6,7 +6,14 @@ public enum ToolPresentation {
         ["read", "read_file", "readfile", "grep", "search", "glob", "find_files"].contains(name.lowercased())
     }
 
+    /// Calls that start a subagent: Claude's Agent tool (named Task in older
+    /// releases) and Codex's collab spawn, which the bridge names agent/spawnAgent.
+    public static func isSubagentCall(name: String) -> Bool {
+        ["agent", "task", "agent/spawnagent"].contains(name.lowercased())
+    }
+
     public static func action(_ name: String) -> String {
+        if isSubagentCall(name: name) { return L("子 Agent") }
         switch name.lowercased() {
         case "read", "read_file", "readfile": return L("读取")
         case "grep", "search": return L("搜索")

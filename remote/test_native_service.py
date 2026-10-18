@@ -190,19 +190,36 @@ class ProtocolTests(unittest.TestCase):
 
     def test_claude_subagent_messages_do_not_replace_main_stream(self):
         s = self.session('claude')
-        s.event({'type':'stream_event','event':{'type':'content_block_start','index':0,
-            'content_block':{'type':'text','text':'main'}}})
-        before = s.snapshot(); revision = s.state['revision']
-        for kind in ['assistant', 'user', 'stream_event']:
-            s.event({'type':kind,'parent_tool_use_id':'agent-tool','uuid':'child',
-                'message':{'role':kind,'content':'child'},'event':{'type':'message_start'}})
-        self.assertEqual(s.state['revision'], revision)
-        self.assertEqual(s.snapshot(), before)
+        with patch.object(broker.threading, 'Timer'):
+            s.event({'type':'stream_event','event':{'type':'content_block_start','index':0,
+                'content_block':{'type':'text','text':'main'}}})
+            # The roster change that registers the child is a session change; the
+            # transcript appends after it are not.
+            s.event({'type':'system','subtype':'task_started','task_id':'task-1','tool_use_id':'agent-tool',
+                'task_type':'local_agent','description':'Explore'})
+            before = s.snapshot(); page = s.snapshot(turns='50'); revision = s.state['revision']
+            messages = json.loads(json.dumps(s.state['messages'])); partial = json.loads(json.dumps(s.state['partial']))
+            for kind in ['assistant', 'user', 'stream_event']:
+                s.event({'type':kind,'parent_tool_use_id':'agent-tool','uuid':'child-'+kind,
+                    'message':{'role':kind,'content':'child'},'event':{'type':'message_start'}})
+            self.assertEqual(s.state['revision'], revision)
+            self.assertEqual((s.state['messages'], s.state['partial']), (messages, partial))
+            self.assertEqual(s.snapshot()['messages'], before['messages'])
+            self.assertEqual(s.snapshot(revision=str(revision), start=str(page['history']['start']),
+                epoch=page['history']['epoch']), {'unchanged':True})
+            # The child's assistant and user messages are in its own transcript;
+            # its stream event is not.
+            transcript = s.subagent_page('agent-tool')
+            self.assertEqual([(m['id'], m['role'], m['content'][0]['text']) for m in transcript['messages']],
+                [('child-assistant','assistant','child'), ('child-user','user','child')])
+            self.assertEqual(transcript['entry']['messageCount'], 2)
         # Parent tool results and approvals still reach the main client.
         s.event({'type':'user','uuid':'parent-result','parent_tool_use_id':None,
             'message':{'role':'user','content':[{'type':'tool_result','tool_use_id':'agent-tool','content':'report'}]}})
         self.assertEqual(s.state['messages'][0]['content'][0]['output'], 'report')
         self.assertEqual(s.state['partial']['content'][0]['text'], 'main')
+        # A task event already reported on this child, so its tool_result cannot end it.
+        self.assertEqual(s.snapshot()['subagents'][0]['status'], 'running')
         s.event({'type':'interaction','id':'child-approval','name':'Bash','input':{}})
         self.assertEqual(s.state['interactions'][0]['id'], 'child-approval')
 
@@ -237,8 +254,17 @@ class ProtocolTests(unittest.TestCase):
         cfg=json.loads(args[2])
         self.assertEqual(cfg['binary'],'/usr/local/bin/claude')
         self.assertEqual(cfg['cwd'],'/tmp')
+        # Subagent text stays off until the probe flips the bridge constant.
+        self.assertIs(cfg['forwardSubagentText'],False)
         # The worker needs the proxy env, otherwise the CLI's phone-home calls stall silently.
         self.assertEqual(popen.call_args.kwargs['env'],{'https_proxy':'http://127.0.0.1:7890'})
+        with patch.object(broker,'CLAUDE_FORWARD_SUBAGENT_TEXT',True), \
+             patch.object(broker.subprocess,'Popen',return_value=process) as popen, \
+             patch.object(broker.threading,'Thread'), patch.object(broker,'proxy_aware_spawn_env',return_value={}), \
+             patch.object(broker.shutil,'which',return_value='/usr/local/bin/claude'):
+            s.launch()
+        popen.call_args.kwargs['stderr'].close()
+        self.assertIs(json.loads(popen.call_args.args[0][2])['forwardSubagentText'],True)
     def test_claude_interrupt_is_not_an_error(self):
         s=self.session('claude');s.state['cancelled']=True
         s.event({'type':'result','is_error':True,'errors':['Operation aborted']})
@@ -1257,6 +1283,447 @@ class HandlerContractTests(unittest.TestCase):
         self.assertEqual(self.s.snapshot()['commandResult']['error'],'nothing to compact')
         self.assertIsNone(self.s.state['error'])
 
+class ClaudeSubagentTests(unittest.TestCase):
+    def setUp(self):
+        process_guard=patch.object(broker.subprocess,'Popen',side_effect=AssertionError('contract tests must not launch a real process'))
+        process_guard.start(); self.addCleanup(process_guard.stop)
+        # The write debounce never fires by itself here; tests fire it explicitly.
+        timer=patch.object(broker.threading,'Timer'); self.timer=timer.start(); self.addCleanup(timer.stop)
+        broker.TOKEN='test-token'; broker.SESSIONS.clear()
+        self.s=self.claude('claude-'+self._testMethodName)
+    def claude(self, identity):
+        s=broker.Session(dict(id=identity,provider='claude',cwd=folder.name,title='Claude',model='',
+            busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
+        s.process=type('Process',(),{'poll':lambda self:None})()
+        s.sent=[]; s.send=lambda value:s.sent.append(value)
+        broker.SESSIONS[identity]=s
+        s.prompt({'text':'派子 Agent','requestId':'turn-1'}); s.event({'type':'agent_start'})
+        return s
+    def request(self,path,body=None):
+        handler=object.__new__(broker.Handler); raw=json.dumps(body or {}).encode()
+        handler.path=path; handler.headers={'Authorization':'Bearer test-token','Content-Length':str(len(raw))}
+        handler.rfile=io.BytesIO(raw); result=[]
+        handler.respond=lambda code,payload:result.append((code,payload))
+        handler.handle_request(body is not None)
+        return result[0]
+    def path(self,key): return '/sessions/'+self.s.state['id']+'/subagents/'+key
+    def task(self,subtype,task_id,s=None,**fields): (s or self.s).event({'type':'system','subtype':subtype,'task_id':task_id,**fields})
+    def started(self,task_id,tool,s=None,**fields):
+        self.task('task_started',task_id,s,**{'tool_use_id':tool,'task_type':'local_agent','description':'子任务 '+task_id,**fields})
+    def spawn(self,tool,**fields):
+        self.s.event({'type':'assistant','uuid':'call-'+tool,'parent_tool_use_id':None,'message':{'role':'assistant','content':[
+            {'type':'tool_use','id':tool,'name':'Agent','input':{'description':'查找调用点','prompt':'在仓库中查找\n细节','subagent_type':'Explore',**fields}}]}})
+    def child(self,tool,identity,content,role='assistant',s=None):
+        (s or self.s).event({'type':role,'uuid':identity,'parent_tool_use_id':tool,'message':{'role':role,'content':content}})
+    def result(self,tool,content,error=False):
+        self.s.event({'type':'user','uuid':'result-'+tool,'parent_tool_use_id':None,'message':{'role':'user','content':[
+            {'type':'tool_result','tool_use_id':tool,'content':content,'is_error':error}]}})
+    def roster(self,s=None): return {x['id']:x for x in (s or self.s).snapshot()['subagents']}
+
+    def test_child_messages_first_make_a_provisional_entry_that_task_started_adopts(self):
+        self.spawn('toolu_A')
+        revision=self.s.state['revision']
+        self.child('toolu_A','c1',[{'type':'tool_use','id':'grep-1','name':'Grep','input':{'pattern':'main'}}])
+        # Registering the child is a roster change, so the session revision moves once.
+        self.assertEqual(self.s.state['revision'],revision+1)
+        entry=self.roster()['toolu_A']
+        self.assertEqual(list(entry),list(broker.SUBAGENT_KEYS))
+        self.assertEqual((entry['kind'],entry['taskId'],entry['toolUseIds'],entry['turnId'],entry['description'],entry['subagentType'],
+                          entry['status'],entry['background'],entry['usage'],entry['endedAt'],entry['messageCount'],entry['canStop']),
+                         ('claude',None,['toolu_A'],'turn-1','查找调用点','Explore','running',None,None,None,1,False))
+        # UTC with milliseconds and Z, the form KimiTask's date parser reads.
+        self.assertEqual(len(entry['startedAt']),24)
+        broker.datetime.datetime.strptime(entry['startedAt'],'%Y-%m-%dT%H:%M:%S.%fZ')
+        self.started('task-A','toolu_A',subagent_type='Explore',is_backgrounded=True)
+        entry=self.roster()['toolu_A']
+        self.assertEqual((entry['id'],entry['taskId'],entry['description'],entry['background'],entry['canStop']),
+                         ('toolu_A','task-A','子任务 task-A',True,True))
+        self.assertEqual(len(self.s.state['subagentRoster']),1)
+        for key in ('toolu_A','task-A'):
+            code,page=self.request(self.path(key))
+            self.assertEqual((code,page['entry']['id'],[m['id'] for m in page['messages']]),(200,'toolu_A',['c1']))
+        self.assertEqual(page['messages'][0]['content'],[{'type':'tool_use','tool_call_id':'grep-1','tool_name':'Grep','input':{'pattern':'main'}}])
+        # Without a description the first line of the prompt names the child, and
+        # an explicit background flag is kept until a task event says otherwise.
+        self.spawn('toolu_B',description='',run_in_background=False)
+        self.child('toolu_B','b1','开始')
+        entry=self.roster()['toolu_B']
+        self.assertEqual((entry['description'],entry['background']),('在仓库中查找',False))
+
+    def test_task_started_first_routes_child_messages_through_the_tool_alias(self):
+        self.started('task-B','toolu_B')
+        self.child('toolu_B','c1','第一步'); self.child('toolu_B','c1','第一步（改）')
+        self.child('toolu_B','c2',[{'type':'tool_result','tool_use_id':'grep','content':'ok'}],role='user')
+        page=self.s.subagent_page('toolu_B')
+        self.assertEqual((page['entry']['id'],page['entry']['toolUseIds'],page['total']),('task-B',['toolu_B'],2))
+        self.assertEqual(page['messages'][0]['content'][0]['text'],'第一步（改）')
+        self.assertEqual(page['messages'][1]['content'][0],{'type':'tool_result','tool_call_id':'grep','output':'ok','is_error':False})
+        # Synthetic context inside a child is marked as on the main thread.
+        self.s.event({'type':'user','uuid':'c3','isSynthetic':True,'parent_tool_use_id':'toolu_B','message':{'role':'user','content':'context'}})
+        self.assertEqual(self.s.subagent_page('task-B')['messages'][2]['content'][0]['source'],{'kind':'runtime_context','provider':'claude'})
+
+    def test_task_events_map_statuses_and_finished_entries_never_revive(self):
+        self.started('task-C','toolu_C')
+        for patch_status,status in (('pending','queued'),('running','running'),('paused','running')):
+            self.task('task_updated','task-C',patch={'status':patch_status})
+            self.assertEqual(self.roster()['task-C']['status'],status)
+        self.task('task_progress','task-C',tool_use_id='toolu_C',description='子任务 task-C',
+                  usage={'total_tokens':1200,'tool_uses':3,'duration_ms':4500},last_tool_name='Grep')
+        entry=self.roster()['task-C']
+        self.assertEqual((entry['usage'],entry['lastToolName']),({'totalTokens':1200,'toolUses':3,'durationMs':4500},'Grep'))
+        self.task('task_notification','task-C',tool_use_id='toolu_C',status='completed',summary='找到 3 处调用',output_file='/tmp/out',
+                  usage={'total_tokens':1500,'tool_uses':4,'duration_ms':6000})
+        done=self.roster()['task-C']
+        self.assertEqual((done['status'],done['summary'],done['usage']['totalTokens'],done['canStop']),('completed','找到 3 处调用',1500,False))
+        self.assertTrue(done['endedAt'])
+        revision=self.s.state['revision']
+        self.started('task-C','toolu_C'); self.task('task_progress','task-C',usage={'total_tokens':9})
+        self.task('task_updated','task-C',patch={'status':'running'})
+        self.assertEqual((self.roster()['task-C'],self.s.state['revision']),(done,revision))
+        # Child messages that arrive after the end still land in the transcript.
+        self.child('toolu_C','late','最后的回复')
+        page=self.s.subagent_page('task-C')
+        self.assertEqual((page['entry']['status'],page['messages'][-1]['id']),('completed','late'))
+        # killed reads as stopped with the runtime's end time; failed keeps its error.
+        self.started('task-D','toolu_D'); self.task('task_updated','task-D',patch={'status':'killed','end_time':1760765409123})
+        self.assertEqual((self.roster()['task-D']['status'],self.roster()['task-D']['endedAt']),('stopped','2025-10-18T05:30:09.123Z'))
+        self.started('task-E','toolu_E'); self.task('task_updated','task-E',patch={'status':'failed','error':'API 超时'})
+        self.assertEqual((self.roster()['task-E']['status'],self.roster()['task-E']['error']),('failed','API 超时'))
+
+    def test_notification_before_started_creates_a_finished_entry(self):
+        self.spawn('toolu_F')
+        self.task('task_notification','task-F',tool_use_id='toolu_F',status='failed',summary='权限不足',output_file='/tmp/x')
+        entry=self.roster()['task-F']
+        self.assertEqual((entry['status'],entry['description'],entry['summary']),('failed','查找调用点','权限不足'))
+        self.started('task-F','toolu_F')
+        self.assertEqual(self.roster()['task-F']['status'],'failed')
+
+    def test_only_subagent_tasks_enter_the_roster(self):
+        self.spawn('toolu_G')
+        revision=self.s.state['revision']
+        self.task('task_started','bash-1',tool_use_id='toolu_bash',task_type='local_bash',description='npm test')
+        self.task('task_started','ambient-1',tool_use_id='toolu_G',task_type='local_agent',description='watch',ambient=True)
+        self.task('task_started','hidden-1',task_type='local_agent',description='memory',skip_transcript=True)
+        self.task('task_started','orphan-1',tool_use_id='toolu_unknown',description='no type, no Agent call')
+        self.task('task_notification','bash-1',tool_use_id='toolu_bash',status='completed',summary='done',output_file='/tmp/x')
+        # An ignored task stays ignored, even when it names a real Agent call.
+        self.task('task_progress','ambient-1',tool_use_id='toolu_G',description='watch',usage={'total_tokens':1,'tool_uses':0,'duration_ms':1})
+        self.s.event({'type':'system','subtype':'background_tasks_changed','tasks':[{'task_id':'x','task_type':'local_agent','description':'d'}]})
+        self.assertEqual((self.s.state['revision'],self.s.snapshot()['subagents']),(revision,[]))
+        # Without a task type, a task whose tool_use is an Agent call is a subagent.
+        self.task('task_started','task-G',tool_use_id='toolu_G',description='旧版 CLI')
+        self.assertEqual(list(self.roster()),['task-G'])
+
+    def test_main_tool_result_ends_only_entries_no_task_event_described(self):
+        self.spawn('toolu_H'); self.child('toolu_H','h1','工作中')
+        self.result('toolu_H',[{'type':'text','text':'报告：完成'}])
+        self.assertEqual((self.roster()['toolu_H']['status'],self.roster()['toolu_H']['summary']),('completed','报告：完成'))
+        self.assertTrue(self.s.subagent_path('toolu_H').exists())
+        self.spawn('toolu_I'); self.child('toolu_I','i1','工作中')
+        self.result('toolu_I','Agent 失败',error=True)
+        self.assertEqual((self.roster()['toolu_I']['status'],self.roster()['toolu_I']['error']),('failed','Agent 失败'))
+        # A background child answers its tool call at once and keeps running.
+        self.started('task-J','toolu_J'); self.result('toolu_J','Async agent launched')
+        self.assertEqual(self.roster()['task-J']['status'],'running')
+
+    def test_turn_end_and_worker_exit_settle_running_children(self):
+        self.started('task-K','toolu_K'); self.child('toolu_K','k1','进行中')
+        self.assertFalse(self.s.subagent_path('task-K').exists())
+        self.s.event({'type':'agent_end'})
+        entry=self.s.subagent_page('task-K')['entry']
+        self.assertEqual((entry['status'],entry['canStop']),('unknown',False)); self.assertTrue(entry['endedAt'])
+        self.assertEqual([m['id'] for m in json.loads(self.s.subagent_path('task-K').read_text())['messages']],['k1'])
+        # A turn the user stopped settles its children as stopped.
+        stopped=self.claude(self.s.state['id']+'-stopped')
+        self.started('task-L','toolu_L',s=stopped)
+        stopped.event({'type':'stop_ack','turnId':'turn-1'}); stopped.event({'type':'agent_end'})
+        self.assertEqual(stopped.subagent_page('task-L')['entry']['status'],'stopped')
+        # A worker that exits mid-turn leaves its children unknown.
+        crashed=self.claude(self.s.state['id']+'-crashed')
+        self.started('task-M','toolu_M',s=crashed)
+        crashed.process=type('Process',(),{'stdout':iter(()),'poll':lambda self:0})()
+        crashed.read()
+        self.assertEqual((crashed.state['busy'],crashed.subagent_page('task-M')['entry']['status']),(False,'unknown'))
+
+    def test_approvals_from_children_are_labelled_and_patched_late(self):
+        # agentID equal to the task id resolves once the task registers.
+        self.s.event({'type':'interaction','id':'child-tool-x','name':'Bash','input':{'command':'ls'},'agentId':'agent-x'})
+        x=self.s.state['interactions'][-1]
+        self.assertNotIn('agentId',x)
+        self.assertEqual(x['subagent'],{'id':None,'agentId':'agent-x','title':None,'type':None})
+        revision=self.s.state['revision']
+        self.started('agent-x','toolu_X',subagent_type='Explore')
+        self.assertEqual(x['subagent'],{'id':'agent-x','agentId':'agent-x','title':'子任务 agent-x','type':'Explore'})
+        self.assertGreater(self.s.state['revision'],revision)
+        # An agentID unlike every task id resolves by the transcript that holds the
+        # approved tool call; later approvals of that agent resolve at once.
+        self.started('task-Y','toolu_Y')
+        self.s.event({'type':'interaction','id':'child-tool-y','name':'Bash','input':{},'agentId':'agent-y'})
+        y=self.s.state['interactions'][-1]; self.assertIsNone(y['subagent']['id'])
+        revision=self.s.state['revision']
+        self.child('toolu_Y','y1',[{'type':'tool_use','id':'child-tool-y','name':'Bash','input':{}}])
+        self.assertEqual(y['subagent'],{'id':'task-Y','agentId':'agent-y','title':'子任务 task-Y','type':None})
+        self.assertEqual(self.s.state['revision'],revision+1)
+        self.s.event({'type':'interaction','id':'child-tool-y2','name':'Bash','input':{},'agentId':'agent-y'})
+        self.assertEqual(self.s.state['interactions'][-1]['subagent']['id'],'task-Y')
+        # A later description reaches the label as well.
+        self.task('task_updated','task-Y',patch={'description':'改名后的子任务'})
+        self.assertEqual(y['subagent']['title'],'改名后的子任务')
+        # Main-thread approvals keep their old shape.
+        self.s.event({'type':'interaction','id':'main-tool','name':'Bash','input':{},'agentId':None})
+        self.assertEqual(self.s.state['interactions'][-1],{'type':'interaction','id':'main-tool','name':'Bash','input':{}})
+
+    def test_snapshot_lists_the_live_roster_and_summary_counts_running(self):
+        for task_id in ('old','done','run'): self.started(task_id,'toolu_'+task_id)
+        for task_id in ('old','done'): self.task('task_notification',task_id,status='completed',summary='完成',output_file='')
+        # Finished children of an earlier turn drop out; running ones never do.
+        for task_id in ('old','run'): self.s.subagent_entries[task_id]['turnId']='turn-0'
+        full=self.s.snapshot(); page=self.s.snapshot(turns='50')
+        self.assertEqual([x['id'] for x in full['subagents']],['done','run'])
+        self.assertEqual(page['subagents'],full['subagents'])
+        self.assertEqual(self.s.summary()['runningSubagents'],1)
+        for value in (full,page): self.assertNotIn('subagentRoster',value)
+        self.assertEqual(len(self.s.state['subagentRoster']),3)
+        self.started('next','toolu_next')
+        delta=self.s.snapshot(revision=str(page['revision']),start=str(page['history']['start']),epoch=page['history']['epoch'])
+        self.assertEqual([x['id'] for x in delta['subagents']],['done','run','next'])
+        self.assertNotIn('subagentRoster',delta)
+        # A pending approval keeps naming its child, from any turn.
+        self.s.event({'type':'interaction','id':'late','name':'Bash','input':{},'agentId':'old'})
+        self.assertEqual([x['id'] for x in self.s.snapshot()['subagents']],['old','done','run','next'])
+
+    def test_snapshot_caps_the_live_list_in_start_order(self):
+        for i in range(40): self.started('task-%02d' % i,'toolu-%02d' % i)
+        self.assertEqual([x['id'] for x in self.s.snapshot()['subagents']],['task-%02d' % i for i in range(8,40)])
+        self.assertEqual(self.s.summary()['runningSubagents'],40)
+        self.s.event({'type':'interaction','id':'child','name':'Bash','input':{},'agentId':'task-00'})
+        self.assertEqual([x['id'] for x in self.s.snapshot()['subagents']],['task-00']+['task-%02d' % i for i in range(9,40)])
+
+    def test_sessions_without_subagents_report_empty_lists(self):
+        codex,_=CodexProtocolTests().session('codex-plain')
+        omp=broker.Session(dict(id='omp-plain',provider='omp',cwd=folder.name,title='OMP',model='',
+            busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
+        for s in (codex,omp):
+            self.assertEqual((s.snapshot()['subagents'],s.snapshot(turns='50')['subagents'],s.summary()['runningSubagents']),([],[],0))
+            self.assertNotIn('subagentRoster',s.state)
+
+    def test_transcript_route_serves_window_delta_unchanged_and_older_pages(self):
+        self.started('task-T','toolu_T')
+        for i in range(250): self.child('toolu_T','m%d' % i,'消息 %d' % i)
+        revision=self.s.state['revision']
+        code,full=self.request(self.path('toolu_T'))
+        self.assertEqual(set(full),{'entry','epoch','revision','total','truncated','start','messages'})
+        self.assertEqual((code,full['total'],full['truncated'],full['start'],len(full['messages']),full['messages'][0]['id']),(200,250,0,50,200,'m50'))
+        self.assertEqual((full['entry']['id'],full['entry']['revision'],full['entry']['messageCount']),('task-T',full['revision'],250))
+        query='?epoch=%s&revision=%d' % (full['epoch'],full['revision'])
+        self.assertEqual(self.request(self.path('task-T')+query),(200,{'unchanged':True}))
+        self.child('toolu_T','m10','消息 10（改）'); self.child('toolu_T','m250','消息 250')
+        code,delta=self.request(self.path('task-T')+query)
+        self.assertEqual(set(delta),{'entry','epoch','revision','total','truncated','changes'})
+        self.assertEqual(([c['index'] for c in delta['changes']],delta['total'],delta['revision']),([10,250],251,full['revision']+2))
+        self.assertEqual(delta['changes'][0]['message']['content'][0]['text'],'消息 10（改）')
+        # Entry changes reach a follower as a delta without messages.
+        self.task('task_progress','task-T',usage={'total_tokens':10,'tool_uses':1,'duration_ms':5})
+        code,change=self.request(self.path('task-T')+'?epoch=%s&revision=%d' % (delta['epoch'],delta['revision']))
+        self.assertEqual((change['changes'],change['entry']['usage']['totalTokens']),([],10))
+        code,older=self.request(self.path('task-T')+'?epoch=%s&before=50&limit=30' % full['epoch'])
+        self.assertEqual((older['start'],[m['id'] for m in older['messages']]),(20,['m%d' % i for i in range(20,50)]))
+        self.assertEqual(set(older),{'entry','epoch','revision','total','truncated','start','messages'})
+        code,default=self.request(self.path('task-T')+'?epoch=%s&before=150' % full['epoch'])
+        self.assertEqual((default['start'],len(default['messages'])),(50,100))
+        for bad in ('&before=50&limit=201','&before=50&limit=0','&before=252','&before=x'):
+            self.assertEqual(self.request(self.path('task-T')+'?epoch='+full['epoch']+bad)[0],400)
+        # A stale epoch answers an older page as the main history route does.
+        stale=self.request(self.path('task-T')+'?epoch=stale&before=50')
+        self.assertEqual(stale,(400,{'error':'History changed; reopen the conversation'}))
+        self.assertEqual(stale,self.request('/sessions/%s?epoch=stale&before=0' % self.s.state['id']))
+        # Any other epoch, or a revision this epoch never had, gets the full window.
+        for other in ('?epoch=stale&revision=1','?epoch=%s&revision=99999' % full['epoch'],'?revision=3'):
+            code,reset=self.request(self.path('task-T')+other)
+            self.assertEqual((reset['start'],len(reset['messages']),reset['epoch']),(51,200,full['epoch']))
+        self.assertEqual(self.request(self.path('nobody')),(404,{'error':'未找到该子 Agent'}))
+        self.assertEqual(self.request(self.path('nobody')+'/stop',{})[0],404)
+        # Transcript appends never moved the session revision; the progress did.
+        self.assertEqual(self.s.state['revision'],revision+1)
+
+    def test_stop_route_sends_stop_task_and_reports_failures(self):
+        self.spawn('toolu_S'); self.child('toolu_S','s1','进行中')
+        self.assertEqual(self.request(self.path('toolu_S')+'/stop',{})[0],400)
+        self.started('task-S','toolu_S')
+        revision=self.s.state['revision']
+        self.assertEqual(self.request(self.path('toolu_S')+'/stop',{}),(200,{'ok':True}))
+        self.assertEqual(self.s.sent[-1],{'type':'stop_task','taskId':'task-S','turnId':'turn-1'})
+        entry=self.roster()['toolu_S']
+        self.assertEqual((entry['stopRequested'],entry['stopError'],entry['canStop'],entry['status']),(True,None,True,'running'))
+        self.assertGreater(self.s.state['revision'],revision)
+        # A request already in flight is not sent again.
+        self.assertEqual(self.request(self.path('task-S')+'/stop',{})[0],200)
+        self.assertEqual(len([x for x in self.s.sent if x['type']=='stop_task']),1)
+        # A refusal is shown and the stop can be retried.
+        self.s.event({'type':'task_stop_result','taskId':'task-S','ok':False,'error':'Task not found'})
+        entry=self.roster()['toolu_S']
+        self.assertEqual((entry['stopRequested'],entry['stopError']),(False,'Task not found'))
+        self.assertEqual(self.request(self.path('task-S')+'/stop',{})[0],200)
+        self.assertEqual((len([x for x in self.s.sent if x['type']=='stop_task']),self.roster()['toolu_S']['stopError']),(2,None))
+        self.task('task_notification','task-S',status='stopped',summary='已停止',output_file='')
+        self.assertEqual(self.request(self.path('task-S')+'/stop',{})[0],400)
+        # Nothing stops outside an active turn, and a dead worker records nothing.
+        self.started('task-S2','toolu_S2'); self.s.state['busy']=False
+        self.assertFalse(self.roster()['task-S2']['canStop'])
+        self.assertEqual(self.request(self.path('task-S2')+'/stop',{})[0],400)
+        self.s.state['busy']=True
+        def fail(value): raise ValueError('远端进程已退出')
+        self.s.send=fail
+        self.assertEqual(self.request(self.path('task-S2')+'/stop',{}),(400,{'error':'远端进程已退出'}))
+        self.assertFalse(self.roster()['task-S2']['stopRequested'])
+
+    def test_long_parts_are_clipped_and_long_transcripts_trim_to_a_new_epoch(self):
+        self.started('task-P','toolu_P')
+        self.child('toolu_P','p1',[{'type':'text','text':'长'*20000},{'type':'thinking','thinking':'x'*40000},{'type':'text','text':'short'}])
+        self.child('toolu_P','p2',[{'type':'tool_result','tool_use_id':'t','content':'y'*100000},
+            {'type':'tool_result','tool_use_id':'u','content':[{'type':'image','source':{'data':'z'*50000}},{'type':'text','text':'caption'}]}],role='user')
+        first=self.s.subagent_page('task-P'); messages=first['messages']
+        for value in (messages[0]['content'][0]['text'],messages[0]['content'][1]['thinking'],messages[1]['content'][0]['output']):
+            self.assertLessEqual(len(value.encode()),broker.SUBAGENT_PART_LIMIT); self.assertIn('已截断',value)
+        self.assertTrue(messages[0]['content'][0]['text'].startswith('长'*1000))
+        self.assertEqual(messages[0]['content'][2],{'type':'text','text':'short'})
+        output=messages[1]['content'][1]['output']
+        self.assertIn('已省略',output[0]['text']); self.assertEqual(output[1],{'type':'text','text':'caption'})
+        # Over the message cap the front goes, down to 75%, under a new epoch.
+        with patch.object(broker,'SUBAGENT_MESSAGE_LIMIT',20):
+            for i in range(19): self.child('toolu_P','q%d' % i,'短消息')
+        page=self.s.subagent_page('task-P')
+        self.assertEqual((page['total'],page['truncated'],page['messages'][0]['id'],page['messages'][-1]['id']),(15,6,'q4','q18'))
+        self.assertNotEqual(page['epoch'],first['epoch'])
+        self.assertEqual(self.request(self.path('task-P')+'?epoch=%s&before=5' % first['epoch'])[0],400)
+        code,reset=self.request(self.path('task-P')+'?epoch=%s&revision=%d' % (first['epoch'],first['revision']))
+        self.assertEqual((reset['start'],reset['total']),(0,15))
+        # Over the byte budget as well.
+        with patch.object(broker,'SUBAGENT_BYTE_LIMIT',3000):
+            self.child('toolu_P','r1','x'*1500)
+        trimmed=self.s.subagent_page('task-P'); transcript=self.s.subagent_transcripts['task-P']
+        self.assertGreater(trimmed['truncated'],6); self.assertEqual(trimmed['messages'][-1]['id'],'r1')
+        self.assertLessEqual(transcript['bytes'],3000*3//4); self.assertNotEqual(trimmed['epoch'],page['epoch'])
+        self.assertEqual(transcript['bytes'],sum(broker.json_size(m) for m in transcript['messages']))
+
+    def test_tool_inputs_are_clipped_string_by_string(self):
+        self.started('task-I','toolu_I')
+        inputs={'command':'x'*40000,'nested':{'list':['y'*50000,'short',7],'flag':True},'note':'短','key'*10:'v'}
+        self.child('toolu_I','i1',[{'type':'tool_use','id':'big-call','name':'Write','input':inputs}])
+        value=self.s.subagent_page('task-I')['messages'][0]['content'][0]['input']
+        for text in (value['command'],value['nested']['list'][0]):
+            self.assertLessEqual(len(text.encode()),broker.SUBAGENT_PART_LIMIT); self.assertIn('…[已截断，原文',text)
+        self.assertTrue(value['command'].startswith('x'*1000))
+        self.assertEqual((value['nested']['list'][1:],value['nested']['flag'],value['note'],value['key'*10]),(['short',7],True,'短','v'))
+        self.assertEqual(len(inputs['command']),40000)
+
+    def test_one_oversized_message_becomes_a_notice_so_the_trim_holds(self):
+        self.started('task-O','toolu_O')
+        # Every part fits its cap, yet together they pass the trim target.
+        self.child('toolu_O','huge',[{'type':'text','text':'z'*32000} for _ in range(100)])
+        huge=self.s.subagent_page('task-O')['messages'][0]
+        self.assertEqual((huge['id'],huge['role'],len(huge['content'])),('huge','assistant',1))
+        self.assertIn('消息过大',huge['content'][0]['text'])
+        # However large single messages get, every append leaves the transcript in budget.
+        with patch.object(broker,'SUBAGENT_BYTE_LIMIT',200000):
+            for i in range(12):
+                parts=10 if i % 3 == 0 else 2
+                self.child('toolu_O','m%d' % i,[{'type':'tool_use','id':'c%d-%d' % (i, n),'name':'Write','input':{'content':'w'*32000}} for n in range(parts)])
+                transcript=self.s.subagent_transcripts['task-O']; last=transcript['messages'][-1]
+                self.assertLessEqual(transcript['bytes'],200000)
+                self.assertEqual(transcript['bytes'],sum(broker.json_size(m) for m in transcript['messages']))
+                if parts == 10: self.assertIn('消息过大',last['content'][0]['text'])
+                else: self.assertEqual([p['input']['content'] for p in last['content']],['w'*32000]*2)
+        self.assertGreater(transcript['truncated'],0)
+
+    def test_only_live_and_recently_read_finished_transcripts_stay_loaded(self):
+        self.started('live','toolu_live'); self.child('toolu_live','l1','还在跑')
+        live=self.s.subagent_transcripts['live']
+        finished=lambda: [key for key in self.s.subagent_transcripts if key!='live']
+        for i in range(10):
+            self.started('t%d' % i,'u%d' % i); self.child('u%d' % i,'m','第 %d 个' % i)
+            self.task('task_notification','t%d' % i,status='completed',summary='完成',output_file='')
+        self.assertEqual(len(finished()),8)
+        first=self.s.subagent_page('t0')
+        for i in range(10): self.assertEqual(self.request(self.path('u%d' % i))[0],200)
+        self.assertEqual(len(finished()),8); self.assertNotIn('t0',self.s.subagent_transcripts)
+        # An evicted transcript reloads from its file unchanged and under its epoch,
+        # so a client following it is not reset.
+        code,again=self.request(self.path('t0'))
+        self.assertEqual({k:again[k] for k in ('epoch','revision','total','messages')},{k:first[k] for k in ('epoch','revision','total','messages')})
+        self.assertEqual(self.request(self.path('t0')+'?epoch=%s&revision=%d' % (first['epoch'],first['revision'])),(200,{'unchanged':True}))
+        # A dirty transcript is written before it leaves memory.
+        self.child('u9','late','迟到的消息')
+        self.assertIn('t9',self.s.subagent_dirty)
+        for i in range(8): self.request(self.path('u%d' % i))
+        self.assertNotIn('t9',self.s.subagent_transcripts); self.assertNotIn('t9',self.s.subagent_dirty)
+        self.assertEqual([m['id'] for m in json.loads(self.s.subagent_path('t9').read_text())['messages']],['m','late'])
+        self.assertEqual([m['id'] for m in self.s.subagent_page('t9')['messages']],['m','late'])
+        # The live transcript, though the oldest, was never evicted.
+        self.assertIs(self.s.subagent_transcripts['live'],live)
+        self.assertLessEqual(len(finished()),8)
+
+    def test_transcripts_are_debounced_written_on_finish_and_restored_lazily(self):
+        sid=self.s.state['id']; folder=broker.ROOT/'subagents'/sid
+        self.started('task-R','toolu_R'); self.child('toolu_R','r1','第一条')
+        self.timer.assert_called_once_with(broker.SUBAGENT_SAVE_DELAY,self.s.subagent_timer_fired)
+        self.assertTrue(self.timer.return_value.daemon); self.timer.return_value.start.assert_called_once_with()
+        self.assertFalse(folder.exists())
+        self.s.subagent_timer_fired()
+        saved=json.loads((folder/'task-R.json').read_text())
+        self.assertEqual(set(saved),{'epoch','revision','truncated','messages','versions'})
+        self.assertEqual(([m['id'] for m in saved['messages']],saved['revision'],saved['truncated']),
+                         (['r1'],self.s.subagent_entries['task-R']['revision'],0))
+        self.child('toolu_R','r2','第二条')
+        self.task('task_notification','task-R',status='completed',summary='完成',output_file='')
+        self.assertEqual([m['id'] for m in json.loads((folder/'task-R.json').read_text())['messages']],['r1','r2'])
+        self.started('task-Q','toolu_Q'); self.child('toolu_Q','q1','还在跑')
+        self.s.subagent_timer_fired()
+        epoch=self.s.subagent_page('task-Q')['epoch']
+        ghost=broker.ROOT/'subagents'/'ghost-session'; ghost.mkdir(parents=True); (ghost/'x.json').write_text('{}')
+        (folder/'stray.json').write_text('{}')
+        self.s.persist(); broker.SESSIONS.clear(); broker.load()
+        restored=broker.SESSIONS[sid]
+        self.assertEqual(restored.subagent_transcripts,{})
+        self.assertFalse(ghost.exists()); self.assertFalse((folder/'stray.json').exists())
+        roster=self.roster(restored)
+        self.assertEqual((roster['task-R']['status'],roster['task-Q']['status']),('completed','unknown'))
+        self.assertTrue(roster['task-Q']['endedAt'])
+        page=restored.subagent_page('toolu_Q')
+        self.assertEqual([m['id'] for m in page['messages']],['q1']); self.assertNotEqual(page['epoch'],epoch)
+        self.assertEqual([m['id'] for m in restored.subagent_page('task-R')['messages']],['r1','r2'])
+        # Deleting the session removes its transcripts.
+        self.assertEqual(self.request('/sessions/%s/delete' % sid,{})[0],200)
+        self.assertFalse(folder.exists())
+
+    def test_roster_keeps_64_entries_and_prunes_the_oldest_finished_with_files(self):
+        for i in range(64):
+            self.started('t%02d' % i,'u%02d' % i); self.child('u%02d' % i,'m','x')
+            if i: self.task('task_notification','t%02d' % i,status='completed',summary='完成',output_file='')
+        self.s.subagent_timer_fired()
+        self.s.event({'type':'interaction','id':'late','name':'Bash','input':{},'agentId':'t01'})
+        self.started('t64','u64')
+        roster=[x['id'] for x in self.s.state['subagentRoster']]
+        self.assertEqual(len(roster),64)
+        self.assertNotIn('t02',roster)
+        for kept in ('t00','t01','t03','t64'): self.assertIn(kept,roster)
+        self.assertFalse(self.s.subagent_path('t02').exists()); self.assertTrue(self.s.subagent_path('t03').exists())
+        self.assertEqual(self.request(self.path('u02'))[0],404)
+
+    def test_malformed_child_events_do_not_stop_the_main_stream(self):
+        lines=[{'type':'assistant','uuid':'bad','parent_tool_use_id':'toolu_Z','message':{'role':'assistant','content':['not a block']}},
+               {'type':'assistant','uuid':'main','parent_tool_use_id':None,'message':{'role':'assistant','content':[{'type':'text','text':'主线程'}]}}]
+        self.s.process=type('Process',(),{'stdout':iter(json.dumps(x)+'\n' for x in lines),'poll':lambda self:0})()
+        with patch.object(broker.traceback,'print_exc') as report: self.s.read()
+        report.assert_called_once_with()
+        self.assertEqual(self.s.state['messages'][-1]['content'][0]['text'],'主线程')
+
+    def test_keys_outside_a_plain_id_never_leave_the_session_folder(self):
+        for key in ('../../escape','a/b','.hidden','名字'):
+            name=broker.subagent_filename(key)
+            self.assertTrue(name.startswith('_') and name.endswith('.json') and '/' not in name)
+        self.assertEqual(broker.subagent_filename('toolu_01ABC-x'),'toolu_01ABC-x.json')
+
 class UpgradeLifecycleTests(unittest.TestCase):
     def test_changed_local_binary_does_not_interrupt_active_task(self):
         endpoint={'port':43210,'token':'fixture-token','pid':1234}
@@ -1351,6 +1818,8 @@ server.serve_forever()
         sessions=({'id':'s','busy':True,'pending':0},{'id':'s','busy':False,'pending':1})
         sessions+=tuple({'id':'s','busy':False,'pending':0,'turnState':state}
             for state in ('submitting','submitted','accepted','running'))
+        # A running subagent keeps the old service, from the list or the snapshot.
+        sessions+=({'id':'s','busy':False,'pending':0,'runningSubagents':1},)
         for session in sessions:
             with self.subTest(session=session), tempfile.TemporaryDirectory() as directory:
                 path,endpoint=self.endpoint(directory)
@@ -1358,6 +1827,18 @@ server.serve_forever()
                 with patch.object(broker,'endpoint_request',side_effect=responses), patch.object(broker.os,'kill') as kill:
                     self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':1})
                     kill.assert_not_called()
+    def test_running_subagent_in_snapshot_is_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path,endpoint=self.endpoint(directory)
+            summary={'id':'s','busy':False,'pending':0,'turnState':'completed','runningSubagents':0}
+            for status in ('queued','running'):
+                snapshot=summary|{'subagents':[{'id':'old','status':'completed'},{'id':'child','status':status}]}
+                with self.subTest(status=status), patch.object(broker,'endpoint_request',side_effect=[{'version':1},{'sessions':[summary]},snapshot]), \
+                     patch.object(broker.os,'kill') as kill:
+                    self.assertEqual(broker.reusable_endpoint(path),endpoint|{'restartPending':1})
+                    kill.assert_not_called()
+        self.assertFalse(broker.active_session({'busy':False,'pending':0,'runningSubagents':0,
+            'subagents':[{'status':s} for s in ('completed','failed','stopped','unknown')]}))
     def test_running_legacy_command_is_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
             path,endpoint=self.endpoint(directory)

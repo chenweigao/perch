@@ -49,7 +49,18 @@ struct NativeAgentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in appActive = false }
-
+        // The subject is read here, so only opening and closing a sheet touches
+        // this body; transcript reads update the sheet alone.
+        .sheet(item: subagentSheet) { subject in
+            NativeSubagentSheet(subject: subject, connection: connection)
+        }
+        .onDisappear { connection.subagents.present(nil) }
+    }
+    /// The open subagent sheet. The connection clears it when the selection
+    /// changes or the connection is replaced; dismissing it closes it there too.
+    private var subagentSheet: Binding<NativeSubagentSubject?> {
+        let presented = connection.subagents.presented
+        return Binding(get: { presented }, set: { connection.subagents.present($0) })
     }
     private func isCurrent(_ snapshot: NativeAgentSnapshot) -> Bool {
         connection.selectedID == snapshot.id && connection.snapshot?.id == snapshot.id
@@ -102,7 +113,8 @@ struct NativeAgentView: View {
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
                                            isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true)
                         .environment(\.conversationActionContext,
-                                     ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id))
+                                     ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id,
+                                                               opensSubagents: s.opensSubagents))
                     NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(s.interactions.filter { NativePlanReview($0) == nil }, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
@@ -135,6 +147,9 @@ struct NativeAgentView: View {
                 if displayedResultKey != nil { onResultDisplayed(s) }
             }
             let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
+            // Bridge protocol 7 roster; an older bridge reports none and the section stays hidden.
+            let subagentBoard = KimiTaskBoard(subagents: (s.subagents ?? []).map(KimiTask.init(native:)))
+            let subagentStopErrors = connection.subagentStopErrors(in: s)
             ConversationActivityBar(activity: ConversationActivity(
                 messages: s.messages, isRunning: s.busy,
                 running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
@@ -151,7 +166,16 @@ struct NativeAgentView: View {
                     guard isCurrent(s) else { throw CancellationError() }
                     return try await connection.recapMessages(for: s.id)
                 },
-                onReview: { activityReview += 1 }, onReconnect: { connection.connect() })
+                onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
+                board: subagentBoard,
+                stoppingTasks: connection.subagents.stopping,
+                onOpenTranscript: { task in
+                    if isCurrent(s) { connection.openSubagent(task.id, in: s.id) }
+                },
+                onSubagentStop: { task in
+                    if isCurrent(s) { connection.stopSubagent(task.id, in: s.id) }
+                },
+                taskStopErrors: subagentStopErrors)
                 .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
                 .frame(maxWidth: .infinity).padding(.vertical, 6)
             // Long upstream errors scroll inside the notice instead of displacing the conversation.
@@ -459,9 +483,22 @@ struct NativeInteractionView: View {
             catch { connection.actionError = error.localizedDescription; submitting = false }
         }
     }
+    /// The subagent this request was raised in (bridge protocol 7), by its title
+    /// or type, else by the roster entry it names; nil for the main agent's.
+    private var subagentSource: String? {
+        guard let label = NativeSubagentLabel(interaction: request) else { return nil }
+        if let name = label.name { return L("来自子 Agent：\(name)") }
+        if let name = label.entry(in: connection.snapshot?.subagents ?? [])?.description, !name.isEmpty {
+            return L("来自子 Agent：\(name)")
+        }
+        return L("来自子 Agent")
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("等你处理", systemImage: "hand.raised").font(.headline)
+            if let subagentSource {
+                Text(subagentSource).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+            }
             Text(request["title"].string ?? request["name"].string ?? L("回答问题")).textSelection(.enabled)
             if let message = request["message"].string { Text(message).font(.callout).textSelection(.enabled) }
             if request["name"].string == "AskUserQuestion" {

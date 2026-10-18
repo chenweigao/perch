@@ -11,6 +11,8 @@ enum ConversationMessageAction {
     /// Regeneration targets the assistant message; the connection finds and
     /// re-sends the user prompt that preceded it.
     case regenerate(before: String)
+    /// Opens the transcript of the subagent an Agent/Task tool call started.
+    case openSubagent(toolCallId: String)
 }
 
 /// Which session a transcript row belongs to. Rows are deep inside a native
@@ -19,6 +21,9 @@ struct ConversationActionContext: Equatable, Sendable {
     let hostID: UUID
     let kind: SessionKind
     let sessionID: String
+    /// The session's bridge records subagents, so Agent/Task tool cards offer
+    /// `openSubagent`. Set once per session load; it never changes per token.
+    var opensSubagents = false
 }
 
 struct ConversationActionPayload {

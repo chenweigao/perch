@@ -40,6 +40,10 @@ import os
     weak var detailView: NSView?
     var detailCurrent = false
     let checkDetailLifecycle = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "detail-lifecycle"
+    /// The activity popover's subagent rows as last rendered: "id|status|stoppable|stopping".
+    var subagentRoster: [String] = []
+    /// The open subagent sheet's row ids as last rendered.
+    var subagentSheetRows: [String] = []
     let signposter = OSSignposter(subsystem: "dev.perch.nativeacceptance", category: .pointsOfInterest)
 }
 
@@ -50,6 +54,20 @@ struct NativeDetailProbe: NSViewRepresentable {
         NativeAcceptanceProbe.shared.detailView = view
         NativeAcceptanceProbe.shared.detailCurrent = current
     }
+}
+
+struct NativeSubagentRosterProbe: NSViewRepresentable {
+    let rows: [String]
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) { NativeAcceptanceProbe.shared.subagentRoster = rows }
+    static func dismantleNSView(_ view: NSView, coordinator: ()) { NativeAcceptanceProbe.shared.subagentRoster = [] }
+}
+
+struct NativeSubagentSheetProbe: NSViewRepresentable {
+    let rows: [String]
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) { NativeAcceptanceProbe.shared.subagentSheetRows = rows }
+    static func dismantleNSView(_ view: NSView, coordinator: ()) { NativeAcceptanceProbe.shared.subagentSheetRows = [] }
 }
 
 @MainActor final class NativeSidebarRowProbeView: NSView {
@@ -140,6 +158,19 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     var failSelection = false
     private(set) var mutationRequests = 0
     var pendingSelection: [CheckedContinuation<Void, Never>] = []
+    /// Subagents mode: session 0's roster (one running, one completed entry) in
+    /// bridge protocol 7's shape, their transcripts, and the requests received.
+    fileprivate var subagentRoster: [[String: Any]]
+    fileprivate var subagentTranscripts: [String: SubagentTranscript]
+    private(set) var subagentReads: [String] = []
+    private(set) var subagentStops: [String] = []
+    fileprivate struct SubagentTranscript {
+        var revision: Int
+        var messages: [[String: Any]]
+        /// The revision each message last changed in.
+        var versions: [Int]
+    }
+    static var subagentMode: Bool { ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "subagents" }
     func response(_ path: String, body: JSONValue?) async throws -> Data {
         if body != nil { mutationRequests += 1 }
         let data = try request(path, body: body)
@@ -158,6 +189,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                                     online: index % 17 != 16, section: .other, canMarkReviewed: false,
                                     archived: index % 19 == 18, updatedAt: Double(500 - index))
         }
+        let roster = NativeAcceptanceFixture.initialSubagentRoster()
         // Only eight fixed local responses are resident, matching the tested
         // working set. No hundreds-of-conversations preload or remote fallback.
         var values: [String: Data] = [:]
@@ -185,13 +217,127 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                 messages.append(["id": "\(id)-a-\(turn)", "role": "assistant", "created_at": "\(turn)-b",
                                  "content": [["type": "text", "text": text]]])
             }
-            values[id] = try JSONSerialization.data(withJSONObject: [
+            var value: [String: Any] = [
                 "id": id, "provider": "omp", "title": session.title, "cwd": session.directory,
                 "busy": false, "revision": 1, "completed": 0, "model": "fixture-model",
                 "messages": messages, "interactions": [], "commands": []
-            ], options: [.sortedKeys])
+            ]
+            if NativeAcceptanceFixture.subagentMode && id == "session-0" {
+                value["provider"] = "claude"
+                value["subagents"] = roster
+            }
+            values[id] = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
         }
         snapshots = values
+        subagentRoster = roster
+        subagentTranscripts = NativeAcceptanceFixture.initialSubagentTranscripts()
+    }
+    private static func subagentEntry(_ id: String, task: String, description: String, type: String,
+                                      status: String, canStop: Bool) -> [String: Any] {
+        let ended: Any
+        if status == "running" { ended = NSNull() } else { ended = "2026-10-18T05:31:00.000Z" }
+        return ["id": id, "kind": "claude", "taskId": task, "toolUseIds": [id], "turnId": "fixture-turn",
+                "description": description, "subagentType": type, "status": status, "background": false,
+                "startedAt": "2026-10-18T05:30:00.000Z", "updatedAt": "2026-10-18T05:31:00.000Z", "endedAt": ended,
+                "usage": ["totalTokens": 1200, "toolUses": 2, "durationMs": 60000], "lastToolName": "Read",
+                "summary": "已检查 2 个文件", "error": NSNull(), "canStop": canStop, "stopRequested": false,
+                "stopError": NSNull(), "messageCount": 6, "revision": 1]
+    }
+    private static func initialSubagentRoster() -> [[String: Any]] {
+        [subagentEntry("toolu_live", task: "task-live", description: "检查原生阅读位置", type: "Explore",
+                       status: "running", canStop: true),
+         subagentEntry("toolu_done", task: "task-done", description: "汇总验收结果", type: "general-purpose",
+                       status: "completed", canStop: false)]
+    }
+    static func subagentMessage(_ id: String, _ role: String, _ content: [[String: Any]]) -> [String: Any] {
+        ["id": id, "role": role, "created_at": id, "content": content]
+    }
+    static func subagentText(_ text: String) -> [String: Any] { ["type": "text", "text": text] }
+    private static func subagentCall(_ id: String, _ name: String, _ input: [String: Any]) -> [String: Any] {
+        ["type": "tool_use", "tool_call_id": id, "tool_name": name, "input": input]
+    }
+    private static func subagentResult(_ id: String, _ output: String) -> [String: Any] {
+        ["type": "tool_result", "tool_call_id": id, "output": output, "is_error": false]
+    }
+    /// The running entry's transcript in the main message schema: its prompt, a
+    /// thought, two tool calls with their results and two replies.
+    private static func initialSubagentTranscripts() -> [String: SubagentTranscript] {
+        let live: [[String: Any]] = [
+            subagentMessage("sub-0", "user", [subagentText("检查原生阅读位置是否保持")]),
+            subagentMessage("sub-1", "assistant", [["type": "thinking", "thinking": "先看滚动锚点"],
+                                                   subagentCall("sub-t1", "Grep", ["pattern": "readingAnchor"])]),
+            subagentMessage("sub-2", "user", [subagentResult("sub-t1", "ConversationTranscriptView.swift:1253")]),
+            subagentMessage("sub-3", "assistant", [subagentText("找到锚点实现"),
+                                                   subagentCall("sub-t2", "Read", ["path": "/fixture/Transcript.swift"])]),
+            subagentMessage("sub-4", "user", [subagentResult("sub-t2", "struct ConversationTranscript")]),
+            subagentMessage("sub-5", "assistant", [subagentText("正在汇总结论")]),
+        ]
+        let done: [[String: Any]] = [
+            subagentMessage("done-0", "user", [subagentText("汇总验收结果")]),
+            subagentMessage("done-1", "assistant", [subagentText("验收结果已汇总")]),
+        ]
+        return ["toolu_live": SubagentTranscript(revision: 1, messages: live, versions: live.map { _ in 1 }),
+                "toolu_done": SubagentTranscript(revision: 1, messages: done, versions: done.map { _ in 1 })]
+    }
+    /// Changes an entry as the bridge reports it: the roster of the next
+    /// snapshot, and the entry of the next transcript read (a new revision).
+    func updateSubagent(_ id: String, _ fields: [String: Any]) throws {
+        guard let index = subagentRoster.firstIndex(where: { $0["id"] as? String == id }) else { return }
+        subagentRoster[index].merge(fields) { _, new in new }
+        subagentTranscripts[id]?.revision += 1
+        var value = try JSONSerialization.jsonObject(with: snapshots["session-0"]!) as! [String: Any]
+        value["subagents"] = subagentRoster
+        value["revision"] = (value["revision"] as? Int ?? 1) + 1
+        snapshots["session-0"] = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
+    }
+    /// One more message of `id`'s transcript, in a new revision.
+    func appendSubagentMessage(_ id: String, _ message: [String: Any]) {
+        guard var transcript = subagentTranscripts[id] else { return }
+        transcript.revision += 1
+        transcript.messages.append(message)
+        transcript.versions.append(transcript.revision)
+        subagentTranscripts[id] = transcript
+    }
+    /// `GET /sessions/session-0/subagents/<key>` (full window, deltas by revision,
+    /// older pages) and `POST …/stop`, as bridge protocol 7 answers them. The
+    /// latest window holds four messages, so the sheet has an older page to read.
+    private func subagentResponse(_ path: String, body: JSONValue?) throws -> Data? {
+        guard NativeAcceptanceFixture.subagentMode, let url = URLComponents(string: "http://fixture" + path) else { return nil }
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard parts.count >= 4, parts[0] == "sessions", parts[2] == "subagents" else { return nil }
+        let key = parts[3]
+        guard let entry = subagentRoster.first(where: { candidate in
+            candidate["id"] as? String == key || candidate["taskId"] as? String == key
+                || (candidate["toolUseIds"] as? [String])?.contains(key) == true
+        }), let id = entry["id"] as? String else { throw WorkbenchError("未找到该子 Agent") }
+        if parts.count == 5 && parts[4] == "stop" && body != nil {
+            subagentStops.append(path)
+            return Data(#"{"ok":true}"#.utf8)
+        }
+        guard parts.count == 4, body == nil, let transcript = subagentTranscripts[id] else {
+            throw WorkbenchError("隔离验收不支持：\(path)")
+        }
+        subagentReads.append(path)
+        let query = Dictionary((url.queryItems ?? []).map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { _, last in last })
+        let count = transcript.messages.count
+        var page: [String: Any] = ["entry": entry, "epoch": "fixture", "revision": transcript.revision,
+                                   "total": count, "truncated": 0]
+        if let before = query["before"].flatMap({ Int($0) }) {
+            let end = min(max(0, before), count)
+            let start = max(0, end - (query["limit"].flatMap({ Int($0) }) ?? 100))
+            page["start"] = start
+            page["messages"] = Array(transcript.messages[start..<end])
+        } else if query["epoch"] == "fixture", let since = query["revision"].flatMap({ Int($0) }), since <= transcript.revision {
+            if since == transcript.revision { return Data(#"{"unchanged":true}"#.utf8) }
+            page["changes"] = transcript.versions.indices.filter { transcript.versions[$0] > since }.map { index -> [String: Any] in
+                ["index": index, "message": transcript.messages[index]]
+            }
+        } else {
+            let start = max(0, count - 4)
+            page["start"] = start
+            page["messages"] = Array(transcript.messages[start..<count])
+        }
+        return try JSONSerialization.data(withJSONObject: page)
     }
     func advanceStream(_ step: Int) throws {
         if streamingSnapshot == nil {
@@ -211,6 +357,7 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     }
     func request(_ path: String, body: JSONValue?) throws -> Data {
         requests.append(path)
+        if let data = try subagentResponse(path, body: body) { return data }
         if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "workspace" {
             if path == "/sessions" {
                 let catalog = try snapshots.keys.sorted().map { id -> [String: Any] in
@@ -346,6 +493,7 @@ private struct ReferenceComposerFixtureView: View {
             }
             if mode == "invalidation" { report.merge(try await invalidation(window)) { _, new in new } }
             if mode == "paging" { report.merge(try await paging(window)) { _, new in new } }
+            if mode == "subagents" { report.merge(try await subagents(window)) { _, new in new } }
             if mode.hasPrefix("sidebar-layout-") { report.merge(try await sidebarLayout(window, mode: mode)) { _, new in new } }
             if mode == "sidebar-projects" { report.merge(try await sidebarProjects(window)) { _, new in new } }
             if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
@@ -384,7 +532,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             let responsivenessReport = responsiveness.finish()
             report["main_actor_lateness"] = responsivenessReport
             let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
@@ -638,6 +786,85 @@ private struct ReferenceComposerFixtureView: View {
             throw WorkbenchError("Draft writes invalidated reading body \(draftEvaluations) times")
         }
         return report
+    }
+    /// Subagents (bridge protocol 7) in the production views over fixed in-memory
+    /// routes: the activity details' roster, the transcript sheet opened through
+    /// the transcript action route, its follow and older reads, a reader body that
+    /// transcript reads leave alone, one subagent's stop, and a close that ends
+    /// the reads without stopping anything.
+    private func subagents(_ window: NSWindow) async throws -> [String: Any] {
+        let native = model.native
+        let live = "toolu_live", route = "/sessions/session-0/subagents/toolu_live"
+        guard native.snapshot?.subagents?.map(\.id) == [live, "toolu_done"] else {
+            throw WorkbenchError("Missing the fixture's subagent roster")
+        }
+        let details = Notification.Name("PerchAcceptanceActivityDetails")
+        NotificationCenter.default.post(name: details, object: true)
+        try await settle(window, "subagent roster") {
+            self.probe.subagentRoster == ["toolu_live|running|true|false", "toolu_done|completed|false|false"]
+        }
+        let roster = probe.subagentRoster
+        NotificationCenter.default.post(name: details, object: false)
+        try await Task.sleep(for: .milliseconds(300))
+
+        // The Agent/Task card's route: the hosted row posts this payload.
+        let context = ConversationActionContext(hostID: NativeAcceptanceFixture.host.id, kind: .claude,
+                                                sessionID: "session-0", opensSubagents: true)
+        model.handleConversationAction(ConversationActionPayload(context: context, action: .openSubagent(toolCallId: live)))
+        let latest = ["tool:sub-t1", "text:sub-3:0", "tool:sub-t2", "text:sub-5:0"]
+        try await settle(window, "subagent sheet") { window.sheets.count == 1 && self.probe.subagentSheetRows == latest }
+        guard native.subagents.presented == NativeSubagentSubject(sessionID: "session-0", key: live),
+              fixture.subagentReads.first == route else { throw WorkbenchError("The sheet did not start from a full read") }
+        // A live entry is read again every second, as a delta.
+        try await settle(window, "follow delta") { self.fixture.subagentReads.count >= 2 }
+        guard fixture.subagentReads.dropFirst().allSatisfy({ $0.hasPrefix(route + "?epoch=fixture&revision=") }) else {
+            throw WorkbenchError("Follow reads were not deltas: \(fixture.subagentReads)")
+        }
+        // A new message reaches the sheet without re-evaluating the reader.
+        flush(window)
+        let readerBefore = probe.nativeBodyEvaluations
+        fixture.appendSubagentMessage(live, NativeAcceptanceFixture.subagentMessage(
+            "sub-6", "assistant", [NativeAcceptanceFixture.subagentText("第一轮检查完成")]))
+        try await settle(window, "transcript delta") { self.probe.subagentSheetRows == latest + ["text:sub-6:0"] }
+        let readerUpdates = probe.nativeBodyEvaluations - readerBefore
+        if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_ALLOW_INVALIDATION"] != "1", readerUpdates != 0 {
+            throw WorkbenchError("Subagent transcript reads invalidated the reading body \(readerUpdates) times")
+        }
+        // The older page is read after the read in flight, never next to it.
+        native.loadOlderSubagent()
+        let all = ["text:sub-0:0", "thinking:sub-1:0"] + latest + ["text:sub-6:0"]
+        try await settle(window, "older subagent page") {
+            self.probe.subagentSheetRows == all && !native.subagents.loadingOlder
+        }
+        guard fixture.subagentReads.contains(route + "?epoch=fixture&before=2&limit=100") else {
+            throw WorkbenchError("Missing the older page read: \(fixture.subagentReads)")
+        }
+        // Stop this one subagent: the request goes out once, the row waits for the roster.
+        native.stopSubagent(live, in: "session-0")
+        native.stopSubagent(live, in: "session-0")
+        try await settle(window, "stop request") {
+            self.fixture.subagentStops == [route + "/stop"] && native.subagents.stopping.contains(live)
+        }
+        try fixture.updateSubagent(live, ["status": "stopped", "canStop": false, "stopRequested": true,
+                                          "endedAt": "2026-10-18T05:32:00.000Z"])
+        try await native.acceptanceRefreshSelected()
+        try await settle(window, "stop outcome") { !native.subagents.stopping.contains(live) }
+        // Closing ends the reads; it never stops anything.
+        native.subagents.present(nil)
+        try await settle(window, "sheet closed") { window.sheets.isEmpty }
+        let reads = fixture.subagentReads.count
+        try await Task.sleep(for: .milliseconds(1500))
+        guard fixture.subagentReads.count == reads, fixture.subagentStops.count == 1 else {
+            throw WorkbenchError("The closed sheet kept reading or sent a stop")
+        }
+        NotificationCenter.default.post(name: details, object: true)
+        try await settle(window, "stopped roster") { self.probe.subagentRoster.first == "toolu_live|cancelled|false|false" }
+        NotificationCenter.default.post(name: details, object: false)
+        try await Task.sleep(for: .milliseconds(300))
+        return ["subagent_roster": roster, "subagent_sheet_rows": all, "subagent_reads": fixture.subagentReads,
+                "subagent_stop_requests": fixture.subagentStops,
+                "reading_body_evaluations_during_transcript_reads": readerUpdates,
+                "subagent_contract": "roster rows in the activity details, sheet through the transcript action route, full then delta follow reads, serialized older page, single-subagent stop settled by the roster, close ends reads without a stop; fixed routes, no SSH or real agent"]
     }
     private func dashboard(_ window: NSWindow) async throws -> [String: Any] {
         let unified = try await unifiedWorkbench(window)

@@ -92,10 +92,23 @@ struct KimiActivityView: View {
 struct KimiToolCard: View {
     let tool: VisibleTool
     var onExpand: (() -> Void)? = nil
+    /// Opens the process of the subagent this Agent/Task call started. Left nil,
+    /// a transcript row's action context provides it when the session's bridge
+    /// records subagents; elsewhere the card stays as it was.
+    var onOpenProcess: (() -> Void)? = nil
     /// Action and status names come from core lookups in the app language;
     /// depending on the locale re-runs them when the language changes.
     @Environment(\.locale) private var locale
+    @Environment(\.conversationActionContext) private var actionContext
     @RememberedExpansion("expanded") private var expanded
+    /// Shown only after expanding, so collapsed row geometry never changes.
+    private var openProcess: (() -> Void)? {
+        guard ToolPresentation.isSubagentCall(name: tool.name) else { return nil }
+        if let onOpenProcess { return onOpenProcess }
+        guard let context = actionContext, context.opensSubagents else { return nil }
+        let id = tool.id
+        return { context.post(.openSubagent(toolCallId: id)) }
+    }
     // A failed tool's structured output is serialized by exitCodeReport.
     // Resolve it once per body evaluation and share it across the label.
     private func symbol(exitReport: Int?) -> String {
@@ -138,16 +151,15 @@ struct KimiToolCard: View {
         #endif
         DisclosureGroup(isExpanded: $expanded) {
             if expanded {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(tool.name).foregroundStyle(.secondary)
-                    if let input = tool.input { Text("Input").foregroundStyle(.secondary); DisclosureReplyText(text: input.display) }
-                    if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
-                    if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
-                    if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(.secondary) }
-                }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(10)
-                    .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
-                    .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
+                if let openProcess {
+                    VStack(alignment: .leading, spacing: 6) {
+                        details
+                        Button("查看过程", action: openProcess).buttonStyle(.borderless)
+                            .font(.system(size: ReplyStyle.Process.labelSize))
+                            .padding(.leading, ReplyStyle.Process.nestedIndent)
+                            .help("读取这个子 Agent 自己的轮次、思考与工具调用")
+                    }
+                } else { details }
             }
         } label: {
             HStack(spacing: 8) {
@@ -164,5 +176,17 @@ struct KimiToolCard: View {
                 .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
         }.disclosureGroupStyle(ProcessDisclosureStyle())
             .onChange(of: expanded) { _, value in if value { onExpand?() } }
+    }
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(tool.name).foregroundStyle(.secondary)
+            if let input = tool.input { Text("Input").foregroundStyle(.secondary); DisclosureReplyText(text: input.display) }
+            if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
+            if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
+            if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(.secondary) }
+        }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
+            .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
     }
 }

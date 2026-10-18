@@ -50,8 +50,9 @@ struct ConversationActivityBar: View {
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
     var onRetryExternal: (() -> Void)? = nil
-    /// Kimi's subagent roster and background task list. Other runtimes report
-    /// neither yet, so the sections stay hidden for them.
+    /// The subagent roster and background task list: Kimi's, and the native
+    /// roster of bridge protocol 7 (subagents only). Without either the
+    /// sections stay hidden.
     var board: KimiTaskBoard = KimiTaskBoard()
     var loadingTaskOutput: Set<String> = []
     var stoppingTasks: Set<String> = []
@@ -60,6 +61,11 @@ struct ConversationActivityBar: View {
     var onTaskStop: (KimiTask) -> Void = { _ in }
     var onTasksRefresh: () -> Void = {}
     var onOpenTranscript: (KimiTask) -> Void = { _ in }
+    /// Stops one subagent on its own, for rows marked stoppable. nil keeps the
+    /// subagent rows read-only (Kimi: the conversation's Stop covers them).
+    var onSubagentStop: ((KimiTask) -> Void)? = nil
+    /// Why stopping a subagent failed, by task id.
+    var taskStopErrors: [String: String] = [:]
     @UILocalization private var L
     @State private var expanded = false
     @State private var recapPresented = false
@@ -109,6 +115,13 @@ struct ConversationActivityBar: View {
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
+        #if PERCH_ACCEPTANCE
+        // The subagents fixture opens and closes the details popover without a pointer.
+        .onReceive(NotificationCenter.default.publisher(for: .init("PerchAcceptanceActivityDetails"))) { notice in
+            pointerAnchor = nil
+            expanded = notice.object as? Bool ?? true
+        }
+        #endif
     }
 
     /// Priority from left to right: the current action, then elapsed time; plan
@@ -340,7 +353,8 @@ struct ConversationActivityBar: View {
                     KimiTaskSections(board: board, loadingOutput: loadingTaskOutput, stopping: stoppingTasks,
                                      listError: taskListError, onLoadOutput: onTaskOutput,
                                      onStop: onTaskStop, onRefresh: onTasksRefresh,
-                                     onOpenTranscript: onOpenTranscript)
+                                     onOpenTranscript: onOpenTranscript,
+                                     onSubagentStop: onSubagentStop, stopErrors: taskStopErrors)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
             }.frame(maxHeight: 300)
             if let externalFailure {
@@ -588,6 +602,9 @@ struct KimiTaskSections: View {
     var onStop: (KimiTask) -> Void = { _ in }
     var onRefresh: () -> Void = {}
     var onOpenTranscript: (KimiTask) -> Void = { _ in }
+    /// Stops one subagent row on its own; nil leaves the roster read-only.
+    var onSubagentStop: ((KimiTask) -> Void)? = nil
+    var stopErrors: [String: String] = [:]
 
     var body: some View {
         let backgroundTasks = board.backgroundTasks
@@ -605,6 +622,11 @@ struct KimiTaskSections: View {
                 }
             }
         }
+        #if PERCH_ACCEPTANCE
+        .background(NativeSubagentRosterProbe(rows: board.subagents.map {
+            "\($0.id)|\($0.status)|\($0.stoppable == true)|\(stopping.contains($0.id))"
+        }))
+        #endif
     }
 
     private func section(_ title: LocalizedStringKey, tasks: [KimiTask], readsOutput: Bool) -> some View {
@@ -625,9 +647,17 @@ struct KimiTaskSections: View {
                             isLoadingOutput: loadingOutput.contains(task.id),
                             isStopping: stopping.contains(task.id), readsOutput: readsOutput,
                             onLoadOutput: { onLoadOutput(task) }, onStop: { onStop(task) },
-                            onOpenTranscript: { onOpenTranscript(task) })
+                            onOpenTranscript: { onOpenTranscript(task) },
+                            onSubagentStop: subagentStop(task, readsOutput: readsOutput),
+                            stopError: readsOutput ? nil : stopErrors[task.id])
             }
         }
+    }
+
+    /// Only roster rows the runtime marks stoppable stop on their own.
+    private func subagentStop(_ task: KimiTask, readsOutput: Bool) -> (() -> Void)? {
+        guard !readsOutput, task.stoppable == true, let onSubagentStop else { return nil }
+        return { onSubagentStop(task) }
     }
 }
 
@@ -642,7 +672,11 @@ private struct KimiTaskRow: View {
     var onLoadOutput: () -> Void = {}
     var onStop: () -> Void = {}
     var onOpenTranscript: () -> Void = {}
+    /// A native roster row the bridge can stop on its own; the main turn keeps running.
+    var onSubagentStop: (() -> Void)? = nil
+    var stopError: String? = nil
     @State private var expanded = false
+    @UILocalization private var L
 
     private var symbol: String {
         switch task.subagentPhase {
@@ -668,22 +702,41 @@ private struct KimiTaskRow: View {
         return task.subagentType ?? task.kindLabel
     }
 
+    /// Tokens, tool calls and the latest tool of a native roster entry; nil for
+    /// Kimi records, which report none of them.
+    private var usage: String? {
+        var parts: [String] = []
+        if let tokens = task.tokenCount { parts.append(L("已用 \(tokens) Token")) }
+        if let calls = task.toolUseCount { parts.append(L("\(calls) 次调用")) }
+        if let tool = task.latestActivity { parts.append(L("最近工具：\(tool)")) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     var body: some View {
+        let usageLine = usage
         DisclosureGroup(isExpanded: $expanded) {
             if expanded { details }
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(tint).accessibilityHidden(true)
-                Text(task.description).lineLimit(1).truncationMode(.middle)
-                if let chip, chip != task.description {
-                    Text(LocalizedStringKey(chip)).font(.system(size: 11)).foregroundStyle(.tertiary).fixedSize()
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(tint).accessibilityHidden(true)
+                    Text(task.description).lineLimit(1).truncationMode(.middle)
+                    if let chip, chip != task.description {
+                        Text(LocalizedStringKey(chip)).font(.system(size: 11)).foregroundStyle(.tertiary).fixedSize()
+                    }
+                    Spacer(minLength: 4)
+                    KimiTaskClock(task: task)
+                    Text(task.phaseLabel).foregroundStyle(tint).fixedSize()
                 }
-                Spacer(minLength: 4)
-                KimiTaskClock(task: task)
-                Text(task.phaseLabel).foregroundStyle(tint).fixedSize()
+                if let usageLine {
+                    // Under the description, past the status symbol's column.
+                    Text(verbatim: usageLine).font(.system(size: 11)).foregroundStyle(.tertiary)
+                        .lineLimit(1).truncationMode(.tail).padding(.leading, 19)
+                }
             }.font(.system(size: 12)).foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text(verbatim: "\(task.kindLabel) \(task.description) \(task.phaseLabel)"))
+                .accessibilityLabel(Text(verbatim: ["\(task.kindLabel) \(task.description) \(task.phaseLabel)", usageLine]
+                    .compactMap { $0 }.joined(separator: ", ")))
                 .help(Text(verbatim: [task.command, task.model, task.id].compactMap { $0 }.joined(separator: "\n")))
         }.disclosureGroupStyle(WorkbenchDisclosureStyle())
             .onChange(of: expanded) { _, value in
@@ -704,9 +757,25 @@ private struct KimiTaskRow: View {
                 if let reason = task.suspendedReason { meta("暂停原因", reason) }
                 meta("任务 ID", task.id)
             }.font(.system(size: 11))
-            if task.transcriptAgentId != nil {
-                Button("查看过程") { onOpenTranscript() }.buttonStyle(.borderless)
-                    .help("读取这个子 Agent 自己的轮次、思考与工具调用")
+            let stopsAlone = onSubagentStop != nil && task.isRunning
+            if task.transcriptAgentId != nil || stopsAlone {
+                HStack(spacing: 14) {
+                    if task.transcriptAgentId != nil {
+                        Button("查看过程") { onOpenTranscript() }.buttonStyle(.borderless)
+                            .help("读取这个子 Agent 自己的轮次、思考与工具调用")
+                    }
+                    if stopsAlone {
+                        // Stays 停止中 until the roster shows an outcome.
+                        Button { onSubagentStop?() } label: {
+                            if isStopping { Text("停止中") } else { Text("停止") }
+                        }.buttonStyle(.borderless).disabled(isStopping)
+                            .help("只停止这个子 Agent，主会话继续运行")
+                    }
+                }
+            }
+            if let stopError, task.isRunning {
+                Text(L("单独停止失败：\(stopError)。可以停止整轮。"))
+                    .foregroundStyle(.orange).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             }
             if readsOutput || output != nil {
                 Text("输出").fontWeight(.medium).foregroundStyle(.secondary)

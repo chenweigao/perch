@@ -60,6 +60,17 @@ OMP、Qoder、Claude 与 dsh 的归档只属于远端工作台目录，删除工
 
 未发送草稿和原生待发队列在 Mac 本地持久化；重启后先核对接收状态，未确认请求不自动重发。OMP/Qoder/dsh 原生附件上传、完整旧 CLI 历史导入、远端主机重启、多客户端同时编辑、长时间休眠与超大历史压力测试不在本轮验收范围，仍可使用终端入口。
 
+## 子 Agent（Claude Code，native service v7）
+
+桥不再丢弃子 Agent 的过程：带 `parent_tool_use_id` 的 assistant / user 消息按主消息同样的 `normalize()` 写进该子 Agent 自己的过程，带父 id 的 `stream_event` 仍然丢弃；主线程的消息、流式尾巴、busy/轮次状态与历史增量保持原样。`task_started / task_progress / task_updated / task_notification` 只处理子 Agent（`task_type` 为 `local_agent`，或没有 `task_type` 但 `tool_use_id` 是 Agent/Task 调用），忽略 `ambient` 与 `skip_transcript`；`background_tasks_changed` 与这些事件的先后未定义，不用来判断结束。别名表把 task id 与 tool use id 映射到条目 key：消息先于 `task_started` 到达时按父 id 建临时条目，描述取主线程 Agent/Task 调用的 `description`（否则 prompt 首行），之后的 `task_started` 并入该条目，key 不变。`pending` 为排队，`paused` 仍算运行，`killed` 为停止；已结束的条目不会被迟到事件复活。从未收到 task 事件的条目由主线程的 tool_result 结束；`agent_end` 或 worker 退出时仍在排队/运行的条目，本轮被停止记为 stopped，否则为 unknown。
+
+- **名单**：会话状态 `subagentRoster` 最多 64 条，超出时删去最旧的已结束条目及其过程文件，不进入深拷贝的快照。快照（全量与增量）带 `subagents`：最新一轮的、仍在排队/运行的、被待处理审批引用的条目，最多 32 条，按 `startedAt` 排序；`GET /sessions` 带 `runningSubagents`，有子 Agent 运行时不替换旧服务。名单、条目与审批标签变化走会话 `touch()`；过程追加只增加该过程自己的 revision，主快照轮询保持安静。
+- **过程**：`GET /sessions/<sid>/subagents/<key>`，key 可为条目 id、task id 或 tool use id，未知 key 返回 404。无参数返回最近 200 条（`entry, epoch, revision, total, truncated, start, messages`）；`?epoch&revision` 同 revision 返回 `{"unchanged":true}`，否则返回 `changes:[{index,message}]`，epoch 不同返回全量；`?epoch&before&limit`（limit ≤ 200，默认 100）取更早一页，epoch 过期时与主会话的 `before` 一样返回 400。
+- **持久化与上限**：过程写在 `subagents/<sid>/<key>.json`（epoch、revision、truncated、messages、versions），约 2 秒防抖，条目结束与 `agent_end` 时立即写；首次读取才载入；随会话删除。内存只保留排队/运行中条目的过程，以及每会话最近读过的至多 8 份已结束过程，换出前先写盘，本服务换出后再载入沿用原 epoch；上一个服务写下的文件可能落后于客户端已读内容，载入后换新 epoch。服务启动时排队/运行中的条目改为 unknown，并清除不属于任何会话或条目的文件。每份过程最多 2,000 条或约 4 MiB，超出后从头裁到 75%，换新 epoch 并累计 `truncated`；单段文本、思考、工具输出与工具输入里的每个字符串最多 32 KiB，截断处带标记；截断后仍超过裁剪目标（预算的 75%）的单条消息改为一条省略提示，裁剪因此总能达标。
+- **停止**：`POST /sessions/<sid>/subagents/<key>/stop` 仅在条目 `canStop`（Claude、排队或运行中、已知 task id、会话有活动轮次）时向 worker 发 `{type:'stop_task', taskId, turnId}`，记 `stopRequested`，否则 400。worker 只对当前轮调用 SDK `stopTask`，回 `task_stop_result`；失败时 `stopError` 带原因，可重试。0.3.280 在最后一个后台子 Agent 结束后的追加轮里可能停止失败，此时改用整轮停止。
+- **审批**：worker 给审批带上 `context.agentID`；桥经别名表或子 Agent 过程中已出现的被审批 tool_use id 解析成 `subagent:{id, agentId, title, type}`，暂时解析不到时 `id` 为 null，之后的事件对上时补全。主线程审批不带该字段。
+- **文字转发**：`forwardSubagentText` 由桥常量 `CLAUDE_FORWARD_SUBAGENT_TEXT` 传入 worker，默认关闭，待实测确认子 Agent 的流式事件带父 id 后再开；关闭时过程只有工具调用与结果。
+
 ## 运行中引导
 
 OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选“下一轮发送”。需要同步更新 Mac 客户端和远端桥接脚本；客户端仅在服务端会话声明 `steer` 能力时提供引导。Qoder CN / dsh / Claude Code 继续使用下一轮队列。
@@ -125,4 +136,4 @@ Codex 的 reviewer 始终为 `user`，四档映射如下：
 
 Perch 不修改远端 `config.toml`，也不会在恢复时放宽会话权限。旧 Codex 默认值 `ask`、`auto-review` 安全迁移为 `workspace-ask`，`full-access` 保留。管理策略或运行时不接受所选权限时，错误仍通过任务错误通道展示，不自动降级或放宽。
 
-权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
+权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
