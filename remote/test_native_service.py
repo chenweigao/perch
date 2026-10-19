@@ -254,17 +254,17 @@ class ProtocolTests(unittest.TestCase):
         cfg=json.loads(args[2])
         self.assertEqual(cfg['binary'],'/usr/local/bin/claude')
         self.assertEqual(cfg['cwd'],'/tmp')
-        # Subagent text stays off until the probe flips the bridge constant.
-        self.assertIs(cfg['forwardSubagentText'],False)
+        # Subagent text is forwarded by default (probe 2026-10-18).
+        self.assertIs(cfg['forwardSubagentText'],True)
         # The worker needs the proxy env, otherwise the CLI's phone-home calls stall silently.
         self.assertEqual(popen.call_args.kwargs['env'],{'https_proxy':'http://127.0.0.1:7890'})
-        with patch.object(broker,'CLAUDE_FORWARD_SUBAGENT_TEXT',True), \
+        with patch.object(broker,'CLAUDE_FORWARD_SUBAGENT_TEXT',False), \
              patch.object(broker.subprocess,'Popen',return_value=process) as popen, \
              patch.object(broker.threading,'Thread'), patch.object(broker,'proxy_aware_spawn_env',return_value={}), \
              patch.object(broker.shutil,'which',return_value='/usr/local/bin/claude'):
             s.launch()
         popen.call_args.kwargs['stderr'].close()
-        self.assertIs(json.loads(popen.call_args.args[0][2])['forwardSubagentText'],True)
+        self.assertIs(json.loads(popen.call_args.args[0][2])['forwardSubagentText'],False)
     def test_claude_interrupt_is_not_an_error(self):
         s=self.session('claude');s.state['cancelled']=True
         s.event({'type':'result','is_error':True,'errors':['Operation aborted']})

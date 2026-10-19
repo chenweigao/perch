@@ -69,7 +69,9 @@ OMP、Qoder、Claude 与 dsh 的归档只属于远端工作台目录，删除工
 - **持久化与上限**：过程写在 `subagents/<sid>/<key>.json`（epoch、revision、truncated、messages、versions），约 2 秒防抖，条目结束与 `agent_end` 时立即写；首次读取才载入；随会话删除。内存只保留排队/运行中条目的过程，以及每会话最近读过的至多 8 份已结束过程，换出前先写盘，本服务换出后再载入沿用原 epoch；上一个服务写下的文件可能落后于客户端已读内容，载入后换新 epoch。服务启动时排队/运行中的条目改为 unknown，并清除不属于任何会话或条目的文件。每份过程最多 2,000 条或约 4 MiB，超出后从头裁到 75%，换新 epoch 并累计 `truncated`；单段文本、思考、工具输出与工具输入里的每个字符串最多 32 KiB，截断处带标记；截断后仍超过裁剪目标（预算的 75%）的单条消息改为一条省略提示，裁剪因此总能达标。
 - **停止**：`POST /sessions/<sid>/subagents/<key>/stop` 仅在条目 `canStop`（Claude、排队或运行中、已知 task id、会话有活动轮次）时向 worker 发 `{type:'stop_task', taskId, turnId}`，记 `stopRequested`，否则 400。worker 只对当前轮调用 SDK `stopTask`，回 `task_stop_result`；失败时 `stopError` 带原因，可重试。0.3.280 在最后一个后台子 Agent 结束后的追加轮里可能停止失败，此时改用整轮停止。
 - **审批**：worker 给审批带上 `context.agentID`；桥经别名表或子 Agent 过程中已出现的被审批 tool_use id 解析成 `subagent:{id, agentId, title, type}`，暂时解析不到时 `id` 为 null，之后的事件对上时补全。主线程审批不带该字段。
-- **文字转发**：`forwardSubagentText` 由桥常量 `CLAUDE_FORWARD_SUBAGENT_TEXT` 传入 worker，默认关闭，待实测确认子 Agent 的流式事件带父 id 后再开；关闭时过程只有工具调用与结果。
+- **文字转发**：`forwardSubagentText` 由桥常量 `CLAUDE_FORWARD_SUBAGENT_TEXT` 传入 worker，默认开启，过程里有子 Agent 的文字、思考与工具调用。
+  2026-10-18 实测（SDK 0.3.280、CLI 2.1.302）：子 Agent 的 assistant/user 消息都带 `parent_tool_use_id`，无父 id 的流式 delta 中没有子 Agent 独有的文字，
+  主线程的流式尾巴不受影响。若新版 CLI 改变这一点，把常量改回 `False`，过程退回只有工具调用与结果。
 
 ## 运行中引导
 
