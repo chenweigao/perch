@@ -354,10 +354,18 @@ enum ComposerAttachments {
 struct ComposerAttachment: View {
     let file: URL
     let onRemove: () -> Void
+    @Environment(\.displayScale) private var displayScale
+    @State private var thumbnail: NSImage?
+    /// Decoding is keyed on the file and the display, not on draft edits: a
+    /// keystroke must never re-read or re-decode the attachment.
+    private struct ThumbnailRequest: Equatable {
+        let file: URL
+        let scale: CGFloat
+    }
     var body: some View {
         HStack(spacing: 8) {
-            if let image = NSImage(contentsOf: file), image.isValid {
-                Image(nsImage: image).resizable().scaledToFill().frame(width: 38, height: 38)
+            if let thumbnail {
+                Image(nsImage: thumbnail).resizable().scaledToFill().frame(width: 38, height: 38)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
             } else { Image(systemName: "doc").frame(width: 30, height: 34).foregroundStyle(.secondary) }
             Text(file.lastPathComponent).font(.system(size: 11)).lineLimit(1).frame(maxWidth: 130)
@@ -365,5 +373,11 @@ struct ComposerAttachment: View {
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove attachment")
                 .accessibilityLabel("Remove attachment")
         }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+            .task(id: ThumbnailRequest(file: file, scale: displayScale)) {
+                guard file.isImageFile else { return }
+                // Full screenshots decode in tens of milliseconds; keep that off
+                // the typing path and bound the bitmap to the chip's size.
+                thumbnail = try? await AttachmentImageDecoder.shared.image(url: file, maxPixels: 38 * 2 * displayScale)
+            }
     }
 }

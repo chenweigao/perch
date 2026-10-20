@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 mkdir -p .local
 work="$(mktemp -d "$PWD/.local/composer-check.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
-swiftc -target "$(uname -m)-apple-macosx26.0" -swift-version 5 Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/ComposerRecall.swift Tests/ComposerChecks/main.swift -o "$work/compiled"
+swiftc -target "$(uname -m)-apple-macosx26.0" -swift-version 5 Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/ComposerRecall.swift Sources/AgentWorkbench/AttachmentImageDecoder.swift Tests/ComposerChecks/main.swift -o "$work/compiled"
 # Match the isolated app launch used by the host lifecycle checks.
 # Require both normal process exit and the receipt written after all assertions.
 app="$work/ComposerChecks.app"

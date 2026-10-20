@@ -14,7 +14,7 @@ BIN = pathlib.Path(subprocess.check_output(
 files = ["RevealFrameDriver", "ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory", "ConversationPresentationEnvironment",
          "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel", "ReplyMermaid", "PerfDiagnostics",
          "ActivitySummarySettings", "ActivitySummaryController",
-         "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView",
+         "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView", "AttachmentImageDecoder",
          "ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle",
          "ConversationActivityBar", "UILocalization", "WorkbenchGlass", "WorkbenchTheme"]
 includes = ["-I", str(BIN / "Modules")]
