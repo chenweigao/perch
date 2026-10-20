@@ -6,7 +6,9 @@ jump to the question. Up/Down and accessibility increment/decrement move one
 turn at a time. Escape dismisses keyboard focus. The dark tick tracks the turn
 at the top of the reading viewport.
 
-The rail is hidden for zero or one turn. Dense histories share painted ticks.
+The rail is hidden for zero or one turn. Dense histories share painted ticks,
+bounded to 32 dashes per band (ccgui anchor-rail parity) so a long history
+reads as a sparse index rather than a solid dashed column.
 After a 120 ms dwell, a fixed neighborhood opens to roughly 18 pt hit targets;
 painting and pointer selection use the same mapping. Moving between neighbors
 updates excerpts immediately without moving or resizing the card. A 90 ms exit
