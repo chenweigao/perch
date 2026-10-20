@@ -47,7 +47,7 @@ class PreviewSourceTests(unittest.TestCase):
         (app / "RevealFrameDriver.swift").write_text("// working tree reveal driver\n")
         # Math, alert, selection, mermaid and diagnostics sources exist only in the working tree: historical refs skip them.
         for name in ("ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle", "ReplyMermaid",
-            "PerfDiagnostics"):
+            "PerfDiagnostics", "AttachmentImageDecoder"):
             (app / f"{name}.swift").write_text("// working tree reply block\n")
         stubs = self.repo / "stubs"
         stubs.mkdir()

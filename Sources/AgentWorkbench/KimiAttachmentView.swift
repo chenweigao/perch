@@ -61,28 +61,3 @@ struct KimiAttachmentView: View {
         part.source?["kind"].string == "file" || part.type == "file" ? "/api/v1/files/\(id)" : "/api/v1/sessions/\(sessionId)/media/\(id)"
     }
 }
-
-/// Serialize native decoding away from the main actor. Cancelled, queued rows
-/// exit before decoding; only the view's display-sized bitmap reaches rendering.
-actor AttachmentImageDecoder {
-    static let shared = AttachmentImageDecoder()
-    func image(data: Data, maxPixels: CGFloat) throws -> NSImage? {
-        try Task.checkCancellation()
-        #if TRANSCRIPT_CHECKS
-        precondition(!Thread.isMainThread, "Attachment decoding ran on the main thread")
-        #endif
-        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
-              CGImageSourceGetCount(source) == 1 else {
-            // Keep NSImage's existing handling of vector and multi-frame formats.
-            return NSImage(data: data)
-        }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixels,
-            kCGImageSourceShouldCacheImmediately: true
-        ]
-        guard let bitmap = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        return NSImage(cgImage: bitmap, size: .zero)
-    }
-}
