@@ -92,8 +92,10 @@ final class MermaidRenderer {
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("mermaid_render", since: start) }
         #endif
+        // Spans the web view's awaits: aggregated, but kept out of frame
+        // attribution. Its main-thread steps are journaled on their own.
         let perfProbe = PerfDiagnostics.begin()
-        defer { PerfDiagnostics.end("mermaid_render", perfProbe) }
+        defer { PerfDiagnostics.end("mermaid_render", perfProbe, journal: false) }
         guard await ensureReady(), let webView else { return nil }
         guard let report = await evaluate(webView, source: source, dark: key.dark) else {
             // Timeout or a wedged page: reload to a known state for the next job.
@@ -123,9 +125,13 @@ final class MermaidRenderer {
         }
         // takeSnapshot hands back a CGImage-backed rep; rewrap it as a bitmap
         // at 2x pixels with the point size as its logical size.
+        let encodeProbe = PerfDiagnostics.begin()
         let bitmap = NSBitmapImageRep(cgImage: pixels)
         bitmap.size = size
-        guard let png = bitmap.representation(using: .png, properties: [:]) else {
+        let encoded = bitmap.representation(using: .png, properties: [:])
+        PerfDiagnostics.end("mermaid_encode", encodeProbe,
+                            detail: "pixels=\(bitmap.pixelsWide)x\(bitmap.pixelsHigh) bytes=\(encoded?.count ?? 0)")
+        guard let png = encoded else {
             failed.insert(key)
             return nil
         }
@@ -324,8 +330,13 @@ final class MermaidRenderer {
     }
 
     private func loadDisk(_ key: Key) -> Diagram? {
+        // A synchronous read and PNG decode on the main actor.
+        let loadProbe = PerfDiagnostics.begin()
+        var bytes = 0
+        defer { PerfDiagnostics.end("mermaid_disk_load", loadProbe, detail: "bytes=\(bytes)") }
         guard let url = Self.cacheURL(key), let data = try? Data(contentsOf: url),
               let bitmap = NSBitmapImageRep(data: data) else { return nil }
+        bytes = data.count
         // The PNG is 2x; restore the point size it was rendered at.
         let image = NSImage(size: NSSize(width: bitmap.pixelsWide / 2, height: bitmap.pixelsHigh / 2))
         image.addRepresentation(bitmap)

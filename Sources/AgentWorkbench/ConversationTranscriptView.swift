@@ -215,6 +215,8 @@ struct ConversationTranscript: View {
     @State private var measured: (session: String, height: CGFloat)?
     @State private var documentLayout = ConversationDocumentLayout()
     var body: some View {
+        // Connection snapshots land here; their state types stay probe-free.
+        let projectionProbe = PerfDiagnostics.begin()
         let key = memoryKey ?? sessionId
         let snapshot = presentation.update(key: key, input: ConversationPresentationModel.Input(
             messages: messages, live: liveTools, running: running, isRunning: isRunning, online: online,
@@ -236,6 +238,8 @@ struct ConversationTranscript: View {
             ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows)
         }
+        let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
+                                    detail: "messages=\(messages.count) rows=\(contents.count)")
         ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment), foldParents: foldParents,
                                  viewport: environment.conversationViewport,
@@ -685,6 +689,12 @@ private final class ConversationDocumentView: NSView {
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("document_configure", since: start) }
         #endif
+        let applyProbe = PerfDiagnostics.begin()
+        var reconciled = false, restructured = false
+        defer {
+            PerfDiagnostics.end("snapshot_apply", applyProbe,
+                                detail: "rows=\(next.count) reconciled=\(reconciled) restructured=\(restructured)")
+        }
         ConversationReadingMemory.shared.visit(sessionId)
         if self.viewport !== viewport {
             self.viewport?.remove(self)
@@ -697,6 +707,8 @@ private final class ConversationDocumentView: NSView {
         } else {
             structureChanged = reconcileRows(next, sessionId: sessionId, appearance: appearance)
             self.contentIdentity = contentIdentity
+            reconciled = true
+            restructured = structureChanged
         }
         if structureChanged || self.navigation != navigation {
             self.navigation = navigation
@@ -940,6 +952,13 @@ private final class ConversationDocumentView: NSView {
         let rangeWorkStart = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("refresh_range_work", since: rangeWorkStart) }
         #endif
+        // Only passes that change the mounted range; same-range scroll steps return above.
+        let refreshProbe = PerfDiagnostics.begin()
+        var entered = 0, exited = 0, created = 0
+        defer {
+            PerfDiagnostics.end("transcript_refresh", refreshProbe, detail: "source=\(source.rawValue) "
+                + "rows=\(laidOutRange?.count ?? 0) entered=\(entered) exited=\(exited) created=\(created)")
+        }
         // Pin the reading position from pre-pass geometry (what is on screen now)
         // before rows above the reader resolve their estimates this pass. Edits
         // and disclosures evict their measuredSizes entry, so presence at the
@@ -963,6 +982,7 @@ private final class ConversationDocumentView: NSView {
             if let existing = controllers[id] {
                 controller = existing
             } else {
+                created += 1
                 let measuredSize: (width: CGFloat, height: CGFloat)? = measuredSizes[id].flatMap {
                     $0.width == columnWidth && $0.content == content ? ($0.width, $0.height) : nil
                 }
@@ -975,6 +995,7 @@ private final class ConversationDocumentView: NSView {
             // for its size. Measuring detached builds a graph that attachment
             // immediately invalidates and lays out again.
             if controller.view.superview !== self {
+                entered += 1
                 controller.layout(frame: CGRect(x: 0, y: rowY, width: columnWidth, height: heights[index]), contentHeight: heights[index])
                 #if TRANSCRIPT_CHECKS
                 let attachStart = CACurrentMediaTime()
@@ -1021,7 +1042,9 @@ private final class ConversationDocumentView: NSView {
         NavigationRenderMetrics.count("refresh_overlap_rows", by: overlap)
         NavigationRenderMetrics.count("refresh_entered_rows", by: nextRange.count - overlap)
         #endif
-        for id in mounted.subtracting(nextMounted) { controllers[id]?.view.removeFromSuperview() }
+        let leaving = mounted.subtracting(nextMounted)
+        exited = leaving.count
+        for id in leaving { controllers[id]?.view.removeFromSuperview() }
         mounted = nextMounted
         laidOutRange = nextRange
         if highlight != nil { applyFindHighlights() }
@@ -1091,6 +1114,12 @@ private final class ConversationDocumentView: NSView {
             self.publicationScheduled = false
             guard !self.suspended else { return }
             guard self.publishedHeight != self.totalHeight else { return }
+            let publishProbe = PerfDiagnostics.begin()
+            let previous = self.publishedHeight
+            defer {
+                PerfDiagnostics.end("height_publish", publishProbe,
+                                    detail: "rows=\(self.contents.count) delta=\((self.totalHeight - (previous ?? 0)).rounded())")
+            }
             self.publishedHeight = self.totalHeight
             self.invalidateIntrinsicContentSize()
             self.heightChanged(self.totalHeight)
@@ -1159,6 +1188,8 @@ private final class ConversationDocumentView: NSView {
             return
         }
         guard let target = restoreTarget, let clip = observedClip, abs(bounds.height - totalHeight) < 1, !contents.isEmpty else { return }
+        let restoreProbe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("anchor_restore", restoreProbe, detail: "rows=\(contents.count)") }
         let index = indices[target.entry] ?? min(target.index, contents.count - 1)
         let y = max(0, offsets[index] + target.offset + contentOriginY)
         clip.scroll(to: NSPoint(x: 0, y: y))
@@ -1479,7 +1510,12 @@ private final class ConversationEntryController: NSViewController {
         container.replySourceProvider = { [weak self] in self?.replySource }
         if let nativeUser { container.addSubview(nativeUser) }
         if let nativeAssistant { container.addSubview(nativeAssistant) }
-        if let host { addChild(host); container.addSubview(host.view) }
+        if let host {
+            // The hosting view and its SwiftUI graph are created on first access.
+            let createProbe = PerfDiagnostics.begin()
+            addChild(host); container.addSubview(host.view)
+            PerfDiagnostics.end("hosted_row_create", createProbe, detail: "step=view presentation=\(content.entry.presentation)")
+        }
         container.widthChanged = { [weak self] in self?.committedWidthChanged() }
         // The row already owns its measured frame; its sole child fills it.
         // Avoid rebuilding an Auto Layout constraint graph on viewport changes.
@@ -1709,6 +1745,8 @@ private final class ConversationEntryController: NSViewController {
         let rootStart = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("set_root", since: rootStart) }
         #endif
+        let setupProbe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("row_setup", setupProbe, detail: rowSetupDetail) }
         placedWidth = nil
         replySource = nil
         var markdownPreparation: ReplyMarkdownPreparation?
@@ -1816,12 +1854,47 @@ private final class ConversationEntryController: NSViewController {
         }
         if let host { host.rootView = root }
         else {
+            let createProbe = PerfDiagnostics.begin()
             let host = NSHostingController(rootView: root)
             host.sizingOptions = []
             host.safeAreaRegions = []
             self.host = host
             if isViewLoaded { addChild(host); view.addSubview(host.view) }
+            PerfDiagnostics.end("hosted_row_create", createProbe,
+                                detail: "step=controller presentation=\(content.entry.presentation)")
         }
+    }
+    /// Diagnostics details: renderer and block kinds and counts, never message text.
+    private var perfRenderer: String {
+        if nativeUser != nil { return "renderer=native_user" }
+        if nativeAssistant != nil { return "renderer=native_assistant" }
+        return "renderer=hosted presentation=\(content.entry.presentation)"
+    }
+    /// A hosted row adds why: a held text selection, or the top-level block
+    /// kinds of a reply the native renderers declined.
+    private var rowSetupDetail: String {
+        guard nativeUser == nil, nativeAssistant == nil else { return perfRenderer }
+        var detail = perfRenderer
+        if settleFlipObserver != nil { detail += " reason=selection" }
+        if case .reuse(_, _, _, let blocks)? = host?.rootView.content.markdownPreparation {
+            detail += " blocks=" + Self.blockKinds(blocks)
+        }
+        return detail
+    }
+    private static func blockKinds(_ blocks: [ReplyBlock]) -> String {
+        Set(blocks.map { block -> String in
+            switch block {
+            case .paragraph: return "paragraph"
+            case .heading: return "heading"
+            case .code(let language, _): return MermaidSupport.isMermaid(language) ? "mermaid" : "code"
+            case .math: return "math"
+            case .list: return "list"
+            case .quote: return "quote"
+            case .table: return "table"
+            case .alert: return "alert"
+            case .rule: return "rule"
+            }
+        }).sorted().joined(separator: ",")
     }
     func measure(width proposed: CGFloat?) -> CGSize {
         let width = max(1, proposed?.isFinite == true ? proposed! : ReplyStyle.readingWidth)
@@ -1832,6 +1905,8 @@ private final class ConversationEntryController: NSViewController {
             #endif
             height = cached.height
         } else {
+            let measureProbe = PerfDiagnostics.begin()
+            defer { PerfDiagnostics.end("row_measure", measureProbe, detail: perfRenderer) }
             #if TRANSCRIPT_CHECKS
             NavigationRenderMetrics.count("host_size_cache_miss")
             let start = CACurrentMediaTime()

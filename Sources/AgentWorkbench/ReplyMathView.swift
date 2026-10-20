@@ -74,6 +74,11 @@ private enum ReplyMathImage {
         let key = Key(latex: latex, size: size, display: display)
         if let hit = cache[key] { return hit }
         if failed.contains(latex) { return nil }
+        let typesetProbe = PerfDiagnostics.begin()
+        defer {
+            PerfDiagnostics.end("math_typeset", typesetProbe,
+                                detail: (display ? "mode=display" : "mode=inline") + " bytes=\(latex.utf8.count)")
+        }
         func typeset(_ ink: NSColor) -> NSImage? {
             let math = MTMathImage(latex: latex, fontSize: size, textColor: ink,
                                    labelMode: display ? .display : .text,

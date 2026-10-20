@@ -34,6 +34,8 @@ import WorkbenchCore
             try await checkActivityBar()
         case "reply-selection":
             try await checkCrossViewSelection()
+        case "frame-hitch":
+            try await checkFrameHitchDiagnostics()
 
         case "architecture":
             UserDefaults.standard.removePersistentDomain(forName: domain)
