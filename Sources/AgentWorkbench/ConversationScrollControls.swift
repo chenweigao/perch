@@ -323,17 +323,24 @@ private struct ConversationTurnRail: View {
     let select: (Int) -> Void
     @FocusState private var focused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// A lens transition glides painted ticks from the previous mapping to the
+    /// committed one; nil means settled. Selection always uses the committed
+    /// mapping, so motion never moves hit targets.
+    @State private var glideFrom: ConversationTurnRailGeometry?
+    @State private var glideProgress: Double = 1
     private let railWidth: CGFloat = 32
     private var count: Int { turns.count }
 
     var body: some View {
         GeometryReader { geometry in
             let height = max(1, geometry.size.height - 32)
+            let plain = ConversationTurnRailGeometry(count: count, height: height)
             let layout = ConversationTurnRailGeometry(count: count, height: height, focus: hover.focus)
             let selected = selectedID.flatMap { id in turns.firstIndex { $0.id == id } }
             let availableWidth = max(1, geometry.size.width - railWidth - 12)
             ZStack(alignment: .topLeading) {
-                ConversationTurnMarks(layout: layout, current: current, selected: selected,
+                ConversationTurnMarks(layout: layout, from: glideFrom, progress: glideProgress,
+                                      current: current, selected: selected,
                                       hovered: hover.index, focus: hover.focus?.index, keyboardFocused: focused,
                                       reduceMotion: reduceMotion)
                 .frame(width: railWidth, height: layout.height)
@@ -386,22 +393,42 @@ private struct ConversationTurnRail: View {
                 }
             }.padding(.vertical, 16)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hover.previewY != nil)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: glideProgress)
+                .onChange(of: hover.focus) { old, focus in
+                    guard !reduceMotion else { glideFrom = nil; glideProgress = 1; return }
+                    // Glide from the mapping the pointer just left: the resting
+                    // rail, the previous lens, or the lens mid-scan.
+                    glideFrom = old.map { ConversationTurnRailGeometry(count: count, height: height, focus: $0) } ?? plain
+                    withTransaction(Transaction(animation: nil)) { glideProgress = 0 }
+                    withAnimation(.smooth(duration: 0.22)) { glideProgress = 1 }
+                }
                 .onChange(of: height) { _, _ in hover.reset() }
                 .onDisappear { hover.reset() }
         }
     }
 }
 
-/// Bounded drawing for dense histories. Motion changes emphasis, never the
-/// vertical mapping shared by drawing and selection.
+/// Bounded drawing for dense histories. Painted ticks interpolate from the
+/// previous mapping to the committed one while a transition runs; selection
+/// and committed marks always use the committed mapping, so motion never
+/// moves targets.
 private struct ConversationTurnMarks: View {
     let layout: ConversationTurnRailGeometry
+    let from: ConversationTurnRailGeometry?
+    let progress: Double
     let current: Int
     let selected: Int?
     let hovered: Int?
     let focus: Int?
     let keyboardFocused: Bool
     let reduceMotion: Bool
+    /// Where a tick is drawn this frame: settled on the committed mapping, or
+    /// gliding from the previous one.
+    private func paintedY(for index: Int) -> CGFloat {
+        let target = layout.y(for: index)
+        guard let from, progress < 1 else { return target }
+        return from.y(for: index) + (target - from.y(for: index)) * progress
+    }
     var body: some View {
         ZStack {
             Canvas { context, _ in
@@ -409,7 +436,7 @@ private struct ConversationTurnMarks: View {
                     let index = layout.index(at: y)
                     let strength = focus.map { layout.expanded.contains(index) ? max(0, 1 - CGFloat(abs(index - $0)) / 5) : 0 } ?? 0
                     let width = 7 + 6 * strength
-                    context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: y, width: width, height: 2), cornerRadius: 1),
+                    context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: paintedY(for: index), width: width, height: 2), cornerRadius: 1),
                                  with: .color(.primary.opacity(0.24 + 0.12 * Double(strength))))
                 }
             }
@@ -423,7 +450,7 @@ private struct ConversationTurnMarks: View {
                                  with: .color(.primary.opacity(opacity)))
                 }
                 if let hovered, hovered != selected {
-                    let y = layout.y(for: hovered)
+                    let y = paintedY(for: hovered)
                     context.fill(Path(roundedRect: CGRect(x: 4, y: y - 6, width: 24, height: 14), cornerRadius: WorkbenchTheme.Radius.chip),
                                  with: .color(.primary.opacity(WorkbenchTheme.Fill.hover)))
                     tick(y: y, width: 14, opacity: 0.55)
