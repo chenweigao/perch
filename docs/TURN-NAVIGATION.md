@@ -12,8 +12,11 @@ reads as a sparse index rather than a solid dashed column.
 After a 120 ms dwell, a fixed neighborhood opens to roughly 18 pt hit targets;
 painting and pointer selection use the same mapping. Moving between neighbors
 updates excerpts immediately without moving or resizing the card. A 90 ms exit
-grace avoids collapsing it when the pointer briefly crosses the edge. Moving
-outside the expanded neighborhood and dwelling opens a new neighborhood.
+grace avoids collapsing it when the pointer briefly crosses the edge. Opening
+and closing glide over 220 ms: painted ticks interpolate between the resting
+and lens mappings while selection keeps the committed mapping; Reduce Motion
+disables the glide. Moving outside the expanded neighborhood and dwelling
+opens a new neighborhood.
 Kimi's existing **Load earlier messages** button expands the indexed history;
 the rail does not fetch remote history on hover.
 
