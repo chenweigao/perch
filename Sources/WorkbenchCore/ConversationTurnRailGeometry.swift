@@ -59,10 +59,16 @@ public struct ConversationTurnRailGeometry {
         return min(count - 1, max(0, index))
     }
 
-    /// Paint compressed history at most once per five points, not once per turn.
+    /// Painted dashes stay bounded, like ccgui's anchor rail
+    /// (`MAX_VISIBLE_ANCHOR_DASHES = 32`): a long history reads as a sparse
+    /// index, not a solid dashed column. Only painting is bounded — selection
+    /// and hit testing keep the full-resolution mapping.
+    public static let maxPaintedTicks = 32
+
+    /// Paint history at most once per five points, never once per turn.
     public var ticks: [CGFloat] {
         func band(_ range: Range<Int>, _ from: CGFloat, _ to: CGFloat) -> [CGFloat] {
-            let n = min(range.count, max(0, Int((to - from) / 5)))
+            let n = min(range.count, Self.maxPaintedTicks, max(0, Int((to - from) / 5)))
             return (0..<n).map { from + (CGFloat($0) + 0.5) * (to - from) / CGFloat(n) }
         }
         return band(0..<expanded.lowerBound, 0, top)

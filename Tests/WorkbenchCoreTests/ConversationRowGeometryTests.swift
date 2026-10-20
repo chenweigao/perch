@@ -20,6 +20,10 @@ func checkConversationRowGeometry() {
                     previous = y
                 }
                 precondition(lens.ticks.count <= Int(height / 5) + 3)
+                precondition(plain.ticks.count <= ConversationTurnRailGeometry.maxPaintedTicks,
+                             "Painted dashes stay bounded without a lens")
+                precondition(lens.ticks.count <= 3 * ConversationTurnRailGeometry.maxPaintedTicks,
+                             "Painted dashes stay bounded with an open lens")
                 if height / CGFloat(count) < 10 {
                     for index in lens.expanded.dropLast() {
                         precondition(lens.y(for: index + 1) - lens.y(for: index) >= 17,
