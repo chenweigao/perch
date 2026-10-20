@@ -60,7 +60,7 @@ OMP、Qoder、Claude 与 dsh 的归档只属于远端工作台目录，删除工
 
 未发送草稿和原生待发队列在 Mac 本地持久化；重启后先核对接收状态，未确认请求不自动重发。OMP/Qoder/dsh 原生附件上传、完整旧 CLI 历史导入、远端主机重启、多客户端同时编辑、长时间休眠与超大历史压力测试不在本轮验收范围，仍可使用终端入口。
 
-## 子 Agent（Claude Code，native service v7）
+## 子 Agent（Claude Code 需 native service v7 起，Codex 需 v9 起）
 
 桥不再丢弃子 Agent 的过程：带 `parent_tool_use_id` 的 assistant / user 消息按主消息同样的 `normalize()` 写进该子 Agent 自己的过程，带父 id 的 `stream_event` 仍然丢弃；主线程的消息、流式尾巴、busy/轮次状态与历史增量保持原样。`task_started / task_progress / task_updated / task_notification` 只处理子 Agent（`task_type` 为 `local_agent`，或没有 `task_type` 但 `tool_use_id` 是 Agent/Task 调用），忽略 `ambient` 与 `skip_transcript`；`background_tasks_changed` 与这些事件的先后未定义，不用来判断结束。别名表把 task id 与 tool use id 映射到条目 key：消息先于 `task_started` 到达时按父 id 建临时条目，描述取主线程 Agent/Task 调用的 `description`（否则 prompt 首行），之后的 `task_started` 并入该条目，key 不变。`pending` 为排队，`paused` 仍算运行，`killed` 为停止；已结束的条目不会被迟到事件复活。从未收到 task 事件的条目由主线程的 tool_result 结束；`agent_end` 或 worker 退出时仍在排队/运行的条目，本轮被停止记为 stopped，否则为 unknown。
 
@@ -72,6 +72,18 @@ OMP、Qoder、Claude 与 dsh 的归档只属于远端工作台目录，删除工
 - **文字转发**：`forwardSubagentText` 由桥常量 `CLAUDE_FORWARD_SUBAGENT_TEXT` 传入 worker，默认开启，过程里有子 Agent 的文字、思考与工具调用。
   2026-10-18 实测（SDK 0.3.280、CLI 2.1.302）：子 Agent 的 assistant/user 消息都带 `parent_tool_use_id`，无父 id 的流式 delta 中没有子 Agent 独有的文字，
   主线程的流式尾巴不受影响。若新版 CLI 改变这一点，把常量改回 `False`，过程退回只有工具调用与结果。
+
+### Codex 子线程（native service v9）
+
+名单、过程路由、持久化与上限同上；条目 `kind` 为 `codex`，key 是子线程 threadId（`taskId` 同值）。
+2026-10-19 实测（codex-cli 0.162.1，产出在 `_evidence/perch-subagents-20261018/probe/codex-20261019/`）：子线程的帧送到父线程的同一条连接，带子线程自己的 threadId（thread/status/changed、mcpServer/startupStatus/updated、turn/started、turn/moderationMetadata、item/started|completed、hook/*、thread/tokenUsage/updated、item/agentMessage/delta、turn/completed）；父线程用 `subAgentActivity` 条目宣布子线程：`kind: started`（带 agentThreadId、agentPath 如 `/root/list_files`、model）在 item/started 与 item/completed 各出现一次，子线程结束后另有 `id: subagent-completed-<子线程轮次>` 的 `kind: completed`。没有子线程的 `thread/started`，也没有 spawnAgent 的 `collabAgentToolCall`（只有一次 receivers 为空的 `wait`；其他配置会发 spawnAgent 及 receiverThreadIds、agentsStates）。`thread/items/list {threadId: 子线程, sortDirection: "asc", limit: 100}` 读到了子线程的 agentMessage 与 commandExecution。子线程审批未触发；上游 v2 子线程接受 `turn/interrupt {threadId, turnId}`，拒绝 turn/start 与 turn/steer。
+
+- **登记**：四个来源。父线程（或已登记子线程）的 `subAgentActivity`：`started` 条目的 id 进 `toolUseIds`，描述取 agentPath 末段，`subagentType` 为 agentPath，另记模型与时间；interrupted 记停止，completed 记完成。`collabAgentToolCall` 的 receivers 与 agentsStates：pendingInit 为排队，running 运行，errored 失败，interrupted 停止，completed 与 shutdown 完成，notFound 为 unknown；spawnAgent 调用的 id 进 `toolUseIds`，描述取 prompt 首行。父线程为本会话或已登记子线程的 `thread/started`：描述取 agentNickname，类型取 agentRole。恢复会话时 `thread/items/list` 历史里的同样条目：app-server 已换新，历史里看似仍在运行的子线程记 unknown。运行态只描述新建的条目，结束态结束运行中或 unknown 的条目；已结束的条目只在子线程自己开始新一轮（父线程给它发了新输入）时重新运行，并清掉上一轮的错误。
+- **主线程卡片**：`subAgentActivity` started 在父线程过程里显示为 `agent/spawnAgent` 工具调用（id 即该条目 id，输入 `{agentPath, model}`），App 的「查看过程」经 `toolUseIds` 打开对应子线程；子线程完成、停止或失败时以其 summary（没有时用状态文字）作为调用结果。孙线程的卡片在子线程自己的过程里。
+- **路由**：已登记子线程的 item/started|completed 经可指定写入目标的 `codex_item` 写进它自己的过程，只取完整条目，不跟随增量、hook 与状态帧。`turn/started` 记子线程自己的轮次：Codex 条目的 `turnId` 是子线程的轮次，所属主轮次另存（取上报它的主线程帧，或子线程轮次的 rootTurnId），快照的「最新一轮」按主轮次判断。`turn/completed` 记结束状态、summary（该轮最后一条 agentMessage）与累加的 `durationMs`，每轮只计一次，并只清该子线程的审批；`thread/tokenUsage/updated` 的 total 记为该子线程的用量。尚未登记的 threadId 的这几类帧最多缓冲 256 条、30 秒，登记后按序重放，过期丢弃。主线程的处理与此前逐字节一致。
+- **审批**：已登记子线程的反向请求作为带 `subagent:{id, agentId, title, type}` 的审批上报，走原有回答路径；主线程 `turn/completed` 只清主线程的审批，子线程的审批随它自己的 `turn/completed` 或 `serverRequest/resolved` 清除；未登记 threadId 的请求仍回 -32602。app-server 退出时清空全部审批，仍在运行的子线程记 unknown。
+- **停止**：`canStop` 为 Codex 条目、运行中、已知子线程轮次，与主轮次是否仍在运行无关（子线程可以比主轮次活得久）。停止路由发 `turn/interrupt {threadId: 子线程, turnId: 子线程轮次}` 并记 `stopRequested`，之后子线程 interrupted 的 `turn/completed` 记为停止；app-server 拒绝或已退出时返回 400 与原因，不记 `stopRequested`。
+- **补历史**：读取过程时若 Codex 条目的过程缺失或为空，在会话锁外用 `thread/items/list`（asc，每页 100，最多 200 页）读该子线程，保留最新的 2,000 条再写入过程。会话的 app-server 在运行时用它，否则与模型目录一样临时启动一个、读完即关。成功读过一次就不再读；失败后 30 秒内不重试；读取期间已由实时帧填入的过程以实时帧为准。
 
 ## 运行中引导
 
@@ -138,4 +150,4 @@ Codex 的 reviewer 始终为 `user`，四档映射如下：
 
 Perch 不修改远端 `config.toml`，也不会在恢复时放宽会话权限。旧 Codex 默认值 `ask`、`auto-review` 安全迁移为 `workspace-ask`，`full-access` 保留。管理策略或运行时不接受所选权限时，错误仍通过任务错误通道展示，不自动降级或放宽。
 
-权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，Claude Agent SDK 0.3.302 需 v8 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
+权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，Claude Agent SDK 0.3.302 需 v8 起，Codex 子线程需 v9 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
