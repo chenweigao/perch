@@ -60,8 +60,10 @@ final class RevealFrameDriver {
         link = created
     }
     private func fire() {
+        let tickProbe = PerfDiagnostics.begin()
         // Controllers re-arm inside their tick; only stop once nobody did.
         let pending = Array(frames.keys)
+        defer { PerfDiagnostics.end("reveal_tick", tickProbe, detail: "callbacks=\(pending.count)") }
         for token in pending {
             // Consume before invoking: a tick can schedule the next frame or
             // cancel a sibling without replaying an old callback.

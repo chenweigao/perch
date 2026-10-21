@@ -82,6 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        // Idle unless Settings → 诊断 → 性能诊断 is on.
+        FrameHitchMonitor.shared.install()
     }
     func applicationWillTerminate(_ notification: Notification) { model?.shutdown() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

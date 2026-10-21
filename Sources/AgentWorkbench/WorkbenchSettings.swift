@@ -118,10 +118,13 @@ struct WorkbenchSettings: View {
                     .onChange(of: diagnosticsOn) { _, on in PerfDiagnostics.shared.setEnabled(on) }
                 Button("导出诊断报告…") { PerfDiagnostics.shared.exportReport() }
                     .disabled(!diagnosticsOn)
+                if diagnosticsOn {
+                    Button("注入一次 120ms 卡顿（校验）") { PerfDiagnostics.injectCalibrationStall() }
+                }
             } header: {
                 SettingsSectionHeader("诊断", systemImage: "stethoscope", tint: .indigo)
             } footer: {
-                Text("开启后记录正文渲染各阶段耗时，可用 Instruments 的 Points of Interest 查看 signpost；关闭即清空并停止记录。")
+                Text("开启后记录正文渲染各阶段耗时与掉帧，以及掉帧期间主线程上的工作，并发送 Instruments 的 Points of Interest signpost。复现卡顿：开启后在一段真实的长对话里滚动，直到出现卡顿，再导出诊断报告。校验按钮让主线程停顿 120ms，报告中应出现一次 calibration_stall。报告不含消息内容；关闭即清空并停止记录。")
             }
             Section {
                 LabeledContent("版本", value: versionLabel)
