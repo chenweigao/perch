@@ -1,6 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
-  <rect x="100" y="100" width="824" height="824" rx="170" fill="#292D37"/>
-  <rect x="350" y="254" width="70" height="526" rx="14" fill="#FAFAF7"/>
-  <polyline points="520,284 650,378 520,472" fill="none" stroke="#55E58B" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="485" y="554" width="200" height="56" rx="12" fill="#FAFAF7"/>
+<defs>
+  <linearGradient id="tile" gradientUnits="userSpaceOnUse" x1="512" y1="100" x2="512" y2="924">
+  <stop offset="0" stop-color="#1B1E26"/><stop offset="1" stop-color="#121419"/>
+</linearGradient>
+  <linearGradient id="orb" gradientUnits="userSpaceOnUse" x1="430" y1="354" x2="430" y2="598">
+  <stop offset="0" stop-color="#FFD98E"/><stop offset="1" stop-color="#FF7A59"/>
+</linearGradient>
+</defs>
+  <rect x="100" y="100" width="824" height="824" rx="170" fill="url(#tile)"/>
+  <line x1="296" y1="640" x2="728" y2="640" stroke-width="84" stroke-linecap="round" stroke="#FAFAF7"/>
+  <circle cx="430" cy="476" r="122" fill="url(#orb)"/>
 </svg>

@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
-  <rect x="350" y="254" width="70" height="526" rx="14" fill="#292D37"/>
-  <polyline points="520,284 650,378 520,472" fill="none" stroke="#292D37" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="485" y="554" width="200" height="56" rx="12" fill="#292D37"/>
+  <line x1="296" y1="640" x2="728" y2="640" stroke-width="84" stroke-linecap="round" stroke="#292D37"/>
+  <circle cx="430" cy="476" r="122" fill="#292D37"/>
 </svg>

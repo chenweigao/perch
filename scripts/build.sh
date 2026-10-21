@@ -36,6 +36,18 @@ else
 fi
 cp Resources/Brand/Perch.icns "$app_dir/Contents/Resources/Perch.icns"
 cp Resources/Info.plist "$app_dir/Contents/Info.plist"
+# Liquid Glass icon: compile the Icon Composer document into Assets.car. On
+# macOS 26 the system prefers CFBundleIconName; the icns above stays as the
+# flattened fallback for contexts that cannot read the compiled catalog.
+icon_build="$PWD/build/icon"
+rm -rf "$icon_build"
+mkdir -p "$icon_build"
+xcrun actool --compile "$icon_build" --platform macosx --minimum-deployment-target 26.0 \
+    --app-icon Perch --standalone-icon-behavior none \
+    --output-partial-info-plist "$icon_build/partial.plist" \
+    Resources/Brand/Perch.icon >/dev/null
+cp "$icon_build/Assets.car" "$app_dir/Contents/Resources/Assets.car"
+plutil -replace CFBundleIconName -string Perch "$app_dir/Contents/Info.plist"
 # The marketing version lives in Resources/Info.plist; the build identity is stamped
 # here so any bundle can be traced back to the commit it was built from. A checkout
 # without Git metadata keeps the source values.
