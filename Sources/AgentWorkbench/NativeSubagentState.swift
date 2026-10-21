@@ -32,10 +32,11 @@ struct NativeSubagentCadence: Sendable {
 }
 
 extension NativeAgentSnapshot {
-    /// Agent/Task tool cards offer their subagent's own process: the bridge
-    /// reports a roster (protocol 7) for a runtime whose subagents it records.
-    /// Claude only for now; an older bridge reports no roster at all.
-    var opensSubagents: Bool { subagents != nil && provider == .claude }
+    /// Agent/Task and agent/spawnAgent tool cards offer their subagent's own
+    /// process: the bridge reports a roster for a runtime whose subagents it
+    /// records, Claude tasks (protocol 7) and Codex child threads (protocol 9).
+    /// An older bridge reports no roster at all.
+    var opensSubagents: Bool { subagents != nil && (provider == .claude || provider == .codex) }
 }
 
 /// What the open subagent sheet and the roster's stop buttons draw. The

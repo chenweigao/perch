@@ -1724,6 +1724,471 @@ class ClaudeSubagentTests(unittest.TestCase):
             self.assertTrue(name.startswith('_') and name.endswith('.json') and '/' not in name)
         self.assertEqual(broker.subagent_filename('toolu_01ABC-x'),'toolu_01ABC-x.json')
 
+class CodexSubagentTests(unittest.TestCase):
+    # Ids and frame shapes follow the 2026-10-19 probe (codex-cli 0.162.1).
+    MAIN='01a152fe-b9a9-76f1-90cd-1b149f05aaa5'; MAIN_TURN='01a152fe-c685-7c01-86c9-ec81efcf9f77'
+    CHILD='01a152fe-ef63-7ef1-bf21-c6c8ce63afc2'; CHILD_TURN='01a152fe-ef6c-7280-80fa-6a7bd4d9a21e'
+    CALL='call_8a85e75fca314da58122d77408df1939'
+    LABEL={'id':CHILD,'agentId':CHILD,'title':'list_files','type':'/root/list_files'}
+    def setUp(self):
+        process_guard=patch.object(broker.subprocess,'Popen',side_effect=AssertionError('contract tests must not launch a real process'))
+        process_guard.start(); self.addCleanup(process_guard.stop)
+        timer=patch.object(broker.threading,'Timer'); self.timer=timer.start(); self.addCleanup(timer.stop)
+        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.CODEX_MODELS=None
+        self.s,self.fake=self.codex('codex-'+self._testMethodName)
+    def codex(self, identity, attached=True):
+        s=broker.Session(dict(id=identity,provider='codex',cwd=folder.name,title='Codex',model='gpt-codex',thinking='medium',
+            busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None,resume=self.MAIN))
+        fake=FakeCodex(); fake.results['turn/start']={'turn':{'id':self.MAIN_TURN,'status':'inProgress'}}
+        s.codex=fake; s.codex_attached=attached; broker.SESSIONS[identity]=s
+        if attached: s.prompt({'text':'Spawn exactly one sub-agent','requestId':'request-1'})
+        return s,fake
+    def request(self,path,body=None):
+        handler=object.__new__(broker.Handler); raw=json.dumps(body or {}).encode()
+        handler.path=path; handler.headers={'Authorization':'Bearer test-token','Content-Length':str(len(raw))}
+        handler.rfile=io.BytesIO(raw); result=[]
+        handler.respond=lambda code,payload:result.append((code,payload))
+        handler.handle_request(body is not None)
+        return result[0]
+    def path(self,key,s=None): return '/sessions/'+(s or self.s).state['id']+'/subagents/'+key
+    def frame(self,method,thread,s=None,**params):
+        s=s or self.s; s.codex_frame(s.codex,{'method':method,'params':{'threadId':thread,**params}})
+    def item(self,thread,item,completed=True,turn=None,at=1792393801581,s=None):
+        key='completedAtMs' if completed else 'startedAtMs'
+        self.frame('item/completed' if completed else 'item/started',thread,s,item=item,
+                   turnId=turn or (self.MAIN_TURN if thread==self.MAIN else self.CHILD_TURN),**{key:at})
+    def activity(self,kind,child=None,item_id=None,path='/root/list_files',model=None,parent=None,s=None):
+        # The parent reports each activity twice, in item/started and item/completed.
+        item={'type':'subAgentActivity','model':model,'reasoningEffort':'high' if model else None,
+              'id':item_id or (self.CALL if kind=='started' else 'subagent-completed-'+self.CHILD_TURN),
+              'kind':kind,'agentThreadId':child or self.CHILD,'agentPath':path}
+        for completed in (False,True): self.item(parent or self.MAIN,item,completed,s=s)
+    def spawn(self,s=None): self.activity('started',model='gpt-6-astra',s=s)
+    def child_turn(self,turn=None,child=None,s=None):
+        self.frame('turn/started',child or self.CHILD,s,turn={'id':turn or self.CHILD_TURN,'rootTurnId':self.MAIN_TURN,'items':[],
+                   'itemsView':'notLoaded','status':'inProgress','error':None,'startedAt':1792393801,'completedAt':None,'durationMs':None})
+    def child_done(self,status='completed',text='a.txt, b.txt, notes.txt',turn=None,child=None,duration=13430,error=None,s=None):
+        items=[{'type':'agentMessage','id':'msg_child','text':text,'phase':'final_answer'}] if text else []
+        self.frame('turn/completed',child or self.CHILD,s,turn={'id':turn or self.CHILD_TURN,'rootTurnId':self.MAIN_TURN,'items':items,
+                   'itemsView':'summary','status':status,'error':error,'startedAt':1792393801,'completedAt':1792393815,'durationMs':duration})
+    def child_work(self,child=None,s=None):
+        child=child or self.CHILD
+        command={'type':'commandExecution','id':'exec-4348f9d8','command':"/bin/bash -lc 'ls -A1'",'cwd':'/tmp/probe',
+                 'status':'inProgress','aggregatedOutput':None,'exitCode':None}
+        self.item(child,command,False,at=1792393811458,s=s)
+        self.item(child,dict(command,status='completed',aggregatedOutput='a.txt\nb.txt\nnotes.txt\n',exitCode=0),at=1792393811458,s=s)
+        self.frame('thread/tokenUsage/updated',child,s,turnId=self.CHILD_TURN,
+                   tokenUsage={'total':{'totalTokens':21206},'last':{'totalTokens':21206},'modelContextWindow':258400})
+        message={'type':'agentMessage','id':'msg_child','text':'','phase':'final_answer'}
+        self.item(child,message,False,at=1792393814037,s=s)
+        for delta in ('a','.txt, b.txt, notes.txt'):
+            self.frame('item/agentMessage/delta',child,s,turnId=self.CHILD_TURN,itemId='msg_child',delta=delta)
+        self.item(child,dict(message,text='a.txt, b.txt, notes.txt'),at=1792393814357,s=s)
+        self.frame('thread/tokenUsage/updated',child,s,turnId=self.CHILD_TURN,
+                   tokenUsage={'total':{'totalTokens':42456},'last':{'totalTokens':21250},'modelContextWindow':258400})
+    def items(self,fake,pages):
+        """thread/items/list answers by thread: pages in order, or an error raised every time."""
+        plain=fake.request
+        def request(method,params,timeout=60):
+            if method!='thread/items/list': return plain(method,params,timeout)
+            fake.calls.append((method,params)); answer=pages[params['threadId']]
+            answer=answer.pop(0) if isinstance(answer,list) else answer
+            if isinstance(answer,Exception): raise answer
+            return answer
+        fake.request=request
+    def roster(self,s=None): return {x['id']:x for x in (s or self.s).snapshot()['subagents']}
+    def main(self,identity,s=None): return next((m for m in (s or self.s).state['messages'] if m['id']==identity),None)
+
+    def test_probe_sequence_builds_the_child_transcript_and_answers_its_card(self):
+        # The child's first frames arrive before the parent reports it; they are not followed.
+        self.frame('thread/status/changed',self.CHILD,status={'type':'idle'})
+        self.frame('mcpServer/startupStatus/updated',self.CHILD,name='codex_apps',status='starting')
+        self.assertEqual((self.s.state.get('subagentRoster'),self.s.codex_pending),(None,[]))
+        revision=self.s.state['revision']
+        self.spawn()
+        entry=self.roster()[self.CHILD]
+        self.assertEqual(list(entry),list(broker.SUBAGENT_KEYS))
+        self.assertEqual((entry['kind'],entry['taskId'],entry['toolUseIds'],entry['turnId'],entry['description'],entry['subagentType'],
+                          entry['status'],entry['background'],entry['usage'],entry['endedAt'],entry['canStop'],entry['messageCount']),
+                         ('codex',self.CHILD,[self.CALL],None,'list_files','/root/list_files','running',None,None,None,False,0))
+        self.assertEqual(entry['startedAt'],'2026-10-19T07:10:01.581Z')
+        # The main turn that reported it places it in the snapshot once it has finished.
+        self.assertEqual((self.s.subagent_entries[self.CHILD]['model'],self.s.subagent_entries[self.CHILD]['parentTurnId']),
+                         ('gpt-6-astra',self.MAIN_TURN))
+        self.assertGreater(self.s.state['revision'],revision)
+        # The start reads as an agent/spawnAgent call in the parent's transcript, open until the child ends.
+        self.assertEqual(self.main('codex-tool:'+self.CALL)['content'],[{'type':'tool_use','tool_call_id':self.CALL,
+            'tool_name':'agent/spawnAgent','input':{'agentPath':'/root/list_files','model':'gpt-6-astra'}}])
+        self.assertIsNone(self.main('codex-result:'+self.CALL))
+        self.child_turn()
+        self.assertEqual((self.roster()[self.CHILD]['turnId'],self.roster()[self.CHILD]['canStop']),(self.CHILD_TURN,True))
+        before=json.loads(json.dumps(self.s.state['messages'])); versions=dict(self.s.message_versions)
+        self.child_work()
+        page=self.s.subagent_page(self.CALL)
+        self.assertEqual([m['id'] for m in page['messages']],['codex-tool:exec-4348f9d8','codex-result:exec-4348f9d8','codex:msg_child'])
+        self.assertEqual(page['messages'][0]['content'],[{'type':'tool_use','tool_call_id':'exec-4348f9d8','tool_name':'shell',
+            'input':{'command':"/bin/bash -lc 'ls -A1'",'cwd':'/tmp/probe'}}])
+        self.assertEqual(page['messages'][1]['content'][0]['output'],[{'type':'text','text':'a.txt\nb.txt\nnotes.txt\n'}])
+        # Deltas are not followed: the reply appears complete, once.
+        self.assertEqual(page['messages'][2]['content'],[{'type':'text','text':'a.txt, b.txt, notes.txt'}])
+        self.assertEqual((page['entry']['usage'],page['entry']['lastToolName']),({'totalTokens':42456,'toolUses':1,'durationMs':0},'shell'))
+        # None of the child's frames reached the main thread.
+        self.assertEqual((self.s.state['messages'],self.s.message_versions),(before,versions))
+        self.assertEqual((self.s.state['context'],self.s.state['busy'],self.s.state['turnId']),(None,True,self.MAIN_TURN))
+        self.child_done()
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['status'],entry['summary'],entry['usage'],entry['endedAt'],entry['canStop']),
+                         ('completed','a.txt, b.txt, notes.txt',{'totalTokens':42456,'toolUses':1,'durationMs':13430},'2026-10-19T07:10:15.000Z',False))
+        self.assertTrue(self.s.state['busy'])
+        self.assertEqual([m['id'] for m in json.loads(self.s.subagent_path(self.CHILD).read_text())['messages']],
+                         ['codex-tool:exec-4348f9d8','codex-result:exec-4348f9d8','codex:msg_child'])
+        self.assertEqual(self.main('codex-result:'+self.CALL)['content'],[{'type':'tool_result','tool_call_id':self.CALL,
+            'output':[{'type':'text','text':'a.txt, b.txt, notes.txt'}],'is_error':False}])
+        # The parent's own completion report changes nothing more.
+        messages=json.loads(json.dumps(self.s.state['messages']))
+        self.activity('completed')
+        self.assertEqual((self.roster()[self.CHILD],self.s.state['messages']),(entry,messages))
+
+    def test_child_frames_leave_the_main_thread_exactly_as_before(self):
+        def main_sequence(s,child=lambda step:None):
+            frame=lambda method,**params:self.frame(method,self.MAIN,s,**params)
+            frame('turn/started',turn={'id':self.MAIN_TURN,'rootTurnId':self.MAIN_TURN,'items':[],'status':'inProgress'})
+            user={'type':'userMessage','id':'01a152fe-dc8e','clientId':None,'content':[{'type':'text','text':'Spawn exactly one sub-agent'}]}
+            self.item(self.MAIN,user,False,at=1792393796751,s=s); self.item(self.MAIN,user,at=1792393796751,s=s)
+            note={'type':'agentMessage','id':'msg_note','text':'','phase':'commentary'}
+            self.item(self.MAIN,note,False,at=1792393799795,s=s)
+            child('start')
+            for delta in ('I’ll have one sub-agent ','list the files.'):
+                frame('item/agentMessage/delta',turnId=self.MAIN_TURN,itemId='msg_note',delta=delta)
+            child('work')
+            self.item(self.MAIN,dict(note,text='I’ll have one sub-agent list the files.'),at=1792393800521,s=s)
+            wait={'type':'collabAgentToolCall','id':'call_wait','tool':'wait','status':'inProgress','senderThreadId':self.MAIN,
+                  'receiverThreadIds':[],'prompt':None,'model':None,'reasoningEffort':None,'agentsStates':{}}
+            self.item(self.MAIN,wait,False,at=1792393805937,s=s)
+            frame('thread/tokenUsage/updated',turnId=self.MAIN_TURN,tokenUsage={'total':{'totalTokens':21401},'last':{'totalTokens':21401},'modelContextWindow':258400})
+            child('done')
+            self.item(self.MAIN,dict(wait,status='completed'),at=1792393815014,s=s)
+            final={'type':'agentMessage','id':'msg_final','text':'','phase':'final_answer'}
+            self.item(self.MAIN,final,False,at=1792393817561,s=s)
+            frame('item/agentMessage/delta',turnId=self.MAIN_TURN,itemId='msg_final',delta='a.txt, b.txt')
+            self.item(self.MAIN,dict(final,text='a.txt, b.txt, notes.txt'),at=1792393817562,s=s)
+            frame('thread/tokenUsage/updated',turnId=self.MAIN_TURN,tokenUsage={'total':{'totalTokens':64366},'last':{'totalTokens':21522},'modelContextWindow':258400})
+            frame('turn/completed',turn={'id':self.MAIN_TURN,'status':'completed','items':[dict(final,text='a.txt, b.txt, notes.txt')]})
+        observed=[]
+        def child(step):
+            # thread/started registers the child without writing to the parent's transcript.
+            if step=='start':
+                self.s.codex_frame(self.fake,{'method':'thread/started','params':{'thread':{'id':self.CHILD,'parentThreadId':self.MAIN}}})
+                self.child_turn()
+            elif step=='work': self.child_work()
+            else:
+                self.child_done(); observed.append((self.s.state['busy'],self.s.state['turnState'],self.s.state['context']['tokens']))
+        plain,_=self.codex('codex-plain-main')
+        main_sequence(plain); main_sequence(self.s,child)
+        view=lambda s:([(m['id'],m['role'],m['content']) for m in s.state['messages']],
+                       {k:s.state.get(k) for k in ('busy','turnId','turnState','completed','error','cancelled','interactions')},
+                       {k:v for k,v in s.state['context'].items() if k!='reportedAt'})
+        self.assertEqual(view(self.s),view(plain))
+        self.assertEqual(observed,[(True,'running',21401)])
+        self.assertEqual(self.s.state['completed'],1)
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['status'],entry['messageCount'],entry['summary']),('completed',3,'a.txt, b.txt, notes.txt'))
+        self.assertEqual(plain.snapshot()['subagents'],[])
+
+    def test_collab_calls_register_receivers_with_mapped_states(self):
+        spawn={'type':'collabAgentToolCall','id':'call_spawn','tool':'spawnAgent','status':'completed','senderThreadId':self.MAIN,
+               'receiverThreadIds':['child-q'],'prompt':'检查测试\n只读','model':'gpt-6-mini','reasoningEffort':None,
+               'agentsStates':{'child-q':{'status':'pendingInit','message':None}}}
+        # The child exists once the call completes; the started item names no receiver yet.
+        self.item(self.MAIN,dict(spawn,status='inProgress',receiverThreadIds=[],agentsStates={}),False); self.item(self.MAIN,spawn)
+        entry=self.roster()['child-q']
+        self.assertEqual((entry['kind'],entry['status'],entry['toolUseIds'],entry['description'],entry['subagentType'],entry['canStop']),
+                         ('codex','queued',['call_spawn'],'检查测试',None,False))
+        self.assertEqual(self.s.subagent_entries['child-q']['model'],'gpt-6-mini')
+        # The collab card itself keeps its earlier shape.
+        self.assertEqual(self.main('codex-tool:call_spawn')['content'][0],{'type':'tool_use','tool_call_id':'call_spawn',
+            'tool_name':'agent/spawnAgent','input':{'prompt':'检查测试\n只读','receivers':['child-q']}})
+        states={'child-q':{'status':'completed','message':'全部通过'},'child-e':{'status':'errored','message':'模型超时'},
+                'child-i':{'status':'interrupted'},'child-s':{'status':'shutdown'},'child-n':{'status':'notFound'},
+                'child-r':{'status':'running'},self.MAIN:{'status':'running'}}
+        wait={'type':'collabAgentToolCall','id':'call_wait','tool':'wait','status':'completed','senderThreadId':self.MAIN,
+              'receiverThreadIds':['child-q','child-e'],'prompt':None,'model':None,'reasoningEffort':None,'agentsStates':states}
+        self.item(self.MAIN,wait)
+        roster=self.roster()
+        self.assertEqual({key:value['status'] for key,value in roster.items()},{'child-q':'completed','child-e':'failed','child-i':'stopped',
+                         'child-s':'completed','child-n':'unknown','child-r':'running'})
+        self.assertEqual((roster['child-q']['summary'],roster['child-e']['error'],roster['child-q']['toolUseIds']),('全部通过','模型超时',['call_spawn']))
+        self.assertTrue(roster['child-q']['endedAt'] and roster['child-n']['endedAt'])
+        self.assertNotIn(self.MAIN,self.s.subagent_entries)
+        # A finished child never revives from a later state report.
+        self.item(self.MAIN,dict(wait,id='call_wait_2',agentsStates={'child-q':{'status':'running'}}))
+        self.assertEqual(self.roster()['child-q']['status'],'completed')
+
+    def test_thread_started_registers_children_of_this_thread_and_of_its_children(self):
+        started=lambda thread:self.s.codex_frame(self.fake,{'method':'thread/started','params':{'thread':thread}})
+        started({'id':self.MAIN,'parentThreadId':None,'agentNickname':None,'agentRole':None})
+        self.assertIsNone(self.s.state.get('subagentRoster'))
+        started({'id':'child-a','parentThreadId':self.MAIN,'agentNickname':'Hubble','agentRole':'explorer','model':'gpt-6-mini'})
+        entry=self.roster()['child-a']
+        self.assertEqual((entry['status'],entry['description'],entry['subagentType'],entry['toolUseIds'],entry['turnId']),
+                         ('running','Hubble','explorer',[],None))
+        started({'id':'child-b','parentThreadId':'child-a','agentNickname':'Kepler','agentRole':None})
+        started({'id':'stranger','parentThreadId':'another-thread'})
+        self.assertEqual(sorted(self.roster()),['child-a','child-b'])
+        self.assertEqual(self.s.subagent_entries['child-b']['parentTurnId'],self.MAIN_TURN)
+        # A child that spawns its own: the card and its answer go to that child's transcript.
+        self.activity('started',child='child-g',item_id='call_g',path='/root/hubble/probe',parent='child-a')
+        self.assertEqual(self.s.subagent_page('call_g')['entry']['id'],'child-g')
+        self.child_turn(turn='turn-g',child='child-g')
+        self.item('child-g',{'type':'agentMessage','id':'g1','text':'深层结果'},turn='turn-g')
+        self.child_done(text='深层结果',turn='turn-g',child='child-g')
+        parent=self.s.subagent_page('child-a')['messages']
+        self.assertEqual([m['id'] for m in parent],['codex-tool:call_g','codex-result:call_g'])
+        self.assertEqual(parent[1]['content'][0]['output'],[{'type':'text','text':'深层结果'}])
+        self.assertEqual([m['id'] for m in self.s.subagent_page('child-g')['messages']],['codex:g1'])
+        self.assertIsNone(self.main('codex-tool:call_g'))
+
+    def test_history_registers_children_and_items_list_backfills_their_transcripts(self):
+        # A session restored from disk: its last turn is known, its app-server is new.
+        s,fake=self.codex('codex-history',attached=False); s.state['turnId']=self.MAIN_TURN
+        fake.results['thread/resume']={'thread':{'id':self.MAIN,'model':'gpt-codex'}}
+        record=lambda item,at:{'turnId':self.MAIN_TURN,'item':item,'startedAtMs':at,'completedAtMs':at}
+        activity=lambda kind,child,item_id,path:{'type':'subAgentActivity','id':item_id,'kind':kind,'agentThreadId':child,'agentPath':path,'model':None}
+        self.items(fake,{self.MAIN:[
+            {'data':[record({'type':'userMessage','id':'u1','content':[{'type':'text','text':'派子 Agent'}]},1792393796751),
+                     record(activity('started','child-a','call_a','/root/list_files'),1792393801581),
+                     record(activity('started','child-b','call_b','/root/grep_todo'),1792393802000)],'nextCursor':'main-2'},
+            {'data':[record(activity('completed','child-a','subagent-completed-a','/root/list_files'),1792393815013),
+                     record(activity('started','child-c','call_c','/root/again'),1792393816000),
+                     record(activity('completed','child-c','subagent-completed-c','/root/again'),1792393817000),
+                     record(activity('interacted','child-c','interacted-c','/root/again'),1792393818000),
+                     record({'type':'agentMessage','id':'a1','text':'完成'},1792393819000)],'nextCursor':None}],
+            'child-a':[{'data':[{'turnId':'turn-a','item':{'type':'commandExecution','id':'exec-a','command':'ls','cwd':'/tmp',
+                                 'status':'completed','aggregatedOutput':'a.txt\n'},'startedAtMs':1792393811458,'completedAtMs':1792393811458}],
+                        'nextCursor':'a-2'},
+                       {'data':[{'turnId':'turn-a','item':{'type':'agentMessage','id':'msg-a','text':'a.txt'},
+                                 'startedAtMs':1792393814037,'completedAtMs':1792393814357}],'nextCursor':None}],
+            'child-b':ValueError('Codex 拒绝 thread/items/list：thread not found')})
+        s.codex_ensure(True)
+        roster=self.roster(s)
+        self.assertEqual({key:value['status'] for key,value in roster.items()},{'child-a':'completed','child-b':'unknown','child-c':'unknown'})
+        self.assertEqual((roster['child-a']['startedAt'],roster['child-a']['endedAt'],roster['child-a']['toolUseIds'],roster['child-a']['description']),
+                         ('2026-10-19T07:10:01.581Z','2026-10-19T07:10:15.013Z',['call_a'],'list_files'))
+        self.assertEqual((roster['child-b']['canStop'],roster['child-c']['endedAt']),(False,None))
+        # History rebuilds the parent's cards: a finished child's is answered, the others stay open.
+        self.assertEqual(self.main('codex-result:call_a',s)['content'][0]['output'],[{'type':'text','text':'子 Agent 已完成'}])
+        self.assertIsNone(self.main('codex-result:call_b',s))
+        self.assertEqual([m['id'] for m in s.state['messages'] if m['id'].startswith('codex-tool:')],['codex-tool:call_a','codex-tool:call_b','codex-tool:call_c'])
+        # Opening a child whose transcript is empty reads its thread, oldest first, once.
+        code,page=self.request(self.path('call_a',s))
+        self.assertEqual((code,page['entry']['id'],[m['id'] for m in page['messages']]),
+                         (200,'child-a',['codex-tool:exec-a','codex-result:exec-a','codex:msg-a']))
+        reads=[params for method,params in fake.calls if method=='thread/items/list' and params['threadId']=='child-a']
+        self.assertEqual(reads,[{'threadId':'child-a','sortDirection':'asc','limit':100},
+                                {'threadId':'child-a','sortDirection':'asc','limit':100,'cursor':'a-2'}])
+        self.assertEqual(self.request(self.path('child-a',s))[1]['total'],3)
+        self.assertEqual(len([1 for method,params in fake.calls if method=='thread/items/list' and params['threadId']=='child-a']),2)
+        self.assertTrue(s.subagent_path('child-a').exists())
+        # A failed read leaves the transcript empty and is retried later, not on every follow read.
+        self.assertEqual(self.request(self.path('call_b',s))[1]['total'],0)
+        self.assertEqual(self.request(self.path('call_b',s))[1]['total'],0)
+        failed=lambda:len([1 for method,params in fake.calls if method=='thread/items/list' and params['threadId']=='child-b'])
+        self.assertEqual(failed(),1)
+        s.codex_backfills['child-b']=time.monotonic()-1
+        self.request(self.path('call_b',s))
+        self.assertEqual(failed(),2)
+
+    def test_backfill_without_a_live_app_server_reads_outside_the_session_lock(self):
+        self.activity('started',child='child-x',item_id='call_x',path='/root/x')
+        self.s.codex_exit(self.fake,'Codex app-server 已退出')
+        self.assertEqual(self.roster()['child-x']['status'],'unknown')
+        reader=FakeCodex(); observed=[]
+        def probe():
+            acquired=broker.LOCK.acquire(blocking=False); observed.append(acquired)
+            if acquired: broker.LOCK.release()
+        def page(method,params,timeout=60):
+            reader.calls.append((method,params)); worker=threading.Thread(target=probe); worker.start(); worker.join()
+            return {'data':[{'turnId':'turn-x','item':{'type':'agentMessage','id':'x1','text':'只读结果'}}],'nextCursor':None}
+        reader.request=page
+        with patch.object(broker,'CodexAppServer',return_value=reader) as factory:
+            code,window=self.request(self.path('call_x'))
+        factory.assert_called_once_with(folder.name,home=self.s.state['codexHome'])
+        self.assertEqual((code,[m['id'] for m in window['messages']]),(200,['codex:x1']))
+        self.assertEqual(([c[0] for c in reader.calls],observed,reader.closed),(['initialize','thread/items/list'],[True],True))
+
+    def test_frames_of_an_unregistered_thread_wait_for_it_and_then_replay(self):
+        self.child_turn(); self.child_work()
+        # Only followed methods wait: turn/started, two items twice, two usage reports.
+        self.assertEqual((self.s.state.get('subagentRoster'),len(self.s.codex_pending)),(None,7))
+        self.spawn()
+        page=self.s.subagent_page(self.CHILD)
+        self.assertEqual([m['id'] for m in page['messages']],['codex-tool:exec-4348f9d8','codex-result:exec-4348f9d8','codex:msg_child'])
+        self.assertEqual((page['entry']['turnId'],page['entry']['usage'],page['entry']['canStop']),
+                         (self.CHILD_TURN,{'totalTokens':42456,'toolUses':1,'durationMs':0},True))
+        self.assertEqual(self.s.codex_pending,[])
+        # At most 256 frames wait, each at most 30 s.
+        clock=[1000.0]
+        with patch.object(broker.time,'monotonic',side_effect=lambda:clock[0]):
+            for i in range(300): self.item('late',{'type':'agentMessage','id':'m%d' % i,'text':'x'},turn='t')
+            self.assertEqual([x[2]['params']['item']['id'] for x in self.s.codex_pending],['m%d' % i for i in range(44,300)])
+            clock[0]+=31
+            self.item('other',{'type':'agentMessage','id':'o1','text':'y'},turn='t')
+            self.assertEqual([x[1] for x in self.s.codex_pending],['other'])
+            self.activity('started',child='late',item_id='call_late',path='/root/late')
+        self.assertEqual(self.s.subagent_page('late')['total'],0)
+
+    def test_child_requests_are_labelled_and_cleared_with_their_own_turn(self):
+        self.spawn(); self.child_turn()
+        self.s.codex_frame(self.fake,{'method':'thread/started','params':{'thread':{'id':'child-2','parentThreadId':self.MAIN,'agentNickname':'Kepler'}}})
+        ask=lambda wire,method,thread,**params:self.s.codex_frame(self.fake,{'id':wire,'method':method,'params':{'threadId':thread,**params}})
+        ask(1,'item/commandExecution/requestApproval',self.MAIN,turnId=self.MAIN_TURN,itemId='m1',command=['git','status'],cwd=folder.name)
+        ask(2,'item/commandExecution/requestApproval',self.CHILD,turnId=self.CHILD_TURN,itemId='c1',command='rm -rf build',cwd=folder.name,reason='clean')
+        ask(3,'item/tool/requestUserInput','child-2',turnId='turn-2',itemId='q1',isBlocking=True,
+            questions=[{'id':'pick','question':'Which?','header':'A','options':[{'label':'one'}]}])
+        ask(4,'item/fileChange/requestApproval',self.CHILD,turnId=self.CHILD_TURN,itemId='f1',reason='edit')
+        ask(5,'item/commandExecution/requestApproval','stranger',turnId='t',itemId='s1',command=['ls'])
+        self.assertEqual(self.fake.responses,[(5,None,{'code':-32602,'message':'thread id does not match this session'})])
+        interactions={x['id']:x for x in self.s.snapshot()['interactions']}
+        self.assertEqual(list(interactions),['codex-request-1','codex-request-2','codex-request-3','codex-request-4'])
+        self.assertNotIn('subagent',interactions['codex-request-1'])
+        self.assertEqual(interactions['codex-request-2'],{'id':'codex-request-2','type':'interaction','name':'shell','title':'Codex 请求确认',
+            'input':{'command':'rm -rf build','cwd':folder.name,'reason':'clean'},'subagent':self.LABEL})
+        self.assertEqual((interactions['codex-request-3']['name'],interactions['codex-request-3']['subagent']),
+                         ('AskUserQuestion',{'id':'child-2','agentId':'child-2','title':'Kepler','type':None}))
+        self.assertEqual(interactions['codex-request-4']['subagent'],self.LABEL)
+        # The existing answer route reaches the child's request.
+        self.assertEqual(self.request('/sessions/%s/answer' % self.s.state['id'],{'id':'codex-request-2','allow':True}),(200,{'ok':True}))
+        self.assertEqual(self.fake.responses[-1],(2,{'decision':'accept'},None))
+        # The main turn's end clears only the main thread's requests.
+        self.frame('turn/completed',self.MAIN,turn={'id':self.MAIN_TURN,'status':'completed'})
+        self.assertEqual([x['id'] for x in self.s.state['interactions']],['codex-request-3','codex-request-4'])
+        self.assertEqual(sorted(self.s.codex_interactions),['codex-request-3','codex-request-4'])
+        # Both children stay listed while they run and wait on the user.
+        self.assertEqual(sorted(x['id'] for x in self.s.snapshot()['subagents']),[self.CHILD,'child-2'])
+        # A child's turn end clears that child's requests; a resolution from the runtime clears one.
+        self.child_done()
+        self.assertEqual([x['id'] for x in self.s.state['interactions']],['codex-request-3'])
+        self.frame('serverRequest/resolved','child-2',requestId=3)
+        self.assertEqual((self.s.state['interactions'],self.s.codex_interactions),([],{}))
+        self.assertEqual(len(self.fake.responses),2)
+
+    def test_stop_interrupts_the_child_turn_and_its_end_reports_stopped(self):
+        self.spawn()
+        self.assertEqual(self.request(self.path(self.CALL)+'/stop',{}),(400,{'error':'该子 Agent 当前无法单独停止'}))
+        self.child_turn()
+        # A child outlives the main turn and can still be stopped on its own.
+        self.frame('turn/completed',self.MAIN,turn={'id':self.MAIN_TURN,'status':'completed'})
+        self.assertTrue(self.roster()[self.CHILD]['canStop'])
+        revision=self.s.state['revision']
+        self.assertEqual(self.request(self.path(self.CALL)+'/stop',{}),(200,{'ok':True}))
+        self.assertEqual(self.fake.calls[-1],('turn/interrupt',{'threadId':self.CHILD,'turnId':self.CHILD_TURN}))
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['stopRequested'],entry['stopError'],entry['status'],entry['canStop']),(True,None,'running',True))
+        self.assertGreater(self.s.state['revision'],revision)
+        self.assertEqual(self.request(self.path(self.CHILD)+'/stop',{}),(200,{'ok':True}))
+        self.assertEqual([c for c in self.fake.calls if c[0]=='turn/interrupt'],[('turn/interrupt',{'threadId':self.CHILD,'turnId':self.CHILD_TURN})])
+        self.child_done('interrupted',text=None,duration=2000)
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['status'],entry['canStop'],entry['usage']['durationMs']),('stopped',False,2000))
+        self.assertEqual(self.main('codex-result:'+self.CALL)['content'][0],{'type':'tool_result','tool_call_id':self.CALL,
+            'output':[{'type':'text','text':'子 Agent 已停止'}],'is_error':True})
+        self.assertEqual(self.request(self.path(self.CALL)+'/stop',{})[0],400)
+        # A refused interrupt reports the runtime's reason and records nothing.
+        self.activity('started',child='child-r',item_id='call_r',path='/root/r'); self.child_turn(turn='turn-r',child='child-r')
+        plain=self.fake.request
+        def refuse(method,params,timeout=60):
+            if method=='turn/interrupt': raise ValueError('Codex 拒绝 turn/interrupt：no active turn')
+            return plain(method,params,timeout)
+        self.fake.request=refuse
+        self.assertEqual(self.request(self.path('call_r')+'/stop',{}),(400,{'error':'Codex 拒绝 turn/interrupt：no active turn'}))
+        self.assertFalse(self.roster()['child-r']['stopRequested'])
+        self.fake.closed=True
+        self.assertEqual(self.request(self.path('call_r')+'/stop',{}),(400,{'error':'Codex app-server 已退出，无法停止子 Agent'}))
+
+    def test_snapshot_summary_and_transcript_routes_for_a_codex_entry(self):
+        self.spawn(); self.child_turn(); self.child_work()
+        full=self.s.snapshot(); page=self.s.snapshot(turns='50')
+        self.assertEqual(page['subagents'],full['subagents'])
+        entry=full['subagents'][0]
+        self.assertEqual(list(entry),list(broker.SUBAGENT_KEYS))
+        self.assertEqual((entry['id'],entry['kind'],entry['taskId'],entry['toolUseIds'],entry['turnId'],entry['status'],entry['canStop'],
+                          entry['messageCount'],entry['stopRequested'],entry['stopError'],entry['error']),
+                         (self.CHILD,'codex',self.CHILD,[self.CALL],self.CHILD_TURN,'running',True,3,False,None,None))
+        for value in (full,page): self.assertNotIn('subagentRoster',value)
+        listed=next(x for x in self.request('/sessions')[1]['sessions'] if x['id']==self.s.state['id'])
+        self.assertEqual((listed['runningSubagents'],self.s.summary()['runningSubagents']),(1,1))
+        for key in (self.CHILD,self.CALL):
+            code,window=self.request(self.path(key))
+            self.assertEqual(set(window),{'entry','epoch','revision','total','truncated','start','messages'})
+            self.assertEqual((code,window['entry'],window['total'],window['start'],window['truncated']),(200,entry,3,0,0))
+        query='?epoch=%s&revision=%d' % (window['epoch'],window['revision'])
+        self.assertEqual(self.request(self.path(self.CALL)+query),(200,{'unchanged':True}))
+        # A plain append moves only the transcript's revision.
+        revision=self.s.state['revision']
+        self.item(self.CHILD,{'type':'reasoning','id':'r1','summary':['检查目录'],'content':[]})
+        self.assertEqual(self.s.state['revision'],revision)
+        code,delta=self.request(self.path(self.CALL)+query)
+        self.assertEqual(([c['index'] for c in delta['changes']],delta['total']),([3],4))
+        self.assertEqual(delta['changes'][0]['message']['content'][0]['source'],{'kind':'activity_summary','provider':'codex','itemId':'r1',
+            'summaryParts':['检查目录'],'state':'final','turnId':self.CHILD_TURN})
+        # The entry's end reaches a follower as a delta without messages.
+        self.child_done()
+        code,change=self.request(self.path(self.CALL)+'?epoch=%s&revision=%d' % (delta['epoch'],delta['revision']))
+        self.assertEqual((change['changes'],change['entry']['status'],change['entry']['canStop']),([],'completed',False))
+        self.assertEqual(self.request(self.path('nobody')),(404,{'error':'未找到该子 Agent'}))
+        # Finished children of an earlier main turn drop out of the snapshot; their routes stay.
+        self.s.state['turnId']='turn-next'
+        self.assertEqual(self.s.snapshot()['subagents'],[])
+        self.assertEqual(self.request(self.path(self.CALL))[0],200)
+
+    def test_a_later_turn_revives_the_child_and_a_parent_report_can_end_it_first(self):
+        self.spawn(); self.child_turn()
+        self.child_done('failed',text=None,error={'message':'模型超时'},duration=1000)
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['status'],entry['error'],entry['usage']['durationMs']),('failed','模型超时',1000))
+        self.assertEqual(self.main('codex-result:'+self.CALL)['content'][0]['output'],[{'type':'text','text':'模型超时'}])
+        # A repeated end is applied once.
+        self.child_done('failed',text=None,error={'message':'模型超时'},duration=1000)
+        self.assertEqual(self.roster()[self.CHILD]['usage']['durationMs'],1000)
+        # The parent sends more input; the child's next turn runs it again, from a clean state.
+        self.activity('interacted',item_id='interacted-1')
+        self.assertEqual(self.roster()[self.CHILD]['status'],'failed')
+        self.child_turn(turn='turn-2')
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['status'],entry['turnId'],entry['error'],entry['endedAt'],entry['canStop']),('running','turn-2',None,None,True))
+        # The parent's report may end it before the child's own turn end, which still adds its summary and time.
+        self.activity('completed',item_id='subagent-completed-turn-2')
+        self.assertEqual((self.roster()[self.CHILD]['status'],self.main('codex-result:'+self.CALL)['content'][0]['output']),
+                         ('completed',[{'type':'text','text':'子 Agent 已完成'}]))
+        self.child_done(text='修好了',turn='turn-2',duration=500)
+        entry=self.roster()[self.CHILD]
+        self.assertEqual((entry['status'],entry['summary'],entry['usage']['durationMs']),('completed','修好了',1500))
+        self.assertEqual(self.main('codex-result:'+self.CALL)['content'][0],{'type':'tool_result','tool_call_id':self.CALL,
+            'output':[{'type':'text','text':'修好了'}],'is_error':False})
+        # A late copy of that turn's start does not revive it.
+        self.child_turn(turn='turn-2')
+        self.assertEqual(self.roster()[self.CHILD]['status'],'completed')
+
+    def test_app_server_exit_and_service_restart_leave_running_children_unknown(self):
+        self.spawn(); self.child_turn(); self.child_work()
+        self.s.codex_frame(self.fake,{'id':9,'method':'item/fileChange/requestApproval','params':{'threadId':self.CHILD,'itemId':'f1'}})
+        self.s.codex_exit(self.fake,'Codex app-server 已退出')
+        entry=self.s.subagent_page(self.CHILD)['entry']
+        self.assertEqual((entry['status'],entry['canStop'],bool(entry['endedAt']),self.s.state['interactions']),('unknown',False,True,[]))
+        self.assertEqual(len(json.loads(self.s.subagent_path(self.CHILD).read_text())['messages']),3)
+        # A service restart: the running child becomes unknown and its transcript loads from disk.
+        restarted,_=self.codex('codex-restart')
+        self.spawn(s=restarted); self.child_turn(s=restarted); self.child_work(s=restarted)
+        restarted.subagent_timer_fired(); restarted.persist()
+        broker.SESSIONS.clear(); broker.load()
+        restored=broker.SESSIONS['codex-restart']
+        self.assertEqual(restored.subagent_transcripts,{})
+        entry=self.roster(restored)[self.CHILD]
+        self.assertEqual((entry['status'],entry['toolUseIds'],entry['description']),('unknown',[self.CALL],'list_files'))
+        code,window=self.request(self.path(self.CALL,restored))
+        self.assertEqual((code,window['total']),(200,3))
+        self.assertEqual(restored.codex_backfills,{self.CHILD:True})
+
 class UpgradeLifecycleTests(unittest.TestCase):
     def test_changed_local_binary_does_not_interrupt_active_task(self):
         endpoint={'port':43210,'token':'fixture-token','pid':1234}

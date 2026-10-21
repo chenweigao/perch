@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 8
+SERVICE_VERSION = 9
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -30,6 +30,21 @@ SUBAGENT_WINDOW = 200
 SUBAGENT_SAVE_DELAY = 2.0
 # Live transcripts stay in memory; finished ones only while recently read.
 SUBAGENT_RECENT_LIMIT = 8
+# Codex child threads. Probe 2026-10-19 (codex-cli 0.162.1): a child's frames reach
+# the parent's connection tagged with the child's threadId, the parent thread
+# announces each child with subAgentActivity items, and no thread/started is sent.
+CODEX_ACTIVITY_STATUS = {'interrupted':'stopped', 'completed':'completed'}
+CODEX_AGENT_STATUS = {'pendingInit':'queued', 'running':'running', 'interrupted':'stopped', 'completed':'completed',
+                      'errored':'failed', 'shutdown':'completed', 'notFound':'unknown'}
+CODEX_TURN_STATUS = {'completed':'completed', 'interrupted':'stopped', 'failed':'failed'}
+CODEX_CHILD_METHODS = ('item/started', 'item/completed', 'turn/started', 'turn/completed',
+                       'thread/tokenUsage/updated', 'serverRequest/resolved')
+# Frames of a thread that is not registered yet wait for it, this many and this long.
+CODEX_PENDING_LIMIT = 256
+CODEX_PENDING_SECONDS = 30.0
+# A child's history is read at most this many pages of 100, and retried this late.
+CODEX_BACKFILL_PAGES = 200
+CODEX_BACKFILL_RETRY = 30.0
 
 def source_fingerprint(path=None):
     """Identity of the code a service is executing. SERVICE_VERSION is bumped by
@@ -419,6 +434,15 @@ def iso_time(value=None):
     value = time.time() if value is None else value
     return datetime.datetime.fromtimestamp(value, datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
+def iso_seconds(value):
+    try: return datetime.datetime.fromisoformat(value.replace('Z', '+00:00')).timestamp()
+    except Exception: return time.time()
+
+def epoch_seconds(value):
+    """Codex reports times in seconds or milliseconds; None for anything else."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0: return None
+    return value / 1000 if value > 100000000000 else value
+
 def clip_chars(value, limit):
     if not isinstance(value, str) or not value.strip(): return None
     value = value.strip()
@@ -514,6 +538,13 @@ def subagent_label(agent_id, entry):
     return {'id':entry['id'] if entry else None, 'agentId':agent_id,
             'title':entry['description'] if entry else None, 'type':entry['subagentType'] if entry else None}
 
+def codex_agent_name(path):
+    """The last segment of a Codex child's agentPath: "/root/list_files" is "list_files"."""
+    return clip_chars(path.rstrip('/').rsplit('/', 1)[-1], 200) if isinstance(path, str) else None
+
+def codex_text_value(value):
+    return value if isinstance(value, str) and value else None
+
 def codex_permission_params(mode, turn=False):
     mode = permission_mode('codex', mode)
     policy, sandbox, turn_sandbox = {
@@ -543,6 +574,9 @@ class Session:
         self.acp_blocks = {}; self.permission_options = {}
         self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
         self.codex_interactions = {}
+        # Codex children: item parts by child, frames waiting for their thread to
+        # register (arrival time, thread id, frame), and history reads by entry key.
+        self.codex_child_parts = {}; self.codex_pending = []; self.codex_backfills = {}
         # Transcripts load on first use; the roster in state is their only index.
         self.subagent_transcripts = {}; self.subagent_dirty = set(); self.subagent_timer = None
         self.subagent_calls = {}; self.subagent_ignored = set()
@@ -723,6 +757,7 @@ class Session:
             client.on_frame=lambda frame: self.codex_frame(client,frame)
             client.on_exit=self.codex_exit
             self.codex=client; self.codex_attached=False
+            self.codex_pending=[]; self.codex_child_parts={}
             try: client.initialize()
             except Exception:
                 client.close(); self.codex=None
@@ -771,7 +806,9 @@ class Session:
             if cursor: params['cursor']=cursor
             page=self.codex.request('thread/items/list',params)
             for entry in page.get('data') or []:
-                self.codex_item(entry.get('item') or {},True)
+                # History registers the children its subAgentActivity items name.
+                self.codex_item(entry.get('item') or {},True,turn_id=entry.get('turnId'),history=True,
+                                at=entry.get('startedAtMs') or entry.get('completedAtMs'))
             cursor=page.get('nextCursor')
             if not cursor: break
     def codex_text(self, value):
@@ -787,27 +824,47 @@ class Session:
                 else: texts.append(str(item))
             return '\n'.join(texts)
         return json.dumps(value,ensure_ascii=False,indent=2)
-    def codex_reasoning_text(self, item_id):
-        parts=self.codex_parts.get(item_id) or {}
+    def codex_reasoning_text(self, item_id, target=None):
+        parts=self.codex_target_parts(target).get(item_id) or {}
         values=[]
         for kind in ('summary','content'):
             values.extend(text for _,text in sorted((parts.get(kind) or {}).items()) if text)
         return '\n'.join(values)
-    def codex_reasoning_source(self, item_id, completed=False):
-        parts=self.codex_parts.get(item_id) or {}
+    def codex_reasoning_source(self, item_id, completed=False, target=None):
+        parts=self.codex_target_parts(target).get(item_id) or {}
         source={'kind':'activity_summary','provider':'codex','itemId':str(item_id),
                 'summaryParts':[text for _,text in sorted((parts.get('summary') or {}).items()) if text],
                 'state':'final' if completed else 'streaming'}
-        if self.state.get('turnId'): source['turnId']=self.state['turnId']
+        turn=self.state.get('turnId') if target is None else target.get('turnId')
+        if turn: source['turnId']=turn
         return source
-    def codex_upsert_reasoning(self, item_id, completed=False, timestamp=None, native_summary=True):
-        part={'type':'thinking','thinking':self.codex_reasoning_text(item_id)}
-        if native_summary: part['source']=self.codex_reasoning_source(item_id,completed)
-        self.upsert({'role':'assistant','content':[part],'timestamp':timestamp or time.time()},'codex:'+str(item_id))
-    def codex_item(self, item, completed=False, timestamp=None):
+    def codex_upsert_reasoning(self, item_id, completed=False, timestamp=None, native_summary=True, target=None):
+        part={'type':'thinking','thinking':self.codex_reasoning_text(item_id,target)}
+        if native_summary: part['source']=self.codex_reasoning_source(item_id,completed,target)
+        self.codex_write(target,{'role':'assistant','content':[part],'timestamp':timestamp or time.time()},'codex:'+str(item_id))
+    def codex_target_parts(self, target=None):
+        # Streaming state of the main thread, or of one child's transcript.
+        return self.codex_parts if target is None else self.codex_child_parts.setdefault(target['id'],{})
+    def codex_write(self, target, message, identity):
+        if target is None: self.upsert(message,identity)
+        else: self.subagent_append(target,clip_subagent_message(copy.deepcopy(normalize(message,identity))))
+    def codex_item(self, item, completed=False, timestamp=None, target=None, turn_id=None, history=False, at=None):
+        """One Codex item into the main transcript, or into the transcript of the child
+        `target`. `turn_id`, `history` and `at` (the record's time) only describe the
+        children an item names; history leaves a child that looks live unknown."""
         kind=item.get('type'); item_id=item.get('id')
         if not kind or not item_id: return
         stamp=(timestamp/1000 if isinstance(timestamp,(int,float)) and timestamp>100000000000 else timestamp) or time.time()
+        store=self.codex_target_parts(target)
+        if target is not None and not completed and kind in ('agentMessage','reasoning','plan') and not any(
+                item.get(key) for key in ('text','content','summary')):
+            return  # A child's reply is shown complete; its deltas are not followed.
+        if kind=='subAgentActivity':
+            # A child report of an unexpected shape must never stop the main stream.
+            self.subagent_guard(self.codex_activity,item,stamp,target,turn_id,history,epoch_seconds(at) or stamp); return
+        if kind=='userMessage' and target is not None:
+            text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
+            self.codex_write(target,{'role':'user','content':text,'timestamp':stamp},'codex:'+item_id); return
         if kind=='userMessage':
             text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
             identity=item.get('clientId') or 'codex:'+item_id
@@ -824,9 +881,9 @@ class Session:
             return
         if kind=='agentMessage':
             if completed or item.get('text'):
-                text=item.get('text',''); self.codex_parts[item_id]={'text':text}
-            else: text=(self.codex_parts.get(item_id) or {}).get('text','')
-            self.upsert({'role':'assistant','content':[{'type':'text','text':text}],'timestamp':stamp},'codex:'+item_id)
+                text=item.get('text',''); store[item_id]={'text':text}
+            else: text=(store.get(item_id) or {}).get('text','')
+            self.codex_write(target,{'role':'assistant','content':[{'type':'text','text':text}],'timestamp':stamp},'codex:'+item_id)
             return
         if kind in ('reasoning','plan'):
             if completed or kind=='plan' or item.get('content') or item.get('summary'):
@@ -834,14 +891,14 @@ class Session:
                 else:
                     parts={'summary':{i:text for i,text in enumerate(item.get('summary') or [])},
                            'content':{i:text for i,text in enumerate(item.get('content') or [])}}
-                self.codex_parts[item_id]=parts
-            self.codex_upsert_reasoning(item_id,completed,stamp,kind=='reasoning')
+                store[item_id]=parts
+            self.codex_upsert_reasoning(item_id,completed,stamp,kind=='reasoning',target)
             return
         tool_name=None; tool_input={}; output=None; failed=False
         if kind=='commandExecution':
             tool_name='shell'; tool_input={'command':item.get('command',''),'cwd':item.get('cwd','')}
             output=item.get('aggregatedOutput')
-            if output is None: output=self.codex_outputs.get(item_id)
+            if output is None and target is None: output=self.codex_outputs.get(item_id)
             failed=item.get('status') in ('failed','declined')
         elif kind=='fileChange':
             tool_name='apply_patch'; tool_input={'changes':item.get('changes') or []}
@@ -870,9 +927,12 @@ class Session:
         elif kind=='imageGeneration':
             tool_name='image_generation'; output=item.get('result') or item.get('failure'); failed=item.get('failure') is not None
         else: return
-        self.upsert({'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':tool_name,'arguments':tool_input}],'timestamp':stamp},'codex-tool:'+item_id)
+        if target is not None and not history: self.codex_child_tool(target,item_id,tool_name)
+        self.codex_write(target,{'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':tool_name,'arguments':tool_input}],'timestamp':stamp},'codex-tool:'+item_id)
         if completed or output is not None:
-            self.upsert({'role':'toolResult','toolCallId':item_id,'content':self.codex_text(output),'isError':failed,'timestamp':stamp},'codex-result:'+item_id)
+            self.codex_write(target,{'role':'toolResult','toolCallId':item_id,'content':self.codex_text(output),'isError':failed,'timestamp':stamp},'codex-result:'+item_id)
+        if kind=='collabAgentToolCall':
+            self.subagent_guard(self.codex_collab,item,target,turn_id,history,epoch_seconds(at) or stamp)
     def codex_question_interaction(self, interaction_id, method, params):
         questions=[]; mapping={}
         def unique_label(value):
@@ -909,41 +969,31 @@ class Session:
             method=frame.get('method'); params=frame.get('params') or {}
             thread_id=params.get('threadId') or params.get('conversationId')
             if thread_id and self.state.get('resume') and thread_id!=self.state['resume']:
-                if 'id' in frame: client.respond(frame['id'],error={'code':-32602,'message':'thread id does not match this session'})
+                # A registered child's requests become labelled interactions; any
+                # other thread's are refused as before. Its notifications go to its
+                # own transcript, or wait for the thread to register.
+                if 'id' in frame:
+                    entry=self.codex_child(thread_id)
+                    if entry is None: client.respond(frame['id'],error={'code':-32602,'message':'thread id does not match this session'})
+                    else: self.codex_request(client,frame,method,params,entry)
+                    return
+                self.subagent_guard(self.codex_child_frame,frame,thread_id)
                 return
             if 'id' in frame:
-                approvals=('item/commandExecution/requestApproval','item/fileChange/requestApproval',
-                           'item/permissions/requestApproval','execCommandApproval','applyPatchApproval')
-                questions=('item/tool/requestUserInput','mcpServer/elicitation/request')
-                if method not in approvals+questions:
-                    client.respond(frame['id'],error={'code':-32601,'message':'unsupported by the Perch bridge'})
-                    return
-                interaction_id='codex-request-'+str(frame['id'])
-                pending={'wireId':frame['id'],'method':method,'params':params}
-                self.codex_interactions[interaction_id]=pending
-                if method in questions and not (method=='mcpServer/elicitation/request' and params.get('mode')=='url'):
-                    interaction=self.codex_question_interaction(interaction_id,method,params)
-                else:
-                    if method in ('item/commandExecution/requestApproval','execCommandApproval'):
-                        command=params.get('command') or []
-                        if isinstance(command,list): command=' '.join(command)
-                        name='shell'; value={'command':command,'cwd':params.get('cwd'),'reason':params.get('reason')}
-                    elif method in ('item/fileChange/requestApproval','applyPatchApproval'):
-                        name='apply_patch'; value={'itemId':params.get('itemId') or params.get('callId'),'reason':params.get('reason'),
-                                                  'grantRoot':params.get('grantRoot'),'changes':params.get('fileChanges')}
-                    elif method=='item/permissions/requestApproval':
-                        name='request_permissions'; value={'cwd':params.get('cwd'),'reason':params.get('reason'),'permissions':params.get('permissions')}
-                    else:
-                        name='mcp_elicitation'; value={'server':params.get('serverName'),'message':params.get('message'),'url':params.get('url')}
-                    interaction={'id':interaction_id,'type':'interaction','name':name,'title':'Codex 请求确认','input':value}
-                self.state['interactions'].append(interaction); self.touch(True); return
+                self.codex_request(client,frame,method,params); return
+            if method=='thread/started':
+                self.subagent_guard(self.codex_thread_started,params.get('thread') or {}); return
             if method=='turn/started':
                 turn=params.get('turn') or {}; turn_id=turn.get('id')
                 if turn_id: self.state['turnId']=turn_id
                 self.state['busy']=True; self.state['error']=None; self.state['updated']=time.time(); self.finish('running'); self.touch(True); return
             if method=='turn/completed':
                 turn=params.get('turn') or {}; status=turn.get('status'); error=turn.get('error') or {}
-                self.state['busy']=False; self.state['interactions']=[]; self.codex_interactions={}; self.state['updated']=time.time()
+                # Children run their own turns, so their pending requests stay.
+                self.state['busy']=False; self.state['updated']=time.time()
+                self.state['interactions']=[x for x in self.state['interactions'] if isinstance(x.get('subagent'),dict)]
+                self.codex_interactions={k:v for k,v in self.codex_interactions.items() if v.get('thread')}
+                self.subagent_guard(self.subagent_flush)
                 if status=='interrupted': self.state['cancelled']=True; self.state['stopAcknowledged']=True
                 elif status=='failed': self.state['error']=error.get('message') if isinstance(error,dict) else str(error)
                 elif not self.state.get('cancelled') and not self.state.get('error'): self.state['completed']+=1
@@ -956,7 +1006,9 @@ class Session:
                 if method == 'item/started' and (params.get('item') or {}).get('type') == 'contextCompaction':
                     self.state['context'] = None
                 key='completedAtMs' if method=='item/completed' else 'startedAtMs'
-                self.codex_item(params.get('item') or {},method=='item/completed',params.get(key)); self.touch(method=='item/completed'); return
+                # The turn only places the children an item names in the roster.
+                self.codex_item(params.get('item') or {},method=='item/completed',params.get(key),
+                                turn_id=params.get('turnId') or self.state.get('turnId')); self.touch(method=='item/completed'); return
             if method=='item/agentMessage/delta':
                 item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'text':''})
                 part['text']=part.get('text','')+params.get('delta','')
@@ -983,12 +1035,43 @@ class Session:
                 # total is cumulative across requests, not the active context window.
                 self.state['context']={'tokens':last.get('totalTokens'),'limit':usage.get('modelContextWindow'),
                                        'reportedAt':time.time()}; self.touch(); return
-            if method=='serverRequest/resolved':
-                wire_id=params.get('requestId')
-                ids=[key for key,value in self.codex_interactions.items() if value.get('wireId')==wire_id]
-                for key in ids: self.codex_interactions.pop(key,None)
-                if ids:
-                    self.state['interactions']=[x for x in self.state['interactions'] if x.get('id') not in ids]; self.touch(True)
+            if method=='serverRequest/resolved': self.codex_resolved(params)
+    def codex_request(self, client, frame, method, params, entry=None):
+        """A server request: an approval or question for the user, raised by the main
+        thread or, labelled with it, by the registered child `entry`."""
+        approvals=('item/commandExecution/requestApproval','item/fileChange/requestApproval',
+                   'item/permissions/requestApproval','execCommandApproval','applyPatchApproval')
+        questions=('item/tool/requestUserInput','mcpServer/elicitation/request')
+        if method not in approvals+questions:
+            client.respond(frame['id'],error={'code':-32601,'message':'unsupported by the Perch bridge'})
+            return
+        interaction_id='codex-request-'+str(frame['id'])
+        pending={'wireId':frame['id'],'method':method,'params':params}
+        if entry is not None: pending['thread']=entry['id']
+        self.codex_interactions[interaction_id]=pending
+        if method in questions and not (method=='mcpServer/elicitation/request' and params.get('mode')=='url'):
+            interaction=self.codex_question_interaction(interaction_id,method,params)
+        else:
+            if method in ('item/commandExecution/requestApproval','execCommandApproval'):
+                command=params.get('command') or []
+                if isinstance(command,list): command=' '.join(command)
+                name='shell'; value={'command':command,'cwd':params.get('cwd'),'reason':params.get('reason')}
+            elif method in ('item/fileChange/requestApproval','applyPatchApproval'):
+                name='apply_patch'; value={'itemId':params.get('itemId') or params.get('callId'),'reason':params.get('reason'),
+                                          'grantRoot':params.get('grantRoot'),'changes':params.get('fileChanges')}
+            elif method=='item/permissions/requestApproval':
+                name='request_permissions'; value={'cwd':params.get('cwd'),'reason':params.get('reason'),'permissions':params.get('permissions')}
+            else:
+                name='mcp_elicitation'; value={'server':params.get('serverName'),'message':params.get('message'),'url':params.get('url')}
+            interaction={'id':interaction_id,'type':'interaction','name':name,'title':'Codex 请求确认','input':value}
+        if entry is not None: interaction['subagent']=subagent_label(entry['id'],entry)
+        self.state['interactions'].append(interaction); self.touch(True)
+    def codex_resolved(self, params):
+        wire_id=params.get('requestId')
+        ids=[key for key,value in self.codex_interactions.items() if value.get('wireId')==wire_id]
+        for key in ids: self.codex_interactions.pop(key,None)
+        if ids:
+            self.state['interactions']=[x for x in self.state['interactions'] if x.get('id') not in ids]; self.touch(True)
     def codex_answer(self, interaction_id, body):
         pending=self.codex_interactions.get(interaction_id)
         if not pending: raise ValueError('该 Codex 请求已失效，请同步会话后重试')
@@ -1031,7 +1114,234 @@ class Session:
             self.state['error']=failure
             if self.state['busy']:
                 self.finish('unknown'); self.state['busy']=False
+            # Children ran inside that app-server and ended with it, unobserved.
+            self.codex_pending=[]; self.subagent_guard(self.subagent_settle,'unknown')
             self.state['interactions']=[]; self.codex_interactions={}; self.touch(True)
+
+    # Codex child threads. A spawned agent runs in a thread of its own on this
+    # connection; its roster entry is keyed by that thread id (kind "codex") and its
+    # frames build its own transcript. The main thread's state is never touched by them.
+    def codex_child(self, thread_id):
+        entry=self.subagent_entries.get(thread_id) if isinstance(thread_id,str) else None
+        return entry if entry is not None and entry.get('kind')=='codex' else None
+    def codex_register(self, thread_id, status=None, history=False, at=None, turn=None, alias=None,
+                       card=None, parent=None, values=None, fill=None):
+        """Registers the child `thread_id` on first sight and applies one report on it.
+        A live `status` only describes a child the report creates (the child's own
+        turn/started marks it running again later); a terminal one ends a live or
+        unknown entry. History describes children no process runs any more, so one
+        it shows live is unknown. `values` replace fields, `fill` sets unknown ones.
+        Frames that waited for the thread are replayed once it registers."""
+        if not isinstance(thread_id,str) or not thread_id or thread_id==self.state.get('resume'): return None
+        entry=self.subagent_entries.get(thread_id)
+        if entry is not None and entry.get('kind')!='codex': return None
+        created=entry is None; ended=False
+        if created:
+            entry=self.subagent_create(thread_id,thread_id,kind='codex')
+            opened=iso_time(at) if at else entry['startedAt']
+            live=status is None or status in SUBAGENT_LIVE
+            state=('unknown' if history else status or 'running') if live else status
+            entry.update(turnId=None,parentTurnId=turn,startedAt=opened,updatedAt=opened,status=state,
+                         endedAt=None if state in SUBAGENT_LIVE else opened)
+        elif (status is not None and status not in SUBAGENT_LIVE and status!=entry['status']
+              and (entry['status'] in SUBAGENT_LIVE or entry['status']=='unknown')):
+            entry.update(status=status,endedAt=iso_time(at) if at else iso_time()); ended=True
+        changed=created or ended
+        if alias: changed=self.subagent_adopt(entry,tool_use_id=alias) or changed
+        if card and not entry.get('cardId'): entry.update(cardId=card,cardParent=parent); changed=True
+        changed=self.subagent_set(entry,**(values or {})) or changed
+        changed=self.subagent_set(entry,**{k:v for k,v in (fill or {}).items() if entry.get(k) is None}) or changed
+        if changed:
+            self.subagent_bump(entry)
+            if entry['status'] not in SUBAGENT_LIVE and (created or ended): self.subagent_write(entry['id']); self.subagent_keep(entry)
+            self.subagent_relabel()
+            # A history pass is published by its caller, once.
+            if not history: self.touch(ended)
+        if created: self.codex_replay(thread_id)
+        return entry
+    def codex_activity(self, item, stamp, target, turn, history, when):
+        """subAgentActivity: the parent's record of a child it started, sent input to,
+        interrupted or saw complete. A start shows in the parent's transcript as an
+        agent/spawnAgent call, which that child's completion or interruption answers."""
+        kind=item.get('kind'); item_id=item['id']
+        path=item.get('agentPath') if isinstance(item.get('agentPath'),str) and item['agentPath'].strip() else None
+        model=codex_text_value(item.get('model'))
+        if kind=='started':
+            self.codex_write(target,{'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':'agent/spawnAgent',
+                                     'arguments':{'agentPath':path,'model':model}}],'timestamp':stamp},'codex-tool:'+item_id)
+        if kind not in ('started','interacted','interrupted','completed'): return
+        started=kind=='started'
+        entry=self.codex_register(item.get('agentThreadId'),CODEX_ACTIVITY_STATUS.get(kind,'running'),history,when,
+                                  target['parentTurnId'] if target is not None else turn,
+                                  alias=item_id if started else None,card=item_id if started else None,
+                                  parent=target['id'] if target is not None else None,
+                                  values={'description':codex_agent_name(path),'subagentType':clip_chars(path,200)},
+                                  fill={'model':model})
+        if entry is None: return
+        if kind=='interacted' and history and entry['status'] not in SUBAGENT_LIVE and entry['status']!='unknown':
+            # Input sent later ran the child again; history does not say how that ended.
+            entry.update(status='unknown',endedAt=None); self.subagent_bump(entry)
+        if kind in CODEX_ACTIVITY_STATUS: self.codex_card_result(entry)
+    def codex_collab(self, item, target, turn, history, when):
+        """collabAgentToolCall: its receivers and agentsStates name children; a
+        spawnAgent call is an alias of the child it started."""
+        states=item.get('agentsStates') if isinstance(item.get('agentsStates'),dict) else {}
+        receivers=[x for x in item.get('receiverThreadIds') or [] if isinstance(x,str)]
+        spawn=item.get('tool')=='spawnAgent'
+        for thread_id in dict.fromkeys(receivers+[x for x in states if isinstance(x,str)]):
+            if thread_id==item.get('senderThreadId'): continue
+            state=states.get(thread_id) if isinstance(states.get(thread_id),dict) else {}
+            status=CODEX_AGENT_STATUS.get(state.get('status')); message=clip_chars(state.get('message'),600)
+            fill={'model':codex_text_value(item.get('model'))}
+            if spawn: fill['description']=subagent_call({'prompt':item.get('prompt')})['description']
+            entry=self.codex_register(thread_id,status,history,when,target['parentTurnId'] if target is not None else turn,
+                                      alias=item.get('id') if spawn else None,fill=fill,
+                                      values={'summary':message} if status=='completed' else {'error':message} if status=='failed' else None)
+            if entry is not None and status in ('completed','stopped','failed'): self.codex_card_result(entry)
+    def codex_thread_started(self, thread):
+        """A thread whose parent is this session's thread, or one of its children."""
+        parent=thread.get('parentThreadId'); owner=self.codex_child(parent)
+        if not parent or (parent!=self.state.get('resume') and owner is None): return
+        self.codex_register(thread.get('id'),'running',turn=owner['parentTurnId'] if owner else self.state.get('turnId'),
+                            fill={'description':clip_chars(thread.get('agentNickname'),200),
+                                  'subagentType':codex_text_value(thread.get('agentRole')),'model':codex_text_value(thread.get('model'))})
+    def codex_card_result(self, entry):
+        """Answers the agent/spawnAgent call that started a child, once it ended."""
+        card=entry.get('cardId'); status=entry.get('status'); parent=entry.get('cardParent')
+        if not card or status not in ('completed','stopped','failed'): return
+        target=self.codex_child(parent) if parent else None
+        if parent and target is None: return
+        text=entry.get('summary') if status=='completed' else entry.get('error') if status=='failed' else None
+        text=text or {'completed':'子 Agent 已完成','stopped':'子 Agent 已停止','failed':'子 Agent 失败'}[status]
+        self.codex_write(target,{'role':'toolResult','toolCallId':card,'content':text,'isError':status!='completed',
+                                 'timestamp':iso_seconds(entry.get('endedAt'))},'codex-result:'+card)
+    def codex_usage(self, entry):
+        usage=entry.get('usage')
+        return dict(usage) if isinstance(usage,dict) else {'totalTokens':0,'toolUses':0,'durationMs':0}
+    def codex_child_tool(self, entry, item_id, name):
+        usage=self.codex_usage(entry)
+        if item_id not in self.subagent_transcript(entry)['tools']: usage['toolUses']+=1
+        if self.subagent_set(entry,usage=usage,lastToolName=name): self.subagent_bump(entry); self.touch()
+    def codex_child_frame(self, frame, thread_id):
+        """A notification of a child thread. Complete items are enough for its
+        transcript, so streaming deltas, hooks and status pings are not followed."""
+        method=frame.get('method'); params=frame.get('params') or {}
+        if method not in CODEX_CHILD_METHODS: return
+        entry=self.codex_child(thread_id)
+        if entry is None:
+            now=time.monotonic()
+            pending=[x for x in self.codex_pending if now-x[0]<=CODEX_PENDING_SECONDS]
+            self.codex_pending=pending[-(CODEX_PENDING_LIMIT-1):]+[(now,thread_id,frame)]
+            return
+        if method in ('item/started','item/completed'):
+            key='completedAtMs' if method=='item/completed' else 'startedAtMs'
+            self.codex_item(params.get('item') or {},method=='item/completed',params.get(key),target=entry,turn_id=params.get('turnId'))
+        elif method=='turn/started': self.codex_child_turn(entry,params.get('turn') or {})
+        elif method=='turn/completed': self.codex_child_done(entry,params.get('turn') or {})
+        elif method=='thread/tokenUsage/updated':
+            # total is what the child used so far; last, the main thread's window
+            # reading, covers one request only.
+            total=((params.get('tokenUsage') or {}).get('total') or {}).get('totalTokens')
+            if isinstance(total,int) and not isinstance(total,bool):
+                usage=self.codex_usage(entry); usage['totalTokens']=total
+                if self.subagent_set(entry,usage=usage): self.subagent_bump(entry); self.touch()
+        else: self.codex_resolved(params)
+    def codex_replay(self, thread_id):
+        now=time.monotonic(); keep=[]; replay=[]
+        for x in self.codex_pending:
+            if now-x[0]<=CODEX_PENDING_SECONDS: (replay if x[1]==thread_id else keep).append(x)
+        self.codex_pending=keep
+        for _,_,frame in replay: self.subagent_guard(self.codex_child_frame,frame,thread_id)
+    def codex_child_turn(self, entry, turn):
+        turn_id=turn.get('id')
+        if not isinstance(turn_id,str) or not turn_id: return
+        live=entry['status'] in SUBAGENT_LIVE
+        # A late copy of a turn that already ended never revives its entry; a new
+        # turn (the parent sent it input) does.
+        if turn_id==entry['turnId'] and not live: return
+        changed=self.subagent_set(entry,turnId=turn_id,status='running')
+        # A new run starts clean; its summary is replaced once it ends.
+        if not live: entry.update(endedAt=None,error=None,stopRequested=False,stopError=None)
+        root=turn.get('rootTurnId')
+        if isinstance(root,str) and root: changed=self.subagent_set(entry,parentTurnId=root) or changed
+        if changed: self.subagent_bump(entry); self.touch()
+    def codex_child_done(self, entry, turn):
+        """The child's turn ended: its status, summary and usage, never the main turn's.
+        Applied once per turn, also when the parent's report ended the entry first."""
+        status=CODEX_TURN_STATUS.get(turn.get('status')); turn_id=turn.get('id')
+        turn_id=turn_id if isinstance(turn_id,str) and turn_id else None
+        if status is None or (entry['turnId'] and turn_id and turn_id!=entry['turnId']): return
+        if turn_id and entry.get('doneTurn')==turn_id: return
+        # The child's own pending requests end with its turn; the main thread's stay.
+        ids=[k for k,v in self.codex_interactions.items() if v.get('thread')==entry['id']]
+        for k in ids: self.codex_interactions.pop(k,None)
+        if ids: self.state['interactions']=[x for x in self.state['interactions'] if x.get('id') not in ids]
+        self.codex_child_parts.pop(entry['id'],None)
+        usage=self.codex_usage(entry); duration=turn.get('durationMs')
+        if isinstance(duration,(int,float)) and not isinstance(duration,bool) and duration>0:
+            usage['durationMs']+=int(duration)
+        error=turn.get('error'); error=error.get('message') if isinstance(error,dict) else error
+        ended=epoch_seconds(turn.get('completedAt'))
+        self.subagent_set(entry,turnId=turn_id,usage=usage,summary=self.codex_child_text(entry,turn),
+                          error=clip_chars(error,600) if status=='failed' else None)
+        entry.update(status=status,endedAt=iso_time(ended) if ended else iso_time(),doneTurn=turn_id)
+        self.subagent_bump(entry); self.subagent_write(entry['id']); self.subagent_keep(entry)
+        self.codex_card_result(entry); self.subagent_relabel(); self.touch(True)
+    def codex_child_text(self, entry, turn):
+        """The child's last reply: the one its turn reports, else its transcript's last text."""
+        for item in reversed(turn.get('items') or []):
+            if isinstance(item,dict) and item.get('type')=='agentMessage' and clip_chars(item.get('text'),600):
+                return clip_chars(item['text'],600)
+        transcript=self.subagent_transcripts.get(entry['id'])
+        for message in reversed(transcript['messages'] if transcript else []):
+            if message['role']!='assistant': continue
+            for part in reversed(message['content']):
+                if part.get('type')=='text' and clip_chars(part.get('text'),600): return clip_chars(part['text'],600)
+        return None
+    def codex_backfill_plan(self, key):
+        """A child whose transcript is missing or empty (after a restart, or known only
+        from history) is read once from the runtime's own record of its thread."""
+        entry=self.subagent_find(key)
+        if entry is None or entry.get('kind')!='codex' or self.deleted: return None
+        key=entry['id']; mark=self.codex_backfills.get(key)
+        if mark is True or mark=='reading' or (isinstance(mark,float) and time.monotonic()<mark): return None
+        if self.subagent_transcript(entry)['messages']: self.codex_backfills[key]=True; return None
+        self.codex_backfills[key]='reading'
+        live=self.codex if self.codex and self.codex.process.poll() is None else None
+        return {'key':key,'client':live,'cwd':self.state['cwd'],'home':self.state.get('codexHome')}
+    def codex_backfill(self, plan):
+        """Runs outside the lock: pages the child's items oldest first, as the probe
+        read them, keeping the newest up to the transcript's message cap. Without a
+        live app-server a short-lived one reads them, as model discovery does."""
+        items=[]; dropped=0; client=plan['client']; own=None
+        try:
+            if client is None:
+                own=client=CodexAppServer(plan['cwd'],home=plan['home']); client.initialize()
+            cursor=None
+            for _ in range(CODEX_BACKFILL_PAGES):
+                params={'threadId':plan['key'],'sortDirection':'asc','limit':100}
+                if cursor: params['cursor']=cursor
+                page=client.request('thread/items/list',params)
+                items.extend(x for x in page.get('data') or [] if isinstance(x,dict))
+                if len(items)>SUBAGENT_MESSAGE_LIMIT:
+                    dropped+=len(items)-SUBAGENT_MESSAGE_LIMIT; items=items[-SUBAGENT_MESSAGE_LIMIT:]
+                cursor=page.get('nextCursor')
+                if not cursor: break
+        except Exception: items=None
+        finally:
+            if own is not None: own.close()
+        with LOCK: self.subagent_guard(self.codex_backfill_install,plan['key'],items,dropped)
+    def codex_backfill_install(self, key, items, dropped):
+        if items is None: self.codex_backfills[key]=time.monotonic()+CODEX_BACKFILL_RETRY; return
+        self.codex_backfills[key]=True
+        entry=self.codex_child(key)
+        # Live frames that filled the transcript meanwhile are newer than this read.
+        if entry is None or self.deleted or self.subagent_transcript(entry)['messages']: return
+        for record in items:
+            self.codex_item(record.get('item') or {},True,record.get('completedAtMs') or record.get('startedAtMs'),
+                            target=entry,turn_id=record.get('turnId'),history=True)
+        if dropped: self.subagent_transcript(entry)['truncated']+=dropped
+        self.subagent_write(key); self.touch()
     def acp_request(self, method, params, kind):
         self.acp_next_id += 1
         request_id = self.acp_next_id
@@ -1552,9 +1862,10 @@ class Session:
         s['subagents'] = self.subagent_live()
         return s
 
-    # Claude subagents. Roster entries live in state['subagentRoster'] and their
-    # changes touch() the session. Each transcript keeps its own epoch, revision and
-    # per-index versions, so a busy child leaves the main snapshot poll quiet.
+    # Subagents: Claude tasks and Codex child threads. Roster entries live in
+    # state['subagentRoster'] and their changes touch() the session. Each transcript
+    # keeps its own epoch, revision and per-index versions, so a busy child leaves
+    # the main snapshot poll quiet.
     def index_subagents(self):
         self.subagent_entries = {}; self.subagent_aliases = {}
         for entry in self.state.get('subagentRoster') or []:
@@ -1606,9 +1917,9 @@ class Session:
     def subagent_bump(self, entry):
         # Entry changes also reach a client that follows the transcript.
         entry['revision'] += 1; entry['updatedAt'] = iso_time()
-    def subagent_create(self, key, task_id=None, tool_use_id=None):
+    def subagent_create(self, key, task_id=None, tool_use_id=None, kind='claude'):
         now = iso_time()
-        entry = {'id':key, 'kind':'claude', 'taskId':None, 'toolUseIds':[], 'turnId':self.state.get('turnId'),
+        entry = {'id':key, 'kind':kind, 'taskId':None, 'toolUseIds':[], 'turnId':self.state.get('turnId'),
                  'description':None, 'subagentType':None, 'status':'running', 'background':None,
                  'startedAt':now, 'updatedAt':now, 'endedAt':None, 'usage':None, 'lastToolName':None,
                  'summary':None, 'error':None, 'canStop':False, 'stopRequested':False, 'stopError':None,
@@ -1644,16 +1955,23 @@ class Session:
         view['toolUseIds'] = list(entry.get('toolUseIds') or [])
         view['usage'] = dict(entry['usage']) if isinstance(entry.get('usage'), dict) else None
         view['stopRequested'] = bool(entry.get('stopRequested'))
-        view['canStop'] = (entry.get('kind') == 'claude' and entry.get('status') in SUBAGENT_LIVE and bool(entry.get('taskId'))
-                           and bool(self.state.get('busy')) and bool(self.state.get('turnId')))
+        if entry.get('kind') == 'codex':
+            # A Codex child's turnId is its own running turn, which turn/interrupt
+            # names; the child may outlive the main turn.
+            view['canStop'] = entry.get('status') == 'running' and bool(entry.get('turnId'))
+        else:
+            view['canStop'] = (entry.get('kind') == 'claude' and entry.get('status') in SUBAGENT_LIVE and bool(entry.get('taskId'))
+                               and bool(self.state.get('busy')) and bool(self.state.get('turnId')))
         return view
     def subagent_live(self):
         roster = self.state.get('subagentRoster') or []
         if not roster: return []
         named = self.subagent_named(); turn = self.state.get('turnId'); ranked = []
         for position, entry in enumerate(roster):
+            # A Codex child's turnId is its own; parentTurnId is the main turn it belongs to.
+            owner = entry.get('parentTurnId') if entry.get('kind') == 'codex' else entry.get('turnId')
             rank = (0 if entry.get('id') in named else 1 if entry.get('status') in SUBAGENT_LIVE
-                    else 2 if turn and entry.get('turnId') == turn else None)
+                    else 2 if turn and owner == turn else None)
             if rank is not None: ranked.append((rank, entry.get('startedAt') or '', position, entry))
         # Over the cap, approvals and running children win over finished ones and
         # newer over older; the list itself reads in start order.
@@ -1857,10 +2175,10 @@ class Session:
             entry['stopError'] = clip_chars(str(e.get('error') or ''), 600) or '停止子 Agent 失败'
         self.subagent_bump(entry)
         return True
-    def subagent_settle(self):
+    def subagent_settle(self, status=None):
         # The turn is over, so a child its worker never reported on did not end on
         # its own terms: stopped when the turn was cancelled, otherwise unknown.
-        status = 'stopped' if self.state.get('cancelled') or self.state.get('stopAcknowledged') else 'unknown'
+        status = status or ('stopped' if self.state.get('cancelled') or self.state.get('stopAcknowledged') else 'unknown')
         settled = [x for x in self.state.get('subagentRoster') or [] if x['status'] in SUBAGENT_LIVE]
         for entry in settled: entry['status'] = status; entry['endedAt'] = iso_time(); self.subagent_bump(entry)
         self.subagent_flush()
@@ -1870,7 +2188,13 @@ class Session:
         if entry is None: raise SubagentNotFound('未找到该子 Agent')
         if not self.subagent_view(entry)['canStop']: raise ValueError('该子 Agent 当前无法单独停止')
         if entry['stopRequested']: return
-        self.send({'type':'stop_task', 'taskId':entry['taskId'], 'turnId':self.state['turnId']})
+        if entry.get('kind') == 'codex':
+            # A v2 child accepts turn/interrupt (unlike turn/start and turn/steer); the
+            # child's turn/completed then reports it stopped.
+            if not self.codex or self.codex.process.poll() is not None: raise ValueError('Codex app-server 已退出，无法停止子 Agent')
+            self.codex.request('turn/interrupt', {'threadId':entry['id'], 'turnId':entry['turnId']})
+        else:
+            self.send({'type':'stop_task', 'taskId':entry['taskId'], 'turnId':self.state['turnId']})
         entry['stopRequested'] = True; entry['stopError'] = None
         self.subagent_bump(entry); self.touch(True)
     def subagent_page(self, key, epoch=None, revision=None, before=None, limit=None):
@@ -1947,6 +2271,12 @@ class Handler(BaseHTTPRequestHandler):
                     needs_codex_catalog=target is not None and target.state.get('provider')=='codex'
                     if needs_codex_catalog: selected_home=target.state['codexHome']
                 if needs_codex_catalog: codex_models=codex_catalog(selected_home)
+            elif not post and len(path)==5 and path[1]=='sessions' and path[3]=='subagents':
+                # A Codex child's own history is read from the runtime outside the lock.
+                with LOCK:
+                    target=SESSIONS.get(path[2])
+                    backfill=target.subagent_guard(target.codex_backfill_plan,unquote(path[4])) if target is not None else None
+                if backfill: target.codex_backfill(backfill)
             with LOCK:
                 if self.path=='/health':
                     result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid()}
