@@ -25,11 +25,14 @@ struct WorkbenchView: View {
             .sheet(item: $model.inspectingSession, onDismiss: model.endInspection) { item in
                 WorkspaceActionDetail(model: model, item: item).id(item.id)
             }
+            .sheet(item: $model.projectOverview) { location in ProjectWorkbenchSheet(model: model, location: location) }
+            .sheet(item: $model.outcomePreview) { outcome in OutcomePreviewSheet(model: model, outcome: outcome) }
+            .sheet(isPresented: $model.showFollowUps) { FollowUpManager(model: model) }
             .sheet(isPresented: $model.showGroupSuggestions) { GroupSuggestionsSheet(model: model) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: model.setupHost) }
             .sheet(isPresented: $model.showSessionSearch) {
-                SessionDirectoryView(model: model, isSearchSheet: true).frame(width: 640, height: 520)
+                UnifiedSearchView(model: model)
             }
             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
             .onAppear {
@@ -165,7 +168,7 @@ private struct WorkbenchDetail: View {
                             context: model.dashboardContext, group: model.selectedGroup, hasSessionSearch: !model.search.isEmpty,
                             onClearSessionFilters: { model.clearSessionFilters() },
                             groupHeader: AnyView(GroupWorkbenchHeader(model: model)),
-                            groupOverview: AnyView(TaskGroupOverview(model: model)),
+                            groupOverview: AnyView(VStack(alignment: .leading, spacing: 24) { ProjectWorkbenchOverview(model: model); TaskGroupOverview(model: model) }),
                             groupProgress: AnyView(GroupWorkbenchProgress(model: model)),
                             groupHistory: AnyView(GroupWorkbenchHistory(model: model)),
                             isArchiving: model.isArchiving,

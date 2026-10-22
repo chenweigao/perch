@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """After scripts/build.sh, check the production model without SSH or real preferences."""
+import argparse
 import pathlib
 import platform
 import plistlib
@@ -7,6 +8,11 @@ import shutil
 import subprocess
 import tempfile
 import uuid
+
+PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade"]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")
+args = parser.parse_args()
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
@@ -46,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     shutil.copy2(compiled, executable)
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
     try:
-        for phase in ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch"]:
+        for phase in args.phase or PHASES:
             subprocess.run([str(executable), phase], check=True, timeout=30)
     finally:
         subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)

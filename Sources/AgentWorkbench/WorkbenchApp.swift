@@ -11,9 +11,10 @@ struct WorkbenchApp: App {
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: appLanguage.resolvedLocale) }
     var body: some Scene {
-        WindowGroup("Perch") {
+        WindowGroup("Perch", id: "main") {
             WorkbenchView(model: model).preferredColorScheme(appAppearance.colorScheme)
                 .frame(minWidth: 940, minHeight: 620)
+                .background(CompanionRegistration(model: model))
                 .environment(\.locale, appLanguage.resolvedLocale)
                 .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }
                 .task { await AppUpdateChecker.shared.checkThrottled() }
@@ -26,6 +27,10 @@ struct WorkbenchApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             SidebarCommands()
+            CommandMenu(L("工作台")) {
+                Button(L("任务浮窗")) { CompanionWindowController.shared.toggle() }
+                Button(L("长任务托管")) { model.showFollowUps = true }
+            }
             CommandGroup(replacing: .appInfo) {
                 Button(L("About Perch")) {
                     NSApp.orderFrontStandardAboutPanel(options: [
@@ -71,6 +76,13 @@ struct WorkbenchApp: App {
                 }.keyboardShortcut("w", modifiers: [.command, .shift])
             }
         }
+        MenuBarExtra("Perch", systemImage: "bird") {
+            Button(L("任务浮窗 · ⌃⌥P")) { CompanionWindowController.shared.show() }
+            Button(L("打开工作台")) { model.showHome(); CompanionWindowController.shared.showMain() }
+            Button(L("长任务托管")) { model.showFollowUps = true; CompanionWindowController.shared.showMain() }
+            Divider()
+            Button(L("退出 Perch")) { NSApp.terminate(nil) }
+        }
         Settings { WorkbenchSettings(model: model).environment(\.locale, appLanguage.resolvedLocale) }
     }
 }
@@ -85,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Idle unless Settings → 诊断 → 性能诊断 is on.
         FrameHitchMonitor.shared.install()
     }
-    func applicationWillTerminate(_ notification: Notification) { model?.shutdown() }
+    func applicationWillTerminate(_ notification: Notification) { CompanionWindowController.shared.shutdown(); model?.shutdown() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         do { try model?.flushDrafts() }
         catch {
@@ -98,5 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         return .terminateNow
     }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { !UserDefaults.standard.bool(forKey: "companion.background") }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { CompanionWindowController.shared.showMain() }; return true
+    }
 }

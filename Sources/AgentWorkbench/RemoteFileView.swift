@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Observation
 import WorkbenchCore
 
 /// Read-only remote file viewing for the current session's SSH host. Every read is a
@@ -13,37 +14,56 @@ enum RemotePanelMode: String, CaseIterable, Identifiable {
 
 enum GitReviewRange: String { case unstaged, staged, branch }
 
-@MainActor
-final class RemoteFileBrowser: ObservableObject {
-    @Published private(set) var host: SSHHost?
-    @Published private(set) var cwd = ""
-    @Published var input = ""
-    @Published private(set) var path = ""
-    @Published private(set) var content: RemoteFileContent?
-    @Published private(set) var loading = false
-    @Published var error: String?
-    @Published var showLineNumbers = false
-    @Published var targetLine: Int?
-    @Published var mode: RemotePanelMode = .file
-    @Published private(set) var gitStatus: RemoteGitStatus?
-    @Published private(set) var gitPath: String?
-    @Published private(set) var gitDiff: RemoteGitDiff?
-    @Published private(set) var gitDirectory = ""
-    @Published private(set) var gitWorktrees: [RemoteGitWorktree] = []
-    @Published var gitInput = ""
-    @Published var gitRange: GitReviewRange = .unstaged
-    @Published var gitBaseInput = ""
-    @Published private(set) var gitComparison: RemoteGitComparison?
-    @Published private(set) var gitRefs: [String] = []
-    @Published private(set) var reviewProgress = GitReviewProgress()
+struct FileReadRequest: Equatable {
+    let id = UUID()
+    let command: String
+    let destination: String
+    let local: Bool
+    let path: String
+    let limit: Int
+    let fromEnd: Bool
+}
+
+@MainActor @Observable
+final class RemoteFileBrowser {
+    private(set) var host: SSHHost?
+    private(set) var cwd = ""
+    var input = ""
+    private(set) var path = ""
+    private(set) var content: RemoteFileContent?
+    private(set) var loading = false
+    var error: String?
+    var showLineNumbers = false
+    var targetLine: Int?
+    var mode: RemotePanelMode = .file
+    private(set) var gitStatus: RemoteGitStatus?
+    private(set) var gitPath: String?
+    private(set) var gitDiff: RemoteGitDiff?
+    private(set) var gitDirectory = ""
+    private(set) var gitWorktrees: [RemoteGitWorktree] = []
+    var gitInput = ""
+    var gitRange: GitReviewRange = .unstaged
+    var gitBaseInput = ""
+    private(set) var gitComparison: RemoteGitComparison?
+    private(set) var gitRefs: [String] = []
+    private(set) var reviewProgress = GitReviewProgress()
     var gitStaged: Bool { gitRange == .staged }
     /// Directories the agent recently touched (worktrees included), most recent
     /// first. Both conversation file resolution and the Git tab start from these.
     private var directoryHints: [String] = []
     private var gitSelectionExplicit = false
     private var generation = 0
-    private var reader: RemoteReader?
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var reader: RemoteReader?
+    @ObservationIgnored private var task: Task<Void, Never>?
+
+    let documents = FileWorkspaceState()
+    private(set) var fileRequest: FileReadRequest?
+    private(set) var previewData: Data?
+    private(set) var readLimit = RemoteFileCommand.readLimit
+    private(set) var readingTail = false
+    var findQuery = ""
+    var findIndex = 0
+    var previewKind: FilePreviewKind { FilePreviewKind(path: path) }
 
     var hostName: String { host?.name ?? L("未选择主机") }
 
@@ -56,6 +76,7 @@ final class RemoteFileBrowser: ObservableObject {
         cancel()
         self.host = host
         self.cwd = cwd
+        documents.activate(host: host?.id, cwd: cwd)
         self.directoryHints = directoryHints
         input = ""
         path = ""
@@ -80,53 +101,63 @@ final class RemoteFileBrowser: ObservableObject {
         gitInput = cwd
         gitSelectionExplicit = false
         targetLine = nil
+        previewData = nil
+        if let selected = documents.selected { open(selected) }
     }
 
     func submit() { open(input) }
 
-    func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false) {
-        targetLine = line
-        mode = .file
+    func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false,
+              limit: Int? = nil, fromEnd: Bool = false) {
         guard let host else { error = L("当前会话没有可用的执行环境。"); return }
-        let resolved: String
-        let command: String
         do {
             if !host.isLocal { try SSHCommand.validateDestination(host.destination) }
-            if fromConversation {
-                command = try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd,
-                                                                 roots: directoryHints)
-                resolved = (try? RemoteFilePath.resolve(requested, cwd: cwd)) ?? requested
-            } else {
-                resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
-                command = RemoteFileCommand.remoteCommand(path: resolved)
+            let resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
+            let limit = limit ?? FilePreviewKind(path: requested).initialReadLimit
+            let command = fromConversation
+                ? try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd, roots: directoryHints, limit: limit)
+                : RemoteFileCommand.remoteCommand(path: resolved, limit: limit, fromEnd: fromEnd)
+            cancel()
+            mode = .file; path = resolved; input = resolved; targetLine = fromEnd ? nil : line
+            content = nil; previewData = nil; error = nil; loading = true
+            readLimit = limit; readingTail = fromEnd; findQuery = ""; findIndex = 0
+            fileRequest = FileReadRequest(command: command, destination: host.destination, local: host.isLocal,
+                                          path: resolved, limit: limit, fromEnd: fromEnd)
+        } catch { self.error = error.localizedDescription }
+    }
+
+    /// The file panel owns the task, so closing it cancels the process as well as
+    /// publication. Identity is checked even if a cancelled transport returns late.
+    func loadFile(_ request: FileReadRequest) async {
+        let reader = RemoteReader(local: request.local)
+        let result = await withTaskCancellationHandler {
+            await reader.run(command: request.command, destination: request.destination)
+        } onCancel: { reader.terminate() }
+        guard !Task.isCancelled, fileRequest?.id == request.id else { return }
+        loading = false
+        do {
+            let data = try result.get()
+            let value = try RemoteFileCommand.parse(data, limit: request.limit, fromEnd: request.fromEnd)
+            let actual = RemoteFileCommand.resolvedPath(in: data) ?? request.path
+            path = actual; input = actual
+            if case .matches(let paths) = value, paths.count == 1 { open(paths[0], line: targetLine); return }
+            content = value
+            switch value {
+            case .text, .binary:
+                documents.select(actual)
+                if targetLine != nil { documents.setReading(false) }
+                if FilePreviewKind(path: actual).isBinary { previewData = RemoteFileCommand.body(in: data) }
+            default: break
             }
-        } catch {
-            self.error = error.localizedDescription
-            return
-        }
-        cancel()
-        generation += 1
-        let token = generation
-        path = resolved
-        input = resolved
-        loading = true
-        error = nil
-        run(command, destination: host.destination, token: token) { browser, data in
-            let content = try RemoteFileCommand.parse(data)
-            // A multi-root lookup can read outside the session directory; display
-            // the path the remote actually read, not the requested guess.
-            if let actual = RemoteFileCommand.resolvedPath(in: data) {
-                browser.path = actual
-                browser.input = actual
-            }
-            if case .matches(let paths) = content, paths.count == 1 {
-                browser.open(paths[0], line: line)
-            } else {
-                browser.content = content
-            }
-        } failed: { browser in
-            browser.content = nil
-        }
+        } catch { content = nil; previewData = nil; self.error = error.localizedDescription }
+    }
+
+    func closeFile(_ path: String) {
+        let wasSelected = documents.selected == path
+        let next = documents.close(path)
+        guard wasSelected else { return }
+        if let next { open(next) }
+        else { cancel(); content = nil; previewData = nil; self.path = ""; input = "" }
     }
 
     func loadGitStatus() {
@@ -347,9 +378,9 @@ final class RemoteFileBrowser: ObservableObject {
 
     // MARK: - Write actions and history
 
-    @Published var gitWriteError: String?
+    var gitWriteError: String?
     private struct GitTarget: Hashable { let hostID: UUID; let directory: String }
-    @Published private var pendingWrites: Set<GitTarget> = []
+    private var pendingWrites: Set<GitTarget> = []
     private var gitTarget: GitTarget? {
         host.map {
             let directory = $0.isLocal && !gitDirectory.isEmpty
@@ -358,11 +389,11 @@ final class RemoteFileBrowser: ObservableObject {
         }
     }
     var gitWriting: Bool { gitTarget.map { pendingWrites.contains($0) } ?? false }
-    @Published private(set) var gitBranches: RemoteGitBranches?
-    @Published private(set) var gitLog: [RemoteGitCommit]?
-    @Published var gitCommitMessage = ""
-    @Published var gitCommitSheet: RemoteGitCommit?
-    @Published private(set) var gitCommitDiff: RemoteGitDiff?
+    private(set) var gitBranches: RemoteGitBranches?
+    private(set) var gitLog: [RemoteGitCommit]?
+    var gitCommitMessage = ""
+    var gitCommitSheet: RemoteGitCommit?
+    private(set) var gitCommitDiff: RemoteGitDiff?
 
     /// Writes never show the full-pane spinner; failures stay inline and every
     /// success re-reads status so the lists stay authoritative.
@@ -468,6 +499,7 @@ final class RemoteFileBrowser: ObservableObject {
     /// Bumping the generation drops any in-flight response, and terminating the
     /// process stops a slow read instead of leaving it running in the background.
     func cancel() {
+        fileRequest = nil
         generation += 1
         task?.cancel()
         task = nil
@@ -572,7 +604,7 @@ private struct DiffText: View {
 
 struct RemoteFilePanel: View {
     @UILocalization private var L
-    @ObservedObject var browser: RemoteFileBrowser
+    @Bindable var browser: RemoteFileBrowser
     var fullWidth = false
     var onToggleWidth: (() -> Void)? = nil
     var onAddContext: ((String) -> Void)? = nil
@@ -789,13 +821,17 @@ struct RemoteFilePanel: View {
             }
             if contextAdded {
                 HStack {
-                    Label("已加入当前任务草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
+                    Label("已加入会话草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
                     Spacer()
                     if let onShowDraft { Button("查看草稿", action: onShowDraft) }
                 }.font(.system(size: 11)).padding(.horizontal, 14).padding(.vertical, 6)
             }
+            if browser.mode == .file { FileReadingToolbar(browser: browser) }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.background(WorkbenchTheme.contentBackground)
+            .task(id: browser.fileRequest?.id) {
+                if let request = browser.fileRequest { await browser.loadFile(request) }
+            }
             .onChange(of: browser.loading) { _, loading in if loading { selection = NSRange(location: 0, length: 0) } }
             .onChange(of: browser.mode) { _, _ in selection = NSRange(location: 0, length: 0) }
             .sheet(item: $browser.gitCommitSheet) { commit in
@@ -1003,18 +1039,30 @@ struct RemoteFilePanel: View {
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         if truncated {
-                            Label("已截断，仅显示前 1 MiB", systemImage: "scissors")
+                            Label(browser.readingTail ? "正在查看文件尾部" : "仅显示已读取部分", systemImage: "scissors")
                                 .font(.system(size: 11)).foregroundStyle(.orange)
                         }
                         Spacer(minLength: 0)
                         Toggle("行号", isOn: $browser.showLineNumbers).toggleStyle(.checkbox).font(.system(size: 11))
                     }.padding(.horizontal, 14).padding(.vertical, 7)
                     Divider()
-                    RemoteSourceText(text: text, line: browser.targetLine, numbered: browser.showLineNumbers, onSelection: { selection = $0 }).id(browser.path)
+                    if browser.previewKind.isBinary {
+                        binaryPreview(size: size)
+                    } else if browser.documents.current?.reading == true && browser.previewKind != .source && !browser.readingTail {
+                        FileContentPreview(kind: browser.previewKind, text: text, data: nil,
+                                           revision: browser.fileRequest?.id, path: browser.path,
+                                           initialOffset: browser.documents.current?.offset,
+                                           onSaveOffset: browser.documents.offsetRecorder()).id(browser.path)
+                    } else {
+                        RemoteSourceText(text: text, line: browser.targetLine, numbered: browser.showLineNumbers,
+                            onSelection: { selection = $0 }, initialOffset: browser.documents.current?.offset,
+                            onSaveOffset: browser.documents.offsetRecorder(),
+                            findQuery: browser.findQuery, findIndex: browser.findIndex, sourcePath: browser.path).id(browser.path + (browser.readingTail ? ":tail" : ":head"))
+                    }
 
                 }
             case .binary(let size):
-                notice(L("这是二进制文件（\(byteLabel(size))），不做预览。"), symbol: "doc.zipper", tint: .secondary)
+                binaryPreview(size: size)
             case .denied:
                 notice(L("没有读取权限。"), symbol: "lock", tint: .orange)
             case .missing:
@@ -1022,6 +1070,15 @@ struct RemoteFilePanel: View {
             case nil:
                 notice(L("输入文件路径后打开。只读查看，不修改文件。"), symbol: "doc.text", tint: .secondary)
             }
+        }
+    }
+
+    @ViewBuilder private func binaryPreview(size: Int) -> some View {
+        if browser.previewKind.isBinary, let data = browser.previewData, size <= data.count {
+            FileContentPreview(kind: browser.previewKind, text: "", data: data,
+                               revision: browser.fileRequest?.id, path: browser.path)
+        } else {
+            notice(L("文件无法预览或超过 16 MiB 预览上限。"), symbol: "doc.zipper", tint: .secondary)
         }
     }
 
@@ -1088,12 +1145,17 @@ struct RemoteSourceText: NSViewRepresentable {
     var onSelection: ((NSRange) -> Void)? = nil
     var initialOffset: Double? = nil
     var onSaveOffset: ((Double) -> Void)? = nil
+    var findQuery = ""
+    var findIndex = 0
+    var sourcePath = ""
     /// Diffs carry their own line numbers in hunk headers.
     private var showsGutter: Bool { numbered && !diff }
     final class Coordinator: NSObject, NSTextViewDelegate {
         var onSaveOffset: ((Double) -> Void)?
         var text: String?
         var diff = false
+        var findQuery = ""
+        var findIndex = 0
         var line: Int?
         var onSelection: ((NSRange) -> Void)?
         func textViewDidChangeSelection(_ notification: Notification) {
@@ -1134,10 +1196,11 @@ struct RemoteSourceText: NSViewRepresentable {
         coordinator.onSaveOffset = onSaveOffset
         let textChanged = coordinator.text != text || coordinator.diff != diff
         let gutterChanged = scroll.rulersVisible != showsGutter
-        guard textChanged || gutterChanged || coordinator.line != line else { return }
+        let findChanged = coordinator.findQuery != findQuery || coordinator.findIndex != findIndex
+        guard textChanged || gutterChanged || coordinator.line != line || findChanged else { return }
         if textChanged {
             coordinator.text = text; coordinator.diff = diff
-            view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : RemoteSourceStyle.code(text))
+            view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : SourceHighlight.attributed(text, path: sourcePath, base: RemoteSourceStyle.code(text)))
         }
         if textChanged || gutterChanged {
             // Numbers are built once per text, and only while shown.
@@ -1153,6 +1216,25 @@ struct RemoteSourceText: NSViewRepresentable {
                 let used = layout.usedRect(for: container), inset = view.textContainerInset
                 view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + inset.width + RemoteSourceMetrics.inset),
                                          height: max(scroll.contentSize.height, used.height + 2 * inset.height)))
+            }
+        }
+        if findChanged || (textChanged && !findQuery.isEmpty) {
+            coordinator.findQuery = findQuery; coordinator.findIndex = findIndex
+            let source = text as NSString
+            view.textStorage?.removeAttribute(.backgroundColor, range: NSRange(location: 0, length: source.length))
+            if !findQuery.isEmpty {
+                var matches: [NSRange] = [], start = 0
+                while start < source.length && matches.count < 5000 {
+                    let range = source.range(of: findQuery, options: [.caseInsensitive, .diacriticInsensitive],
+                                             range: NSRange(location: start, length: source.length - start))
+                    if range.location == NSNotFound { break }
+                    matches.append(range); start = NSMaxRange(range)
+                    view.textStorage?.addAttribute(.backgroundColor, value: NSColor.systemYellow.withAlphaComponent(0.25), range: range)
+                }
+                if !matches.isEmpty {
+                    let match = matches[((findIndex % matches.count) + matches.count) % matches.count]
+                    view.setSelectedRange(match); view.scrollRangeToVisible(match); return
+                }
             }
         }
         // Showing or hiding the numbers keeps the reader's place and selection.

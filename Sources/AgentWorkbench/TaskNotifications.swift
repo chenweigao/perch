@@ -29,6 +29,13 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
         content.userInfo = ["session": id]; content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "\(id):\(event.rawValue)", content: content, trigger: nil))
     }
+    func postInactivity(id: String, title: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = L("任务长时间没有更新，请检查当前进展。")
+        content.userInfo = ["session": id]; content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "inactivity:" + id, content: content, trigger: nil))
+    }
     func cancelPendingCompletions(for id: String? = nil) {
         if let id { completions.removeValue(forKey: id) } else { completions.removeAll() }
         if completions.isEmpty { completionDelivery?.cancel(); completionDelivery = nil }

@@ -11,7 +11,7 @@ struct NewTaskView: View {
     let native: NativeAgentConnection
     let kimi: KimiConnection
     @StateObject var projectFiles = ProjectFileSuggestions()
-    @StateObject var referenceBrowser = RemoteFileBrowser()
+    @State private var referenceBrowser = RemoteFileBrowser()
     @AppStorage("new.task.prompt") private var prompt = ""
     @State private var provider: SessionKind = .kimi
     @State private var cwd = ""

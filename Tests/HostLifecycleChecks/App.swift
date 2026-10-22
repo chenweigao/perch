@@ -14,6 +14,8 @@ import WorkbenchCore
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
         switch CommandLine.arguments[1] {
+        case "workspace-upgrade":
+            try await checkWorkspaceUpgradeUI()
         case "interactions":
             try await checkDisclosureAndQuestionInteractions()
         case "stream-reveal":
