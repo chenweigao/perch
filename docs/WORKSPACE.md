@@ -39,6 +39,12 @@ Opening or closing the reader cancels its read; late replies cannot replace a ne
 file or another host's content. Source selections can be added to the originating
 agent session's draft without sending it.
 
+The reader opens in a separate, resizable macOS window and remembers its window
+frame. Recent files use tabs above a compact toolbar. Open-path controls, source
+environment and file details are available on demand; find expands only when used.
+The actions menu contains refresh, line numbers, larger reads and quote/feedback
+commands. Closing the reader cancels its file read and retains the saved tabs.
+
 ## Companion and background lifetime
 
 Follow tasks from a project, then use **Workbench → Companion**, the menu-bar bird,

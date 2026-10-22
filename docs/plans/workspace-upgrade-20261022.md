@@ -59,3 +59,19 @@ Implementation stays on feat/workspace-upgrade-20261022 in its dedicated worktre
   is claimed. HTML external resources and app-closed scheduling are not supported.
 
 Usage and limits: [WORKSPACE.md](../WORKSPACE.md).
+
+## File reader follow-up
+
+File links and the view-files action now open one resizable native reader window.
+The main conversation retains its width. Recent-file tabs and one compact toolbar
+replace the repeated environment/path, feedback, refresh, find and metadata rows.
+Path entry and metadata are popovers; find is shown on demand; the actions menu
+retains quoting, selected-code feedback, refresh, line numbers and bounded reads.
+
+The `file-reader` host phase checks 480/720/1100pt widths in light/dark appearance,
+source selection and viewport bounds, default chrome below 100pt, tab retention,
+close cancellation and restored window width. The workspace-upgrade phase remains
+part of the follow-up verification. Native UI automation stalled during visual
+acceptance; automated geometry checks and a build are not a complete manual UI
+review. No push, deployment, live remote-service check or performance claim is
+included in this follow-up.

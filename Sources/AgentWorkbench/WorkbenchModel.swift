@@ -160,6 +160,7 @@ final class WorkbenchModel {
     @ObservationIgnored private var navigatingHistory = false
     var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
+    @ObservationIgnored let fileWindow = FileWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac")
         .appendingPathComponent("workspace.json")
@@ -233,6 +234,7 @@ final class WorkbenchModel {
                 guard !self.showDashboard, self.selectedHost != nil else { return }
                 self.showFileViewer = true; self.syncFileViewer()
                 self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
+                self.fileWindow.show(model: self)
             }
         })
         observers.append(NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { [weak self] notice in
@@ -1308,8 +1310,9 @@ final class WorkbenchModel {
         return connections.first { $0.id == reference.hostID }?.host
     }
     func toggleFileViewer() {
-        showFileViewer.toggle()
-        if showFileViewer { syncFileViewer() } else { fileBrowser.cancel() }
+        showFileViewer = true
+        syncFileViewer()
+        fileWindow.show(model: self)
     }
     private func syncFileViewer() {
         guard showFileViewer else { return }
@@ -1521,6 +1524,7 @@ final class WorkbenchModel {
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        fileWindow.close()
         followUpLoop?.cancel(); followUpLoop = nil
         conversationPresentations.removeAll()
         try? flushDrafts()

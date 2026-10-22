@@ -2073,7 +2073,7 @@ private struct ReferenceComposerFixtureView: View {
                 browser.loadGitDiff(changed)
                 try await settle(window, "restore committed diff") { !browser.loading && browser.gitDiff != nil }
                 try await settle(window, "visible diff after empty comparison") {
-                    guard let source = self.reviewSource(in: window.contentView) else { return false }
+                    guard let source = self.reviewSource(in: self.model.fileWindow.window?.contentView) else { return false }
                     return source.visibleRect.width > 20 && source.visibleRect.height > 20
                 }
                 report["diff_visible_after_empty_comparison"] = true
@@ -2086,14 +2086,14 @@ private struct ReferenceComposerFixtureView: View {
                 browser.loadGitDiff(next)
                 try await settle(window, "next file") { !browser.loading && browser.gitDiff != nil }
                 browser.toggleReviewed()
-                guard let source = self.reviewSource(in: window.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
+                guard let source = self.reviewSource(in: self.model.fileWindow.window?.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
                 scroll.contentView.scroll(to: NSPoint(x: 0, y: 240)); scroll.reflectScrolledClipView(scroll.contentView)
                 guard let previous = browser.adjacentReview(-1), previous.path == changed.path else { throw WorkbenchError("Previous file unavailable") }
                 browser.loadGitDiff(previous)
                 try await settle(window, "previous file") { !browser.loading && browser.gitDiff != nil }
                 browser.loadGitDiff(next)
                 try await settle(window, "restored scroll offset") {
-                    !browser.loading && (self.reviewSource(in: window.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
+                    !browser.loading && (self.reviewSource(in: self.model.fileWindow.window?.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
                 }
                 browser.loadGitDiff(changed)
                 try await settle(window, "return to reviewed file") { !browser.loading && browser.gitDiff != nil }

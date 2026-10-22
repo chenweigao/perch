@@ -9,10 +9,13 @@ import subprocess
 import tempfile
 import uuid
 
-PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade"]
+PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")
+parser.add_argument("--preview-file-reader", action="store_true", help="Keep the isolated file-reader fixture open for 120 seconds after checks")
 args = parser.parse_args()
+if args.preview_file_reader:
+    args.phase = [phase for phase in args.phase or [] if phase != "file-reader"] + ["file-reader"]
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
@@ -53,7 +56,11 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
     try:
         for phase in args.phase or PHASES:
-            subprocess.run([str(executable), phase], check=True, timeout=30)
+            preview = args.preview_file_reader and phase == "file-reader"
+            if preview:
+                print(f"File reader preview app: {app}", flush=True)
+            subprocess.run([str(executable), phase, *(["preview"] if preview else [])],
+                           check=True, timeout=150 if preview else 30)
     finally:
         subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)
         shutil.rmtree(pathlib.Path.home() / "Library/Application Support" / DOMAIN, ignore_errors=True)

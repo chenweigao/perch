@@ -41,6 +41,10 @@ struct WorkbenchView: View {
                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
                 actions.start()
             }
+            .onChange(of: model.showFileViewer, initial: true) { _, visible in
+                if visible { model.fileWindow.show(model: model) }
+                else { model.fileWindow.close() }
+            }
             .onChange(of: model.selectedReference) { _, _ in SelectionActionsController.shared.hide() }
             .onChange(of: model.showDashboard) { _, _ in SelectionActionsController.shared.hide() }
             .sheet(isPresented: $model.showNewTerminal) {
@@ -91,49 +95,8 @@ private struct WorkbenchDetail: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
 
-    @AppStorage("files.panel.width") private var filePanelWidth = 460.0
-    @State private var fullWidthReview = false
-    @State private var resizeStart: Double?
-
     var body: some View {
-        GeometryReader { geometry in
-            let visible = model.showFileViewer && !model.showDashboard && !model.draftingNewTask
-            let expanded = visible && (fullWidthReview || geometry.size.width < 706)
-            let width = min(max(320, filePanelWidth), max(320, geometry.size.width - 386))
-            HStack(spacing: 0) {
-                conversation.frame(width: expanded ? 0 : nil).clipped()
-                    .accessibilityHidden(expanded).allowsHitTesting(!expanded)
-                if visible {
-                    if !expanded {
-                        Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 6)
-                            .contentShape(Rectangle())
-                            .gesture(DragGesture().onChanged { value in
-                                if resizeStart == nil { resizeStart = width }
-                                filePanelWidth = min(max(320, resizeStart! - value.translation.width), max(320, geometry.size.width - 386))
-                            }.onEnded { _ in resizeStart = nil })
-                            .accessibilityLabel("调整文件面板宽度")
-                            .accessibilityValue(String(Int(width)))
-                            .accessibilityAdjustableAction { direction in
-                                filePanelWidth = min(max(320, width + (direction == .increment ? 40 : -40)), max(320, geometry.size.width - 386))
-                            }
-                    }
-                    let reference = model.selectedReference
-                    RemoteFilePanel(browser: model.fileBrowser, fullWidth: expanded,
-                        onToggleWidth: geometry.size.width >= 706 ? { fullWidthReview.toggle() } : nil,
-                        onAddContext: model.canQuoteSelection ? { text in
-                            guard let reference else { return }
-                            model.appendReviewContext(text, to: reference)
-                            fullWidthReview = false
-                        } : nil,
-                        onShowDraft: {
-                            model.showFileViewer = false; fullWidthReview = false
-                            DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
-                        },
-                        onClose: { model.toggleFileViewer(); fullWidthReview = false })
-                        .id(reference?.id).frame(width: expanded ? geometry.size.width : width)
-                }
-            }
-        }.environment(\.conversationPresentations, model.conversationPresentations)
+        conversation.environment(\.conversationPresentations, model.conversationPresentations)
     }
 
     @ViewBuilder private var conversation: some View {
@@ -217,7 +180,7 @@ private struct WorkbenchDetail: View {
                         .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: model.showFileViewer ? 380 : 600, maxWidth: .infinity, maxHeight: .infinity)
+        }.frame(minWidth: 600, maxWidth: .infinity, maxHeight: .infinity)
             .background(WorkbenchTheme.contentBackground)
     }
 

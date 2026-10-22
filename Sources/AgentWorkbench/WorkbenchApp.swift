@@ -48,11 +48,21 @@ struct WorkbenchApp: App {
             CommandMenu(L("Conversation")) {
                 Button(L("搜索项目与会话")) { model.showSessionSearch = true }.keyboardShortcut("k")
                 Button(L("Find in conversation")) {
+                    if model.fileWindow.window?.isKeyWindow == true {
+                        NotificationCenter.default.post(name: .init("PerchFindInFile"), object: nil)
+                        return
+                    }
                     model.showConversationFind = true
                     NotificationCenter.default.post(name: .init("PerchFocusFind"), object: nil)
-                }.keyboardShortcut("f").disabled(!model.showKimi && !model.showNative)
-                Button(L("Next match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }.keyboardShortcut("g").disabled(!model.showConversationFind)
-                Button(L("Previous match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showConversationFind)
+                }.keyboardShortcut("f").disabled(!model.showFileViewer && !model.showKimi && !model.showNative)
+                Button(L("Next match")) {
+                    if model.fileWindow.window?.isKeyWindow == true { model.fileBrowser.findIndex += 1 }
+                    else { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }
+                }.keyboardShortcut("g").disabled(!model.showFileViewer && !model.showConversationFind)
+                Button(L("Previous match")) {
+                    if model.fileWindow.window?.isKeyWindow == true { model.fileBrowser.findIndex -= 1 }
+                    else { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }
+                }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showFileViewer && !model.showConversationFind)
                 Divider()
                 Button(L("导出当前会话（Markdown）…")) { model.exportSelectedConversation(markdown: true) }
                     .disabled(!model.showKimi && !model.showNative)

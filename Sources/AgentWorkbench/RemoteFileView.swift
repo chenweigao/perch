@@ -605,14 +605,16 @@ private struct DiffText: View {
 struct RemoteFilePanel: View {
     @UILocalization private var L
     @Bindable var browser: RemoteFileBrowser
-    var fullWidth = false
-    var onToggleWidth: (() -> Void)? = nil
+    var showsCloseButton = true
     var onAddContext: ((String) -> Void)? = nil
     var onShowDraft: (() -> Void)? = nil
     /// Set where the panel is a sheet of its own. The side panel leaves Escape to
     /// its window, so its close button has no shortcut.
     var closeShortcut: KeyboardShortcut? = nil
     let onClose: () -> Void
+    @State private var showLocation = false
+    @State private var showDetails = false
+    @State private var showFind = false
     @State private var selection = NSRange(location: 0, length: 0)
     @State private var feedbackContext: ReviewContext?
     @State private var feedback = ""
@@ -622,54 +624,41 @@ struct RemoteFilePanel: View {
     private var pendingBranchName: String { pendingBranch ?? "" }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "doc.text.magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
-                Text("文件").font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 0)
-                if let onToggleWidth {
-                    Button(action: onToggleWidth) {
-                        Image(systemName: fullWidth ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                            .frame(width: 28, height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
-                        .accessibilityLabel(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
-                }
-                Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板").accessibilityLabel("关闭文件面板")
-                    .keyboardShortcut(closeShortcut)
-            }.padding(.horizontal, 14).frame(height: WorkbenchChrome.headerHeight)
-            Divider()
-            VStack(alignment: .leading, spacing: 9) {
-                Text("\(browser.hostName)\(browser.cwd.isEmpty ? "" : " · \(browser.cwd)")")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    .help(browser.mode == .git ? L("暂存、提交与切换分支会直接修改远端工作区；差异与比较仍为只读。")
-                                               : L("在当前执行环境中只读查看文件。"))
+            if browser.mode == .file, !browser.documents.tabs.isEmpty {
+                FileTabStrip(browser: browser)
+                Divider()
+            }
+            HStack(spacing: 10) {
                 Picker("", selection: $browser.mode) {
                     ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
-                }.pickerStyle(.segmented).labelsHidden()
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 132)
                     .onChange(of: browser.mode) { _, mode in
                         if mode == .git, browser.gitStatus == nil { browser.loadGitStatus() }
                     }
+                if browser.mode == .file { FileDisplayMode(browser: browser) }
+                Spacer(minLength: 0)
                 if browser.mode == .file {
-                    HStack(spacing: 7) {
-                        TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
-                            .textFieldStyle(.roundedBorder).font(.system(size: 12)).onSubmit { browser.submit() }
-                        if browser.loading {
-                            Button("取消") { browser.cancel() }.controlSize(.small)
-                        } else {
-                            Button("打开") { browser.submit() }.controlSize(.small)
-                                .disabled(browser.input.trimmingCharacters(in: .whitespaces).isEmpty)
-                        }
-                    }
-                    if !browser.path.isEmpty {
-                        HStack(spacing: 7) {
-                            Button { browser.openParent() } label: { Image(systemName: "arrow.up").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                                .buttonStyle(.plain).foregroundStyle(.secondary).help("上一级目录").accessibilityLabel("上一级目录")
-                                .disabled(RemoteFilePath.parent(of: browser.path) == nil)
-                            Text(browser.path).font(.system(size: 11, design: .monospaced))
-                                .lineLimit(1).truncationMode(.head).textSelection(.enabled)
-                        }
-                    }
-                } else {
+                    Button { showLocation.toggle() } label: { Image(systemName: "folder") }
+                        .help("打开文件…").accessibilityLabel("打开文件…")
+                        .popover(isPresented: $showLocation) { locationEditor }
+                    Button { showFind.toggle() } label: { Image(systemName: "magnifyingglass") }
+                        .help("在已读取内容中查找").accessibilityLabel("在已读取内容中查找")
+                        .disabled(!hasContext)
+                    Button { showDetails.toggle() } label: { Image(systemName: "info.circle") }
+                        .help("文件详情").accessibilityLabel("文件详情")
+                        .popover(isPresented: $showDetails) { fileDetails }
+                }
+                if browser.mode == .file || onAddContext != nil { fileActions }
+                if showsCloseButton {
+                    Button(action: onClose) { Image(systemName: "xmark") }
+                        .help("关闭文件面板").accessibilityLabel("关闭文件面板")
+                        .keyboardShortcut(closeShortcut)
+                }
+            }.buttonStyle(.borderless).controlSize(.small)
+                .padding(.horizontal, 12).frame(height: 38)
+            Divider()
+            if browser.mode == .git {
+                VStack(alignment: .leading, spacing: 9) {
                     HStack(spacing: 7) {
                         TextField("Git 仓库或 worktree 目录", text: $browser.gitInput)
                             .textFieldStyle(.roundedBorder).font(.system(size: 12))
@@ -806,17 +795,7 @@ struct RemoteFilePanel: View {
                             .font(.system(size: 10)).foregroundStyle(.secondary)
                     }
                 }
-            }.padding(.horizontal, 14).padding(.vertical, 12)
-            Divider()
-            if onAddContext != nil {
-                HStack(spacing: 12) {
-                    Button("引用文件") { if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); contextAdded = true } }
-                        .disabled(!hasContext || browser.loading || browser.error != nil)
-                    Button("反馈选中代码…") {
-                        feedback = ""; feedbackContext = context(selection: selection)
-                    }.disabled(selection.length == 0 || browser.loading || browser.error != nil)
-                    Spacer(minLength: 0)
-                }.font(.system(size: 12)).padding(.horizontal, 14).padding(.vertical, 8)
+                .padding(.horizontal, 14).padding(.vertical, 12)
                 Divider()
             }
             if contextAdded {
@@ -826,9 +805,12 @@ struct RemoteFilePanel: View {
                     if let onShowDraft { Button("查看草稿", action: onShowDraft) }
                 }.font(.system(size: 11)).padding(.horizontal, 14).padding(.vertical, 6)
             }
-            if browser.mode == .file { FileReadingToolbar(browser: browser) }
+            if browser.mode == .file, showFind, hasContext { FileFindBar(browser: browser, isPresented: $showFind) }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.background(WorkbenchTheme.contentBackground)
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindInFile"))) { _ in
+                if browser.mode == .file && hasContext { showFind = true }
+            }
             .task(id: browser.fileRequest?.id) {
                 if let request = browser.fileRequest { await browser.loadFile(request) }
             }
@@ -877,6 +859,66 @@ struct RemoteFilePanel: View {
                     }
                 }.padding(WorkbenchTheme.Dialog.padding).frame(width: 520)
             }
+    }
+
+    private var locationEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\(browser.hostName) · \(browser.cwd)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
+                .textFieldStyle(.roundedBorder).onSubmit { browser.submit(); showLocation = false }
+            HStack {
+                Button("上一级目录") { browser.openParent(); showLocation = false }
+                    .disabled(RemoteFilePath.parent(of: browser.path) == nil)
+                Spacer()
+                Button("打开") { browser.submit(); showLocation = false }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(browser.input.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }.padding(16).frame(width: 420)
+    }
+
+    private var fileDetails: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text((browser.path as NSString).lastPathComponent).font(.headline)
+            Text(browser.path).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+            Text("\(browser.hostName) · \(browser.cwd)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            if case .text(let text, _, let size) = browser.content {
+                Text(byteLabel(size)).font(.caption)
+                if let line = browser.targetLine {
+                    Text(line <= RemoteSourceStyle.lineCount(text) ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
+                        .font(.caption)
+                }
+            } else if case .binary(let size) = browser.content { Text(byteLabel(size)).font(.caption) }
+        }.padding(16).frame(width: 360, alignment: .leading)
+    }
+
+    private var fileActions: some View {
+        Menu {
+            if browser.mode == .file {
+                if browser.loading { Button("取消") { browser.cancel() } }
+                else { Button("刷新") { browser.open(browser.path, limit: browser.readLimit, fromEnd: browser.readingTail) }.disabled(browser.path.isEmpty) }
+                Toggle("行号", isOn: $browser.showLineNumbers)
+                if case .text(_, let truncated, _) = browser.content {
+                    if truncated && !browser.readingTail && browser.readLimit < 4 * 1_048_576 {
+                        Button("读取更多") { browser.open(browser.path, limit: browser.readLimit + 1_048_576) }
+                    }
+                    if truncated || browser.readingTail {
+                        Button(browser.readingTail ? "查看开头" : "查看尾部") {
+                            browser.documents.setReading(false); browser.open(browser.path, fromEnd: !browser.readingTail)
+                        }
+                    }
+                }
+            }
+            if onAddContext != nil {
+                Divider()
+                Button("引用文件") {
+                    if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); contextAdded = true }
+                }.disabled(!hasContext || browser.loading || browser.error != nil)
+                Button("反馈选中代码…") { feedback = ""; feedbackContext = context(selection: selection) }
+                    .disabled(selection.length == 0 || browser.loading || browser.error != nil)
+            }
+        } label: { Image(systemName: "ellipsis") }
+            .menuStyle(.borderlessButton).fixedSize().help("文件操作").accessibilityLabel("文件操作")
     }
 
     @ViewBuilder private var content: some View {
@@ -1030,22 +1072,10 @@ struct RemoteFilePanel: View {
                 }
             case .text(let text, let truncated, let size):
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 8) {
-                        Text(byteLabel(size)).font(.system(size: 11)).foregroundStyle(.secondary)
-                        if let line = browser.targetLine {
-                            // Counted as the gutter numbers lines.
-                            Text(line <= RemoteSourceStyle.lineCount(text)
-                                 ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
-                        }
-                        if truncated {
-                            Label(browser.readingTail ? "正在查看文件尾部" : "仅显示已读取部分", systemImage: "scissors")
-                                .font(.system(size: 11)).foregroundStyle(.orange)
-                        }
-                        Spacer(minLength: 0)
-                        Toggle("行号", isOn: $browser.showLineNumbers).toggleStyle(.checkbox).font(.system(size: 11))
-                    }.padding(.horizontal, 14).padding(.vertical, 7)
-                    Divider()
+                    if truncated {
+                        Label(browser.readingTail ? "正在查看文件尾部" : "仅显示已读取部分", systemImage: "scissors")
+                            .font(.caption).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 5)
+                    }
                     if browser.previewKind.isBinary {
                         binaryPreview(size: size)
                     } else if browser.documents.current?.reading == true && browser.previewKind != .source && !browser.readingTail {
@@ -1068,7 +1098,10 @@ struct RemoteFilePanel: View {
             case .missing:
                 notice(L("路径不存在。"), symbol: "questionmark.folder", tint: .orange)
             case nil:
-                notice(L("输入文件路径后打开。只读查看，不修改文件。"), symbol: "doc.text", tint: .secondary)
+                VStack(spacing: 12) {
+                    ContentUnavailableView("打开文件阅读", systemImage: "doc.text")
+                    Button("打开文件…") { showLocation = true }
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }

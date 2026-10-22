@@ -4,64 +4,54 @@ import SwiftUI
 import WebKit
 import WorkbenchCore
 
-struct FileReadingToolbar: View {
+struct FileTabStrip: View {
     @Bindable var browser: RemoteFileBrowser
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if !browser.documents.tabs.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        ForEach(browser.documents.tabs) { tab in
-                            HStack(spacing: 2) {
-                                Button((tab.path as NSString).lastPathComponent) { browser.open(tab.path) }
-                                    .foregroundStyle(tab.path == browser.path ? Color.accentColor : .primary)
-                                    .help(tab.path)
-                                Button { browser.closeFile(tab.path) } label: { Image(systemName: "xmark") }
-                                    .accessibilityLabel("关闭文件 \((tab.path as NSString).lastPathComponent)")
-                            }.buttonStyle(.borderless)
-                        }
-                    }.padding(.vertical, 4)
+        ScrollView(.horizontal) {
+            HStack(spacing: 4) {
+                ForEach(browser.documents.tabs) { tab in
+                    HStack(spacing: 6) {
+                        Button((tab.path as NSString).lastPathComponent) { browser.open(tab.path) }
+                            .lineLimit(1).help(tab.path)
+                        Button { browser.closeFile(tab.path) } label: { Image(systemName: "xmark").font(.system(size: 9)) }
+                            .accessibilityLabel("关闭文件 \((tab.path as NSString).lastPathComponent)")
+                    }.buttonStyle(.plain).font(.system(size: 12))
+                        .padding(.horizontal, 10).padding(.vertical, 8)
+                        .foregroundStyle(tab.path == browser.path ? Color.primary : .secondary)
+                        .background(tab.path == browser.path ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 6))
                 }
-            }
-            if case .binary = browser.content { Button("刷新") { browser.open(browser.path) } }
-            if case .text(_, let truncated, _) = browser.content {
-                ViewThatFits(in: .horizontal) {
-                    HStack { readingControls; loadControls(truncated) }
-                    VStack(alignment: .leading) { readingControls; loadControls(truncated) }
-                }
-                if browser.documents.current?.reading != true || browser.previewKind == .source {
-                    HStack {
-                        TextField("在已读取内容中查找", text: $browser.findQuery)
-                            .textFieldStyle(.roundedBorder).onSubmit { browser.findIndex += 1 }.help("匹配定位最多 5000 处")
-                        Button { browser.findIndex -= 1 } label: { Image(systemName: "chevron.up") }.accessibilityLabel("上一个匹配")
-                        Button { browser.findIndex += 1 } label: { Image(systemName: "chevron.down") }.accessibilityLabel("下一个匹配")
-                    }.onChange(of: browser.findQuery) { _, _ in browser.findIndex = 0 }
-                }
-            }
-        }.font(.system(size: 11)).controlSize(.small).padding(.horizontal, 14).padding(.vertical, 5)
+            }.padding(.horizontal, 8).padding(.vertical, 3)
+        }.scrollIndicators(.hidden).fixedSize(horizontal: false, vertical: true)
     }
-    private var readingControls: some View {
-        HStack {
-            if browser.previewKind != .source {
-                Picker("显示", selection: Binding(get: { browser.documents.current?.reading ?? false }, set: { browser.documents.setReading($0) })) {
-                    Text("阅读").tag(true); Text("源码").tag(false)
-                }.pickerStyle(.segmented).frame(maxWidth: 150)
-            }
-            Button("刷新") { browser.open(browser.path, limit: browser.readLimit, fromEnd: browser.readingTail) }
+}
+
+struct FileDisplayMode: View {
+    @Bindable var browser: RemoteFileBrowser
+    var body: some View {
+        if case .text = browser.content, browser.previewKind != .source {
+            Picker("显示", selection: Binding(get: { browser.documents.current?.reading ?? false }, set: { browser.documents.setReading($0) })) {
+                Text("阅读").tag(true); Text("源码").tag(false)
+            }.pickerStyle(.segmented).frame(width: 100)
         }
     }
-    private func loadControls(_ truncated: Bool) -> some View {
-        HStack {
-            if truncated && !browser.readingTail && browser.readLimit < 4 * 1_048_576 {
-                Button("读取更多") { browser.open(browser.path, limit: browser.readLimit + 1_048_576) }
-            }
-            if truncated || browser.readingTail {
-                Button(browser.readingTail ? "查看开头" : "查看尾部") {
-                    browser.documents.setReading(false)
-                    browser.open(browser.path, fromEnd: !browser.readingTail)
-                }
-            }
-        }
+}
+
+struct FileFindBar: View {
+    @Bindable var browser: RemoteFileBrowser
+    @Binding var isPresented: Bool
+    @FocusState private var focused: Bool
+    var body: some View {
+        HStack(spacing: 8) {
+            TextField("在已读取内容中查找", text: $browser.findQuery)
+                .textFieldStyle(.roundedBorder).focused($focused).onSubmit { browser.findIndex += 1 }
+                .help("匹配定位最多 5000 处")
+            Button { browser.findIndex -= 1 } label: { Image(systemName: "chevron.up") }.accessibilityLabel("上一个匹配")
+            Button { browser.findIndex += 1 } label: { Image(systemName: "chevron.down") }.accessibilityLabel("下一个匹配")
+            Button { isPresented = false; browser.findQuery = "" } label: { Image(systemName: "xmark") }.accessibilityLabel("关闭查找")
+        }.font(.system(size: 12)).controlSize(.small).buttonStyle(.borderless)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .onAppear { browser.documents.setReading(false); focused = true }
+            .onChange(of: browser.findQuery) { _, _ in browser.findIndex = 0 }
     }
 }
 

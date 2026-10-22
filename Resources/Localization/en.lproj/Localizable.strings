@@ -1786,3 +1786,7 @@
 "项目所在环境已移除，无法读取文件。" = "The project's environment was removed. Files cannot be read.";
 "匹配定位最多 5000 处" = "Locates up to 5000 matches";
 "无法解码 PDF" = "Unable to decode PDF";
+"打开文件…" = "Open File…";
+"打开文件阅读" = "Open a file to read";
+"文件操作" = "File actions";
+"文件详情" = "File details";
