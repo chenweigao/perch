@@ -20,29 +20,36 @@ namespace Perch.App;
 public sealed class MainViewModel : Observable, ISessionObserver
 {
     private readonly Dispatcher _dispatcher;
-    private readonly Func<ISshProcessLauncher> _launcherFactory;
+    private readonly Func<IBridgeTokenProvider, ConnectionCoordinator> _coordinatorFactory;
+    private readonly Func<int, Task<bool>> _probeForward;
+    private readonly SemaphoreSlim _connectionGate = new(1, 1);
+    private CancellationTokenSource? _connectCancellation;
     private readonly ITokenFilePermissionChecker _permissions;
 
     private ConnectionCoordinator? _coordinator;
     private SessionController? _controller;
 
     public MainViewModel()
-        : this(Dispatcher.CurrentDispatcher, () => new DiagnosticsSshLauncher(),
-               new WindowsTokenFilePermissionChecker())
+        : this(Dispatcher.CurrentDispatcher,
+               provider => new ConnectionCoordinator(new DiagnosticsSshLauncher(),
+                   new EphemeralLoopbackPortAllocator(), provider,
+                   SshLocator.Resolve(File.Exists, null, SshLocator.DefaultProgramFilesRoots())),
+               new WindowsTokenFilePermissionChecker(), ProbeForwardAsync)
     {
     }
 
-    /// Preview constructor: injects the dispatcher and launcher seam. All protocol,
-    /// argument and state logic lives in Perch.Core and is tested headless there, so the
-    /// ViewModel keeps no logic of its own to unit-test.
+    /// Injects connection creation and readiness so lifecycle tests use the real
+    /// coordinator with a controlled transport and SSH process.
     public MainViewModel(
         Dispatcher dispatcher,
-        Func<ISshProcessLauncher> launcherFactory,
-        ITokenFilePermissionChecker permissions)
+        Func<IBridgeTokenProvider, ConnectionCoordinator> coordinatorFactory,
+        ITokenFilePermissionChecker permissions,
+        Func<int, Task<bool>> probeForward)
     {
         _dispatcher = dispatcher;
-        _launcherFactory = launcherFactory;
+        _coordinatorFactory = coordinatorFactory;
         _permissions = permissions;
+        _probeForward = probeForward;
     }
 
     // --- Connection inputs (bound to the connect panel) ---
@@ -82,6 +89,7 @@ public sealed class MainViewModel : Observable, ISessionObserver
 
     private SessionRow? _selectedSession;
     private string _composer = string.Empty;
+    private long _composerVersion;
     private bool _isBusy;
     private bool _isSending;
     private bool _isCancelling;
@@ -96,7 +104,17 @@ public sealed class MainViewModel : Observable, ISessionObserver
             foreach (var row in Sessions) row.IsSelected = ReferenceEquals(row, value);
         }
     }
-    public string Composer { get => _composer; set { Set(ref _composer, value); OnPropertyChanged(nameof(CanSend)); } }
+    public string Composer
+    {
+        get => _composer;
+        set
+        {
+            if (_composer == value) return;
+            _composerVersion++;
+            Set(ref _composer, value);
+            OnPropertyChanged(nameof(CanSend));
+        }
+    }
     public bool IsBusy { get => _isBusy; set { Set(ref _isBusy, value); OnPropertyChanged(nameof(CanCancel)); } }
     public bool IsSending { get => _isSending; set { Set(ref _isSending, value); OnPropertyChanged(nameof(CanSend)); } }
     public bool IsCancelling { get => _isCancelling; set { Set(ref _isCancelling, value); OnPropertyChanged(nameof(CanCancel)); } }
@@ -113,7 +131,8 @@ public sealed class MainViewModel : Observable, ISessionObserver
         if (IsConnecting) return;
         ErrorText = null;
         var port = ParsePort();
-        if (string.IsNullOrWhiteSpace(Destination) || port is null)
+        var destination = Destination.Trim();
+        if (string.IsNullOrWhiteSpace(destination) || port is null)
         {
             ErrorText = "请填写 SSH 别名和有效的远端桥接端口（1–65535）。";
             return;
@@ -131,35 +150,37 @@ public sealed class MainViewModel : Observable, ISessionObserver
         }
 
         IsConnecting = true;
-        StatusText = "正在连接…";
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _connectCancellation = cancellation;
+        await _connectionGate.WaitAsync();
         try
         {
-            var launcher = _launcherFactory();
-            var sshPath = SshLocator.Resolve(File.Exists, null, SshLocator.DefaultProgramFilesRoots());
-            var coordinator = new ConnectionCoordinator(launcher, new EphemeralLoopbackPortAllocator(),
-                tokenProvider, sshPath);
+            // A faulted connection may still own a poll loop and local SSH process.
+            // Finish releasing it before creating the replacement.
+            await ReleaseConnectionAsync();
+            cancellation.Token.ThrowIfCancellationRequested();
+            StatusText = "正在连接…";
+            var coordinator = _coordinatorFactory(tokenProvider);
             _coordinator = coordinator;
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             _controller = await coordinator.ConnectAsync(
-                new ConnectionConfig(Destination.Trim(), port.Value),
-                this,
-                ProbeForwardAsync,
-                cts.Token);
+                new ConnectionConfig(destination, port.Value),
+                this, _probeForward, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
 
+            // The first poll can finish before ConnectAsync returns.
+            RebuildCatalog();
             IsOnline = true;
-            StatusText = "已连接：" + Destination.Trim();
+            StatusText = "已连接：" + destination;
         }
         catch (Exception ex) when (ex is PerchException or OperationCanceledException or HttpRequestException)
         {
-            IsOnline = false;
-            StatusText = "未连接";
-            ErrorText = ex is OperationCanceledException ? "连接超时。" : ex.Message;
-            _coordinator = null;
-            _controller = null;
+            await ReleaseConnectionAsync();
+            ErrorText = ex is OperationCanceledException ? "连接已取消或超时。" : ex.Message;
         }
         finally
         {
+            _connectCancellation = null;
+            _connectionGate.Release();
             IsConnecting = false;
         }
     }
@@ -195,25 +216,42 @@ public sealed class MainViewModel : Observable, ISessionObserver
 
     public async Task DisconnectAsync()
     {
-        if (_coordinator is null) { IsOnline = false; return; }
-        StatusText = "正在断开…";
+        // Window close can arrive while SSH is still becoming ready.
+        _connectCancellation?.Cancel();
+        await _connectionGate.WaitAsync();
         try
         {
-            // Releases only this client: stops polling, closes the transport and kills the
-            // local ssh forward. The remote bridge and any running turn keep going.
-            await _coordinator.DisposeAsync();
+            await ReleaseConnectionAsync();
         }
         finally
         {
-            _coordinator = null;
-            _controller = null;
-            IsOnline = false;
+            _connectionGate.Release();
+        }
+    }
+
+    private async Task ReleaseConnectionAsync()
+    {
+        var coordinator = _coordinator;
+        // Detach before awaiting cleanup so catalog/transcript callbacks see no controller.
+        _coordinator = null;
+        _controller = null;
+        IsOnline = false;
+        Sessions.Clear();
+        Messages.Clear();
+        Interactions.Clear();
+        SelectedSession = null;
+        SecureToken = null;
+        OnPropertyChanged(nameof(HasInteractions));
+        OnPropertyChanged(nameof(CanSend));
+        OnPropertyChanged(nameof(CanCancel));
+        StatusText = "正在断开…";
+        try
+        {
+            if (coordinator is not null) await coordinator.DisposeAsync();
+        }
+        finally
+        {
             StatusText = "未连接";
-            Sessions.Clear();
-            Messages.Clear();
-            Interactions.Clear();
-            SelectedSession = null;
-            SecureToken = null;
         }
     }
 
@@ -222,11 +260,15 @@ public sealed class MainViewModel : Observable, ISessionObserver
         var controller = _controller;
         var text = Composer;
         if (controller is null || string.IsNullOrWhiteSpace(text) || IsSending) return;
+        var draftVersion = _composerVersion;
+        var sessionId = controller.SelectedId;
         IsSending = true;
         try
         {
             await controller.SendAsync(text, CancellationToken.None);
-            Composer = string.Empty; // cleared only after the send is accepted/queued
+            if (ReferenceEquals(controller, _controller) && controller.SelectedId == sessionId &&
+                _composerVersion == draftVersion)
+                Composer = string.Empty;
         }
         catch (PerchException ex)
         {

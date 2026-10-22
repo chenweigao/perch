@@ -1,4 +1,4 @@
-# Perch for Windows (MVP)
+# Perch for Windows (experimental MVP)
 
 A standalone **C# / .NET 8 / WPF** client for viewing and driving existing **Perch native
 Agent sessions** on a remote Linux dev machine, from Windows 10/11 x64.
@@ -47,9 +47,18 @@ There is **no Windows GUI, no real `ssh.exe`, and no remote bridge** on that hos
 - Real OpenSSH discovery under `%ProgramFiles%\OpenSSH\ssh.exe` and the system SSH agent.
 - Actual streaming of a live model turn, and a real cancel/abort round trip.
 
-The CI workflow (`.github/workflows/windows-client.yml`) runs on `ubuntu-24.04`: it runs
-the core tests, cross-builds and publishes for win-x64. **It is not a Windows run and
-cannot start the GUI or perform a real SSH round trip.** It has not been triggered.
+The CI workflow (`.github/workflows/windows-client.yml`) has two jobs:
+
+- `ubuntu-24.04` regenerates the Unix bridge fixtures, checks for drift, runs the core
+  tests and cross-builds/publishes win-x64.
+- `windows-2022` runs those core tests plus WPF ViewModel regressions on a real STA
+  dispatcher, then builds and publishes a self-contained win-x64 client.
+
+The WPF tests control HTTP/SSH dependencies. They cover edits during a pending send,
+unchanged/failed sends, switching/disconnecting before a reply, cleanup before
+reconnecting, and disconnecting while a connection is starting. They do not render
+or click the window, start real SSH, inspect a real token-file ACL, or use live agents.
+CI results are recorded on the PR; the manual acceptance below remains pending.
 
 ---
 
@@ -72,7 +81,8 @@ windows/
     Secrets/BridgeToken.cs         #   in-memory token, secure input + file providers
     ConnectionCoordinator.cs       #   handshake -> health gate -> poll loop
   src/Perch.App/                   # WPF UI (thin; binds to the controller)
-  tests/Perch.Core.Tests/          # xunit; runs on Linux
+  tests/Perch.App.Tests/           # WPF dispatcher regressions; Windows only
+  tests/Perch.Core.Tests/          # xunit; runs on Linux and Windows
     fixtures/*.json                # real bridge output (regenerate, don't hand-edit)
   tools/generate-fixtures.py       # derives fixtures from remote/native-agent-service.py
   scripts/{Common,Build,Test,Publish}.ps1
@@ -177,11 +187,22 @@ python3 windows/tools/generate-fixtures.py
 ```
 
 This re-derives `windows/tests/Perch.Core.Tests/fixtures/*.json` from the real bridge.
-CI fails if the committed fixtures drift from the current bridge output.
+Run generation on Linux: the bridge imports Unix-only fcntl. Linux CI fails if the
+committed fixtures drift from the current bridge output. Windows tests use the
+committed fixtures.
 
 ---
 
-## Windows acceptance (manual — not run here)
+### WPF lifecycle regression tests (Windows only)
+
+From the Windows module directory (so its global.json selects the .NET 8 SDK):
+
+```powershell
+cd windows
+dotnet test tests/Perch.App.Tests/Perch.App.Tests.csproj -c Release
+```
+
+## Windows acceptance (manual — pending)
 
 On a real Windows 10/11 x64 machine with a reachable Linux dev host that has a running
 bridge:

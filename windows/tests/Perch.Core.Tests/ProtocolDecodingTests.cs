@@ -30,7 +30,7 @@ public class ProtocolDecodingTests
         if (!File.Exists(bridgePath)) return;
 
         var source = File.ReadAllText(bridgePath);
-        var match = System.Text.RegularExpressions.Regex.Match(source, @"^SERVICE_VERSION = (\d+)$",
+        var match = System.Text.RegularExpressions.Regex.Match(source, @"^SERVICE_VERSION = (\d+)\r?$",
             System.Text.RegularExpressions.RegexOptions.Multiline);
         Assert.True(match.Success, "remote/native-agent-service.py must declare SERVICE_VERSION");
         Assert.Equal(BridgeProtocol.ServiceVersion, int.Parse(match.Groups[1].Value));

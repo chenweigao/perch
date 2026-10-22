@@ -6,3 +6,4 @@ dist/
 
 # Never commit a real token file.
 *.token
+test-results/
