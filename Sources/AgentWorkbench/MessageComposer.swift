@@ -366,13 +366,13 @@ struct ComposerAttachment: View {
         HStack(spacing: 8) {
             if let thumbnail {
                 Image(nsImage: thumbnail).resizable().scaledToFill().frame(width: 38, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
             } else { Image(systemName: "doc").frame(width: 30, height: 34).foregroundStyle(.secondary) }
             Text(file.lastPathComponent).font(.system(size: 11)).lineLimit(1).frame(maxWidth: 130)
             Button(action: onRemove) { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove attachment")
                 .accessibilityLabel("Remove attachment")
-        }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+        }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .task(id: ThumbnailRequest(file: file, scale: displayScale)) {
                 guard file.isImageFile else { return }
                 // Full screenshots decode in tens of milliseconds; keep that off

@@ -6,14 +6,17 @@ import SwiftUI
 /// AppKit text (cached attributed strings) redraws correctly on appearance changes.
 enum WorkbenchTheme {
     /// Primary reading ink: dark slate in light, warm off-white in dark.
-    static let ink = color(light: (0.16, 0.18, 0.23), dark: (0.88, 0.885, 0.90))
+    static let inkNS = nsColor(light: (0.16, 0.18, 0.23), dark: (0.88, 0.885, 0.90))
+    static let ink = Color(nsColor: inkNS)
     /// Monochrome accent: near-black in light, near-white in dark.
     static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.90, 0.90, 0.92))
     /// De-emphasised ink for status lines and timestamps.
     static let quiet = color(light: (0.48, 0.51, 0.58), dark: (0.60, 0.62, 0.68))
-    /// Content surfaces were pure white in light; dark uses the system window fill.
+    /// Content surfaces: white in light; dark is a blue-tinted near-black instead
+    /// of the system's neutral gray — a designed dark reads intentional, not default.
+    /// Sidebar and composer glass keep their system materials and are unaffected.
     static let contentBackground = Color(nsColor: nsColor(
-        light: .white, dark: .windowBackgroundColor))
+        light: (1, 1, 1), dark: (0.104, 0.108, 0.125)))
 
     /// Glyph color atop the accent-colored primary action circle.
     static let actionGlyph = color(light: (1, 1, 1), dark: (0.13, 0.13, 0.14))
@@ -52,6 +55,13 @@ enum WorkbenchTheme {
 extension WorkbenchTheme {
     /// Sheets and dialogs share one outer padding.
     enum Dialog { static let padding: CGFloat = 24 }
+
+    /// Brand mark colors (Resources/Brand): the only warm hues outside diff/link
+    /// semantics. The branch renders in `ink` so the mark adapts to appearance.
+    enum Brand {
+        static let orbTop = NSColor(srgbRed: 1.0, green: 0.851, blue: 0.557, alpha: 1)      // #FFD98E
+        static let orbBottom = NSColor(srgbRed: 1.0, green: 0.478, blue: 0.349, alpha: 1)   // #FF7A59
+    }
 }
 
 extension WorkbenchTheme {

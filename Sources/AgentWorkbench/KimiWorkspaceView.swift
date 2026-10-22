@@ -520,7 +520,7 @@ struct KimiQuestionView: View {
                                     // Radio for single, checkbox for multi (ccgui marker parity).
                                     Image(systemName: markerImage(for: q, option: option.id))
                                         .font(.system(size: 14))
-                                        .foregroundStyle(selected(option.id, in: q) ? Color.accentColor : Color.secondary)
+                                        .foregroundStyle(selected(option.id, in: q) ? WorkbenchTheme.accent : Color.secondary)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(option.label)
                                         if let description = option.description { Text(description).font(.system(size: 11)).foregroundStyle(.secondary) }
@@ -538,7 +538,7 @@ struct KimiQuestionView: View {
                     }
                 }
                 .padding(10)
-                .background(isCurrent ? Color.accentColor.opacity(0.06) : .clear,
+                .background(isCurrent ? WorkbenchTheme.accent.opacity(0.06) : .clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
             }
             Button("提交回答") {

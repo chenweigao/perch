@@ -783,7 +783,7 @@ private struct ConnectionControls: View {
                     ProgressView().controlSize(.mini).frame(width: 24, height: 24)
                 } else if needsBridgeUpdate, let update {
                     Button(action: update) { Text("更新组件").font(.system(size: 11)).frame(height: 24).contentShape(Rectangle()) }
-                        .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+                        .buttonStyle(.plain).foregroundStyle(WorkbenchTheme.accent)
                         .help("远端桥接组件版本过旧；更新全部组件并自动重连")
                 }
                 Button(action: reconnect) { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }

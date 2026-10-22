@@ -329,7 +329,7 @@ struct ConversationActivityBar: View {
                         ForEach(activity.todos) { item in
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
-                                    .foregroundStyle(item.status == .inProgress ? Color.accentColor : Color.secondary)
+                                    .foregroundStyle(item.status == .inProgress ? WorkbenchTheme.accent : Color.secondary)
                                 Text(item.title).fontWeight(item.status == .inProgress ? .medium : .regular)
                                     .foregroundStyle(item.status == .done ? .secondary : .primary)
                             }.accessibilityElement(children: .combine)
