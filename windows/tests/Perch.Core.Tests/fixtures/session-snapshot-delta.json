@@ -1,0 +1,55 @@
+{
+  "id": "ses-busy",
+  "provider": "codex",
+  "title": "重构登录页 \"引号\" & emoji 🚀",
+  "cwd": "/home/developer/项目 目录",
+  "model": "gpt-5-codex",
+  "thinking": "medium",
+  "permissionMode": "workspace-ask",
+  "busy": true,
+  "archived": false,
+  "updated": 1760000300.0,
+  "revision": 4,
+  "completed": 0,
+  "interactions": [],
+  "error": null,
+  "codexHome": "/home/developer/.codex",
+  "context": null,
+  "resume": "native-thread-1",
+  "turnId": "turn-1",
+  "turnState": "running",
+  "permission": {
+    "selected": "workspace-ask",
+    "options": [
+      "read-only",
+      "workspace-ask",
+      "workspace-auto",
+      "full-access"
+    ],
+    "scope": "new-session"
+  },
+  "messages": [
+    {
+      "id": "codex:item-1",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "正在处理 中文 🚀 完成 ✅"
+        }
+      ],
+      "created_at": "1760000000.0"
+    }
+  ],
+  "history": {
+    "epoch": "00000000000000000000000000001000",
+    "start": 0,
+    "total": 2,
+    "end": 2,
+    "indices": [
+      1
+    ],
+    "baseRevision": 3
+  },
+  "subagents": []
+}

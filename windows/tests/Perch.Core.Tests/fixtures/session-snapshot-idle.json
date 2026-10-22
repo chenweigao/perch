@@ -1,0 +1,54 @@
+{
+  "id": "ses-idle",
+  "provider": "codex",
+  "title": "空闲会话",
+  "cwd": "/home/developer/other repo",
+  "model": "gpt-5-codex",
+  "thinking": "medium",
+  "permissionMode": "workspace-ask",
+  "busy": false,
+  "archived": false,
+  "updated": 1760000000.0,
+  "revision": 1,
+  "completed": 3,
+  "messages": [
+    {
+      "id": "req-old",
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "你好"
+        }
+      ],
+      "created_at": ""
+    },
+    {
+      "id": "codex:item-9",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "你好，已完成。"
+        }
+      ],
+      "created_at": ""
+    }
+  ],
+  "interactions": [],
+  "error": null,
+  "codexHome": "/home/developer/.codex",
+  "context": null,
+  "resume": "native-thread-1",
+  "permission": {
+    "selected": "workspace-ask",
+    "options": [
+      "read-only",
+      "workspace-ask",
+      "workspace-auto",
+      "full-access"
+    ],
+    "scope": "new-session"
+  },
+  "subagents": []
+}

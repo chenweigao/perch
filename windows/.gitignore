@@ -1,0 +1,8 @@
+# .NET build output and publish staging for the Windows client.
+bin/
+obj/
+dist/
+*.user
+
+# Never commit a real token file.
+*.token

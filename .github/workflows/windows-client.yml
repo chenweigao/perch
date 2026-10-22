@@ -1,0 +1,74 @@
+name: Windows client
+
+# Core tests run on Linux (no WPF/Windows dependency); the WPF app is cross-built and
+# published for win-x64 from the same Linux SDK via EnableWindowsTargeting. This job is
+# NOT a Windows run: it cannot start the GUI or perform a real SSH/bridge round trip.
+# The Windows acceptance steps in windows/README.md cover that separately, on a machine.
+
+on:
+  pull_request:
+    paths:
+      - 'windows/**'
+      - 'remote/native-agent-service.py'
+      - '.github/workflows/windows-client.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'windows/**'
+      - 'remote/native-agent-service.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-and-crossbuild:
+    name: Core tests and win-x64 cross-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Record toolchain
+        run: |
+          dotnet --version
+          pwsh --version
+
+      # Regenerates the fixtures from remote/native-agent-service.py, then runs the core
+      # tests. If the bridge changed and the committed fixtures are stale, the diff shows
+      # up here; the version test asserts SERVICE_VERSION matches the bridge source.
+      - name: Regenerate fixtures and test
+        run: pwsh -NoProfile -File windows/scripts/Test.ps1 -RegenerateFixtures
+
+      - name: Fixtures are up to date
+        run: |
+          if ! git diff --exit-code -- windows/tests/Perch.Core.Tests/fixtures; then
+            echo "Committed fixtures differ from the current bridge output." >&2
+            echo "Re-run: python3 windows/tools/generate-fixtures.py and commit." >&2
+            exit 1
+          fi
+
+      - name: Build solution
+        run: pwsh -NoProfile -File windows/scripts/Build.ps1 -Configuration Release
+
+      - name: Publish win-x64
+        run: pwsh -NoProfile -File windows/scripts/Publish.ps1 -Configuration Release -Runtime win-x64
+
+      - name: Retain published client
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perch-windows-x64
+          path: windows/dist/win-x64/
+          retention-days: 7
+          if-no-files-found: error
