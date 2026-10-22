@@ -1,0 +1,18 @@
+{
+  "comment": "Pinned numeric corner-radius literals. Each entry must match exactly one live line (file + stripped line text). Stale entries and unpinned literals both fail scripts/check-radius-tokens.py. See docs/UI-RADIUS.md.",
+  "exceptions": [
+    { "file": "Sources/AgentWorkbench/ConversationNotice.swift", "line": "static let cornerRadius: CGFloat = 8", "reason": "Notice card family" },
+    { "file": "Sources/AgentWorkbench/ConversationScrollControls.swift", "line": ".overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(.primary.opacity(WorkbenchTheme.Stroke.hairline)))", "reason": "Scroll-to-bottom pill" },
+    { "file": "Sources/AgentWorkbench/ConversationScrollControls.swift", "line": "context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: paintedY(for: index), width: width, height: 2), cornerRadius: 1),", "reason": "Turn-rail painted tick, a drawn detail not a surface" },
+    { "file": "Sources/AgentWorkbench/ConversationTranscriptView.swift", "line": "marker.cornerRadius = 12", "reason": "Find-hit marker overlay" },
+    { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "static let cornerRadius: CGFloat = 8", "reason": "ReplyStyle.Code block family" },
+    { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "static let cornerRadius: CGFloat = 12", "reason": "UserMessageStyle bubble family" },
+    { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(0.16)).frame(width: ReplyStyle.Quote.barWidth)", "reason": "Quote bar, a drawn detail" },
+    { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: ReplyStyle.Quote.barWidth)", "reason": "Alert bar, a drawn detail" },
+    { "file": "Sources/AgentWorkbench/SubagentTranscriptList.swift", "line": ".background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))", "reason": "Subagent transcript card" },
+    { "file": "Sources/AgentWorkbench/ToolActivityView.swift", "line": ".background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))", "reason": "Tool paper card" },
+    { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": "modifier(WorkbenchGlassSurface(cornerRadius: 20))", "reason": "Composer glass panel, intentional per AGENTS.md" },
+    { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": "modifier(WorkbenchGlassSurface(cornerRadius: 16))", "reason": "Control glass surface, intentional per AGENTS.md" },
+    { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": ".background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6))", "reason": "Glass inner wash" }
+  ]
+}

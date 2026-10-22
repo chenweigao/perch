@@ -49,7 +49,7 @@ struct WorkbenchSettings: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(WorkbenchTheme.accent)
             } header: {
                 SettingsSectionHeader("Agent 与执行环境", systemImage: "server.rack", tint: .teal)
             } footer: {

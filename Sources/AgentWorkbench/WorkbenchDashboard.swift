@@ -274,10 +274,17 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     private func emptyState(_ state: DashboardEmptyState) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
-                .foregroundStyle(.secondary)
+            if state == .noEnvironment {
+                // Fresh-workspace brand moment: the mark carries the welcome,
+                // not a generic symbol.
+                PerchMark().frame(width: 110).padding(.bottom, 2)
+            } else {
+                Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
+                    .foregroundStyle(.secondary)
+            }
             Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
+                Text("本地与远程 Agent 的一个家。").font(.system(size: 12)).foregroundStyle(.secondary)
                 HStack(spacing: 10) {
                     Button("添加机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
                         .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)

@@ -512,7 +512,7 @@ struct NativeInteractionView: View {
                         } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Image(systemName: answers[question] == label ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(answers[question] == label ? Color.accentColor : Color.secondary)
+                                    .foregroundStyle(answers[question] == label ? WorkbenchTheme.accent : Color.secondary)
                                 Text(label).foregroundStyle(.primary)
                             }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain)
