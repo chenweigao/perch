@@ -280,6 +280,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
             return view
         }()
         codeText.update(text)
+        codeText.highlightCode(language: language)
         let lineCount = CodeLineNumbers.count(in: source)
         if lineCount > 1 {
             let gutter = self.gutter ?? {

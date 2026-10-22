@@ -45,6 +45,13 @@ environment and file details are available on demand; find expands only when use
 The actions menu contains refresh, line numbers, larger reads and quote/feedback
 commands. Closing the reader cancels its file read and retains the saved tabs.
 
+Files and conversation code blocks share language-aware highlighting from bundled
+highlight.js. The reader displays source first, then fills colors in the background;
+large loaded slices retain highlighting. TextKit lays out requested ranges instead
+of blocking on the entire document. Find searches the loaded slice asynchronously,
+keeps all matches, and reuses those positions for next/previous navigation.
+Unknown languages stay plain text, and selection/copying always use original text.
+
 ## Companion and background lifetime
 
 Follow tasks from a project, then use **Workbench → Companion**, the menu-bar bird,

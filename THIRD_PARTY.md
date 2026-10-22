@@ -15,6 +15,11 @@
   `https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.min.js`
   (sha256 `198b19442f86f0b46a17e56d3abf744c3a28a3427e66fa8dada3b589a77babcc`)
   into `Resources/Mermaid/` on demand and verifies the digest.
+- [highlight.js](https://github.com/highlightjs/highlight.js), 11.11.1, BSD-3-Clause;
+  bundled common-language build, used through JavaScriptCore for native code colors.
+  `scripts/prepare-highlight.sh` downloads the pinned upstream build and verifies
+  SHA-256 `c4a399dd6f488bc97a3546e3476747b3e714c99c57b9473154c6fb8d259b9381`.
+  Source text is passed as data, never evaluated as JavaScript.
 - [swift-cmark](https://github.com/swiftlang/swift-cmark), 0.8.0, BSD-2-Clause
   and upstream notices in COPYING; Swift Markdown's CommonMark/GFM parser.
 - The system OpenSSH client and Apple frameworks are used from macOS.

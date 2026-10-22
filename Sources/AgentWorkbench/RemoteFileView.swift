@@ -1185,8 +1185,11 @@ struct RemoteSourceText: NSViewRepresentable {
     private var showsGutter: Bool { numbered && !diff }
     final class Coordinator: NSObject, NSTextViewDelegate {
         var onSaveOffset: ((Double) -> Void)?
+        var highlighting: CodeHighlightController?
+        var search: FileSearchController?
         var text: String?
         var diff = false
+        var sourcePath = ""
         var findQuery = ""
         var findIndex = 0
         var line: Int?
@@ -1199,21 +1202,28 @@ struct RemoteSourceText: NSViewRepresentable {
         }
     }
     static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+        coordinator.search?.cancel(); coordinator.highlighting?.reset()
         let save = coordinator.onSaveOffset, offset = Double(scroll.contentView.bounds.origin.y)
         DispatchQueue.main.async { save?(offset) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
+        let scroll = SourceScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
         // TextKit 1 from the start: sizing below and the gutter read its layout.
         let view = NSTextView(usingTextLayoutManager: false); view.isEditable = false; view.isSelectable = true
         view.identifier = NSUserInterfaceItemIdentifier("PerchReviewSource")
         view.delegate = context.coordinator
+        let highlighting = CodeHighlightController(view: view)
+        context.coordinator.highlighting = highlighting
+        context.coordinator.search = FileSearchController(view: view, highlighting: highlighting)
+        view.layoutManager?.allowsNonContiguousLayout = true
+        view.layoutManager?.backgroundLayoutEnabled = false
         // The vertical ruler is the gutter; the text view must not claim it.
         view.usesRuler = false
         view.textContainer?.lineFragmentPadding = 0
-        // Code never wraps. The view is sized to its laid-out text in updateNSView.
-        view.isHorizontallyResizable = false; view.isVerticallyResizable = false
+        // TextKit estimates the document extent and lays out only requested ranges.
+        view.isHorizontallyResizable = true; view.isVerticallyResizable = true
+        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         view.textContainer?.widthTracksTextView = false
         view.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         scroll.documentView = view
@@ -1228,12 +1238,17 @@ struct RemoteSourceText: NSViewRepresentable {
         coordinator.onSelection = onSelection
         coordinator.onSaveOffset = onSaveOffset
         let textChanged = coordinator.text != text || coordinator.diff != diff
+        let languageChanged = coordinator.sourcePath != sourcePath
         let gutterChanged = scroll.rulersVisible != showsGutter
         let findChanged = coordinator.findQuery != findQuery || coordinator.findIndex != findIndex
-        guard textChanged || gutterChanged || coordinator.line != line || findChanged else { return }
+        guard textChanged || languageChanged || gutterChanged || coordinator.line != line || findChanged else { return }
         if textChanged {
             coordinator.text = text; coordinator.diff = diff
-            view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : SourceHighlight.attributed(text, path: sourcePath, base: RemoteSourceStyle.code(text)))
+            view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : RemoteSourceStyle.code(text))
+        }
+        if textChanged || languageChanged {
+            coordinator.sourcePath = sourcePath
+            coordinator.highlighting?.update(source: text, language: diff ? "" : CodeLanguage.file(sourcePath))
         }
         if textChanged || gutterChanged {
             // Numbers are built once per text, and only while shown.
@@ -1242,43 +1257,24 @@ struct RemoteSourceText: NSViewRepresentable {
             // Beside the gutter its trailing padding is the gap before the code.
             view.textContainerInset = NSSize(width: showsGutter ? 0 : RemoteSourceMetrics.inset, height: RemoteSourceMetrics.inset)
             scroll.tile()
-            // A newly mounted split pane can still have a zero-sized viewport here.
-            // Size from laid-out glyphs so text is visible before a later window resize.
-            if let layout = view.layoutManager, let container = view.textContainer {
-                layout.ensureLayout(for: container)
-                let used = layout.usedRect(for: container), inset = view.textContainerInset
-                view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + inset.width + RemoteSourceMetrics.inset),
-                                         height: max(scroll.contentSize.height, used.height + 2 * inset.height)))
-            }
         }
-        if findChanged || (textChanged && !findQuery.isEmpty) {
-            coordinator.findQuery = findQuery; coordinator.findIndex = findIndex
-            let source = text as NSString
-            view.textStorage?.removeAttribute(.backgroundColor, range: NSRange(location: 0, length: source.length))
-            if !findQuery.isEmpty {
-                var matches: [NSRange] = [], start = 0
-                while start < source.length && matches.count < 5000 {
-                    let range = source.range(of: findQuery, options: [.caseInsensitive, .diacriticInsensitive],
-                                             range: NSRange(location: start, length: source.length - start))
-                    if range.location == NSNotFound { break }
-                    matches.append(range); start = NSMaxRange(range)
-                    view.textStorage?.addAttribute(.backgroundColor, value: NSColor.systemYellow.withAlphaComponent(0.25), range: range)
-                }
-                if !matches.isEmpty {
-                    let match = matches[((findIndex % matches.count) + matches.count) % matches.count]
-                    view.setSelectedRange(match); view.scrollRangeToVisible(match); return
-                }
-            }
-        }
+        coordinator.findQuery = findQuery; coordinator.findIndex = findIndex
+        coordinator.search?.update(text: text, query: findQuery, index: findIndex)
         // Showing or hiding the numbers keeps the reader's place and selection.
         guard textChanged || coordinator.line != line else { return }
         coordinator.line = line
         guard let line, let range = RemoteFileContent.lineRange(in: text, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
             if let initialOffset {
-                let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
-                scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
-                scroll.reflectScrolledClipView(scroll.contentView)
+                // A new SwiftUI host has no viewport yet. Restore after native
+                // sizing, just as line navigation below waits for attachment.
+                DispatchQueue.main.async {
+                    guard coordinator.text == text, coordinator.line == line else { return }
+                    scroll.layoutSubtreeIfNeeded()
+                    let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
+                    scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
+                    scroll.reflectScrolledClipView(scroll.contentView)
+                }
             } else { view.scrollRangeToVisible(NSRange(location: 0, length: 0)) }
             return
         }
@@ -1332,68 +1328,70 @@ private enum RemoteSourceMetrics {
     }
 }
 
-/// `RemoteSourceText`'s numbers: one `ReplyTextAttributes.codeGutter` string per
-/// text, laid out once in its own column and drawn at the rows the code occupies.
-/// Drawing only reads the code view's position, so it cannot move any frame.
-private final class RemoteSourceGutter: NSRulerView {
+/// Numbers follow the source's actual visible fragments. Independent estimated
+/// document heights would drift when TextKit lays out noncontiguous ranges.
+final class RemoteSourceGutter: NSRulerView {
     private weak var codeView: NSTextView?
-    private let numberStorage = NSTextStorage()
-    private let numberLayout = NSLayoutManager()
-    private let numberColumn = NSTextContainer(size: .zero)
     private var numberedText: String?
+    private var lineStarts = [0]
+    private var attributes: [NSAttributedString.Key: Any] = [:]
 
     init(scrollView: NSScrollView, source: NSTextView) {
         codeView = source
         super.init(scrollView: scrollView, orientation: .verticalRuler)
-        numberColumn.lineFragmentPadding = 0
-        numberLayout.addTextContainer(numberColumn)
-        numberStorage.addLayoutManager(numberLayout)
-        reservedThicknessForMarkers = 0
-        reservedThicknessForAccessoryView = 0
-        clipsToBounds = true
-        // Drawn numbers are not text a reader can reach; the code view holds the source.
-        setAccessibilityElement(false)
-        // The scroll view redraws its rulers as it scrolls; this keeps the rows in
-        // step with any scroll that only moves the clip view.
+        reservedThicknessForMarkers = 0; reservedThicknessForAccessoryView = 0
+        clipsToBounds = true; setAccessibilityElement(false)
         scrollView.contentView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(self, selector: #selector(clipDidScroll(_:)),
                                                name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
     }
     required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
     override var isFlipped: Bool { true }
-
-    /// Right-aligned numbers in a column as wide as the widest one.
     func showNumbers(for text: String) {
         guard numberedText != text else { return }
-        numberedText = text
-        let lines = RemoteSourceStyle.lineCount(text)
-        let numbers = RemoteSourceStyle.gutter(lines)
-        numberStorage.setAttributedString(numbers)
-        let widest = NSAttributedString(string: String(lines), attributes: numbers.attributes(at: 0, effectiveRange: nil))
-        let width = ceil(widest.size().width)
-        numberColumn.size = NSSize(width: width, height: CGFloat.greatestFiniteMagnitude)
-        ruleThickness = ReplyStyle.Code.gutterLeading + width + ReplyStyle.Code.gutterTrailing
+        numberedText = text; lineStarts = []
+        let source = text as NSString
+        var offset = 0
+        while offset < source.length {
+            lineStarts.append(offset)
+            offset = NSMaxRange(source.lineRange(for: NSRange(location: offset, length: 0)))
+        }
+        if lineStarts.isEmpty { lineStarts = [0] }
+        attributes = RemoteSourceStyle.gutter(1).attributes(at: 0, effectiveRange: nil)
+        let widest = NSAttributedString(string: String(lineStarts.count), attributes: attributes)
+        ruleThickness = ReplyStyle.Code.gutterLeading + ceil(widest.size().width) + ReplyStyle.Code.gutterTrailing
         needsDisplay = true
     }
-
+    func lineNumber(at offset: Int) -> Int {
+        var low = 0, high = lineStarts.count
+        while low < high {
+            let mid = (low + high) / 2
+            if lineStarts[mid] <= offset { low = mid + 1 } else { high = mid }
+        }
+        return max(1, low)
+    }
     override func draw(_ dirtyRect: NSRect) {
         let area = dirtyRect.intersection(bounds)
-        (codeView?.backgroundColor ?? .textBackgroundColor).setFill()
-        area.fill()
-        guard let codeView else { return }
-        // Row 1 sits at the code's container origin, which moves as the clip view scrolls.
+        (codeView?.backgroundColor ?? .textBackgroundColor).setFill(); area.fill()
+        guard let codeView, let layout = codeView.layoutManager, let container = codeView.textContainer else { return }
         let origin = convert(codeView.textContainerOrigin, from: codeView)
-        let rows = NSRect(x: 0, y: area.minY - origin.y, width: numberColumn.size.width, height: area.height)
-        let glyphs = numberLayout.glyphRange(forBoundingRect: rows, in: numberColumn)
-        guard glyphs.length > 0 else { return }
-        numberLayout.drawGlyphs(forGlyphRange: glyphs, at: NSPoint(x: ReplyStyle.Code.gutterLeading, y: origin.y))
+        let rows = NSRect(x: 0, y: area.minY - origin.y, width: max(1, codeView.visibleRect.width), height: area.height)
+        let glyphs = layout.glyphRange(forBoundingRect: rows, in: container)
+        layout.enumerateLineFragments(forGlyphRange: glyphs) { rect, _, _, range, _ in
+            let line = self.lineNumber(at: layout.characterIndexForGlyph(at: range.location))
+            let number = NSAttributedString(string: String(line), attributes: self.attributes)
+            number.draw(at: NSPoint(x: self.ruleThickness - ReplyStyle.Code.gutterTrailing - number.size().width,
+                                    y: origin.y + rect.minY))
+        }
     }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        needsDisplay = true
-    }
-
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
     @objc private func clipDidScroll(_ notification: Notification) { needsDisplay = true }
+}
+
+private final class SourceScrollView: NSScrollView {
+    override func tile() {
+        super.tile()
+        guard let view = documentView as? NSTextView else { return }
+        if view.minSize != contentSize { view.minSize = contentSize }
+    }
 }

@@ -172,24 +172,3 @@ private struct SandboxedHTMLPreview: NSViewRepresentable {
     }
     static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) { view.stopLoading(); view.navigationDelegate = nil }
 }
-
-enum SourceHighlight {
-    static func attributed(_ text: String, path: String, base: NSAttributedString) -> NSAttributedString {
-        let extensions = ["swift", "py", "js", "ts", "tsx", "jsx", "go", "rs", "c", "h", "cpp", "json", "sh", "yaml", "yml"]
-        guard extensions.contains((path as NSString).pathExtension.lowercased()), text.utf8.count <= 256_000 else { return base }
-        let result = NSMutableAttributedString(attributedString: base)
-        let rules: [(String, NSColor)] = [
-            (#"\b(?:let|var|func|class|struct|enum|import|return|if|else|for|while|guard|async|await|def|from|const|function|export|pub|fn|package|type|true|false|null|nil|None)\b"#, .systemPurple),
-            (#"\b\d+(?:\.\d+)?\b"#, .systemOrange),
-            (#"\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'"#, .systemRed),
-            (#"(?m)//[^\n]*|^[ \t]*#[^\n]*"#, .secondaryLabelColor)
-        ]
-        for (pattern, color) in rules {
-            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
-            for match in regex.matches(in: text, range: NSRange(location: 0, length: result.length)) {
-                result.addAttribute(.foregroundColor, value: color, range: match.range)
-            }
-        }
-        return result
-    }
-}

@@ -26,6 +26,8 @@ import WorkbenchCore
         }
 
         switch CommandLine.arguments[1] {
+        case "code-reader":
+            try await checkCodeReader()
         case "file-reader":
             try await checkFileReaderWindow()
         case "workspace-upgrade":
