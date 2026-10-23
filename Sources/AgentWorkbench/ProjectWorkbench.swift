@@ -111,6 +111,7 @@ struct ProjectWorkbenchSheet: View {
                             }.buttonStyle(.plain)
                         }
                     }
+                    ProjectDocumentsSection(model: model, location: location)
                     DisclosureGroup("项目会话（\(sessions.count)）") {
                         ForEach(sessions) { item in sessionRow(item) }
                     }

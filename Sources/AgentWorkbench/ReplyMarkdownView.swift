@@ -223,7 +223,7 @@ private struct ReplyContent: View, Equatable {
     }
 }
 
-private struct ReplyBlocks: View {
+struct ReplyBlocks: View {
     let blocks: [ReplyBlock]
     var compact = false
     var coalescesParagraphs = ReplyParagraphLayout.enabled
@@ -604,7 +604,9 @@ enum ReplyTextAttributes {
                 if let link = run.link {
                     // Render layer: only allowlisted schemes become clickable;
                     // everything else stays plain text (SafeLink).
-                    if let reference = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url {
+                    if link.scheme == "perch-document" {
+                        attributes[.link] = link
+                    } else if let reference = ConversationFileReference(text: link.relativeString.removingPercentEncoding ?? link.relativeString)?.url {
                         attributes[.link] = reference
                     } else if SafeLink.allowed(link) {
                         attributes[.link] = link
@@ -721,6 +723,10 @@ extension EnvironmentValues {
 
 struct SelectableReplyText: NSViewRepresentable {
     @Environment(\.isConversationBodyText) private var isConversationBodyText
+    @Environment(\.documentFontScale) private var documentFontScale
+    @Environment(\.documentQuery) private var documentQuery
+    @Environment(\.documentOpenLink) private var documentOpenLink
+    @Environment(\.documentSelection) private var documentSelection
     let attributed: NSAttributedString
     var preservesSelectionOnAppend = false
     /// Gutter-style rows opt out of selection.
@@ -740,8 +746,10 @@ struct SelectableReplyText: NSViewRepresentable {
         self.selectable = selectable
     }
     final class Coordinator: NSObject, NSTextViewDelegate {
+        var documentOpenLink: ((URL) -> Bool)?
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
             guard let url = (link as? URL) ?? (link as? String).flatMap(URL.init(string:)) else { return false }
+            if documentOpenLink?(url) == true { return true }
             if url.scheme == "perch-file" {
                 NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: url)
                 return true
@@ -805,7 +813,36 @@ struct SelectableReplyText: NSViewRepresentable {
     }
     func updateNSView(_ view: ReplyTextView, context: Context) {
         view.isConversationBodyText = isConversationBodyText; view.isSelectable = selectable
-        view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend)
+        context.coordinator.documentOpenLink = documentOpenLink
+        let styled: NSAttributedString
+        if documentFontScale != 1 {
+            let copy = NSMutableAttributedString(attributedString: attributed)
+            attributed.enumerateAttributes(in: NSRange(location: 0, length: attributed.length)) { attrs, range, _ in
+                if let font = attrs[.font] as? NSFont {
+                    copy.addAttribute(.font, value: NSFontManager.shared.convert(font, toSize: font.pointSize * documentFontScale), range: range)
+                }
+                if let paragraph = (attrs[.paragraphStyle] as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle {
+                    paragraph.minimumLineHeight *= documentFontScale; paragraph.maximumLineHeight *= documentFontScale
+                    paragraph.lineSpacing *= documentFontScale
+                    copy.addAttribute(.paragraphStyle, value: paragraph, range: range)
+                }
+            }
+            styled = copy
+        } else { styled = attributed }
+        view.update(styled, preservingSelectionOnAppend: preservesSelectionOnAppend, replacingAttributes: documentOpenLink != nil)
+        view.extraMenuItems = documentSelection.map { action in { [weak view] in
+            guard let view else { return [] }
+            let range = view.selectedRange()
+            let selected = ReplySelection.shared.text(from: view) ?? ((range.length > 0 && NSMaxRange(range) <= view.string.utf16.count) ? (view.string as NSString).substring(with: range) : "")
+            let target = DocumentSelectionAction { action(selected) }
+            let item = NSMenuItem(title: L("反馈选中文本…"), action: #selector(DocumentSelectionAction.performSelection(_:)), keyEquivalent: "")
+            item.target = target; item.representedObject = target; item.isEnabled = !selected.isEmpty
+            return [item]
+        } }
+        if documentOpenLink != nil {
+            view.findHighlight = documentQuery.isEmpty ? nil : (documentQuery, false, false)
+            view.applyFindHighlight()
+        }
         if let codeLanguage { view.highlightCode(language: codeLanguage, debounce: true) }
         else { view.codeHighlighting?.reset() }
     }
@@ -1212,11 +1249,11 @@ final class ReplyTextView: NSTextView {
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
     private var measurements: [(width: CGFloat, size: CGSize)] = []
-    func update(_ value: NSAttributedString, preservingSelectionOnAppend: Bool = false) {
+    func update(_ value: NSAttributedString, preservingSelectionOnAppend: Bool = false, replacingAttributes: Bool = false) {
         guard let storage = textStorage, !storage.isEqual(to: value) else { return }
         let appending = value.string.hasPrefix(storage.string)
-        let retainedSelection = preservingSelectionOnAppend && appending ? selectedRange() : nil
-        if appending {
+        let retainedSelection = (preservingSelectionOnAppend || replacingAttributes) && appending ? selectedRange() : nil
+        if appending && !replacingAttributes {
             // Prefix growth (streaming, reveal frames): append only the delta so
             // TextKit layout invalidates the tail, not the whole paragraph.
             storage.append(value.attributedSubstring(from: NSRange(location: storage.length, length: value.length - storage.length)))
@@ -1683,4 +1720,17 @@ private struct ReplyTableLayout: Layout {
     private func isSeparator(_ index: Int) -> Bool {
         index >= columnCount && (index - columnCount) % (columnCount + 1) == 0
     }
+}
+
+// Document controls stay local to the reader; conversation rendering keeps defaults.
+extension EnvironmentValues {
+    @Entry var documentFontScale: CGFloat = 1
+    @Entry var documentQuery: String = ""
+    @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+    @Entry var documentSelection: ((String) -> Void)? = nil
+}
+@MainActor private final class DocumentSelectionAction: NSObject {
+    let action: () -> Void
+    init(_ action: @escaping () -> Void) { self.action = action }
+    @objc func performSelection(_ sender: NSMenuItem) { action() }
 }

@@ -71,9 +71,11 @@ struct FileViewerContent: View {
                     DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
                 },
                 contextDestination: item?.title,
+                documentLibrary: model.documentLibraryActions,
                 onClose: { model.fileWindow.close() })
                 .environment(\.locale, appLanguage.resolvedLocale)
                 .preferredColorScheme(appAppearance.colorScheme)
+                .onChange(of: model.fileBrowser.completedFileReadID) { _, id in if id != nil { model.recordReadDocument() } }
         }
     }
 }
@@ -107,6 +109,12 @@ final class FileReaderWindow: NSWindow {
         guard attachedSheet == nil, let browser else { return super.performKeyEquivalent(with: event) }
         let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
         let key = event.charactersIgnoringModifiers?.lowercased()
+        if modifiers == .command, key == "[" || key == "]" {
+            browser.navigateHistory(key == "[" ? -1 : 1); return true
+        }
+        if modifiers == .command && key == "f" {
+            NotificationCenter.default.post(name: .init("PerchFindDocument"), object: browser); return true
+        }
         if modifiers == .command && key == "w" {
             closeTab(); return true
         }

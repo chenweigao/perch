@@ -105,6 +105,7 @@ public struct SavedTerminal: Codable, Equatable, Sendable {
 }
 
 public struct LocalWorkspace: Codable, Equatable, Sendable {
+    public var documents: [ProjectDocument] = []
     public var projectBriefs: [String: ProjectBrief] = [:]
     public var companionDrafts: [String: String] = [:]
     public var followedSessions: [SessionReference] = []
@@ -129,11 +130,12 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var reviewedRevisions: [String: UInt64] = [:]
     public init() {}
     private enum CodingKeys: String, CodingKey {
-        case projectBriefs, followedSessions, deliveries, followUps, companionDrafts
+        case documents, projectBriefs, followedSessions, deliveries, followUps, companionDrafts
         case dashboardSeen, sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions, sidebarProjectLocations
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        documents = try values.decodeIfPresent([ProjectDocument].self, forKey: .documents) ?? []
         companionDrafts = try values.decodeIfPresent([String: String].self, forKey: .companionDrafts) ?? [:]
         projectBriefs = try values.decodeIfPresent([String: ProjectBrief].self, forKey: .projectBriefs) ?? [:]
         followedSessions = try values.decodeIfPresent([SessionReference].self, forKey: .followedSessions) ?? []

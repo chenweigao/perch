@@ -12,6 +12,11 @@ enum RemotePanelMode: String, CaseIterable, Identifiable {
     var label: LocalizedStringKey { self == .file ? "文件" : "Git 变更" }
 }
 
+struct DocumentLibraryActions {
+    let pinned: Bool
+    let togglePin: () -> Void
+}
+
 enum GitReviewRange: String { case unstaged, staged, branch }
 
 struct FileReadRequest: Equatable {
@@ -60,13 +65,23 @@ final class RemoteFileBrowser {
     @ObservationIgnored private var task: Task<Void, Never>?
 
     let documents = FileWorkspaceState()
+    let reading = DocumentReadingState()
     private(set) var fileRequest: FileReadRequest?
+    private(set) var completedFileReadID: UUID?
     private(set) var previewData: Data?
     private(set) var readLimit = RemoteFileCommand.readLimit
     private(set) var readingTail = false
+    var documentAnchor: String?
+    var documentNavigation = 0
+    private(set) var modifiedAt: Double?
     var findQuery = ""
     var findIndex = 0
     var previewKind: FilePreviewKind { FilePreviewKind(path: path) }
+
+    var hasLoadedDocument: Bool {
+        guard mode == .file, !loading, error == nil, previewKind != .source else { return false }
+        switch content { case .text, .binary: return true; default: return false }
+    }
 
     var hostName: String { host?.name ?? L("未选择主机") }
 
@@ -111,7 +126,7 @@ final class RemoteFileBrowser {
     func submit() { open(input) }
 
     func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false,
-              limit: Int? = nil, fromEnd: Bool = false, source: SessionReference? = nil) {
+              limit: Int? = nil, fromEnd: Bool = false, source: SessionReference? = nil, anchor: String? = nil, inheritSource: Bool = true) {
         guard let host else { error = L("当前会话没有可用的执行环境。"); return }
         do {
             if !host.isLocal { try SSHCommand.validateDestination(host.destination) }
@@ -121,12 +136,15 @@ final class RemoteFileBrowser {
                 ? try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd, roots: directoryHints, limit: limit)
                 : RemoteFileCommand.remoteCommand(path: resolved, limit: limit, fromEnd: fromEnd)
             cancel()
+            reading.document = nil; reading.notice = nil
+            documentAnchor = anchor; documentNavigation += 1; modifiedAt = nil
             mode = .file; path = resolved; input = resolved; targetLine = fromEnd ? nil : line
             content = nil; previewData = nil; error = nil; loading = true
             readLimit = limit; readingTail = fromEnd; findQuery = ""; findIndex = 0
             fileRequest = FileReadRequest(command: command, destination: host.destination, local: host.isLocal,
                                           path: resolved, limit: limit, fromEnd: fromEnd,
-                                          source: source ?? documents.tabs.first(where: { $0.path == resolved })?.source ?? self.source)
+                                          source: source ?? (inheritSource ? (documents.tabs.first(where: { $0.path == resolved })?.source ?? self.source) : nil))
+            documents.recordVisit(resolved, source: fileRequest?.source)
         } catch { self.error = error.localizedDescription }
     }
 
@@ -144,13 +162,19 @@ final class RemoteFileBrowser {
             let value = try RemoteFileCommand.parse(data, limit: request.limit, fromEnd: request.fromEnd)
             let actual = RemoteFileCommand.resolvedPath(in: data) ?? request.path
             path = actual; input = actual
-            if case .matches(let paths) = value, paths.count == 1 { open(paths[0], line: targetLine, source: request.source); return }
+            documents.resolveVisit(request.path, to: actual)
+            if case .matches(let paths) = value, paths.count == 1 {
+                documents.resolveVisit(actual, to: paths[0]); open(paths[0], line: targetLine, source: request.source); return
+            }
             content = value
+            modifiedAt = RemoteFileCommand.modifiedAt(in: data)
             switch value {
             case .text, .binary:
                 documents.select(actual, source: request.source)
                 if targetLine != nil { documents.setReading(false) }
+                else if documentAnchor != nil { documents.setReading(true) }
                 if FilePreviewKind(path: actual).isBinary { previewData = RemoteFileCommand.body(in: data) }
+                completedFileReadID = request.id
             default: break
             }
         } catch { content = nil; previewData = nil; self.error = error.localizedDescription }
@@ -162,6 +186,24 @@ final class RemoteFileBrowser {
         guard wasSelected else { return }
         if let next { open(next) }
         else { cancel(); content = nil; previewData = nil; self.path = ""; input = "" }
+    }
+
+    func navigateDocument(_ target: String) {
+        reading.notice = nil
+        switch DocumentLink.resolve(target, relativeTo: path) {
+        case .file(let next, let anchor):
+            if next == path {
+                documentAnchor = anchor ?? ""; documentNavigation += 1; documents.setReading(true)
+            } else { open(next, source: documents.current?.source ?? source, anchor: anchor) }
+        case .web(let url): NSWorkspace.shared.open(url)
+        case .blocked: reading.notice = L("无法打开此文档链接。")
+        }
+    }
+    func navigateHistory(_ delta: Int) {
+        if let visit = documents.historyEntry(delta) {
+            documents.restoreVisit(visit)
+            open(visit.path, source: visit.source, inheritSource: false)
+        }
     }
 
     func selectAdjacentFile(_ delta: Int) {
@@ -620,6 +662,7 @@ struct RemoteFilePanel: View {
     var onAddContext: ((String) -> Void)? = nil
     var onShowDraft: (() -> Void)? = nil
     var contextDestination: String? = nil
+    var documentLibrary: DocumentLibraryActions? = nil
     /// Set where the panel is a sheet of its own. The side panel leaves Escape to
     /// its window, so its close button has no shortcut.
     var closeShortcut: KeyboardShortcut? = nil
@@ -652,14 +695,23 @@ struct RemoteFilePanel: View {
                 FileTabStrip(browser: browser)
                 Divider()
             }
-            HStack(spacing: 10) {
+            HStack(spacing: 6) {
                 Picker("", selection: $browser.mode) {
                     ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 132)
+                }.pickerStyle(.menu).labelsHidden().frame(width: 74)
                     .onChange(of: browser.mode) { _, mode in
                         if mode == .git, browser.gitStatus == nil { browser.loadGitStatus() }
                     }
-                if browser.mode == .file { FileDisplayMode(browser: browser) }
+                if browser.mode == .file {
+                    Button { browser.navigateHistory(-1) } label: { Image(systemName: "chevron.left") }
+                        .disabled(!browser.documents.canGoBack).help("返回上一个文档").accessibilityLabel("返回上一个文档")
+                    Button { browser.navigateHistory(1) } label: { Image(systemName: "chevron.right") }
+                        .disabled(!browser.documents.canGoForward).help("前往下一个文档").accessibilityLabel("前往下一个文档")
+                    FileDisplayMode(browser: browser)
+                    if browser.previewKind == .markdown && browser.documents.current?.reading == true {
+                        DocumentReaderControls(state: browser.reading)
+                    }
+                }
                 Spacer(minLength: 0)
                 if browser.mode == .file {
                     Button { showLocation.toggle() } label: { Image(systemName: "folder") }
@@ -871,6 +923,9 @@ struct RemoteFilePanel: View {
                     }
                 }.padding(WorkbenchTheme.Dialog.padding).frame(width: 640, height: 520)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindDocument"))) { note in
+                if note.object as? RemoteFileBrowser === browser { showFind = true }
+            }
             .sheet(item: $feedbackContext) { draft in
                 let context = draft.context
                 VStack(alignment: .leading, spacing: 12) {
@@ -948,6 +1003,9 @@ struct RemoteFilePanel: View {
     private var fileActions: some View {
         Menu {
             if browser.mode == .file {
+                if let library = documentLibrary, !browser.path.isEmpty, browser.previewKind != .source {
+                    Button(library.pinned ? "取消固定文档" : "固定到项目文档") { library.togglePin() }
+                }
                 if browser.loading { Button("取消") { browser.cancel() } }
                 else { Button("刷新") { browser.open(browser.path, limit: browser.readLimit, fromEnd: browser.readingTail) }.disabled(browser.path.isEmpty) }
                 Button("跳转到行…") { lineInput = browser.targetLine.map(String.init) ?? ""; showLine = true }
@@ -1140,6 +1198,10 @@ struct RemoteFilePanel: View {
                     }
                     if browser.previewKind.isBinary {
                         binaryPreview(size: size)
+                    } else if browser.documents.current?.reading == true && browser.previewKind == .markdown && !browser.readingTail {
+                        DocumentReader(browser: browser, text: text, path: browser.path, onAddContext: onAddContext,
+                                       destination: contextDestination, onShowDraft: onShowDraft,
+                                       onSaveOffset: browser.documents.offsetRecorder()).id(browser.path)
                     } else if browser.documents.current?.reading == true && browser.previewKind != .source && !browser.readingTail {
                         FileContentPreview(kind: browser.previewKind, text: text, data: nil,
                                            revision: browser.fileRequest?.id, path: browser.path,
