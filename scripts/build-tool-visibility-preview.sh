@@ -14,6 +14,7 @@ if [[ "${1:-}" == "--summary-duplicate" ]]; then
 fi
 app_dir="$PWD/build/$app_name.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
@@ -22,7 +23,7 @@ done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ReplySelection.swift Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
+    Sources/AgentWorkbench/CodeHighlighting.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ReplySelection.swift Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/ReplyProcessStyle.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/AttachmentImageDecoder.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift Sources/AgentWorkbench/AutoCompactStore.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/ConversationActivityBar.swift "$fixture" \

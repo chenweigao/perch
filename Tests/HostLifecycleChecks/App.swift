@@ -13,7 +13,25 @@ import WorkbenchCore
             .appendingPathComponent(domain)
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
+        if CommandLine.arguments.contains("preview") {
+            // Interactive fixtures need AppKit's event loop for native window events
+            // and accessibility, unlike the command-line layout checks below.
+            NSApp.setActivationPolicy(.accessory)
+            Task { @MainActor in
+                do { try await checkFileReaderWindow(); NSApp.terminate(nil) }
+                catch { fatalError("File reader preview failed: \(error)") }
+            }
+            NSApp.run()
+            return
+        }
+
         switch CommandLine.arguments[1] {
+        case "code-reader":
+            try await checkCodeReader()
+        case "file-reader":
+            try await checkFileReaderWindow()
+        case "workspace-upgrade":
+            try await checkWorkspaceUpgradeUI()
         case "interactions":
             try await checkDisclosureAndQuestionInteractions()
         case "stream-reveal":

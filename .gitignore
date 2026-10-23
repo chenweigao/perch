@@ -14,3 +14,4 @@ __pycache__/
 .public-export/
 # Fetched and verified by scripts/build.sh; pinned in THIRD_PARTY.md.
 Resources/Mermaid/mermaid.min.js
+Resources/Highlight/highlight.min.js

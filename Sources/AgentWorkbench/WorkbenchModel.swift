@@ -144,7 +144,15 @@ final class WorkbenchModel {
     @ObservationIgnored private var taskEvents = TaskEventTracker()
     @ObservationIgnored private var pendingNotificationID: String?
     var showConversationFind = false
+    var workspaceSearchQuery = ""
+    var workspaceSearchEntryID: String?
     var showSessionSearch = false
+    var projectOverview: SidebarProjectLocation?
+    var outcomePreview: GroupOutcome?
+    var showFollowUps = false
+    var companionShortcutError: String?
+    @ObservationIgnored var followUpLoop: Task<Void, Never>?
+    var followUpNotices: [String] = []
     private(set) var navigation: SessionNavigation {
         get { navigationState.navigation }
         set { navigationState.navigation = newValue }
@@ -152,6 +160,7 @@ final class WorkbenchModel {
     @ObservationIgnored private var navigatingHistory = false
     var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
+    @ObservationIgnored let fileWindow = FileWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac")
         .appendingPathComponent("workspace.json")
@@ -225,6 +234,7 @@ final class WorkbenchModel {
                 guard !self.showDashboard, self.selectedHost != nil else { return }
                 self.showFileViewer = true; self.syncFileViewer()
                 self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
+                self.fileWindow.show(model: self)
             }
         })
         observers.append(NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { [weak self] notice in
@@ -657,6 +667,7 @@ final class WorkbenchModel {
         guard !started else { return }
         if let reference = selectedReference, reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
         started = true
+        startFollowUpLoop()
         for connection in connections {
             if connection.host.autoConnectSSH { connectSSH(connection.id) }
             if connection.host.autoConnectHerdr, connection.host.enabledAgents.contains(.terminal) { connection.connect() }
@@ -1299,8 +1310,9 @@ final class WorkbenchModel {
         return connections.first { $0.id == reference.hostID }?.host
     }
     func toggleFileViewer() {
-        showFileViewer.toggle()
-        if showFileViewer { syncFileViewer() } else { fileBrowser.cancel() }
+        showFileViewer = true
+        syncFileViewer()
+        fileWindow.show(model: self)
     }
     private func syncFileViewer() {
         guard showFileViewer else { return }
@@ -1323,7 +1335,7 @@ final class WorkbenchModel {
         fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: hints)
     }
     func forgetRestoration(_ saved: SavedTerminal) { close(saved.session.id) }
-    private func saveWorkspace() {
+    func saveWorkspace() {
         guard canSaveWorkspace else { return }
         var saved = workspace
         saved.pinned = tabs.ids.filter { $0 != tabs.previewID }.compactMap { id in openedSessions.first { $0.session.id == id } }
@@ -1337,6 +1349,17 @@ final class WorkbenchModel {
                 let detail = String(describing: error)
                 Task { @MainActor in self?.workspaceError = L("工作台保存失败：\(detail)") }
             }
+        }
+    }
+    /// Persist the dispatch intent before allowing any network side effect.
+    func persistFollowUpIntent() throws {
+        guard canSaveWorkspace else { throw WorkbenchError(L("工作台无法保存，托管消息尚未发送。")) }
+        saveWorkspace()
+        try workspaceWriter.flush(workspace)
+    }
+    func notifyInactiveTask(_ rule: FollowUpRule) {
+        if notificationsEnabled && !mutedTasks.contains(rule.session.id) {
+            notifications.postInactivity(id: rule.session.id, title: rule.title)
         }
     }
     private func catalogChanged() {
@@ -1501,6 +1524,8 @@ final class WorkbenchModel {
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        fileWindow.close()
+        followUpLoop?.cancel(); followUpLoop = nil
         conversationPresentations.removeAll()
         try? flushDrafts()
         saveWorkspace()

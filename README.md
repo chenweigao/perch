@@ -27,7 +27,8 @@ presentation only; no private conversations or live command results are shown.
 - **A workspace for your tasks.** Group sessions, pin important work, archive finished conversations and return to your previous workspace.
 - **Know what needs you.** See running tasks, pending questions and results waiting to be read, plus Kimi's subagents (including their own transcripts), background tasks with their output tails, and the session's edit churn (+/− per file) in the activity bar.
 - **Keep your CLI workflow.** Use native chat for supported agents and Ghostty terminals for CLI sessions through Herdr.
-- **Inspect the work.** Open remote files and read Git diffs alongside a conversation (experimental).
+- **Inspect the work.** Read Markdown, source, images, PDF, tables and standalone HTML, then inspect Git changes alongside the conversation (experimental).
+- **Keep projects moving.** Project goals and outcomes, a floating companion, scoped search, revision-bound delivery records and one-time follow-ups. See [workspace workflows](docs/WORKSPACE.md) for limits and background behavior.
 - **Remote execution, local control.** Files and tools run on your server. Closing the Mac app leaves managed remote sessions running.
 - **Explicit permission modes.** Choose adapter-specific defaults and per-task overrides; high-risk modes require confirmation. Kimi, Qoder and Claude Code can change for a later message or turn, while OMP and Codex are fixed when a session is created.
 
@@ -81,7 +82,7 @@ login actions, then lets you browse a remote directory and start your first task
 Kimi's port and token-file path are editable in Advanced settings. Fresh installs
 start without a preset host. See the [setup guide](docs/GETTING-STARTED.md).
 
-`⌘N` new conversation · `⌘K` search · `Return` send · `Shift Return` new line
+`⌘N` new conversation · `⌘K` search · `⌃⌥P` companion · `Return` send · `Shift Return` new line
 
 The interface follows the system language, with 简体中文 and English available
 under Settings → Language; the sidebar and its flows are bilingual first, other
@@ -90,8 +91,7 @@ areas may still mix languages while translations catch up.
 ## Status
 
 Early source preview. Long-session responsiveness and recovery still need work;
-this is not a stable release. Remote file browsing and read-only Git diff are
-experimental. Support varies by agent; check the adapter documentation before
+this is not a stable release. File previews and Git review/write workflows are experimental. Support varies by agent; check the adapter documentation before
 relying on a workflow. Builds use local ad-hoc signing; notarized downloads are
 not available yet.
 

@@ -105,6 +105,11 @@ public struct SavedTerminal: Codable, Equatable, Sendable {
 }
 
 public struct LocalWorkspace: Codable, Equatable, Sendable {
+    public var projectBriefs: [String: ProjectBrief] = [:]
+    public var companionDrafts: [String: String] = [:]
+    public var followedSessions: [SessionReference] = []
+    public var deliveries: [DeliveryRecord] = []
+    public var followUps: [FollowUpRule] = []
     public var groups: [WorkItemGroup] = []
     public var dashboardSeen: [String: DashboardObservation] = [:]
     public var pinned: [SavedTerminal] = []
@@ -124,10 +129,16 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     public var reviewedRevisions: [String: UInt64] = [:]
     public init() {}
     private enum CodingKeys: String, CodingKey {
+        case projectBriefs, followedSessions, deliveries, followUps, companionDrafts
         case dashboardSeen, sessionTitles, groups, pinned, selectedTerminalID, selectedGroupID, reviewedRevisions, destination, reviewedKimiUpdates, lastSessionByGroup, starred, archivedTerminals, autoNamedSessions, sidebarProjectLocations
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        companionDrafts = try values.decodeIfPresent([String: String].self, forKey: .companionDrafts) ?? [:]
+        projectBriefs = try values.decodeIfPresent([String: ProjectBrief].self, forKey: .projectBriefs) ?? [:]
+        followedSessions = try values.decodeIfPresent([SessionReference].self, forKey: .followedSessions) ?? []
+        deliveries = try values.decodeIfPresent([DeliveryRecord].self, forKey: .deliveries) ?? []
+        followUps = try values.decodeIfPresent([FollowUpRule].self, forKey: .followUps) ?? []
         groups = try values.decode([WorkItemGroup].self, forKey: .groups)
         dashboardSeen = try values.decodeIfPresent([String: DashboardObservation].self, forKey: .dashboardSeen) ?? [:]
         pinned = try values.decode([SavedTerminal].self, forKey: .pinned)

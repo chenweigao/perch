@@ -725,7 +725,9 @@ struct SelectableReplyText: NSViewRepresentable {
     var preservesSelectionOnAppend = false
     /// Gutter-style rows opt out of selection.
     var selectable = true
-    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true) {
+    var codeLanguage: String?
+    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true, codeLanguage: String? = nil) {
+        self.codeLanguage = codeLanguage
         self.attributed = attributed
         self.preservesSelectionOnAppend = preservesSelectionOnAppend
         self.selectable = selectable
@@ -759,6 +761,7 @@ struct SelectableReplyText: NSViewRepresentable {
     static func recycle(_ view: ReplyTextView) {
         ReplySelection.shared.forget(view)
         view.delegate = nil
+        view.codeHighlighting?.reset()
         view.setSelectedRange(NSRange(location: 0, length: 0))
         view.update(NSAttributedString(string: ""))
         view.isConversationBodyText = false
@@ -800,7 +803,12 @@ struct SelectableReplyText: NSViewRepresentable {
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }
-    func updateNSView(_ view: ReplyTextView, context: Context) { view.isConversationBodyText = isConversationBodyText; view.isSelectable = selectable; view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend) }
+    func updateNSView(_ view: ReplyTextView, context: Context) {
+        view.isConversationBodyText = isConversationBodyText; view.isSelectable = selectable
+        view.update(attributed, preservingSelectionOnAppend: preservesSelectionOnAppend)
+        if let codeLanguage { view.highlightCode(language: codeLanguage, debounce: true) }
+        else { view.codeHighlighting?.reset() }
+    }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ReplyTextView, context: Context) -> CGSize? {
         nsView.measure(width: proposal.width)
     }
@@ -1113,6 +1121,11 @@ final class NativeAssistantMessageView: NSView {
 }
 
 final class ReplyTextView: NSTextView {
+    var codeHighlighting: CodeHighlightController?
+    func highlightCode(language: String, debounce: Bool = false) {
+        if codeHighlighting == nil { codeHighlighting = CodeHighlightController(view: self) }
+        codeHighlighting?.update(source: string, language: language, debounce: debounce)
+    }
     var isConversationBodyText = false
     /// Extra context-menu items (message-level actions) supplied by the row.
     var extraMenuItems: (() -> [NSMenuItem])?
@@ -1469,6 +1482,7 @@ struct ReplyCopyButton: View {
 /// The code card's scrolling text area, shared by the mermaid card's source view.
 struct ReplyCodeBody: View {
     let source: String
+    var language = ""
     private var lineCount: Int { CodeLineNumbers.count(in: source) }
     var body: some View {
         ReplyHorizontalScroll {
@@ -1479,8 +1493,7 @@ struct ReplyCodeBody: View {
                         .padding(.leading, ReplyStyle.Code.gutterLeading).padding(.trailing, ReplyStyle.Code.gutterTrailing)
                         .padding(.vertical, ReplyStyle.Code.inset)
                 }
-                SelectableReplyText(source, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular),
-                                    lineSpacing: ReplyStyle.codeLineSpacing)
+                SelectableReplyText(attributed: ReplyTextAttributes.code(source), preservesSelectionOnAppend: true, codeLanguage: language)
                     .fixedSize(horizontal: true, vertical: true)
                     .padding(EdgeInsets(top: ReplyStyle.Code.inset, leading: lineCount > 1 ? 0 : ReplyStyle.Code.inset,
                                         bottom: ReplyStyle.Code.inset, trailing: ReplyStyle.Code.inset))
@@ -1502,7 +1515,7 @@ struct ReplyCode: View {
                 ReplyCopyButton(text: source, label: "复制代码")
             }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
             Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
-            ReplyCodeBody(source: source)
+            ReplyCodeBody(source: source, language: language)
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }

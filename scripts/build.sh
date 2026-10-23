@@ -20,6 +20,7 @@ cp "$bin_dir/AgentWorkbench" "$app_dir/Contents/MacOS/AgentWorkbench"
 for bundle in "$bin_dir"/*.bundle; do
     cp -R "$bundle" "$app_dir/Contents/Resources/"
 done
+scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 cp -R "$PWD/Resources/Localization/"*.lproj "$app_dir/Contents/Resources/"
 # mermaid.min.js is not committed (a minified blob trips the source audit);
 # fetch the pinned release on demand and verify its digest. Without it mermaid
@@ -68,6 +69,7 @@ cp .build/checkouts/libghostty-spm/LICENSE "$app_dir/Contents/Resources/Licenses
 cp .build/checkouts/MSDisplayLink/LICENSE "$app_dir/Contents/Resources/Licenses/MSDisplayLink.txt"
 cp .build/checkouts/swift-markdown/LICENSE.txt "$app_dir/Contents/Resources/Licenses/SwiftMarkdown.txt"
 cp .build/checkouts/SwiftMath/LICENSE "$app_dir/Contents/Resources/Licenses/SwiftMath.txt"
+cp Resources/Highlight/LICENSE "$app_dir/Contents/Resources/Licenses/HighlightJS.txt"
 cp Resources/Mermaid/LICENSE "$app_dir/Contents/Resources/Licenses/Mermaid.txt"
 cp .build/checkouts/swift-cmark/COPYING "$app_dir/Contents/Resources/Licenses/SwiftCMark.txt"
 cp THIRD_PARTY.md "$app_dir/Contents/Resources/Licenses/THIRD_PARTY.md"

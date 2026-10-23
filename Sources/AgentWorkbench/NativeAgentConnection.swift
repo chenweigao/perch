@@ -357,6 +357,22 @@ final class NativeAgentConnection {
         return page.messages
     }
 
+    func searchHistory(for id: String) async throws -> HistorySearchWindow {
+        guard online else { throw WorkbenchError(L("需要连接 Agent 才能搜索历史。")) }
+        let token = generation
+        var full: NativeAgentSnapshot = try await request("/sessions/\(id)?turns=50")
+        try Task.checkCancellation()
+        guard token == generation else { throw CancellationError() }
+        while full.hasOlder && full.messages.count < 5000 {
+            guard let window = full.history else { break }
+            let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+            try Task.checkCancellation()
+            guard token == generation else { throw CancellationError() }
+            full = try full.prepending(page)
+        }
+        return HistorySearchWindow(messages: Array(full.messages.suffix(5000)), complete: !full.hasOlder && full.messages.count <= 5000)
+    }
+
     func recapMessages(for id: String) async throws -> [KimiMessage] {
         guard id == selectedID, var full = snapshot, full.id == id,
               !full.busy, full.interactions.isEmpty, full.error == nil, full.completed > 0 else {
@@ -724,6 +740,20 @@ final class NativeAgentConnection {
         // messages still wait for "Resume queued messages".
         if queue.isPaused(reference), !stops.isStopping(reference) { queue.unpause(reference) }
         deliver(id)
+    }
+    /// Explicit text from the companion or a saved follow-up. Keep the draft,
+    /// attachments, model and permission selections untouched.
+    func enqueueFollowUp(_ text: String, for id: String, messageID: String) -> Bool {
+        guard online, let reference = reference(id), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if queue.allItems.contains(where: { $0.id == messageID }) { return true }
+        guard queue.enqueue(text, for: reference, mode: .nextTurn, id: messageID) != nil else { return false }
+        do { try flushDrafts() }
+        catch {
+            _ = queue.remove(messageID)
+            draftSaveError = error.localizedDescription
+            return false
+        }
+        deliver(id); return true
     }
     private func deliver(_ id: String) {
         guard online, !sendingSessions.contains(id), let reference = reference(id) else { return }

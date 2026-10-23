@@ -6,6 +6,9 @@ struct ConversationFindBar: View {
     let kimi: KimiConnection
     let native: NativeAgentConnection
     @State private var query = ""
+    @State private var pendingSearchSession: SessionReference?
+    @State private var pendingSearchEntry: String?
+    @State private var requestedSearchHistory = false
     @State private var options = ConversationFindOptions()
     @State private var index = 0
     @State private var result = ConversationFindResult.empty
@@ -28,9 +31,11 @@ struct ConversationFindBar: View {
             if hits.indices.contains(index) { Text(hits[index].excerpt).lineLimit(2).textSelection(.enabled).foregroundStyle(.secondary) }
             if hasOlder { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
         }.font(.system(size: 12)).padding(10).background(.regularMaterial)
-            .onAppear { focused = true; updateSearch() }
+            .onAppear { focused = true; consumeWorkspaceSearch(); updateSearch(); locateWorkspaceResult() }
             .onChange(of: model.selectedReference) { old, _ in if let old { sessionChanged(from: old) } }
-            .onChange(of: messages) { _, _ in updateSearch() }
+            .onChange(of: model.workspaceSearchEntryID) { _, entry in if entry != nil { consumeWorkspaceSearch(); updateSearch(); locateWorkspaceResult() } }
+            .onChange(of: messages) { _, _ in updateSearch(); locateWorkspaceResult() }
+            .onChange(of: hasOlder) { _, _ in locateWorkspaceResult() }
             .onChange(of: running) { _, _ in updateSearch() }
             .onChange(of: hits.count) { _, count in index = min(index, max(0, count - 1)) }
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindNext"))) { notice in move(notice.object as? Int ?? 1) }
@@ -90,6 +95,7 @@ struct ConversationFindBar: View {
     /// Switching sessions resets the bar and clears highlights left behind in
     /// the outgoing session's transcript.
     private func sessionChanged(from old: SessionReference) {
+        if pendingSearchSession != model.selectedReference { pendingSearchEntry = nil; pendingSearchSession = nil }
         let kind = old.kind == .kimi ? "kimi" : "native"
         let oldKey = "\(old.hostID.uuidString):\(kind):\(old.terminalID)"
         let clear = ConversationHighlightUpdate(session: oldKey, query: "", options: ConversationFindOptions())
@@ -104,6 +110,22 @@ struct ConversationFindBar: View {
         // Loading older messages inserts matches before the current one.
         // Keep the user's match selected instead of changing it by array index.
         index = current.flatMap { id in hits.firstIndex { $0.id == id } } ?? min(index, max(0, hits.count - 1))
+    }
+    private func consumeWorkspaceSearch() {
+        guard !model.workspaceSearchQuery.isEmpty else { return }
+        query = model.workspaceSearchQuery; pendingSearchEntry = model.workspaceSearchEntryID
+        pendingSearchSession = model.selectedReference
+        requestedSearchHistory = false
+        model.workspaceSearchQuery = ""; model.workspaceSearchEntryID = nil
+    }
+    private func locateWorkspaceResult() {
+        guard let entry = pendingSearchEntry, pendingSearchSession == model.selectedReference else { return }
+        if let found = hits.firstIndex(where: { $0.entryID == entry }) {
+            index = found; reveal(); publishHighlight(); pendingSearchEntry = nil
+        } else if hasOlder && !loadingOlder && !requestedSearchHistory {
+            requestedSearchHistory = true
+            if model.showKimi { kimi.loadAllHistoryForSearch() } else { native.loadAllHistoryForSearch() }
+        }
     }
     private func close() {
         model.showConversationFind = false
