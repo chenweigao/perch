@@ -1,0 +1,17 @@
+{
+  "threadId": "native-thread-1",
+  "input": [
+    {
+      "type": "text",
+      "text": "shell 元字符 $VAR `whoami` && rm -rf / \"引号\" 'single' 中文 🚀 C:\\路径 空格"
+    }
+  ],
+  "clientUserMessageId": "req-send-1",
+  "approvalPolicy": "on-request",
+  "approvalsReviewer": "user",
+  "sandboxPolicy": {
+    "type": "workspaceWrite"
+  },
+  "model": "gpt-5-codex",
+  "effort": "medium"
+}
