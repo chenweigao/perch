@@ -20,6 +20,10 @@ final class RemoteSetupController: ObservableObject {
     @Published var enabledAgents: Set<SessionKind>
     @Published var port: String
     @Published var tokenPath: String
+    /// Perch starts this host's Kimi Web and restarts it once idle after an upgrade.
+    @Published var kimiManaged: Bool
+    /// Extra launch environment for that instance, as `NAME=value` entries.
+    @Published var kimiEnvironment: String
     @Published var directory = ""
     @Published var modelID = ""
     @Published private(set) var models: [ModelOption] = []
@@ -51,15 +55,21 @@ final class RemoteSetupController: ObservableObject {
         provider = host?.enabledAgents.first ?? .kimi
         enabledAgents = Set(host?.enabledAgents ?? [])
         port = String(host?.kimiPort ?? 58627); tokenPath = host?.kimiTokenPath ?? "~/.kimi-code/server.token"
+        kimiManaged = host?.kimiManaged ?? false
+        kimiEnvironment = RemoteSetup.formatKimiEnvironment(host?.kimiEnvironment ?? [:])
         let config = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh/config")
         if let text = try? String(contentsOf: config, encoding: .utf8) { aliases = RemoteSetup.sshAliases(text) }
     }
     var host: SSHHost {
-        SSHHost(id: hostID, name: name.isEmpty ? destination : name, destination: destination,
-                enabledAgents: RemoteSetup.agents.filter { enabledAgents.contains($0) || $0 == provider },
-                kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath,
-                autoConnectSSH: original?.autoConnectSSH ?? true,
-                autoConnectHerdr: original?.autoConnectHerdr ?? true)
+        var result = SSHHost(id: hostID, name: name.isEmpty ? destination : name, destination: destination,
+                             enabledAgents: RemoteSetup.agents.filter { enabledAgents.contains($0) || $0 == provider },
+                             kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath,
+                             autoConnectSSH: original?.autoConnectSSH ?? true,
+                             autoConnectHerdr: original?.autoConnectHerdr ?? true)
+        result.kimiManaged = kimiManaged
+        // An unparsable entry is reported by the agent check, which a save requires.
+        result.kimiEnvironment = (try? RemoteSetup.parseKimiEnvironment(kimiEnvironment)) ?? original?.kimiEnvironment ?? [:]
+        return result
     }
     var needsBridge: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider) }
     var canContinue: Bool { ready && !busy }
@@ -162,11 +172,11 @@ final class RemoteSetupController: ObservableObject {
     private func mark(_ id: String, _ status: Status, _ detail: String = "") {
         if let index = checks.firstIndex(where: { $0.id == id }) { checks[index].status = status; checks[index].detail = detail }
     }
-    private func awaitConnection(allowRetries: Bool = false, online: () -> Bool, error: () -> String?) async throws {
-        for _ in 0..<350 {
+    private func awaitConnection(seconds: Int = 35, online: () -> Bool, error: () -> String?) async throws {
+        for _ in 0..<(seconds * 10) {
             try Task.checkCancellation()
             if online() { return }
-            if !allowRetries, let error = error() { throw WorkbenchError(error) }
+            if let error = error() { throw WorkbenchError(error) }
             try await Task.sleep(for: .milliseconds(100))
         }
         if let error = error() { throw WorkbenchError(error) }
@@ -177,6 +187,7 @@ final class RemoteSetupController: ObservableObject {
         run {
             self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
             try RemoteSetup.validate(self.host)
+            if self.provider == .kimi { _ = try RemoteSetup.parseKimiEnvironment(self.kimiEnvironment) }
             self.checks = [Check(id: "runtime", title: L("运行环境")), Check(id: "service", title: L("服务连接")), Check(id: "models", title: L("模型与登录"))]
             defer { if !Task.isCancelled { self.disconnectProbes() } }
             if self.provider == .kimi { try await self.checkKimi() }
@@ -215,13 +226,18 @@ final class RemoteSetupController: ObservableObject {
             throw WorkbenchError(L("无法识别远端 Kimi 检查结果。请在终端运行 kimi --version。"))
         }
     }
-    private func checkKimiServiceAndModels(allowRetries: Bool = false) async throws {
+    private func checkKimiServiceAndModels() async throws {
         mark("service", .checking)
-        hint = L("正在连接 Kimi Web；已有服务请核对高级设置中的端口与令牌路径。")
+        hint = host.kimiManaged ? L("正在准备由 Perch 托管的 Kimi Web；远端需要 Python 3。")
+            : L("正在连接 Kimi Web；已有服务请核对高级设置中的端口与令牌路径。")
         let connection = KimiConnection(setupHost: host); kimi = connection; connection.connect()
-        try await awaitConnection(allowRetries: allowRetries, online: { connection.online }, error: { connection.error })
-        mark("service", .passed, "127.0.0.1:\(host.kimiPort)")
-        reportKimiProcess(running: connection.runtime)
+        // Replacing an idle outdated managed instance first waits for its shutdown.
+        let seconds = host.kimiManaged ? Int(RemoteSetup.kimiEnsureTimeout) + 10 : 35
+        try await awaitConnection(seconds: seconds, online: { connection.online }, error: { connection.error })
+        let service = connection.managedService
+        let address = "127.0.0.1:\(service?.port ?? host.kimiPort)"
+        mark("service", .passed, service?.owned == true ? address + " · " + L("由 Perch 托管") : address)
+        reportKimiProcess(running: connection.runtime, managed: service)
         mark("models", .checking)
         models = ModelCatalog.options(connection.models)
         hint = L("在远端 Kimi 中完成登录并配置模型，然后重新检查。")
@@ -232,15 +248,27 @@ final class RemoteSetupController: ObservableObject {
     }
     /// Holds the version of the process serving the connection against the package
     /// on disk. A `kimi web` started before an upgrade keeps running the old code,
-    /// so this row is informational and never blocks the wizard: Perch does not
-    /// stop someone else's running service.
-    private func reportKimiProcess(running: RunningRuntime) {
+    /// so this row is informational and never blocks the wizard. Perch restarts only
+    /// the instance it manages, once idle; someone else's service gets manual steps.
+    private func reportKimiProcess(running: RunningRuntime, managed: KimiServiceEndpoint?) {
         checks.removeAll { $0.id == "process" }
+        if let managed, managed.owned {
+            if let notice = RuntimeVersion.managedNotice(managed) {
+                let title = managed.restartReason == .settings ? L("Kimi Web 配置待生效") : L("Kimi 更新待生效")
+                checks.append(Check(id: "process", title: title, status: .information, detail: notice))
+                return
+            }
+            var detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
+            if managed.replaced { detail = detail.isEmpty ? L("Perch 已自动重启 Kimi Web") : L("Perch 已自动重启 Kimi Web") + " · " + detail }
+            if !detail.isEmpty { checks.append(Check(id: "process", title: L("运行进程"), status: .information, detail: detail)) }
+            return
+        }
         let freshness = RuntimeVersion.compare(installed: kimiInstalledVersion, running: running.version)
-        let detail: String
+        var detail: String
         switch freshness {
         case .stale(let onDisk, let serving):
             detail = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+            if managed != nil { detail += "\n" + RuntimeVersion.foreignServiceNote() }
         case .current, .unknown:
             detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
         }
@@ -378,17 +406,20 @@ final class RemoteSetupController: ObservableObject {
             self.verifiedDirectory = self.directory; self.hint = ""
         }
     }
+    /// A Kimi Web Perch starts is Perch's to manage: connecting with managed mode starts
+    /// it through the service script, which records it as Perch's own.
     func startKimi() {
         awaitingInstallCheck = false
+        kimiManaged = true
         run {
             self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
             try RemoteSetup.validate(self.host)
+            _ = try RemoteSetup.parseKimiEnvironment(self.kimiEnvironment)
             defer { if !Task.isCancelled { self.disconnectProbes() } }
-            let runtime = try await self.checkKimiRuntime()
+            _ = try await self.checkKimiRuntime()
             self.hint = L("正在启动并连接 Kimi Web。")
-            _ = try await self.ssh(RemoteSetup.kimiStartCommand(binaryPath: runtime.path, port: self.host.kimiPort))
-            try Task.checkCancellation()
-            try await self.checkKimiServiceAndModels(allowRetries: true)
+            // The service script returns once the instance it started answers.
+            try await self.checkKimiServiceAndModels()
             try Task.checkCancellation()
             self.ready = true
         }

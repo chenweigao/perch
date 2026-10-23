@@ -16,8 +16,9 @@ public enum LocalAgentRuntime {
         guard FileManager.default.fileExists(atPath: script.path) else {
             throw WorkbenchError(L("本机服务组件缺失，请重新构建应用。"))
         }
+        // Kimi may first replace an idle outdated instance Perch started, which waits for its shutdown.
         return try await SetupCommandRunner.run("/usr/bin/python3",
             [script.path, "--agent", kind.rawValue, "--binary", binary, "--port", String(host.kimiPort)],
-            timeout: 20, environment: LocalAgentDiscovery.environment)
+            timeout: kind == .kimi ? RemoteSetup.kimiEnsureTimeout : 20, environment: LocalAgentDiscovery.environment)
     }
 }

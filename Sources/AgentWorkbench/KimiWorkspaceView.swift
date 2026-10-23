@@ -77,8 +77,8 @@ struct KimiWorkspaceView: View {
             if let problem = connection.error, connection.online || connection.conversation == nil {
                 ConversationNotice(text: L("连接中断，显示的是最近同步的内容。") + "\n" + problem, symbol: "wifi.exclamationmark")
             }
-            // An upgraded package with an older service still running. Informational:
-            // the session keeps working, and restarting that service stays the user's call.
+            // An upgraded package with an older service still running. Informational: the
+            // session keeps working. Perch restarts only the Kimi Web it started, once idle.
             if let notice = connection.staleRuntimeNotice {
                 ConversationNotice(text: notice, symbol: "info.circle", tint: .secondary)
             }

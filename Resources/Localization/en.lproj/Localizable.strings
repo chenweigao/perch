@@ -849,7 +849,6 @@
 
 "未找到可用的本机 Agent，请重新检测。" = "No usable local agent found. Scan again.";
 
-"本机服务未返回连接信息" = "The local service did not return connection details.";
 
 "本机服务组件缺失，请重新构建应用。" = "Local service resources are missing. Rebuild the app.";
 
@@ -1664,3 +1663,22 @@
 /* Frame-hitch diagnostics (2026-10-20) */
 "注入一次 120ms 卡顿（校验）" = "Inject one 120 ms stall (calibration)";
 "开启后记录正文渲染各阶段耗时与掉帧，以及掉帧期间主线程上的工作，并发送 Instruments 的 Points of Interest signpost。复现卡顿：开启后在一段真实的长对话里滚动，直到出现卡顿，再导出诊断报告。校验按钮让主线程停顿 120ms，报告中应出现一次 calibration_stall。报告不含消息内容；关闭即清空并停止记录。" = "While on, Perch records per-stage reply rendering costs, dropped frames and the main-thread work during each one, and emits Instruments Points of Interest signposts. To capture jank, turn this on, scroll a real long conversation until it stutters, then export the report. The calibration button stalls the main thread for 120 ms; the report should then show one calibration_stall hitch. Reports contain no message text; turning this off clears and stops recording.";
+
+/* Managed Kimi Web (2026-10-22) */
+"由 Perch 托管 Kimi Web" = "Let Perch manage Kimi Web";
+"启动环境变量" = "Launch environment";
+"托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。" = "When managed, Perch starts the service if it is not running, and restarts it automatically once every session is idle after a Kimi upgrade or a change to its launch settings. Perch only restarts a Kimi Web it started.";
+"由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它。" = "A Kimi Web started by Perch is managed by Perch: after a Kimi upgrade, Perch restarts it automatically once every session is idle.";
+"由 Perch 托管" = "managed by Perch";
+"正在准备由 Perch 托管的 Kimi Web；远端需要 Python 3。" = "Preparing the Kimi Web managed by Perch; the remote needs Python 3.";
+"Kimi Web 配置待生效" = "Kimi Web settings pending restart";
+"Perch 已自动重启 Kimi Web" = "Perch restarted Kimi Web automatically";
+"Kimi Web 环境变量 %@ 无效。" = "Kimi Web environment variable %@ is invalid.";
+"环境变量须写成 NAME=value，名称只含英文字母、数字和下划线且不以数字开头：%@" = "Write each environment variable as NAME=value. Names use only ASCII letters, digits and underscores, and do not start with a digit: %@";
+"托管的 Kimi Web 未返回连接信息。" = "The managed Kimi Web returned no connection details.";
+"此构建缺少 Kimi Web 托管组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build lacks the Kimi Web management component. Use the Perch.app packaged by scripts/build.sh.";
+"这个 Kimi Web 不是 Perch 启动的，Perch 不会重启它；停止它后，Perch 会在重新连接时接管。" = "This Kimi Web was not started by Perch, so Perch will not restart it. Once it stops, Perch takes over when it reconnects.";
+"Kimi %@ 已安装，当前仍使用 %@，可以继续使用。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@ and keeps working. Sessions still running: %3$@. Once all are idle, Perch restarts Kimi Web automatically.";
+"Kimi %@ 已安装，当前仍使用 %@。Perch 无法确认服务空闲，或重启后版本仍未变化，因此不会自动重启；请在这台机器上手动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@. Perch cannot confirm the service is idle, or a restart left the version unchanged, so it will not restart it automatically. Restart Kimi Web on that machine by hand.";
+"Perch 无法确认 Kimi Web 是否空闲，暂不自动重启。可以在这台机器上手动重启 Kimi Web。" = "Perch cannot confirm that Kimi Web is idle, so it will not restart it automatically for now. You can restart Kimi Web on that machine by hand.";
+"Kimi Web 的启动配置已修改。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启它，新配置随之生效。" = "Kimi Web's launch settings changed. Sessions still running: %@. Once all are idle, Perch restarts it automatically and the new settings take effect.";

@@ -10,6 +10,11 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
     public var kimiPort: Int
     public var kimiTokenPath: String
     public var localAgentPaths: [String: String] = [:]
+    /// Perch starts this host's Kimi Web and may restart that instance, and only that
+    /// instance, once every session in it is idle.
+    public var kimiManaged = false
+    /// Extra environment for the Kimi Web instance Perch starts on this host.
+    public var kimiEnvironment: [String: String] = [:]
     public var isLocal: Bool { id == ExecutionEnvironment.localHostID }
 
     public init(id: UUID = UUID(), name: String, destination: String,
@@ -20,7 +25,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         self.autoConnectSSH = autoConnectSSH; self.autoConnectHerdr = autoConnectHerdr
         self.enabledAgents = enabledAgents; self.kimiPort = kimiPort; self.kimiTokenPath = kimiTokenPath
     }
-    enum CodingKeys: String, CodingKey { case id, name, destination, enabledAgents, kimiPort, kimiTokenPath, autoConnectSSH, autoConnectHerdr, localAgentPaths }
+    enum CodingKeys: String, CodingKey { case id, name, destination, enabledAgents, kimiPort, kimiTokenPath, autoConnectSSH, autoConnectHerdr, localAgentPaths, kimiManaged, kimiEnvironment }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -33,6 +38,9 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         localAgentPaths = try c.decodeIfPresent([String: String].self, forKey: .localAgentPaths) ?? [:]
         kimiPort = try c.decodeIfPresent(Int.self, forKey: .kimiPort) ?? 58627
         kimiTokenPath = try c.decodeIfPresent(String.self, forKey: .kimiTokenPath) ?? "~/.kimi-code/server.token"
+        // Hosts saved before managed mode keep connecting to the service the user runs.
+        kimiManaged = try c.decodeIfPresent(Bool.self, forKey: .kimiManaged) ?? false
+        kimiEnvironment = try c.decodeIfPresent([String: String].self, forKey: .kimiEnvironment) ?? [:]
     }
     public var hasNativeAgents: Bool { enabledAgents.contains { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) } }
     /// Inert view state for an empty workspace; never listed, saved or connected.

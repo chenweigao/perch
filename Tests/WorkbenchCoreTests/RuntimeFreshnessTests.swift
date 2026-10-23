@@ -25,6 +25,25 @@ func checkRuntimeFreshness() throws {
     let notice = RuntimeVersion.staleNotice(agent: "Kimi", installed: "2.1.0", running: "2.0.2")
     precondition(notice.contains("Kimi") && notice.contains("2.1.0") && notice.contains("2.0.2"))
 
+    // Perch's own Kimi Web: silent unless a restart waits, then says what it waits for.
+    let current = KimiServiceEndpoint(port: 58627, token: "t", owned: true, installedVersion: "2.3.0", runningVersion: "2.3.0")
+    precondition(RuntimeVersion.managedNotice(current) == nil)
+    let foreign = KimiServiceEndpoint(port: 58627, token: "t", restartReason: .update, restartPending: 2)
+    precondition(RuntimeVersion.managedNotice(foreign) == nil, "only Perch's own instance is restarted")
+    let busy = KimiServiceEndpoint(port: 58627, token: "t", owned: true, installedVersion: "2.4.0", runningVersion: "2.3.0",
+                                   restartReason: .update, restartPending: 3)
+    let waiting = RuntimeVersion.managedNotice(busy) ?? ""
+    precondition(waiting.contains("2.4.0") && waiting.contains("2.3.0") && waiting.contains("3"))
+    let unknown = KimiServiceEndpoint(port: 58627, token: "t", owned: true, installedVersion: "2.4.0", runningVersion: "2.3.0",
+                                      restartReason: .update, restartPending: -1)
+    let manual = RuntimeVersion.managedNotice(unknown) ?? ""
+    precondition(manual.contains("2.4.0") && manual != waiting)
+    let settings = KimiServiceEndpoint(port: 58627, token: "t", owned: true, installedVersion: "2.3.0", runningVersion: "2.3.0",
+                                       restartReason: .settings, restartPending: 1)
+    let configured = RuntimeVersion.managedNotice(settings) ?? ""
+    precondition(!configured.isEmpty && !configured.contains("2.3.0") && configured.contains("1"))
+    precondition(!RuntimeVersion.foreignServiceNote().isEmpty)
+
     // Start timestamps: fractional seconds, `Z` and both offset spellings parse.
     precondition(RuntimeVersion.startDate("2026-09-28T03:20:42.196Z") != nil)
     precondition(RuntimeVersion.startDate("2026-09-28T11:20:42+08:00") != nil)
@@ -57,5 +76,5 @@ func checkRuntimeFreshness() throws {
     precondition(trimmed.runtime.version == nil && trimmed.runtime.startedAt == nil)
     precondition(RuntimeVersion.compare(installed: "2.0.2", running: trimmed.runtime.version) == .unknown)
 
-    print("PASS: version parsing, installed/serving comparison, stale notice, start timestamps and meta decoding")
+    print("PASS: version parsing, installed/serving comparison, stale and managed notices, start timestamps and meta decoding")
 }
