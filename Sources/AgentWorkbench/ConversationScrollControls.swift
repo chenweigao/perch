@@ -146,7 +146,10 @@ struct ConversationScrollView<Content: View>: View {
                     .environment(\.conversationViewport, conversationViewport)
                     .padding(.vertical, 12)
                     .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 2 * ReplyStyle.horizontalPadding)), alignment: .leading)
-                    .padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity)
+                    // A legacy vertical scroller consumes clip width. Keep the
+                    // reading column centered with the composer in the outer viewport;
+                    // the scroller fits in its trailing reading margin.
+                    .padding(.horizontal, ReplyStyle.horizontalPadding).frame(width: viewport.size.width)
                     .coordinateSpace(name: "conversation-content")
                     .background {
                         ConversationScrollObserver(onScroll: { following in

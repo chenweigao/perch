@@ -273,36 +273,39 @@ import WorkbenchCore
                  "The transcript and composer shift together")
     click(1200 - 32, 22, in: page)
     try await Task.sleep(for: .milliseconds(150))
-    for (width, height): (CGFloat, CGFloat) in [(1200, 780), (1100, 780), (1056, 780), (1055, 780), (600, 500), (800, 780), (800, 500)] {
-        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-            page.setContentSize(NSSize(width: width, height: height))
-            page.appearance = NSAppearance(named: appearance)
-            try await Task.sleep(for: .milliseconds(200))
-            page.displayIfNeeded()
-            precondition(page.contentView!.bounds.size == NSSize(width: width, height: height),
-                         "The fixture must exercise the requested viewport: \(width)x\(height), actual=\(page.contentView!.bounds.size)")
-            let frames = horizontalFrames()
-            precondition(abs(frames.reading.width - min(680, width - 72)) < 1,
-                         "Context must not squeeze the actual reading column at \(width): \(frames.reading)")
-            precondition(abs(frames.reading.midX - frames.editor.midX) < 1,
-                         "Transcript and composer must remain aligned")
-            if width < 1056 {
-                precondition(abs(contentView!.bounds.width - width) < 1 && abs(frames.reading.midX - width / 2) < 1)
-                let text = descendants(readingColumn()).compactMap { $0 as? ReplyTextView }
-                    .first { !$0.visibleRect.isEmpty }!
-                let point = text.convert(NSPoint(x: text.visibleRect.minX + 8, y: text.visibleRect.minY + 8),
-                                         to: page.contentView!.superview)
-                let target = page.contentView!.hitTest(point)
-                // Native block padding may hit its stack rather than NSTextView;
-                // either must remain inside the transcript, never the context strip.
-                precondition(target?.isDescendant(of: readingColumn()) == true,
-                             "Compact context must leave the transcript available to pointer input: width=\(width), target=\(String(describing: target))")
-            }
-            if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
-               let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-                view.cacheDisplay(in: view.bounds, to: bitmap)
-                try bitmap.representation(using: .png, properties: [:])?.write(to:
-                    URL(fileURLWithPath: directory).appendingPathComponent("layout-\(Int(width))-\(Int(height))-\(appearance == .aqua ? "light" : "dark").png"))
+    for scrollerStyle in [NSScroller.Style.overlay, .legacy] {
+        for scroll in scrollViews(page.contentView!) { scroll.scrollerStyle = scrollerStyle }
+        for (width, height): (CGFloat, CGFloat) in [(1200, 780), (1100, 780), (1056, 780), (1055, 780), (600, 500), (800, 780), (800, 500)] {
+            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                page.setContentSize(NSSize(width: width, height: height))
+                page.appearance = NSAppearance(named: appearance)
+                try await Task.sleep(for: .milliseconds(200))
+                page.displayIfNeeded()
+                precondition(page.contentView!.bounds.size == NSSize(width: width, height: height),
+                             "The fixture must exercise the requested viewport: \(width)x\(height), actual=\(page.contentView!.bounds.size)")
+                let frames = horizontalFrames()
+                precondition(abs(frames.reading.width - min(680, width - 72)) < 1,
+                             "Context must not squeeze the actual reading column at \(width): \(frames.reading)")
+                precondition(abs(frames.reading.midX - frames.editor.midX) < 1,
+                             "Transcript and composer must remain aligned: viewport=\(width)x\(height), appearance=\(appearance), scrollers=\(scrollerStyle), reading=\(frames.reading), editor=\(frames.editor)")
+                if width < 1056 {
+                    precondition(abs(contentView!.bounds.width - width) < 1 && abs(frames.reading.midX - width / 2) < 1)
+                    let text = descendants(readingColumn()).compactMap { $0 as? ReplyTextView }
+                        .first { !$0.visibleRect.isEmpty }!
+                    let point = text.convert(NSPoint(x: text.visibleRect.minX + 8, y: text.visibleRect.minY + 8),
+                                             to: page.contentView!.superview)
+                    let target = page.contentView!.hitTest(point)
+                    // Native block padding may hit its stack rather than NSTextView;
+                    // either must remain inside the transcript, never the context strip.
+                    precondition(target?.isDescendant(of: readingColumn()) == true,
+                                 "Compact context must leave the transcript available to pointer input: width=\(width), target=\(String(describing: target))")
+                }
+                if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
+                   let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                    view.cacheDisplay(in: view.bounds, to: bitmap)
+                    try bitmap.representation(using: .png, properties: [:])?.write(to:
+                        URL(fileURLWithPath: directory).appendingPathComponent("layout-\(Int(width))-\(Int(height))-\(appearance == .aqua ? "light" : "dark").png"))
+                }
             }
         }
     }
