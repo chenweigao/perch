@@ -55,6 +55,11 @@ import WorkbenchCore
     model.fileBrowser.open(file.path)
     try await settle()
     precondition(model.fileBrowser.documents.selected == file.path)
+    // AppKit constrains restored frames to the screen; CI has a 1024pt display.
+    // Verify persistence with a non-default size that fits, after the wide layout checks.
+    window.setContentSize(NSSize(width: 720, height: 500))
+    window.center()
+    try await Task.sleep(for: .milliseconds(100))
     model.fileWindow.close()
     precondition(model.fileWindow.window == nil && !model.showFileViewer && model.fileBrowser.fileRequest == nil,
                  "Closing the native reader must cancel its page read and clear presentation state")
@@ -63,7 +68,7 @@ import WorkbenchCore
     model.fileWindow.show(model: model)
     try await settle()
     precondition(model.fileBrowser.documents.tabs.count == 2, "Closing and reopening must preserve file tabs")
-    precondition(abs(model.fileWindow.window!.contentView!.bounds.width - 1100) < 1,
+    precondition(abs(model.fileWindow.window!.contentView!.bounds.width - 720) < 1,
                  "The native reader must restore its resized width, got \(model.fileWindow.window!.contentView!.bounds.width)")
     print("PASS: native file window, 480/720/1100 light/dark widths, chrome <100pt, selection, tabs, close cancellation and restored frame")
     fflush(stdout)
