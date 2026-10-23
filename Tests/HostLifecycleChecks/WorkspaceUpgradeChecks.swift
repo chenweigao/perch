@@ -24,6 +24,15 @@ import WorkbenchCore
     precondition(browser.path == b.path && browser.documents.selected == b.path && !browser.loading)
     browser.open(a.path)
     await browser.loadFile(browser.fileRequest!)
+    browser.open(b.path)
+    let closing = browser.fileRequest!
+    browser.closeFile(b.path)
+    await browser.loadFile(closing)
+    precondition(browser.path == a.path && browser.content == nil && browser.loading,
+                 "Closing a pending tab must discard its late response")
+    await browser.loadFile(browser.fileRequest!)
+    browser.open(b.path); await browser.loadFile(browser.fileRequest!)
+    browser.open(a.path); await browser.loadFile(browser.fileRequest!)
     let recorder = browser.documents.offsetRecorder()
     recorder(123)
     browser.documents.setReading(false)

@@ -40,7 +40,11 @@ import WorkbenchCore
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.minSize = NSSize(width: 340, height: 400)
             panel.setFrameAutosaveName("PerchCompanion")
-            panel.contentViewController = NSHostingController(rootView: CompanionView(model: model, openMain: { [weak self] in self?.showMain() }))
+            let hosting = NSHostingController(rootView: CompanionView(model: model, openMain: { [weak self] in self?.showMain() }))
+            hosting.sizingOptions = [.minSize]
+            panel.contentViewController = hosting
+            panel.setContentSize(NSSize(width: 420, height: 560))
+            panel.setFrameUsingName("PerchCompanion")
             self.panel = panel
         }
         panel?.makeKeyAndOrderFront(nil)
@@ -73,7 +77,12 @@ struct CompanionView: View {
     @State private var notice = ""
     private var items: [WorkspaceSession] {
         let followed = Set(model.workspace.followedSessions)
-        return model.allSessions.filter { !$0.archived && followed.contains($0.reference) }
+        return model.allSessions.filter { !$0.archived && followed.contains($0.reference) }.sorted {
+            let left = workspaceTaskPriority($0), right = workspaceTaskPriority($1)
+            if left != right { return left < right }
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return $0.id < $1.id
+        }
     }
     private var selected: WorkspaceSession? { items.first { $0.reference == target } }
     var body: some View {
@@ -89,6 +98,9 @@ struct CompanionView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(items) { item in
+                            if items.first(where: { workspaceTaskPriority($0) == workspaceTaskPriority(item) })?.id == item.id {
+                                Text(sectionTitle(item)).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                            }
                             Button { target = item.reference; notice = "" } label: {
                                 VStack(alignment: .leading, spacing: 5) {
                                     HStack {
@@ -96,10 +108,12 @@ struct CompanionView: View {
                                         Text(item.title).lineLimit(2); Spacer()
                                         if target == item.reference { Image(systemName: "checkmark") }
                                     }
-                                    Text("\(item.hostName) · \(item.online ? L(key: item.section.rawValue) : L("状态未同步"))").foregroundStyle(.secondary)
-                                    if !item.detail.isEmpty { Text(item.detail).lineLimit(3).foregroundStyle(.secondary) }
+                                    if !item.online { Text("状态未同步").foregroundStyle(.secondary) }
+                                    if !item.detail.isEmpty && (item.section == .attention || target == item.reference) {
+                                        Text(item.detail).lineLimit(2).foregroundStyle(.secondary)
+                                    }
                                 }.font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8).contentShape(Rectangle())
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.plain).help("\(item.hostName) · \(item.directory)")
                             Divider()
                         }
                     }
@@ -135,4 +149,14 @@ struct CompanionView: View {
             .onAppear { if target == nil { target = items.first?.reference } }
             .onChange(of: items.map(\.reference)) { _, references in if target.map(references.contains) != true { target = references.first } }
     }
+    private func sectionTitle(_ item: WorkspaceSession) -> LocalizedStringKey {
+        switch workspaceTaskPriority(item) {
+        case 0: return "需要你处理"
+        case 1: return "结果待查看"
+        case 2: return "进行中"
+        case 4: return "状态未同步"
+        default: return "其他关注"
+        }
+    }
+
 }

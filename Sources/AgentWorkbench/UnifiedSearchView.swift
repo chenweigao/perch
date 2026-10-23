@@ -71,21 +71,58 @@ struct UnifiedSearchView: View {
     @State private var query = ""
     @State private var scope = "会话"
     @State private var projectID = ""
+    @State private var selection: String?
+    @FocusState private var focused: Bool
     @State private var state = WorkspaceSearchState()
     @State private var request: Request?
-    @State private var filePreview: GroupOutcome?
-    @State private var filePreviewLine: Int?
     struct Request: Equatable {
         let id = UUID(); let query: String; let scope: String; let location: SidebarProjectLocation?; let sessions: [WorkspaceSession]
     }
+    private struct Result: Identifiable {
+        enum Destination { case session(WorkspaceSession), history(WorkspaceSearchState.Hit), outcome(GroupOutcome), file(ProjectFileSearchResult.Hit) }
+        let id: String
+        let title: String
+        let detail: String
+        let enabled: Bool
+        let destination: Destination
+    }
     private var location: SidebarProjectLocation? { model.workbenchProjects.first { $0.id == projectID }?.location }
     private var scopedSessions: [WorkspaceSession] { location.map { model.projectSessions($0) } ?? model.allSessions }
+    private func results(sessions: [WorkspaceSession]) -> [Result] {
+        switch scope {
+        case "会话": return sessions.map {
+            Result(id: $0.id, title: $0.title, detail: "\($0.hostName) · \($0.directory)", enabled: $0.online && !$0.archived, destination: .session($0))
+        }
+        case "历史": return state.hits.map {
+            Result(id: $0.id, title: $0.session.title, detail: $0.excerpt, enabled: true, destination: .history($0))
+        }
+        case "成果":
+            let references = Set(scopedSessions.map(\.reference))
+            return model.workspace.groups.flatMap { group in
+                group.outcomes.filter { outcome in
+                    (projectID.isEmpty || outcome.source.map(references.contains) == true)
+                    && (query.isEmpty || "\(outcome.title) \(outcome.detail) \(outcome.link)".localizedStandardContains(query))
+                }.map { Result(id: "\(group.id):\($0.id)", title: $0.title, detail: "\(group.name) · \($0.detail)", enabled: !$0.link.isEmpty, destination: .outcome($0)) }
+            }
+        case "文件": return (state.files?.hits ?? []).map {
+            Result(id: $0.id, title: "\($0.path):\($0.line)", detail: $0.excerpt, enabled: true, destination: .file($0))
+        }
+        default: return []
+        }
+    }
     var body: some View {
         let sessions = scope == "会话" ? scopedSessions.filter { $0.matchesSearch(query) } : []
+        let rows = results(sessions: sessions)
+        let available = rows.filter(\.enabled)
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                TextField("搜索会话、历史、成果或文件", text: $query).textFieldStyle(.roundedBorder).onSubmit(search)
-                Button(state.loading ? "取消" : "搜索") { if state.loading { request = nil; state.reset() } else { search() } }
+                TextField("搜索会话、历史、成果或文件", text: $query)
+                    .textFieldStyle(.roundedBorder).focused($focused)
+                    .onSubmit { submit(rows) }
+                    .onKeyPress(.downArrow, phases: [.down, .repeat]) { move(1, key: $0, rows: available) }
+                    .onKeyPress(.upArrow, phases: [.down, .repeat]) { move(-1, key: $0, rows: available) }
+                    .accessibilityIdentifier("PerchUnifiedSearchField")
+                Button(state.loading ? "取消" : "搜索") { if state.loading { cancelSearch() } else { search() } }
                 Button("完成") { dismiss() }.keyboardShortcut(.cancelAction)
             }
             Picker("范围", selection: $scope) {
@@ -97,22 +134,49 @@ struct UnifiedSearchView: View {
                     if let location = project.location { Text("\(project.title) · \(location.hostName)").tag(project.id) }
                 }
             }
-            if scope == "历史" { Text("显式读取在线会话历史，每个会话最多 5000 条消息；搜索不会切换当前会话。").font(.caption).foregroundStyle(.secondary) }
-            if scope == "文件" { Text("选择项目后搜索文件名与正文。最多检查 1000 个文本文件 / 25 MiB，每个文件最多 3 处匹配；跳过构建目录、符号链接和大于 1 MiB 的文件。").font(.caption).foregroundStyle(.secondary) }
-            if let request, ["历史", "文件"].contains(scope) { Text("检索词：\(request.query)").font(.caption).foregroundStyle(.secondary) }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) { results(sessions: sessions) }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if ["历史", "文件"].contains(scope) {
+                DisclosureGroup("搜索范围说明") {
+                    if scope == "历史" { Text("显式读取在线会话历史，每个会话最多 5000 条消息；搜索不会切换当前会话。") }
+                    else { Text("选择项目后搜索文件名与正文。最多检查 1000 个文本文件 / 25 MiB，每个文件最多 3 处匹配；跳过构建目录、符号链接和大于 1 MiB 的文件。") }
+                }.font(.caption).foregroundStyle(.secondary)
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(rows) { row in
+                            Button { open(row) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(row.title).fontWeight(.medium).lineLimit(2)
+                                    Text(row.detail).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+                                }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                                    .contentShape(Rectangle())
+                                    .background(selection == row.id ? Color.accentColor.opacity(0.12) : .clear,
+                                                in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
+                            }.buttonStyle(.plain).disabled(!row.enabled).id(row.id)
+                                .accessibilityAddTraits(selection == row.id ? [.isSelected] : [])
+                        }
+                        if rows.isEmpty && !state.loading { Text("没有找到结果").foregroundStyle(.secondary).padding(24) }
+                    }
+                }
+                .onChange(of: selection) { _, value in if let value { proxy.scrollTo(value) } }
             }
             if state.loading { ProgressView().controlSize(.small) }
             if !state.progress.isEmpty && scope == "历史" { Text(state.progress).font(.caption).foregroundStyle(.secondary) }
-            if !state.errors.isEmpty { DisclosureGroup("\(state.errors.count) 项未能读取") { ForEach(state.errors, id: \.self) { Text($0).font(.caption).textSelection(.enabled) } } }
-        }.padding(24).frame(width: 740, height: 620)
-            #if PERCH_ACCEPTANCE
-            .onReceive(NativeAcceptanceProbe.shared.$query) { value in
-                if let value { query = value }
+            if let result = state.files, scope == "文件" {
+                Text("已检查 \(result.inspected) 个文件 · 跳过 \(result.skipped) 个").font(.caption).foregroundStyle(.secondary)
+                if result.limited { Text("已达搜索上限").font(.caption).foregroundStyle(.secondary) }
             }
-            .background(NativeDirectoryProbe(query: query, selection: nil, results: sessions.map(\.id)))
+            if !state.errors.isEmpty { DisclosureGroup("\(state.errors.count) 项未能读取") { ForEach(state.errors, id: \.self) { Text($0).font(.caption).textSelection(.enabled) } } }
+            Text("↑↓ 选择 · 回车打开 · Esc 关闭").font(.caption).foregroundStyle(.tertiary)
+        }.padding(24).frame(width: 740, height: 620)
+            .defaultFocus($focused, true)
+            .task { focused = true }
+            .onChange(of: available.map(\.id), initial: true) { _, ids in
+                if selection.map(ids.contains) != true { selection = ids.first }
+            }
+            #if PERCH_ACCEPTANCE
+            .onReceive(NativeAcceptanceProbe.shared.$query) { value in if let value { query = value } }
+            .background(NativeDirectoryProbe(query: query, selection: selection, results: sessions.map(\.id)))
             #endif
             .task(id: request?.id) {
                 guard let request else { return }
@@ -121,72 +185,49 @@ struct UnifiedSearchView: View {
                 } else if request.scope == "文件", let location = request.location,
                           let host = model.connections.first(where: { $0.id == location.hostID })?.host {
                     await state.fileSearch(query: request.query, location: location, host: host)
-                } else if request.scope == "文件" {
-                    state.errors = [L("项目所在环境已移除，无法读取文件。")]
-                }
+                } else if request.scope == "文件" { state.errors = [L("项目所在环境已移除，无法读取文件。")] }
             }
-            .onChange(of: scope) { _, _ in request = nil; state.reset() }
-            .onChange(of: projectID) { _, _ in request = nil; state.reset() }
-            .sheet(item: $filePreview) { outcome in OutcomePreviewSheet(model: model, outcome: outcome, location: scope == "文件" ? request?.location : nil, line: scope == "文件" ? filePreviewLine : nil) }
+            .onChange(of: scope) { _, _ in cancelSearch(); focused = true }
+            .onChange(of: projectID) { _, _ in cancelSearch() }
+            .onChange(of: query) { _, _ in
+                selection = available.first?.id
+                if ["历史", "文件"].contains(scope) { cancelSearch() }
+            }
     }
+    private func cancelSearch() { request = nil; state.reset(); selection = nil }
     private func search() {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { request = nil; state.reset(); return }
+        guard !text.isEmpty else { cancelSearch(); return }
         state.reset()
         if scope == "文件" && location == nil { state.errors = [L("请先选择文件所在的项目。")]; return }
         request = Request(query: text, scope: scope, location: location, sessions: scopedSessions)
     }
-    @ViewBuilder private func results(sessions: [WorkspaceSession]) -> some View {
-        switch scope {
-        case "会话":
-            ForEach(sessions) { item in
-                Button { model.open(item); dismiss() } label: {
-                    VStack(alignment: .leading) { Text(item.title); Text("\(item.hostName) · \(item.directory)").font(.caption).foregroundStyle(.secondary) }
-                }.buttonStyle(.plain).disabled(!item.online || item.archived)
-            }
-        case "历史":
-            ForEach(state.hits) { hit in
-                Button {
-                    model.open(hit.session); model.showConversationFind = true
-                    model.workspaceSearchQuery = request?.query ?? query
-                    model.workspaceSearchEntryID = hit.entryID
-                    dismiss()
-                } label: {
-                    VStack(alignment: .leading, spacing: 5) { Text(hit.session.title).fontWeight(.medium); Text(hit.excerpt).lineLimit(3).foregroundStyle(.secondary) }
-                }.buttonStyle(.plain)
-                Divider()
-            }
-        case "成果":
-            let references = Set(scopedSessions.map(\.reference))
-            ForEach(model.workspace.groups) { group in
-                ForEach(group.outcomes.filter { outcome in
-                    (projectID.isEmpty || outcome.source.map(references.contains) == true)
-                    && (query.isEmpty || "\(outcome.title) \(outcome.detail) \(outcome.link)".localizedStandardContains(query))
-                }) { outcome in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(outcome.title).fontWeight(.medium)
-                        Text("\(group.name) · \(outcome.detail)").font(.caption).lineLimit(3)
-                        if !outcome.link.isEmpty {
-                            Button("打开成果") { if let url = outcome.webURL { NSWorkspace.shared.open(url) } else { filePreview = outcome } }
-                        }
-                    }
-                }
-            }
-        case "文件":
-            if let result = state.files {
-                Text("已检查 \(result.inspected) 个文件 · 跳过 \(result.skipped) 个").font(.caption).foregroundStyle(.secondary)
-                if result.limited { Text("已达搜索上限").font(.caption).foregroundStyle(.secondary) }
-                ForEach(result.hits) { hit in
-                    Button {
-                        filePreviewLine = hit.line
-                        filePreview = GroupOutcome(title: (hit.path as NSString).lastPathComponent, link: hit.path,
-                                                   source: request?.sessions.first(where: { $0.reference.hostID == request?.location?.hostID && $0.reference.kind != .terminal })?.reference)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) { Text("\(hit.path):\(hit.line)").font(.caption.monospaced()); Text(hit.excerpt).lineLimit(2) }
-                    }.buttonStyle(.plain)
-                }
-            }
-        default: EmptyView()
+    private func submit(_ rows: [Result]) {
+        if let row = rows.first(where: { $0.id == selection && $0.enabled }) { open(row) }
+        else if let row = rows.first(where: \.enabled), ["会话", "成果"].contains(scope) { open(row) }
+        else { search() }
+    }
+    private func move(_ delta: Int, key: KeyPress, rows: [Result]) -> KeyPress.Result {
+        guard key.modifiers.intersection([.command, .control, .option, .shift]).isEmpty,
+              (NSApp.keyWindow?.firstResponder as? NSTextView)?.hasMarkedText() != true,
+              !rows.isEmpty else { return .ignored }
+        let index = rows.firstIndex { $0.id == selection } ?? (delta > 0 ? -1 : rows.count)
+        selection = rows[min(max(index + delta, 0), rows.count - 1)].id
+        return .handled
+    }
+    private func open(_ row: Result) {
+        guard row.enabled else { return }
+        switch row.destination {
+        case .session(let item): model.open(item)
+        case .history(let hit):
+            model.open(hit.session); model.showConversationFind = true
+            model.workspaceSearchQuery = request?.query ?? query
+            model.workspaceSearchEntryID = hit.entryID
+        case .outcome(let outcome): model.openOutcome(outcome)
+        case .file(let hit):
+            model.openWorkspaceFile(GroupOutcome(title: (hit.path as NSString).lastPathComponent, link: hit.path),
+                                    location: request?.location, line: hit.line)
         }
+        dismiss()
     }
 }

@@ -22,12 +22,14 @@ struct FileReadRequest: Equatable {
     let path: String
     let limit: Int
     let fromEnd: Bool
+    let source: SessionReference?
 }
 
 @MainActor @Observable
 final class RemoteFileBrowser {
     private(set) var host: SSHHost?
     private(set) var cwd = ""
+    var source: SessionReference?
     var input = ""
     private(set) var path = ""
     private(set) var content: RemoteFileContent?
@@ -35,6 +37,7 @@ final class RemoteFileBrowser {
     var error: String?
     var showLineNumbers = false
     var targetLine: Int?
+    var lineNavigation = 0
     var mode: RemotePanelMode = .file
     private(set) var gitStatus: RemoteGitStatus?
     private(set) var gitPath: String?
@@ -108,7 +111,7 @@ final class RemoteFileBrowser {
     func submit() { open(input) }
 
     func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false,
-              limit: Int? = nil, fromEnd: Bool = false) {
+              limit: Int? = nil, fromEnd: Bool = false, source: SessionReference? = nil) {
         guard let host else { error = L("当前会话没有可用的执行环境。"); return }
         do {
             if !host.isLocal { try SSHCommand.validateDestination(host.destination) }
@@ -122,7 +125,8 @@ final class RemoteFileBrowser {
             content = nil; previewData = nil; error = nil; loading = true
             readLimit = limit; readingTail = fromEnd; findQuery = ""; findIndex = 0
             fileRequest = FileReadRequest(command: command, destination: host.destination, local: host.isLocal,
-                                          path: resolved, limit: limit, fromEnd: fromEnd)
+                                          path: resolved, limit: limit, fromEnd: fromEnd,
+                                          source: source ?? documents.tabs.first(where: { $0.path == resolved })?.source ?? self.source)
         } catch { self.error = error.localizedDescription }
     }
 
@@ -140,11 +144,11 @@ final class RemoteFileBrowser {
             let value = try RemoteFileCommand.parse(data, limit: request.limit, fromEnd: request.fromEnd)
             let actual = RemoteFileCommand.resolvedPath(in: data) ?? request.path
             path = actual; input = actual
-            if case .matches(let paths) = value, paths.count == 1 { open(paths[0], line: targetLine); return }
+            if case .matches(let paths) = value, paths.count == 1 { open(paths[0], line: targetLine, source: request.source); return }
             content = value
             switch value {
             case .text, .binary:
-                documents.select(actual)
+                documents.select(actual, source: request.source)
                 if targetLine != nil { documents.setReading(false) }
                 if FilePreviewKind(path: actual).isBinary { previewData = RemoteFileCommand.body(in: data) }
             default: break
@@ -153,11 +157,18 @@ final class RemoteFileBrowser {
     }
 
     func closeFile(_ path: String) {
-        let wasSelected = documents.selected == path
+        let wasSelected = self.path == path
         let next = documents.close(path)
         guard wasSelected else { return }
         if let next { open(next) }
         else { cancel(); content = nil; previewData = nil; self.path = ""; input = "" }
+    }
+
+    func selectAdjacentFile(_ delta: Int) {
+        let tabs = documents.tabs
+        guard !tabs.isEmpty else { return }
+        let index = tabs.firstIndex { $0.path == path } ?? 0
+        open(tabs[(index + delta + tabs.count) % tabs.count].path)
     }
 
     func loadGitStatus() {
@@ -608,6 +619,7 @@ struct RemoteFilePanel: View {
     var showsCloseButton = true
     var onAddContext: ((String) -> Void)? = nil
     var onShowDraft: (() -> Void)? = nil
+    var contextDestination: String? = nil
     /// Set where the panel is a sheet of its own. The side panel leaves Escape to
     /// its window, so its close button has no shortcut.
     var closeShortcut: KeyboardShortcut? = nil
@@ -615,10 +627,22 @@ struct RemoteFilePanel: View {
     @State private var showLocation = false
     @State private var showDetails = false
     @State private var showFind = false
+    @State private var showLine = false
+    @State private var lineInput = ""
+    @FocusState private var locationFocused: Bool
+    @FocusState private var lineFocused: Bool
     @State private var selection = NSRange(location: 0, length: 0)
-    @State private var feedbackContext: ReviewContext?
+    private struct FeedbackDraft: Identifiable {
+        let id = UUID()
+        let context: ReviewContext
+        let destination: String?
+        let append: (String) -> Void
+        let showDraft: (() -> Void)?
+    }
+    @State private var feedbackContext: FeedbackDraft?
     @State private var feedback = ""
     @State private var contextAdded = false
+    @State private var showAddedDraft: (() -> Void)?
     /// A branch switch rewrites the remote worktree under any agent working there.
     @State private var pendingBranch: String?
     private var pendingBranchName: String { pendingBranch ?? "" }
@@ -647,6 +671,7 @@ struct RemoteFilePanel: View {
                     Button { showDetails.toggle() } label: { Image(systemName: "info.circle") }
                         .help("文件详情").accessibilityLabel("文件详情")
                         .popover(isPresented: $showDetails) { fileDetails }
+                        .popover(isPresented: $showLine) { lineEditor }
                 }
                 if browser.mode == .file || onAddContext != nil { fileActions }
                 if showsCloseButton {
@@ -802,7 +827,7 @@ struct RemoteFilePanel: View {
                 HStack {
                     Label("已加入会话草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
                     Spacer()
-                    if let onShowDraft { Button("查看草稿", action: onShowDraft) }
+                    if let showAddedDraft { Button("查看草稿", action: showAddedDraft) }
                 }.font(.system(size: 11)).padding(.horizontal, 14).padding(.vertical, 6)
             }
             if browser.mode == .file, showFind, hasContext { FileFindBar(browser: browser, isPresented: $showFind) }
@@ -810,6 +835,14 @@ struct RemoteFilePanel: View {
         }.background(WorkbenchTheme.contentBackground)
             .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindInFile"))) { _ in
                 if browser.mode == .file && hasContext { showFind = true }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchOpenFileLocation"))) { notice in
+                if notice.object as? RemoteFileBrowser === browser { browser.mode = .file; showLocation = true }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchGoToFileLine"))) { notice in
+                if notice.object as? RemoteFileBrowser === browser && hasContext && browser.mode == .file {
+                    lineInput = browser.targetLine.map(String.init) ?? ""; showLine = true
+                }
             }
             .task(id: browser.fileRequest?.id) {
                 if let request = browser.fileRequest { await browser.loadFile(request) }
@@ -838,7 +871,8 @@ struct RemoteFilePanel: View {
                     }
                 }.padding(WorkbenchTheme.Dialog.padding).frame(width: 640, height: 520)
             }
-            .sheet(item: $feedbackContext) { context in
+            .sheet(item: $feedbackContext) { draft in
+                let context = draft.context
                 VStack(alignment: .leading, spacing: 12) {
                     Text("代码反馈").font(.headline)
                     Group {
@@ -847,12 +881,13 @@ struct RemoteFilePanel: View {
                         ScrollView { Text(context.excerpt).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 160)
                     }
                     TextField("希望如何修改？", text: $feedback, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder)
-                    Text("加入当前任务草稿，检查后再发送。").font(.caption).foregroundStyle(.secondary)
+                    if let destination = draft.destination { Text("引用到：\(destination)").font(.caption).foregroundStyle(.secondary) }
+                    Text("加入会话草稿，检查后再发送。").font(.caption).foregroundStyle(.secondary)
                     HStack {
                         Spacer()
                         Button("取消") { feedbackContext = nil }.keyboardShortcut(.cancelAction)
                         Button("加入草稿") {
-                            onAddContext?(context.prompt(feedback: feedback)); contextAdded = true
+                            draft.append(context.prompt(feedback: feedback)); showAddedDraft = draft.showDraft; contextAdded = true
                             feedbackContext = nil
                         }.keyboardShortcut(.defaultAction)
                             .disabled(feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -865,7 +900,7 @@ struct RemoteFilePanel: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("\(browser.hostName) · \(browser.cwd)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
             TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
-                .textFieldStyle(.roundedBorder).onSubmit { browser.submit(); showLocation = false }
+                .textFieldStyle(.roundedBorder).focused($locationFocused).onSubmit { browser.submit(); showLocation = false }
             HStack {
                 Button("上一级目录") { browser.openParent(); showLocation = false }
                     .disabled(RemoteFilePath.parent(of: browser.path) == nil)
@@ -874,7 +909,25 @@ struct RemoteFilePanel: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(browser.input.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-        }.padding(16).frame(width: 420)
+        }.padding(16).frame(width: 420).defaultFocus($locationFocused, true)
+    }
+
+    private var lineEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TextField("跳转到行", text: $lineInput).textFieldStyle(.roundedBorder).focused($lineFocused)
+                .onSubmit(jumpToLine)
+            Text("仅定位已读取内容中的行号").font(.caption).foregroundStyle(.secondary)
+            Button("跳转", action: jumpToLine).keyboardShortcut(.defaultAction).disabled(validLine == nil)
+        }.padding(16).frame(width: 260).defaultFocus($lineFocused, true)
+    }
+    private var validLine: Int? {
+        guard let line = Int(lineInput), line > 0, case .text(let text, _, _) = browser.content,
+              line <= RemoteSourceStyle.lineCount(text) else { return nil }
+        return line
+    }
+    private func jumpToLine() {
+        guard let line = validLine else { return }
+        browser.documents.setReading(false); browser.findQuery = ""; browser.targetLine = line; browser.lineNavigation += 1; showLine = false
     }
 
     private var fileDetails: some View {
@@ -897,6 +950,10 @@ struct RemoteFilePanel: View {
             if browser.mode == .file {
                 if browser.loading { Button("取消") { browser.cancel() } }
                 else { Button("刷新") { browser.open(browser.path, limit: browser.readLimit, fromEnd: browser.readingTail) }.disabled(browser.path.isEmpty) }
+                Button("跳转到行…") { lineInput = browser.targetLine.map(String.init) ?? ""; showLine = true }
+                    .keyboardShortcut("l", modifiers: [.command, .shift]).disabled(!hasContext)
+                Button("上一个文件标签页") { browser.selectAdjacentFile(-1) }.keyboardShortcut("[", modifiers: [.command, .shift]).disabled(browser.documents.tabs.count < 2)
+                Button("下一个文件标签页") { browser.selectAdjacentFile(1) }.keyboardShortcut("]", modifiers: [.command, .shift]).disabled(browser.documents.tabs.count < 2)
                 Toggle("行号", isOn: $browser.showLineNumbers)
                 if case .text(_, let truncated, _) = browser.content {
                     if truncated && !browser.readingTail && browser.readLimit < 4 * 1_048_576 {
@@ -911,10 +968,15 @@ struct RemoteFilePanel: View {
             }
             if onAddContext != nil {
                 Divider()
+                if let contextDestination { Text("引用到：\(contextDestination)") }
                 Button("引用文件") {
-                    if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); contextAdded = true }
+                    if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); showAddedDraft = onShowDraft; contextAdded = true }
                 }.disabled(!hasContext || browser.loading || browser.error != nil)
-                Button("反馈选中代码…") { feedback = ""; feedbackContext = context(selection: selection) }
+                Button("反馈选中代码…") {
+                    guard let context = context(selection: selection), let onAddContext else { return }
+                    feedback = ""
+                    feedbackContext = FeedbackDraft(context: context, destination: contextDestination, append: onAddContext, showDraft: onShowDraft)
+                }
                     .disabled(selection.length == 0 || browser.loading || browser.error != nil)
             }
         } label: { Image(systemName: "ellipsis") }
@@ -1087,7 +1149,7 @@ struct RemoteFilePanel: View {
                         RemoteSourceText(text: text, line: browser.targetLine, numbered: browser.showLineNumbers,
                             onSelection: { selection = $0 }, initialOffset: browser.documents.current?.offset,
                             onSaveOffset: browser.documents.offsetRecorder(),
-                            findQuery: browser.findQuery, findIndex: browser.findIndex, sourcePath: browser.path).id(browser.path + (browser.readingTail ? ":tail" : ":head"))
+                            findQuery: browser.findQuery, findIndex: browser.findIndex, sourcePath: browser.path, lineNavigation: browser.lineNavigation).id(browser.path + (browser.readingTail ? ":tail" : ":head"))
                     }
 
                 }
@@ -1181,6 +1243,7 @@ struct RemoteSourceText: NSViewRepresentable {
     var findQuery = ""
     var findIndex = 0
     var sourcePath = ""
+    var lineNavigation = 0
     /// Diffs carry their own line numbers in hunk headers.
     private var showsGutter: Bool { numbered && !diff }
     final class Coordinator: NSObject, NSTextViewDelegate {
@@ -1193,6 +1256,7 @@ struct RemoteSourceText: NSViewRepresentable {
         var findQuery = ""
         var findIndex = 0
         var line: Int?
+        var lineNavigation = 0
         var onSelection: ((NSRange) -> Void)?
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let view = notification.object as? NSTextView else { return }
@@ -1241,7 +1305,7 @@ struct RemoteSourceText: NSViewRepresentable {
         let languageChanged = coordinator.sourcePath != sourcePath
         let gutterChanged = scroll.rulersVisible != showsGutter
         let findChanged = coordinator.findQuery != findQuery || coordinator.findIndex != findIndex
-        guard textChanged || languageChanged || gutterChanged || coordinator.line != line || findChanged else { return }
+        guard textChanged || languageChanged || gutterChanged || coordinator.line != line || coordinator.lineNavigation != lineNavigation || findChanged else { return }
         if textChanged {
             coordinator.text = text; coordinator.diff = diff
             view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : RemoteSourceStyle.code(text))
@@ -1261,15 +1325,15 @@ struct RemoteSourceText: NSViewRepresentable {
         coordinator.findQuery = findQuery; coordinator.findIndex = findIndex
         coordinator.search?.update(text: text, query: findQuery, index: findIndex)
         // Showing or hiding the numbers keeps the reader's place and selection.
-        guard textChanged || coordinator.line != line else { return }
-        coordinator.line = line
+        guard textChanged || coordinator.line != line || coordinator.lineNavigation != lineNavigation else { return }
+        coordinator.line = line; coordinator.lineNavigation = lineNavigation
         guard let line, let range = RemoteFileContent.lineRange(in: text, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
             if let initialOffset {
                 // A new SwiftUI host has no viewport yet. Restore after native
                 // sizing, just as line navigation below waits for attachment.
                 DispatchQueue.main.async {
-                    guard coordinator.text == text, coordinator.line == line else { return }
+                    guard coordinator.text == text, coordinator.line == line, coordinator.lineNavigation == lineNavigation else { return }
                     scroll.layoutSubtreeIfNeeded()
                     let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
                     scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
@@ -1280,7 +1344,7 @@ struct RemoteSourceText: NSViewRepresentable {
         }
         view.setSelectedRange(range)
         DispatchQueue.main.async {
-            guard coordinator.text == text, coordinator.line == line else { return }
+            guard coordinator.text == text, coordinator.line == line, coordinator.lineNavigation == lineNavigation else { return }
             view.scrollRangeToVisible(range)
         }
     }

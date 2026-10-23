@@ -52,6 +52,27 @@ import WorkbenchCore
     precondition(highlighting.ready && highlighting.error == nil && !highlighting.tokens.isEmpty,
                  "Large files must remain highlighted: \(String(describing: highlighting.error))")
     precondition(view.selectedRange() == selection && view.string == source, "Async color cannot replace text or selection")
+    let parsed = await CodeHighlighter.largeFiles.parseCount
+    let cacheStart = CACurrentMediaTime()
+    let cached = try await CodeHighlighter.engine(for: source).highlight(source, language: "python")
+    let afterLargeCache = await CodeHighlighter.largeFiles.parseCount
+    precondition(afterLargeCache == parsed && cached.count == highlighting.tokens.count, "Reopening a large file must reuse bounded tokens")
+    print("METRIC: large-file cached colors ms=\((CACurrentMediaTime() - cacheStart) * 1000)")
+    let largeCacheBytes = await CodeHighlighter.largeFiles.cacheBytes
+    precondition(largeCacheBytes <= 32 * 1_048_576)
+    // Start an uncached large parse, then switch this same reader to a small file.
+    highlighting.update(source: source + "# uncached replacement\n", language: "python")
+    try await Task.sleep(for: .milliseconds(50))
+    let switched = "let immediate = 123"
+    let switchStart = CACurrentMediaTime()
+    highlighting.update(source: switched, language: "swift")
+    for _ in 0..<100 where !highlighting.ready { try await Task.sleep(for: .milliseconds(10)) }
+    precondition(highlighting.ready && highlighting.error == nil && NSMaxRange(highlighting.tokens.last!.range) == switched.utf16.count,
+                 "Small-file colors must not wait for an obsolete large-file parse")
+    print("METRIC: large-to-small colors ms=\((CACurrentMediaTime() - switchStart) * 1000)")
+    highlighting.update(source: source, language: "python")
+    for _ in 0..<400 where !highlighting.ready { try await Task.sleep(for: .milliseconds(25)) }
+    precondition(highlighting.ready && highlighting.error == nil)
     print("CHECK: large highlights and selection passed")
     let probe = CodeDrawingProbe(highlighting)
     view.layoutManager!.delegate = probe

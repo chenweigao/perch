@@ -148,7 +148,7 @@ final class WorkbenchModel {
     var workspaceSearchEntryID: String?
     var showSessionSearch = false
     var projectOverview: SidebarProjectLocation?
-    var outcomePreview: GroupOutcome?
+    var pendingFileOutcome: GroupOutcome?
     var showFollowUps = false
     var companionShortcutError: String?
     @ObservationIgnored var followUpLoop: Task<Void, Never>?
@@ -233,7 +233,7 @@ final class WorkbenchModel {
                 if let item = self.inspectingSession { self.inspectingSession = nil; self.open(item) }
                 guard !self.showDashboard, self.selectedHost != nil else { return }
                 self.showFileViewer = true; self.syncFileViewer()
-                self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
+                self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true, source: self.selectedReference)
                 self.fileWindow.show(model: self)
             }
         })
@@ -593,7 +593,11 @@ final class WorkbenchModel {
         if scopeHostID == host.id { scopeHostID = nil }
         do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
         catch { managementError = L("机器已移除，但保存机器列表失败：\(error.localizedDescription)") }
-        rebuildCatalog(); syncFileViewer(); saveWorkspace()
+        if fileBrowser.host?.id == host.id {
+            fileBrowser.source = nil
+            fileBrowser.configure(host: nil, cwd: "")
+        }
+        rebuildCatalog(); saveWorkspace()
     }
     func open(_ pane: Pane, on connection: HostConnection, pinned: Bool = false) {
         openReference(SessionReference(hostID: connection.id, terminalID: pane.id), title: pane.displayTitle, pinned: pinned)
@@ -627,7 +631,7 @@ final class WorkbenchModel {
             if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) { native.select(reference.terminalID) }
             if reference.kind == .kimi, kimi.online { kimi.select(reference.terminalID) }
         }
-        updateVisibility(focus: true); saveWorkspace(); syncFileViewer()
+        updateVisibility(focus: true); saveWorkspace()
     }
     private var navigableSessionIDs: Set<String> {
         Set(openedSessions.map { $0.session.id }).union(allSessions.filter { $0.online && !$0.archived }.map(\.id))
@@ -1332,6 +1336,8 @@ final class WorkbenchModel {
         }
         let hints = RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
                                                        sessionDirectory: directory)
+        pendingFileOutcome = nil
+        fileBrowser.source = selectedReference
         fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: hints)
     }
     func forgetRestoration(_ saved: SavedTerminal) { close(saved.session.id) }

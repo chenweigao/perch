@@ -18,10 +18,11 @@ public enum FilePreviewKind: String, Codable, Sendable {
 
 public struct FileReadingTab: Codable, Identifiable, Equatable, Sendable {
     public var path: String
+    public var source: SessionReference?
     public var offset: Double = 0
     public var reading = true
     public var id: String { path }
-    public init(path: String) { self.path = path }
+    public init(path: String, source: SessionReference? = nil) { self.path = path; self.source = source }
 }
 
 /// A bounded RFC 4180 reader for previews; quoted delimiters, escaped quotes,

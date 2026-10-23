@@ -66,11 +66,22 @@ enum CodeLanguage {
 /// trusted grammar code; file contents are arguments to highlight(), never eval.
 actor CodeHighlighter {
     static let shared = CodeHighlighter()
+    // A large JavaScript parse is synchronous. Give it a separate VM/actor so
+    // switching to a small file or a conversation card never queues behind it.
+    static let largeFiles = CodeHighlighter(byteLimit: 32 * 1_048_576, entryLimit: 2)
+    static func engine(for source: String) -> CodeHighlighter {
+        source.utf8.count > 256 * 1024 ? largeFiles : shared
+    }
+    private let byteLimit: Int
+    private let entryLimit: Int
+    init(byteLimit: Int = 8 * 1_048_576, entryLimit: Int = 24) {
+        self.byteLimit = byteLimit; self.entryLimit = entryLimit
+    }
     private var context: JSContext?
     private struct Key: Hashable { let source: String; let language: String }
     private var cache: [Key: [CodeToken]] = [:]
     private var order: [Key] = []
-    private var cacheBytes = 0
+    private(set) var cacheBytes = 0
     private(set) var parseCount = 0
     enum Failure: Error { case missingEngine, invalidOutput }
 
@@ -78,7 +89,10 @@ actor CodeHighlighter {
         try Task.checkCancellation()
         guard !source.isEmpty, !language.isEmpty else { return [] }
         let key = Key(source: source, language: language)
-        if let hit = cache[key] { return hit }
+        if let hit = cache[key] {
+            order.removeAll { $0 == key }; order.append(key)
+            return hit
+        }
         if context == nil {
             guard let url = Bundle.main.url(forResource: "highlight.min", withExtension: "js"),
                   let vm = JSContext() else { throw Failure.missingEngine }
@@ -96,13 +110,14 @@ actor CodeHighlighter {
         // XML normalizes literal CR/CRLF; character references preserve offsets.
         let xml = "<code>" + html.replacingOccurrences(of: "\r", with: "&#13;") + "</code>"
         let parser = XMLParser(data: Data(xml.utf8)); parser.delegate = decoder
-        guard parser.parse(), decoder.text == source else { throw Failure.invalidOutput }
+        let parsed = parser.parse()
         try Task.checkCancellation()
+        guard parsed, decoder.text == source else { throw Failure.invalidOutput }
         let tokens = decoder.tokens
         let cost = source.utf16.count * 2 + tokens.count * MemoryLayout<CodeToken>.stride
         // Cache immutable token data for remounted conversation cards, never views.
-        if cost <= 8 * 1_048_576 {
-            while !order.isEmpty && (order.count >= 24 || cacheBytes + cost > 8 * 1_048_576) {
+        if cost <= byteLimit {
+            while !order.isEmpty && (order.count >= entryLimit || cacheBytes + cost > byteLimit) {
                 let oldest = order.removeFirst()
                 if let removed = cache.removeValue(forKey: oldest) {
                     cacheBytes -= oldest.source.utf16.count * 2 + removed.count * MemoryLayout<CodeToken>.stride
@@ -124,6 +139,7 @@ private final class HighlightTokens: NSObject, XMLParserDelegate {
     }
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?) { scopes.removeLast() }
     func parser(_ parser: XMLParser, foundCharacters string: String) {
+        if Task.isCancelled { parser.abortParsing(); return }
         let length = string.utf16.count, kind = scopes.last.flatMap { $0 }
         if let last = tokens.last, last.kind == kind {
             tokens[tokens.count - 1] = CodeToken(range: NSRange(location: last.range.location, length: last.range.length + length), kind: kind)
@@ -154,7 +170,7 @@ private final class HighlightTokens: NSObject, XMLParserDelegate {
         task = Task { [weak self] in
             do {
                 if debounce { try await Task.sleep(for: .milliseconds(150)) }
-                let tokens = try await CodeHighlighter.shared.highlight(source, language: language)
+                let tokens = try await CodeHighlighter.engine(for: source).highlight(source, language: language)
                 try Task.checkCancellation()
                 guard let self, self.source == source, self.language == language else { return }
                 self.tokens = tokens; self.ready = true; self.view?.needsDisplay = true

@@ -7,21 +7,24 @@ import WorkbenchCore
 struct FileTabStrip: View {
     @Bindable var browser: RemoteFileBrowser
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 4) {
-                ForEach(browser.documents.tabs) { tab in
-                    HStack(spacing: 6) {
-                        Button((tab.path as NSString).lastPathComponent) { browser.open(tab.path) }
-                            .lineLimit(1).help(tab.path)
-                        Button { browser.closeFile(tab.path) } label: { Image(systemName: "xmark").font(.system(size: 9)) }
-                            .accessibilityLabel("关闭文件 \((tab.path as NSString).lastPathComponent)")
-                    }.buttonStyle(.plain).font(.system(size: 12))
-                        .padding(.horizontal, 10).padding(.vertical, 8)
-                        .foregroundStyle(tab.path == browser.path ? Color.primary : .secondary)
-                        .background(tab.path == browser.path ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
-                }
-            }.padding(.horizontal, 8).padding(.vertical, 3)
-        }.scrollIndicators(.hidden).fixedSize(horizontal: false, vertical: true)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 4) {
+                    ForEach(browser.documents.tabs) { tab in
+                        HStack(spacing: 6) {
+                            Button((tab.path as NSString).lastPathComponent) { browser.open(tab.path) }
+                                .lineLimit(1).help(tab.path)
+                            Button { browser.closeFile(tab.path) } label: { Image(systemName: "xmark").font(.system(size: 9)) }
+                                .accessibilityLabel("关闭文件 \((tab.path as NSString).lastPathComponent)")
+                        }.id(tab.path).buttonStyle(.plain).font(.system(size: 12))
+                            .padding(.horizontal, 10).padding(.vertical, 8)
+                            .foregroundStyle(tab.path == browser.path ? Color.primary : .secondary)
+                            .background(tab.path == browser.path ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
+                    }
+                }.padding(.horizontal, 8).padding(.vertical, 3)
+            }.scrollIndicators(.hidden).fixedSize(horizontal: false, vertical: true)
+                .onChange(of: browser.documents.selected, initial: true) { _, path in if let path { proxy.scrollTo(path) } }
+        }
     }
 }
 
@@ -44,13 +47,15 @@ struct FileFindBar: View {
         HStack(spacing: 8) {
             TextField("在已读取内容中查找", text: $browser.findQuery)
                 .textFieldStyle(.roundedBorder).focused($focused).onSubmit { browser.findIndex += 1 }
-                .help("匹配定位最多 5000 处")
+                .help("在已读取内容中查找")
             Button { browser.findIndex -= 1 } label: { Image(systemName: "chevron.up") }.accessibilityLabel("上一个匹配")
             Button { browser.findIndex += 1 } label: { Image(systemName: "chevron.down") }.accessibilityLabel("下一个匹配")
             Button { isPresented = false; browser.findQuery = "" } label: { Image(systemName: "xmark") }.accessibilityLabel("关闭查找")
         }.font(.system(size: 12)).controlSize(.small).buttonStyle(.borderless)
             .padding(.horizontal, 12).padding(.vertical, 6)
-            .onAppear { browser.documents.setReading(false); focused = true }
+            .defaultFocus($focused, true)
+            .onAppear { browser.documents.setReading(false) }
+            .onExitCommand { isPresented = false; browser.findQuery = "" }
             .onChange(of: browser.findQuery) { _, _ in browser.findIndex = 0 }
     }
 }

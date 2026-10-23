@@ -46,7 +46,7 @@ struct WorkbenchApp: App {
                     .disabled(model.selectedConnection?.online != true)
             }
             CommandMenu(L("Conversation")) {
-                Button(L("搜索项目与会话")) { model.showSessionSearch = true }.keyboardShortcut("k")
+                Button(L("搜索项目与会话")) { CompanionWindowController.shared.showMain(); model.showSessionSearch = true }.keyboardShortcut("k")
                 Button(L("Find in conversation")) {
                     if model.fileWindow.window?.isKeyWindow == true {
                         NotificationCenter.default.post(name: .init("PerchFindInFile"), object: nil)

@@ -15,11 +15,12 @@ final class FileWorkspaceState {
         tabs = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode([FileReadingTab].self, from: $0) } ?? []
         selected = defaults.string(forKey: key + ".selected").flatMap { path in tabs.contains { $0.path == path } ? path : nil } ?? tabs.last?.path
     }
-    func select(_ path: String) {
+    func select(_ path: String, source: SessionReference? = nil) {
         if !tabs.contains(where: { $0.path == path }) {
-            tabs.append(FileReadingTab(path: path))
+            tabs.append(FileReadingTab(path: path, source: source))
             if tabs.count > 12 { tabs.removeFirst() }
         }
+        if let source, let index = tabs.firstIndex(where: { $0.path == path }) { tabs[index].source = source }
         selected = path; save()
     }
     func resolve(_ requested: String, to actual: String) {

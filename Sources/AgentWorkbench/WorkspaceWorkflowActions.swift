@@ -23,8 +23,27 @@ extension WorkbenchModel {
     }
     func openOutcome(_ outcome: GroupOutcome) {
         if let url = outcome.webURL { NSWorkspace.shared.open(url) }
-        else { outcomePreview = outcome }
+        else { openWorkspaceFile(outcome) }
     }
+    /// All file entry points share the native window. Reading never selects a conversation.
+    func openWorkspaceFile(_ outcome: GroupOutcome, location: SidebarProjectLocation? = nil, line: Int? = nil) {
+        let source = outcome.source.flatMap { reference in allSessions.first { $0.reference == reference } }
+        guard let hostID = source?.reference.hostID ?? location?.hostID,
+              let host = connections.first(where: { $0.id == hostID })?.host else {
+            fileBrowser.cancel()
+            pendingFileOutcome = outcome
+            showFileViewer = true
+            fileWindow.show(model: self)
+            return
+        }
+        pendingFileOutcome = nil
+        fileBrowser.source = source?.reference
+        fileBrowser.configure(host: host, cwd: source?.directory ?? location?.directory ?? "")
+        fileBrowser.open(outcome.link, line: line, fromConversation: true, source: source?.reference)
+        showFileViewer = true
+        fileWindow.show(model: self)
+    }
+
     func addFollowUp(_ rule: FollowUpRule) {
         workspace.followUps.append(rule); saveWorkspace()
     }
@@ -75,5 +94,16 @@ extension WorkbenchModel {
         let id = "perch-companion-\(UUID().uuidString)"
         return reference.kind == .kimi ? agents.kimi.enqueueFollowUp(text, for: reference.terminalID, messageID: id)
             : agents.native.enqueueFollowUp(text, for: reference.terminalID, messageID: id)
+    }
+}
+
+/// Keep actionable requests ahead of unread results, running work and stale status.
+func workspaceTaskPriority(_ item: WorkspaceSession) -> Int {
+    guard item.online && !item.archived else { return 4 }
+    switch item.section {
+    case .attention: return 0
+    case .review: return 1
+    case .running: return 2
+    default: return 3
     }
 }
