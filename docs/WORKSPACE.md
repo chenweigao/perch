@@ -110,12 +110,16 @@ owns the shortcut, use the menu bar; Settings reports registration failure.
 The conversation header's **Task panel** toggles a card inside the conversation page containing
 pending requests, documents, background tasks/subagents, and current-turn tool
 activity. Empty sections stay hidden; completed calls start collapsed. The panel
-reserves a trailing column when the page is at least 960 points wide; in smaller
-windows it overlays the page's trailing edge without narrowing the transcript.
-The card fits its header, visible sections and footer, up to 620 points or the
-available page height. Expanding a section grows the card until that limit, then
-scrolls its contents. In compact windows the actual composer bounds cap the card
-above the input area, including when a multiline draft makes the composer taller.
+uses a 280–340 point trailing card when the page can also fit the full 680 point
+reading column and its margins (at least 1,056 points of page width). The transcript
+and composer shift together and recenter when the card closes. Smaller windows
+show a compact entry above the conversation that opens the independent floating
+panel; it neither covers the transcript nor reads task data while collapsed to
+that entry. Widening the page restores the card.
+The card fits its header and visible sections, up to 620 points or the available
+page height. Expanding a section grows the card until that limit, then scrolls its
+contents. Its compact header keeps task controls visible; the independent window
+also offers conversation and draft actions in its footer.
 It stays open while interacting with the conversation and can be collapsed with
 its close control or the header button. Resizing and toggling retain the same
 conversation view, reading position, and composer. The card can detach into a
@@ -146,7 +150,7 @@ is checked before issuing it. Stop acknowledgement does not mark a task finished
 the subsequent task state does. Unconfirmed stops become retryable after 15 seconds.
 Subagent details continue to use the full conversation.
 
-**Add instructions** captures the source task when opened and appends to that task's
+The independent window’s **Add instructions** captures the source task when opened and appends to that task's
 existing draft. It does not send a message. The task panel and the older followed-task
 companion remain separate views: one follows a conversation, the other lists tasks
 explicitly followed from the workbench.
