@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import uuid
 
-PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading"]
+PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")
 parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")

@@ -28,6 +28,8 @@ import WorkbenchCore
         switch CommandLine.arguments[1] {
         case "document-reading":
             try await checkDocumentReadingUI()
+        case "task-context":
+            try await checkTaskContextPanel()
         case "workflow-polish":
             try await checkWorkflowPolish()
         case "code-reader":
