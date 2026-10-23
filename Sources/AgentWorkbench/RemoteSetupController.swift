@@ -54,7 +54,7 @@ final class RemoteSetupController: ObservableObject {
         destination = host?.destination ?? ""; name = host?.name ?? ""
         provider = host?.enabledAgents.first ?? .kimi
         enabledAgents = Set(host?.enabledAgents ?? [])
-        port = String(host?.kimiPort ?? 58627); tokenPath = host?.kimiTokenPath ?? "~/.kimi-code/server.token"
+        port = String(host?.kimiPort ?? 58627); tokenPath = host?.kimiTokenPath ?? SSHHost.defaultKimiTokenPath
         kimiManaged = host?.kimiManaged ?? false
         kimiEnvironment = RemoteSetup.formatKimiEnvironment(host?.kimiEnvironment ?? [:])
         let config = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh/config")

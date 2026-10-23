@@ -29,7 +29,7 @@ VERSION = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?')
 ENV_NAME = re.compile(r'[A-Za-z_][A-Za-z0-9_]*\Z')
 # Shutdown closes every session and runs its SessionEnd hooks without an overall cap.
 STOP_TIMEOUT = 90
-READY_TIMEOUT = 15
+READY_TIMEOUT = 30
 
 
 def kimi_endpoint(port, token_path):
@@ -170,27 +170,46 @@ def start_kimi(binary, port, home, env, kimi_dir, token_path, record_path, envir
         process = subprocess.Popen([binary, 'web', '--host', '127.0.0.1', '--port', str(port), '--no-open'],
                                    cwd=str(home), env=env, stdin=subprocess.DEVNULL, stdout=log,
                                    stderr=subprocess.STDOUT, start_new_session=True)
-    failure = None
-    for _ in range(READY_TIMEOUT * 10):
-        time.sleep(.1)
-        actual = instance_port(kimi_dir, process.pid) or port
-        try: endpoint = kimi_endpoint(actual, token_path)
-        except RuntimeError as error:
-            # The token file may appear only once the new service has booted.
-            failure, endpoint = error, None
-        if endpoint:
-            meta = kimi_meta(actual, endpoint['token'])
-            started = meta.get('started_at')
-            if type(process.pid) is not int or not isinstance(started, str) or not started:
+    ready = False
+    try:
+        failure = None
+        for _ in range(READY_TIMEOUT * 10):
+            time.sleep(.1)
+            actual = instance_port(kimi_dir, process.pid) or port
+            try: endpoint = kimi_endpoint(actual, token_path)
+            except RuntimeError as error:
+                # The token file may appear only once the new service has booted.
+                failure, endpoint = error, None
+            if endpoint:
+                meta = kimi_meta(actual, endpoint['token'])
+                started = meta.get('started_at')
+                if type(process.pid) is not int or not isinstance(started, str) or not started:
+                    ready = True
+                    return endpoint
+                write_record(record_path, {'pid': process.pid, 'port': actual, 'startedAt': started,
+                                           'version': parse_version(meta.get('server_version')),
+                                           'environment': environment, 'replacedFor': replaced_for})
+                endpoint['owned'] = True
+                ready = True
                 return endpoint
-            write_record(record_path, {'pid': process.pid, 'port': actual, 'startedAt': started,
-                                       'version': parse_version(meta.get('server_version')),
-                                       'environment': environment, 'replacedFor': replaced_for})
-            endpoint['owned'] = True
-            return endpoint
-        if process.poll() is not None:
-            raise RuntimeError('Kimi Web exited during startup. See ~/.local/state/perch/kimi-web.log.')
-    raise failure or RuntimeError('The Kimi service did not become ready.')
+            if process.poll() is not None:
+                raise RuntimeError('Kimi Web exited during startup. See ~/.local/state/perch/kimi-web.log.')
+        raise failure or RuntimeError('The Kimi service did not become ready.')
+    finally:
+        # Without a record a later check would find the port taken by a service it
+        # cannot own, so a start that never became ready must not outlive this call.
+        if not ready: stop_child(process)
+
+
+def stop_child(process):
+    try:
+        process.terminate()
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+    except OSError:
+        pass
 
 
 def stop_kimi(pid, port, timeout):

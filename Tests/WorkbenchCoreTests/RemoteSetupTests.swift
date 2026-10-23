@@ -145,6 +145,11 @@ func checkRemoteSetup() async throws {
         precondition(echoed == ["--agent", "kimi", "--port", "60123", "--token-path", hostileToken,
                                 "--env", "KIMI_CODE_INFINITE_RETRY=true", "--env", "QUOTE=it's $HOME"])
     }
+    // The default token path is left to the host, where it follows KIMI_CODE_HOME.
+    let moved = RemoteSetup.kimiEnsureCommand(script: echo, port: 60123, tokenPath: SSHHost.defaultKimiTokenPath,
+                                              environment: ["KIMI_CODE_HOME": "/srv/kimi home"])
+    let movedArguments = try JSONDecoder().decode([String].self, from: try await SetupCommandRunner.run("/bin/sh", ["-c", moved]))
+    precondition(movedArguments == ["--agent", "kimi", "--port", "60123", "--env", "KIMI_CODE_HOME=/srv/kimi home"])
     // The real script runs from the stream without an installed copy; a host without Kimi says so.
     let serviceScript = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().appendingPathComponent("remote/local-agent-service.py")

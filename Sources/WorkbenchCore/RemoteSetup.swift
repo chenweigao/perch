@@ -225,11 +225,13 @@ public enum RemoteSetup {
 
     /// Starts, reuses or replaces Perch's Kimi Web on the host and prints its endpoint.
     /// Only the 127.0.0.1 instance Perch started is ever stopped, and only while idle;
-    /// a service the user runs is reused untouched.
+    /// a service the user runs is reused untouched. Only a custom token path is passed:
+    /// the default one follows `KIMI_CODE_HOME` from the launch environment on the host.
     public static func kimiEnsureCommand(script: String, port: Int, tokenPath: String,
                                          environment: [String: String]) -> String {
         var arguments = ["python3", "-c", streamedScriptLoader, Data(script.utf8).base64EncodedString(),
-                         "--agent", "kimi", "--port", String(port), "--token-path", tokenPath]
+                         "--agent", "kimi", "--port", String(port)]
+        if tokenPath != SSHHost.defaultKimiTokenPath { arguments += ["--token-path", tokenPath] }
         for name in environment.keys.sorted() { arguments += ["--env", name + "=" + (environment[name] ?? "")] }
         return arguments.map(SSHCommand.quote).joined(separator: " ")
     }

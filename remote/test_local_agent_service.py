@@ -96,6 +96,32 @@ class LocalServiceTests(unittest.TestCase):
                 self.assertEqual(service.ensure_kimi('/fixture/kimi', 58627, home), {'port': 58628, 'token': 'test', 'owned': True})
             self.assertEqual(json.loads((home/'.local/state/perch/kimi-web-58627.json').read_text())['port'], 58628)
 
+    def test_start_stops_a_service_that_never_becomes_ready(self):
+        # Left running without a record, it would keep the port as a service Perch cannot own.
+        with tempfile.TemporaryDirectory() as root, patch.object(service, 'kimi_endpoint', return_value=None), patch.object(service.subprocess, 'Popen') as launch, patch.object(service.time, 'sleep'):
+            launch.return_value.pid = 4242
+            launch.return_value.poll.return_value = None
+            with self.assertRaisesRegex(RuntimeError, 'ready'): service.ensure_kimi('/fixture/kimi', 58627, pathlib.Path(root))
+            launch.return_value.terminate.assert_called_once_with()
+            self.assertFalse((pathlib.Path(root)/'.local/state/perch/kimi-web-58627.json').exists())
+
+    def test_start_stops_a_service_that_rejects_the_credential(self):
+        rejected = [RuntimeError('The Kimi service on port 58627 rejected its saved credential.')] * (service.READY_TIMEOUT * 10)
+        with tempfile.TemporaryDirectory() as root, patch.object(service, 'kimi_endpoint', side_effect=[None] + rejected), patch.object(service.subprocess, 'Popen') as launch, patch.object(service.time, 'sleep'):
+            launch.return_value.pid = 4242
+            launch.return_value.poll.return_value = None
+            with self.assertRaisesRegex(RuntimeError, 'credential'): service.ensure_kimi('/fixture/kimi', 58627, pathlib.Path(root))
+            launch.return_value.terminate.assert_called_once_with()
+
+    def test_token_follows_kimi_code_home_from_the_launch_environment(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(service, 'kimi_endpoint', return_value={'port': 58627, 'token': 't'}) as endpoint:
+            home = pathlib.Path(root)
+            service.ensure_kimi('/fixture/kimi', 58627, home, environment={'KIMI_CODE_HOME': str(home / 'alt')})
+            self.assertEqual(endpoint.call_args[0][1], home / 'alt/server.token')
+            service.ensure_kimi('/fixture/kimi', 58627, home, token_path=str(home / 'custom/token'),
+                                environment={'KIMI_CODE_HOME': str(home / 'alt')})
+            self.assertEqual(endpoint.call_args[0][1], home / 'custom/token')
+
     def test_start_reports_an_exited_service(self):
         with tempfile.TemporaryDirectory() as root, patch.object(service, 'kimi_endpoint', return_value=None), patch.object(service.subprocess, 'Popen') as launch, patch.object(service.time, 'sleep'):
             launch.return_value.pid = 4242
