@@ -84,7 +84,7 @@ struct FileContentPreview: View {
             case .table: DelimitedFileView(text: text, delimiter: path.hasSuffix(".tsv") ? "\t" : ",")
             case .html:
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("独立 HTML 预览 · 仅内联资源，网络访问已关闭").font(.caption).foregroundStyle(.secondary).padding(8)
+                    Text("独立 HTML 预览 · 仅内联资源，网络访问已关闭").font(.subheadline).foregroundStyle(.secondary).padding(8)
                     SandboxedHTMLPreview(source: text)
                 }
             case .pdf:
@@ -113,7 +113,7 @@ private struct DelimitedFileView: View {
         let preview = DelimitedPreview(text, delimiter: delimiter)
         VStack(alignment: .leading) {
             Text(preview.truncated ? "显示前 200 行、40 列；完整内容可在源码中查看" : "\(preview.rows.count) 行")
-                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12)
+                .font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 12)
             ScrollView([.horizontal, .vertical]) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(preview.rows.enumerated()), id: \.offset) { index, row in

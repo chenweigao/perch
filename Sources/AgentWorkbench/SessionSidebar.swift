@@ -484,7 +484,7 @@ private struct SidebarPinPicker: View {
                                 SidebarAgentIndicator(item: item)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.title).font(.system(size: 12)).lineLimit(1)
-                                    Text(item.hostName + " · " + item.directory).font(.system(size: 10))
+                                    Text(item.hostName + " · " + item.directory).font(.system(size: SidebarMetrics.detailSize))
                                         .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                                 }
                                 Spacer(minLength: 0)
@@ -492,7 +492,7 @@ private struct SidebarPinPicker: View {
                             }.padding(6).contentShape(Rectangle())
                         }.buttonStyle(SidebarNavigationStyle()).accessibilityLabel(item.title)
                     }
-                    if sessions.isEmpty { Text("没有可置顶的会话").font(.caption).foregroundStyle(.secondary).padding(8) }
+                    if sessions.isEmpty { Text("没有可置顶的会话").font(.subheadline).foregroundStyle(.secondary).padding(8) }
                 }
             }.frame(height: 280)
         }.padding(14).frame(width: 320).onAppear { searchFocused = true }
@@ -789,7 +789,7 @@ private struct ConnectionControls: View {
                 Button(action: reconnect) { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }
                     .buttonStyle(.plain).help("重新连接").accessibilityLabel("重新连接")
             }
-            if let error, !online { Text(error).font(.caption).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled) }
+            if let error, !online { Text(error).font(.subheadline).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled) }
         }.padding(.leading, 12)
     }
 }

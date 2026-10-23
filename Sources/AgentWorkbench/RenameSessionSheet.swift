@@ -30,14 +30,14 @@ struct RenameSessionSheet: View {
             }
             if let suggestionError {
                 HStack(alignment: .top) {
-                    Text(suggestionError).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
+                    Text(suggestionError).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled)
                     Button("重试") { loadSuggestion() }.disabled(suggesting)
                 }
             }
             Text(model.automaticNamingStatus(for: item.reference))
-                .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                .font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
             Text("仅修改 Perch 中的显示名称，不更改远端标题。")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.subheadline).foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)

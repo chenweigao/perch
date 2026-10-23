@@ -63,9 +63,9 @@ struct PermissionPicker: View {
                         control
                     }
                     Text(detail)
-                        .font(.caption).foregroundStyle(riskColor)
+                        .font(.subheadline).foregroundStyle(riskColor)
                     Text(capability.scope.label)
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
             } else {
                 control

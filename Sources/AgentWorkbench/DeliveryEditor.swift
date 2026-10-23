@@ -54,23 +54,23 @@ struct DeliveryEditor: View {
                 TextField("GitHub PR 地址", text: $record.pullRequest)
                 Button(refresh.loading ? "正在读取…" : "刷新 PR 与 CI") { refreshRequest = record; refreshToken = UUID() }
                     .disabled(refresh.loading || record.pullRequest.isEmpty)
-                Text("使用项目所在机器已登录的 gh；刷新只读取状态。").font(.caption).foregroundStyle(.secondary)
+                Text("使用项目所在机器已登录的 gh；刷新只读取状态。").font(.subheadline).foregroundStyle(.secondary)
                 if let snapshot = record.snapshot {
                     Text("PR 状态：\(snapshot.state) · \(snapshot.ciSummary)")
-                    Text("HEAD \(snapshot.head)").font(.caption.monospaced()).textSelection(.enabled)
-                    Text("读取于 \(Date(timeIntervalSince1970: snapshot.fetchedAt).formatted())").font(.caption).foregroundStyle(.secondary)
+                    Text("HEAD \(snapshot.head)").font(.subheadline.monospaced()).textSelection(.enabled)
+                    Text("读取于 \(Date(timeIntervalSince1970: snapshot.fetchedAt).formatted())").font(.subheadline).foregroundStyle(.secondary)
                     if !record.evidenceMatchesHead {
                         Label("验证记录尚未对应当前 PR HEAD", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
                     }
                     ForEach(Array(snapshot.checks.enumerated()), id: \.offset) { _, check in
-                        LabeledContent(check.name, value: check.state).font(.caption)
+                        LabeledContent(check.name, value: check.state).font(.subheadline)
                     }
                 }
                 if let error = refresh.error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
                 Toggle("我已完成验收", isOn: Binding(get: { record.acceptanceCurrent }, set: {
                     record.accepted = $0; record.acceptedRevision = $0 ? record.revision : nil
                 })).disabled(record.revision.isEmpty || (record.snapshot != nil && !record.evidenceMatchesHead))
-                Text("人工验收、测试结果、PR/CI 分别记录；回复结束不会改变这些状态。").font(.caption).foregroundStyle(.secondary)
+                Text("人工验收、测试结果、PR/CI 分别记录；回复结束不会改变这些状态。").font(.subheadline).foregroundStyle(.secondary)
             }.formStyle(.grouped)
             HStack {
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)

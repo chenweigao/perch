@@ -122,7 +122,7 @@ struct ProjectWorkbenchSheet: View {
     }
     private var projectDetails: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(location.hostName) · \(location.directory)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            Text("\(location.hostName) · \(location.directory)").font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
             TextField("项目目标", text: $briefDraft.goal, axis: .vertical)
             TextField("回来后先做什么", text: $briefDraft.nextStep, axis: .vertical)
             Button("保存目标与下一步") {

@@ -15,7 +15,7 @@ struct FollowUpManager: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack { Text("长任务托管").font(.title2); Spacer(); Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
             Text("Perch 运行时每 15 秒检查一次。机器离线、会话归档或等待审批时，发送会等待；已有任务仍由原 Agent 执行。")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.subheadline).foregroundStyle(.secondary)
             Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
             Form {
                 Picker("会话", selection: $target) {
@@ -46,9 +46,9 @@ struct FollowUpManager: View {
                             }
                             Text("\(rule.trigger.title) · \(rule.status.title)").foregroundStyle(.secondary)
                             if rule.status == .needsReview {
-                                Text("发送时发生中断。请先检查来源会话的发送队列和回复，确认后再手动添加托管。").font(.caption).foregroundStyle(.orange)
+                                Text("发送时发生中断。请先检查来源会话的发送队列和回复，确认后再手动添加托管。").font(.subheadline).foregroundStyle(.orange)
                             }
-                            if rule.trigger == .time { Text(Date(timeIntervalSince1970: rule.dueAt).formatted()).font(.caption) }
+                            if rule.trigger == .time { Text(Date(timeIntervalSince1970: rule.dueAt).formatted()).font(.subheadline) }
                             if !rule.prompt.isEmpty { Text(rule.prompt).lineLimit(3).textSelection(.enabled) }
                             if let item = model.allSessions.first(where: { $0.reference == rule.session }) {
                                 Button("打开来源会话") { dismiss(); model.open(item) }.disabled(!item.online).buttonStyle(QuietLinkStyle())

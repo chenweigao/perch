@@ -10,7 +10,7 @@ struct CommandPalette: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let parent = completion.parent {
-                Text("/\(parent.name) 的子命令").font(.system(size: 10)).foregroundStyle(.secondary)
+                Text("/\(parent.name) 的子命令").font(.system(size: 11)).foregroundStyle(.secondary)
                     .padding(.horizontal, 12).padding(.top, 9).padding(.bottom, 3)
             }
             ScrollViewReader { proxy in
@@ -29,7 +29,7 @@ struct CommandPalette: View {
             }
             Divider()
             Text("↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭")
-                .font(.system(size: 10)).foregroundStyle(.secondary).padding(10)
+                .font(.system(size: 11)).foregroundStyle(.secondary).padding(10)
         }.frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
@@ -54,9 +54,9 @@ private struct CommandPaletteRow: View {
                 Spacer(minLength: 6)
                 // The hint tells the user arguments are expected before they commit.
                 if let hint = command.hint {
-                    Text(hint).font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary).lineLimit(1)
+                    Text(hint).font(.system(size: 11, design: .monospaced)).foregroundStyle(.tertiary).lineLimit(1)
                 } else if !command.children.isEmpty {
-                    Text("\(command.children.count) 个子命令").font(.system(size: 10)).foregroundStyle(.tertiary)
+                    Text("\(command.children.count) 个子命令").font(.system(size: 11)).foregroundStyle(.tertiary)
                 }
             }.padding(.horizontal, 10).padding(.vertical, 7).contentShape(Rectangle())
                 // The keyboard row outranks the pointer's, so hover never reads as a second selection.

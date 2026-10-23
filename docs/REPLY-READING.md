@@ -84,7 +84,7 @@ Assistant progress stays visible in chronological order, interleaved with each
 reasoning phase. New reasoning and new overviews append below prior output rather
 than replacing a turn-wide slot. Completed reasoning phases have independent
 disclosures; the currently streaming phase uses a naturally wrapped viewport that
-fits short thoughts and caps its height at 76 pt. The header offers a full-text
+fits short thoughts and caps its height at four lines (80 pt). The header offers a full-text
 popover only when the preview overflows. The viewport follows
 new text unless the user scrolls upward, with no flashing scrollbar. Kimi volatile deltas and native
 agent snapshots use the same policy. A volatile Kimi message is deduplicated only
@@ -157,7 +157,7 @@ Kimi conversation (and use Edit → Paste): confirm one thumbnail appears and th
 existing draft remains. Send it to verify upload separately. OMP/Qoder text-only
 inputs do not advertise image paste support.
 
-Streaming thinking uses complete light italic text in a fixed 76 pt vertical scroll area.
+Streaming thinking uses complete upright 13 pt secondary text in a vertical scroll area capped at four lines (80 pt).
 It wraps to the reading width instead of truncating a 240-character suffix; text
 updates do not move the outer transcript. Its inner viewport follows new text by
 default, pauses when the user scrolls upward, and resumes after they return to the

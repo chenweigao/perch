@@ -71,7 +71,7 @@ struct AddHostSheet: View {
                 Text("SSH 地址").font(.callout.weight(.medium))
                 TextField("SSH 别名或 user@host", text: $setup.destination).textFieldStyle(.roundedBorder)
                     .disabled(setup.original != nil)
-                if setup.original != nil { Text("要连接另一台机器，请添加新机器。").font(.caption).foregroundStyle(.secondary) }
+                if setup.original != nil { Text("要连接另一台机器，请添加新机器。").font(.subheadline).foregroundStyle(.secondary) }
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("显示名称").font(.callout.weight(.medium))
@@ -81,7 +81,7 @@ struct AddHostSheet: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("端口、密钥与跳板机配置在 ~/.ssh/config。首次连接需在终端确认主机指纹；需要口令的密钥请先加入 SSH agent。")
                     Text("Host my-server\n    HostName server.example.com\n    User developer") // l10n-ignore
-                        .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                        .font(.system(.subheadline, design: .monospaced)).textSelection(.enabled)
                     Button("在终端连接") { setup.openTerminal() }.disabled(setup.destination.isEmpty)
                 }.font(.callout).padding(.top, 8)
             }
@@ -102,7 +102,7 @@ struct AddHostSheet: View {
                             TextField("~/.kimi-code/server.token", text: $setup.tokenPath) // l10n-ignore
                         }
                         Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.subheadline).foregroundStyle(.secondary)
                         Toggle("由 Perch 托管 Kimi Web", isOn: Binding(get: { setup.kimiManaged },
                                                                     set: { setup.kimiManaged = $0; setup.invalidateAgent() }))
                         if setup.kimiManaged {
@@ -111,7 +111,7 @@ struct AddHostSheet: View {
                             }
                         }
                         Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }.textFieldStyle(.roundedBorder).padding(.top, 8)
                 }.disabled(setup.busy)
             }
@@ -160,7 +160,7 @@ struct AddHostSheet: View {
             }.frame(width: 18, height: 18)
             VStack(alignment: .leading, spacing: 4) {
                 Text(check.title).font(.callout.weight(.medium))
-                if !check.detail.isEmpty { Text(check.detail).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
+                if !check.detail.isEmpty { Text(check.detail).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled) }
                 if check.needsManualRestart {
                     DisclosureGroup("重启步骤") {
                         VStack(alignment: .leading, spacing: 8) {
@@ -171,7 +171,7 @@ struct AddHostSheet: View {
                             Text("“重新检查”只核对状态；重开 Perch 不会重启远端 Kimi Web。")
                                 .foregroundStyle(.secondary)
                         }.textSelection(.enabled).padding(.top, 6)
-                    }.font(.caption).padding(.top, 4)
+                    }.font(.subheadline).padding(.top, 4)
                 }
             }
         }.accessibilityElement(children: check.needsManualRestart ? .contain : .combine)
@@ -182,15 +182,15 @@ struct AddHostSheet: View {
                 DisclosureGroup("安装 Agent") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("使用已核对的版本。Kimi 需要 Node.js 22.19+，Qoder 与 Codex 需要 Node.js，OMP 需要 Bun。安装完成后重新检查。")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Text(command).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        Text(command).font(.system(.subheadline, design: .monospaced)).textSelection(.enabled)
                         Button("在终端安装") { setup.openInstallTerminal() }
                     }.padding(.top, 8)
                 }
             }
             if setup.needsBridge && ["runtime", "service"].contains(setup.failedCheck ?? "") {
                 Text("Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
                 Button("安装 / 更新桥接组件") { setup.installBridge() }
             }
             HStack {
@@ -204,11 +204,11 @@ struct AddHostSheet: View {
             }
             if setup.provider == .kimi && setup.failedCheck == "service" && !setup.kimiManaged {
                 Text("由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
             if setup.provider == .dsh {
                 Text("在远端 shell 或服务环境中设置 DEEPSEEK_API_KEY；Perch 不读取或保存它的值。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
         }
     }
@@ -248,7 +248,7 @@ struct AddHostSheet: View {
     private var folderBrowser: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("选择远端目录").font(.headline)
-            Text(setup.browsingDirectory).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            Text(setup.browsingDirectory).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
             HStack {
                 Button("主目录") { setup.browse(setup.remoteHome) }
                 Button("上级目录") { setup.browse((setup.browsingDirectory as NSString).deletingLastPathComponent) }
@@ -266,7 +266,7 @@ struct AddHostSheet: View {
                     }
                 }
             }.frame(height: 220)
-            if let error = setup.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+            if let error = setup.error { Text(error).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled) }
             Button("使用此目录") {
                 setup.directory = setup.browsingDirectory
                 showFolders = false

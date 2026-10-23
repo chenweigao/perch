@@ -25,7 +25,14 @@ measure narrows with it, so lines keep a comfortable length.
 | User bubble line, padding, top gap | 24; 14×8; 10 pt | 21; 12×7; 8 pt |
 | Gap between entries / within an entry and above actions | 18 / 12 pt | 16 / 10 pt |
 | Body ink | label 94 % | label 90 % |
-| Thoughts | 13 pt light italic | 12.5 pt regular italic |
+| Thoughts | 13 pt light italic | 13 / 20 pt regular upright, secondary ink |
+
+Thoughts (`ReplyStyle.Process.thoughtSize`, `thoughtLineHeight`) were 12.5 pt
+italic until 2026-10-23. Italic slanted only the Latin glyphs, because PingFang has
+no italic, so mixed Chinese and English thoughts read unevenly; three cues (smaller,
+italic, secondary ink) also made long thoughts hard to read. Size and ink are
+enough to set them apart. The streaming preview shows four lines (80 pt), and the
+full-text popover is a reading surface of its own: body style, 560 × 360 pt.
 
 `ReplyStyle.blockSpacing(before:after:compact:)` is the single vertical rhythm.
 The SwiftUI renderer maps `ReplyBlock`, the native renderer `NativeAssistantBlock`,
@@ -56,7 +63,14 @@ the project title:
 | Section headers | three styles (11–12 pt, chevron before or after, icon on 置顶) | one: 11 pt semibold at 62 % ink, count, chevron after |
 
 Section headers are darker than secondary text, so 置顶 and the other headers never
-read as disabled. The 置顶 add button stays a solid control. The native glass
+read as disabled.
+
+## Secondary text floor
+
+No text is set below 11 pt. On macOS `.caption` and `.caption2` are 10 pt, so
+secondary notes, errors and hints use `.subheadline` (11 pt) or an explicit 11 pt
+size; tertiary ink only appears on text of at least that size. Sizes of 8–10 pt
+remain only for SF Symbols such as chevrons and badges. The 置顶 add button stays a solid control. The native glass
 sidebar item (`WorkspaceSplitView`) and the composer glass are unchanged; only the
 inner rows and headers changed.
 

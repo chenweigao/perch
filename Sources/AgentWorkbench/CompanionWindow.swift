@@ -99,7 +99,7 @@ struct CompanionView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(items) { item in
                             if items.first(where: { workspaceTaskPriority($0) == workspaceTaskPriority(item) })?.id == item.id {
-                                Text(sectionTitle(item)).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                                Text(sectionTitle(item)).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
                             }
                             Button { target = item.reference; notice = "" } label: {
                                 VStack(alignment: .leading, spacing: 5) {
@@ -120,7 +120,7 @@ struct CompanionView: View {
                 }
             }
             if let item = selected {
-                Text("发送到：\(item.title) · \(item.hostName)").font(.caption).lineLimit(2)
+                Text("发送到：\(item.title) · \(item.hostName)").font(.subheadline).lineLimit(2)
                 if item.reference.kind == .terminal {
                     Button("打开会话") { model.open(item); openMain() }.disabled(!item.online)
                 } else if item.section == .attention {
@@ -139,10 +139,10 @@ struct CompanionView: View {
                     }
                 }
             }
-            if !notice.isEmpty { Text(notice).font(.caption).foregroundStyle(.secondary) }
+            if !notice.isEmpty { Text(notice).font(.subheadline).foregroundStyle(.secondary) }
             HStack {
-                Text("⌃⌥P 显示或收起").font(.caption).foregroundStyle(.secondary); Spacer()
-                Button("托管") { model.showFollowUps = true; openMain() }.font(.caption)
+                Text("⌃⌥P 显示或收起").font(.subheadline).foregroundStyle(.secondary); Spacer()
+                Button("托管") { model.showFollowUps = true; openMain() }.font(.subheadline)
             }
         }.padding(18).frame(minWidth: 320, minHeight: 360)
             .environment(\.locale, appLanguage.resolvedLocale).preferredColorScheme(appAppearance.colorScheme)

@@ -64,15 +64,15 @@ struct ProjectMessageComposer: View {
                     HStack {
                         Text("引用项目文件").font(.system(size: 11, weight: .medium))
                         if !matches.isEmpty {
-                            Text("\(matches.count) 个匹配").font(.system(size: 10)).foregroundStyle(.tertiary)
+                            Text("\(matches.count) 个匹配").font(.system(size: 11)).foregroundStyle(.tertiary)
                         }
                         Spacer()
                         Button("刷新") { choice = 0; files.load(host: host, cwd: cwd) }
                         Button("关闭") { dismiss() }
                     }.font(.system(size: 11))
                     if files.loading { ProgressView().controlSize(.small) }
-                    else if let error = files.error { Text(error).font(.caption).foregroundStyle(.orange) }
-                    else if matches.isEmpty { Text("没有匹配文件").font(.caption).foregroundStyle(.secondary) }
+                    else if let error = files.error { Text(error).font(.subheadline).foregroundStyle(.orange) }
+                    else if matches.isEmpty { Text("没有匹配文件").font(.subheadline).foregroundStyle(.secondary) }
                     else {
                         ScrollViewReader { proxy in
                             ScrollView {
@@ -92,7 +92,7 @@ struct ProjectMessageComposer: View {
                         }
                     }
                     Text("↑↓ 选择 · Return / Tab 引用 · Esc 关闭，不会发送消息")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
                 }.padding(8).background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
                                          in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             }

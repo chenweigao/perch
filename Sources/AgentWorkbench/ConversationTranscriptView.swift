@@ -2237,14 +2237,18 @@ struct ProcessFoldRow: View {
     }
 }
 
-/// Keep live, historical and popover thoughts in the same TextKit style.
-private enum ThoughtTextStyle {    static let attributes: [NSAttributedString.Key: Any] = {
+/// Live and historical thoughts share one TextKit style. The full-text popover is
+/// a reading surface of its own and uses the body style.
+private enum ThoughtTextStyle {
+    static let attributes = make(size: ReplyStyle.Process.thoughtSize, lineHeight: ReplyStyle.Process.thoughtLineHeight,
+                                 ink: .secondaryLabelColor)
+    static let fullTextAttributes = make(size: ReplyStyle.bodySize, lineHeight: ReplyStyle.lineHeight,
+                                         ink: ReplyStyle.nativeInk)
+    private static func make(size: CGFloat, lineHeight: CGFloat, ink: NSColor) -> [NSAttributedString.Key: Any] {
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = 4
-        // A step below the 14 pt body; regular weight keeps secondary ink legible.
-        let font = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 12.5, weight: .regular), toHaveTrait: .italicFontMask)
-        return [.font: font, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph]
-    }()
+        paragraph.minimumLineHeight = lineHeight
+        return [.font: NSFont.systemFont(ofSize: size, weight: .regular), .foregroundColor: ink, .paragraphStyle: paragraph]
+    }
 }
 
 /// Expanded thoughts sit under their toggle's label, like every nested process row.
@@ -2305,16 +2309,16 @@ private struct ThoughtOutput: View {
         }
         .popover(isPresented: $showFullText, arrowEdge: .top) {
             ScrollView {
-                SelectableReplyText(attributed: NSAttributedString(string: fullText, attributes: ThoughtTextStyle.attributes))
+                SelectableReplyText(attributed: NSAttributedString(string: fullText, attributes: ThoughtTextStyle.fullTextAttributes))
                     .frame(maxWidth: .infinity, alignment: .leading).padding(16)
             }
-                .frame(width: 480, height: 300)
+                .frame(width: 560, height: 360)
         }
     }
 }
 
 /// TextKit keeps wrapped layout for existing text while a reasoning stream appends.
-/// Reuse TextKit layout to fit short thoughts and cap a growing preview at 76 pt.
+/// Reuse TextKit layout to fit short thoughts and cap a growing preview at four lines.
 private struct ThinkingTextViewport: NSViewRepresentable {
     let text: String
     @Binding var overflows: Bool
@@ -2329,7 +2333,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
         // The preview follows the stream; wheel gestures scroll the conversation.
         scroll.hasVerticalScroller = false
         scroll.autohidesScrollers = true
-        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 760, height: 76))
+        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 760, height: ReplyStyle.Process.thoughtPreviewHeight))
         view.isEditable = false
         view.enabledTextCheckingTypes = 0
         view.isSelectable = true
@@ -2362,7 +2366,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
     }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: FollowingThoughtScrollView, context: Context) -> CGSize? {
         let width = proposal.width ?? 760
-        return CGSize(width: width, height: min(76, nsView.textHeight(width: width)))
+        return CGSize(width: width, height: min(ReplyStyle.Process.thoughtPreviewHeight, nsView.textHeight(width: width)))
     }
 }
 

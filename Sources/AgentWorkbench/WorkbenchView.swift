@@ -222,7 +222,7 @@ private struct StatusBar: View {
             Spacer()
             if let date = connection.updatedAt { Text("状态更新于 \(date.formatted(date: .omitted, time: .standard))") }
             Text("·"); Text("原生终端")
-        }.font(.system(size: 10)).foregroundStyle(quiet).padding(.horizontal, 18).padding(.vertical, 9)
+        }.font(.system(size: 11)).foregroundStyle(quiet).padding(.horizontal, 18).padding(.vertical, 9)
             .help(connection.error ?? L("会话状态每 3 秒同步一次；终端内容实时传输"))
     }
 }

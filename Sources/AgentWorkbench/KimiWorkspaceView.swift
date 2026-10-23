@@ -113,7 +113,7 @@ private struct KimiComposerView: View {
     var body: some View {
         VStack(spacing: 10) {
             if let feedback = connection.commandFeedback[sessionID] {
-                Text(feedback).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(feedback).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
                     .lineLimit(4).help(feedback)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -299,7 +299,7 @@ private struct KimiQueuedMessages: View {
         let items = connection.queue.items(for: reference)
         // A queue paused at restart also holds messages queued while offline.
         if connection.queue.isPaused(reference), !items.isEmpty {
-            Button("继续发送排队消息") { connection.resumeQueue(for: sessionID) }.font(.caption)
+            Button("继续发送排队消息") { connection.resumeQueue(for: sessionID) }.font(.subheadline)
                 .disabled(!connection.online)
         }
         ForEach(items) { message in
@@ -504,7 +504,7 @@ struct KimiQuestionView: View {
                                 confirmed.remove(q.id)
                                 // Keep the answer while returning to its editable form.
                                 editing = q.id
-                            }.font(.caption).buttonStyle(.plain)
+                            }.font(.subheadline).buttonStyle(.plain)
                         }
                     }
                     if let body = q.body, !isDone { KimiMarkdown(text: body) }
