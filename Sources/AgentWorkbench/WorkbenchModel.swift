@@ -161,6 +161,7 @@ final class WorkbenchModel {
     var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
     @ObservationIgnored let fileWindow = FileWindowController()
+    let taskContextWindow = TaskContextWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac")
         .appendingPathComponent("workspace.json")
@@ -1530,6 +1531,7 @@ final class WorkbenchModel {
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        taskContextWindow.close()
         fileWindow.close()
         followUpLoop?.cancel(); followUpLoop = nil
         conversationPresentations.removeAll()

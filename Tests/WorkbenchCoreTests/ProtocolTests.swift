@@ -31,6 +31,7 @@ struct ProtocolTests {
         try checkToolVisibility()
         try checkConversationTodos()
         try checkConversationActivity()
+        try checkTaskContextFiles()
         checkConversationTiming()
         checkStreamReveal()
         try checkFrameHitchRecorder()

@@ -85,6 +85,7 @@ struct WorkbenchHeaderActions: View {
                 }.foregroundStyle(.secondary).fixedSize()
             }
             if !model.showDashboard, model.selectedHost != nil {
+                TaskContextButton(model: model)
                 Button { model.toggleFileViewer() } label: {
                     WorkbenchToolbarSymbol(name: "doc.text.magnifyingglass").workbenchControlSurface()
                 }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")

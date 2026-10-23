@@ -668,9 +668,56 @@ final class KimiConnection {
             }
         }
     }
-    /// Reads the persisted task list of the selected session. Subagent lifecycle
-    /// events keep the roster current locally; this list is the only source for
-    /// background processes and detached children.
+    /// Independent, read-only context; keep the selected stream and draft untouched.
+    func readTaskContext(_ id: String) async throws -> TaskContextSnapshot {
+        guard online, let api else { throw WorkbenchError(L("状态未同步")) }
+        let value: KimiSnapshot
+        let messages: [KimiMessage]
+        let live: [KimiLiveTool]
+        let roster: [KimiTask]
+        if snapshotReady, let current = conversation, current.snapshot.session.id == id {
+            value = current.snapshot; messages = current.displayMessages
+            live = current.live?.runningTools ?? []
+            roster = current.tasks.subagents
+        } else {
+            value = try await api.get(KimiSnapshot.self, "/api/v1/sessions/\(id)/snapshot")
+            messages = value.messages.items; live = value.inFlightTurn?.runningTools ?? []
+            roster = value.subagents ?? []
+        }
+        try Task.checkCancellation()
+        guard self.api === api, online, value.session.id == id else { throw CancellationError() }
+        var board = KimiTaskBoard(subagents: roster)
+        var taskError: String?
+        do {
+            let list = try await api.get(KimiTaskList.self, "/api/v1/sessions/\(id)/tasks")
+            board.reconcile(background: list.items)
+        } catch is CancellationError { throw CancellationError() }
+        catch { taskError = error.localizedDescription }
+        try Task.checkCancellation()
+        guard self.api === api, online else { throw CancellationError() }
+        var result = TaskContextSnapshot(title: value.session.title, directory: value.session.cwd,
+            busy: value.session.isTurnRunning,
+            requests: value.pendingApprovals.map { TaskContextRequest(id: "approval:" + $0.id, title: $0.action) } +
+                value.pendingQuestions.map { TaskContextRequest(id: "question:" + $0.id, title: $0.questions.map(\.question).joined(separator: "\n")) },
+            failure: value.session.lastTurnReason == "failed" ? L("任务执行失败，请查看会话。") : nil,
+            messages: Array(messages.suffix(160)), live: live, tasks: board.subagents + board.backgroundTasks)
+        result.taskError = taskError
+        return result
+    }
+    func taskContextOperation(_ task: KimiTask, session: String, stop: Bool) async throws -> String {
+        guard online, let api else { throw WorkbenchError(L("状态未同步")) }
+        let path = "/api/v1/sessions/\(session)/tasks/\(task.id)"
+        if stop {
+            let response = try await api.post(JSONValue.self, path + ":cancel")
+            guard response["cancelled"] == .bool(true) else { throw WorkbenchError(L("服务端未确认停止")) }
+            return ""
+        }
+        let value = try await api.get(KimiTask.self, path + "?with_output=true&output_bytes=16384")
+        return value.outputPreview ?? ""
+    }
+
+    /// Reads the selected session's persisted background processes and detached
+    /// children; subagent lifecycle events keep its roster current in between.
     func refreshTasks(selectionToken: UUID? = nil) async {
         let token = selectionToken ?? selectionGeneration
         guard token == selectionGeneration, online, let api, let id = selectedId, conversation != nil else { return }

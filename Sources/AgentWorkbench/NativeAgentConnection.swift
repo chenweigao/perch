@@ -255,6 +255,32 @@ final class NativeAgentConnection {
         runtime = RunningRuntime(version: health["implementation"].string,
                                  startedAt: health["startedAt"].string)
     }
+    /// Read a pinned panel without selecting it or replacing the main transcript.
+    func readTaskContext(_ id: String) async throws -> TaskContextSnapshot {
+        guard online else { throw WorkbenchError(L("状态未同步")) }
+        let token = generation
+        let value: NativeAgentSnapshot
+        if let current = snapshot, current.id == id { value = current }
+        else { value = try await request("/sessions/\(id)?turns=20") }
+        try Task.checkCancellation()
+        guard token == generation, online, value.id == id else { throw CancellationError() }
+        return TaskContextSnapshot(title: value.title, directory: value.cwd, busy: value.busy,
+            requests: value.interactions.map { request in
+                TaskContextRequest(id: request["id"].string ?? request.display,
+                    title: request["title"].string ?? request["question"].string ?? request["message"].string ?? L("需要你处理"))
+            }, failure: value.error, messages: Array(value.messages.suffix(160)),
+            tasks: (value.subagents ?? []).map(KimiTask.init(native:)), native: true)
+    }
+    func stopTaskContextAgent(_ key: String, session: String) async throws {
+        guard online else { throw WorkbenchError(L("状态未同步")) }
+        let token = generation
+        let current: NativeAgentSnapshot = try await request("/sessions/\(session)?turns=1")
+        guard token == generation, online, current.id == session, current.subagents?.contains(where: {
+            $0.id == key && $0.canStop && $0.status.isLive
+        }) == true else { throw WorkbenchError(L("任务状态已变化，请刷新后重试。")) }
+        let _: JSONValue = try await request(NativeSubagentRoute.path(session: session, key: key) + "/stop", body: .object([:]))
+    }
+
     private func request<T: Decodable>(_ path: String, body: JSONValue? = nil) async throws -> T {
         let data: Data
         if let requestTransport { data = try await requestTransport(path, body) }
