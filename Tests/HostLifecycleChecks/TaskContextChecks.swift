@@ -213,8 +213,8 @@ import WorkbenchCore
 
     // Exercise the embedded production container with a real transcript/composer.
     // Its content identity must survive toggling and crossing the width breakpoint.
-    let page = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1200, height: 780),
-                        styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+    let page = TaskContextFixtureWindow(contentRect: NSRect(x: 100, y: 100, width: 1200, height: 780),
+                                       styleMask: [.titled, .resizable], backing: .buffered, defer: false)
     page.isReleasedWhenClosed = false
     defer { page.close(); page.contentViewController = nil }
     var contentMounts = 0
@@ -233,8 +233,7 @@ import WorkbenchCore
     hosting.sizingOptions = []
     page.contentViewController = hosting
     page.makeKeyAndOrderFront(nil)
-    // Ordering a new window constrains its frame to the screen (1024pt in CI).
-    // Apply the fixture viewport afterward so wide-layout clicks stay in bounds.
+    // Apply and verify the fixture viewport before layout assertions or clicks.
     page.setContentSize(NSSize(width: 1200, height: 780))
     model.taskContextWindow.locked = a
     try await Task.sleep(for: .milliseconds(200))
@@ -379,6 +378,12 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(150))
     precondition(!model.taskContextWindow.embeddedVisible, "The card close control collapses it")
     print("PASS: task context fixed reading/composer widths, synchronized shifting and recentering, adaptive card and compact transcript/composer hit testing, content-fit/expand/collapse/overflow heights, multiline input, native windows, wide/compact light/dark, toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
+}
+
+/// Layout fixtures must exercise viewports larger than the CI runner's display.
+/// Production windows keep AppKit's normal screen constraints.
+private final class TaskContextFixtureWindow: NSWindow {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
 private struct TaskContextContentProbe: NSViewRepresentable {
