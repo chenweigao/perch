@@ -21,7 +21,11 @@ import WorkbenchCore
             window.isReleasedWhenClosed = false
             window.contentMinSize = NSSize(width: 480, height: 320)
             window.delegate = self
-            window.contentViewController = NSHostingController(rootView: FileViewerContent(model: model))
+            let hosting = NSHostingController(rootView: FileViewerContent(model: model))
+            // The window owns its size; content may impose a minimum, not an ideal size.
+            hosting.sizingOptions = [.minSize]
+            window.contentViewController = hosting
+            window.setContentSize(NSSize(width: 960, height: 720))
             window.setFrameUsingName("PerchFileViewer")
             window.setFrameAutosaveName("PerchFileViewer")
             self.window = window

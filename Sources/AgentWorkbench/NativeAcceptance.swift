@@ -2017,16 +2017,17 @@ private struct ReferenceComposerFixtureView: View {
             _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Fixture"])
             try "let title = \"After 中文\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
             try await Task.sleep(for: .seconds(2))
-            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
+            guard let mainWindow = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
             let item = fixture.sessions[0]
             model.open(item)
-            try await settle(window) { self.model.native.snapshot?.id == item.reference.terminalID }
+            try await settle(mainWindow) { self.model.native.snapshot?.id == item.reference.terminalID }
             model.native.drafts[item.reference.terminalID] = "Existing draft"
             let browser = model.fileBrowser
             model.showFileViewer = true
             browser.configure(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""), cwd: directory.path)
             browser.open(file.path, line: 1)
-            try await settle(window, "file read") { !browser.loading && browser.content != nil }
+            try await settle(mainWindow, "file read") { !browser.loading && browser.content != nil }
+            guard let window = model.fileWindow.window else { throw WorkbenchError("Missing file reader window") }
             guard case .text(let text, _, _) = browser.content else { throw WorkbenchError("Missing file text") }
             let reference = ReviewContext(path: file.path, text: text, selection: (text as NSString).range(of: "After"))
             model.appendReviewContext(reference.prompt(feedback: "Review this change"), to: item.reference)
@@ -2131,7 +2132,19 @@ private struct ReferenceComposerFixtureView: View {
                 report["new_task_file_completion_without_session"] = true
             }
             report["status"] = "passed"
-        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        } catch {
+            report["status"] = "failed"; report["error"] = error.localizedDescription
+            if let reader = model.fileWindow.window {
+                report["reader_frame"] = NSStringFromRect(reader.frame)
+                var view: NSView? = reviewSource(in: reader.contentView)
+                var hierarchy: [String] = []
+                while let current = view {
+                    hierarchy.append("\(type(of: current)): frame=\(current.frame), visible=\(current.visibleRect), hidden=\(current.isHidden)")
+                    view = current.superview
+                }
+                report["reader_geometry"] = hierarchy
+            }
+        }
         try? writeReport(report, name: "result.json")
         if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] != "1" {
             try? FileManager.default.removeItem(at: directory)

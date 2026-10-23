@@ -27,6 +27,8 @@ import WorkbenchCore
         precondition(!model.fileBrowser.loading && model.fileBrowser.error == nil)
     }
     try await settle()
+    precondition(abs(window.contentView!.bounds.width - 960) < 1,
+                 "Initial content must not shrink the native reader's default width")
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     func sourceScroll() -> NSScrollView {
         descendants(window.contentView!).compactMap { $0 as? NSTextView }.first { $0.identifier?.rawValue == "PerchReviewSource" }!.enclosingScrollView!
