@@ -6,8 +6,10 @@ sessions, groups and drafts; the new fields default to empty when loading older 
 ## Projects and delivery
 
 The home page's **Project workbench** groups sessions by their sidebar project.
-Open a project to save its goal and next step, review requests/results updated since
-last seen, open linked outcomes, follow sessions, and record a delivery.
+Open a project to handle requests, review new results since last seen, and see running
+tasks in that order. Marking results seen does not hide pending requests. Project details
+hold the editable goal, next step and environment; the full session list is collapsed.
+Linked outcomes, followed sessions and delivery records remain available.
 
 Delivery records keep the source session, full verification commit, evidence notes,
 verification result, PR/CI snapshot and human acceptance separately. Refresh uses
@@ -18,7 +20,9 @@ No test, merge, push or deployment is performed by refreshing a record.
 
 ## Files and outcomes
 
-File links in saved outcomes open a reader with an explicit source environment.
+Conversation links, search results and saved outcomes reuse the same native reader
+window and its tabs. A saved outcome keeps its source environment, including when
+linked from another project. When the origin is missing, the reader asks for it.
 Project-file search results retain the searched environment even when sidebar
 membership differs from a session's execution directory.
 
@@ -37,13 +41,17 @@ membership differs from a session's execution directory.
 
 Opening or closing the reader cancels its read; late replies cannot replace a newer
 file or another host's content. Source selections can be added to the originating
-agent session's draft without sending it.
+agent session's draft without sending it. Each tab persists its source session; switching
+the main conversation does not change the file or its quote destination. The action
+menu names that destination. Closing a tab during a read also rejects its late response.
 
 The reader opens in a separate, resizable macOS window and remembers its window
 frame. Recent files use tabs above a compact toolbar. Open-path controls, source
 environment and file details are available on demand; find expands only when used.
 The actions menu contains refresh, line numbers, larger reads and quote/feedback
-commands. Closing the reader cancels its file read and retains the saved tabs.
+commands. Use Command–L for a path, Command–Shift–L for a loaded line,
+Command–Shift–[ / ] to switch tabs, and Command–W to close the current tab (or the
+window for the last tab). Closing the reader cancels its file read and retains saved tabs.
 
 Files and conversation code blocks share language-aware highlighting from bundled
 highlight.js. The reader displays source first, then fills colors in the background;
@@ -51,11 +59,15 @@ large loaded slices retain highlighting. TextKit lays out requested ranges inste
 of blocking on the entire document. Find searches the loaded slice asynchronously,
 keeps all matches, and reuses those positions for next/previous navigation.
 Unknown languages stay plain text, and selection/copying always use original text.
+Large files use a separate background parser so their coloring cannot queue small
+code blocks behind them. Bounded token caches make repeated reading cheaper; see
+[the matched measurement](performance/2026-10-23-highlighting/REPORT.md).
 
 ## Companion and background lifetime
 
 Follow tasks from a project, then use **Workbench → Companion**, the menu-bar bird,
-or **Control–Option–P**. The floating panel shows their current state and detail,
+or **Control–Option–P**. The floating panel puts requests first, then unread results,
+running work and other followed tasks. Only requests and the selected task expand detail. It
 opens pending requests in the main window, and queues a short next-turn reply for
 the explicitly selected session. Companion drafts are separate from conversation
 drafts and persist in the workspace. New-task entry hands off to the main composer.
@@ -68,7 +80,10 @@ owns the shortcut, use the menu bar; Settings reports registration failure.
 ## Search
 
 **Command–K** opens session metadata, history, saved outcomes and project-file
-search. Metadata and outcomes are local. History search explicitly reads online
+search. The input starts focused; Up/Down selects available results, Return opens
+the selection and Escape closes the sheet. For history/files, the first Return starts
+search; changing the query cancels that request and clears obsolete results. Search
+coverage details are expandable. Metadata and outcomes are local. History search explicitly reads online
 agent sessions, up to 5000 messages per session and 500 result entries, without
 changing the selected session. Opening a result uses conversation find and loads
 older history when needed. Offline/archived coverage is not implied; per-session

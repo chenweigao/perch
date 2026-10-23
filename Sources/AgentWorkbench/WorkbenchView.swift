@@ -26,7 +26,6 @@ struct WorkbenchView: View {
                 WorkspaceActionDetail(model: model, item: item).id(item.id)
             }
             .sheet(item: $model.projectOverview) { location in ProjectWorkbenchSheet(model: model, location: location) }
-            .sheet(item: $model.outcomePreview) { outcome in OutcomePreviewSheet(model: model, outcome: outcome) }
             .sheet(isPresented: $model.showFollowUps) { FollowUpManager(model: model) }
             .sheet(isPresented: $model.showGroupSuggestions) { GroupSuggestionsSheet(model: model) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }

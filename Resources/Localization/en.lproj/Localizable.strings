@@ -1808,3 +1808,34 @@
 "Kimi %@ 已安装，当前仍使用 %@。Perch 无法确认服务空闲，或重启后版本仍未变化，因此不会自动重启；请在这台机器上手动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@. Perch cannot confirm the service is idle, or a restart left the version unchanged, so it will not restart it automatically. Restart Kimi Web on that machine by hand.";
 "Perch 无法确认 Kimi Web 是否空闲，暂不自动重启。可以在这台机器上手动重启 Kimi Web。" = "Perch cannot confirm that Kimi Web is idle, so it will not restart it automatically for now. You can restart Kimi Web on that machine by hand.";
 "Kimi Web 的启动配置已修改。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启它，新配置随之生效。" = "Kimi Web's launch settings changed. Sessions still running: %@. Once all are idle, Perch restarts it automatically and the new settings take effect.";
+"↑↓ 选择 · 回车打开 · Esc 关闭" = "↑↓ Select · Return to open · Esc to close";
+
+"仅定位已读取内容中的行号" = "Jump within the loaded content";
+
+"其他关注" = "Other followed tasks";
+
+"搜索范围说明" = "Search coverage";
+
+"新完成的结果" = "New results";
+
+"暂无任务" = "No tasks";
+
+"没有找到结果" = "No results";
+
+"跳转" = "Go";
+
+"跳转到行" = "Go to line";
+
+"项目会话（%lld）" = "Project sessions (%lld)";
+
+"项目详情" = "Project details";
+
+"跳转到行…" = "Go to line…";
+
+"上一个文件标签页" = "Previous file tab";
+
+"下一个文件标签页" = "Next file tab";
+
+"引用到：%@" = "Quote to: %@";
+
+"加入会话草稿，检查后再发送。" = "Add to the session draft and review before sending.";
