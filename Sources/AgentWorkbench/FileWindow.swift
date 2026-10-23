@@ -75,7 +75,7 @@ struct FileViewerContent: View {
                 onClose: { model.fileWindow.close() })
                 .environment(\.locale, appLanguage.resolvedLocale)
                 .preferredColorScheme(appAppearance.colorScheme)
-                .onChange(of: model.fileBrowser.loading) { _, loading in if !loading { model.recordReadDocument() } }
+                .onChange(of: model.fileBrowser.completedFileReadID) { _, id in if id != nil { model.recordReadDocument() } }
         }
     }
 }

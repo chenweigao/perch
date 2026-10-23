@@ -27,6 +27,12 @@ import WorkbenchCore
     let first = WorkspaceSession(reference: SessionReference(hostID: host.id, terminalID: "doc-source", kind: .codex), title: "文档任务", directory: root.path, hostName: host.name, detail: "", online: true, section: .other, canMarkReviewed: false)
     let second = WorkspaceSession(reference: SessionReference(hostID: host.id, terminalID: "other-task", kind: .codex), title: "其他任务", directory: root.path, hostName: host.name, detail: "", online: true, section: .other, canMarkReviewed: false)
     model.catalog.replace([first, second])
+    // Earlier phases can leave other project documents in the same test domain.
+    // Resolve assertions by document identity, never insertion order.
+    model.workspace.documents.insert(ProjectDocument(
+        project: SidebarProjectLocation(hostID: host.id, directory: root.path, hostName: host.name),
+        path: root.appendingPathComponent("Earlier.md").path, title: "Earlier", source: second.reference), at: 0)
+    var recorded: ProjectDocument? { model.workspace.documents.first { $0.path == report.path } }
     model.openOutcome(GroupOutcome(title: "方案", link: report.path, source: first.reference))
     let browser = model.fileBrowser, window = model.fileWindow.window!
     func settle() async throws {
@@ -47,10 +53,28 @@ import WorkbenchCore
     try await settle()
     precondition(browser.reading.document!.outline.count == 36)
     precondition(browser.documents.current?.reading == true)
-    precondition(browser.modifiedAt != nil && model.workspace.documents.first?.modifiedAt != nil)
-    precondition(model.workspace.documents.first?.source == first.reference)
+    precondition(browser.modifiedAt != nil && recorded?.modifiedAt != nil)
+    precondition(recorded?.source == first.reference)
     model.documentLibraryActions!.togglePin()
-    precondition(model.workspace.documents.first?.pinned == true)
+    precondition(recorded?.pinned == true)
+    let lastRead = recorded!.lastReadAt
+    let completedRead = browser.completedFileReadID
+    browser.mode = .git
+    browser.loadGitStatus()
+    for _ in 0..<150 where browser.loading { try await Task.sleep(for: .milliseconds(20)) }
+    try await Task.sleep(for: .milliseconds(100))
+    precondition(!browser.loading && browser.error == nil)
+    precondition(recorded?.lastReadAt == lastRead && browser.completedFileReadID == completedRead,
+                 "Git completion must not record another document read")
+    precondition(model.documentLibraryActions == nil)
+    browser.mode = .file
+    precondition(model.documentLibraryActions != nil && recorded?.lastReadAt == lastRead,
+                 "Returning to cached document content keeps pinning available without another read")
+    browser.open(report.path, source: first.reference)
+    precondition(model.documentLibraryActions == nil, "Pending reads must not offer pinning")
+    try await settle()
+    precondition(recorded!.lastReadAt > lastRead && model.documentLibraryActions != nil,
+                 "A successful refresh records a new read and enables pinning")
     let readerText = texts().first { $0.string.contains("打开下一份文档") }!
     let link = readerText.textStorage!.attribute(.link, at: 0, effectiveRange: nil) as! URL
     precondition(link.scheme == "perch-document", "Relative links must survive attributed rendering")
@@ -123,6 +147,8 @@ import WorkbenchCore
     browser.navigateDocument("missing.md")
     for _ in 0..<100 where browser.loading { try await Task.sleep(for: .milliseconds(20)) }
     precondition(browser.content == .missing && browser.documents.canGoBack)
+    precondition(model.documentLibraryActions == nil, "Missing documents must not offer a no-op pin action")
+    precondition(!model.workspace.documents.contains { $0.path == browser.path })
     browser.navigateHistory(-1); try await settle()
     precondition(browser.path == report.path && browser.documents.current?.source == first.reference)
     model.fileWindow.close()
@@ -137,7 +163,7 @@ import WorkbenchCore
     cancelled.cancel(); let cancelledResult = await cancelled.value; precondition(cancelledResult == nil)
     let projectWindow = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 720, height: 700), styleMask: [.titled, .resizable], backing: .buffered, defer: false)
     projectWindow.isReleasedWhenClosed = false
-    projectWindow.contentViewController = NSHostingController(rootView: ProjectWorkbenchSheet(model: model, location: saved.documents.first!.project).background(Color(nsColor: .windowBackgroundColor)))
+    projectWindow.contentViewController = NSHostingController(rootView: ProjectWorkbenchSheet(model: model, location: saved.documents.first { $0.path == report.path }!.project).background(Color(nsColor: .windowBackgroundColor)))
     projectWindow.orderFront(nil)
     try await Task.sleep(for: .milliseconds(200))
     capture("project-documents", in: projectWindow); projectWindow.close()

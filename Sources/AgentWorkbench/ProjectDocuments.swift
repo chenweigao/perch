@@ -10,7 +10,7 @@ extension WorkbenchModel {
         return SidebarProjectLocation(hostID: host.id, directory: fileBrowser.cwd, hostName: host.name)
     }
     var documentLibraryActions: DocumentLibraryActions? {
-        guard let project = readingProject else { return nil }
+        guard fileBrowser.hasLoadedDocument, let project = readingProject else { return nil }
         let path = fileBrowser.path
         let pinned = workspace.documents.first { $0.project.id == project.id && $0.path == path }?.pinned ?? false
         return DocumentLibraryActions(pinned: pinned) { [weak self] in
@@ -21,8 +21,7 @@ extension WorkbenchModel {
         }
     }
     func recordReadDocument() {
-        guard let project = readingProject, !fileBrowser.path.isEmpty, fileBrowser.previewKind != .source else { return }
-        switch fileBrowser.content { case .text, .binary: break; default: return }
+        guard fileBrowser.hasLoadedDocument, let project = readingProject else { return }
         let path = fileBrowser.path
         let source = fileBrowser.documents.current?.source ?? fileBrowser.source
         if let index = workspace.documents.firstIndex(where: { $0.project.id == project.id && $0.path == path }) {

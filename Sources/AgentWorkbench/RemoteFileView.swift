@@ -67,6 +67,7 @@ final class RemoteFileBrowser {
     let documents = FileWorkspaceState()
     let reading = DocumentReadingState()
     private(set) var fileRequest: FileReadRequest?
+    private(set) var completedFileReadID: UUID?
     private(set) var previewData: Data?
     private(set) var readLimit = RemoteFileCommand.readLimit
     private(set) var readingTail = false
@@ -76,6 +77,11 @@ final class RemoteFileBrowser {
     var findQuery = ""
     var findIndex = 0
     var previewKind: FilePreviewKind { FilePreviewKind(path: path) }
+
+    var hasLoadedDocument: Bool {
+        guard mode == .file, !loading, error == nil, previewKind != .source else { return false }
+        switch content { case .text, .binary: return true; default: return false }
+    }
 
     var hostName: String { host?.name ?? L("未选择主机") }
 
@@ -168,6 +174,7 @@ final class RemoteFileBrowser {
                 if targetLine != nil { documents.setReading(false) }
                 else if documentAnchor != nil { documents.setReading(true) }
                 if FilePreviewKind(path: actual).isBinary { previewData = RemoteFileCommand.body(in: data) }
+                completedFileReadID = request.id
             default: break
             }
         } catch { content = nil; previewData = nil; self.error = error.localizedDescription }
