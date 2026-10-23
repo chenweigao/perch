@@ -13,7 +13,9 @@ import WorkbenchCore
     let report = root.appendingPathComponent("Report.md")
     let next = root.appendingPathComponent("sub/Next page.md")
     let paragraphs = (1...35).map { "## Chapter \($0)\n\n正文 \($0)：A useful finding with **clear evidence** and a next step.\n\n" }.joined()
-    try ("# 项目方案\n\n[打开下一份文档](sub/Next%20page.md#结论) · [跳到章节](#chapter-20)\n\n![图示](diagram.png)\n\n" + paragraphs).write(to: report, atomically: true, encoding: .utf8)
+    let introduction = "让文档与执行状态随时可见，同时保留完整的正文阅读空间。"
+    let overview = "\(introduction)\n\n> 先看需要处理的事项，再看可以继续阅读的文档。\n\n- 文档以名称为主，路径与来源按需展开。\n- 后台任务保留摘要，细节按需查看。\n\n| 内容 | 视觉处理 |\n| --- | --- |\n| 文档与产物 | 清楚的标题与稳定的留白 |\n| 进行中的任务 | 简短状态与轻量活动标记 |\n\n"
+    try ("# 项目方案\n\n\(overview)[打开下一份文档](sub/Next%20page.md#结论) · [跳到章节](#chapter-20)\n\n![图示](diagram.png)\n\n" + paragraphs).write(to: report, atomically: true, encoding: .utf8)
     try "# 第二份文档\n\nNotes.\n\n## 结论\n\nA separate result.\n\n[返回](../Report.md)".write(to: next, atomically: true, encoding: .utf8)
     let image = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 240, pixelsHigh: 80, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     for y in 0..<80 { for x in 0..<240 { image.setColor(NSColor(calibratedRed: 0.1, green: 0.6, blue: 0.6, alpha: 1), atX: x, y: y) } }
@@ -52,6 +54,35 @@ import WorkbenchCore
     }
     try await settle()
     precondition(browser.reading.document!.outline.count == 36)
+    let title = texts().first { $0.string == "项目方案" }!
+    precondition(abs((title.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 26) < 0.1)
+    let body = texts().first { $0.string.contains(introduction) }!
+    precondition(abs((body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 16) < 0.1)
+    precondition(!NSFontManager.shared.traits(of: body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).contains(.boldFontMask))
+    precondition(abs((body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle).minimumLineHeight - 28) < 0.1)
+    let readerScroll = title.enclosingScrollView!
+    window.setContentSize(NSSize(width: 960, height: 640))
+    try await Task.sleep(for: .milliseconds(150))
+    browser.reading.showOutline = true
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(browser.reading.outlineBeside && texts().first { $0.string == "项目方案" }?.enclosingScrollView === readerScroll,
+                 "Opening the outline preserves the mounted reader")
+    precondition(readerScroll.convert(readerScroll.bounds, to: window.contentView).minX >= 188)
+    let outlineTarget = browser.reading.document!.outline.first { $0.anchor == "chapter-20" }!
+    browser.reading.jump(outlineTarget.id)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(browser.reading.showOutline && readerScroll.contentView.bounds.origin.y > 500)
+    window.setContentSize(NSSize(width: 720, height: 640))
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(!browser.reading.outlineBeside)
+    browser.reading.jump(browser.reading.document!.sections.first!.id)
+    try await Task.sleep(for: .milliseconds(200))
+    let returnedTitle = texts().first { $0.string == "项目方案" }!
+    precondition(!browser.reading.showOutline && returnedTitle.enclosingScrollView === readerScroll &&
+                 returnedTitle.convert(returnedTitle.bounds, to: readerScroll.contentView).intersects(readerScroll.contentView.bounds),
+                 "A narrow outline closes after navigation without replacing the reader")
+    capture("document-focused-single")
+    if CommandLine.arguments.contains("preview") { try await Task.sleep(for: .seconds(120)) }
     precondition(browser.documents.current?.reading == true)
     precondition(browser.modifiedAt != nil && recorded?.modifiedAt != nil)
     precondition(recorded?.source == first.reference)
@@ -88,6 +119,7 @@ import WorkbenchCore
     browser.navigateDocument("#chapter-20")
     try await Task.sleep(for: .milliseconds(250))
     let chapter = texts().first { $0.string == "Chapter 20" }!
+    precondition(abs((chapter.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 18) < 0.1)
     precondition(chapter.enclosingScrollView!.contentView.bounds.origin.y > 500)
     let offset = chapter.enclosingScrollView!.contentView.bounds.origin.y
     browser.navigateDocument("sub/Next%20page.md")
@@ -142,6 +174,12 @@ import WorkbenchCore
             try await Task.sleep(for: .milliseconds(180))
             precondition(abs(window.contentView!.bounds.width - width) < 1)
             capture("document-\(Int(width))-\(appearance == .aqua ? "light" : "dark")")
+            if width == 1100 {
+                browser.reading.showOutline = true
+                try await Task.sleep(for: .milliseconds(150))
+                capture("document-outline-\(appearance == .aqua ? "light" : "dark")")
+                browser.reading.showOutline = false
+            }
         }
     }
     browser.navigateDocument("missing.md")

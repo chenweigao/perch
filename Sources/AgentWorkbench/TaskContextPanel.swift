@@ -128,6 +128,7 @@ struct TaskContextView: View {
     @State private var state = TaskContextState()
     @State private var allFiles = false
     @State private var allTasks = false
+    @State private var expandedTasks: Set<String> = []
     @State private var completedTools = false
     @State private var outputTask: String?
     @State private var draftSource: WorkspaceSession?
@@ -160,11 +161,11 @@ struct TaskContextView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 24) {
                     if let error = state.error {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("状态未同步", systemImage: "wifi.exclamationmark")
-                            Text(error).font(.caption).textSelection(.enabled)
+                            Text(error).font(.system(size: 11)).textSelection(.enabled)
                             Button("重试") { state.refresh += 1 }.disabled(item?.online != true)
                         }.foregroundStyle(.secondary)
                     }
@@ -179,7 +180,7 @@ struct TaskContextView: View {
                     } else if reference?.kind == .terminal {
                         Text("终端任务请在完整会话中查看。").foregroundStyle(.secondary)
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
             if detached, let item {
@@ -196,7 +197,7 @@ struct TaskContextView: View {
                 }.fixedSize(horizontal: false, vertical: true)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
             }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
             .frame(height: fittedHeight)
             .background(detached ? Color(nsColor: .windowBackgroundColor) : WorkbenchTheme.contentBackground)
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
@@ -208,7 +209,7 @@ struct TaskContextView: View {
                 }
             }
             .onChange(of: reference) { _, _ in
-                allFiles = false; allTasks = false; completedTools = false; outputTask = nil
+                allFiles = false; allTasks = false; expandedTasks = []; completedTools = false; outputTask = nil
             }
             .sheet(item: $draftSource) { source in
                 TaskContextDraft(model: model, source: source)
@@ -216,7 +217,7 @@ struct TaskContextView: View {
     }
     private var header: some View {
         HStack(spacing: 4) {
-            if (detached || model.taskContextWindow.locked != nil), let item {
+            if let item {
                 Button { model.open(item); openMain() } label: {
                     Text(item.title).lineLimit(1).truncationMode(.tail)
                 }.help("打开会话")
@@ -246,24 +247,33 @@ struct TaskContextView: View {
                 Button(action: close) { Image(systemName: "xmark").frame(width: 24, height: 24) }
                     .help("收起任务面板").accessibilityLabel("收起任务面板")
             }
-        }.font(.callout).foregroundStyle(.secondary).buttonStyle(.borderless)
+        }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.borderless)
             .padding(.horizontal, 16).padding(.top, 10)
     }
 
     @ViewBuilder private func sections(_ value: TaskContextSnapshot, item: WorkspaceSession) -> some View {
         let online = item.online && state.error == nil
         if !value.requests.isEmpty || value.failure != nil {
-            VStack(alignment: .leading, spacing: 9) {
+            VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("需要你处理", count: value.requests.count + (value.failure == nil ? 0 : 1))
                 ForEach(value.requests.prefix(3)) { request in
-                    Text(request.title).lineLimit(3).font(.callout)
+                    Button { model.inspect(item); openMain() } label: {
+                        Label(request.title, systemImage: "bubble.left")
+                            .lineLimit(3).frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    }.buttonStyle(TaskContextRowStyle()).disabled(!online)
+                        .help("查看并处理")
                 }
-                if let error = value.failure { Text(error).lineLimit(3).foregroundStyle(.orange) }
-                Button("查看并处理") { model.inspect(item); openMain() }.disabled(!online)
+                if let error = value.failure {
+                    Button { model.inspect(item); openMain() } label: {
+                        Label(error, systemImage: "exclamationmark.circle")
+                            .lineLimit(3).foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    }.buttonStyle(TaskContextRowStyle()).disabled(!online).help("查看并处理")
+                }
             }
         }
         if !value.files.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", count: value.files.count)
                 ForEach(allFiles ? value.files : Array(value.files.prefix(4))) { file in
                     Button {
@@ -273,26 +283,26 @@ struct TaskContextView: View {
                             Image(systemName: "doc.text").foregroundStyle(.secondary)
                             Text(file.name).lineLimit(1).truncationMode(.middle)
                             Spacer(minLength: 4)
-                            Text(file.written ? "本轮更新" : "相关文件").font(.caption).foregroundStyle(.secondary)
-                        }.contentShape(Rectangle())
-                    }.buttonStyle(.plain).help(file.path).disabled(!item.online)
+                            if file.written { Text("本轮更新").font(.system(size: 11)).foregroundStyle(.secondary) }
+                        }.frame(minHeight: 36).contentShape(Rectangle())
+                    }.buttonStyle(TaskContextRowStyle()).help(file.path).disabled(!item.online)
                 }
-                if value.files.count > 4 { Button(allFiles ? "收起" : "查看全部文件") { allFiles.toggle() }.font(.caption) }
+                if value.files.count > 4 { Button(allFiles ? "收起" : "查看全部文件") { allFiles.toggle() }.font(.system(size: 12)) }
             }
         }
         if !value.tasks.isEmpty || value.taskError != nil {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("后台任务与子 Agent", count: value.tasks.count)
-                if let error = value.taskError { Text(error).font(.caption).foregroundStyle(.secondary) }
+                if let error = value.taskError { Text(error).font(.system(size: 11)).foregroundStyle(.secondary) }
                 let ordered = value.tasks.sorted { $0.isRunning && !$1.isRunning }
                 ForEach(allTasks ? ordered : Array(ordered.prefix(4))) { task in
                     taskRow(task, item: item, online: online)
                 }
-                if value.tasks.count > 4 { Button(allTasks ? "收起" : "查看全部任务") { allTasks.toggle() }.font(.caption) }
+                if value.tasks.count > 4 { Button(allTasks ? "收起" : "查看全部任务") { allTasks.toggle() }.font(.system(size: 12)) }
             }
         }
         if !value.tools.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("工具活动", count: value.tools.count)
                 ForEach(value.tools.filter { $0.staysVisible || $0.status == .failed }) { tool in toolRow(tool) }
                 let completed = value.tools.filter { !$0.staysVisible && $0.status != .failed }
@@ -300,9 +310,9 @@ struct TaskContextView: View {
                     DisclosureGroup("已结束的调用 · \(completed.count)", isExpanded: $completedTools) {
                         ForEach(completed.suffix(20).reversed()) { tool in toolRow(tool) }
                         if completed.count > 20 {
-                            Text("显示最近 20 次调用，完整记录请打开会话。").font(.caption).foregroundStyle(.secondary)
+                            Text("显示最近 20 次调用，完整记录请打开会话。").font(.system(size: 11)).foregroundStyle(.secondary)
                         }
-                    }
+                    }.font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -314,65 +324,98 @@ struct TaskContextView: View {
     }
     private func sectionTitle(_ title: LocalizedStringKey, count: Int) -> some View {
         HStack {
-            Text(title).font(.subheadline.weight(.medium))
+            Text(title).font(.system(size: 12, weight: .medium))
             Spacer()
-            Text(count.formatted()).font(.caption).foregroundStyle(.secondary)
-        }
+            Text(count.formatted()).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
+        }.padding(.bottom, 4)
     }
     private func toolRow(_ tool: VisibleTool) -> some View {
         DisclosureGroup {
             KimiToolCard(tool: tool)
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(ConversationActivity.summary(of: tool)).lineLimit(2)
-                Text(ConversationActivity.status(of: tool)).font(.caption).foregroundStyle(.secondary)
-            }
-        }.font(.callout)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: tool.status == .failed ? "exclamationmark.circle" : tool.staysVisible ? "circle.dashed" : "checkmark.circle")
+                    .foregroundStyle(tool.status == .failed ? Color.red : .secondary).frame(width: 16)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(ConversationActivity.summary(of: tool)).lineLimit(2).foregroundStyle(.primary)
+                    Text(ConversationActivity.status(of: tool)).font(.system(size: 11))
+                        .foregroundStyle(tool.status == .failed ? Color.red : .secondary)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }.padding(.vertical, 4)
+        }.font(.system(size: 13))
     }
     private func taskRow(_ task: KimiTask, item: WorkspaceSession, online: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(task.description.isEmpty ? task.kindLabel : task.description).font(.callout).lineLimit(2)
-            HStack(spacing: 8) {
-                Text(task.phaseLabel)
-                if let elapsed = task.elapsed(at: Date()) { Text("\(Int(elapsed)) 秒").monospacedDigit() }
-            }.font(.caption).foregroundStyle(.secondary)
-            if let latest = task.latestActivity { Text(latest).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
-            HStack {
-                if item.reference.kind == .kimi && task.kind != "subagent" {
-                    Button(outputTask == task.id ? "收起输出" : "查看输出") {
-                        if outputTask == task.id { outputTask = nil }
-                        else {
-                            outputTask = task.id
-                            Task { await state.perform(task, source: item.reference, stopping: false) {
-                                try await model.taskContextOperation(task, source: item.reference, stop: false)
-                            } }
+        DisclosureGroup(isExpanded: Binding(get: { expandedTasks.contains(task.id) }, set: { expanded in
+            if expanded { expandedTasks.insert(task.id) } else { expandedTasks.remove(task.id) }
+        })) {
+            VStack(alignment: .leading, spacing: 8) {
+                if let latest = task.latestActivity { Text(latest).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(3) }
+                HStack {
+                    if item.reference.kind == .kimi && task.kind != "subagent" {
+                        Button(outputTask == task.id ? "收起输出" : "查看输出") {
+                            if outputTask == task.id { outputTask = nil }
+                            else {
+                                outputTask = task.id
+                                Task { await state.perform(task, source: item.reference, stopping: false) {
+                                    try await model.taskContextOperation(task, source: item.reference, stop: false)
+                                } }
+                            }
                         }
+                    } else {
+                        Button("查看会话") { model.open(item); openMain() }
                     }
-                } else {
-                    Button("查看会话") { model.open(item); openMain() }
+                    Spacer()
+                    if task.isRunning && (task.stoppable == true || (item.reference.kind == .kimi && task.kind != "subagent")) {
+                        Button(state.stopRequested.contains(task.id) ? "已请求停止" : "停止") {
+                            Task { await state.perform(task, source: item.reference, stopping: true) {
+                                try await model.taskContextOperation(task, source: item.reference, stop: true)
+                            } }
+                        }.disabled(state.stopRequested.contains(task.id))
+                    }
+                }.font(.system(size: 11)).disabled(!online || state.working.contains(task.id))
+                if outputTask == task.id {
+                    ScrollView {
+                        Text(state.outputs[task.id] ?? task.outputPreview ?? L("正在读取输出…"))
+                            .font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }.frame(maxHeight: 160)
                 }
-                Spacer()
-                if task.isRunning && (task.stoppable == true || (item.reference.kind == .kimi && task.kind != "subagent")) {
-                    Button(state.stopRequested.contains(task.id) ? "已请求停止" : "停止") {
-                        Task { await state.perform(task, source: item.reference, stopping: true) {
-                            try await model.taskContextOperation(task, source: item.reference, stop: true)
-                        } }
-                    }.disabled(state.stopRequested.contains(task.id))
-                }
-            }.font(.caption).disabled(!online || state.working.contains(task.id))
-            if outputTask == task.id {
-                ScrollView {
-                    Text(state.outputs[task.id] ?? task.outputPreview ?? L("正在读取输出…"))
-                        .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }.frame(maxHeight: 160)
-            }
-            if let error = state.actionErrors[task.id] { Text(error).font(.caption).foregroundStyle(.orange) }
-        }
+                if let error = state.actionErrors[task.id] { Text(error).font(.system(size: 11)).foregroundStyle(.red) }
+            }.padding(.vertical, 6)
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: task.isRunning ? "circle.dashed" : task.isFailed ? "exclamationmark.circle" :
+                        task.status == "completed" ? "checkmark.circle" : task.status == "cancelled" ? "stop.circle" : "questionmark.circle")
+                    .foregroundStyle(task.isFailed ? Color.red : .secondary).frame(width: 16)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(task.description.isEmpty ? task.kindLabel : task.description).lineLimit(2)
+                    HStack(spacing: 6) {
+                        Text(task.phaseLabel)
+                        if let elapsed = task.elapsed(at: Date()) { Text("\(Int(elapsed)) 秒").monospacedDigit() }
+                    }.font(.system(size: 11)).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }.padding(.vertical, 4)
+        }.font(.system(size: 13))
     }
     private func openMain() {
         close?()
         CompanionWindowController.shared.showMain()
+    }
+}
+
+private struct TaskContextRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Row(configuration: configuration)
+    }
+    private struct Row: View {
+        let configuration: Configuration
+        @State private var hovered = false
+        var body: some View {
+            configuration.label.padding(.horizontal, 4)
+                .background(.primary.opacity(configuration.isPressed ? 0.08 : hovered ? 0.04 : 0),
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
+                .contentShape(Rectangle()).onHover { hovered = $0 }
+        }
     }
 }
 

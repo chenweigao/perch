@@ -14,9 +14,12 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")
 parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")
 parser.add_argument("--preview-file-reader", action="store_true", help="Keep the isolated file-reader fixture open for 120 seconds after checks")
+parser.add_argument("--preview-document-reader", action="store_true", help="Keep the isolated document reader open for 120 seconds")
 args = parser.parse_args()
 if args.preview_file_reader:
     args.phase = [phase for phase in args.phase or [] if phase != "file-reader"] + ["file-reader"]
+if args.preview_document_reader:
+    args.phase = [phase for phase in args.phase or [] if phase != "document-reading"] + ["document-reading"]
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
@@ -58,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
     try:
         for phase in args.phase or PHASES:
-            preview = args.preview_file_reader and phase == "file-reader"
+            preview = (args.preview_file_reader and phase == "file-reader") or (args.preview_document_reader and phase == "document-reading")
             if preview:
                 print(f"File reader preview app: {app}", flush=True)
             subprocess.run([str(executable), phase, *(["preview"] if preview else [])],
