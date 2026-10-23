@@ -689,41 +689,51 @@ struct RemoteFilePanel: View {
     /// A branch switch rewrites the remote worktree under any agent working there.
     @State private var pendingBranch: String?
     private var pendingBranchName: String { pendingBranch ?? "" }
+    private var isDocumentReading: Bool {
+        browser.mode == .file && browser.previewKind == .markdown && browser.documents.current?.reading == true
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if browser.mode == .file, !browser.documents.tabs.isEmpty {
+            if browser.mode == .file, !browser.documents.tabs.isEmpty,
+               !isDocumentReading || browser.documents.tabs.count > 1 {
                 FileTabStrip(browser: browser)
                 Divider()
             }
             HStack(spacing: 6) {
-                Picker("", selection: $browser.mode) {
-                    ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
-                }.pickerStyle(.menu).labelsHidden().frame(width: 74)
-                    .onChange(of: browser.mode) { _, mode in
-                        if mode == .git, browser.gitStatus == nil { browser.loadGitStatus() }
-                    }
+                if !isDocumentReading {
+                    Picker("", selection: $browser.mode) {
+                        ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
+                    }.pickerStyle(.menu).labelsHidden().frame(width: 74)
+                        .onChange(of: browser.mode) { _, mode in
+                            if mode == .git, browser.gitStatus == nil { browser.loadGitStatus() }
+                        }
+                }
                 if browser.mode == .file {
                     Button { browser.navigateHistory(-1) } label: { Image(systemName: "chevron.left") }
                         .disabled(!browser.documents.canGoBack).help("返回上一个文档").accessibilityLabel("返回上一个文档")
                     Button { browser.navigateHistory(1) } label: { Image(systemName: "chevron.right") }
                         .disabled(!browser.documents.canGoForward).help("前往下一个文档").accessibilityLabel("前往下一个文档")
-                    FileDisplayMode(browser: browser)
-                    if browser.previewKind == .markdown && browser.documents.current?.reading == true {
-                        DocumentReaderControls(state: browser.reading)
+                    if !isDocumentReading { FileDisplayMode(browser: browser) }
+                    if isDocumentReading && browser.documents.tabs.count == 1 {
+                        Image(systemName: "doc.text").foregroundStyle(.secondary).padding(.leading, 4)
+                        Text((browser.path as NSString).lastPathComponent)
+                            .font(.system(size: 13)).lineLimit(1).truncationMode(.middle).help(browser.path)
                     }
                 }
                 Spacer(minLength: 0)
                 if browser.mode == .file {
-                    Button { showLocation.toggle() } label: { Image(systemName: "folder") }
-                        .help("打开文件…").accessibilityLabel("打开文件…")
-                        .popover(isPresented: $showLocation) { locationEditor }
+                    if isDocumentReading { DocumentReaderControls(state: browser.reading) }
+                    if !isDocumentReading {
+                        Button { showLocation.toggle() } label: { Image(systemName: "folder") }
+                            .help("打开文件…").accessibilityLabel("打开文件…")
+                    }
                     Button { showFind.toggle() } label: { Image(systemName: "magnifyingglass") }
                         .help("在已读取内容中查找").accessibilityLabel("在已读取内容中查找")
                         .disabled(!hasContext)
-                    Button { showDetails.toggle() } label: { Image(systemName: "info.circle") }
+                    if !isDocumentReading {
+                        Button { showDetails.toggle() } label: { Image(systemName: "info.circle") }
                         .help("文件详情").accessibilityLabel("文件详情")
-                        .popover(isPresented: $showDetails) { fileDetails }
-                        .popover(isPresented: $showLine) { lineEditor }
+                    }
                 }
                 if browser.mode == .file || onAddContext != nil { fileActions }
                 if showsCloseButton {
@@ -732,7 +742,10 @@ struct RemoteFilePanel: View {
                         .keyboardShortcut(closeShortcut)
                 }
             }.buttonStyle(.borderless).controlSize(.small)
-                .padding(.horizontal, 12).frame(height: 38)
+                .padding(.horizontal, 12).frame(height: isDocumentReading ? 48 : 38)
+                .popover(isPresented: $showLocation) { locationEditor }
+                .popover(isPresented: $showDetails) { fileDetails }
+                .popover(isPresented: $showLine) { lineEditor }
             Divider()
             if browser.mode == .git {
                 VStack(alignment: .leading, spacing: 9) {
@@ -1003,6 +1016,16 @@ struct RemoteFilePanel: View {
     private var fileActions: some View {
         Menu {
             if browser.mode == .file {
+                if isDocumentReading {
+                    Button("打开文件…") { showLocation = true }
+                    Button("文件详情") { showDetails = true }
+                    Button("源码") { browser.documents.setReading(false) }
+                    Button("Git 变更") {
+                        browser.mode = .git
+                        if browser.gitStatus == nil { browser.loadGitStatus() }
+                    }
+                    Divider()
+                }
                 if let library = documentLibrary, !browser.path.isEmpty, browser.previewKind != .source {
                     Button(library.pinned ? "取消固定文档" : "固定到项目文档") { library.togglePin() }
                 }

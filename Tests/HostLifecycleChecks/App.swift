@@ -18,8 +18,12 @@ import WorkbenchCore
             // and accessibility, unlike the command-line layout checks below.
             NSApp.setActivationPolicy(.accessory)
             Task { @MainActor in
-                do { try await checkFileReaderWindow(); NSApp.terminate(nil) }
-                catch { fatalError("File reader preview failed: \(error)") }
+                do {
+                    if CommandLine.arguments.contains("document-reading") { try await checkDocumentReadingUI() }
+                    else { try await checkFileReaderWindow() }
+                    NSApp.terminate(nil)
+                }
+                catch { fatalError("Reader preview failed: \(error)") }
             }
             NSApp.run()
             return

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """After scripts/build.sh, check the production model without SSH or real preferences."""
 import argparse
+import faulthandler
 import pathlib
 import platform
 import plistlib
 import shutil
 import subprocess
 import tempfile
+import time
 import uuid
 
 PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context"]
@@ -14,9 +16,12 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")
 parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")
 parser.add_argument("--preview-file-reader", action="store_true", help="Keep the isolated file-reader fixture open for 120 seconds after checks")
+parser.add_argument("--preview-document-reader", action="store_true", help="Keep the isolated document reader open for 120 seconds")
 args = parser.parse_args()
 if args.preview_file_reader:
     args.phase = [phase for phase in args.phase or [] if phase != "file-reader"] + ["file-reader"]
+if args.preview_document_reader:
+    args.phase = [phase for phase in args.phase or [] if phase != "document-reading"] + ["document-reading"]
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
@@ -45,6 +50,8 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     }))
     subprocess.run([str(ROOT / "scripts/prepare-highlight.sh"), str(app / "Contents/Resources")], check=True)
     compiled = work / "compiled"
+    started = time.monotonic()
+    print("Compiling host lifecycle fixture", flush=True)
     subprocess.run([
         "swiftc", *(["-O", "-whole-module-optimization"] if args.release else ["-Onone"]), "-swift-version", "5", "-parse-as-library",
         "-target", platform.machine() + "-apple-macosx26.0", *includes,
@@ -56,13 +63,36 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     # Stage a fresh executable inode before signing the isolated app bundle.
     shutil.copy2(compiled, executable)
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
+    print(f"Host lifecycle fixture ready in {time.monotonic() - started:.2f} s", flush=True)
     try:
         for phase in args.phase or PHASES:
-            preview = args.preview_file_reader and phase == "file-reader"
+            started = time.monotonic()
+            print(f"Running host lifecycle phase: {phase}", flush=True)
+            preview = (args.preview_file_reader and phase == "file-reader") or (args.preview_document_reader and phase == "document-reading")
             if preview:
                 print(f"File reader preview app: {app}", flush=True)
-            subprocess.run([str(executable), phase, *(["preview"] if preview else [])],
-                           check=True, timeout=150 if preview else 60)
+            command = [str(executable), phase, *(["preview"] if preview else [])]
+            limit = 150 if preview else 60
+            faulthandler.dump_traceback_later(limit + 15)
+            process = subprocess.Popen(command)
+            try:
+                process.wait(timeout=limit)
+            except subprocess.TimeoutExpired:
+                print(f"Timed out host lifecycle phase: {phase}; sampling PID {process.pid}", flush=True)
+                try:
+                    subprocess.run(["sample", str(process.pid), "1", "1"], timeout=5)
+                finally:
+                    process.kill()
+                    process.wait(timeout=5)
+                raise
+            finally:
+                faulthandler.cancel_dump_traceback_later()
+            if process.returncode:
+                raise subprocess.CalledProcessError(process.returncode, command)
+            print(f"Passed host lifecycle phase: {phase} ({time.monotonic() - started:.2f} s)", flush=True)
     finally:
-        subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)
+        print("Cleaning up host lifecycle preferences", flush=True)
+        subprocess.run(["defaults", "delete", DOMAIN], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=10)
         shutil.rmtree(pathlib.Path.home() / "Library/Application Support" / DOMAIN, ignore_errors=True)
+        print("Host lifecycle cleanup complete", flush=True)

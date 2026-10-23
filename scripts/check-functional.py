@@ -43,9 +43,10 @@ def main():
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),
-            # Compiles the whole app target before 15 phases (each capped at 30 s);
-            # passing CI runs took 118–171 s, so 180 s timed out on a slow runner.
-            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 300),
+            # Compiles the whole app before 23 isolated phases (each capped at 60 s).
+            # The expanded reader/panel suite reached the old 300 s aggregate cap
+            # on CI after all assertions passed; leave room for compilation/cleanup.
+            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 600),
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
             ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
         ]
@@ -94,6 +95,8 @@ def main():
         report["status"] = "running" if entry["passed"] else "failed"
         (out / "results.json").write_text(json.dumps(report, indent=2) + "\n")
         if not entry["passed"]:
+            reason = f"timed out after {timeout} s" if entry.get("timed_out") else f"exited with code {entry['exit_code']}"
+            print(f"Failed {name}: {reason}", flush=True)
             print((out / entry["log"]).read_text()[-12000:])
             return 1
     report["status"] = "passed"
