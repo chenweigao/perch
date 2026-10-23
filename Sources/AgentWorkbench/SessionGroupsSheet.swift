@@ -30,7 +30,7 @@ struct SessionGroupsSheet: View {
                 TextField("任务组名称（可选）", text: $newGroupName)
             }
             Text("可选多个任务组；取消全部选择且不新建，保存后即移出所有任务组。不会共享对话上下文。")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.subheadline).foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)

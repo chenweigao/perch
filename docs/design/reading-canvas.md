@@ -13,6 +13,9 @@ see [the visual refresh](visual-refresh.md) for the complete scale and rationale
 - Lists, quotes and alerts use compact 6 pt paragraph gaps. Code uses 12.5 pt
   monospaced text and tables 13 pt. User messages share the body size on a slightly
   tighter 21 pt line.
+- Thoughts: 13 pt regular, upright, on a 20 pt line in secondary ink; no italic,
+  because PingFang has none and only the Latin glyphs would slant. The streaming
+  preview caps at four lines; the full-text popover uses the body style.
 - SwiftUI and native cached rows share the same text attributes, block rhythm
   (`ReplyStyle.blockSpacing`), code card, quote and list metrics. A code card's
   horizontal scroller never takes height: the native card overlays it, and the

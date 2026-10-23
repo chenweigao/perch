@@ -28,7 +28,7 @@ struct GroupProgressView: View {
             }
             if !group.criteria.isEmpty {
                 Text("已核对 \(group.criteria.filter(\.completed).count) / \(group.criteria.count) 项 · 阶段由你确认")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
             Divider()
             HStack {

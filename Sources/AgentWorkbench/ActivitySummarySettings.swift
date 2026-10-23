@@ -111,8 +111,8 @@ struct ActivitySummarySettingsSheet: View {
                     .help("仅用于支持 chat_template_kwargs.enable_thinking 的服务，可减少摘要的延迟与开销。")
             }
             Text("使用 OpenAI 兼容的 Chat Completions 接口。活动叙事发送当前轮公开文本和受限工具元数据；手动 Recap 会按需读取完整分页历史，再发送最多 12 轮公开用户/Agent 文本、Todo，以及最多 24 条工具类型、截短目标、状态和可用退出码。工具输出摘录需单独开启；不发送完整命令参数、编辑内容、私有思考或运行上下文。自动命名仍只发送首条用户消息开头。所有内容都不会写回 Agent 上下文。")
-                .font(.caption).foregroundStyle(.secondary)
-            if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+                .font(.subheadline).foregroundStyle(.secondary)
+            if let error { Text(error).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled) }
             if let testResult { Text(testResult).font(.callout).textSelection(.enabled) }
             HStack {
                 Button(testing ? "正在测试…" : "测试连接（发送示例）") { test() }

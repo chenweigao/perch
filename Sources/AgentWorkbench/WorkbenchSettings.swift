@@ -84,11 +84,11 @@ struct WorkbenchSettings: View {
             }
             Section {
                 Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
-                if let error = model.companionShortcutError { Text(error).font(.caption).foregroundStyle(.orange) }
+                if let error = model.companionShortcutError { Text(error).font(.subheadline).foregroundStyle(.orange) }
                 Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
                 Toggle("仅通知需要我处理的任务", isOn: $model.notifyAttentionOnly)
                     .disabled(!model.notificationsEnabled)
-                if let error = model.notificationError { Text(error).font(.caption).foregroundStyle(.orange) }
+                if let error = model.notificationError { Text(error).font(.subheadline).foregroundStyle(.orange) }
             } header: {
                 SettingsSectionHeader("Task notifications", systemImage: "bell.badge", tint: .red)
             } footer: {
@@ -105,7 +105,7 @@ struct WorkbenchSettings: View {
                     Text("活动叙事与 Recap").foregroundStyle(.primary)
                 } trailing: {
                     (summarySettings.configuration.enabled ? Text("已开启") : Text("默认关闭"))
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(summarySettings.configuration.enabled ? Color.green : Color.secondary)
                 }
                 if summarySettings.configuration.enabled {
@@ -170,16 +170,16 @@ struct WorkbenchSettings: View {
             }
             Button("检查更新") { Task { await checker.checkNow() } }
                 .disabled(checker.state == .checking)
-        }.font(.caption)
+        }.font(.subheadline)
         .task { await checker.checkThrottled() }
     }
 
     @ViewBuilder private var localAgentStatus: some View {
         let count = model.localAgents.values.filter { $0.executablePath != nil }.count
         if count > 0 {
-            Text("已发现 \(count) 个本机 Agent").font(.caption).foregroundStyle(.secondary)
+            Text("已发现 \(count) 个本机 Agent").font(.subheadline).foregroundStyle(.secondary)
         } else {
-            Text("检测 Kimi、Codex 等本机 Agent").font(.caption).foregroundStyle(.secondary)
+            Text("检测 Kimi、Codex 等本机 Agent").font(.subheadline).foregroundStyle(.secondary)
         }
     }
 
@@ -222,7 +222,7 @@ private struct HostSettingsRow: View {
             HostIdentityIcon(hostID: connection.id).frame(width: 20)
             VStack(alignment: .leading, spacing: 1) {
                 Text(connection.host.name).foregroundStyle(.primary)
-                Text(connection.host.destination).font(.caption).foregroundStyle(.secondary)
+                Text(connection.host.destination).font(.subheadline).foregroundStyle(.secondary)
             }
         }
     }
@@ -280,7 +280,7 @@ private struct HostConnectionControls: View {
             Toggle("自动连接", isOn: autoConnect)
                 .toggleStyle(.switch).controlSize(.mini)
                 .accessibilityLabel(Text("\(title) 自动连接"))
-        }.font(.caption)
+        }.font(.subheadline)
     }
 }
 

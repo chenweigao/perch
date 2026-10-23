@@ -25,7 +25,7 @@ struct NewTerminalSheet: View {
                 TextField("目录", text: $cwd)
                 TextField("名称", text: $label)
             }
-            if let error { Text(error).foregroundStyle(.red).font(.caption) }
+            if let error { Text(error).foregroundStyle(.red).font(.subheadline) }
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction).disabled(creating)

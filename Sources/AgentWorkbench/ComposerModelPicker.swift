@@ -187,7 +187,7 @@ private struct ComposerModelPanel: View {
                     }
                 }.font(.system(size: 13)).padding(14)
                 if let catalogError {
-                    Text(catalogError).font(.caption).foregroundStyle(.orange)
+                    Text(catalogError).font(.subheadline).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 14).padding(.bottom, 8)
                 }
                 if let onUseDefaultModel {

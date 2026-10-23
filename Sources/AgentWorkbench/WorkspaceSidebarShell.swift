@@ -100,7 +100,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                 navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
                                     .help(environmentSummary)
                                 if environmentNeedsAttention {
-                                    Text("环境需要处理").font(.caption).foregroundStyle(.orange)
+                                    Text("环境需要处理").font(.subheadline).foregroundStyle(.orange)
                                         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10)
                                 }
                                 navigation("已归档会话", symbol: "archivebox", selected: page == .archive) {

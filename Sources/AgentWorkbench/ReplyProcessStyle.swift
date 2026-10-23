@@ -20,6 +20,13 @@ extension ReplyStyle {
         static let labelSize: CGFloat = 12
         /// Between the rows of an expanded fold, and above its first row.
         static let rowSpacing: CGFloat = 12
+        /// Thought text: one step below the body, upright, in secondary ink. Size
+        /// and ink already set it apart; italic would slant only the Latin glyphs,
+        /// because PingFang has no italic.
+        static let thoughtSize: CGFloat = 13
+        static let thoughtLineHeight: CGFloat = 20
+        /// The streaming preview shows at most four thought lines.
+        static let thoughtPreviewHeight: CGFloat = thoughtLineHeight * 4
     }
 }
 

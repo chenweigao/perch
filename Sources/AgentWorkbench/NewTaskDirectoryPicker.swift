@@ -22,7 +22,7 @@ struct NewTaskDirectoryPicker: View {
             HStack {
                 Text("项目目录").font(.headline)
                 Spacer()
-                Text(host.name).font(.caption).foregroundStyle(.secondary)
+                Text(host.name).font(.subheadline).foregroundStyle(.secondary)
             }
             if !recent.isEmpty {
                 TextField("搜索最近项目", text: $directoryQuery).textFieldStyle(.roundedBorder)
@@ -39,7 +39,7 @@ struct NewTaskDirectoryPicker: View {
                     VStack(alignment: .leading, spacing: 4) {
                         if matchingDirectories.isEmpty {
                             Text(recent.isEmpty ? "还没有最近项目，可在下方输入目录。" : "没有匹配的项目")
-                                .font(.caption).foregroundStyle(.secondary).padding(.vertical, 16)
+                                .font(.subheadline).foregroundStyle(.secondary).padding(.vertical, 16)
                         }
                         ForEach(matchingDirectories, id: \.self) { path in
                             Button { cwd = path; onClose() } label: {

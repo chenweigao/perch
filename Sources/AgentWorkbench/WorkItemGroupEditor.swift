@@ -40,19 +40,19 @@ struct WorkItemGroupEditor: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Label { Text(item.title) } icon: { AgentMark(kind: item.reference.kind, size: 12) }
                                     .font(.system(size: 12)).lineLimit(1)
-                                Text("\(item.hostName) · \(item.detail)").font(.caption).foregroundStyle(.secondary)
+                                Text("\(item.hostName) · \(item.detail)").font(.subheadline).foregroundStyle(.secondary)
                             }
                         }.toggleStyle(.checkbox)
                     }
                     ForEach(sessions.filter { ref in !model.allSessions.contains { $0.reference == ref } }.sorted { $0.id < $1.id }) { ref in
                         Toggle("未连接或已结束的\(ref.kind.label)：\(ref.terminalID)", isOn: Binding(get: { sessions.contains(ref) }, set: { selected in
                             if !selected { sessions.remove(ref) }
-                        })).toggleStyle(.checkbox).font(.caption).foregroundStyle(.secondary)
+                        })).toggleStyle(.checkbox).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }.padding(4)
             }.frame(height: 250)
             HStack {
-                Text("已选 \(sessions.count) 个会话 · 保存在本机").font(.caption).foregroundStyle(.secondary)
+                Text("已选 \(sessions.count) 个会话 · 保存在本机").font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("保存任务组") {

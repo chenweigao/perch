@@ -106,9 +106,9 @@ struct ContextMeter: View {
                             Text(L("上报时间"))
                             Text(Date(timeIntervalSince1970: reportedAt), style: .date)
                             Text(Date(timeIntervalSince1970: reportedAt), style: .time)
-                        }.font(.caption).foregroundStyle(.secondary)
+                        }.font(.subheadline).foregroundStyle(.secondary)
                     } else {
-                        Text(L("上报时间未提供")).font(.caption).foregroundStyle(.secondary)
+                        Text(L("上报时间未提供")).font(.subheadline).foregroundStyle(.secondary)
                     }
                     if let autoCompactHost, let autoCompactSession {
                         Divider()

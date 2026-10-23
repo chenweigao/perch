@@ -372,7 +372,7 @@ private struct ConversationTurnRail: View {
                 if let index = hover.index, let previewY = hover.previewY, turns.indices.contains(index) {
                     let turn = turns[index]
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(index + 1) / \(count)").font(.system(size: 10)).monospacedDigit().foregroundStyle(.tertiary)
+                        Text("\(index + 1) / \(count)").font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary)
                         Group {
                             if turn.prompt.isEmpty { Text("Attachment") }
                             else { Text(turn.prompt) }

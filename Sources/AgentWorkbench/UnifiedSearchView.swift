@@ -138,7 +138,7 @@ struct UnifiedSearchView: View {
                 DisclosureGroup("搜索范围说明") {
                     if scope == "历史" { Text("显式读取在线会话历史，每个会话最多 5000 条消息；搜索不会切换当前会话。") }
                     else { Text("选择项目后搜索文件名与正文。最多检查 1000 个文本文件 / 25 MiB，每个文件最多 3 处匹配；跳过构建目录、符号链接和大于 1 MiB 的文件。") }
-                }.font(.caption).foregroundStyle(.secondary)
+                }.font(.subheadline).foregroundStyle(.secondary)
             }
             ScrollViewReader { proxy in
                 ScrollView {
@@ -147,7 +147,7 @@ struct UnifiedSearchView: View {
                             Button { open(row) } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(row.title).fontWeight(.medium).lineLimit(2)
-                                    Text(row.detail).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+                                    Text(row.detail).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
                                 }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
                                     .contentShape(Rectangle())
                                     .background(selection == row.id ? Color.accentColor.opacity(0.12) : .clear,
@@ -161,13 +161,13 @@ struct UnifiedSearchView: View {
                 .onChange(of: selection) { _, value in if let value { proxy.scrollTo(value) } }
             }
             if state.loading { ProgressView().controlSize(.small) }
-            if !state.progress.isEmpty && scope == "历史" { Text(state.progress).font(.caption).foregroundStyle(.secondary) }
+            if !state.progress.isEmpty && scope == "历史" { Text(state.progress).font(.subheadline).foregroundStyle(.secondary) }
             if let result = state.files, scope == "文件" {
-                Text("已检查 \(result.inspected) 个文件 · 跳过 \(result.skipped) 个").font(.caption).foregroundStyle(.secondary)
-                if result.limited { Text("已达搜索上限").font(.caption).foregroundStyle(.secondary) }
+                Text("已检查 \(result.inspected) 个文件 · 跳过 \(result.skipped) 个").font(.subheadline).foregroundStyle(.secondary)
+                if result.limited { Text("已达搜索上限").font(.subheadline).foregroundStyle(.secondary) }
             }
-            if !state.errors.isEmpty { DisclosureGroup("\(state.errors.count) 项未能读取") { ForEach(state.errors, id: \.self) { Text($0).font(.caption).textSelection(.enabled) } } }
-            Text("↑↓ 选择 · 回车打开 · Esc 关闭").font(.caption).foregroundStyle(.tertiary)
+            if !state.errors.isEmpty { DisclosureGroup("\(state.errors.count) 项未能读取") { ForEach(state.errors, id: \.self) { Text($0).font(.subheadline).textSelection(.enabled) } } }
+            Text("↑↓ 选择 · 回车打开 · Esc 关闭").font(.subheadline).foregroundStyle(.tertiary)
         }.padding(24).frame(width: 740, height: 620)
             .defaultFocus($focused, true)
             .task { focused = true }

@@ -125,7 +125,7 @@ struct NativeAgentView: View {
                         if s.hasOlder {
                             Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
                                 follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
-                            }.font(.caption).buttonStyle(.bordered)
+                            }.font(.subheadline).buttonStyle(.bordered)
                                 .disabled(connection.loadingOlder || !connection.online).padding(8)
                         }
                     }
@@ -184,7 +184,7 @@ struct NativeAgentView: View {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }
                     Text(command.status == "running" ? L("正在压缩上下文…") : command.error ?? L("上下文压缩完成"))
-                        .font(.caption).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
+                        .font(.subheadline).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                 }.padding(6)
             }
             NativeComposerView(connection: connection, s: s).id(s.id)
@@ -407,18 +407,18 @@ struct NativeRunControls: View {
                 if phase != .idle {
                     HStack(spacing: 10) {
                         if !phase.isSettled { ProgressView().controlSize(.small) }
-                        Text(phase.label).font(.caption)
+                        Text(phase.label).font(.subheadline)
                             .foregroundStyle(phase.canRetry ? .orange : .secondary).textSelection(.enabled)
                         if phase.canRetry {
                             Button("Retry stop") {
                                 guard connection.selectedID == sessionID, connection.snapshot?.id == sessionID else { return }
                                 connection.stop()
-                            }.font(.caption)
+                            }.font(.subheadline)
                         }
                     }
                 }
                 if connection.queue.isPaused(reference) || pending.contains(where: { $0.state == .stoppedBeforeDelivery }) {
-                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.caption)
+                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.subheadline)
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
@@ -452,7 +452,7 @@ struct NativeRunControls: View {
                     }
                 }
                 if let warning = connection.queue.unsentWarning(for: reference) {
-                    Text(warning).font(.caption2).foregroundStyle(.secondary)
+                    Text(warning).font(.subheadline).foregroundStyle(.secondary)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
                 .sheet(item: $editingMessage) { message in
