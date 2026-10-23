@@ -232,10 +232,14 @@ import WorkbenchCore
     }.background(WorkbenchTheme.contentBackground))
     hosting.sizingOptions = []
     page.contentViewController = hosting
-    page.setContentSize(NSSize(width: 1200, height: 780))
     page.makeKeyAndOrderFront(nil)
+    // Ordering a new window constrains its frame to the screen (1024pt in CI).
+    // Apply the fixture viewport afterward so wide-layout clicks stay in bounds.
+    page.setContentSize(NSSize(width: 1200, height: 780))
     model.taskContextWindow.locked = a
     try await Task.sleep(for: .milliseconds(200))
+    precondition(page.contentView!.bounds.size == NSSize(width: 1200, height: 780),
+                 "The initial layout viewport must be applied after ordering: \(page.contentView!.bounds.size)")
     precondition(!model.taskContextWindow.embeddedVisible)
     if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
        let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
@@ -276,6 +280,8 @@ import WorkbenchCore
             page.appearance = NSAppearance(named: appearance)
             try await Task.sleep(for: .milliseconds(200))
             page.displayIfNeeded()
+            precondition(page.contentView!.bounds.size == NSSize(width: width, height: height),
+                         "The fixture must exercise the requested viewport: \(width)x\(height), actual=\(page.contentView!.bounds.size)")
             let frames = horizontalFrames()
             precondition(abs(frames.reading.width - min(680, width - 72)) < 1,
                          "Context must not squeeze the actual reading column at \(width): \(frames.reading)")
