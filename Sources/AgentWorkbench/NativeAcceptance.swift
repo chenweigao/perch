@@ -12,6 +12,7 @@ import os
     var kimiBodyEvaluations = 0
     var renderedQuery: String?
     var selection: String?
+    var searchResults: [String]?
     var dashboardProjection: DashboardProjection?
     var dashboardAttentionOnly = false
     var dashboardGroupID: UUID?
@@ -138,10 +139,12 @@ struct NativeDashboardProbe: NSViewRepresentable {
 struct NativeDirectoryProbe: NSViewRepresentable {
     let query: String
     let selection: String?
+    var results: [String]? = nil
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ view: NSView, context: Context) {
         NativeAcceptanceProbe.shared.renderedQuery = query
         NativeAcceptanceProbe.shared.selection = selection
+        NativeAcceptanceProbe.shared.searchResults = results
     }
 }
 
@@ -1118,7 +1121,7 @@ private struct ReferenceComposerFixtureView: View {
                 "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }
     private func search(_ window: NSWindow, sheet: Bool) async throws -> [String: Any] {
-        probe.query = nil; probe.renderedQuery = nil
+        probe.query = nil; probe.renderedQuery = nil; probe.searchResults = nil
         if sheet { model.showSessionSearch = true } else { model.showAllSessions() }
         try await settle(window) { self.probe.renderedQuery != nil }
         var samples: [Double] = []
@@ -1132,9 +1135,15 @@ private struct ReferenceComposerFixtureView: View {
             probe.signposter.endInterval("DirectoryQuery", span)
             // Correctness checks happen after timing, never by re-running the
             // search inside a readiness token on every rendering pass.
-            let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
-            guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
-            states.append(["query": term, "selection": probe.selection ?? "none"])
+            if sheet {
+                let expected = fixture.sessions.filter { $0.matchesSearch(term) }.map(\.id)
+                guard probe.searchResults == expected else { throw WorkbenchError("Unified search results mismatch for \(term)") }
+                states.append(["query": term, "result_count": String(expected.count)])
+            } else {
+                let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
+                guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
+                states.append(["query": term, "selection": probe.selection ?? "none"])
+            }
         }
         if sheet {
             model.showSessionSearch = false

@@ -81,6 +81,7 @@ struct UnifiedSearchView: View {
     private var location: SidebarProjectLocation? { model.workbenchProjects.first { $0.id == projectID }?.location }
     private var scopedSessions: [WorkspaceSession] { location.map { model.projectSessions($0) } ?? model.allSessions }
     var body: some View {
+        let sessions = scope == "会话" ? scopedSessions.filter { $0.matchesSearch(query) } : []
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 TextField("搜索会话、历史、成果或文件", text: $query).textFieldStyle(.roundedBorder).onSubmit(search)
@@ -100,13 +101,19 @@ struct UnifiedSearchView: View {
             if scope == "文件" { Text("选择项目后搜索文件名与正文。最多检查 1000 个文本文件 / 25 MiB，每个文件最多 3 处匹配；跳过构建目录、符号链接和大于 1 MiB 的文件。").font(.caption).foregroundStyle(.secondary) }
             if let request, ["历史", "文件"].contains(scope) { Text("检索词：\(request.query)").font(.caption).foregroundStyle(.secondary) }
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) { results }
+                VStack(alignment: .leading, spacing: 12) { results(sessions: sessions) }
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if state.loading { ProgressView().controlSize(.small) }
             if !state.progress.isEmpty && scope == "历史" { Text(state.progress).font(.caption).foregroundStyle(.secondary) }
             if !state.errors.isEmpty { DisclosureGroup("\(state.errors.count) 项未能读取") { ForEach(state.errors, id: \.self) { Text($0).font(.caption).textSelection(.enabled) } } }
         }.padding(24).frame(width: 740, height: 620)
+            #if PERCH_ACCEPTANCE
+            .onReceive(NativeAcceptanceProbe.shared.$query) { value in
+                if let value { query = value }
+            }
+            .background(NativeDirectoryProbe(query: query, selection: nil, results: sessions.map(\.id)))
+            #endif
             .task(id: request?.id) {
                 guard let request else { return }
                 if request.scope == "历史" {
@@ -129,10 +136,10 @@ struct UnifiedSearchView: View {
         if scope == "文件" && location == nil { state.errors = [L("请先选择文件所在的项目。")]; return }
         request = Request(query: text, scope: scope, location: location, sessions: scopedSessions)
     }
-    @ViewBuilder private var results: some View {
+    @ViewBuilder private func results(sessions: [WorkspaceSession]) -> some View {
         switch scope {
         case "会话":
-            ForEach(scopedSessions.filter { $0.matchesSearch(query) }) { item in
+            ForEach(sessions) { item in
                 Button { model.open(item); dismiss() } label: {
                     VStack(alignment: .leading) { Text(item.title); Text("\(item.hostName) · \(item.directory)").font(.caption).foregroundStyle(.secondary) }
                 }.buttonStyle(.plain).disabled(!item.online || item.archived)
