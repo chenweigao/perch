@@ -3,6 +3,7 @@ import WorkbenchCore
 
 struct WorkbenchSettings: View {
     @Bindable var model: WorkbenchModel
+    @AppStorage("companion.background") private var background = false
     @State private var showLocal = false
     @State private var showSSH = false
     @State private var showSummary = false
@@ -82,6 +83,8 @@ struct WorkbenchSettings: View {
                 Text("只影响新建会话。Kimi、Qoder 与 Claude Code 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
             }
             Section {
+                Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
+                if let error = model.companionShortcutError { Text(error).font(.caption).foregroundStyle(.orange) }
                 Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
                 Toggle("仅通知需要我处理的任务", isOn: $model.notifyAttentionOnly)
                     .disabled(!model.notificationsEnabled)

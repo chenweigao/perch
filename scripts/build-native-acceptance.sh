@@ -15,6 +15,7 @@ bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 app_dir="$PWD/build/Perch Acceptance.app"
 rm -rf "$app_dir"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 cp "$bin_dir/AgentWorkbench" "$app_dir/Contents/MacOS/NativeAcceptance"
 for bundle in "$bin_dir"/*.bundle; do cp -R "$bundle" "$app_dir/Contents/Resources/"; done
 cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"

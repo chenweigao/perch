@@ -54,7 +54,7 @@ struct GroupProgressView: View {
                     }
                     if !outcome.detail.isEmpty { Text(outcome.detail).textSelection(.enabled) }
                     if let url = outcome.webURL { Link(outcome.link, destination: url).lineLimit(2) }
-                    else if !outcome.link.isEmpty { Text(outcome.link).textSelection(.enabled).foregroundStyle(.secondary) }
+                    else if !outcome.link.isEmpty { Button("打开成果文件") { model.openOutcome(outcome) }.buttonStyle(QuietLinkStyle()).help(outcome.link) }
                     if let source = outcome.source {
                         if let session = model.allSessions.first(where: { $0.reference == source }) {
                             Button("来源：\(session.title)") { model.open(session) }.buttonStyle(QuietLinkStyle()).disabled(!session.online || session.archived)

@@ -70,6 +70,7 @@ struct ProtocolTests {
         checkSidebar()
         try checkModelSelection()
         try checkSlashCommands()
+        try await checkWorkspaceUpgrade()
         try await checkRemoteFileViewer()
         try await checkRemoteGitDiff()
         try await checkRemoteGitComparison()

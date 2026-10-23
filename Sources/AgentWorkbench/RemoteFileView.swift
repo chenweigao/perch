@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Observation
 import WorkbenchCore
 
 /// Read-only remote file viewing for the current session's SSH host. Every read is a
@@ -13,37 +14,56 @@ enum RemotePanelMode: String, CaseIterable, Identifiable {
 
 enum GitReviewRange: String { case unstaged, staged, branch }
 
-@MainActor
-final class RemoteFileBrowser: ObservableObject {
-    @Published private(set) var host: SSHHost?
-    @Published private(set) var cwd = ""
-    @Published var input = ""
-    @Published private(set) var path = ""
-    @Published private(set) var content: RemoteFileContent?
-    @Published private(set) var loading = false
-    @Published var error: String?
-    @Published var showLineNumbers = false
-    @Published var targetLine: Int?
-    @Published var mode: RemotePanelMode = .file
-    @Published private(set) var gitStatus: RemoteGitStatus?
-    @Published private(set) var gitPath: String?
-    @Published private(set) var gitDiff: RemoteGitDiff?
-    @Published private(set) var gitDirectory = ""
-    @Published private(set) var gitWorktrees: [RemoteGitWorktree] = []
-    @Published var gitInput = ""
-    @Published var gitRange: GitReviewRange = .unstaged
-    @Published var gitBaseInput = ""
-    @Published private(set) var gitComparison: RemoteGitComparison?
-    @Published private(set) var gitRefs: [String] = []
-    @Published private(set) var reviewProgress = GitReviewProgress()
+struct FileReadRequest: Equatable {
+    let id = UUID()
+    let command: String
+    let destination: String
+    let local: Bool
+    let path: String
+    let limit: Int
+    let fromEnd: Bool
+}
+
+@MainActor @Observable
+final class RemoteFileBrowser {
+    private(set) var host: SSHHost?
+    private(set) var cwd = ""
+    var input = ""
+    private(set) var path = ""
+    private(set) var content: RemoteFileContent?
+    private(set) var loading = false
+    var error: String?
+    var showLineNumbers = false
+    var targetLine: Int?
+    var mode: RemotePanelMode = .file
+    private(set) var gitStatus: RemoteGitStatus?
+    private(set) var gitPath: String?
+    private(set) var gitDiff: RemoteGitDiff?
+    private(set) var gitDirectory = ""
+    private(set) var gitWorktrees: [RemoteGitWorktree] = []
+    var gitInput = ""
+    var gitRange: GitReviewRange = .unstaged
+    var gitBaseInput = ""
+    private(set) var gitComparison: RemoteGitComparison?
+    private(set) var gitRefs: [String] = []
+    private(set) var reviewProgress = GitReviewProgress()
     var gitStaged: Bool { gitRange == .staged }
     /// Directories the agent recently touched (worktrees included), most recent
     /// first. Both conversation file resolution and the Git tab start from these.
     private var directoryHints: [String] = []
     private var gitSelectionExplicit = false
     private var generation = 0
-    private var reader: RemoteReader?
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var reader: RemoteReader?
+    @ObservationIgnored private var task: Task<Void, Never>?
+
+    let documents = FileWorkspaceState()
+    private(set) var fileRequest: FileReadRequest?
+    private(set) var previewData: Data?
+    private(set) var readLimit = RemoteFileCommand.readLimit
+    private(set) var readingTail = false
+    var findQuery = ""
+    var findIndex = 0
+    var previewKind: FilePreviewKind { FilePreviewKind(path: path) }
 
     var hostName: String { host?.name ?? L("未选择主机") }
 
@@ -56,6 +76,7 @@ final class RemoteFileBrowser: ObservableObject {
         cancel()
         self.host = host
         self.cwd = cwd
+        documents.activate(host: host?.id, cwd: cwd)
         self.directoryHints = directoryHints
         input = ""
         path = ""
@@ -80,53 +101,63 @@ final class RemoteFileBrowser: ObservableObject {
         gitInput = cwd
         gitSelectionExplicit = false
         targetLine = nil
+        previewData = nil
+        if let selected = documents.selected { open(selected) }
     }
 
     func submit() { open(input) }
 
-    func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false) {
-        targetLine = line
-        mode = .file
+    func open(_ requested: String, line: Int? = nil, fromConversation: Bool = false,
+              limit: Int? = nil, fromEnd: Bool = false) {
         guard let host else { error = L("当前会话没有可用的执行环境。"); return }
-        let resolved: String
-        let command: String
         do {
             if !host.isLocal { try SSHCommand.validateDestination(host.destination) }
-            if fromConversation {
-                command = try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd,
-                                                                 roots: directoryHints)
-                resolved = (try? RemoteFilePath.resolve(requested, cwd: cwd)) ?? requested
-            } else {
-                resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
-                command = RemoteFileCommand.remoteCommand(path: resolved)
+            let resolved = try RemoteFilePath.resolve(requested, cwd: cwd)
+            let limit = limit ?? FilePreviewKind(path: requested).initialReadLimit
+            let command = fromConversation
+                ? try RemoteFileCommand.referenceCommand(path: requested, cwd: cwd, roots: directoryHints, limit: limit)
+                : RemoteFileCommand.remoteCommand(path: resolved, limit: limit, fromEnd: fromEnd)
+            cancel()
+            mode = .file; path = resolved; input = resolved; targetLine = fromEnd ? nil : line
+            content = nil; previewData = nil; error = nil; loading = true
+            readLimit = limit; readingTail = fromEnd; findQuery = ""; findIndex = 0
+            fileRequest = FileReadRequest(command: command, destination: host.destination, local: host.isLocal,
+                                          path: resolved, limit: limit, fromEnd: fromEnd)
+        } catch { self.error = error.localizedDescription }
+    }
+
+    /// The file panel owns the task, so closing it cancels the process as well as
+    /// publication. Identity is checked even if a cancelled transport returns late.
+    func loadFile(_ request: FileReadRequest) async {
+        let reader = RemoteReader(local: request.local)
+        let result = await withTaskCancellationHandler {
+            await reader.run(command: request.command, destination: request.destination)
+        } onCancel: { reader.terminate() }
+        guard !Task.isCancelled, fileRequest?.id == request.id else { return }
+        loading = false
+        do {
+            let data = try result.get()
+            let value = try RemoteFileCommand.parse(data, limit: request.limit, fromEnd: request.fromEnd)
+            let actual = RemoteFileCommand.resolvedPath(in: data) ?? request.path
+            path = actual; input = actual
+            if case .matches(let paths) = value, paths.count == 1 { open(paths[0], line: targetLine); return }
+            content = value
+            switch value {
+            case .text, .binary:
+                documents.select(actual)
+                if targetLine != nil { documents.setReading(false) }
+                if FilePreviewKind(path: actual).isBinary { previewData = RemoteFileCommand.body(in: data) }
+            default: break
             }
-        } catch {
-            self.error = error.localizedDescription
-            return
-        }
-        cancel()
-        generation += 1
-        let token = generation
-        path = resolved
-        input = resolved
-        loading = true
-        error = nil
-        run(command, destination: host.destination, token: token) { browser, data in
-            let content = try RemoteFileCommand.parse(data)
-            // A multi-root lookup can read outside the session directory; display
-            // the path the remote actually read, not the requested guess.
-            if let actual = RemoteFileCommand.resolvedPath(in: data) {
-                browser.path = actual
-                browser.input = actual
-            }
-            if case .matches(let paths) = content, paths.count == 1 {
-                browser.open(paths[0], line: line)
-            } else {
-                browser.content = content
-            }
-        } failed: { browser in
-            browser.content = nil
-        }
+        } catch { content = nil; previewData = nil; self.error = error.localizedDescription }
+    }
+
+    func closeFile(_ path: String) {
+        let wasSelected = documents.selected == path
+        let next = documents.close(path)
+        guard wasSelected else { return }
+        if let next { open(next) }
+        else { cancel(); content = nil; previewData = nil; self.path = ""; input = "" }
     }
 
     func loadGitStatus() {
@@ -347,9 +378,9 @@ final class RemoteFileBrowser: ObservableObject {
 
     // MARK: - Write actions and history
 
-    @Published var gitWriteError: String?
+    var gitWriteError: String?
     private struct GitTarget: Hashable { let hostID: UUID; let directory: String }
-    @Published private var pendingWrites: Set<GitTarget> = []
+    private var pendingWrites: Set<GitTarget> = []
     private var gitTarget: GitTarget? {
         host.map {
             let directory = $0.isLocal && !gitDirectory.isEmpty
@@ -358,11 +389,11 @@ final class RemoteFileBrowser: ObservableObject {
         }
     }
     var gitWriting: Bool { gitTarget.map { pendingWrites.contains($0) } ?? false }
-    @Published private(set) var gitBranches: RemoteGitBranches?
-    @Published private(set) var gitLog: [RemoteGitCommit]?
-    @Published var gitCommitMessage = ""
-    @Published var gitCommitSheet: RemoteGitCommit?
-    @Published private(set) var gitCommitDiff: RemoteGitDiff?
+    private(set) var gitBranches: RemoteGitBranches?
+    private(set) var gitLog: [RemoteGitCommit]?
+    var gitCommitMessage = ""
+    var gitCommitSheet: RemoteGitCommit?
+    private(set) var gitCommitDiff: RemoteGitDiff?
 
     /// Writes never show the full-pane spinner; failures stay inline and every
     /// success re-reads status so the lists stay authoritative.
@@ -468,6 +499,7 @@ final class RemoteFileBrowser: ObservableObject {
     /// Bumping the generation drops any in-flight response, and terminating the
     /// process stops a slow read instead of leaving it running in the background.
     func cancel() {
+        fileRequest = nil
         generation += 1
         task?.cancel()
         task = nil
@@ -572,15 +604,17 @@ private struct DiffText: View {
 
 struct RemoteFilePanel: View {
     @UILocalization private var L
-    @ObservedObject var browser: RemoteFileBrowser
-    var fullWidth = false
-    var onToggleWidth: (() -> Void)? = nil
+    @Bindable var browser: RemoteFileBrowser
+    var showsCloseButton = true
     var onAddContext: ((String) -> Void)? = nil
     var onShowDraft: (() -> Void)? = nil
     /// Set where the panel is a sheet of its own. The side panel leaves Escape to
     /// its window, so its close button has no shortcut.
     var closeShortcut: KeyboardShortcut? = nil
     let onClose: () -> Void
+    @State private var showLocation = false
+    @State private var showDetails = false
+    @State private var showFind = false
     @State private var selection = NSRange(location: 0, length: 0)
     @State private var feedbackContext: ReviewContext?
     @State private var feedback = ""
@@ -590,54 +624,41 @@ struct RemoteFilePanel: View {
     private var pendingBranchName: String { pendingBranch ?? "" }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "doc.text.magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
-                Text("文件").font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 0)
-                if let onToggleWidth {
-                    Button(action: onToggleWidth) {
-                        Image(systemName: fullWidth ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                            .frame(width: 28, height: 28).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
-                        .accessibilityLabel(fullWidth ? L("恢复并排布局") : L("全宽审阅"))
-                }
-                Button { onClose() } label: { Image(systemName: "xmark").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).help("关闭文件面板").accessibilityLabel("关闭文件面板")
-                    .keyboardShortcut(closeShortcut)
-            }.padding(.horizontal, 14).frame(height: WorkbenchChrome.headerHeight)
-            Divider()
-            VStack(alignment: .leading, spacing: 9) {
-                Text("\(browser.hostName)\(browser.cwd.isEmpty ? "" : " · \(browser.cwd)")")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    .help(browser.mode == .git ? L("暂存、提交与切换分支会直接修改远端工作区；差异与比较仍为只读。")
-                                               : L("在当前执行环境中只读查看文件。"))
+            if browser.mode == .file, !browser.documents.tabs.isEmpty {
+                FileTabStrip(browser: browser)
+                Divider()
+            }
+            HStack(spacing: 10) {
                 Picker("", selection: $browser.mode) {
                     ForEach(RemotePanelMode.allCases) { mode in Text(mode.label).tag(mode) }
-                }.pickerStyle(.segmented).labelsHidden()
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 132)
                     .onChange(of: browser.mode) { _, mode in
                         if mode == .git, browser.gitStatus == nil { browser.loadGitStatus() }
                     }
+                if browser.mode == .file { FileDisplayMode(browser: browser) }
+                Spacer(minLength: 0)
                 if browser.mode == .file {
-                    HStack(spacing: 7) {
-                        TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
-                            .textFieldStyle(.roundedBorder).font(.system(size: 12)).onSubmit { browser.submit() }
-                        if browser.loading {
-                            Button("取消") { browser.cancel() }.controlSize(.small)
-                        } else {
-                            Button("打开") { browser.submit() }.controlSize(.small)
-                                .disabled(browser.input.trimmingCharacters(in: .whitespaces).isEmpty)
-                        }
-                    }
-                    if !browser.path.isEmpty {
-                        HStack(spacing: 7) {
-                            Button { browser.openParent() } label: { Image(systemName: "arrow.up").font(.system(size: 10)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                                .buttonStyle(.plain).foregroundStyle(.secondary).help("上一级目录").accessibilityLabel("上一级目录")
-                                .disabled(RemoteFilePath.parent(of: browser.path) == nil)
-                            Text(browser.path).font(.system(size: 11, design: .monospaced))
-                                .lineLimit(1).truncationMode(.head).textSelection(.enabled)
-                        }
-                    }
-                } else {
+                    Button { showLocation.toggle() } label: { Image(systemName: "folder") }
+                        .help("打开文件…").accessibilityLabel("打开文件…")
+                        .popover(isPresented: $showLocation) { locationEditor }
+                    Button { showFind.toggle() } label: { Image(systemName: "magnifyingglass") }
+                        .help("在已读取内容中查找").accessibilityLabel("在已读取内容中查找")
+                        .disabled(!hasContext)
+                    Button { showDetails.toggle() } label: { Image(systemName: "info.circle") }
+                        .help("文件详情").accessibilityLabel("文件详情")
+                        .popover(isPresented: $showDetails) { fileDetails }
+                }
+                if browser.mode == .file || onAddContext != nil { fileActions }
+                if showsCloseButton {
+                    Button(action: onClose) { Image(systemName: "xmark") }
+                        .help("关闭文件面板").accessibilityLabel("关闭文件面板")
+                        .keyboardShortcut(closeShortcut)
+                }
+            }.buttonStyle(.borderless).controlSize(.small)
+                .padding(.horizontal, 12).frame(height: 38)
+            Divider()
+            if browser.mode == .git {
+                VStack(alignment: .leading, spacing: 9) {
                     HStack(spacing: 7) {
                         TextField("Git 仓库或 worktree 目录", text: $browser.gitInput)
                             .textFieldStyle(.roundedBorder).font(.system(size: 12))
@@ -774,28 +795,25 @@ struct RemoteFilePanel: View {
                             .font(.system(size: 10)).foregroundStyle(.secondary)
                     }
                 }
-            }.padding(.horizontal, 14).padding(.vertical, 12)
-            Divider()
-            if onAddContext != nil {
-                HStack(spacing: 12) {
-                    Button("引用文件") { if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); contextAdded = true } }
-                        .disabled(!hasContext || browser.loading || browser.error != nil)
-                    Button("反馈选中代码…") {
-                        feedback = ""; feedbackContext = context(selection: selection)
-                    }.disabled(selection.length == 0 || browser.loading || browser.error != nil)
-                    Spacer(minLength: 0)
-                }.font(.system(size: 12)).padding(.horizontal, 14).padding(.vertical, 8)
+                .padding(.horizontal, 14).padding(.vertical, 12)
                 Divider()
             }
             if contextAdded {
                 HStack {
-                    Label("已加入当前任务草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
+                    Label("已加入会话草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
                     Spacer()
                     if let onShowDraft { Button("查看草稿", action: onShowDraft) }
                 }.font(.system(size: 11)).padding(.horizontal, 14).padding(.vertical, 6)
             }
+            if browser.mode == .file, showFind, hasContext { FileFindBar(browser: browser, isPresented: $showFind) }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }.background(WorkbenchTheme.contentBackground)
+            .onReceive(NotificationCenter.default.publisher(for: .init("PerchFindInFile"))) { _ in
+                if browser.mode == .file && hasContext { showFind = true }
+            }
+            .task(id: browser.fileRequest?.id) {
+                if let request = browser.fileRequest { await browser.loadFile(request) }
+            }
             .onChange(of: browser.loading) { _, loading in if loading { selection = NSRange(location: 0, length: 0) } }
             .onChange(of: browser.mode) { _, _ in selection = NSRange(location: 0, length: 0) }
             .sheet(item: $browser.gitCommitSheet) { commit in
@@ -841,6 +859,66 @@ struct RemoteFilePanel: View {
                     }
                 }.padding(WorkbenchTheme.Dialog.padding).frame(width: 520)
             }
+    }
+
+    private var locationEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\(browser.hostName) · \(browser.cwd)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
+                .textFieldStyle(.roundedBorder).onSubmit { browser.submit(); showLocation = false }
+            HStack {
+                Button("上一级目录") { browser.openParent(); showLocation = false }
+                    .disabled(RemoteFilePath.parent(of: browser.path) == nil)
+                Spacer()
+                Button("打开") { browser.submit(); showLocation = false }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(browser.input.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }.padding(16).frame(width: 420)
+    }
+
+    private var fileDetails: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text((browser.path as NSString).lastPathComponent).font(.headline)
+            Text(browser.path).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+            Text("\(browser.hostName) · \(browser.cwd)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            if case .text(let text, _, let size) = browser.content {
+                Text(byteLabel(size)).font(.caption)
+                if let line = browser.targetLine {
+                    Text(line <= RemoteSourceStyle.lineCount(text) ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
+                        .font(.caption)
+                }
+            } else if case .binary(let size) = browser.content { Text(byteLabel(size)).font(.caption) }
+        }.padding(16).frame(width: 360, alignment: .leading)
+    }
+
+    private var fileActions: some View {
+        Menu {
+            if browser.mode == .file {
+                if browser.loading { Button("取消") { browser.cancel() } }
+                else { Button("刷新") { browser.open(browser.path, limit: browser.readLimit, fromEnd: browser.readingTail) }.disabled(browser.path.isEmpty) }
+                Toggle("行号", isOn: $browser.showLineNumbers)
+                if case .text(_, let truncated, _) = browser.content {
+                    if truncated && !browser.readingTail && browser.readLimit < 4 * 1_048_576 {
+                        Button("读取更多") { browser.open(browser.path, limit: browser.readLimit + 1_048_576) }
+                    }
+                    if truncated || browser.readingTail {
+                        Button(browser.readingTail ? "查看开头" : "查看尾部") {
+                            browser.documents.setReading(false); browser.open(browser.path, fromEnd: !browser.readingTail)
+                        }
+                    }
+                }
+            }
+            if onAddContext != nil {
+                Divider()
+                Button("引用文件") {
+                    if let context = context(selection: NSRange(location: 0, length: 0)) { onAddContext?(context.prompt()); contextAdded = true }
+                }.disabled(!hasContext || browser.loading || browser.error != nil)
+                Button("反馈选中代码…") { feedback = ""; feedbackContext = context(selection: selection) }
+                    .disabled(selection.length == 0 || browser.loading || browser.error != nil)
+            }
+        } label: { Image(systemName: "ellipsis") }
+            .menuStyle(.borderlessButton).fixedSize().help("文件操作").accessibilityLabel("文件操作")
     }
 
     @ViewBuilder private var content: some View {
@@ -919,7 +997,7 @@ struct RemoteFilePanel: View {
                     }
                 }.padding(.vertical, 8)
             }.frame(minHeight: 80, idealHeight: max(80, min(220, Double(entries.count) * 42 + 16)), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))
-            diffPane
+            diffPane.frame(minHeight: 120)
         }
         }
     }
@@ -994,34 +1072,46 @@ struct RemoteFilePanel: View {
                 }
             case .text(let text, let truncated, let size):
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 8) {
-                        Text(byteLabel(size)).font(.system(size: 11)).foregroundStyle(.secondary)
-                        if let line = browser.targetLine {
-                            // Counted as the gutter numbers lines.
-                            Text(line <= RemoteSourceStyle.lineCount(text)
-                                 ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
-                        }
-                        if truncated {
-                            Label("已截断，仅显示前 1 MiB", systemImage: "scissors")
-                                .font(.system(size: 11)).foregroundStyle(.orange)
-                        }
-                        Spacer(minLength: 0)
-                        Toggle("行号", isOn: $browser.showLineNumbers).toggleStyle(.checkbox).font(.system(size: 11))
-                    }.padding(.horizontal, 14).padding(.vertical, 7)
-                    Divider()
-                    RemoteSourceText(text: text, line: browser.targetLine, numbered: browser.showLineNumbers, onSelection: { selection = $0 }).id(browser.path)
+                    if truncated {
+                        Label(browser.readingTail ? "正在查看文件尾部" : "仅显示已读取部分", systemImage: "scissors")
+                            .font(.caption).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 5)
+                    }
+                    if browser.previewKind.isBinary {
+                        binaryPreview(size: size)
+                    } else if browser.documents.current?.reading == true && browser.previewKind != .source && !browser.readingTail {
+                        FileContentPreview(kind: browser.previewKind, text: text, data: nil,
+                                           revision: browser.fileRequest?.id, path: browser.path,
+                                           initialOffset: browser.documents.current?.offset,
+                                           onSaveOffset: browser.documents.offsetRecorder()).id(browser.path)
+                    } else {
+                        RemoteSourceText(text: text, line: browser.targetLine, numbered: browser.showLineNumbers,
+                            onSelection: { selection = $0 }, initialOffset: browser.documents.current?.offset,
+                            onSaveOffset: browser.documents.offsetRecorder(),
+                            findQuery: browser.findQuery, findIndex: browser.findIndex, sourcePath: browser.path).id(browser.path + (browser.readingTail ? ":tail" : ":head"))
+                    }
 
                 }
             case .binary(let size):
-                notice(L("这是二进制文件（\(byteLabel(size))），不做预览。"), symbol: "doc.zipper", tint: .secondary)
+                binaryPreview(size: size)
             case .denied:
                 notice(L("没有读取权限。"), symbol: "lock", tint: .orange)
             case .missing:
                 notice(L("路径不存在。"), symbol: "questionmark.folder", tint: .orange)
             case nil:
-                notice(L("输入文件路径后打开。只读查看，不修改文件。"), symbol: "doc.text", tint: .secondary)
+                VStack(spacing: 12) {
+                    ContentUnavailableView("打开文件阅读", systemImage: "doc.text")
+                    Button("打开文件…") { showLocation = true }
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+    }
+
+    @ViewBuilder private func binaryPreview(size: Int) -> some View {
+        if browser.previewKind.isBinary, let data = browser.previewData, size <= data.count {
+            FileContentPreview(kind: browser.previewKind, text: "", data: data,
+                               revision: browser.fileRequest?.id, path: browser.path)
+        } else {
+            notice(L("文件无法预览或超过 16 MiB 预览上限。"), symbol: "doc.zipper", tint: .secondary)
         }
     }
 
@@ -1088,12 +1178,20 @@ struct RemoteSourceText: NSViewRepresentable {
     var onSelection: ((NSRange) -> Void)? = nil
     var initialOffset: Double? = nil
     var onSaveOffset: ((Double) -> Void)? = nil
+    var findQuery = ""
+    var findIndex = 0
+    var sourcePath = ""
     /// Diffs carry their own line numbers in hunk headers.
     private var showsGutter: Bool { numbered && !diff }
     final class Coordinator: NSObject, NSTextViewDelegate {
         var onSaveOffset: ((Double) -> Void)?
+        var highlighting: CodeHighlightController?
+        var search: FileSearchController?
         var text: String?
         var diff = false
+        var sourcePath = ""
+        var findQuery = ""
+        var findIndex = 0
         var line: Int?
         var onSelection: ((NSRange) -> Void)?
         func textViewDidChangeSelection(_ notification: Notification) {
@@ -1104,21 +1202,28 @@ struct RemoteSourceText: NSViewRepresentable {
         }
     }
     static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+        coordinator.search?.cancel(); coordinator.highlighting?.reset()
         let save = coordinator.onSaveOffset, offset = Double(scroll.contentView.bounds.origin.y)
         DispatchQueue.main.async { save?(offset) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
+        let scroll = SourceScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
         // TextKit 1 from the start: sizing below and the gutter read its layout.
         let view = NSTextView(usingTextLayoutManager: false); view.isEditable = false; view.isSelectable = true
         view.identifier = NSUserInterfaceItemIdentifier("PerchReviewSource")
         view.delegate = context.coordinator
+        let highlighting = CodeHighlightController(view: view)
+        context.coordinator.highlighting = highlighting
+        context.coordinator.search = FileSearchController(view: view, highlighting: highlighting)
+        view.layoutManager?.allowsNonContiguousLayout = true
+        view.layoutManager?.backgroundLayoutEnabled = false
         // The vertical ruler is the gutter; the text view must not claim it.
         view.usesRuler = false
         view.textContainer?.lineFragmentPadding = 0
-        // Code never wraps. The view is sized to its laid-out text in updateNSView.
-        view.isHorizontallyResizable = false; view.isVerticallyResizable = false
+        // TextKit estimates the document extent and lays out only requested ranges.
+        view.isHorizontallyResizable = true; view.isVerticallyResizable = true
+        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         view.textContainer?.widthTracksTextView = false
         view.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         scroll.documentView = view
@@ -1133,11 +1238,17 @@ struct RemoteSourceText: NSViewRepresentable {
         coordinator.onSelection = onSelection
         coordinator.onSaveOffset = onSaveOffset
         let textChanged = coordinator.text != text || coordinator.diff != diff
+        let languageChanged = coordinator.sourcePath != sourcePath
         let gutterChanged = scroll.rulersVisible != showsGutter
-        guard textChanged || gutterChanged || coordinator.line != line else { return }
+        let findChanged = coordinator.findQuery != findQuery || coordinator.findIndex != findIndex
+        guard textChanged || languageChanged || gutterChanged || coordinator.line != line || findChanged else { return }
         if textChanged {
             coordinator.text = text; coordinator.diff = diff
             view.textStorage?.setAttributedString(diff ? DiffText.attributed(text) : RemoteSourceStyle.code(text))
+        }
+        if textChanged || languageChanged {
+            coordinator.sourcePath = sourcePath
+            coordinator.highlighting?.update(source: text, language: diff ? "" : CodeLanguage.file(sourcePath))
         }
         if textChanged || gutterChanged {
             // Numbers are built once per text, and only while shown.
@@ -1146,24 +1257,24 @@ struct RemoteSourceText: NSViewRepresentable {
             // Beside the gutter its trailing padding is the gap before the code.
             view.textContainerInset = NSSize(width: showsGutter ? 0 : RemoteSourceMetrics.inset, height: RemoteSourceMetrics.inset)
             scroll.tile()
-            // A newly mounted split pane can still have a zero-sized viewport here.
-            // Size from laid-out glyphs so text is visible before a later window resize.
-            if let layout = view.layoutManager, let container = view.textContainer {
-                layout.ensureLayout(for: container)
-                let used = layout.usedRect(for: container), inset = view.textContainerInset
-                view.setFrameSize(NSSize(width: max(scroll.contentSize.width, used.width + inset.width + RemoteSourceMetrics.inset),
-                                         height: max(scroll.contentSize.height, used.height + 2 * inset.height)))
-            }
         }
+        coordinator.findQuery = findQuery; coordinator.findIndex = findIndex
+        coordinator.search?.update(text: text, query: findQuery, index: findIndex)
         // Showing or hiding the numbers keeps the reader's place and selection.
         guard textChanged || coordinator.line != line else { return }
         coordinator.line = line
         guard let line, let range = RemoteFileContent.lineRange(in: text, line: line) else {
             view.setSelectedRange(NSRange(location: 0, length: 0))
             if let initialOffset {
-                let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
-                scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
-                scroll.reflectScrolledClipView(scroll.contentView)
+                // A new SwiftUI host has no viewport yet. Restore after native
+                // sizing, just as line navigation below waits for attachment.
+                DispatchQueue.main.async {
+                    guard coordinator.text == text, coordinator.line == line else { return }
+                    scroll.layoutSubtreeIfNeeded()
+                    let offset = min(max(0, initialOffset), max(0, view.frame.height - scroll.contentSize.height))
+                    scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
+                    scroll.reflectScrolledClipView(scroll.contentView)
+                }
             } else { view.scrollRangeToVisible(NSRange(location: 0, length: 0)) }
             return
         }
@@ -1217,68 +1328,70 @@ private enum RemoteSourceMetrics {
     }
 }
 
-/// `RemoteSourceText`'s numbers: one `ReplyTextAttributes.codeGutter` string per
-/// text, laid out once in its own column and drawn at the rows the code occupies.
-/// Drawing only reads the code view's position, so it cannot move any frame.
-private final class RemoteSourceGutter: NSRulerView {
+/// Numbers follow the source's actual visible fragments. Independent estimated
+/// document heights would drift when TextKit lays out noncontiguous ranges.
+final class RemoteSourceGutter: NSRulerView {
     private weak var codeView: NSTextView?
-    private let numberStorage = NSTextStorage()
-    private let numberLayout = NSLayoutManager()
-    private let numberColumn = NSTextContainer(size: .zero)
     private var numberedText: String?
+    private var lineStarts = [0]
+    private var attributes: [NSAttributedString.Key: Any] = [:]
 
     init(scrollView: NSScrollView, source: NSTextView) {
         codeView = source
         super.init(scrollView: scrollView, orientation: .verticalRuler)
-        numberColumn.lineFragmentPadding = 0
-        numberLayout.addTextContainer(numberColumn)
-        numberStorage.addLayoutManager(numberLayout)
-        reservedThicknessForMarkers = 0
-        reservedThicknessForAccessoryView = 0
-        clipsToBounds = true
-        // Drawn numbers are not text a reader can reach; the code view holds the source.
-        setAccessibilityElement(false)
-        // The scroll view redraws its rulers as it scrolls; this keeps the rows in
-        // step with any scroll that only moves the clip view.
+        reservedThicknessForMarkers = 0; reservedThicknessForAccessoryView = 0
+        clipsToBounds = true; setAccessibilityElement(false)
         scrollView.contentView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(self, selector: #selector(clipDidScroll(_:)),
                                                name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
     }
     required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
     override var isFlipped: Bool { true }
-
-    /// Right-aligned numbers in a column as wide as the widest one.
     func showNumbers(for text: String) {
         guard numberedText != text else { return }
-        numberedText = text
-        let lines = RemoteSourceStyle.lineCount(text)
-        let numbers = RemoteSourceStyle.gutter(lines)
-        numberStorage.setAttributedString(numbers)
-        let widest = NSAttributedString(string: String(lines), attributes: numbers.attributes(at: 0, effectiveRange: nil))
-        let width = ceil(widest.size().width)
-        numberColumn.size = NSSize(width: width, height: CGFloat.greatestFiniteMagnitude)
-        ruleThickness = ReplyStyle.Code.gutterLeading + width + ReplyStyle.Code.gutterTrailing
+        numberedText = text; lineStarts = []
+        let source = text as NSString
+        var offset = 0
+        while offset < source.length {
+            lineStarts.append(offset)
+            offset = NSMaxRange(source.lineRange(for: NSRange(location: offset, length: 0)))
+        }
+        if lineStarts.isEmpty { lineStarts = [0] }
+        attributes = RemoteSourceStyle.gutter(1).attributes(at: 0, effectiveRange: nil)
+        let widest = NSAttributedString(string: String(lineStarts.count), attributes: attributes)
+        ruleThickness = ReplyStyle.Code.gutterLeading + ceil(widest.size().width) + ReplyStyle.Code.gutterTrailing
         needsDisplay = true
     }
-
+    func lineNumber(at offset: Int) -> Int {
+        var low = 0, high = lineStarts.count
+        while low < high {
+            let mid = (low + high) / 2
+            if lineStarts[mid] <= offset { low = mid + 1 } else { high = mid }
+        }
+        return max(1, low)
+    }
     override func draw(_ dirtyRect: NSRect) {
         let area = dirtyRect.intersection(bounds)
-        (codeView?.backgroundColor ?? .textBackgroundColor).setFill()
-        area.fill()
-        guard let codeView else { return }
-        // Row 1 sits at the code's container origin, which moves as the clip view scrolls.
+        (codeView?.backgroundColor ?? .textBackgroundColor).setFill(); area.fill()
+        guard let codeView, let layout = codeView.layoutManager, let container = codeView.textContainer else { return }
         let origin = convert(codeView.textContainerOrigin, from: codeView)
-        let rows = NSRect(x: 0, y: area.minY - origin.y, width: numberColumn.size.width, height: area.height)
-        let glyphs = numberLayout.glyphRange(forBoundingRect: rows, in: numberColumn)
-        guard glyphs.length > 0 else { return }
-        numberLayout.drawGlyphs(forGlyphRange: glyphs, at: NSPoint(x: ReplyStyle.Code.gutterLeading, y: origin.y))
+        let rows = NSRect(x: 0, y: area.minY - origin.y, width: max(1, codeView.visibleRect.width), height: area.height)
+        let glyphs = layout.glyphRange(forBoundingRect: rows, in: container)
+        layout.enumerateLineFragments(forGlyphRange: glyphs) { rect, _, _, range, _ in
+            let line = self.lineNumber(at: layout.characterIndexForGlyph(at: range.location))
+            let number = NSAttributedString(string: String(line), attributes: self.attributes)
+            number.draw(at: NSPoint(x: self.ruleThickness - ReplyStyle.Code.gutterTrailing - number.size().width,
+                                    y: origin.y + rect.minY))
+        }
     }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        needsDisplay = true
-    }
-
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
     @objc private func clipDidScroll(_ notification: Notification) { needsDisplay = true }
+}
+
+private final class SourceScrollView: NSScrollView {
+    override func tile() {
+        super.tile()
+        guard let view = documentView as? NSTextView else { return }
+        if view.minSize != contentSize { view.minSize = contentSize }
+    }
 }

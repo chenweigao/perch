@@ -443,6 +443,23 @@ final class KimiConnection {
         conversation = cachedConversations.take(id)
         loadSelected(id)
     }
+    /// Read history for search without changing selection or subscribing to it.
+    func searchHistory(for id: String) async throws -> HistorySearchWindow {
+        guard online, let api else { throw WorkbenchError(L("需要连接 Agent 才能搜索历史。")) }
+        let token = generation
+        var messages: [KimiMessage] = [], before: String?, more = true
+        while more && messages.count < 5000 {
+            let suffix = before.map { "&before_id=\($0)" } ?? ""
+            let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100\(suffix)")
+            try Task.checkCancellation()
+            guard token == generation else { throw CancellationError() }
+            let next = page.items.first?.id
+            guard !page.items.isEmpty, next != before else { break }
+            messages = page.items + messages; before = next; more = page.hasMore
+        }
+        return HistorySearchWindow(messages: messages, complete: !more)
+    }
+
     /// Messages of a session opened this launch, for local name suggestions.
     func loadedMessages(for id: String) -> [KimiMessage]? {
         let loaded = conversation?.snapshot.session.id == id ? conversation : cachedConversations.value(id)
@@ -863,6 +880,18 @@ final class KimiConnection {
         guard online, api != nil else { return }
         let pending = Set(queue.allItems.filter { $0.state == .draftQueued }.map { $0.session.terminalID })
         for id in pending { deliverQueued(id) }
+    }
+    func enqueueFollowUp(_ text: String, for id: String, messageID: String) -> Bool {
+        guard online, sessions.contains(where: { $0.id == id }), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if queue.allItems.contains(where: { $0.id == messageID }) { return true }
+        guard queue.enqueue(text, for: reference(for: id), mode: .nextTurn, id: messageID) != nil else { return false }
+        do { try flushDrafts() }
+        catch {
+            _ = queue.remove(messageID)
+            draftSaveError = error.localizedDescription
+            return false
+        }
+        deliverQueued(id); return true
     }
     private func deliverQueued(_ id: String) {
         let reference = reference(for: id)

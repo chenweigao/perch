@@ -12,6 +12,7 @@ import os
     var kimiBodyEvaluations = 0
     var renderedQuery: String?
     var selection: String?
+    var searchResults: [String]?
     var dashboardProjection: DashboardProjection?
     var dashboardAttentionOnly = false
     var dashboardGroupID: UUID?
@@ -138,10 +139,12 @@ struct NativeDashboardProbe: NSViewRepresentable {
 struct NativeDirectoryProbe: NSViewRepresentable {
     let query: String
     let selection: String?
+    var results: [String]? = nil
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ view: NSView, context: Context) {
         NativeAcceptanceProbe.shared.renderedQuery = query
         NativeAcceptanceProbe.shared.selection = selection
+        NativeAcceptanceProbe.shared.searchResults = results
     }
 }
 
@@ -1118,7 +1121,7 @@ private struct ReferenceComposerFixtureView: View {
                 "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }
     private func search(_ window: NSWindow, sheet: Bool) async throws -> [String: Any] {
-        probe.query = nil; probe.renderedQuery = nil
+        probe.query = nil; probe.renderedQuery = nil; probe.searchResults = nil
         if sheet { model.showSessionSearch = true } else { model.showAllSessions() }
         try await settle(window) { self.probe.renderedQuery != nil }
         var samples: [Double] = []
@@ -1132,9 +1135,15 @@ private struct ReferenceComposerFixtureView: View {
             probe.signposter.endInterval("DirectoryQuery", span)
             // Correctness checks happen after timing, never by re-running the
             // search inside a readiness token on every rendering pass.
-            let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
-            guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
-            states.append(["query": term, "selection": probe.selection ?? "none"])
+            if sheet {
+                let expected = fixture.sessions.filter { $0.matchesSearch(term) }.map(\.id)
+                guard probe.searchResults == expected else { throw WorkbenchError("Unified search results mismatch for \(term)") }
+                states.append(["query": term, "result_count": String(expected.count)])
+            } else {
+                let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
+                guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
+                states.append(["query": term, "selection": probe.selection ?? "none"])
+            }
         }
         if sheet {
             model.showSessionSearch = false
@@ -2008,16 +2017,17 @@ private struct ReferenceComposerFixtureView: View {
             _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Fixture"])
             try "let title = \"After 中文\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
             try await Task.sleep(for: .seconds(2))
-            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
+            guard let mainWindow = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
             let item = fixture.sessions[0]
             model.open(item)
-            try await settle(window) { self.model.native.snapshot?.id == item.reference.terminalID }
+            try await settle(mainWindow) { self.model.native.snapshot?.id == item.reference.terminalID }
             model.native.drafts[item.reference.terminalID] = "Existing draft"
             let browser = model.fileBrowser
             model.showFileViewer = true
             browser.configure(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""), cwd: directory.path)
             browser.open(file.path, line: 1)
-            try await settle(window, "file read") { !browser.loading && browser.content != nil }
+            try await settle(mainWindow, "file read") { !browser.loading && browser.content != nil }
+            guard let window = model.fileWindow.window else { throw WorkbenchError("Missing file reader window") }
             guard case .text(let text, _, _) = browser.content else { throw WorkbenchError("Missing file text") }
             let reference = ReviewContext(path: file.path, text: text, selection: (text as NSString).range(of: "After"))
             model.appendReviewContext(reference.prompt(feedback: "Review this change"), to: item.reference)
@@ -2073,7 +2083,7 @@ private struct ReferenceComposerFixtureView: View {
                 browser.loadGitDiff(changed)
                 try await settle(window, "restore committed diff") { !browser.loading && browser.gitDiff != nil }
                 try await settle(window, "visible diff after empty comparison") {
-                    guard let source = self.reviewSource(in: window.contentView) else { return false }
+                    guard let source = self.reviewSource(in: self.model.fileWindow.window?.contentView) else { return false }
                     return source.visibleRect.width > 20 && source.visibleRect.height > 20
                 }
                 report["diff_visible_after_empty_comparison"] = true
@@ -2086,14 +2096,14 @@ private struct ReferenceComposerFixtureView: View {
                 browser.loadGitDiff(next)
                 try await settle(window, "next file") { !browser.loading && browser.gitDiff != nil }
                 browser.toggleReviewed()
-                guard let source = self.reviewSource(in: window.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
+                guard let source = self.reviewSource(in: self.model.fileWindow.window?.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
                 scroll.contentView.scroll(to: NSPoint(x: 0, y: 240)); scroll.reflectScrolledClipView(scroll.contentView)
                 guard let previous = browser.adjacentReview(-1), previous.path == changed.path else { throw WorkbenchError("Previous file unavailable") }
                 browser.loadGitDiff(previous)
                 try await settle(window, "previous file") { !browser.loading && browser.gitDiff != nil }
                 browser.loadGitDiff(next)
                 try await settle(window, "restored scroll offset") {
-                    !browser.loading && (self.reviewSource(in: window.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
+                    !browser.loading && (self.reviewSource(in: self.model.fileWindow.window?.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
                 }
                 browser.loadGitDiff(changed)
                 try await settle(window, "return to reviewed file") { !browser.loading && browser.gitDiff != nil }
@@ -2122,7 +2132,19 @@ private struct ReferenceComposerFixtureView: View {
                 report["new_task_file_completion_without_session"] = true
             }
             report["status"] = "passed"
-        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        } catch {
+            report["status"] = "failed"; report["error"] = error.localizedDescription
+            if let reader = model.fileWindow.window {
+                report["reader_frame"] = NSStringFromRect(reader.frame)
+                var view: NSView? = reviewSource(in: reader.contentView)
+                var hierarchy: [String] = []
+                while let current = view {
+                    hierarchy.append("\(type(of: current)): frame=\(current.frame), visible=\(current.visibleRect), hidden=\(current.isHidden)")
+                    view = current.superview
+                }
+                report["reader_geometry"] = hierarchy
+            }
+        }
         try? writeReport(report, name: "result.json")
         if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] != "1" {
             try? FileManager.default.removeItem(at: directory)

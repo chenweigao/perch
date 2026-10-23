@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ConversationSearchHit: Identifiable, Equatable {
+public struct ConversationSearchHit: Identifiable, Equatable, Sendable {
     public let entryID: String
     public let occurrence: Int
     public let excerpt: String

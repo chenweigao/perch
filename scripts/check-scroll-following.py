@@ -14,7 +14,7 @@ BIN = pathlib.Path(subprocess.check_output(
 files = ["RevealFrameDriver", "ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory", "ConversationPresentationEnvironment",
          "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel", "ReplyMermaid", "PerfDiagnostics",
          "ActivitySummarySettings", "ActivitySummaryController",
-         "ConversationScrollControls", "ReplyMarkdownView", "NativeAssistantBlocks", "KimiAttachmentView", "AttachmentImageDecoder",
+         "ConversationScrollControls", "ReplyMarkdownView", "CodeHighlighting", "NativeAssistantBlocks", "KimiAttachmentView", "AttachmentImageDecoder",
          "ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle",
          "ConversationActivityBar", "UILocalization", "WorkbenchGlass", "WorkbenchTheme"]
 includes = ["-I", str(BIN / "Modules")]
@@ -33,6 +33,7 @@ with tempfile.TemporaryDirectory(prefix="perch-scroll-check-") as folder:
         "CFBundleName": "Scroll Following Checks", "CFBundleExecutable": executable.name,
         "CFBundlePackageType": "APPL", "LSUIElement": True,
     }))
+    subprocess.run([str(ROOT / "scripts/prepare-highlight.sh"), str(app / "Contents/Resources")], check=True)
     compiled = work / "compiled"
     subprocess.run([
         "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library", "-target", platform.machine() + "-apple-macosx26.0", *includes,

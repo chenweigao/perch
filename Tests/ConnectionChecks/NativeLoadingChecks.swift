@@ -57,15 +57,28 @@ import WorkbenchCore
         try await client.refresh()
         precondition(fixture.paths.filter { $0 == "/sessions" }.count == count + 1)
     }
+    let queuedFixture = LoadingTransport(); queuedFixture.busy = true
+    let queuedClient = NativeAgentConnection(host: host, transport: queuedFixture.request)
+    try await queuedClient.refresh()
+    queuedClient.drafts["a"] = "keep my draft"
+    precondition(queuedClient.enqueueFollowUp("next step", for: "a", messageID: "followup-one"))
+    precondition(queuedClient.enqueueFollowUp("next step", for: "a", messageID: "followup-one"))
+    precondition(queuedClient.queue.allItems.count == 1 && queuedClient.queue.allItems[0].mode == .nextTurn)
+    precondition(queuedClient.drafts["a"] == "keep my draft", "Companion sends must not alter a conversation draft")
+    queuedClient.disconnect()
+    precondition(!queuedClient.enqueueFollowUp("offline", for: "a", messageID: "followup-two"))
     let fixture = LoadingTransport()
     let client = NativeAgentConnection(host: host, transport: fixture.request)
     try await client.refresh(); client.select("a")
     await ConnectionChecks.settle { client.snapshot?.id == "a" }
     precondition(client.snapshot?.messages.count == 100 && client.snapshot?.history?.start == 140)
+    let searched = try await client.searchHistory(for: "b")
+    precondition(searched.complete && searched.messages.count == 240)
+    precondition(client.selectedID == "a" && client.snapshot?.id == "a", "History search must not change the active session")
     client.loadOlder(); client.loadOlder()
     await ConnectionChecks.settle { !client.loadingOlder }
     precondition(client.snapshot?.messages.count == 200 && client.snapshot?.history?.start == 40)
-    precondition(fixture.paths.filter { $0.contains("before=") }.count == 1, "Overlapping pages were requested")
+    precondition(fixture.paths.filter { $0.hasPrefix("/sessions/a?") && $0.contains("before=") }.count == 1, "Overlapping pages were requested")
     client.select("b"); await ConnectionChecks.settle { client.snapshot?.id == "b" }
     client.select("a"); await ConnectionChecks.settle { client.snapshot?.id == "a" }
     precondition(client.snapshot?.history?.start == 40, "Returning to a session discarded its reading window")
