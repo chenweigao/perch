@@ -112,6 +112,10 @@ pending requests, documents, background tasks/subagents, and current-turn tool
 activity. Empty sections stay hidden; completed calls start collapsed. The panel
 reserves a trailing column when the page is at least 960 points wide; in smaller
 windows it overlays the page's trailing edge without narrowing the transcript.
+The card fits its header, visible sections and footer, up to 620 points or the
+available page height. Expanding a section grows the card until that limit, then
+scrolls its contents. In compact windows the actual composer bounds cap the card
+above the input area, including when a multiline draft makes the composer taller.
 It stays open while interacting with the conversation and can be collapsed with
 its close control or the header button. Resizing and toggling retain the same
 conversation view, reading position, and composer. The card can detach into a

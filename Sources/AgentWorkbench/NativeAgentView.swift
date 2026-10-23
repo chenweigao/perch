@@ -188,6 +188,7 @@ struct NativeAgentView: View {
                 }.padding(6)
             }
             NativeComposerView(connection: connection, s: s).id(s.id)
+                .anchorPreference(key: ConversationComposerBounds.self, value: .bounds) { $0 }
         }
     }
 

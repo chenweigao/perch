@@ -78,12 +78,14 @@ struct TaskContextWorkspace<Content: View>: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.trailing, shown && alongside ? 364 : 0)
-                .overlay(alignment: .topTrailing) {
+                .overlayPreferenceValue(ConversationComposerBounds.self, alignment: .topTrailing) { composer in
                     if shown {
-                        TaskContextView(model: model, detach: { model.taskContextWindow.show(model: model) },
+                        let bottom = !alongside ? composer.map { geometry[$0].minY } ?? geometry.size.height : geometry.size.height
+                        TaskContextView(model: model, maximumHeight: min(620, max(0, bottom - 24)),
+                                        detach: { model.taskContextWindow.show(model: model) },
                                         close: { model.taskContextWindow.embeddedVisible = false })
-                            .frame(width: min(340, max(0, geometry.size.width - 24)),
-                                   height: min(620, max(0, geometry.size.height - 24)))
+                            .frame(width: min(340, max(0, geometry.size.width - 24)))
+                            .contentShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                             .background(WorkbenchTheme.contentBackground)
                             .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                             .overlay {
@@ -101,8 +103,12 @@ struct TaskContextWorkspace<Content: View>: View {
 struct TaskContextView: View {
     let model: WorkbenchModel
     var detached = false
+    var maximumHeight: CGFloat?
     var detach: (() -> Void)?
     var close: (() -> Void)?
+    @State private var headerHeight: CGFloat?
+    @State private var contentHeight: CGFloat?
+    @State private var footerHeight: CGFloat?
     @State private var state = TaskContextState()
     @State private var allFiles = false
     @State private var allTasks = false
@@ -127,10 +133,16 @@ struct TaskContextView: View {
         LoadKey(reference: active && reference?.kind != .terminal ? reference : nil,
                 online: item?.online == true, refresh: state.refresh, language: language)
     }
+    private var fittedHeight: CGFloat? {
+        guard let maximumHeight else { return nil }
+        guard let headerHeight, let contentHeight, item == nil || footerHeight != nil else { return maximumHeight }
+        return min(maximumHeight, headerHeight + contentHeight + (item == nil ? 0 : footerHeight!))
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-            Divider()
+            VStack(spacing: 0) { header; Divider() }
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     if let error = state.error {
@@ -152,19 +164,24 @@ struct TaskContextView: View {
                         Text("终端任务请在完整会话中查看。").foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
             if let item {
-                Divider()
-                HStack {
-                    Button("打开会话") { model.open(item); openMain() }
-                    Spacer()
-                    if item.reference.kind != .terminal {
-                        Button("补充要求") { draftSource = item }
-                            .help("补充到该任务草稿，不自动发送")
-                    }
-                }.buttonStyle(.borderless).padding(14)
+                VStack(spacing: 0) {
+                    Divider()
+                    HStack {
+                        Button("打开会话") { model.open(item); openMain() }
+                        Spacer()
+                        if item.reference.kind != .terminal {
+                            Button("补充要求") { draftSource = item }
+                                .help("补充到该任务草稿，不自动发送")
+                        }
+                    }.buttonStyle(.borderless).padding(14)
+                }.fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(height: fittedHeight)
             .background(detached ? Color(nsColor: .windowBackgroundColor) : WorkbenchTheme.contentBackground)
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
             .task(id: key) {

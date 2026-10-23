@@ -55,6 +55,7 @@ struct KimiWorkspaceView: View {
                     .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
                 KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
                     .id(conversation.snapshot.session.id)
+                    .anchorPreference(key: ConversationComposerBounds.self, value: .bounds) { $0 }
             } else if let id = connection.selectedId {
                 VStack(spacing: 14) {
                     if connection.loading { ProgressView("正在读取会话…") }

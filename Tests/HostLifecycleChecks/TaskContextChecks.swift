@@ -42,6 +42,12 @@ import WorkbenchCore
                 ["type": "tool_result", "tool_call_id": "failed", "is_error": true, "output": "Not found"]
             ]]
         ]
+        if id == "b" {
+            data["messages"] = [["id": "report", "role": "assistant", "created_at": "", "content": [[
+                "type": "text", "text": "## 调研报告\n\n参考资料已整理。右侧面板可以查看文档，正文继续保留阅读空间。\n\n" +
+                    ["Report", "References", "Notes", "Outline", "Appendix", "Summary"].map { "- [\($0)](\($0).md)" }.joined(separator: "\n")
+            ]]]]
+        }
         data["interactions"] = id == "a" ? [["id": "question", "title": "报告需要包含哪些时间范围？"]] : []
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         data["subagents"] = id == "a" ? [[
@@ -165,6 +171,46 @@ import WorkbenchCore
     precondition(model.taskContextWindow.window != nil, "A closed panel can be reopened")
     model.taskContextWindow.close()
 
+    // Measure actual laid-out cards, including expansion and overflow, rather
+    // than asserting the same size formula as the implementation.
+    let fitting = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 340, height: 700),
+                           styleMask: [.titled], backing: .buffered, defer: false)
+    fitting.isReleasedWhenClosed = false
+    defer { fitting.close(); fitting.contentViewController = nil }
+    var fittedView: NSView?
+    fitting.contentViewController = NSHostingController(rootView: VStack(spacing: 0) {
+        TaskContextView(model: model, maximumHeight: 420)
+            .background(TaskContextContentProbe { fittedView = $0 })
+        Spacer(minLength: 0)
+    })
+    fitting.setContentSize(NSSize(width: 340, height: 700))
+    model.taskContextWindow.locked = b
+    fitting.makeKeyAndOrderFront(nil)
+    try await Task.sleep(for: .milliseconds(300))
+    let shortHeight = fittedView!.bounds.height
+    precondition(shortHeight > 150 && shortHeight < 360, "Short content should shrink: \(shortHeight)")
+    click(70, shortHeight - 72, in: fitting)
+    try await Task.sleep(for: .milliseconds(200))
+    let expandedHeight = fittedView!.bounds.height
+    precondition(expandedHeight > shortHeight + 30 && expandedHeight <= 420,
+                 "Expanding files should grow the card: \(shortHeight) -> \(expandedHeight)")
+    click(40, expandedHeight - 72, in: fitting)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(abs(fittedView!.bounds.height - shortHeight) < 1, "Collapsing files should shrink again")
+    model.taskContextWindow.locked = a
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(abs(fittedView!.bounds.height - 420) < 1, "Long content stops at the available height")
+    func scrollViews(_ view: NSView) -> [NSScrollView] {
+        (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+    }
+    let scroll = scrollViews(fitting.contentView!).first!
+    precondition(scroll.documentView!.frame.height > scroll.contentView.bounds.height)
+    scroll.contentView.scroll(to: NSPoint(x: 0, y: scroll.documentView!.frame.height - scroll.contentView.bounds.height))
+    scroll.reflectScrolledClipView(scroll.contentView)
+    try await Task.sleep(for: .milliseconds(100))
+    precondition(scroll.contentView.bounds.minY > 0 && abs(fittedView!.bounds.height - 420) < 1)
+    fitting.close(); fitting.contentViewController = nil
+
     // Exercise the embedded production container with a real transcript/composer.
     // Its content identity must survive toggling and crossing the width breakpoint.
     let page = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1100, height: 780),
@@ -201,9 +247,9 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(250))
     precondition(model.taskContextWindow.embeddedVisible && model.taskContextWindow.window == nil,
                  "The header opens in-page without creating a window: size=\(page.contentView!.bounds.size), embedded=\(model.taskContextWindow.embeddedVisible)")
-    for width: CGFloat in [1100, 800] {
+    for (width, height): (CGFloat, CGFloat) in [(1100, 780), (800, 780), (800, 500)] {
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-            page.setContentSize(NSSize(width: width, height: 780))
+            page.setContentSize(NSSize(width: width, height: height))
             page.appearance = NSAppearance(named: appearance)
             try await Task.sleep(for: .milliseconds(200))
             page.displayIfNeeded()
@@ -213,10 +259,41 @@ import WorkbenchCore
                let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
                 view.cacheDisplay(in: view.bounds, to: bitmap)
                 try bitmap.representation(using: .png, properties: [:])?.write(to:
-                    URL(fileURLWithPath: directory).appendingPathComponent("embedded-\(Int(width))-\(appearance == .aqua ? "light" : "dark").png"))
+                    URL(fileURLWithPath: directory).appendingPathComponent("height-\(Int(width))-\(Int(height))-\(appearance == .aqua ? "light" : "dark").png"))
             }
         }
     }
+    func editors(_ view: NSView) -> [DraftTextView] {
+        (view as? DraftTextView).map { [$0] } ?? view.subviews.flatMap(editors)
+    }
+    let composer = editors(page.contentView!).first!
+    page.makeKeyAndOrderFront(nil)
+    // Check AppKit's actual pointer target separately from keyboard focus. A
+    // synthetic NSWindow.sendEvent doesn't reliably focus NSTextView here.
+    func checkInputTarget() {
+        let point = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
+                                     to: page.contentView!.superview)
+        precondition(page.contentView!.hitTest(point) === composer,
+                     "The compact card must leave the actual composer available to pointer input")
+    }
+    checkInputTarget()
+    precondition(page.makeFirstResponder(composer))
+    composer.insertText(String(repeating: "\n补充验证依据", count: 8),
+                        replacementRange: NSRange(location: composer.string.utf16.count, length: 0))
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(connection.drafts["b"]!.contains("补充验证依据") && composer.visibleRect.height > 80)
+    checkInputTarget()
+    connection.drafts["b"] = "其他任务草稿"
+    try await Task.sleep(for: .milliseconds(150))
+    model.taskContextWindow.locked = b
+    try await Task.sleep(for: .milliseconds(200))
+    if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
+       let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to:
+            URL(fileURLWithPath: directory).appendingPathComponent("height-compact-documents.png"))
+    }
+    model.taskContextWindow.locked = a
     click(800 - 32, 22, in: page)
     try await Task.sleep(for: .milliseconds(200))
     precondition(!model.taskContextWindow.embeddedVisible && abs(contentView!.bounds.width - 800) < 1)
@@ -241,7 +318,7 @@ import WorkbenchCore
     click(800 - 38, 44 + 12 + 26, in: page)
     try await Task.sleep(for: .milliseconds(150))
     precondition(!model.taskContextWindow.embeddedVisible, "The card close control collapses it")
-    print("PASS: task context native windows, embedded wide/compact light/dark, real toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
+    print("PASS: task context content-fit/expand/collapse/overflow heights, compact composer hit testing and multiline input, native windows, wide/compact light/dark, real toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
 }
 
 private struct TaskContextContentProbe: NSViewRepresentable {
