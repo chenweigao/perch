@@ -40,6 +40,7 @@ struct ProtocolTests {
         try checkProjectCommands()
         checkAppVersionCheck()
         try checkWorkflow()
+        try checkDocumentReading()
         checkConversationRowGeometry()
         checkReplyDocument()
         checkReplyMath()

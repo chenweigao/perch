@@ -63,6 +63,34 @@ Large files use a separate background parser so their coloring cannot queue smal
 code blocks behind them. Bounded token caches make repeated reading cheaper; see
 [the matched measurement](performance/2026-10-23-highlighting/REPORT.md).
 
+## Document reading
+
+Markdown opens in the native reader with an on-demand heading outline, four font
+sizes and three reading widths. Command–F keeps Markdown rendered: it highlights
+literal text and moves through matching paragraphs. The count refers to matching
+paragraphs, not individual occurrences. Search covers the loaded portion only.
+
+Relative document links and heading anchors resolve on the document's own host.
+Reference-style Markdown links keep their targets. Command–[ / ] and the toolbar
+arrows move through file history; saved tab positions restore when returning.
+History resets when changing host/project. The existing twelve-tab limit applies.
+
+Referenced local/remote image files load from that same environment with bounded
+reads and downsampled display. External image URLs are explicit browser links;
+the reader does not silently fetch web images. Markdown HTML remains literal text.
+
+Select rendered text and use **Give feedback on selected text** in its context menu.
+The sheet keeps the excerpt, document path, chapter and original conversation.
+Adding feedback (Command–Return) updates that conversation's draft without sending it. Switching
+the main conversation never retargets an open document's feedback.
+
+A project's **Documents** section holds pinned documents and collapsible recent
+reading. Pin from the file actions menu or a document row; unpin/remove only affects
+the list. Markdown, PDF, HTML, tables and images can be collected. Entries retain
+host, path, source conversation, last-read time and the file modification time last
+observed when reading. This is not a background file watcher. Pinned entries are
+preserved; unpinned recent entries are bounded to 100 across the workspace.
+
 ## Companion and background lifetime
 
 Follow tasks from a project, then use **Workbench → Companion**, the menu-bar bird,

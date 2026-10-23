@@ -18,7 +18,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/ReplyProcessStyle.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/AttachmentImageDecoder.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift Sources/AgentWorkbench/AutoCompactStore.swift Sources/AgentWorkbench/UILocalization.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/FileWorkspaceState.swift \
-    Sources/AgentWorkbench/FileContentPreview.swift \
+    Sources/AgentWorkbench/DocumentReader.swift Sources/AgentWorkbench/FileContentPreview.swift \
     Sources/AgentWorkbench/RemoteFileView.swift Tests/WorkflowPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkflowPreview"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"

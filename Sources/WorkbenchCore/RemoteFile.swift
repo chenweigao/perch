@@ -92,7 +92,7 @@ public enum RemoteFileCommand {
           ls -A -p -1 -- "$p"
         elif [ -e "$p" ]; then
           if [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
-          printf 'kind=file\\npath_base64=%s\\nsize=%s\\n--\\n' "$(printf '%s' "$p" | base64 | tr -d '\\n')" "$(wc -c < "$p")"
+          printf 'kind=file\\npath_base64=%s\\nsize=%s\\nmtime=%s\\n--\\n' "$(printf '%s' "$p" | base64 | tr -d '\\n')" "$(wc -c < "$p")" "$(stat -c %Y -- "$p" 2>/dev/null || stat -f %m "$p" 2>/dev/null || true)"
           \(fromEnd ? "tail" : "head") -c \(limit) -- "$p"
         else
           printf 'kind=missing\\n'
@@ -182,6 +182,12 @@ public enum RemoteFileCommand {
             }
         }
         return nil
+    }
+
+    public static func modifiedAt(in data: Data) -> Double? {
+        guard let end = data.range(of: Data("\n--\n".utf8)) else { return nil }
+        let header = String(decoding: data[..<end.lowerBound], as: UTF8.self)
+        return header.split(separator: "\n").first { $0.hasPrefix("mtime=") }.flatMap { Double($0.dropFirst(6)) }
     }
 
     public static func body(in data: Data) -> Data? {

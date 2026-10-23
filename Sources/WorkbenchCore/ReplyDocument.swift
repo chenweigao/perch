@@ -2,7 +2,7 @@ import Foundation
 import Markdown
 
 /// A semantic document shared by all native conversation providers.
-public enum ReplyBlock: Equatable {
+public enum ReplyBlock: Equatable, Sendable {
     case paragraph([ReplyInline])
     case heading(Int, [ReplyInline])
     case code(language: String, source: String)
@@ -16,7 +16,7 @@ public enum ReplyBlock: Equatable {
     case rule
 }
 
-public enum ReplyAlertKind: String, Equatable, CaseIterable {
+public enum ReplyAlertKind: String, Equatable, CaseIterable, Sendable {
     case note, tip, important, warning, caution
 }
 
@@ -44,14 +44,14 @@ public enum ReplyAlert {
     }
 }
 
-public struct ReplyListItem: Equatable {
+public struct ReplyListItem: Equatable, Sendable {
     public let marker: String
     public let blocks: [ReplyBlock]
 }
 
-public enum ReplyAlignment: Equatable { case leading, center, trailing }
+public enum ReplyAlignment: Equatable, Sendable { case leading, center, trailing }
 
-public struct ReplyInline: Equatable, Hashable {
+public struct ReplyInline: Equatable, Hashable, Sendable {
     public var text: String
     public var strong = false
     public var emphasis = false
@@ -63,44 +63,46 @@ public struct ReplyInline: Equatable, Hashable {
 }
 
 public enum ReplyDocument {
-    public static func parse(_ source: String) -> [ReplyBlock] {
-        blocks(Document(parsing: source))
+    public static func parse(_ source: String, documentLinks: Bool = false) -> [ReplyBlock] {
+        blocks(Document(parsing: source), documentLinks: documentLinks)
     }
 
-    private static func blocks(_ parent: Markup) -> [ReplyBlock] {
-        parent.children.flatMap { node -> [ReplyBlock] in
+    private static func blocks(_ parent: Markup, documentLinks: Bool) -> [ReplyBlock] {
+        parent.children.flatMap { blocks(from: $0, documentLinks: documentLinks) }
+    }
+
+    public static func blocks(from node: Markup, documentLinks: Bool = false) -> [ReplyBlock] {
             switch node {
             case let value as Paragraph:
-                let runs = linkBareURLs(inlines(value))
+                let runs = linkBareURLs(inlines(value, documentLinks: documentLinks))
                 if let latex = ReplyMath.displayContent(runs.map(\.text).joined()) { return [.math(latex)] }
                 return [.paragraph(ReplyMath.splitInline(runs))]
-            case let value as Heading: return [.heading(value.level, linkBareURLs(inlines(value)))]
+            case let value as Heading: return [.heading(value.level, linkBareURLs(inlines(value, documentLinks: documentLinks)))]
             case let value as CodeBlock:
                 // Remove the parser's terminal newline, preserving code indentation and blank lines.
                 let code = value.code.hasSuffix("\n") ? String(value.code.dropLast()) : value.code
                 return [.code(language: value.language ?? "", source: code)]
             case let value as OrderedList:
                 return [.list(value.listItems.enumerated().map { index, item in
-                    ReplyListItem(marker: "\(Int(value.startIndex) + index).", blocks: blocks(item))
+                    ReplyListItem(marker: "\(Int(value.startIndex) + index).", blocks: blocks(item, documentLinks: documentLinks))
                 })]
             case let value as UnorderedList:
                 return [.list(value.listItems.map { item in
-                    ReplyListItem(marker: item.checkbox.map { $0 == .checked ? "☑" : "☐" } ?? "•", blocks: blocks(item))
+                    ReplyListItem(marker: item.checkbox.map { $0 == .checked ? "☑" : "☐" } ?? "•", blocks: blocks(item, documentLinks: documentLinks))
                 })]
             case let value as BlockQuote:
-                let inner = blocks(value)
+                let inner = blocks(value, documentLinks: documentLinks)
                 if let (kind, content) = ReplyAlert.rewrite(inner) { return [.alert(kind: kind, content)] }
                 return [.quote(inner)]
             case let value as Markdown.Table:
                 let alignments: [ReplyAlignment] = value.columnAlignments.map {
                     switch $0 { case .center: return .center; case .right: return .trailing; default: return .leading }
                 }
-                return [.table(headers: value.head.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0))) }, rows: value.body.rows.map { $0.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0))) } }, alignments: alignments)]
+                return [.table(headers: value.head.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0, documentLinks: documentLinks))) }, rows: value.body.rows.map { $0.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0, documentLinks: documentLinks))) } }, alignments: alignments)]
             case is ThematicBreak: return [.rule]
             case let value as HTMLBlock: return [.paragraph([ReplyInline(text: value.rawHTML)])]
-            default: return blocks(node)
+            default: return blocks(node, documentLinks: documentLinks)
             }
-        }
     }
 
     private static let linkDetector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
@@ -135,24 +137,24 @@ public enum ReplyDocument {
         }
     }
 
-    private static func inlines(_ parent: Markup) -> [ReplyInline] {
+    private static func inlines(_ parent: Markup, documentLinks: Bool) -> [ReplyInline] {
         parent.children.flatMap { node -> [ReplyInline] in
             switch node {
             case let value as Markdown.Text: return [ReplyInline(text: value.string)]
             case is SoftBreak: return [ReplyInline(text: " ")]
             case is LineBreak: return [ReplyInline(text: "\n")]
             case let value as InlineCode: return [ReplyInline(text: value.code, code: true)]
-            case let value as Strong: return inlines(value).map { var run = $0; run.strong = true; return run }
-            case let value as Emphasis: return inlines(value).map { var run = $0; run.emphasis = true; return run }
-            case let value as Strikethrough: return inlines(value).map { var run = $0; run.strikethrough = true; return run }
+            case let value as Strong: return inlines(value, documentLinks: documentLinks).map { var run = $0; run.strong = true; return run }
+            case let value as Emphasis: return inlines(value, documentLinks: documentLinks).map { var run = $0; run.emphasis = true; return run }
+            case let value as Strikethrough: return inlines(value, documentLinks: documentLinks).map { var run = $0; run.strikethrough = true; return run }
             case let value as Link:
                 let url = value.destination.flatMap(URL.init(string:))
                 let allowed = ["https", "http", "mailto"].contains(url?.scheme?.lowercased() ?? "")
                 let file = value.destination.flatMap { ConversationFileReference(text: $0.removingPercentEncoding ?? $0) }
-                return inlines(value).map { var run = $0; run.link = allowed ? url : file?.url; return run }
-            case let value as Markdown.Image: return inlines(value) // Render alt text without fetching remote media.
+                return inlines(value, documentLinks: documentLinks).map { var run = $0; run.link = documentLinks ? value.destination.flatMap(DocumentLink.url) : (allowed ? url : file?.url); return run }
+            case let value as Markdown.Image: return inlines(value, documentLinks: documentLinks) // Render alt text without fetching remote media.
             case let value as InlineHTML: return [ReplyInline(text: value.rawHTML)]
-            default: return inlines(node)
+            default: return inlines(node, documentLinks: documentLinks)
             }
         }
     }

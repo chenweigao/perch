@@ -1839,3 +1839,41 @@
 "引用到：%@" = "Quote to: %@";
 
 "加入会话草稿，检查后再发送。" = "Add to the session draft and review before sending.";
+
+/* Document reading */
+"<P> 个匹配段落" = "<P> matching paragraphs";
+"\n章节：" = "\nSection: ";
+"中（16）" = "Medium (16)";
+"从文档列表移除" = "Remove from document list";
+"关闭反馈提示" = "Dismiss feedback notice";
+"前往下一个文档" = "Forward to next document";
+"加入原会话草稿" = "Add to source conversation draft";
+"反馈已加入原会话草稿" = "Feedback added to the source draft";
+"反馈选中文本…" = "Give feedback on selected text…";
+"取消固定文档" = "Unpin document";
+"固定到项目文档" = "Pin to project documents";
+"大（18）" = "Large (18)";
+"字号" = "Font size";
+"宽" = "Wide";
+"小（14）" = "Small (14)";
+"打开图片" = "Open image";
+"打开引用图片" = "Open referenced image";
+"文档反馈" = "Document feedback";
+"文档操作" = "Document actions";
+"文档目录" = "Document outline";
+"文档：<P><P>\n\n<P>\n\n反馈：<P>" = "Document: <P><P>\n\n<P>\n\nFeedback: <P>";
+"无法打开此文档链接。" = "This document link cannot be opened.";
+"更新于 <P>" = "Modified <P>";
+"最近阅读" = "Recently read";
+"未找到匹配段落" = "No matching paragraphs";
+"未找到链接中的章节" = "The linked section was not found";
+"本文没有章节标题" = "This document has no headings";
+"标准" = "Standard";
+"特大（20）" = "Extra large (20)";
+"窄" = "Narrow";
+"返回上一个文档" = "Back to previous document";
+"阅读于 <P>" = "Read <P>";
+"阅读宽度" = "Reading width";
+"阅读文档后会显示在这里；可在文件菜单中固定常用文档。" = "Documents appear here after reading. Pin frequently used documents from the file menu.";
+"阅读样式" = "Reading style";
+"项目文档" = "Project documents";

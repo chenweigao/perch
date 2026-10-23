@@ -34,7 +34,7 @@ struct FileDisplayMode: View {
         if case .text = browser.content, browser.previewKind != .source {
             Picker("显示", selection: Binding(get: { browser.documents.current?.reading ?? false }, set: { browser.documents.setReading($0) })) {
                 Text("阅读").tag(true); Text("源码").tag(false)
-            }.pickerStyle(.segmented).frame(width: 100)
+            }.pickerStyle(.segmented).labelsHidden().frame(width: 100)
         }
     }
 }
@@ -54,7 +54,7 @@ struct FileFindBar: View {
         }.font(.system(size: 12)).controlSize(.small).buttonStyle(.borderless)
             .padding(.horizontal, 12).padding(.vertical, 6)
             .defaultFocus($focused, true)
-            .onAppear { browser.documents.setReading(false) }
+            .onAppear { if browser.previewKind != .markdown { browser.documents.setReading(false) } }
             .onExitCommand { isPresented = false; browser.findQuery = "" }
             .onChange(of: browser.findQuery) { _, _ in browser.findIndex = 0 }
     }

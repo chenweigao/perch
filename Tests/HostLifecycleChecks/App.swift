@@ -26,6 +26,8 @@ import WorkbenchCore
         }
 
         switch CommandLine.arguments[1] {
+        case "document-reading":
+            try await checkDocumentReadingUI()
         case "workflow-polish":
             try await checkWorkflowPolish()
         case "code-reader":
