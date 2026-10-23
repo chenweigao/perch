@@ -64,8 +64,9 @@ struct TaskContextButton: View {
     }
 }
 
-/// Keep the conversation at one structural identity while the card opens or the
-/// window crosses the breakpoint. In compact windows, only the card overlays it.
+/// Reserve a side lane only when the full reading column fits. At smaller sizes,
+/// a compact entry above the conversation opens the independent panel instead.
+/// Padding changes preserve the transcript and composer at one structural identity.
 struct TaskContextWorkspace<Content: View>: View {
     let model: WorkbenchModel
     @ViewBuilder let content: Content
@@ -74,17 +75,19 @@ struct TaskContextWorkspace<Content: View>: View {
     }
     var body: some View {
         GeometryReader { geometry in
-            let alongside = geometry.size.width >= 960
+            let available = geometry.size.width - ReplyStyle.readingWidth - 2 * ReplyStyle.horizontalPadding - 24
+            let alongside = available >= 280
+            let cardWidth = min(340, available)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.trailing, shown && alongside ? 364 : 0)
-                .overlayPreferenceValue(ConversationComposerBounds.self, alignment: .topTrailing) { composer in
-                    if shown {
-                        let bottom = !alongside ? composer.map { geometry[$0].minY } ?? geometry.size.height : geometry.size.height
-                        TaskContextView(model: model, maximumHeight: min(620, max(0, bottom - 24)),
+                .padding(.trailing, shown && alongside ? cardWidth + 24 : 0)
+                .padding(.top, shown && !alongside ? 48 : 0)
+                .overlay(alignment: .topTrailing) {
+                    if shown && alongside {
+                        TaskContextView(model: model, maximumHeight: min(620, max(0, geometry.size.height - 24)),
                                         detach: { model.taskContextWindow.show(model: model) },
                                         close: { model.taskContextWindow.embeddedVisible = false })
-                            .frame(width: min(340, max(0, geometry.size.width - 24)))
+                            .frame(width: cardWidth)
                             .contentShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                             .background(WorkbenchTheme.contentBackground)
                             .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
@@ -92,8 +95,21 @@ struct TaskContextWorkspace<Content: View>: View {
                                 RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
                                     .strokeBorder(.primary.opacity(0.10), lineWidth: 0.5)
                             }
-                            .shadow(color: .black.opacity(alongside ? 0.04 : 0.12), radius: 12, y: 3)
+                            .shadow(color: .black.opacity(0.04), radius: 12, y: 3)
                             .padding(12)
+                    } else if shown {
+                        HStack(spacing: 12) {
+                            Text("任务面板").foregroundStyle(.secondary)
+                            Spacer(minLength: 0)
+                            Button { model.taskContextWindow.show(model: model) } label: {
+                                Label("在浮窗中查看", systemImage: "arrow.up.left.and.arrow.down.right")
+                            }
+                            Button { model.taskContextWindow.embeddedVisible = false } label: {
+                                Image(systemName: "xmark").frame(width: 24, height: 24)
+                            }.help("收起任务面板").accessibilityLabel("收起任务面板")
+                        }.font(.callout).buttonStyle(.borderless)
+                            .frame(maxWidth: ReplyStyle.readingWidth).frame(height: 48)
+                            .padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity)
                     }
                 }
         }
@@ -135,12 +151,12 @@ struct TaskContextView: View {
     }
     private var fittedHeight: CGFloat? {
         guard let maximumHeight else { return nil }
-        guard let headerHeight, let contentHeight, item == nil || footerHeight != nil else { return maximumHeight }
-        return min(maximumHeight, headerHeight + contentHeight + (item == nil ? 0 : footerHeight!))
+        guard let headerHeight, let contentHeight else { return maximumHeight }
+        return min(maximumHeight, headerHeight + contentHeight + (detached && item != nil ? footerHeight ?? 0 : 0))
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(spacing: 0) { header; Divider() }
+            header
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
             ScrollView {
@@ -166,7 +182,7 @@ struct TaskContextView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
-            if let item {
+            if detached, let item {
                 VStack(spacing: 0) {
                     Divider()
                     HStack {
@@ -199,34 +215,39 @@ struct TaskContextView: View {
             }
     }
     private var header: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(item?.title ?? current?.title ?? L("任务面板"))
-                    .font(.headline).lineLimit(2)
-                Text(model.taskContextWindow.locked == nil ? "跟随当前会话" : "已锁定此任务")
-                    .font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 4) {
+            if (detached || model.taskContextWindow.locked != nil), let item {
+                Button { model.open(item); openMain() } label: {
+                    Text(item.title).lineLimit(1).truncationMode(.tail)
+                }.help("打开会话")
+            } else {
+                Text("任务面板")
             }
             Spacer(minLength: 4)
             if detached {
-                Button { model.taskContextWindow.embed(model: model) } label: { Image(systemName: "rectangle.inset.filled") }
+                Button { model.taskContextWindow.embed(model: model) } label: {
+                    Image(systemName: "rectangle.inset.filled").frame(width: 24, height: 24)
+                }
                     .help("在正文中显示").accessibilityLabel("在正文中显示")
             }
             Button {
                 model.taskContextWindow.locked = model.taskContextWindow.locked == nil ? reference : nil
             } label: {
                 Image(systemName: model.taskContextWindow.locked == nil ? "pin" : "pin.fill")
+                    .frame(width: 24, height: 24)
             }.disabled(reference == nil)
                 .help(model.taskContextWindow.locked == nil ? "锁定此任务" : "跟随当前会话")
                 .accessibilityLabel(model.taskContextWindow.locked == nil ? "锁定此任务" : "跟随当前会话")
             if let detach {
-                Button(action: detach) { Image(systemName: "arrow.up.left.and.arrow.down.right") }
+                Button(action: detach) { Image(systemName: "arrow.up.left.and.arrow.down.right").frame(width: 24, height: 24) }
                     .help("固定为浮窗").accessibilityLabel("固定为浮窗")
             }
             if let close {
-                Button(action: close) { Image(systemName: "xmark") }
+                Button(action: close) { Image(systemName: "xmark").frame(width: 24, height: 24) }
                     .help("收起任务面板").accessibilityLabel("收起任务面板")
             }
-        }.buttonStyle(.borderless).padding(18)
+        }.font(.callout).foregroundStyle(.secondary).buttonStyle(.borderless)
+            .padding(.horizontal, 16).padding(.top, 10)
     }
 
     @ViewBuilder private func sections(_ value: TaskContextSnapshot, item: WorkspaceSession) -> some View {

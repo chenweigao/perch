@@ -176,7 +176,7 @@ struct NativeAgentView: View {
                     if isCurrent(s) { connection.stopSubagent(task.id, in: s.id) }
                 },
                 taskStopErrors: subagentStopErrors)
-                .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
+                .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding)
                 .frame(maxWidth: .infinity).padding(.vertical, 6)
             // Long upstream errors scroll inside the notice instead of displacing the conversation.
             if let error = connection.actionError ?? s.error { ConversationNotice(text: error) }
@@ -188,7 +188,6 @@ struct NativeAgentView: View {
                 }.padding(6)
             }
             NativeComposerView(connection: connection, s: s).id(s.id)
-                .anchorPreference(key: ConversationComposerBounds.self, value: .bounds) { $0 }
         }
     }
 
@@ -278,7 +277,7 @@ private struct NativeComposerView: View {
             }.padding(12).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[s.id] ?? "").count)
-        }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
+        }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity).padding(.bottom, 16)
         .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             do { addAttachments(try result.get()) } catch { connection.actionError = error.localizedDescription }
         }

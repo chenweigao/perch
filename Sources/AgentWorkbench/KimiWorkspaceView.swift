@@ -52,10 +52,9 @@ struct KimiWorkspaceView: View {
                     onTasksRefresh: { Task { await connection.refreshTasks() } },
                     onOpenTranscript: { transcriptSubject = $0 })
                     .id(conversation.snapshot.session.id)
-                    .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
+                    .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity).padding(.top, 4)
                 KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
                     .id(conversation.snapshot.session.id)
-                    .anchorPreference(key: ConversationComposerBounds.self, value: .bounds) { $0 }
             } else if let id = connection.selectedId {
                 VStack(spacing: 14) {
                     if connection.loading { ProgressView("正在读取会话…") }
@@ -207,7 +206,7 @@ private struct KimiComposerView: View {
                 } catch { connection.actionError = error.localizedDescription }
             }
             return accepted
-        }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
+        }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do {
                     let urls = try result.get()

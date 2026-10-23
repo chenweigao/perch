@@ -189,12 +189,12 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(300))
     let shortHeight = fittedView!.bounds.height
     precondition(shortHeight > 150 && shortHeight < 360, "Short content should shrink: \(shortHeight)")
-    click(70, shortHeight - 72, in: fitting)
+    click(70, shortHeight - 24, in: fitting)
     try await Task.sleep(for: .milliseconds(200))
     let expandedHeight = fittedView!.bounds.height
     precondition(expandedHeight > shortHeight + 30 && expandedHeight <= 420,
                  "Expanding files should grow the card: \(shortHeight) -> \(expandedHeight)")
-    click(40, expandedHeight - 72, in: fitting)
+    click(40, expandedHeight - 24, in: fitting)
     try await Task.sleep(for: .milliseconds(200))
     precondition(abs(fittedView!.bounds.height - shortHeight) < 1, "Collapsing files should shrink again")
     model.taskContextWindow.locked = a
@@ -213,7 +213,7 @@ import WorkbenchCore
 
     // Exercise the embedded production container with a real transcript/composer.
     // Its content identity must survive toggling and crossing the width breakpoint.
-    let page = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1100, height: 780),
+    let page = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1200, height: 780),
                         styleMask: [.titled, .resizable], backing: .buffered, defer: false)
     page.isReleasedWhenClosed = false
     defer { page.close(); page.contentViewController = nil }
@@ -232,7 +232,7 @@ import WorkbenchCore
     }.background(WorkbenchTheme.contentBackground))
     hosting.sizingOptions = []
     page.contentViewController = hosting
-    page.setContentSize(NSSize(width: 1100, height: 780))
+    page.setContentSize(NSSize(width: 1200, height: 780))
     page.makeKeyAndOrderFront(nil)
     model.taskContextWindow.locked = a
     try await Task.sleep(for: .milliseconds(200))
@@ -241,31 +241,85 @@ import WorkbenchCore
        let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
         view.cacheDisplay(in: view.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])?.write(to:
-            URL(fileURLWithPath: directory).appendingPathComponent("embedded-closed.png"))
+            URL(fileURLWithPath: directory).appendingPathComponent("layout-closed.png"))
     }
-    click(1100 - 32, 22, in: page)
+    click(1200 - 32, 22, in: page)
     try await Task.sleep(for: .milliseconds(250))
     precondition(model.taskContextWindow.embeddedVisible && model.taskContextWindow.window == nil,
                  "The header opens in-page without creating a window: size=\(page.contentView!.bounds.size), embedded=\(model.taskContextWindow.embeddedVisible)")
-    for (width, height): (CGFloat, CGFloat) in [(1100, 780), (800, 780), (800, 500)] {
+    func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+    func editors(_ view: NSView) -> [DraftTextView] { descendants(view).compactMap { $0 as? DraftTextView } }
+    func readingColumn() -> NSView {
+        descendants(page.contentView!).first { String(describing: type(of: $0)) == "ConversationDocumentView" }!
+    }
+    func horizontalFrames() -> (reading: CGRect, editor: CGRect) {
+        let document = readingColumn(), editor = editors(page.contentView!).first!
+        return (document.convert(document.bounds, to: page.contentView), editor.convert(editor.bounds, to: page.contentView))
+    }
+    let opened = horizontalFrames()
+    precondition(abs(opened.reading.width - 680) < 1)
+    click(1200 - 32, 22, in: page)
+    try await Task.sleep(for: .milliseconds(150))
+    let closed = horizontalFrames()
+    precondition(abs(closed.reading.width - opened.reading.width) < 1 && abs(closed.editor.width - opened.editor.width) < 1,
+                 "Opening the card must preserve both reading and composer widths")
+    precondition(abs(closed.reading.midX - 600) < 1 && abs(closed.editor.midX - 600) < 1,
+                 "Closing recenters both columns")
+    precondition(closed.reading.minX > opened.reading.minX + 150 &&
+                 abs((closed.reading.minX - opened.reading.minX) - (closed.editor.minX - opened.editor.minX)) < 1,
+                 "The transcript and composer shift together")
+    click(1200 - 32, 22, in: page)
+    try await Task.sleep(for: .milliseconds(150))
+    for (width, height): (CGFloat, CGFloat) in [(1200, 780), (1100, 780), (1056, 780), (1055, 780), (600, 500), (800, 780), (800, 500)] {
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             page.setContentSize(NSSize(width: width, height: height))
             page.appearance = NSAppearance(named: appearance)
             try await Task.sleep(for: .milliseconds(200))
             page.displayIfNeeded()
-            precondition(abs(contentView!.bounds.width - (width >= 960 ? width - 364 : width)) < 1,
-                         "The compact card must not squeeze the transcript")
+            let frames = horizontalFrames()
+            precondition(abs(frames.reading.width - min(680, width - 72)) < 1,
+                         "Context must not squeeze the actual reading column at \(width): \(frames.reading)")
+            precondition(abs(frames.reading.midX - frames.editor.midX) < 1,
+                         "Transcript and composer must remain aligned")
+            if width < 1056 {
+                precondition(abs(contentView!.bounds.width - width) < 1 && abs(frames.reading.midX - width / 2) < 1)
+                let text = descendants(readingColumn()).compactMap { $0 as? ReplyTextView }
+                    .first { !$0.visibleRect.isEmpty }!
+                let point = text.convert(NSPoint(x: text.visibleRect.minX + 8, y: text.visibleRect.minY + 8),
+                                         to: page.contentView!.superview)
+                let target = page.contentView!.hitTest(point)
+                // Native block padding may hit its stack rather than NSTextView;
+                // either must remain inside the transcript, never the context strip.
+                precondition(target?.isDescendant(of: readingColumn()) == true,
+                             "Compact context must leave the transcript available to pointer input: width=\(width), target=\(String(describing: target))")
+            }
             if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
                let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
                 view.cacheDisplay(in: view.bounds, to: bitmap)
                 try bitmap.representation(using: .png, properties: [:])?.write(to:
-                    URL(fileURLWithPath: directory).appendingPathComponent("height-\(Int(width))-\(Int(height))-\(appearance == .aqua ? "light" : "dark").png"))
+                    URL(fileURLWithPath: directory).appendingPathComponent("layout-\(Int(width))-\(Int(height))-\(appearance == .aqua ? "light" : "dark").png"))
             }
         }
     }
-    func editors(_ view: NSView) -> [DraftTextView] {
-        (view as? DraftTextView).map { [$0] } ?? view.subviews.flatMap(editors)
+    page.setContentSize(NSSize(width: 1200, height: 780))
+    page.appearance = NSAppearance(named: .aqua)
+    model.taskContextWindow.locked = nil
+    try await Task.sleep(for: .milliseconds(200))
+    if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
+       let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to:
+            URL(fileURLWithPath: directory).appendingPathComponent("layout-documents.png"))
     }
+    // The full card still exposes detach; returning to a compact page keeps
+    // the reading position and draft in the same mounted conversation.
+    click(1200 - 68, 44 + 12 + 22, in: page)
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible)
+    model.taskContextWindow.embed(model: model)
+    page.setContentSize(NSSize(width: 800, height: 500))
+    page.appearance = NSAppearance(named: .darkAqua)
+    try await Task.sleep(for: .milliseconds(150))
     let composer = editors(page.contentView!).first!
     page.makeKeyAndOrderFront(nil)
     // Check AppKit's actual pointer target separately from keyboard focus. A
@@ -291,7 +345,7 @@ import WorkbenchCore
        let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
         view.cacheDisplay(in: view.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])?.write(to:
-            URL(fileURLWithPath: directory).appendingPathComponent("height-compact-documents.png"))
+            URL(fileURLWithPath: directory).appendingPathComponent("layout-compact-documents.png"))
     }
     model.taskContextWindow.locked = a
     click(800 - 32, 22, in: page)
@@ -303,8 +357,8 @@ import WorkbenchCore
                  "Collapsing the in-page card ends its reads")
     click(800 - 32, 22, in: page)
     try await Task.sleep(for: .milliseconds(150))
-    // In-page header: close at the right, detach immediately before it.
-    click(800 - 64, 44 + 12 + 26, in: page)
+    // Compact context opens its independent window without covering the page.
+    click(660, 44 + 24, in: page)
     try await Task.sleep(for: .milliseconds(200))
     precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible)
     let detached = model.taskContextWindow.window!
@@ -315,10 +369,10 @@ import WorkbenchCore
     precondition(contentMounts == 1 && model.selectedReference == b && connection.drafts["b"] == "其他任务草稿",
                  "Panel layout changes must preserve transcript identity, selection and draft")
     page.makeKeyAndOrderFront(nil)
-    click(800 - 38, 44 + 12 + 26, in: page)
+    click(728, 44 + 24, in: page)
     try await Task.sleep(for: .milliseconds(150))
     precondition(!model.taskContextWindow.embeddedVisible, "The card close control collapses it")
-    print("PASS: task context content-fit/expand/collapse/overflow heights, compact composer hit testing and multiline input, native windows, wide/compact light/dark, real toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
+    print("PASS: task context fixed reading/composer widths, synchronized shifting and recentering, adaptive card and compact transcript/composer hit testing, content-fit/expand/collapse/overflow heights, multiline input, native windows, wide/compact light/dark, toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
 }
 
 private struct TaskContextContentProbe: NSViewRepresentable {

@@ -145,8 +145,8 @@ struct ConversationScrollView<Content: View>: View {
                 VStack(alignment: .leading, spacing: ReplyStyle.entrySpacing) { content }
                     .environment(\.conversationViewport, conversationViewport)
                     .padding(.vertical, 12)
-                    .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 72)), alignment: .leading)
-                    .padding(.horizontal, 36).frame(maxWidth: .infinity)
+                    .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 2 * ReplyStyle.horizontalPadding)), alignment: .leading)
+                    .padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity)
                     .coordinateSpace(name: "conversation-content")
                     .background {
                         ConversationScrollObserver(onScroll: { following in

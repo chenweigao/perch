@@ -13,6 +13,7 @@ import WorkbenchCore
 /// weight and space; only H1 steps up in size.
 enum ReplyStyle {
     static let readingWidth: CGFloat = 680
+    static let horizontalPadding: CGFloat = 36
     static let bodySize: CGFloat = 14
     static let lineHeight: CGFloat = 22
     static let lineHeightRatio: CGFloat = lineHeight / bodySize

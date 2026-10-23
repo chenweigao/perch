@@ -2,15 +2,6 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Page overlays resolve the actual composer bounds, including a growing draft,
-/// rather than reserving a fixed estimate of the input area's height.
-struct ConversationComposerBounds: PreferenceKey {
-    static var defaultValue: Anchor<CGRect>? { nil }
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-        value = nextValue() ?? value
-    }
-}
-
 private extension URL {
     /// Image files keep the attachment pipeline; everything else can become a
     /// @-reference when the composer offers one.
