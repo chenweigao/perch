@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """After scripts/build.sh, check the production model without SSH or real preferences."""
 import argparse
+import faulthandler
 import pathlib
 import platform
 import plistlib
@@ -70,9 +71,28 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
             preview = (args.preview_file_reader and phase == "file-reader") or (args.preview_document_reader and phase == "document-reading")
             if preview:
                 print(f"File reader preview app: {app}", flush=True)
-            subprocess.run([str(executable), phase, *(["preview"] if preview else [])],
-                           check=True, timeout=150 if preview else 60)
+            command = [str(executable), phase, *(["preview"] if preview else [])]
+            limit = 150 if preview else 60
+            faulthandler.dump_traceback_later(limit + 15)
+            process = subprocess.Popen(command)
+            try:
+                process.wait(timeout=limit)
+            except subprocess.TimeoutExpired:
+                print(f"Timed out host lifecycle phase: {phase}; sampling PID {process.pid}", flush=True)
+                try:
+                    subprocess.run(["sample", str(process.pid), "1", "1"], timeout=5)
+                finally:
+                    process.kill()
+                    process.wait(timeout=5)
+                raise
+            finally:
+                faulthandler.cancel_dump_traceback_later()
+            if process.returncode:
+                raise subprocess.CalledProcessError(process.returncode, command)
             print(f"Passed host lifecycle phase: {phase} ({time.monotonic() - started:.2f} s)", flush=True)
     finally:
-        subprocess.run(["defaults", "delete", DOMAIN], capture_output=True)
+        print("Cleaning up host lifecycle preferences", flush=True)
+        subprocess.run(["defaults", "delete", DOMAIN], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=10)
         shutil.rmtree(pathlib.Path.home() / "Library/Application Support" / DOMAIN, ignore_errors=True)
+        print("Host lifecycle cleanup complete", flush=True)
