@@ -49,6 +49,7 @@ struct AddHostSheet: View {
             .onChange(of: setup.provider) { _, _ in setup.invalidateAgent() }
             .onChange(of: setup.port) { _, _ in setup.invalidateAgent() }
             .onChange(of: setup.tokenPath) { _, _ in setup.invalidateAgent() }
+            .onChange(of: setup.kimiEnvironment) { _, _ in setup.invalidateAgent() }
             .onChange(of: setup.directory) { _, _ in setup.invalidateProject() }
     }
     private func stepLabel(_ title: LocalizedStringKey, step: RemoteSetupController.Step) -> some View {
@@ -101,6 +102,15 @@ struct AddHostSheet: View {
                             TextField("~/.kimi-code/server.token", text: $setup.tokenPath) // l10n-ignore
                         }
                         Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Toggle("由 Perch 托管 Kimi Web", isOn: Binding(get: { setup.kimiManaged },
+                                                                    set: { setup.kimiManaged = $0; setup.invalidateAgent() }))
+                        if setup.kimiManaged {
+                            LabeledContent("启动环境变量") {
+                                TextField("NAME=value", text: $setup.kimiEnvironment) // l10n-ignore
+                            }
+                        }
+                        Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。")
                             .font(.caption).foregroundStyle(.secondary)
                     }.textFieldStyle(.roundedBorder).padding(.top, 8)
                 }.disabled(setup.busy)
@@ -191,6 +201,10 @@ struct AddHostSheet: View {
                 if !setup.loginCommand.isEmpty && setup.failedCheck == "models" {
                     Button("登录 / 配置模型…") { setup.openTerminal(command: setup.loginCommand) }
                 }
+            }
+            if setup.provider == .kimi && setup.failedCheck == "service" && !setup.kimiManaged {
+                Text("由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它。")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             if setup.provider == .dsh {
                 Text("在远端 shell 或服务环境中设置 DEEPSEEK_API_KEY；Perch 不读取或保存它的值。")

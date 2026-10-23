@@ -25,6 +25,31 @@ public enum BridgeProbeResult: Equatable, Sendable {
     case invalid(output: String)
 }
 
+/// What `local-agent-service.py --agent kimi` reports about the Kimi Web it ensured.
+public struct KimiServiceEndpoint: Equatable, Sendable {
+    public enum RestartReason: String, Equatable, Sendable { case update, settings }
+    public let port: Int
+    public let token: String
+    /// Perch started this instance, so it is the only kind Perch restarts.
+    public let owned: Bool
+    /// The previous instance was stopped and this one started during the check.
+    public let replaced: Bool
+    public let installedVersion: String?
+    public let runningVersion: String?
+    public let restartReason: RestartReason?
+    /// Busy sessions an update or new settings wait for; -1 when Perch cannot confirm
+    /// the service is idle, or a restart already failed to apply the update.
+    public let restartPending: Int?
+
+    public init(port: Int, token: String, owned: Bool = false, replaced: Bool = false,
+                installedVersion: String? = nil, runningVersion: String? = nil,
+                restartReason: RestartReason? = nil, restartPending: Int? = nil) {
+        self.port = port; self.token = token; self.owned = owned; self.replaced = replaced
+        self.installedVersion = installedVersion; self.runningVersion = runningVersion
+        self.restartReason = restartReason; self.restartPending = restartPending
+    }
+}
+
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
     public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .terminal]
@@ -55,6 +80,11 @@ public enum RemoteSetup {
         guard host.kimiTokenPath.hasPrefix("/") || host.kimiTokenPath.hasPrefix("~/"),
               !host.kimiTokenPath.contains(where: { $0.isNewline || $0.asciiValue == 0 }) else {
             throw WorkbenchError(L("令牌路径须为远端绝对路径或以 ~/ 开头。"))
+        }
+        for (name, value) in host.kimiEnvironment {
+            guard validEnvironmentName(name), !value.contains(where: { $0.isWhitespace || $0.asciiValue == 0 }) else {
+                throw WorkbenchError(L("Kimi Web 环境变量 \(name) 无效。"))
+            }
         }
     }
 
@@ -185,8 +215,72 @@ public enum RemoteSetup {
         return "/bin/sh -c " + SSHCommand.quote(script)
     }
 
-    public static func kimiStartCommand(binaryPath: String, port: Int) -> String {
-        // Never replaces a running service or changes its permission mode.
-        "umask 077; mkdir -p ~/.local/state/perch; nohup \(SSHCommand.quote(binaryPath)) web --host 127.0.0.1 --port \(port) --no-open >> ~/.local/state/perch/kimi-web.log 2>&1 < /dev/null &"
+    /// Stopping an idle instance waits up to 90 s for its shutdown hooks before the
+    /// replacement starts.
+    public static let kimiEnsureTimeout: TimeInterval = 150
+
+    /// Runs a script passed as the first argument, so the host needs no installed Perch
+    /// file. The script stays compatible with Python 3.6.
+    static let streamedScriptLoader = #"import base64,sys;exec(compile(base64.b64decode(sys.argv.pop(1)),"perch-kimi-web","exec"))"#
+
+    /// Starts, reuses or replaces Perch's Kimi Web on the host and prints its endpoint.
+    /// Only the 127.0.0.1 instance Perch started is ever stopped, and only while idle;
+    /// a service the user runs is reused untouched. Only a custom token path is passed:
+    /// the default one follows `KIMI_CODE_HOME` from the launch environment on the host.
+    public static func kimiEnsureCommand(script: String, port: Int, tokenPath: String,
+                                         environment: [String: String]) -> String {
+        var arguments = ["python3", "-c", streamedScriptLoader, Data(script.utf8).base64EncodedString(),
+                         "--agent", "kimi", "--port", String(port)]
+        if tokenPath != SSHHost.defaultKimiTokenPath { arguments += ["--token-path", tokenPath] }
+        for name in environment.keys.sorted() { arguments += ["--env", name + "=" + (environment[name] ?? "")] }
+        return arguments.map(SSHCommand.quote).joined(separator: " ")
+    }
+
+    /// The service script packaged by scripts/build.sh; the Mac runs it for local Kimi
+    /// and streams it to remote hosts.
+    public static func kimiServiceScript() throws -> String {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("RemoteSetup/remote/local-agent-service.py"),
+              let script = try? String(contentsOf: url, encoding: .utf8) else {
+            throw WorkbenchError(L("此构建缺少 Kimi Web 托管组件。请使用 scripts/build.sh 打包的 Perch.app。"))
+        }
+        return script
+    }
+
+    public static func parseKimiServiceEndpoint(_ data: Data) throws -> KimiServiceEndpoint {
+        let value = try? JSONDecoder().decode(JSONValue.self, from: data)
+        guard let value, let port = value["port"].int, (1...65535).contains(port),
+              let token = value["token"].string, !token.isEmpty else {
+            throw WorkbenchError(L("托管的 Kimi Web 未返回连接信息。"))
+        }
+        return KimiServiceEndpoint(port: port, token: token, owned: value["owned"] == .bool(true),
+                                   replaced: value["replaced"] == .bool(true),
+                                   installedVersion: value["installedVersion"].string,
+                                   runningVersion: value["runningVersion"].string,
+                                   restartReason: value["restartReason"].string.flatMap { KimiServiceEndpoint.RestartReason(rawValue: $0) },
+                                   restartPending: value["restartPending"].int)
+    }
+
+    /// `NAME=value` entries separated by spaces or new lines.
+    public static func parseKimiEnvironment(_ text: String) throws -> [String: String] {
+        var environment: [String: String] = [:]
+        for entry in text.split(whereSeparator: \.isWhitespace).map(String.init) {
+            let parts = entry.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+            guard parts.count == 2, validEnvironmentName(parts[0]), !parts[1].contains("\0") else {
+                throw WorkbenchError(L("环境变量须写成 NAME=value，名称只含英文字母、数字和下划线且不以数字开头：\(entry)"))
+            }
+            environment[parts[0]] = parts[1]
+        }
+        return environment
+    }
+
+    public static func formatKimiEnvironment(_ environment: [String: String]) -> String {
+        environment.keys.sorted().map { $0 + "=" + (environment[$0] ?? "") }.joined(separator: " ")
+    }
+
+    /// ASCII letters, digits and `_`, not starting with a digit.
+    static func validEnvironmentName(_ name: String) -> Bool {
+        let values = name.unicodeScalars.map(\.value)
+        guard let first = values.first, !(48...57).contains(first) else { return false }
+        return values.allSatisfy { $0 == 95 || (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) }
     }
 }

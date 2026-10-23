@@ -163,9 +163,13 @@ final class KimiConnection {
     /// What the service answering this connection reports about itself, read from
     /// `/api/v1/meta` on every connect.
     private(set) var runtime = RunningRuntime.unknown
-    /// Set when the remote package is newer than the running service. Perch reports
-    /// it and nothing more: the daemon belongs to the user, not to this client.
+    /// Set when the remote package is newer than the running service. For a service the
+    /// user runs, Perch only reports it. For the instance Perch manages, it says what
+    /// the automatic restart waits for, or why Perch will not restart it.
     private(set) var staleRuntimeNotice: String?
+    /// The last report about the Kimi Web Perch manages on this host.
+    @ObservationIgnored private(set) var managedService: KimiServiceEndpoint?
+    @ObservationIgnored private var managedCheckedAt: Date?
     @ObservationIgnored private(set) var api: KimiAPI?
     /// Folded long pastes live on disk per host; tokens ride inside drafts.
     let pastes: DraftPasteStore
@@ -246,7 +250,8 @@ final class KimiConnection {
     }
 
     func updateHost(_ value: SSHHost) {
-        if value.kimiPort != host.kimiPort || value.kimiTokenPath != host.kimiTokenPath || value.destination != host.destination { disconnect() }
+        if value.kimiPort != host.kimiPort || value.kimiTokenPath != host.kimiTokenPath || value.destination != host.destination
+            || value.kimiManaged != host.kimiManaged || value.kimiEnvironment != host.kimiEnvironment { disconnect() }
         host = value
     }
 
@@ -300,9 +305,9 @@ final class KimiConnection {
                             do { try await Task.sleep(for: .seconds(30)); try await self?.refreshSessions() }
                             catch { return }
                             ticks += 1
-                            // An upgrade happens by hand between sessions, so this
-                            // re-probe stays rare: it costs an SSH round trip.
-                            if ticks % 20 == 0 { self?.checkRuntimeFreshness() }
+                            // Each probe costs an SSH round trip, so it stays rare unless a
+                            // managed restart waits for busy sessions to finish.
+                            if ticks % (self?.freshnessTicks ?? 20) == 0 { self?.checkRuntimeFreshness() }
                         }
                     }
                     defer { heartbeat.cancel(); poll.cancel(); ws.cancel(with: .goingAway, reason: nil) }
@@ -327,7 +332,7 @@ final class KimiConnection {
     func disconnect() {
         generation = UUID(); detail.cancelLoads()
         freshnessCheck?.cancel(); freshnessCheck = nil
-        runtime = .unknown; staleRuntimeNotice = nil
+        runtime = .unknown; staleRuntimeNotice = nil; managedService = nil; managedCheckedAt = nil
         task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
         snapshotReady = false; goal = nil; goalIsStale = true
         subagentTranscript = nil; subagentTranscriptError = nil
@@ -341,29 +346,38 @@ final class KimiConnection {
     }
     private func establish(token: UUID) async throws {
         if host.isLocal {
-            let data = try await LocalAgentRuntime.endpoint(for: .kimi, host: host)
+            let service = try await ensureManagedService()
             try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
-            let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
-            guard let port = endpoint["port"].int, let secret = endpoint["token"].string else {
-                throw WorkbenchError(L("本机服务未返回连接信息"))
-            }
-            api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
+            managedService = service; managedCheckedAt = Date()
+            let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(service.port)")!, token: service.token)
+            api = client
+            runtime = (try? await client.get(KimiServerMeta.self, "/api/v1/meta").runtime) ?? .unknown
+            staleRuntimeNotice = RuntimeVersion.managedNotice(service)
             return
         }
         try SSHCommand.validateDestination(host.destination)
-        // Read this server's existing credential through SSH; keep it only in process memory.
-        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
-            command: "cat " + RemoteSetup.remotePath(host.kimiTokenPath)))
-        try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
-        let secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !secret.isEmpty else { throw WorkbenchError(L("远端 Kimi Web 凭证为空")) }
+        var remotePort = port
+        let secret: String
+        if host.kimiManaged {
+            let service = try await ensureManagedService()
+            try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
+            managedService = service; managedCheckedAt = Date()
+            remotePort = service.port; secret = service.token
+        } else {
+            // Read this server's existing credential through SSH; keep it only in process memory.
+            let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+                command: "cat " + RemoteSetup.remotePath(host.kimiTokenPath)))
+            try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
+            secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !secret.isEmpty else { throw WorkbenchError(L("远端 Kimi Web 凭证为空")) }
+        }
         let localPort = try KimiAPI.availableLoopbackPort()
         let directory = URL(fileURLWithPath: "/tmp/awb-kimi-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         folder = directory
         let control = directory.appendingPathComponent("ssh").path
         let process = Process(); process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = ["-N", "-T", "-M", "-S", control, "-o", "ControlPersist=no", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=2", "-L", "127.0.0.1:\(localPort):127.0.0.1:\(port)", host.destination]
+        process.arguments = ["-N", "-T", "-M", "-S", control, "-o", "ControlPersist=no", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=2", "-L", "127.0.0.1:\(localPort):127.0.0.1:\(remotePort)", host.destination]
         process.standardInput = FileHandle.nullDevice; process.standardOutput = FileHandle.nullDevice
         let errors = Pipe(); process.standardError = errors; tunnel = process; try process.run()
         for _ in 0..<150 {
@@ -373,6 +387,7 @@ final class KimiConnection {
                 let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(localPort)")!, token: secret)
                 api = client
                 runtime = try await client.get(KimiServerMeta.self, "/api/v1/meta").runtime
+                if let managedService { staleRuntimeNotice = RuntimeVersion.managedNotice(managedService) }
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
@@ -384,15 +399,26 @@ final class KimiConnection {
     /// this connection. A failed or unreadable probe stays silent: a version check
     /// must not interrupt a session or surface as a connection error.
     func checkRuntimeFreshness() {
-        guard probesInstalledVersion, freshnessCheck == nil,
-              runtime.version != nil, !host.destination.isEmpty else { return }
+        guard probesInstalledVersion, freshnessCheck == nil, runtime.version != nil,
+              host.isLocal || !host.destination.isEmpty else { return }
+        // Connecting has just checked the instance Perch manages.
+        if managedService?.owned == true, let checked = managedCheckedAt, Date().timeIntervalSince(checked) < 60 { return }
         freshnessCheck = Task { [weak self] in
             await self?.probeRuntimeFreshness()
             self?.freshnessCheck = nil
         }
     }
+    /// Poll ticks (30 s each) between version checks. A managed restart that waits for
+    /// busy sessions is rechecked every minute, so it happens soon after they finish.
+    private var freshnessTicks: Int { (managedService?.restartPending ?? 0) > 0 ? 2 : 20 }
     private func probeRuntimeFreshness() async {
         guard let running = runtime.version else { return }
+        if host.isLocal || host.kimiManaged {
+            // Replacing the idle service ends this connection; reconnecting reads the new one.
+            guard let service = try? await ensureManagedService() else { return }
+            managedService = service; managedCheckedAt = Date()
+            if service.owned || host.isLocal { staleRuntimeNotice = RuntimeVersion.managedNotice(service); return }
+        }
         do {
             let output = try await SetupCommandRunner.run("/usr/bin/ssh",
                 RemoteSetup.sshArguments(host.destination, command: RemoteSetup.kimiRuntimeProbeCommand), timeout: 20)
@@ -401,8 +427,23 @@ final class KimiConnection {
                     RuntimeVersion.compare(installed: installed.version, running: running) else {
                 staleRuntimeNotice = nil; return
             }
-            staleRuntimeNotice = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+            var notice = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+            if host.kimiManaged { notice += "\n" + RuntimeVersion.foreignServiceNote() }
+            staleRuntimeNotice = notice
         } catch {}
+    }
+    /// Runs the service script for this host. It starts Perch's Kimi Web when none
+    /// answers, reuses it, or replaces it once every session is idle. A service the user
+    /// started is reused and never stopped.
+    private func ensureManagedService() async throws -> KimiServiceEndpoint {
+        if host.isLocal {
+            return try RemoteSetup.parseKimiServiceEndpoint(try await LocalAgentRuntime.endpoint(for: .kimi, host: host))
+        }
+        let command = RemoteSetup.kimiEnsureCommand(script: try RemoteSetup.kimiServiceScript(), port: host.kimiPort,
+                                                    tokenPath: host.kimiTokenPath, environment: host.kimiEnvironment)
+        let output = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination, command: command),
+                                                      timeout: RemoteSetup.kimiEnsureTimeout)
+        return try RemoteSetup.parseKimiServiceEndpoint(output)
     }
 
     /// Read navigation evidence without selecting or subscribing to a conversation.

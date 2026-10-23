@@ -28,14 +28,18 @@ controls. This takes inspiration from [Codex's SSH connection workflow](https://
   `npm prefix -g` for the installed executable. It does not modify remote shell
   startup files. After an external Terminal installation, the setup button makes
   the required recheck explicit.
-- Starting Kimi Web uses the executable path found by that probe, waits for the
-  service connection, and continues through the model check in the same action.
+- Starting Kimi Web makes the host managed: Perch streams
+  `remote/local-agent-service.py` over SSH (`python3 -c`, no installed file),
+  which starts `kimi web --host 127.0.0.1` with the saved launch environment and
+  records the instance it started. The check then waits for the service
+  connection and continues through the model check in the same action.
 - The installed package and the process serving the connection are read
   separately: `kimi --version` (or the npm prefix) against `/api/v1/meta` for
   Kimi, the deployed bridge file against `/health` for the native agents. A
   mismatch is reported in the informational `Running process` row and, for Kimi,
-  in the conversation as well. It never blocks the wizard, and Perch does not
-  restart or stop a service the user is running.
+  in the conversation as well. It never blocks the wizard. Perch does not
+  restart or stop a service the user is running; it restarts only the managed
+  Kimi Web it started, once every session is idle (see `docs/KIMI.md`).
 - The same machine UUID, agent, checked project path and selected model are
   passed to the existing task composer. No duplicate task-creation path is added.
 - Removing a machine only disconnects the Mac and removes the local entry. The
