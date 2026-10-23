@@ -18,7 +18,7 @@ struct FileTabStrip: View {
                     }.buttonStyle(.plain).font(.system(size: 12))
                         .padding(.horizontal, 10).padding(.vertical, 8)
                         .foregroundStyle(tab.path == browser.path ? Color.primary : .secondary)
-                        .background(tab.path == browser.path ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 6))
+                        .background(tab.path == browser.path ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
                 }
             }.padding(.horizontal, 8).padding(.vertical, 3)
         }.scrollIndicators(.hidden).fixedSize(horizontal: false, vertical: true)
