@@ -1916,3 +1916,5 @@
 "希望任务如何继续…" = "How should this task continue…";
 "加入该任务的草稿，由你确认后发送。" = "Add to this task’s draft for you to review and send.";
 "加入草稿并查看" = "Add to draft and view";
+"在正文中显示" = "Show in conversation";
+"收起任务面板" = "Collapse task panel";

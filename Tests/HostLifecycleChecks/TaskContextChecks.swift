@@ -33,7 +33,7 @@ import WorkbenchCore
         data["messages"] = [
             ["id": "u", "role": "user", "created_at": "", "content": [["type": "text", "text": "整理方案"]]],
             ["id": "a", "role": "assistant", "created_at": "", "content": [
-                ["type": "text", "text": "[方案](Report.md)"],
+                ["type": "text", "text": "## 调研报告\n\n已整理参考资料和关键结论，接下来会核对文档中的时间范围。\n\n你可以继续在正文里阅读与补充要求，也可以从右侧任务面板打开[方案](Report.md)。"],
                 ["type": "tool_use", "tool_call_id": "write", "tool_name": "Write", "input": ["file_path": "Report.md"]],
                 ["type": "tool_use", "tool_call_id": "failed", "tool_name": "Read", "input": ["path": "missing.txt"]]
             ]],
@@ -110,7 +110,8 @@ import WorkbenchCore
             }
         }
     }
-    func click(_ x: CGFloat, _ distanceFromTop: CGFloat) {
+    func click(_ x: CGFloat, _ distanceFromTop: CGFloat, in target: NSWindow? = nil) {
+        let window = target ?? window
         let view = window.contentView!
         let y = view.isFlipped ? distanceFromTop : view.bounds.height - distanceFromTop
         let point = view.convert(NSPoint(x: x, y: y), to: nil)
@@ -163,5 +164,90 @@ import WorkbenchCore
     model.taskContextWindow.show(model: model)
     precondition(model.taskContextWindow.window != nil, "A closed panel can be reopened")
     model.taskContextWindow.close()
-    print("PASS: task context native windows 340/420/620 light/dark, real pin and draft controls, source isolation, stop targeting, cancellation, file route and close/reopen")
+
+    // Exercise the embedded production container with a real transcript/composer.
+    // Its content identity must survive toggling and crossing the width breakpoint.
+    let page = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1100, height: 780),
+                        styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+    page.isReleasedWhenClosed = false
+    defer { page.close(); page.contentViewController = nil }
+    var contentMounts = 0
+    var contentView: NSView?
+    let hosting = NSHostingController(rootView: VStack(spacing: 0) {
+        HStack {
+            Text("准备调研报告").font(.headline)
+            Spacer()
+            TaskContextButton(model: model)
+        }.padding(.horizontal, 18).frame(height: 44)
+        TaskContextWorkspace(model: model) {
+            NativeAgentView(connection: connection, onResultDisplayed: { _ in })
+                .background(TaskContextContentProbe { view in contentMounts += 1; contentView = view })
+        }
+    }.background(WorkbenchTheme.contentBackground))
+    hosting.sizingOptions = []
+    page.contentViewController = hosting
+    page.setContentSize(NSSize(width: 1100, height: 780))
+    page.makeKeyAndOrderFront(nil)
+    model.taskContextWindow.locked = a
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(!model.taskContextWindow.embeddedVisible)
+    if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
+       let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to:
+            URL(fileURLWithPath: directory).appendingPathComponent("embedded-closed.png"))
+    }
+    click(1100 - 32, 22, in: page)
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(model.taskContextWindow.embeddedVisible && model.taskContextWindow.window == nil,
+                 "The header opens in-page without creating a window: size=\(page.contentView!.bounds.size), embedded=\(model.taskContextWindow.embeddedVisible)")
+    for width: CGFloat in [1100, 800] {
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            page.setContentSize(NSSize(width: width, height: 780))
+            page.appearance = NSAppearance(named: appearance)
+            try await Task.sleep(for: .milliseconds(200))
+            page.displayIfNeeded()
+            precondition(abs(contentView!.bounds.width - (width >= 960 ? width - 364 : width)) < 1,
+                         "The compact card must not squeeze the transcript")
+            if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
+               let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])?.write(to:
+                    URL(fileURLWithPath: directory).appendingPathComponent("embedded-\(Int(width))-\(appearance == .aqua ? "light" : "dark").png"))
+            }
+        }
+    }
+    click(800 - 32, 22, in: page)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(!model.taskContextWindow.embeddedVisible && abs(contentView!.bounds.width - 800) < 1)
+    let hiddenReads = reads.filter { $0 == "/sessions/a?turns=20" }.count
+    try await Task.sleep(for: .milliseconds(2200))
+    precondition(reads.filter { $0 == "/sessions/a?turns=20" }.count == hiddenReads,
+                 "Collapsing the in-page card ends its reads")
+    click(800 - 32, 22, in: page)
+    try await Task.sleep(for: .milliseconds(150))
+    // In-page header: close at the right, detach immediately before it.
+    click(800 - 64, 44 + 12 + 26, in: page)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible)
+    let detached = model.taskContextWindow.window!
+    click(detached.contentView!.bounds.width - 50, 26, in: detached)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(model.taskContextWindow.embeddedVisible && !model.taskContextWindow.visible && model.taskContextWindow.window == nil,
+                 "Docking returns to the page and releases the separate window")
+    precondition(contentMounts == 1 && model.selectedReference == b && connection.drafts["b"] == "其他任务草稿",
+                 "Panel layout changes must preserve transcript identity, selection and draft")
+    page.makeKeyAndOrderFront(nil)
+    click(800 - 38, 44 + 12 + 26, in: page)
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(!model.taskContextWindow.embeddedVisible, "The card close control collapses it")
+    print("PASS: task context native windows, embedded wide/compact light/dark, real toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
+}
+
+private struct TaskContextContentProbe: NSViewRepresentable {
+    let mounted: (NSView) -> Void
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(); mounted(view); return view
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }

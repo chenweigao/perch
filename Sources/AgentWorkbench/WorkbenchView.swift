@@ -95,7 +95,8 @@ private struct WorkbenchDetail: View {
     @Bindable var model: WorkbenchModel
 
     var body: some View {
-        conversation.environment(\.conversationPresentations, model.conversationPresentations)
+        TaskContextWorkspace(model: model) { conversation }
+            .environment(\.conversationPresentations, model.conversationPresentations)
     }
 
     @ViewBuilder private var conversation: some View {

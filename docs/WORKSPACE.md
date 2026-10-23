@@ -107,10 +107,17 @@ owns the shortcut, use the menu bar; Settings reports registration failure.
 
 ## Task context panel
 
-The conversation header's **Task panel** opens a compact popover containing
+The conversation header's **Task panel** toggles a card inside the conversation page containing
 pending requests, documents, background tasks/subagents, and current-turn tool
 activity. Empty sections stay hidden; completed calls start collapsed. The panel
-can detach into a resizable native window. **Lock to this task** preserves the
+reserves a trailing column when the page is at least 960 points wide; in smaller
+windows it overlays the page's trailing edge without narrowing the transcript.
+It stays open while interacting with the conversation and can be collapsed with
+its close control or the header button. Resizing and toggling retain the same
+conversation view, reading position, and composer. The card can detach into a
+resizable native window, then return with **Show in conversation**. Only one
+presentation reads at a time. Navigating away from the conversation removes the
+embedded card and ends its reads. **Lock to this task** preserves the
 source host and session while the main window navigates; unlocking resumes
 following the current conversation. Closing it ends its reads, not remote work.
 

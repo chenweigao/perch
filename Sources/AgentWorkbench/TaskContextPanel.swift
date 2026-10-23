@@ -5,9 +5,11 @@ import WorkbenchCore
 
 @MainActor @Observable final class TaskContextWindowController: NSObject, NSWindowDelegate {
     var locked: SessionReference?
+    var embeddedVisible = false
     private(set) var visible = false
     @ObservationIgnored private(set) var window: NSPanel?
     func show(model: WorkbenchModel) {
+        embeddedVisible = false
         if window == nil {
             let panel = TaskContextPanel(contentRect: NSRect(x: 220, y: 180, width: 400, height: 580),
                 styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -24,6 +26,16 @@ import WorkbenchCore
         visible = true
         window?.makeKeyAndOrderFront(nil)
     }
+    func embed(model: WorkbenchModel) {
+        close()
+        embeddedVisible = true
+        if model.showDashboard || model.draftingNewTask,
+           let source = locked ?? model.selectedReference,
+           let item = model.allSessions.first(where: { $0.reference == source }) {
+            model.open(item)
+        }
+        CompanionWindowController.shared.showMain()
+    }
     func close() { visible = false; window?.close() }
     func windowWillClose(_ notification: Notification) {
         visible = false
@@ -39,20 +51,50 @@ private final class TaskContextPanel: NSPanel {
 
 struct TaskContextButton: View {
     let model: WorkbenchModel
-    @State private var presented = false
     var body: some View {
         Button {
-            if model.taskContextWindow.visible { model.taskContextWindow.show(model: model) }
-            else { presented.toggle() }
+            if model.taskContextWindow.visible { model.taskContextWindow.embed(model: model) }
+            else { model.taskContextWindow.embeddedVisible.toggle() }
         } label: {
-            WorkbenchToolbarSymbol(name: "sidebar.right").workbenchControlSurface()
+            WorkbenchToolbarSymbol(name: "sidebar.right")
+                .foregroundStyle(model.taskContextWindow.embeddedVisible ? WorkbenchTheme.accent : .secondary)
+                .workbenchControlSurface()
         }.buttonStyle(.plain).help("任务面板").accessibilityLabel("任务面板")
-            .popover(isPresented: $presented, arrowEdge: .bottom) {
-                TaskContextView(model: model, detach: {
-                    presented = false
-                    model.taskContextWindow.show(model: model)
-                }).frame(width: 400, height: 580)
-            }
+            .accessibilityValue(model.taskContextWindow.embeddedVisible ? "已展开" : "已收起")
+    }
+}
+
+/// Keep the conversation at one structural identity while the card opens or the
+/// window crosses the breakpoint. In compact windows, only the card overlays it.
+struct TaskContextWorkspace<Content: View>: View {
+    let model: WorkbenchModel
+    @ViewBuilder let content: Content
+    private var shown: Bool {
+        model.taskContextWindow.embeddedVisible && !model.showDashboard && !model.draftingNewTask
+    }
+    var body: some View {
+        GeometryReader { geometry in
+            let alongside = geometry.size.width >= 960
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.trailing, shown && alongside ? 364 : 0)
+                .overlay(alignment: .topTrailing) {
+                    if shown {
+                        TaskContextView(model: model, detach: { model.taskContextWindow.show(model: model) },
+                                        close: { model.taskContextWindow.embeddedVisible = false })
+                            .frame(width: min(340, max(0, geometry.size.width - 24)),
+                                   height: min(620, max(0, geometry.size.height - 24)))
+                            .background(WorkbenchTheme.contentBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
+                                    .strokeBorder(.primary.opacity(0.10), lineWidth: 0.5)
+                            }
+                            .shadow(color: .black.opacity(alongside ? 0.04 : 0.12), radius: 12, y: 3)
+                            .padding(12)
+                    }
+                }
+        }
     }
 }
 
@@ -60,6 +102,7 @@ struct TaskContextView: View {
     let model: WorkbenchModel
     var detached = false
     var detach: (() -> Void)?
+    var close: (() -> Void)?
     @State private var state = TaskContextState()
     @State private var allFiles = false
     @State private var allTasks = false
@@ -68,7 +111,6 @@ struct TaskContextView: View {
     @State private var draftSource: WorkspaceSession?
     @AppStorage(AppLanguage.defaultsKey) private var language: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appearance: AppAppearance = .system
-    @Environment(\.dismiss) private var dismiss
     private var reference: SessionReference? {
         model.taskContextWindow.locked ?? (model.showDashboard ? nil : model.selectedReference)
     }
@@ -122,8 +164,8 @@ struct TaskContextView: View {
                     }
                 }.buttonStyle(.borderless).padding(14)
             }
-        }.frame(minWidth: 320, minHeight: 320)
-            .background(Color(nsColor: .windowBackgroundColor))
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(detached ? Color(nsColor: .windowBackgroundColor) : WorkbenchTheme.contentBackground)
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
             .task(id: key) {
                 let input = key
@@ -148,6 +190,10 @@ struct TaskContextView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
+            if detached {
+                Button { model.taskContextWindow.embed(model: model) } label: { Image(systemName: "rectangle.inset.filled") }
+                    .help("在正文中显示").accessibilityLabel("在正文中显示")
+            }
             Button {
                 model.taskContextWindow.locked = model.taskContextWindow.locked == nil ? reference : nil
             } label: {
@@ -158,6 +204,10 @@ struct TaskContextView: View {
             if let detach {
                 Button(action: detach) { Image(systemName: "arrow.up.left.and.arrow.down.right") }
                     .help("固定为浮窗").accessibilityLabel("固定为浮窗")
+            }
+            if let close {
+                Button(action: close) { Image(systemName: "xmark") }
+                    .help("收起任务面板").accessibilityLabel("收起任务面板")
             }
         }.buttonStyle(.borderless).padding(18)
     }
@@ -283,7 +333,7 @@ struct TaskContextView: View {
         }
     }
     private func openMain() {
-        if !detached { dismiss() }
+        close?()
         CompanionWindowController.shared.showMain()
     }
 }
