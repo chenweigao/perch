@@ -14,6 +14,7 @@ struct KimiWorkspaceView: View {
     let onResultDisplayed: (KimiSession) -> Void
     @State private var activityReview = 0
     @State private var transcriptSubject: KimiTask?
+    @State private var editStats = SessionEditStatsCache()
     var body: some View {
         #if PERCH_ACCEPTANCE
         let _ = { NativeAcceptanceProbe.shared.kimiBodyEvaluations += 1 }()
@@ -35,7 +36,7 @@ struct KimiWorkspaceView: View {
                     liveTools: conversation.live?.runningTools ?? [], online: connection.online,
                     isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
                     isResponding: conversation.live?.assistantText.isEmpty == false,
-                    pendingCount: pending, isStopping: connection.isStopping),
+                    pendingCount: pending, isStopping: connection.isStopping, editStats: editStats),
                     isRunning: conversation.snapshot.session.isTurnRunning,
                     timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, offlineDetail: connection.error, pendingCount: pending,

@@ -15,12 +15,16 @@ struct ProtocolTests {
         case "activity":
             try benchConversationActivity()
             return
+        case "streaming":
+            try benchStreamingDelta()
+            return
         default:
             break
         }
         try checkConversationPresentation()
         try checkConversationProcessFold()
         try checkConversationPresentationModel()
+        try checkConversationPresentationHistory()
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
         try checkTaskRecaps()
@@ -38,6 +42,7 @@ struct ProtocolTests {
         checkAutoCompact()
         checkSafeLink()
         try checkSessionEditStats()
+        try checkSessionEditStatsCache()
         try checkProjectCommands()
         checkAppVersionCheck()
         try checkWorkflow()

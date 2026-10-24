@@ -21,6 +21,12 @@ public enum SessionEditStats {
     /// hides the stats instead of showing zeros.
     public static func derive(from messages: [KimiMessage]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
         var perFile: [String: SessionEditStat] = [:]
+        tally(messages[...], into: &perFile)
+        return summary(perFile)
+    }
+
+    /// Per-file tallies only add up, so any split of the messages sums to the same result.
+    static func tally(_ messages: ArraySlice<KimiMessage>, into perFile: inout [String: SessionEditStat]) {
         for message in messages {
             for part in message.content where part.type == "tool_use" {
                 guard let tool = part.toolName, let input = part.input else { continue }
@@ -45,6 +51,9 @@ public enum SessionEditStats {
                 }
             }
         }
+    }
+
+    static func summary(_ perFile: [String: SessionEditStat]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
         guard !perFile.isEmpty else { return nil }
         let total = perFile.values.reduce(SessionEditStat(additions: 0, deletions: 0)) {
             SessionEditStat(additions: $0.additions + $1.additions, deletions: $0.deletions + $1.deletions)
@@ -84,8 +93,8 @@ public enum SessionEditStats {
         return stat
     }
 
-    /// The derivation reruns for every snapshot the status bar renders, over the
-    /// whole loaded session. Splitting by Character grapheme-breaks every edit
+    /// The status bar derives the latest turn on every update and the whole
+    /// loaded window after paging or a history change. Splitting by Character grapheme-breaks every edit
     /// payload; these UTF-8 scans produce the same lines without that cost.
     /// `String.split(separator: "\n")` compares Characters, and CR LF is a single
     /// Character, so only an LF that does not follow a CR separates lines. Such an
@@ -144,5 +153,27 @@ public enum SessionEditStats {
             newEnd -= 1
         }
         return SessionEditStat(additions: newEnd - start, deletions: oldEnd - start)
+    }
+}
+
+/// The activity bar derives the whole-session tally on every update of the
+/// loaded window. Messages before the latest user prompt only change on paging
+/// or history replacement; their tally is kept and the latest turn is added.
+public final class SessionEditStatsCache {
+    private var source: ArraySlice<KimiMessage> = []
+    private var earlier: [String: SessionEditStat] = [:]
+    public init() {}
+
+    public func derive(from messages: [KimiMessage]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
+        let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
+        if source.count != split || !messages[..<split].elementsEqual(source) {
+            var tally: [String: SessionEditStat] = [:]
+            SessionEditStats.tally(messages[..<split], into: &tally)
+            source = messages[..<split]
+            earlier = tally
+        }
+        var perFile = earlier
+        SessionEditStats.tally(messages[split...], into: &perFile)
+        return SessionEditStats.summary(perFile)
     }
 }

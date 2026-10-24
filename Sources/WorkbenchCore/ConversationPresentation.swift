@@ -14,6 +14,8 @@ public struct ConversationPresentationUpdateMetrics: Equatable {
     public let totalNanoseconds: UInt64
     public let reusedTurnCount: Int
     public let rebuiltTurnCount: Int
+    /// The turns before the latest prompt were reused without being projected again.
+    public let reusedHistory: Bool
 }
 
 /// Pure, synchronous presentation work. No provider, view, task or network owner is
@@ -36,6 +38,23 @@ public final class ConversationPresentationModel {
             self.isRunning = isRunning; self.online = online; self.epoch = epoch; self.language = language
             self.summariesEnabled = summariesEnabled; self.includeToolOutput = includeToolOutput
         }
+        public static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.isRunning == rhs.isRunning && lhs.online == rhs.online && lhs.epoch == rhs.epoch
+                && lhs.language == rhs.language && lhs.summariesEnabled == rhs.summariesEnabled
+                && lhs.includeToolOutput == rhs.includeToolOutput && lhs.running == rhs.running && lhs.live == rhs.live
+                && Self.equal(lhs.messages, rhs.messages)
+        }
+        /// A streamed token changes the latest message: compare from the end so
+        /// a changed window is told apart without walking all of its history.
+        private static func equal(_ lhs: [KimiMessage], _ rhs: [KimiMessage]) -> Bool {
+            guard lhs.count == rhs.count else { return false }
+            var index = lhs.count
+            while index > 0 {
+                index -= 1
+                if lhs[index] != rhs[index] { return false }
+            }
+            return true
+        }
     }
     public struct Row: Equatable {
         public let entry: ConversationTimelineEntry
@@ -48,15 +67,73 @@ public final class ConversationPresentationModel {
             self.entry = entry; self.tools = tools; self.activity = activity; self.foldedRows = foldedRows
         }
     }
-    public final class Snapshot {
+    /// Rows of the turns before the latest user prompt. While only the latest
+    /// turn changes, every snapshot shares one instance, so its rows are neither
+    /// rebuilt nor re-presented for each streamed token.
+    final class History {
+        let rows: [Row]
+        let entryIDs: Set<String>
+        let navigation: [ConversationTurnSummary]
+        let turnCount: Int
+        let source: ToolVisibilityProjection.Prefix?
+        var cost = 0
+        private var presentation: (activity: [String: ActivityNarrativeRow], foldsProcess: Bool, value: Presentation)?
+
+        init(rows: [Row] = [], navigation: [ConversationTurnSummary] = [], turnCount: Int = 0,
+             source: ToolVisibilityProjection.Prefix? = nil) {
+            self.rows = rows; self.navigation = navigation; self.turnCount = turnCount; self.source = source
+            entryIDs = Set(rows.map(\.entry.id))
+        }
+
+        /// These rows never carry the model's own narrative (it covers the latest
+        /// turn only), and no live reply is among them; `Snapshot.presented` checks both.
+        func presented(activity: [String: ActivityNarrativeRow], foldsProcess: Bool) -> Presentation {
+            let relevant = activity.filter { entryIDs.contains($0.key) }
+            if let presentation, presentation.foldsProcess == foldsProcess, presentation.activity == relevant {
+                return presentation.value
+            }
+            let displayed = rows.compactMap { row -> Row? in
+                guard let narrative = relevant[row.entry.id] else { return row }
+                if narrative.isAnchor, !narrative.stageClosed, row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
+                return Row(entry: row.entry, tools: row.tools, activity: narrative)
+            }
+            let value = Presentation(displayed: displayed, foldsProcess: foldsProcess, isRunning: false)
+            presentation = (relevant, foldsProcess, value)
+            return value
+        }
+    }
+
+    /// Transcript rows after external summaries and process folding.
+    public struct Presentation: Equatable {
         public let rows: [Row]
+        /// Folded entry id -> its fold row id, so find results open the fold.
+        public let foldParents: [String: String]
+
+        init(displayed: [Row], foldsProcess: Bool, isRunning: Bool) {
+            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
+            foldParents = Self.parents(of: rows)
+        }
+        init(rows: [Row], foldParents: [String: String]) { self.rows = rows; self.foldParents = foldParents }
+
+        static func parents(of rows: [Row], into map: [String: String] = [:]) -> [String: String] {
+            rows.reduce(into: map) { map, row in
+                for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
+            }
+        }
+    }
+
+    public final class Snapshot {
+        let history: History
+        let tail: [Row]
+        public var rows: [Row] { history.rows.isEmpty ? tail : history.rows + tail }
         public let navigation: [ConversationTurnSummary]
         public let narrative: ActivityNarrativeSnapshot
         public let narrativeKey: String
         public let batch: ActivitySummaryBatch?
-        init(rows: [Row], navigation: [ConversationTurnSummary], narrative: ActivityNarrativeSnapshot,
+        init(history: History, tail: [Row], navigation: [ConversationTurnSummary], narrative: ActivityNarrativeSnapshot,
              batch: ActivitySummaryBatch?) {
-            self.rows = rows; self.navigation = navigation; self.narrative = narrative; self.batch = batch
+            self.history = history; self.tail = tail
+            self.navigation = navigation; self.narrative = narrative; self.batch = batch
             narrativeKey = [narrative.current?.stageID, narrative.current?.headline,
                 narrative.current?.detail, narrative.current?.source.rawValue,
                 narrative.current?.lifecycle.rawValue, narrative.current.map { String($0.revision) },
@@ -65,13 +142,41 @@ public final class ConversationPresentationModel {
         }
         /// External summaries stay live; they never become part of a cached input.
         public func displayedRows(activity: (String) -> ActivityNarrativeRow?) -> [Row] {
-            // Keep the current reply visible. Its locally derived commentary
-            // summary is useful to the activity bar, but must not replace the
-            // actual streaming text in the transcript.
-            let liveReplyID = rows.last {
-                $0.entry.presentation == .progress && $0.activity?.stageClosed == false
-            }?.entry.id
-            return rows.compactMap { row in
+            Self.displayed(rows, activity: activity, liveReplyID: Self.liveReplyID(in: rows))
+        }
+
+        /// `displayedRows` followed by the process fold when `foldsProcess` is set.
+        /// The earlier turns are presented once per summary overlay; each update
+        /// then only presents the latest turn.
+        public func presented(activity: [String: ActivityNarrativeRow], foldsProcess: Bool, isRunning: Bool) -> Presentation {
+            let liveReplyID = Self.liveReplyID(in: tail)
+            func whole() -> Presentation {
+                Presentation(displayed: displayedRows { activity[$0] }, foldsProcess: foldsProcess, isRunning: isRunning)
+            }
+            guard !history.rows.isEmpty else {
+                return Presentation(displayed: Self.displayed(tail, activity: { activity[$0] }, liveReplyID: liveReplyID),
+                                    foldsProcess: foldsProcess, isRunning: isRunning)
+            }
+            if let liveReplyID, history.entryIDs.contains(liveReplyID) { return whole() }
+            let latest = Self.displayed(tail, activity: { activity[$0] }, liveReplyID: liveReplyID)
+            // Folding is decided per turn, so it divides exactly at the latest prompt.
+            if foldsProcess, let first = latest.first?.entry,
+               !(first.presentation == .message && first.messages.first?.isUserPrompt == true) { return whole() }
+            if foldsProcess, latest.isEmpty { return whole() }
+            let earlier = history.presented(activity: activity, foldsProcess: foldsProcess)
+            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning) : latest
+            return Presentation(rows: earlier.rows + rows, foldParents: Presentation.parents(of: rows, into: earlier.foldParents))
+        }
+
+        // Keep the current reply visible. Its locally derived commentary
+        // summary is useful to the activity bar, but must not replace the
+        // actual streaming text in the transcript.
+        private static func liveReplyID(in rows: [Row]) -> String? {
+            rows.last { $0.entry.presentation == .progress && $0.activity?.stageClosed == false }?.entry.id
+        }
+
+        private static func displayed(_ rows: [Row], activity: (String) -> ActivityNarrativeRow?, liveReplyID: String?) -> [Row] {
+            rows.compactMap { row in
                 if row.entry.id == liveReplyID {
                     return Row(entry: row.entry, tools: row.tools, activity: nil)
                 }
@@ -92,6 +197,7 @@ public final class ConversationPresentationModel {
     private var messageCosts: [Int] = []
     private var previous: Input?
     private var snapshot: Snapshot?
+    private var history: History?
     public init(key: String, metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)? = nil) {
         self.key = key
         self.metricsHandler = metricsHandler
@@ -116,7 +222,8 @@ public final class ConversationPresentationModel {
                 retainedCostNanoseconds: 0,
                 totalNanoseconds: updateEnded - updateStarted,
                 reusedTurnCount: 0,
-                rebuiltTurnCount: 0))
+                rebuiltTurnCount: 0,
+                reusedHistory: false))
             return snapshot
         }
         let resetStarted = timestamp()
@@ -124,45 +231,96 @@ public final class ConversationPresentationModel {
         // rebuilds localized excerpts and keeps the same observed tool handoff.
         if let previous, previous.epoch != input.epoch { tools = ToolVisibilityProjection() }
         if let previous, previous.epoch != input.epoch || previous.language != input.language {
-            turns = ConversationProjection()
+            turns = ConversationProjection(); history = nil; tools.discardPrefix()
         }
         let resetEnded = timestamp()
         let toolsStarted = timestamp()
-        let visible = tools.update(input.messages, sessionID: key, live: input.live,
-                                   running: input.running, online: input.online)
+        // The turns before the latest prompt are projected once; a streamed token
+        // only reprojects the latest turn. The split never changes the result.
+        let split = input.messages.lastIndex(where: \.isUserPrompt).flatMap { $0 > 0 ? $0 : nil }
+        let parts = split.map { tools.update(input.messages, splittingAt: $0, sessionID: key, live: input.live,
+                                             running: input.running, online: input.online) }
+        let whole = parts == nil ? tools.update(input.messages, sessionID: key, live: input.live,
+                                                running: input.running, online: input.online) : nil
         let toolsEnded = timestamp()
         let turnsStarted = timestamp()
-        let timeline = turns.update(visible.messages, isRunning: input.isRunning)
+        var reusedTurnCount = 0, rebuiltTurnCount = 0
+        var earlier: History?
+        var reusedHistory = false
+        let entries: [ConversationTimelineEntry]
+        let visibleTools: [String: VisibleTool]
+        let navigation: [ConversationTurnSummary]
+        if let parts, parts.separable {
+            if let history, history.source === parts.prefix {
+                earlier = history; reusedHistory = true
+                reusedTurnCount = history.turnCount
+            } else {
+                let timeline = turns.update(parts.prefix.messages, isRunning: false)
+                reusedTurnCount = timeline.reusedTurnCount; rebuiltTurnCount = timeline.rebuiltTurnCount
+                earlier = History(rows: timeline.entries.map { Self.row($0, tools: parts.prefix.tools, activity: nil) },
+                                  navigation: timeline.navigation, turnCount: timeline.reusedTurnCount + timeline.rebuiltTurnCount,
+                                  source: parts.prefix)
+            }
+            entries = ConversationTimelineEntry.make(parts.tail.messages, isRunning: input.isRunning)
+            rebuiltTurnCount += 1
+            visibleTools = parts.tail.tools
+            navigation = earlier!.navigation + (ConversationTurnSummary.make(parts.tail.messages, entries: entries).map { [$0] } ?? [])
+        } else {
+            let visible = whole ?? ToolVisibilityProjection.Snapshot(messages: parts!.prefix.messages + parts!.tail.messages,
+                tools: parts!.prefix.tools.merging(parts!.tail.tools) { _, latest in latest })
+            let timeline = turns.update(visible.messages, isRunning: input.isRunning)
+            reusedTurnCount = timeline.reusedTurnCount; rebuiltTurnCount = timeline.rebuiltTurnCount
+            entries = timeline.entries; visibleTools = visible.tools; navigation = timeline.navigation
+        }
+        history = earlier
         let turnsEnded = timestamp()
         let narrativeStarted = timestamp()
-        let narrative = ActivityNarrativeProjection.make(entries: timeline.entries, tools: visible.tools, isRunning: input.isRunning)
+        let narrative = ActivityNarrativeProjection.make(entries: entries, tools: visibleTools, isRunning: input.isRunning)
         let narrativeEnded = timestamp()
         let rowsStarted = timestamp()
         let projected = narrative.rows
-        let rows = timeline.entries.map { entry in
-            let ids = Set(entry.messages.flatMap(\.content).compactMap(\.toolCallId))
-            let rowTools = ids.reduce(into: [String: VisibleTool]()) { if let tool = visible.tools[$1] { $0[$1] = tool } }
-            return Row(entry: entry, tools: rowTools, activity: projected[entry.id])
+        let latest = entries.map { Self.row($0, tools: visibleTools, activity: projected[$0.id]) }
+        let presentedHistory: History, tail: [Row]
+        if let earlier, projected.keys.contains(where: earlier.entryIDs.contains) {
+            // An earlier entry sharing an id with the latest turn takes its
+            // narrative too; present that snapshot without a shared history.
+            presentedHistory = History()
+            tail = earlier.rows.map { Row(entry: $0.entry, tools: $0.tools, activity: projected[$0.entry.id]) } + latest
+        } else {
+            presentedHistory = earlier ?? History(); tail = latest
         }
         let rowsEnded = timestamp()
         let summaryStarted = timestamp()
-        let batch = ActivitySummaryBatch.latest(in: timeline.entries, tools: visible.tools,
+        let batch = ActivitySummaryBatch.latest(in: entries, tools: visibleTools,
             isRunning: input.isRunning, enabled: input.summariesEnabled, includeToolOutput: input.includeToolOutput)
         let summaryEnded = timestamp()
-        let value = Snapshot(rows: rows, navigation: timeline.navigation, narrative: narrative, batch: batch)
+        let value = Snapshot(history: presentedHistory, tail: tail, navigation: navigation, narrative: narrative, batch: batch)
         snapshot = value; preparationCount += 1
         messageCount = input.messages.count
         let retainedCostStarted = timestamp()
         // Token updates preserve historical message values. Reuse their source
         // costs while still comparing full values, including same-ID tool edits.
         let oldCosts = messageCosts
-        messageCosts = input.messages.enumerated().map { index, message in
+        let reuseEnd = reusedHistory && oldCosts.count >= split! ? split! : 0
+        var costs = Array(oldCosts[..<reuseEnd])
+        costs.reserveCapacity(input.messages.count)
+        for index in reuseEnd..<input.messages.count {
+            let message = input.messages[index]
             if let previous, previous.messages.indices.contains(index), previous.messages[index] == message {
-                return oldCosts[index]
+                costs.append(oldCosts[index])
+            } else {
+                costs.append(Self.cost(message))
             }
-            return Self.cost(message)
         }
-        retainedPayloadCost = messageCosts.reduce(0, +)
+        messageCosts = costs
+        let sourceCost: Int
+        if let earlier, let split {
+            if reuseEnd == 0 { earlier.cost = costs[..<split].reduce(0, +) }
+            sourceCost = earlier.cost + costs[split...].reduce(0, +)
+        } else {
+            sourceCost = costs.reduce(0, +)
+        }
+        retainedPayloadCost = sourceCost
             + tools.retainedLiveTools.reduce(0) { $0 + $1.name.utf8.count + $1.id.utf8.count + Self.cost($1.args) + Self.cost($1.lastProgress) }
         previous = input
         let retainedCostEnded = timestamp()
@@ -178,9 +336,21 @@ public final class ConversationPresentationModel {
             summaryNanoseconds: summaryEnded - summaryStarted,
             retainedCostNanoseconds: retainedCostEnded - retainedCostStarted,
             totalNanoseconds: updateEnded - updateStarted,
-            reusedTurnCount: timeline.reusedTurnCount,
-            rebuiltTurnCount: timeline.rebuiltTurnCount))
+            reusedTurnCount: reusedTurnCount,
+            rebuiltTurnCount: rebuiltTurnCount,
+            reusedHistory: reusedHistory))
         return value
+    }
+
+    private static func row(_ entry: ConversationTimelineEntry, tools: [String: VisibleTool],
+                            activity: ActivityNarrativeRow?) -> Row {
+        var rowTools: [String: VisibleTool] = [:]
+        for message in entry.messages {
+            for part in message.content {
+                if let id = part.toolCallId, let tool = tools[id] { rowTools[id] = tool }
+            }
+        }
+        return Row(entry: entry, tools: rowTools, activity: activity)
     }
 
     private func timestamp() -> UInt64 {

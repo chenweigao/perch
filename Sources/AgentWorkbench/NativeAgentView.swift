@@ -10,6 +10,7 @@ struct NativeAgentView: View {
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     @State private var activityReview = 0
+    @State private var editStats = SessionEditStatsCache()
     private var displayedResultKey: String? {
         guard appActive, follow, connection.online,
               let snapshot = connection.snapshot, snapshot.id == connection.selectedID,
@@ -156,7 +157,7 @@ struct NativeAgentView: View {
                 online: connection.online,
                 isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
                 isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                pendingCount: s.interactions.count, isStopping: connection.isStopping),
+                pendingCount: s.interactions.count, isStopping: connection.isStopping, editStats: editStats),
                 isRunning: s.busy,
                 timing: connection.timings.turns[s.id],
                 online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,
