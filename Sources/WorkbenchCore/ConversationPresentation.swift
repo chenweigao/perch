@@ -67,39 +67,102 @@ public final class ConversationPresentationModel {
             self.entry = entry; self.tools = tools; self.activity = activity; self.foldedRows = foldedRows
         }
     }
+    /// One earlier turn's rows, kept while the tool chunk it was built from is
+    /// reused, or all earlier rows when the prefix was projected as a whole.
+    final class HistoryTurn {
+        let chunk: ToolVisibilityProjection.Chunk?
+        let rows: [Row]
+        let navigation: [ConversationTurnSummary]
+        private var presentation: (activity: [String: ActivityNarrativeRow], foldsProcess: Bool, value: Presentation)?
+
+        init(chunk: ToolVisibilityProjection.Chunk?, rows: [Row], navigation: [ConversationTurnSummary]) {
+            self.chunk = chunk; self.rows = rows; self.navigation = navigation
+        }
+
+        /// Nil when a summary overlay removes the turn's prompt row: that row ends
+        /// the previous turn's fold, so only the whole history folds exactly.
+        func presented(activity: [String: ActivityNarrativeRow], foldsProcess: Bool) -> Presentation? {
+            if let presentation, presentation.foldsProcess == foldsProcess, presentation.activity == activity {
+                return presentation.value
+            }
+            let displayed = History.displayed(rows, activity: activity)
+            if let first = rows.first, first.entry.presentation == .message, first.entry.messages.first?.isUserPrompt == true,
+               displayed.first?.entry.id != first.entry.id { return nil }
+            let value = Presentation(displayed: displayed, foldsProcess: foldsProcess, isRunning: false)
+            presentation = (activity, foldsProcess, value)
+            return value
+        }
+    }
+
     /// Rows of the turns before the latest user prompt. While only the latest
     /// turn changes, every snapshot shares one instance, so its rows are neither
     /// rebuilt nor re-presented for each streamed token.
     final class History {
+        let turns: [HistoryTurn]
         let rows: [Row]
-        let entryIDs: Set<String>
+        /// Entry id -> index of its turn.
+        private let entryTurns: [String: Int]
+        private let uniqueEntries: Bool
         let navigation: [ConversationTurnSummary]
         let turnCount: Int
         let source: ToolVisibilityProjection.Prefix?
         var cost = 0
         private var presentation: (activity: [String: ActivityNarrativeRow], foldsProcess: Bool, value: Presentation)?
 
-        init(rows: [Row] = [], navigation: [ConversationTurnSummary] = [], turnCount: Int = 0,
-             source: ToolVisibilityProjection.Prefix? = nil) {
-            self.rows = rows; self.navigation = navigation; self.turnCount = turnCount; self.source = source
-            entryIDs = Set(rows.map(\.entry.id))
+        init(turns: [HistoryTurn] = [], turnCount: Int = 0, source: ToolVisibilityProjection.Prefix? = nil) {
+            self.turns = turns; self.turnCount = turnCount; self.source = source
+            var rows: [Row] = [], navigation: [ConversationTurnSummary] = [], entryTurns: [String: Int] = [:]
+            rows.reserveCapacity(turns.reduce(0) { $0 + $1.rows.count })
+            entryTurns.reserveCapacity(rows.capacity)
+            for (index, turn) in turns.enumerated() {
+                rows.append(contentsOf: turn.rows)
+                navigation.append(contentsOf: turn.navigation)
+                for row in turn.rows { entryTurns[row.entry.id] = index }
+            }
+            self.rows = rows; self.navigation = navigation; self.entryTurns = entryTurns
+            uniqueEntries = entryTurns.count == rows.count
         }
+
+        func contains(entry id: String) -> Bool { entryTurns[id] != nil }
 
         /// These rows never carry the model's own narrative (it covers the latest
         /// turn only), and no live reply is among them; `Snapshot.presented` checks both.
+        /// Folding is decided per turn, so each turn's presentation is reused
+        /// while that turn and its summary overlays stay the same.
         func presented(activity: [String: ActivityNarrativeRow], foldsProcess: Bool) -> Presentation {
-            let relevant = activity.filter { entryIDs.contains($0.key) }
+            var relevant: [String: ActivityNarrativeRow] = [:]
+            var byTurn: [Int: [String: ActivityNarrativeRow]] = [:]
+            for (id, narrative) in activity {
+                guard let turn = entryTurns[id] else { continue }
+                relevant[id] = narrative; byTurn[turn, default: [:]][id] = narrative
+            }
             if let presentation, presentation.foldsProcess == foldsProcess, presentation.activity == relevant {
                 return presentation.value
             }
-            let displayed = rows.compactMap { row -> Row? in
-                guard let narrative = relevant[row.entry.id] else { return row }
+            let value = uniqueEntries ? joined(byTurn, foldsProcess: foldsProcess) : nil
+            let result = value ?? Presentation(displayed: Self.displayed(rows, activity: relevant),
+                                               foldsProcess: foldsProcess, isRunning: false)
+            presentation = (relevant, foldsProcess, result)
+            return result
+        }
+
+        private func joined(_ activity: [Int: [String: ActivityNarrativeRow]], foldsProcess: Bool) -> Presentation? {
+            var rows: [Row] = [], parents: [String: String] = [:]
+            for (index, turn) in turns.enumerated() {
+                guard let value = turn.presented(activity: activity[index] ?? [:], foldsProcess: foldsProcess) else { return nil }
+                rows.append(contentsOf: value.rows)
+                parents.merge(value.foldParents) { current, _ in current }
+            }
+            return Presentation(rows: rows, foldParents: parents)
+        }
+
+        static func displayed(_ rows: [Row], activity: [String: ActivityNarrativeRow]) -> [Row] {
+            guard !activity.isEmpty else { return rows }
+            return rows.compactMap { row -> Row? in
+                guard let narrative = activity[row.entry.id] else { return row }
                 if narrative.isAnchor, !narrative.stageClosed, row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
                 return Row(entry: row.entry, tools: row.tools, activity: narrative)
             }
-            let value = Presentation(displayed: displayed, foldsProcess: foldsProcess, isRunning: false)
-            presentation = (relevant, foldsProcess, value)
-            return value
         }
     }
 
@@ -157,7 +220,7 @@ public final class ConversationPresentationModel {
                 return Presentation(displayed: Self.displayed(tail, activity: { activity[$0] }, liveReplyID: liveReplyID),
                                     foldsProcess: foldsProcess, isRunning: isRunning)
             }
-            if let liveReplyID, history.entryIDs.contains(liveReplyID) { return whole() }
+            if let liveReplyID, history.contains(entry: liveReplyID) { return whole() }
             let latest = Self.displayed(tail, activity: { activity[$0] }, liveReplyID: liveReplyID)
             // Folding is decided per turn, so it divides exactly at the latest prompt.
             if foldsProcess, let first = latest.first?.entry,
@@ -198,6 +261,8 @@ public final class ConversationPresentationModel {
     private var previous: Input?
     private var snapshot: Snapshot?
     private var history: History?
+    /// Earlier turns by their first message, while their tool chunk is reused.
+    private var historyTurns: [String: HistoryTurn] = [:]
     public init(key: String, metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)? = nil) {
         self.key = key
         self.metricsHandler = metricsHandler
@@ -231,7 +296,7 @@ public final class ConversationPresentationModel {
         // rebuilds localized excerpts and keeps the same observed tool handoff.
         if let previous, previous.epoch != input.epoch { tools = ToolVisibilityProjection() }
         if let previous, previous.epoch != input.epoch || previous.language != input.language {
-            turns = ConversationProjection(); history = nil; tools.discardPrefix()
+            turns = ConversationProjection(); history = nil; historyTurns = [:]; tools.discardPrefix()
         }
         let resetEnded = timestamp()
         let toolsStarted = timestamp()
@@ -254,12 +319,33 @@ public final class ConversationPresentationModel {
             if let history, history.source === parts.prefix {
                 earlier = history; reusedHistory = true
                 reusedTurnCount = history.turnCount
+            } else if let chunks = parts.prefix.chunks {
+                // A page of older messages or a new prompt: rebuild only the turns
+                // whose tool chunk was projected again.
+                var next: [String: HistoryTurn] = [:], built: [HistoryTurn] = []
+                built.reserveCapacity(chunks.count)
+                for chunk in chunks {
+                    let id = chunk.messages[0].id
+                    let turn: HistoryTurn
+                    if let prior = historyTurns[id], prior.chunk === chunk {
+                        turn = prior; reusedTurnCount += 1
+                    } else {
+                        let timeline = ConversationTimelineEntry.make(chunk.messages, isRunning: false)
+                        turn = HistoryTurn(chunk: chunk, rows: timeline.map { Self.row($0, tools: chunk.tools, activity: nil) },
+                                           navigation: ConversationTurnSummary.make(chunk.messages, entries: timeline).map { [$0] } ?? [])
+                        rebuiltTurnCount += 1
+                    }
+                    next[id] = turn; built.append(turn)
+                }
+                historyTurns = next
+                earlier = History(turns: built, turnCount: chunks.count, source: parts.prefix)
             } else {
                 let timeline = turns.update(parts.prefix.messages, isRunning: false)
                 reusedTurnCount = timeline.reusedTurnCount; rebuiltTurnCount = timeline.rebuiltTurnCount
-                earlier = History(rows: timeline.entries.map { Self.row($0, tools: parts.prefix.tools, activity: nil) },
-                                  navigation: timeline.navigation, turnCount: timeline.reusedTurnCount + timeline.rebuiltTurnCount,
-                                  source: parts.prefix)
+                historyTurns = [:]
+                earlier = History(turns: [HistoryTurn(chunk: nil, rows: timeline.entries.map { Self.row($0, tools: parts.prefix.tools, activity: nil) },
+                                                      navigation: timeline.navigation)],
+                                  turnCount: timeline.reusedTurnCount + timeline.rebuiltTurnCount, source: parts.prefix)
             }
             entries = ConversationTimelineEntry.make(parts.tail.messages, isRunning: input.isRunning)
             rebuiltTurnCount += 1
@@ -281,7 +367,7 @@ public final class ConversationPresentationModel {
         let projected = narrative.rows
         let latest = entries.map { Self.row($0, tools: visibleTools, activity: projected[$0.id]) }
         let presentedHistory: History, tail: [Row]
-        if let earlier, projected.keys.contains(where: earlier.entryIDs.contains) {
+        if let earlier, projected.keys.contains(where: earlier.contains(entry:)) {
             // An earlier entry sharing an id with the latest turn takes its
             // narrative too; present that snapshot without a shared history.
             presentedHistory = History()
@@ -302,12 +388,17 @@ public final class ConversationPresentationModel {
         // costs while still comparing full values, including same-ID tool edits.
         let oldCosts = messageCosts
         let reuseEnd = reusedHistory && oldCosts.count >= split! ? split! : 0
+        // A page of older messages moves the earlier ones back by its length.
+        var shift = 0
+        if reuseEnd == 0, let previous, let first = previous.messages.first, input.messages.count > previous.messages.count {
+            shift = input.messages.prefix(input.messages.count - previous.messages.count + 1).firstIndex { $0.id == first.id } ?? 0
+        }
         var costs = Array(oldCosts[..<reuseEnd])
         costs.reserveCapacity(input.messages.count)
         for index in reuseEnd..<input.messages.count {
             let message = input.messages[index]
-            if let previous, previous.messages.indices.contains(index), previous.messages[index] == message {
-                costs.append(oldCosts[index])
+            if let previous, previous.messages.indices.contains(index - shift), previous.messages[index - shift] == message {
+                costs.append(oldCosts[index - shift])
             } else {
                 costs.append(Self.cost(message))
             }

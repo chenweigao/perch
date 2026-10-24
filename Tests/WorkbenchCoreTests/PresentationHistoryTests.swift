@@ -226,3 +226,196 @@ func checkSessionEditStatsCache() throws {
     }
     print("PASS: session edit tallies reuse earlier turns only while they are unchanged")
 }
+
+/// Scrolling up prepends pages that start anywhere in a turn, and a new prompt
+/// moves the latest turn into the history. The model then reuses the earlier
+/// turns that did not change. Every snapshot must equal a complete
+/// recomputation, including tool identities that connect two turns, remembered
+/// live tools, running tools of earlier turns, user-role tool results, runtime
+/// context, compaction and the connection state. The find bar's matches equal a
+/// complete search at every step.
+func checkConversationPresentationPaging() throws {
+    typealias Model = ConversationPresentationModel
+    typealias Row = Model.Row
+    var seed: UInt64 = 0x9E37_79B9_7F4A_7C15
+    func random(_ bound: Int) -> Int {
+        seed &+= 0x9E37_79B9_7F4A_7C15
+        var z = seed
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return Int((z ^ (z >> 31)) % UInt64(bound))
+    }
+    var clock = 0
+    func message(_ id: String, _ role: String, _ content: [[String: Any]], metadata: [String: Any]? = nil) -> [String: Any] {
+        clock += 1
+        var value: [String: Any] = ["id": id, "role": role, "created_at": String(format: "%06d", clock), "content": content]
+        if let metadata { value["metadata"] = metadata }
+        return value
+    }
+    func decode(_ raw: [[String: Any]]) throws -> [KimiMessage] {
+        try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
+    }
+    var calls: [[String]] = []
+    func turn(_ index: Int) -> [[String: Any]] {
+        var raw = [message("u\(index)", "user", [["type": "text", "text": "第 \(index) 轮"]])]
+        var own: [String] = []
+        for step in 0..<(2 + random(5)) {
+            let id = "t\(index)-\(step)"
+            switch random(8) {
+            case 0:
+                raw.append(message("a-\(id)", "assistant", [["type": "thinking", "thinking": "想 \(id)"],
+                    ["type": "tool_use", "tool_call_id": "c-\(id)", "tool_name": "Read", "input": ["path": "\(id).swift"]]]))
+                raw.append(message("r-\(id)", "tool", [["type": "tool_result", "tool_call_id": "c-\(id)", "output": "读 \(id)", "is_error": false]]))
+                own.append("c-\(id)")
+            case 1:
+                raw.append(message("p-\(id)", "assistant", [["type": "text", "text": "进度 \(id)"]]))
+            case 2:
+                raw.append(message("n-\(id)", "assistant", [["type": "tool_use", "tool_name": "Grep", "input": ["pattern": id]]]))
+            case 3:
+                // Claude delivers results as user-role messages; they never open a turn.
+                raw.append(message("a-\(id)", "assistant", [["type": "tool_use", "tool_call_id": "c-\(id)", "tool_name": "Bash",
+                                                              "input": ["command": "make", "description": "Build \(id)"]]]))
+                raw.append(message("ur-\(id)", "user", [["type": "tool_result", "tool_call_id": "c-\(id)",
+                                                          "output": "Command failed with exit code: 2", "is_error": true]]))
+                own.append("c-\(id)")
+            case 4:
+                raw.append(message("ctx-\(id)", "user", [["type": "text", "text": "<system-reminder>\n提醒 \(id)\n</system-reminder>"]]))
+            case 5:
+                raw.append(message("e-\(id)", "assistant", [["type": "tool_use", "tool_call_id": "c-\(id)", "tool_name": "Edit",
+                    "input": ["file_path": "F\(index % 3).swift", "old_string": "a\nb", "new_string": "a\nc\nd"]]]))
+                raw.append(message("er-\(id)", "tool", [["type": "tool_result", "tool_call_id": "c-\(id)", "output": "ok", "is_error": false]]))
+                own.append("c-\(id)")
+            case 6:
+                // An unanswered call: missing, running or disconnected by state.
+                raw.append(message("o-\(id)", "assistant", [["type": "tool_use", "tool_call_id": "c-\(id)", "tool_name": "Read", "input": ["path": id]]]))
+                own.append("c-\(id)")
+            default:
+                if index > 0, let earlier = calls[index - 1].last, random(3) == 0 {
+                    // A late result for the previous turn's call connects the two turns.
+                    raw.append(message("late-\(id)", "tool", [["type": "tool_result", "tool_call_id": earlier, "output": "迟到", "is_error": false]]))
+                } else {
+                    raw.append(message("s-\(id)", "assistant", [["type": "text", "text": "Base directory for this skill: /s\n正文"]]))
+                }
+            }
+        }
+        if random(9) == 0 {
+            raw.append(message("compact-\(index)", "user", [["type": "text", "text": "压缩摘要 \(index)"]],
+                               metadata: ["origin": ["kind": "compaction_summary"]]))
+        }
+        if random(5) != 0 { raw.append(message("f\(index)", "assistant", [["type": "text", "text": "第 \(index) 轮完成"]])) }
+        calls.append(own)
+        return raw
+    }
+    let turns = try (0..<72).map { try decode(turn($0)) }
+    let history = Array(turns[..<64].joined())
+    var future = Array(turns[64...])
+    var latest = future.removeFirst()
+    var window = Array(history.suffix(40))
+    var earlier = Array(history.dropLast(40))
+    var tokens = 1
+    var online = true, running: Set<String> = [], live: [KimiLiveTool] = [], language = "zh"
+    var steps: [String] = []
+    func liveTool(_ id: String) throws -> KimiLiveTool {
+        try KimiWire.decoder().decode(KimiLiveTool.self, from: Data(#"{"tool_call_id":"\#(id)","name":"Read","args":{"path":"live"}}"#.utf8))
+    }
+
+    var metrics: ConversationPresentationUpdateMetrics?
+    let model = Model(key: "host:kimi:paging", metricsHandler: { metrics = $0 })
+    let editStats = SessionEditStatsCache()
+    let search = ConversationSearch()
+    let queries: [(String, ConversationFindOptions)] = [("第", .init()), ("进度", .init(role: .assistant)), ("make", .init(role: .tool)),
+                                                         ("完成$", .init(regex: true)), ("BASE", .init(caseSensitive: true)), ("提醒", .init())]
+    var referenceTools = ToolVisibilityProjection(), referenceTurns = ConversationProjection()
+    var previousLanguage = language
+    var remembered: [String: KimiLiveTool] = [:]
+    var reusingPages = 0, pages = 0, reusingPrompts = 0
+    for index in 0..<90 {
+        let name: String
+        var action = index == 0 ? -1 : random(12)
+        if (action <= 3 && earlier.isEmpty) || (action == 4 && future.isEmpty) { action = -1 }
+        switch action {
+        case 0, 1, 2, 3:
+            let size = min(earlier.count, 1 + random(index % 3 == 0 ? 3 : 45))
+            window = Array(earlier.suffix(size)) + window; earlier.removeLast(size)
+            name = "page \(size)"; pages += 1
+        case 4:
+            window += latest; latest = future.removeFirst(); live = []; running = []
+            name = "next prompt"
+        case 5: online.toggle(); name = online ? "online" : "offline"
+        case 6:
+            let ids = calls.joined().filter { id in window.contains { $0.content.contains { $0.toolCallId == id } } }
+            running = ids.isEmpty || random(2) == 0 ? [] : [ids[random(ids.count)]]
+            name = "running \(running.sorted())"
+        case 7:
+            let latestIDs = latest.flatMap(\.content).compactMap(\.toolCallId)
+            let id = random(3) == 0 ? "live-only-\(index)" : latestIDs.isEmpty ? "live-\(index)" : latestIDs[random(latestIDs.count)]
+            live = [try liveTool(id)]
+            name = "live \(id)"
+        case 8: language = language == "zh" ? "en" : "zh"; name = "language \(language)"
+        default: tokens += 1; name = index == 0 ? "first" : "token"
+        }
+        steps.append(name)
+        let thought = try decode([["id": "live:1", "role": "assistant", "created_at": "",
+                                   "content": [["type": "thinking", "thinking": String(repeating: "推理 ", count: tokens)]]]])
+        let input = Model.Input(messages: window + latest + thought, live: live, running: running, isRunning: true, online: online,
+                                epoch: "one", language: language, summariesEnabled: true, includeToolOutput: true)
+        for tool in live { remembered[tool.id] = tool }
+        if language != previousLanguage { referenceTurns = ConversationProjection(); previousLanguage = language }
+        let visible = referenceTools.update(input.messages, sessionID: model.key, live: input.live, running: input.running, online: input.online)
+        let timeline = referenceTurns.update(visible.messages, isRunning: true)
+        let narrative = ActivityNarrativeProjection.make(entries: timeline.entries, tools: visible.tools, isRunning: true)
+        let rows = timeline.entries.map { entry -> Row in
+            let ids = Set(entry.messages.flatMap(\.content).compactMap(\.toolCallId))
+            return Row(entry: entry, tools: visible.tools.filter { ids.contains($0.key) }, activity: narrative.rows[entry.id])
+        }
+        metrics = nil
+        let snapshot = model.update(input)
+        let trace = steps.suffix(6).joined(separator: " → ")
+        precondition(snapshot.rows == rows, "\(trace): rows must equal a complete recomputation")
+        precondition(snapshot.navigation == timeline.navigation && snapshot.narrative == narrative, "\(trace): navigation and narrative")
+        precondition(snapshot.batch == ActivitySummaryBatch.latest(in: timeline.entries, tools: visible.tools,
+            isRunning: true, enabled: true, includeToolOutput: true), "\(trace): summary batch")
+        let oracle = Model(key: model.key)
+        _ = oracle.update(.init(messages: [], live: Array(remembered.values), epoch: "one", language: language))
+        _ = oracle.update(input)
+        precondition(model.retainedPayloadCost == oracle.retainedPayloadCost, "\(trace): payload admission cost")
+        let stats = editStats.derive(from: input.messages), expectedStats = SessionEditStats.derive(from: input.messages)
+        precondition(stats?.perFile == expectedStats?.perFile && stats?.total == expectedStats?.total, "\(trace): edit tallies")
+        let (query, findOptions) = queries[(index / 7) % queries.count]
+        precondition(search.hits(in: input.messages, query: query, running: true, options: findOptions)
+                     == ConversationSearch().hits(in: input.messages, query: query, running: true, options: findOptions),
+                     "\(trace): find results must equal a complete search")
+        if let metrics, !metrics.reusedHistory, metrics.reusedTurnCount > 0 {
+            if name.hasPrefix("page") { reusingPages += 1 }
+            if name == "next prompt" { reusingPrompts += 1 }
+        }
+
+        let progress = rows.filter { $0.entry.presentation == .progress }.map(\.entry.id)
+        var overlays: [[String: ActivityNarrativeRow]] = [[:]]
+        for (id, anchor, closed) in [(progress.first, true, false), (progress.dropFirst(progress.count / 2).first, false, true)] {
+            guard let id else { continue }
+            overlays.append([id: ActivityNarrativeRow(narrative: .init(turnID: "u", stageID: "external-\(id)", phase: .editing,
+                headline: "外部摘要", source: .commentary, lifecycle: closed ? .final : .streaming), isAnchor: anchor, stageClosed: closed)])
+        }
+        for activity in overlays {
+            for folds in [true, false] {
+                let live = rows.last { $0.entry.presentation == .progress && $0.activity?.stageClosed == false }?.entry.id
+                let shown = rows.compactMap { row -> Row? in
+                    if row.entry.id == live { return Row(entry: row.entry, tools: row.tools, activity: nil) }
+                    let narrative = activity[row.entry.id] ?? row.activity
+                    if let narrative, narrative.isAnchor, !narrative.stageClosed, row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
+                    return Row(entry: row.entry, tools: row.tools, activity: narrative)
+                }
+                let expected = folds ? ConversationProcessFold.fold(rows: shown, isRunning: true) : shown
+                let parents = expected.reduce(into: [String: String]()) { map, row in
+                    for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
+                }
+                let presented = snapshot.presented(activity: activity, foldsProcess: folds, isRunning: true)
+                precondition(presented.rows == expected && presented.foldParents == parents, "\(trace): presented rows and fold")
+            }
+        }
+    }
+    precondition(pages >= 20 && reusingPages * 2 >= pages, "Most pages must reuse the unchanged earlier turns (\(reusingPages)/\(pages))")
+    precondition(reusingPrompts > 0, "A new prompt must reuse the earlier turns")
+    print("PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (\(reusingPages)/\(pages) pages)")
+}

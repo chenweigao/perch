@@ -38,8 +38,28 @@ public final class ToolVisibilityProjection {
     /// The output for the turns before the latest user prompt. The same instance
     /// is returned while a later update may reuse it.
     public final class Prefix {
-        public let messages: [KimiMessage]
-        public let tools: [String: VisibleTool]
+        /// Each earlier turn projected on its own, in order, when no tool identity
+        /// connects two of them; nil when the prefix was projected as a whole.
+        public let chunks: [Chunk]?
+        private var storedMessages: [KimiMessage]?
+        private var storedTools: [String: VisibleTool]?
+        /// Joined on first use: per-turn consumers read the chunks instead.
+        public var messages: [KimiMessage] {
+            if let storedMessages { return storedMessages }
+            var value: [KimiMessage] = []
+            value.reserveCapacity(chunks!.reduce(0) { $0 + $1.messages.count })
+            for chunk in chunks! { value.append(contentsOf: chunk.messages) }
+            storedMessages = value
+            return value
+        }
+        public var tools: [String: VisibleTool] {
+            if let storedTools { return storedTools }
+            var value: [String: VisibleTool] = [:]
+            value.reserveCapacity(chunks!.reduce(0) { $0 + $1.tools.count })
+            for chunk in chunks! { value.merge(chunk.tools) { _, latest in latest } }
+            storedTools = value
+            return value
+        }
         fileprivate let source: ArraySlice<KimiMessage>
         fileprivate let anchor: String
         fileprivate let sessionID: String
@@ -49,12 +69,33 @@ public final class ToolVisibilityProjection {
         fileprivate let identities: Set<String>
         fileprivate let active: Set<String>
         fileprivate let observed: [String: ObservedLive]
-        fileprivate init(messages: [KimiMessage], tools: [String: VisibleTool], source: ArraySlice<KimiMessage>,
-                         anchor: String, sessionID: String, online: Bool, identities: Set<String>,
-                         active: Set<String>, observed: [String: ObservedLive]) {
-            self.messages = messages; self.tools = tools; self.source = source; self.anchor = anchor
+        fileprivate init(messages: [KimiMessage]?, tools: [String: VisibleTool]?, chunks: [Chunk]?,
+                         source: ArraySlice<KimiMessage>, anchor: String, sessionID: String, online: Bool,
+                         identities: Set<String>, active: Set<String>, observed: [String: ObservedLive]) {
+            storedMessages = messages; storedTools = tools; self.chunks = chunks
+            self.source = source; self.anchor = anchor
             self.sessionID = sessionID; self.online = online; self.identities = identities
             self.active = active; self.observed = observed
+        }
+    }
+    /// One earlier turn, from its user prompt to the next one, or the part of a
+    /// turn the loaded window starts with. Its output equals its part of the
+    /// whole projection while its tool identities occur in no other turn.
+    public final class Chunk {
+        public let messages: [KimiMessage]
+        public let tools: [String: VisibleTool]
+        fileprivate let source: ArraySlice<KimiMessage>
+        fileprivate let anchor: String?
+        fileprivate let online: Bool
+        fileprivate let identities: Set<String>
+        /// The running state and remembered live tools its output depends on.
+        fileprivate let active: Set<String>
+        fileprivate let observed: [String: ObservedLive]
+        fileprivate init(messages: [KimiMessage], tools: [String: VisibleTool], source: ArraySlice<KimiMessage>,
+                         anchor: String?, online: Bool, identities: Set<String>, active: Set<String>,
+                         observed: [String: ObservedLive]) {
+            self.messages = messages; self.tools = tools; self.source = source; self.anchor = anchor
+            self.online = online; self.identities = identities; self.active = active; self.observed = observed
         }
     }
     public struct Split {
@@ -74,16 +115,19 @@ public final class ToolVisibilityProjection {
     private var observed: [String: ObservedLive] = [:]
     private var order: [String] = []
     private var prefix: Prefix?
+    /// The prefix's turns by their first message, reused when a page of older
+    /// messages or a new prompt changes the prefix around them.
+    private var chunks: [String: Chunk] = [:]
     public init() {}
     public var retainedLiveTools: [KimiLiveTool] { order.compactMap { observed[$0]?.tool } }
 
     /// Localized fallback names are part of the output; a language change must
     /// not reuse a prefix projected in the previous language.
-    public func discardPrefix() { prefix = nil }
+    public func discardPrefix() { prefix = nil; chunks = [:] }
 
     public func update(_ messages: [KimiMessage], sessionID: String, live: [KimiLiveTool] = [],
                        running: Set<String> = [], online: Bool = true) -> Snapshot {
-        prefix = nil
+        prefix = nil; chunks = [:]
         return project(messages, split: nil, sessionID: sessionID, live: live, running: running, online: online).snapshot
     }
 
@@ -91,7 +135,9 @@ public final class ToolVisibilityProjection {
     /// latest user prompt. While the earlier turns, their remembered live tools,
     /// the connection state and their running tools stay the same, and no tool
     /// identity of the latest turn also occurs before it, the earlier output is
-    /// reused and only the latest turn is projected. Otherwise everything is.
+    /// reused and only the latest turn is projected. A changed prefix reuses its
+    /// unchanged turns while no tool identity connects two turns or the latest
+    /// one. Otherwise everything is projected.
     public func update(_ messages: [KimiMessage], splittingAt split: Int, sessionID: String, live: [KimiLiveTool] = [],
                        running: Set<String> = [], online: Bool = true) -> Split {
         precondition(messages.indices.contains(split) && messages[split].isUserPrompt
@@ -103,6 +149,11 @@ public final class ToolVisibilityProjection {
             let tail = normalize(messages[split...], activeIDs: activeIDs, online: online, anchor: prefix.anchor)
             return Split(prefix: prefix, tail: tail, separable: true)
         }
+        if let prefix = projectTurns(messages, split: split, sessionID: sessionID, activeIDs: activeIDs, online: online) {
+            self.prefix = prefix
+            let tail = normalize(messages[split...], activeIDs: activeIDs, online: online, anchor: prefix.anchor)
+            return Split(prefix: prefix, tail: tail, separable: true)
+        }
         let result = project(messages, split: split, sessionID: sessionID, live: [], running: activeIDs, online: online)
         let prefix = result.prefix!
         let separable = separates(messages[split...], from: prefix.identities, anchor: prefix.anchor)
@@ -111,9 +162,101 @@ public final class ToolVisibilityProjection {
         return Split(prefix: prefix, tail: result.tail!, separable: separable)
     }
 
+    /// The prefix as its turns, each projected on its own and reused while its
+    /// messages, running tools, remembered live tools and the connection state
+    /// stay the same. Nil unless that equals the projection of the whole window:
+    /// every tool identity occurs in one turn only, none of them in the latest
+    /// turn, and each remembered live tool belongs to a known turn.
+    private func projectTurns(_ messages: [KimiMessage], split: Int, sessionID: String,
+                              activeIDs: Set<String>, online: Bool) -> Prefix? {
+        let anchor = messages[split].id
+        var anchored: [String: [String]] = [:]
+        for id in order {
+            // The whole projection emits a live tool without a turn before the first prompt.
+            guard let turn = observed[id]?.anchor else { return nil }
+            anchored[turn, default: []].append(id)
+        }
+        var bounds: [Range<Int>] = []
+        var start = 0
+        for index in 1..<max(split, 1) where messages[index].isUserPrompt {
+            bounds.append(start..<index); start = index
+        }
+        if split > 0 { bounds.append(start..<split) }
+        // Every turn but a leading partial one starts with its prompt.
+        let leadingPrompt = messages[0].isUserPrompt
+        var turnAnchors: [String: Int] = [:]
+        for (index, range) in bounds.enumerated() where index > 0 || leadingPrompt {
+            // Two prompts with one id would both take the live tools anchored to it.
+            guard turnAnchors.updateValue(index, forKey: messages[range.lowerBound].id) == nil else { return nil }
+        }
+        guard turnAnchors[anchor] == nil else { return nil }
+        var candidates: [Chunk?] = []
+        var identities: [Set<String>] = []
+        var owner: [String: Int] = [:]
+        for (index, range) in bounds.enumerated() {
+            let source = messages[range]
+            let previous = chunks[source.first!.id]
+            let candidate = previous.flatMap { $0.source.count == source.count && $0.source.elementsEqual(source) ? $0 : nil }
+            let own = candidate?.identities ?? Self.identities(in: source)
+            for id in own where owner.updateValue(index, forKey: id) != nil { return nil }
+            candidates.append(candidate); identities.append(own)
+        }
+        // A live tool appended after its turn is placed there only while no
+        // other turn holds its call or result.
+        for (turn, ids) in anchored {
+            guard let index = turnAnchors[turn] else { continue }
+            for id in ids where owner[id].map({ $0 != index }) == true { return nil }
+        }
+        let prefixIdentities = Set(owner.keys).union(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
+        guard separates(messages[split...], from: prefixIdentities, anchor: anchor) else { return nil }
+        var observedByTurn: [Int: [String: ObservedLive]] = [:]
+        for (id, entry) in observed {
+            if let index = owner[id] { observedByTurn[index, default: [:]][id] = entry }
+            if let turn = entry.anchor, let index = turnAnchors[turn] { observedByTurn[index, default: [:]][id] = entry }
+        }
+        var next: [String: Chunk] = [:]
+        var result: [Chunk] = []
+        result.reserveCapacity(bounds.count)
+        for (index, range) in bounds.enumerated() {
+            let source = messages[range]
+            let turnAnchor = index > 0 || leadingPrompt ? source.first!.id : nil
+            let relevant = observedByTurn[index] ?? [:]
+            let active = activeIDs.filter { identities[index].contains($0) || relevant[$0] != nil }
+            let chunk: Chunk
+            if let candidate = candidates[index], candidate.anchor == turnAnchor, candidate.online == online,
+               candidate.active == active, candidate.observed == relevant {
+                chunk = candidate
+            } else {
+                var pass = Pass(observed: observed, order: order, activeIDs: activeIDs, online: online)
+                for message in source { pass.collect(message) }
+                for message in source { pass.normalize(message) }
+                pass.appendUnrecorded(after: turnAnchor)
+                chunk = Chunk(messages: pass.normalized, tools: pass.tools, source: source, anchor: turnAnchor,
+                              online: online, identities: identities[index], active: active, observed: relevant)
+            }
+            next[source.first!.id] = chunk
+            result.append(chunk)
+        }
+        chunks = next
+        return Prefix(messages: nil, tools: nil, chunks: result, source: messages[..<split], anchor: anchor,
+                      sessionID: sessionID, online: online, identities: prefixIdentities,
+                      active: activeIDs.intersection(prefixIdentities),
+                      observed: observedForPrefix(identities: prefixIdentities, anchor: anchor))
+    }
+
+    private static func identities(in messages: ArraySlice<KimiMessage>) -> Set<String> {
+        var result = Set<String>()
+        for message in messages {
+            for (offset, part) in message.content.enumerated() {
+                if let id = identity(of: part, in: message, offset: offset) { result.insert(id) }
+            }
+        }
+        return result
+    }
+
     private func observe(_ live: [KimiLiveTool], sessionID: String, anchor: String?) {
         if self.sessionID != sessionID {
-            self.sessionID = sessionID; observed = [:]; order = []; prefix = nil
+            self.sessionID = sessionID; observed = [:]; order = []; prefix = nil; chunks = [:]
         }
         for tool in live {
             if observed[tool.id] == nil { order.append(tool.id) }
@@ -182,7 +325,7 @@ public final class ToolVisibilityProjection {
         let snapshot = Snapshot(messages: pass.normalized, tools: pass.tools)
         guard let split, let boundary, let anchor else { prefix = nil; return (snapshot, nil, nil) }
         let identities = prefixIdentities.union(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
-        let value = Prefix(messages: Array(pass.normalized[..<boundary.count]), tools: boundary.tools,
+        let value = Prefix(messages: Array(pass.normalized[..<boundary.count]), tools: boundary.tools, chunks: nil,
                            source: messages[..<split], anchor: anchor, sessionID: sessionID, online: online,
                            identities: identities, active: pass.activeIDs.intersection(identities),
                            observed: observedForPrefix(identities: identities, anchor: anchor))

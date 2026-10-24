@@ -622,6 +622,8 @@ final class WorkbenchModel {
         tabs.pin(identity); saveWorkspace()
     }
     func select(_ identity: String) {
+        let probe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("session_select", probe, detail: selectedReference.map { "kind=\($0.kind.rawValue)" }) }
         if !navigatingHistory { navigation.visit(identity) }
         tabs.select(identity); showDashboard = false; draftingNewTask = false
         if let reference = selectedReference {
@@ -1370,6 +1372,8 @@ final class WorkbenchModel {
         }
     }
     private func catalogChanged() {
+        let probe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("catalog_refresh", probe, detail: "sessions=\(allSessions.count)") }
         rebuildCatalog()
         updateTaskEvents()
         resolveRestoreReports()

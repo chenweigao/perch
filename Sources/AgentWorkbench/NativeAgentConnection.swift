@@ -483,6 +483,11 @@ final class NativeAgentConnection {
     /// everything queued behind it.
     private func purgeRecordedReceipts() {
         guard let snapshot else { return }
+        // Each applied snapshot reaches here; index the transcript only when a receipt waits for it.
+        guard queue.allItems.contains(where: { item in
+            guard item.session.terminalID == snapshot.id else { return false }
+            switch item.state { case .failed, .unknown: return true; default: return false }
+        }) else { return }
         let visible = Set(snapshot.messages.map(\.id))
         var purged = false
         for item in queue.allItems where item.session.terminalID == snapshot.id && visible.contains(item.id) {
@@ -496,20 +501,40 @@ final class NativeAgentConnection {
     }
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
+    /// Every publication re-derives the transcript over the whole window, so
+    /// reading the entire history joins adjacent pages and publishes them at
+    /// most once a second.
     private func loadHistory(all: Bool) {
         guard online, !loadingOlder, snapshot?.hasOlder == true, let id = selectedID else { return }
         let token = selectionGeneration, connectionToken = generation
         conversation.loadHistory { [self] in
-            repeat {
-                guard let current = snapshot, let window = current.history, current.hasOlder else { return }
-                let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
-                try Task.checkCancellation()
-                guard token == selectionGeneration, connectionToken == generation, id == selectedID,
-                      let latest = snapshot else { return }
-                snapshot = try latest.prepending(page)
-                if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
-            } while all
+            var pending: NativeAgentSnapshot?
+            var published = ContinuousClock.now
+            do {
+                repeat {
+                    guard let current = snapshot, let window = pending?.history ?? current.history, window.start > 0 else { break }
+                    let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+                    try Task.checkCancellation()
+                    guard token == selectionGeneration, connectionToken == generation, id == selectedID else { return }
+                    pending = try pending.map { try $0.prepending(page) } ?? page
+                    if all, ContinuousClock.now - published >= .seconds(1) {
+                        try publishHistory(&pending, for: id, token: token, connectionToken: connectionToken)
+                        published = .now
+                    }
+                } while all
+            } catch {
+                try? publishHistory(&pending, for: id, token: token, connectionToken: connectionToken)
+                throw error
+            }
+            try publishHistory(&pending, for: id, token: token, connectionToken: connectionToken)
         }
+    }
+    private func publishHistory(_ pending: inout NativeAgentSnapshot?, for id: String, token: UUID, connectionToken: UUID) throws {
+        guard let joined = pending, token == selectionGeneration, connectionToken == generation, id == selectedID,
+              let latest = snapshot else { return }
+        pending = nil
+        snapshot = try latest.prepending(joined)
+        if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
     }
 
     // MARK: Subagents (bridge protocol 7)
