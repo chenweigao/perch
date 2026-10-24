@@ -157,8 +157,9 @@ public enum SessionEditStats {
 }
 
 /// The activity bar derives the whole-session tally on every update of the
-/// loaded window. Messages before the latest user prompt only change on paging
-/// or history replacement; their tally is kept and the latest turn is added.
+/// loaded window. Messages before the latest user prompt only change on paging,
+/// a new prompt or history replacement; their tally is kept and the latest turn
+/// is added. A page of older messages or a newly completed turn only adds its own.
 public final class SessionEditStatsCache {
     private var source: ArraySlice<KimiMessage> = []
     private var earlier: [String: SessionEditStat] = [:]
@@ -167,10 +168,16 @@ public final class SessionEditStatsCache {
     public func derive(from messages: [KimiMessage]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
         let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
         if source.count != split || !messages[..<split].elementsEqual(source) {
-            var tally: [String: SessionEditStat] = [:]
-            SessionEditStats.tally(messages[..<split], into: &tally)
+            let older = split - source.count
+            if older >= 0, messages[older..<split].elementsEqual(source) {
+                SessionEditStats.tally(messages[..<older], into: &earlier)
+            } else if older >= 0, messages[..<source.count].elementsEqual(source) {
+                SessionEditStats.tally(messages[source.count..<split], into: &earlier)
+            } else {
+                earlier = [:]
+                SessionEditStats.tally(messages[..<split], into: &earlier)
+            }
             source = messages[..<split]
-            earlier = tally
         }
         var perFile = earlier
         SessionEditStats.tally(messages[split...], into: &perFile)

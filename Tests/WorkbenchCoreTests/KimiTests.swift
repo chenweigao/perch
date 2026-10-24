@@ -67,9 +67,24 @@ func checkKimiProtocol() throws {
         let rows = ids.map { "{\"id\":\"\($0)\",\"role\":\"user\",\"content\":[],\"created_at\":\"\($0)\"}" }.joined(separator: ",")
         return try KimiWire.decoder().decode(KimiPage<KimiMessage>.self, from: Data("{\"items\":[\(rows)],\"has_more\":\(more)}".utf8))
     }
+    let beforePages = c
     c.prepend(try history(["02", "03"], more: true))
     c.prepend(try history(["02", "01"], more: false))
     require(c.messages.map(\.id) == ["01", "02", "03"] && !c.hasOlder)
+    // Reading the whole history prepends its pages together, exactly as one by one.
+    for pages in [[["02", "03"], ["02", "01"]], [["09", "07", "07"], ["06", "08"], ["06"], ["05", "04"]], [["03"], []]] {
+        var sequential = beforePages, batched = beforePages
+        var batch = KimiHistoryBatch(batched)
+        for (index, ids) in pages.enumerated() {
+            let page = try history(ids, more: index < pages.count - 1)
+            sequential.prepend(page); batch.add(page)
+            require(batch.oldest?.id == sequential.messages.first?.id && batch.hasMore == sequential.hasOlder,
+                    "The next page is requested before the message a single prepend would show first")
+        }
+        batched.prepend(batch)
+        require(batched.messages.map(\.id) == sequential.messages.map(\.id) && batched.hasOlder == sequential.hasOlder,
+                "A batch of pages must prepend like successive pages")
+    }
     for newTurn in [false, true] {
         let user = newTurn ? ",{\"id\":\"u2\",\"role\":\"user\",\"created_at\":\"2\",\"content\":[{\"type\":\"text\",\"text\":\"再来一次\"}]}" : ""
         let data = Data("""

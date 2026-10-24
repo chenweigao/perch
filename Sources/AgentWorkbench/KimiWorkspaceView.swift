@@ -31,12 +31,16 @@ struct KimiWorkspaceView: View {
                 let recapKey = conversation.taskRecapRevision.map {
                     "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
                 }
-                ConversationActivityBar(activity: ConversationActivity(
-                    messages: conversation.displayMessages, isRunning: conversation.snapshot.session.isTurnRunning,
+                let activityProbe = PerfDiagnostics.begin()
+                let messages = conversation.displayMessages
+                let activity = ConversationActivity(
+                    messages: messages, isRunning: conversation.snapshot.session.isTurnRunning,
                     liveTools: conversation.live?.runningTools ?? [], online: connection.online,
                     isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
                     isResponding: conversation.live?.assistantText.isEmpty == false,
-                    pendingCount: pending, isStopping: connection.isStopping, editStats: editStats),
+                    pendingCount: pending, isStopping: connection.isStopping, editStats: editStats)
+                let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(messages.count)")
+                ConversationActivityBar(activity: activity,
                     isRunning: conversation.snapshot.session.isTurnRunning,
                     timing: connection.timings.turns[conversation.snapshot.session.id],
                     online: connection.online, offlineDetail: connection.error, pendingCount: pending,
