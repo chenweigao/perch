@@ -161,6 +161,16 @@ epoch changes clear remembered live tools; language changes rebuild localized tu
 summaries without losing tool handoff evidence. External narrative-store updates are
 overlaid at read time, so a cache hit cannot freeze a newly arrived summary.
 
+A changed input reprojects only the latest turn while the turns before the latest
+user prompt are unchanged: their tool visibility output, timeline rows and (in
+`Snapshot.presented`) their summary-overlaid, folded rows are shared between
+snapshots. Reuse is refused whenever it could differ from a complete recomputation:
+a tool identity of the latest turn that also occurs earlier, a remembered live tool
+resolved in an earlier turn, a running ID or connection change affecting earlier
+tools, an entry identity shared across the split, or a locale/epoch change. The
+activity bar's whole-session edit tally is kept the same way by a view-owned
+`SessionEditStatsCache`.
+
 `ConversationPresentationHandle` belongs to the transcript view. The workbench owns
 an LRU of at most eight presentation models, injected directly into `WorkbenchDetail`
 (the custom AppKit hosting boundary). Each admitted model has at most 1,000 source

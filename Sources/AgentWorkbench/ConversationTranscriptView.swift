@@ -229,12 +229,11 @@ struct ConversationTranscript: View {
         let narratives = narrativeStore.rows(session: key)
         let identity = ConversationContentIdentity(snapshot: snapshot, narratives: narratives,
             api: api, session: sessionId, memoryKey: key)
-        let displayed = snapshot.displayedRows { narratives[$0] }
-        let rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
-        let foldParents = rows.reduce(into: [String: String]()) { map, row in
-            for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
-        }
-        let contents = rows.map { row in
+        // Earlier turns are presented once per summary overlay; a streamed token
+        // only presents the latest turn.
+        let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning)
+        let foldParents = presented.foldParents
+        let contents = presented.rows.map { row in
             ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows)
         }

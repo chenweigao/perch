@@ -63,6 +63,8 @@ Observation。当前已定位的问题是视图读了过多状态，因此先修
 会话展示计算已从视图中提取为 `ConversationPresentationModel`，由工作台保留最近
 八个符合预算的会话。完整输入决定复用，消息 ID 相同但正文改变也必须更新；分页、
 运行时 epoch、语言和摘要配置都有失效契约。大记录继续正常显示，共享缓存不接纳。
+流式更新只重算最新一轮，历史轮次的投影与折叠在快照间共享，跨界情况回退全量
+（[长会话流式投影](../performance/2026-10-23-streaming-projection/REPORT.md)）。
 
 先复用纯数据，保留现有 AppKit 行生命周期与阅读锚点。后续是否复用更多视图或移动
 计算到后台，仍取决于新旧对照中的实际热点。[本轮实验](../performance/2026-09-29-conversation-presentation/REPORT.md)
