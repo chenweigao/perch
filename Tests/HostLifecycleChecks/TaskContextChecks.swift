@@ -280,7 +280,8 @@ import WorkbenchCore
     let composerSurface = composer.enclosingScrollView ?? composer
     let pointer = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
                                    to: page.contentView)
-    let pointerHit = page.contentView!.hitTest(pointer)
+    let hitPoint = page.contentView!.convert(pointer, to: page.contentView!.superview)
+    let pointerHit = page.contentView!.hitTest(hitPoint)
     let hitsComposer = pointerHit === composer || pointerHit === composerSurface ||
         (pointerHit?.isDescendant(of: composerSurface) ?? false)
 

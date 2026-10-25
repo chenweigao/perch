@@ -191,7 +191,7 @@ struct NativeAgentView: View {
                         .font(.subheadline).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                 }.padding(6)
             }
-            NativeComposerView(connection: connection, s: s).id(s.id).zIndex(1)
+            NativeComposerView(connection: connection, s: s).id(s.id)
         }
     }
 
