@@ -352,6 +352,13 @@ private final class WorkbenchDetailController: NSViewController {
 
 final class WorkbenchSplitController: NSSplitViewController {
     var workspaceToolbar: NSToolbar?
+    private var adaptingToAvailableWidth = false
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        collapsePanesThatDoNotFit()
+    }
+
     override func viewDidAppear() {
         super.viewDidAppear()
         guard let window = view.window else { return }
@@ -359,6 +366,30 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
         window.toolbar = workspaceToolbar
+    }
+
+    private func collapsePanesThatDoNotFit() {
+        let availableWidth = splitView.bounds.width
+        guard !adaptingToAvailableWidth, availableWidth > 0 else { return }
+
+        func requiredWidth(_ items: [NSSplitViewItem]) -> CGFloat {
+            let dividers = CGFloat(max(0, items.count - 1)) * splitView.dividerThickness
+            return items.reduce(dividers) { $0 + $1.minimumThickness }
+        }
+
+        var visibleItems = splitViewItems.filter { !$0.isCollapsed }
+        guard requiredWidth(visibleItems) > availableWidth + 0.5 else { return }
+        adaptingToAvailableWidth = true
+        defer { adaptingToAvailableWidth = false }
+
+        let collapsibleItems = visibleItems.filter(\.canCollapse).sorted {
+            $0.holdingPriority.rawValue < $1.holdingPriority.rawValue
+        }
+        for item in collapsibleItems {
+            item.isCollapsed = true
+            visibleItems.removeAll { $0 === item }
+            if requiredWidth(visibleItems) <= availableWidth + 0.5 { break }
+        }
     }
 }
 
