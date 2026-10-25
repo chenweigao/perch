@@ -137,6 +137,10 @@ struct TaskContextView: View {
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(detached ? Color(nsColor: .windowBackgroundColor) : WorkbenchTheme.contentBackground)
+            #if PERCH_ACCEPTANCE
+            .background(NativeTaskContextProbe(reference: state.reference, loading: state.loading,
+                                               ready: current != nil))
+            #endif
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
             .task(id: key) {
                 let input = key

@@ -4,6 +4,11 @@ import WorkbenchCore
 
 @MainActor func checkTaskContextPanel() async throws {
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
+    let legacySplitFramesKey = "NSSplitView Subview Frames WorkbenchWorkspace"
+    UserDefaults.standard.set([
+        "0.000000, 0.000000, 15.000000, 780.000000, NO, NO",
+        "16.000000, 0.000000, 1264.000000, 780.000000, NO, NO",
+    ], forKey: legacySplitFramesKey)
     AppLanguage.applyToSystem(.zhHans)
     NSApp.setActivationPolicy(.accessory); NSApp.activate(ignoringOtherApps: true)
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("perch-task-panel-\(UUID())")
@@ -191,22 +196,39 @@ import WorkbenchCore
     model.taskContextWindow.locked = a
     try await Task.sleep(for: .milliseconds(300))
 
-    func splitController(in root: NSViewController) -> WorkbenchSplitController? {
-        if let split = root as? WorkbenchSplitController { return split }
-        return root.children.lazy.compactMap { splitController(in: $0) }.first
+    func splitController(from mountedView: NSView?) -> WorkbenchSplitController? {
+        var responder: NSResponder? = mountedView
+        while let current = responder {
+            if let split = current as? WorkbenchSplitController { return split }
+            if let controller = current as? NSViewController {
+                var parent = controller.parent
+                while let candidate = parent {
+                    if let split = candidate as? WorkbenchSplitController { return split }
+                    parent = candidate.parent
+                }
+            }
+            responder = current.nextResponder
+        }
+        return nil
     }
-    guard let split = splitController(in: hosting) else { fatalError("The production split controller must mount") }
+    guard let split = splitController(from: contentView) else { fatalError("The production split controller must mount") }
     precondition(split.splitViewItems.count == 3, "The workspace must expose sidebar, detail, and inspector items")
+    let sidebarItem = split.splitViewItems[0]
     let detailItem = split.splitViewItems[1]
     let inspectorItem = split.splitViewItems[2]
+    precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v2" &&
+                 sidebarItem.viewController.view.frame.width >= 219,
+                 "The three-pane layout must not restore the legacy two-pane autosave state")
+    precondition(UserDefaults.standard.array(forKey: legacySplitFramesKey)?.count == 2,
+                 "Mounting the new split layout must leave the legacy autosave value isolated")
     precondition(inspectorItem.isCollapsed && !model.taskContextWindow.embeddedVisible)
 
     model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(300))
     split.splitView.layoutSubtreeIfNeeded()
     page.displayIfNeeded()
-    let detailFrame = detailItem.viewController.view.frame
-    let inspectorFrame = inspectorItem.viewController.view.frame
+    var detailFrame = detailItem.viewController.view.frame
+    var inspectorFrame = inspectorItem.viewController.view.frame
     precondition(!inspectorItem.isCollapsed)
     precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
                  "Inspector width must stay within its native 280–420 point range: \(inspectorFrame)")
@@ -217,6 +239,36 @@ import WorkbenchCore
                  inspectorFrame.minX - detailFrame.maxX <= split.splitView.dividerThickness + 1,
                  "Inspector must be adjacent to, not overlay, the conversation")
     precondition(contentView?.window === page)
+
+    page.setContentSize(NSSize(width: 1000, height: 780))
+    try await Task.sleep(for: .milliseconds(250))
+    split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    detailFrame = detailItem.viewController.view.frame
+    precondition(inspectorItem.isCollapsed && !sidebarItem.isCollapsed && detailFrame.width >= 599,
+                 "At 1000 points the lower-priority inspector must yield before the sidebar or conversation")
+
+    page.setContentSize(NSSize(width: 800, height: 780))
+    try await Task.sleep(for: .milliseconds(250))
+    split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    detailFrame = detailItem.viewController.view.frame
+    precondition(inspectorItem.isCollapsed && sidebarItem.isCollapsed && detailFrame.width >= 599,
+                 "At 800 points both collapsible panes must yield to the conversation")
+
+    page.setContentSize(NSSize(width: 1280, height: 780))
+    sidebarItem.isCollapsed = false
+    model.taskContextWindow.embeddedVisible = true
+    try await Task.sleep(for: .milliseconds(300))
+    split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    detailFrame = detailItem.viewController.view.frame
+    inspectorFrame = inspectorItem.viewController.view.frame
+    precondition(!sidebarItem.isCollapsed && !inspectorItem.isCollapsed && detailFrame.width >= 599 &&
+                 inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
+                 "Restoring a wide window must support the native three-pane layout")
+    let visibleFrames = split.splitViewItems.filter { !$0.isCollapsed }.map { $0.viewController.view.frame }
+    for (left, right) in zip(visibleFrames, visibleFrames.dropFirst()) {
+        precondition(right.minX >= left.maxX && right.minX - left.maxX <= split.splitView.dividerThickness + 1,
+                     "Visible split panes must stay adjacent without overlap")
+    }
 
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     let composer = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.first!
@@ -251,10 +303,8 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(250))
     precondition(!inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
 
-    // A user collapse from the native divider is reflected back into model state.
+    // Direct observation must reflect a native collapse without waiting for a split-view resize notification.
     inspectorItem.isCollapsed = true
-    split.splitView.adjustSubviews()
-    split.splitView.layoutSubtreeIfNeeded()
     try await Task.sleep(for: .milliseconds(250))
     precondition(!model.taskContextWindow.embeddedVisible,
                  "Collapsing the native inspector must update the task-panel preference")
@@ -277,10 +327,8 @@ import WorkbenchCore
                  "Docking must return to the native inspector and release the panel")
 
     inspectorItem.isCollapsed = true
-    split.splitView.adjustSubviews()
-    split.splitView.layoutSubtreeIfNeeded()
     try await Task.sleep(for: .milliseconds(250))
-    precondition(contentMounts == 1 && model.selectedReference == b &&
+    precondition(!model.taskContextWindow.embeddedVisible && contentMounts == 1 && model.selectedReference == b &&
                  connection.drafts["b"] == "其他任务草稿",
                  "Inspector changes must preserve transcript identity, selection, and draft")
     model.taskContextWindow.locked = nil

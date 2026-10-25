@@ -94,19 +94,21 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         sidebarItem.titlebarSeparatorStyle = .none
         let contentItem = NSSplitViewItem(viewController: WorkbenchDetailController(content: coordinator.contentHost))
         contentItem.minimumThickness = 600
+        contentItem.holdingPriority = .required
         controller.addSplitViewItem(sidebarItem)
         controller.addSplitViewItem(contentItem)
         if let inspectorHost = coordinator.inspectorHost {
             let inspectorItem = NSSplitViewItem(inspectorWithViewController: inspectorHost)
             inspectorItem.minimumThickness = 280
             inspectorItem.maximumThickness = 420
+            inspectorItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 250)
             inspectorItem.canCollapse = true
             inspectorItem.isCollapsed = !inspectorVisible
             controller.addSplitViewItem(inspectorItem)
-            coordinator.observe(inspectorItem, in: controller.splitView)
+            coordinator.observe(inspectorItem)
         }
         controller.splitView.dividerStyle = .thin
-        controller.splitView.autosaveName = "WorkbenchWorkspace"
+        controller.splitView.autosaveName = "WorkbenchWorkspace.v2"
 
         let toolbar = NSToolbar(identifier: "WorkbenchToolbar")
         toolbar.delegate = coordinator
@@ -153,6 +155,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         var navigate: (Int) -> Void
         var inspectorVisibilityChanged: (Bool) -> Void
         private var desiredInspectorVisible: Bool
+        private var inspectorCollapseObservation: NSKeyValueObservation?
         private let backID = NSToolbarItem.Identifier("WorkbenchBack")
         private let forwardID = NSToolbarItem.Identifier("WorkbenchForward")
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
@@ -185,26 +188,21 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             headerHost.setContentHuggingPriority(.defaultLow, for: .horizontal)
         }
 
-        deinit { NotificationCenter.default.removeObserver(self) }
-
-        func observe(_ item: NSSplitViewItem, in splitView: NSSplitView) {
+        func observe(_ item: NSSplitViewItem) {
             inspectorItem = item
-            NotificationCenter.default.addObserver(self, selector: #selector(inspectorDidResize(_:)),
-                name: NSSplitView.didResizeSubviewsNotification, object: splitView)
+            inspectorCollapseObservation = item.observe(\.isCollapsed, options: [.new]) { [weak self] _, change in
+                guard let self, let collapsed = change.newValue else { return }
+                let visible = !collapsed
+                guard visible != self.desiredInspectorVisible else { return }
+                self.desiredInspectorVisible = visible
+                self.inspectorVisibilityChanged(visible)
+            }
         }
 
         func setInspectorVisible(_ visible: Bool) {
             desiredInspectorVisible = visible
-            guard let inspectorItem, inspectorItem.isCollapsed == visible else { return }
+            guard let inspectorItem, inspectorItem.isCollapsed != !visible else { return }
             inspectorItem.isCollapsed = !visible
-        }
-
-        @objc private func inspectorDidResize(_ notification: Notification) {
-            guard let inspectorItem else { return }
-            let visible = !inspectorItem.isCollapsed
-            guard visible != desiredInspectorVisible else { return }
-            desiredInspectorVisible = visible
-            inspectorVisibilityChanged(visible)
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
