@@ -233,7 +233,8 @@ import WorkbenchCore
     page.displayIfNeeded()
     var detailFrame = splitFrame(detailItem)
     var inspectorFrame = splitFrame(inspectorItem)
-    precondition(!inspectorItem.isCollapsed)
+    precondition(!inspectorItem.isCollapsed,
+                 "Opening at 1280 points must keep the inspector visible; sidebarCollapsed=\(sidebarItem.isCollapsed), split=\(split.splitView.bounds), window=\(String(describing: page.contentView?.bounds))")
     precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
                  "Inspector width must stay within its native 280–420 point range: \(inspectorFrame)")
     precondition(abs(inspectorFrame.height - split.splitView.bounds.height) < 1 &&

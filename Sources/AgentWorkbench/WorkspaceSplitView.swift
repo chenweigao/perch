@@ -354,14 +354,10 @@ final class WorkbenchSplitController: NSSplitViewController {
     var workspaceToolbar: NSToolbar?
     private var adaptingToAvailableWidth = false
 
-    override func viewWillTransition(to newSize: NSSize) {
-        super.viewWillTransition(to: newSize)
-        adaptPanesToAvailableWidth(newSize.width)
-    }
-
     override func viewDidLayout() {
         super.viewDidLayout()
-        adaptPanesToAvailableWidth(splitView.bounds.width)
+        guard let availableWidth = view.window?.contentView?.bounds.width else { return }
+        adaptPanesToAvailableWidth(availableWidth)
     }
 
     override func viewDidAppear() {
