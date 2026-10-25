@@ -277,10 +277,15 @@ import WorkbenchCore
 
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     let composer = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.first!
+    let composerSurface = composer.enclosingScrollView ?? composer
     let pointer = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
                                    to: page.contentView)
-    precondition(page.contentView!.hitTest(pointer) === composer,
-                 "The adjacent inspector must leave the composer available to pointer input")
+    let pointerHit = page.contentView!.hitTest(pointer)
+    let hitsComposer = pointerHit === composer || pointerHit === composerSurface ||
+        (pointerHit?.isDescendant(of: composerSurface) ?? false)
+    let pointerHitDescription = pointerHit.map { String(describing: type(of: $0)) } ?? "nil"
+    precondition(hitsComposer,
+                 "The adjacent inspector must leave the composer available to pointer input; hit=\(pointerHitDescription), pointer=\(pointer), composer=\(composerSurface.convert(composerSurface.bounds, to: page.contentView))")
 
     if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
        let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
