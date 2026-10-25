@@ -354,6 +354,11 @@ final class WorkbenchSplitController: NSSplitViewController {
     var workspaceToolbar: NSToolbar?
     private var adaptingToAvailableWidth = false
 
+    override func viewWillTransition(to newSize: NSSize) {
+        super.viewWillTransition(to: newSize)
+        collapsePanesThatDoNotFit(availableWidth: newSize.width)
+    }
+
     override func viewDidLayout() {
         super.viewDidLayout()
         collapsePanesThatDoNotFit()
@@ -368,8 +373,8 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.toolbar = workspaceToolbar
     }
 
-    private func collapsePanesThatDoNotFit() {
-        let availableWidth = splitView.bounds.width
+    private func collapsePanesThatDoNotFit(availableWidth: CGFloat? = nil) {
+        let availableWidth = availableWidth ?? splitView.bounds.width
         guard !adaptingToAvailableWidth, availableWidth > 0 else { return }
 
         func requiredWidth(_ items: [NSSplitViewItem]) -> CGFloat {

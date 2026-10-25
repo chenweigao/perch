@@ -249,7 +249,7 @@ import WorkbenchCore
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
     detailFrame = splitFrame(detailItem)
     precondition(inspectorItem.isCollapsed && !sidebarItem.isCollapsed && detailFrame.width >= 599,
-                 "At 1000 points the lower-priority inspector must yield before the sidebar or conversation")
+                 "At 1000 points the inspector must yield first; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarCollapsed=\(sidebarItem.isCollapsed), detail=\(detailFrame), split=\(split.splitView.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     page.setContentSize(NSSize(width: 800, height: 780))
     try await Task.sleep(for: .milliseconds(250))
