@@ -653,20 +653,40 @@ final class KimiConnection {
 
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
+    /// Every publication re-derives the transcript over the whole window, so
+    /// reading the entire history publishes its pages at most once a second.
     private func loadHistory(all: Bool) {
-        guard online, snapshotReady, !loadingOlder, let api, let id = selectedId, conversation?.hasOlder == true else { return }
+        guard online, snapshotReady, !loadingOlder, let api, let id = selectedId, let start = conversation, start.hasOlder else { return }
         let token = selectionGeneration
         detail.loadHistory { [self] in
-            while token == selectionGeneration, conversation?.hasOlder == true, let first = conversation?.messages.first {
-                let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
-                try Task.checkCancellation()
-                guard token == selectionGeneration else { return }
-                conversation?.prepend(page)
-                pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [],
-                                                        messages: conversation?.messages ?? [])
-                if !all || page.items.isEmpty { break }
+            var batch = KimiHistoryBatch(start)
+            var published = ContinuousClock.now
+            do {
+                while token == selectionGeneration, batch.hasMore, let first = batch.oldest {
+                    let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
+                    try Task.checkCancellation()
+                    guard token == selectionGeneration else { return }
+                    batch.add(page)
+                    if !all || page.items.isEmpty { break }
+                    if ContinuousClock.now - published >= .seconds(1) {
+                        publishHistory(&batch, for: id, token: token)
+                        published = .now
+                    }
+                }
+            } catch {
+                publishHistory(&batch, for: id, token: token)
+                throw error
             }
+            publishHistory(&batch, for: id, token: token)
         }
+    }
+    private func publishHistory(_ batch: inout KimiHistoryBatch, for id: String, token: UUID) {
+        guard !batch.isEmpty, token == selectionGeneration, let current = conversation else { return }
+        var next = current
+        next.prepend(batch)
+        conversation = next
+        pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [], messages: next.messages)
+        batch = KimiHistoryBatch(next)
     }
     /// Independent, read-only context; keep the selected stream and draft untouched.
     func readTaskContext(_ id: String) async throws -> TaskContextSnapshot {

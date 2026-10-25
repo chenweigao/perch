@@ -151,13 +151,16 @@ struct NativeAgentView: View {
             // Bridge protocol 7 roster; an older bridge reports none and the section stays hidden.
             let subagentBoard = KimiTaskBoard(subagents: (s.subagents ?? []).map(KimiTask.init(native:)))
             let subagentStopErrors = connection.subagentStopErrors(in: s)
-            ConversationActivityBar(activity: ConversationActivity(
+            let activityProbe = PerfDiagnostics.begin()
+            let activity = ConversationActivity(
                 messages: s.messages, isRunning: s.busy,
                 running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                 online: connection.online,
                 isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
                 isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                pendingCount: s.interactions.count, isStopping: connection.isStopping, editStats: editStats),
+                pendingCount: s.interactions.count, isStopping: connection.isStopping, editStats: editStats)
+            let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(s.messages.count)")
+            ConversationActivityBar(activity: activity,
                 isRunning: s.busy,
                 timing: connection.timings.turns[s.id],
                 online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,

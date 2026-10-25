@@ -171,6 +171,20 @@ tools, an entry identity shared across the split, or a locale/epoch change. The
 activity bar's whole-session edit tally is kept the same way by a view-owned
 `SessionEditStatsCache`.
 
+When the earlier turns themselves change — a page of older messages prepended
+while scrolling up, or a new prompt moving the latest turn into the history —
+each earlier turn is projected on its own (`ToolVisibilityProjection.Chunk`) and
+its rows, navigation and fold are reused while its messages, relevant running
+IDs, remembered live tools and connection state are unchanged. Only the turn a
+page boundary cut and the new turns are rebuilt. This per-turn form is used only
+while no tool identity occurs in two turns or in the latest turn, and every
+remembered live tool belongs to a loaded turn; otherwise the whole prefix is
+projected as before. The edit tally adds a prepended page or completed turn, and
+payload costs follow messages moved by a page. The find bar's `ConversationSearch`
+keeps the earlier turns' matches while they, the query and the options stay the
+same, so an open find bar searches only the latest turn per streamed token.
+Reading the whole history (search, naming) prepends pages at most once a second.
+
 `ConversationPresentationHandle` belongs to the transcript view. The workbench owns
 an LRU of at most eight presentation models, injected directly into `WorkbenchDetail`
 (the custom AppKit hosting boundary). Each admitted model has at most 1,000 source

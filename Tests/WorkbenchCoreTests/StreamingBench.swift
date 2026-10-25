@@ -6,7 +6,8 @@ import WorkbenchCore
 /// session whose older pages were loaded by scrolling up: the conversation
 /// mutation, the activity bar's derivation, the transcript's presentation
 /// update and the transcript body's row projection, in the order the views
-/// evaluate them. Not part of the checked-in suite; run with
+/// evaluate them; separately, an open find bar's search, and the older pages
+/// that scrolling up prepends. Not part of the checked-in suite; run with
 /// WORKBENCH_BENCH=streaming. It excludes SwiftUI/AppKit layout and FPS.
 func benchStreamingDelta() throws {
     let completedTurns = Int(ProcessInfo.processInfo.environment["STREAMING_TURNS"] ?? "") ?? 230
@@ -60,16 +61,21 @@ func benchStreamingDelta() throws {
         raw.append(["id": "r-\(id)", "role": "tool", "created_at": stamp(), "content": [
             ["type": "tool_result", "tool_call_id": "call-\(id)", "is_error": false, "output": output]]])
     }
-    for turn in 0...completedTurns {
+    func turn(_ turn: Int, running: Bool) {
         raw.append(["id": "u-\(turn)", "role": "user", "created_at": stamp(),
                     "content": [["type": "text", "text": "第 \(turn) 轮：\(prompt)"]]])
-        let running = turn == completedTurns
         for step in 0..<(running ? runningCycles : cyclesPerTurn) { cycle(turn: turn, step: step) }
         if !running {
             raw.append(["id": "f-\(turn)", "role": "assistant", "created_at": stamp(), "content": [
                 ["type": "thinking", "thinking": thinking], ["type": "text", "text": "完成。\n\n\(answer)"]]])
         }
     }
+    // Earlier turns of the same shape, read later as 100-message history pages.
+    // A page boundary can split a turn and separate a call from its result.
+    for index in -5..<0 { turn(index, running: false) }
+    let earlierRaw = raw
+    raw = []
+    for index in 0...completedTurns { turn(index, running: index == completedTurns) }
     let snapshotJSON: [String: Any] = [
         "as_of_seq": 1, "epoch": "bench",
         "session": ["id": "s", "title": "bench", "updated_at": "1", "busy": true, "main_turn_active": true,
@@ -90,6 +96,8 @@ func benchStreamingDelta() throws {
     let handle = ConversationPresentationHandle()
     let cache = ConversationPresentationCache()
     let editStats = SessionEditStatsCache()
+    let findBar = ConversationSearch()
+    var findStage: [Double] = []
     let key = "host:kimi:s"
     var stages: [String: [Double]] = [:]
     var presentationStages: [String: [Double]] = [:]
@@ -132,6 +140,11 @@ func benchStreamingDelta() throws {
         t = CACurrentMediaTime()
         let memoryKeys = presented.rows.map { key + ":" + $0.entry.id }
         let contentsMs = ms(t)
+        // An open find bar with a query searches again on every update.
+        t = CACurrentMediaTime()
+        let found = findBar.hits(in: timelineMessages, query: "已经处理", running: true)
+        let findMs = ms(t)
+        precondition(found.hits.count >= completedTurns)
         rowCount = memoryKeys.count
         precondition(activity.isVisible)
         if update < 2 {
@@ -144,6 +157,7 @@ func benchStreamingDelta() throws {
             entryCount = snapshot.rows.count
         }
         guard update >= 5 else { continue }
+        findStage.append(findMs)
         for (name, value) in [("apply", apply), ("display_messages_workspace", display1), ("conversation_activity", activityMs),
                               ("display_messages_timeline", display2), ("presentation_update", presentation),
                               ("presented_rows", presentedMs), ("memory_keys", contentsMs)] {
@@ -158,19 +172,43 @@ func benchStreamingDelta() throws {
             }
         }
     }
-    // One older page arriving while reading: the full projection a page costs.
+    // Scrolling up reads one 100-message page at a time; each is prepended to
+    // the window the previous page left.
+    let earlier = try decoder.decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: earlierRaw))
     var paged: [Double] = []
+    var pageStages: [String: [Double]] = [:]
+    var window = conversation.displayMessages
     for page in 0..<3 {
-        let older = try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: (0..<100).map { index -> [String: Any] in
-            ["id": "older-\(page)-\(index)", "role": index == 0 ? "user" : "assistant", "created_at": String(format: "2026-10-22T%04d%04d", 9 - page, index),
-             "content": [["type": "text", "text": "较早的第 \(page) 页第 \(index) 条。"]]]
-        }))
-        let messages = older + conversation.displayMessages
-        let t = CACurrentMediaTime()
-        let snapshot = handle.update(key: key, input: .init(messages: messages, isRunning: true, epoch: "bench", language: "zh"), cache: cache)
-        _ = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
+        let start = earlier.count - 100 * (page + 1)
+        window = Array(earlier[start..<(start + 100)]) + window
+        let messages = window
+        let input = ConversationPresentationModel.Input(messages: messages, isRunning: true, epoch: "bench", language: "zh")
+        var t = CACurrentMediaTime()
+        let snapshot = handle.update(key: key, input: input, cache: cache)
+        let presentation = ms(t)
+        t = CACurrentMediaTime()
+        let presented = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
+        let presentedMs = ms(t)
+        t = CACurrentMediaTime()
         _ = ConversationActivity(messages: messages, isRunning: true, isThinking: true, editStats: editStats)
-        paged.append(ms(t))
+        let activityMs = ms(t)
+        paged.append(presentation + presentedMs + activityMs)
+        let reference = ConversationPresentationModel(key: key).update(input)
+            .presented(activity: [:], foldsProcess: true, isRunning: true)
+        precondition(presented == reference, "a prepended page must present like a full projection")
+        metrics = nil
+        _ = model.update(input)
+        for (name, value) in [("presentation_update", presentation), ("presented_rows", presentedMs),
+                              ("conversation_activity", activityMs)] {
+            pageStages[name, default: []].append(value)
+        }
+        if let metrics {
+            for (name, value) in [("tool_projection", metrics.toolProjectionNanoseconds), ("turn_projection", metrics.turnProjectionNanoseconds),
+                                  ("narrative", metrics.narrativeNanoseconds), ("row_projection", metrics.rowProjectionNanoseconds),
+                                  ("retained_cost", metrics.retainedCostNanoseconds), ("model_total", metrics.totalNanoseconds)] {
+                pageStages[name, default: []].append(nanos(value))
+            }
+        }
     }
     // Leaving the session releases its presentation state and loaded window.
     var released: [Double] = []
@@ -202,6 +240,14 @@ func benchStreamingDelta() throws {
     for name in ["input_comparison", "tool_projection", "turn_projection", "narrative", "row_projection", "summary", "retained_cost", "total"] {
         print(line(name, median(presentationStages[name]!), indent: "    "))
     }
+    print(line("find_bar_query_update", median(findStage)))
     print(line("older_page_full_chain", median(paged)))
+    for name in ["presentation_update", "presented_rows", "conversation_activity"] {
+        print(line(name, median(pageStages[name]!), indent: "    "))
+    }
+    print("    presentation_update breakdown (separate warm model with metrics):")
+    for name in ["tool_projection", "turn_projection", "narrative", "row_projection", "retained_cost", "model_total"] {
+        print(line(name, median(pageStages[name]!), indent: "      "))
+    }
     print(line("release_model_state", median(released)))
 }

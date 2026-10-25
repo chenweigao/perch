@@ -105,6 +105,9 @@ overlap the window).
 | `anchor_restore` | `ConversationDocumentView.restoreReadingPosition`, when it scrolls | `rows` |
 | `snapshot_projection` | `ConversationTranscript.body`: presentation-model update and row list | `messages`, `rows` |
 | `snapshot_apply` | `ConversationDocumentView.configure`: row reconciliation and refresh | `rows`, `reconciled`, `restructured` |
+| `activity_derive` | `KimiWorkspaceView` / `NativeAgentView` body: the activity bar's `ConversationActivity` | `messages` |
+| `session_select` | `WorkbenchModel.select`, including the connection's synchronous selection | `kind` |
+| `catalog_refresh` | `WorkbenchModel.catalogChanged`: sidebar catalog rebuild and its follow-ups | `sessions` |
 | `reveal_tick` | `RevealFrameDriver.fire` (streaming reveal) | `callbacks` |
 | `math_typeset` | `ReplyMathImage.entry`, cache miss | `mode`, `bytes` of TeX |
 | `attributed_text` | `ReplyTextAttributes.paragraphs`, cache miss | `paragraphs` |
@@ -119,7 +122,8 @@ other work's frames. Its main-thread steps are journaled as the two
 `mermaid_*` stages above. Connection and conversation state types are also
 compiled into `ConnectionChecks`, which depends only on WorkbenchCore, so they
 have no probes. Their snapshots are measured where the view layer applies them
-(`snapshot_projection`, `snapshot_apply`).
+(`snapshot_projection`, `snapshot_apply`, `activity_derive`), and selection where
+the workbench calls them (`session_select`).
 
 ## Limits
 

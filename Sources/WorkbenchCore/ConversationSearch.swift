@@ -40,36 +40,70 @@ public struct ConversationFindResult: Equatable {
 
 /// One find bar's rendered text cache. Reuse requires both row identity and source
 /// equality; replacing history with same-ID messages must invalidate its text.
+/// The turns before the latest prompt keep their matches while they, the query and
+/// the options stay the same: a streamed token searches the latest turn only.
 public final class ConversationSearch {
     private struct Entry {
         let sources: [String]
         let text: NSString
         let role: ConversationFindOptions.Role
     }
+    private struct Earlier {
+        let source: ArraySlice<KimiMessage>
+        let query: String
+        let options: ConversationFindOptions
+        let hits: [ConversationSearchHit]
+        let entries: [String: Entry]
+    }
     private var entries: [String: Entry] = [:]
+    private var earlier: Earlier?
     public init() {}
 
     public func hits(in messages: [KimiMessage], query: String, running: Bool,
                      options: ConversationFindOptions = ConversationFindOptions()) -> ConversationFindResult {
         guard !query.isEmpty else { return .empty }
-        var next: [String: Entry] = [:]
-        defer { entries = next }
         var regex: NSRegularExpression?
         if options.regex {
             do {
                 regex = try NSRegularExpression(pattern: query, options: options.caseSensitive ? [] : [.caseInsensitive])
             } catch {
+                entries = [:]; earlier = nil
                 return ConversationFindResult(hits: [], queryError: L("无效正则表达式"))
             }
         }
-        let timeline = ConversationTimelineEntry.make(messages, isRunning: running)
+        // Timeline entries are made per turn, so the earlier turns' entries are
+        // exactly those of the messages before the latest prompt.
+        let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
+        let prefix = messages[..<split]
+        var hits: [ConversationSearchHit]
+        if let earlier, earlier.query == query, earlier.options == options,
+           earlier.source.count == prefix.count, earlier.source.elementsEqual(prefix) {
+            hits = earlier.hits
+        } else {
+            var found: [String: Entry] = [:]
+            let previous = earlier?.entries ?? [:]
+            hits = search(ConversationTimelineEntry.make(Array(prefix), isRunning: false), query: query, regex: regex,
+                          options: options, cached: { previous[$0] ?? self.entries[$0] }, into: &found)
+            earlier = Earlier(source: prefix, query: query, options: options, hits: hits, entries: found)
+        }
+        var next: [String: Entry] = [:]
+        let held = earlier?.entries ?? [:]
+        hits += search(ConversationTimelineEntry.make(Array(messages[split...]), isRunning: running), query: query, regex: regex,
+                       options: options, cached: { self.entries[$0] ?? held[$0] }, into: &next)
+        entries = next
+        return ConversationFindResult(hits: hits, queryError: nil)
+    }
+
+    private func search(_ timeline: [ConversationTimelineEntry], query: String, regex: NSRegularExpression?,
+                        options: ConversationFindOptions, cached lookup: (String) -> Entry?,
+                        into next: inout [String: Entry]) -> [ConversationSearchHit] {
         var hits: [ConversationSearchHit] = []
         for entry in timeline {
             let role = Self.role(of: entry)
             guard options.role == .all || role == options.role else { continue }
             let sources = Self.sources(of: entry, role: role)
             let cached: Entry
-            if let previous = entries[entry.id], previous.sources == sources {
+            if let previous = lookup(entry.id), previous.sources == sources {
                 cached = previous
             } else {
                 cached = Entry(sources: sources,
@@ -96,7 +130,7 @@ public final class ConversationSearch {
                 hits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange)))
             }
         }
-        return ConversationFindResult(hits: hits, queryError: nil)
+        return hits
     }
 
     /// User prompts, tool activity and assistant text search separately. Tool

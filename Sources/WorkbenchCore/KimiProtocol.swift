@@ -132,11 +132,15 @@ public struct KimiPart: Decodable, Equatable, Sendable {
     /// next to the typed prompt. It is harness metadata, not user prose.
     public var isRuntimeContext: Bool {
         guard type == "text", let text else { return false }
+        if source?["kind"].string == "runtime_context" { return true }
+        // Every marker below starts with "<" or "B" or ends with ">". Projections
+        // ask this of every text part on each update; most prose is neither, and
+        // is answered without copying the trimmed text.
+        guard let edges = Self.trimmedEdges(text), edges.first == "<" || edges.first == "B" || edges.last == ">" else { return false }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // The prefix also recognizes historical Claude snapshots whose bridge
         // discarded the SDK synthetic marker. Keep them folded on reopen.
-        return source?["kind"].string == "runtime_context"
-            || (value.hasPrefix("Base directory for this skill: ") && value.contains("\n"))
+        return (value.hasPrefix("Base directory for this skill: ") && value.contains("\n"))
             || value.hasPrefix("<system-reminder>")
             || (value.hasPrefix("<notification ") && value.hasSuffix("</notification>"))
             || (value.hasPrefix("<skill-loaded ") && value.hasSuffix("</skill-loaded>"))
@@ -148,6 +152,13 @@ public struct KimiPart: Decodable, Equatable, Sendable {
     /// The Skill call already shows in the activity record, so the whole
     /// injection folds as harness metadata — unlike a `trigger="user-slash"`
     /// activation, whose summary line anchors the user's turn.
+    /// The first and last scalars `trimmingCharacters(in: .whitespacesAndNewlines)` keeps.
+    private static func trimmedEdges(_ text: String) -> (first: Unicode.Scalar, last: Unicode.Scalar)? {
+        let scalars = text.unicodeScalars
+        guard let first = scalars.first(where: { !CharacterSet.whitespacesAndNewlines.contains($0) }),
+              let last = scalars.last(where: { !CharacterSet.whitespacesAndNewlines.contains($0) }) else { return nil }
+        return (first, last)
+    }
     private func isToolSkillLoad(_ value: String) -> Bool {
         guard value.hasSuffix("</skill-loaded>"), let cut = value.firstIndex(of: "\n") else { return false }
         let block = value[cut...].drop(while: \.isWhitespace)
@@ -160,7 +171,7 @@ public struct KimiPart: Decodable, Equatable, Sendable {
     /// skill body collapses instead of dumping the full SKILL.md into the chat.
     /// Tool-triggered loads never reach here; they fold as runtime context.
     public var skillContextSplit: (prefix: String, context: String)? {
-        guard type == "text", let text, !isRuntimeContext else { return nil }
+        guard type == "text", let text, !isRuntimeContext, Self.trimmedEdges(text)?.last == ">" else { return nil }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard value.hasSuffix("</skill-loaded>"), let cut = value.firstIndex(of: "\n") else { return nil }
         let prefix = String(value[..<cut]).trimmingCharacters(in: .whitespaces)
@@ -307,6 +318,15 @@ public struct KimiConversation: Sendable {
         let older = page.items.filter { !existing.contains($0.id) }.sorted { $0.createdAt < $1.createdAt }
         messages = older + messages; hasOlder = page.hasMore
     }
+    /// Several pages at once, as successive `prepend(_:)` calls would leave them.
+    /// Messages that arrived in the window since the batch began are not repeated.
+    public mutating func prepend(_ batch: KimiHistoryBatch) {
+        guard !batch.pages.isEmpty else { return }
+        let existing = Set(messages.map(\.id))
+        var older: [KimiMessage] = []
+        for page in batch.pages.reversed() { older.append(contentsOf: page.filter { !existing.contains($0.id) }) }
+        messages = older + messages; hasOlder = batch.hasMore
+    }
     /// Returns true when an authoritative snapshot is needed. Volatile deltas use JavaScript UTF-16 offsets.
     public mutating func apply(_ event: KimiEvent) -> Bool {
         guard event.sessionId == snapshot.session.id else { return false }
@@ -349,5 +369,26 @@ public struct KimiConversation: Sendable {
              "prompt.submitted", "prompt.queued", "prompt.steered", "turn.steer", "prompt.started", "prompt.completed", "prompt.aborted": return true
         default: return false
         }
+    }
+}
+
+/// Older pages read one after another, held until they are prepended together.
+/// Each page is reduced and ordered as `KimiConversation.prepend(_:)` would at
+/// that point, so the next page is requested before the same message.
+public struct KimiHistoryBatch {
+    fileprivate private(set) var pages: [[KimiMessage]] = []
+    private var existing: Set<String>
+    /// The window's first message once these pages are prepended.
+    public private(set) var oldest: KimiMessage?
+    public private(set) var hasMore: Bool
+    public var isEmpty: Bool { pages.isEmpty }
+    public init(_ conversation: KimiConversation) {
+        existing = Set(conversation.messages.map(\.id)); oldest = conversation.messages.first; hasMore = conversation.hasOlder
+    }
+    public mutating func add(_ page: KimiPage<KimiMessage>) {
+        let older = page.items.filter { !existing.contains($0.id) }.sorted { $0.createdAt < $1.createdAt }
+        existing.formUnion(older.map(\.id))
+        pages.append(older); hasMore = page.hasMore
+        if let first = older.first { oldest = first }
     }
 }
