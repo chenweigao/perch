@@ -41,6 +41,10 @@ import os
     weak var detailView: NSView?
     var detailCurrent = false
     let checkDetailLifecycle = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "detail-lifecycle"
+    weak var taskContextView: NSView?
+    var taskContextReference: SessionReference?
+    var taskContextLoading = false
+    var taskContextReady = false
     /// The activity popover's subagent rows as last rendered: "id|status|stoppable|stopping".
     var subagentRoster: [String] = []
     /// The open subagent sheet's row ids as last rendered.
@@ -54,6 +58,28 @@ struct NativeDetailProbe: NSViewRepresentable {
     func updateNSView(_ view: NSView, context: Context) {
         NativeAcceptanceProbe.shared.detailView = view
         NativeAcceptanceProbe.shared.detailCurrent = current
+    }
+}
+
+struct NativeTaskContextProbe: NSViewRepresentable {
+    let reference: SessionReference?
+    let loading: Bool
+    let ready: Bool
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        let probe = NativeAcceptanceProbe.shared
+        probe.taskContextView = view
+        probe.taskContextReference = reference
+        probe.taskContextLoading = loading
+        probe.taskContextReady = ready
+    }
+    static func dismantleNSView(_ view: NSView, coordinator: ()) {
+        let probe = NativeAcceptanceProbe.shared
+        guard probe.taskContextView === view else { return }
+        probe.taskContextView = nil
+        probe.taskContextReference = nil
+        probe.taskContextLoading = false
+        probe.taskContextReady = false
     }
 }
 
@@ -502,6 +528,7 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
             if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
+            if mode == "inspector" { report.merge(try await inspector(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
             }
@@ -535,7 +562,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             let responsivenessReport = responsiveness.finish()
             report["main_actor_lateness"] = responsivenessReport
             let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
@@ -762,6 +789,77 @@ private struct ReferenceComposerFixtureView: View {
         catch { fputs("Kimi acceptance result write failed: \(error)\n", stderr); exit(1) }
         if report["status"] as? String != "passed" { exit(1) }
         NSApp.terminate(nil)
+    }
+    private func inspector(_ window: NSWindow) async throws -> [String: Any] {
+        guard let split = workspaceSplit(in: window), split.splitViewItems.count == 3 else {
+            throw WorkbenchError("Missing three-pane workspace split")
+        }
+        let inspectorItem = split.splitViewItems[2]
+        let source = fixture.sessions[1].reference
+        let route = "/sessions/\(source.terminalID)?turns=20"
+        let draft = "Inspector 性能验收草稿"
+        model.native.drafts["session-0"] = draft
+        model.taskContextWindow.locked = source
+        model.taskContextWindow.embeddedVisible = false
+        try await settle(window, "inspector baseline") {
+            inspectorItem.isCollapsed && self.probe.taskContextReference == nil &&
+                self.containsText(draft, in: window.contentView)
+        }
+        guard let reader = transcript(in: window),
+              let document = ConversationTranscript.document(in: reader),
+              let composer = draftEditor(in: window.contentView) else {
+            throw WorkbenchError("Missing transcript identity fixtures")
+        }
+        let selected = model.tabs.selectedID
+        func identityStable() -> Bool {
+            transcript(in: window) === reader && ConversationTranscript.document(in: reader) === document &&
+                draftEditor(in: window.contentView) === composer && model.tabs.selectedID == selected &&
+                model.native.drafts["session-0"] == draft
+        }
+
+        var opens: [Double] = [], closes: [Double] = []
+        let cpuStart = processCPU()
+        let span = probe.signposter.beginInterval("TaskContextInspectorToggle")
+        for step in 0..<12 {
+            let requestCount = fixture.requests.count
+            var start = CACurrentMediaTime()
+            model.taskContextWindow.embeddedVisible = true
+            try await settle(window, "inspector open \(step)") {
+                !inspectorItem.isCollapsed && inspectorItem.viewController.view.frame.width >= 279 &&
+                    inspectorItem.viewController.view.frame.width <= 421 &&
+                    self.probe.taskContextView?.window === window &&
+                    self.probe.taskContextReference == source && !self.probe.taskContextLoading &&
+                    self.probe.taskContextReady && self.fixture.requests.dropFirst(requestCount).contains(route)
+            }
+            opens.append((CACurrentMediaTime() - start) * 1000)
+            guard identityStable() else { throw WorkbenchError("Opening the inspector replaced conversation state") }
+
+            start = CACurrentMediaTime()
+            model.taskContextWindow.embeddedVisible = false
+            try await settle(window, "inspector close \(step)") {
+                inspectorItem.isCollapsed && self.probe.taskContextReference == nil &&
+                    !self.probe.taskContextLoading && !self.probe.taskContextReady
+            }
+            closes.append((CACurrentMediaTime() - start) * 1000)
+            guard identityStable() else { throw WorkbenchError("Closing the inspector replaced conversation state") }
+        }
+        probe.signposter.endInterval("TaskContextInspectorToggle", span)
+        let cpuSeconds = processCPU() - cpuStart
+        let openStats = stats(opens), closeStats = stats(closes)
+        guard openStats["p95"]! < 750, closeStats["p95"]! < 750,
+              max(openStats["max"]!, closeStats["max"]!) < 1500 else {
+            throw WorkbenchError("Inspector toggles exceeded the latency budget: open=\(openStats), close=\(closeStats)")
+        }
+        let idleStart = processCPU()
+        try await Task.sleep(for: .seconds(2))
+        let idleCPU = processCPU() - idleStart
+        guard idleCPU < 1 else { throw WorkbenchError("Collapsed inspector kept consuming CPU: \(idleCPU)s / 2s") }
+        model.taskContextWindow.locked = nil
+        return ["inspector_toggles": opens.count, "inspector_open_ms": openStats,
+                "inspector_close_ms": closeStats, "inspector_process_cpu_seconds": cpuSeconds,
+                "inspector_idle_cpu_seconds_over_2s": idleCPU,
+                "inspector_context_reads": fixture.requests.filter { $0 == route }.count,
+                "inspector_contract": "200-turn locked context decoded and projected in the native inspector; split state, transcript/document/composer identity, selection and draft verified after every toggle"]
     }
     private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
         // Allow initial tasks/layout to settle before measuring unrelated writes.
@@ -2238,6 +2336,27 @@ private struct ReferenceComposerFixtureView: View {
             if let scroll = view as? NSScrollView, let document = scroll.documentView,
                ConversationTranscript.retainedHosts(in: document) != nil { return scroll }
             queue.append(contentsOf: view.subviews)
+        }
+        return nil
+    }
+    private func workspaceSplit(in window: NSWindow) -> WorkbenchSplitController? {
+        var views = window.contentView.map { [$0] } ?? []
+        while let view = views.popLast() {
+            if let splitView = view as? NSSplitView {
+                var responder: NSResponder? = splitView
+                while let current = responder {
+                    if let split = current as? WorkbenchSplitController { return split }
+                    if let controller = current as? NSViewController {
+                        var parent = controller.parent
+                        while let candidate = parent {
+                            if let split = candidate as? WorkbenchSplitController { return split }
+                            parent = candidate.parent
+                        }
+                    }
+                    responder = current.nextResponder
+                }
+            }
+            views.append(contentsOf: view.subviews)
         }
         return nil
     }
