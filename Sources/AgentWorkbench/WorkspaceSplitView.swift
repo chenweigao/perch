@@ -85,6 +85,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.sidebarHost.view.setFrameSize(NSSize(width: 270, height: 620))
         coordinator.contentHost.view.setFrameSize(NSSize(width: 900, height: 620))
         coordinator.inspectorHost?.view.setFrameSize(NSSize(width: 340, height: 620))
+        coordinator.inspectorHost?.view.clipsToBounds = true
 
         let sidebarItem = NSSplitViewItem(sidebarWithViewController: coordinator.sidebarHost)
         sidebarItem.minimumThickness = 220
