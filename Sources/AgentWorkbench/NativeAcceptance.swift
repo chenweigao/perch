@@ -2342,7 +2342,7 @@ private struct ReferenceComposerFixtureView: View {
     private func workspaceSplit(in window: NSWindow) -> WorkbenchSplitController? {
         var views = window.contentView.map { [$0] } ?? []
         while let view = views.popLast() {
-            if let splitView = view as? NSSplitView, splitView.subviews.count == 3 {
+            if let splitView = view as? NSSplitView {
                 var responder: NSResponder? = splitView
                 while let current = responder {
                     if let split = current as? WorkbenchSplitController { return split }
