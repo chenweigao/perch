@@ -78,13 +78,26 @@ private struct WorkbenchWorkspace: View, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.model === rhs.model }
 
     var body: some View {
+        let inspectorVisible = model.taskContextWindow.embeddedVisible &&
+            !model.showDashboard && !model.draftingNewTask
         WorkspaceSplitView(
             newConversation: { model.startNewTask() },
             canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
+            inspectorVisible: inspectorVisible,
+            inspectorVisibilityChanged: { visible in
+                if !model.showDashboard && !model.draftingNewTask {
+                    model.taskContextWindow.embeddedVisible = visible
+                }
+            },
             sidebar: { WorkbenchSidebar(model: model) },
             header: { WorkbenchHeader(model: model) },
             actions: { WorkbenchHeaderActions(model: model, kimi: model.kimi, native: model.native) },
+            inspector: {
+                TaskContextView(model: model,
+                    detach: { model.taskContextWindow.show(model: model) },
+                    close: { model.taskContextWindow.embeddedVisible = false })
+            },
             content: { WorkbenchDetail(model: model) }
         )
     }
@@ -95,8 +108,7 @@ private struct WorkbenchDetail: View {
     @Bindable var model: WorkbenchModel
 
     var body: some View {
-        TaskContextWorkspace(model: model) { conversation }
-            .environment(\.conversationPresentations, model.conversationPresentations)
+        conversation.environment(\.conversationPresentations, model.conversationPresentations)
     }
 
     @ViewBuilder private var conversation: some View {

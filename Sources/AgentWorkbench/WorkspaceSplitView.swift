@@ -22,15 +22,18 @@ struct WorkbenchToolbarSymbol: View {
     }
 }
 
-/// AppKit owns the native glass sidebar, divider restoration, and unified toolbar.
+/// AppKit owns the native glass sidebar, inspector, divider restoration, and unified toolbar.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
     let newConversation: () -> Void
     let canNavigate: (Int) -> Bool
     let navigate: (Int) -> Void
+    let inspectorVisible: Bool
+    let inspectorVisibilityChanged: (Bool) -> Void
     let sidebar: Sidebar
     let header: Header
     let actions: Actions
+    let inspector: AnyView?
     let content: Content
 
     init(newConversation: @escaping () -> Void,
@@ -42,9 +45,34 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         self.newConversation = newConversation
         self.canNavigate = canNavigate
         self.navigate = navigate
+        inspectorVisible = false
+        inspectorVisibilityChanged = { _ in }
         self.sidebar = sidebar()
         self.header = header()
         self.actions = actions()
+        inspector = nil
+        self.content = content()
+    }
+
+    init<Inspector: View>(newConversation: @escaping () -> Void,
+                          canNavigate: @escaping (Int) -> Bool = { _ in false },
+                          navigate: @escaping (Int) -> Void = { _ in },
+                          inspectorVisible: Bool,
+                          inspectorVisibilityChanged: @escaping (Bool) -> Void,
+                          @ViewBuilder sidebar: () -> Sidebar,
+                          @ViewBuilder header: () -> Header,
+                          @ViewBuilder actions: () -> Actions,
+                          @ViewBuilder inspector: () -> Inspector,
+                          @ViewBuilder content: () -> Content) {
+        self.newConversation = newConversation
+        self.canNavigate = canNavigate
+        self.navigate = navigate
+        self.inspectorVisible = inspectorVisible
+        self.inspectorVisibilityChanged = inspectorVisibilityChanged
+        self.sidebar = sidebar()
+        self.header = header()
+        self.actions = actions()
+        self.inspector = AnyView(inspector())
         self.content = content()
     }
 
@@ -56,6 +84,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.controller = controller
         coordinator.sidebarHost.view.setFrameSize(NSSize(width: 270, height: 620))
         coordinator.contentHost.view.setFrameSize(NSSize(width: 900, height: 620))
+        coordinator.inspectorHost?.view.setFrameSize(NSSize(width: 340, height: 620))
 
         let sidebarItem = NSSplitViewItem(sidebarWithViewController: coordinator.sidebarHost)
         sidebarItem.minimumThickness = 220
@@ -67,6 +96,15 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         contentItem.minimumThickness = 600
         controller.addSplitViewItem(sidebarItem)
         controller.addSplitViewItem(contentItem)
+        if let inspectorHost = coordinator.inspectorHost {
+            let inspectorItem = NSSplitViewItem(inspectorWithViewController: inspectorHost)
+            inspectorItem.minimumThickness = 280
+            inspectorItem.maximumThickness = 420
+            inspectorItem.canCollapse = true
+            inspectorItem.isCollapsed = !inspectorVisible
+            controller.addSplitViewItem(inspectorItem)
+            coordinator.observe(inspectorItem, in: controller.splitView)
+        }
         controller.splitView.dividerStyle = .thin
         controller.splitView.autosaveName = "WorkbenchWorkspace"
 
@@ -84,11 +122,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.newConversation = newConversation
         coordinator.canNavigate = canNavigate
         coordinator.navigate = navigate
+        coordinator.inspectorVisibilityChanged = inspectorVisibilityChanged
         coordinator.locale = locale
         coordinator.sidebarHost.rootView = WorkspaceLocalizedRoot(content: sidebar, locale: locale)
         coordinator.contentHost.rootView = WorkspaceLocalizedRoot(content: content, locale: locale)
         coordinator.headerHost.rootView = WorkspaceLocalizedRoot(content: header, locale: locale)
         coordinator.actionsHost.rootView = WorkspaceLocalizedRoot(content: actions, locale: locale)
+        if let inspector { coordinator.inspectorHost?.rootView = WorkspaceLocalizedRoot(content: inspector, locale: locale) }
+        coordinator.setInspectorVisible(inspectorVisible)
         coordinator.updateToolbarLanguage()
     }
 
@@ -103,11 +144,15 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let contentHost: NSHostingController<WorkspaceLocalizedRoot<Content>>
         let headerHost: NSHostingView<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
+        let inspectorHost: NSHostingController<WorkspaceLocalizedRoot<AnyView>>?
         weak var controller: WorkbenchSplitController?
+        weak var inspectorItem: NSSplitViewItem?
         var locale: Locale
         var newConversation: () -> Void
         var canNavigate: (Int) -> Bool
         var navigate: (Int) -> Void
+        var inspectorVisibilityChanged: (Bool) -> Void
+        private var desiredInspectorVisible: Bool
         private let backID = NSToolbarItem.Identifier("WorkbenchBack")
         private let forwardID = NSToolbarItem.Identifier("WorkbenchForward")
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
@@ -121,17 +166,45 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             contentHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.content, locale: view.locale))
             headerHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
             actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
+            inspectorHost = view.inspector.map {
+                NSHostingController(rootView: WorkspaceLocalizedRoot(content: $0, locale: view.locale))
+            }
             locale = view.locale
             newConversation = view.newConversation
             canNavigate = view.canNavigate
             navigate = view.navigate
+            inspectorVisibilityChanged = view.inspectorVisibilityChanged
+            desiredInspectorVisible = view.inspectorVisible
             super.init()
             // NSSplitView owns these dimensions; intrinsic SwiftUI measurements would
             // recursively measure the full conversation during every split layout.
             sidebarHost.sizingOptions = []
             contentHost.sizingOptions = []
+            inspectorHost?.sizingOptions = []
             headerHost.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             headerHost.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        }
+
+        deinit { NotificationCenter.default.removeObserver(self) }
+
+        func observe(_ item: NSSplitViewItem, in splitView: NSSplitView) {
+            inspectorItem = item
+            NotificationCenter.default.addObserver(self, selector: #selector(inspectorDidResize(_:)),
+                name: NSSplitView.didResizeSubviewsNotification, object: splitView)
+        }
+
+        func setInspectorVisible(_ visible: Bool) {
+            desiredInspectorVisible = visible
+            guard let inspectorItem, inspectorItem.isCollapsed == visible else { return }
+            inspectorItem.isCollapsed = !visible
+        }
+
+        @objc private func inspectorDidResize(_ notification: Notification) {
+            guard let inspectorItem else { return }
+            let visible = !inspectorItem.isCollapsed
+            guard visible != desiredInspectorVisible else { return }
+            desiredInspectorVisible = visible
+            inspectorVisibilityChanged(visible)
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {

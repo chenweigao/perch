@@ -107,27 +107,24 @@ owns the shortcut, use the menu bar; Settings reports registration failure.
 
 ## Task context panel
 
-The conversation header's **Task panel** toggles a card inside the conversation page containing
-pending requests, documents, background tasks/subagents, and current-turn tool
-activity. Empty sections stay hidden; completed calls start collapsed. The panel
-uses a 280–340 point trailing card when the page can also fit the full 680 point
-reading column and its margins (at least 1,056 points of page width). The transcript
-and composer shift together and recenter when the card closes. Smaller windows
-show a compact entry above the conversation that opens the independent floating
-panel; it neither covers the transcript nor reads task data while collapsed to
-that entry. Widening the page restores the card.
-The card fits its header and visible sections, up to 620 points or the available
-page height. Expanding a section grows the card until that limit, then scrolls its
-contents. Its compact header keeps task controls visible; the independent window
-also offers conversation and draft actions in its footer.
-It stays open while interacting with the conversation and can be collapsed with
-its close control or the header button. Resizing and toggling retain the same
-conversation view, reading position, and composer. The card can detach into a
-resizable native window, then return with **Show in conversation**. Only one
-presentation reads at a time. Navigating away from the conversation removes the
-embedded card and ends its reads. **Lock to this task** preserves the
-source host and session while the main window navigates; unlocking resumes
-following the current conversation. Closing it ends its reads, not remote work.
+The conversation header's **Task panel** toggles a native right-side inspector
+containing pending requests, documents, background tasks/subagents, and
+current-turn tool activity. Empty sections stay hidden; completed calls start
+collapsed. The inspector is a full-height 280–420 point column beside the
+conversation, with the standard macOS divider, resizing, and collapse behavior.
+It never overlays the transcript or composer; AppKit manages narrower windows as
+part of the workspace split view.
+
+The inspector stays open while interacting with the conversation and can be
+collapsed with its close control, the header button, or the native divider.
+Resizing and toggling retain the same conversation view, reading position, and
+composer. It can detach into a resizable native window, then return with **Show
+in conversation**. Only one presentation reads at a time. Navigating to the
+workbench or new-task page temporarily hides the inspector and ends its reads;
+returning to the conversation restores the user's expanded state. **Lock to this
+task** preserves the source host and session while the main window navigates;
+unlocking resumes following the current conversation. Closing it ends its reads,
+not remote work.
 
 Native agents reuse the current snapshot when available and independently read
 up to 20 turns for another session. Kimi reads the snapshot and task list through

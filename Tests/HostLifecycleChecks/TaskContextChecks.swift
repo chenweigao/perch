@@ -171,222 +171,157 @@ import WorkbenchCore
     precondition(model.taskContextWindow.window != nil, "A closed panel can be reopened")
     model.taskContextWindow.close()
 
-    // Measure actual laid-out cards, including expansion and overflow, rather
-    // than asserting the same size formula as the implementation.
-    let fitting = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 340, height: 700),
-                           styleMask: [.titled], backing: .buffered, defer: false)
-    fitting.isReleasedWhenClosed = false
-    defer { fitting.close(); fitting.contentViewController = nil }
-    var fittedView: NSView?
-    fitting.contentViewController = NSHostingController(rootView: VStack(spacing: 0) {
-        TaskContextView(model: model, maximumHeight: 420)
-            .background(TaskContextContentProbe { fittedView = $0 })
-        Spacer(minLength: 0)
-    })
-    fitting.setContentSize(NSSize(width: 340, height: 700))
-    model.taskContextWindow.locked = b
-    fitting.makeKeyAndOrderFront(nil)
-    try await Task.sleep(for: .milliseconds(300))
-    let shortHeight = fittedView!.bounds.height
-    precondition(shortHeight > 150 && shortHeight < 360, "Short content should shrink: \(shortHeight)")
-    click(70, shortHeight - 24, in: fitting)
-    try await Task.sleep(for: .milliseconds(200))
-    let expandedHeight = fittedView!.bounds.height
-    precondition(expandedHeight > shortHeight + 30 && expandedHeight <= 420,
-                 "Expanding files should grow the card: \(shortHeight) -> \(expandedHeight)")
-    click(40, expandedHeight - 24, in: fitting)
-    try await Task.sleep(for: .milliseconds(200))
-    precondition(abs(fittedView!.bounds.height - shortHeight) < 1, "Collapsing files should shrink again")
-    model.taskContextWindow.locked = a
-    try await Task.sleep(for: .milliseconds(250))
-    precondition(abs(fittedView!.bounds.height - 420) < 1, "Long content stops at the available height")
-    func scrollViews(_ view: NSView) -> [NSScrollView] {
-        (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
-    }
-    let scroll = scrollViews(fitting.contentView!).first!
-    precondition(scroll.documentView!.frame.height > scroll.contentView.bounds.height)
-    scroll.contentView.scroll(to: NSPoint(x: 0, y: scroll.documentView!.frame.height - scroll.contentView.bounds.height))
-    scroll.reflectScrolledClipView(scroll.contentView)
-    try await Task.sleep(for: .milliseconds(100))
-    precondition(scroll.contentView.bounds.minY > 0 && abs(fittedView!.bounds.height - 420) < 1)
-    fitting.close(); fitting.contentViewController = nil
-
-    // Exercise the embedded production container with a real transcript/composer.
-    // Its content identity must survive toggling and crossing the width breakpoint.
-    let page = TaskContextFixtureWindow(contentRect: NSRect(x: 100, y: 100, width: 1200, height: 780),
+    // Exercise the production AppKit split container with a real transcript and
+    // composer. The conversation host must survive inspector and destination changes.
+    let page = TaskContextFixtureWindow(contentRect: NSRect(x: 100, y: 100, width: 1280, height: 780),
                                        styleMask: [.titled, .resizable], backing: .buffered, defer: false)
     page.isReleasedWhenClosed = false
     defer { page.close(); page.contentViewController = nil }
     var contentMounts = 0
     var contentView: NSView?
-    let hosting = NSHostingController(rootView: VStack(spacing: 0) {
-        HStack {
-            Text("准备调研报告").font(.headline)
-            Spacer()
-            TaskContextButton(model: model)
-        }.padding(.horizontal, 18).frame(height: 44)
-        TaskContextWorkspace(model: model) {
-            NativeAgentView(connection: connection, onResultDisplayed: { _ in })
-                .background(TaskContextContentProbe { view in contentMounts += 1; contentView = view })
-        }
-    }.background(WorkbenchTheme.contentBackground))
+    let hosting = NSHostingController(rootView: TaskContextInspectorFixture(
+        model: model, connection: connection,
+        contentMounted: { view in contentMounts += 1; contentView = view }))
     hosting.sizingOptions = []
     page.contentViewController = hosting
     page.makeKeyAndOrderFront(nil)
-    // Apply and verify the fixture viewport before layout assertions or clicks.
-    page.setContentSize(NSSize(width: 1200, height: 780))
+    page.setContentSize(NSSize(width: 1280, height: 780))
+    model.showDashboard = false
+    model.draftingNewTask = false
     model.taskContextWindow.locked = a
-    try await Task.sleep(for: .milliseconds(200))
-    precondition(page.contentView!.bounds.size == NSSize(width: 1200, height: 780),
-                 "The initial layout viewport must be applied after ordering: \(page.contentView!.bounds.size)")
-    precondition(!model.taskContextWindow.embeddedVisible)
-    if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
-       let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        try bitmap.representation(using: .png, properties: [:])?.write(to:
-            URL(fileURLWithPath: directory).appendingPathComponent("layout-closed.png"))
+    try await Task.sleep(for: .milliseconds(300))
+
+    func splitController(in root: NSViewController) -> WorkbenchSplitController? {
+        if let split = root as? WorkbenchSplitController { return split }
+        return root.children.lazy.compactMap { splitController(in: $0) }.first
     }
-    click(1200 - 32, 22, in: page)
-    try await Task.sleep(for: .milliseconds(250))
-    precondition(model.taskContextWindow.embeddedVisible && model.taskContextWindow.window == nil,
-                 "The header opens in-page without creating a window: size=\(page.contentView!.bounds.size), embedded=\(model.taskContextWindow.embeddedVisible)")
+    guard let split = splitController(in: hosting) else { fatalError("The production split controller must mount") }
+    precondition(split.splitViewItems.count == 3, "The workspace must expose sidebar, detail, and inspector items")
+    let detailItem = split.splitViewItems[1]
+    let inspectorItem = split.splitViewItems[2]
+    precondition(inspectorItem.isCollapsed && !model.taskContextWindow.embeddedVisible)
+
+    model.taskContextWindow.embeddedVisible = true
+    try await Task.sleep(for: .milliseconds(300))
+    split.splitView.layoutSubtreeIfNeeded()
+    page.displayIfNeeded()
+    let detailFrame = detailItem.viewController.view.frame
+    let inspectorFrame = inspectorItem.viewController.view.frame
+    precondition(!inspectorItem.isCollapsed)
+    precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
+                 "Inspector width must stay within its native 280–420 point range: \(inspectorFrame)")
+    precondition(abs(inspectorFrame.height - split.splitView.bounds.height) < 1 &&
+                 abs(detailFrame.height - inspectorFrame.height) < 1,
+                 "Inspector and detail must share the full split-view height")
+    precondition(inspectorFrame.minX >= detailFrame.maxX &&
+                 inspectorFrame.minX - detailFrame.maxX <= split.splitView.dividerThickness + 1,
+                 "Inspector must be adjacent to, not overlay, the conversation")
+    precondition(contentView?.window === page)
+
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
-    func editors(_ view: NSView) -> [DraftTextView] { descendants(view).compactMap { $0 as? DraftTextView } }
-    func readingColumn() -> NSView {
-        descendants(page.contentView!).first { String(describing: type(of: $0)) == "ConversationDocumentView" }!
-    }
-    func horizontalFrames() -> (reading: CGRect, editor: CGRect) {
-        let document = readingColumn(), editor = editors(page.contentView!).first!
-        return (document.convert(document.bounds, to: page.contentView), editor.convert(editor.bounds, to: page.contentView))
-    }
-    let opened = horizontalFrames()
-    precondition(abs(opened.reading.width - 680) < 1)
-    click(1200 - 32, 22, in: page)
-    try await Task.sleep(for: .milliseconds(150))
-    let closed = horizontalFrames()
-    precondition(abs(closed.reading.width - opened.reading.width) < 1 && abs(closed.editor.width - opened.editor.width) < 1,
-                 "Opening the card must preserve both reading and composer widths")
-    precondition(abs(closed.reading.midX - 600) < 1 && abs(closed.editor.midX - 600) < 1,
-                 "Closing recenters both columns")
-    precondition(closed.reading.minX > opened.reading.minX + 150 &&
-                 abs((closed.reading.minX - opened.reading.minX) - (closed.editor.minX - opened.editor.minX)) < 1,
-                 "The transcript and composer shift together")
-    click(1200 - 32, 22, in: page)
-    try await Task.sleep(for: .milliseconds(150))
-    for scrollerStyle in [NSScroller.Style.overlay, .legacy] {
-        for scroll in scrollViews(page.contentView!) { scroll.scrollerStyle = scrollerStyle }
-        for (width, height): (CGFloat, CGFloat) in [(1200, 780), (1100, 780), (1056, 780), (1055, 780), (600, 500), (800, 780), (800, 500)] {
-            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-                page.setContentSize(NSSize(width: width, height: height))
-                page.appearance = NSAppearance(named: appearance)
-                try await Task.sleep(for: .milliseconds(200))
-                page.displayIfNeeded()
-                precondition(page.contentView!.bounds.size == NSSize(width: width, height: height),
-                             "The fixture must exercise the requested viewport: \(width)x\(height), actual=\(page.contentView!.bounds.size)")
-                let frames = horizontalFrames()
-                precondition(abs(frames.reading.width - min(680, width - 72)) < 1,
-                             "Context must not squeeze the actual reading column at \(width): \(frames.reading)")
-                precondition(abs(frames.reading.midX - frames.editor.midX) < 1,
-                             "Transcript and composer must remain aligned: viewport=\(width)x\(height), appearance=\(appearance), scrollers=\(scrollerStyle), reading=\(frames.reading), editor=\(frames.editor)")
-                if width < 1056 {
-                    precondition(abs(contentView!.bounds.width - width) < 1 && abs(frames.reading.midX - width / 2) < 1)
-                    let text = descendants(readingColumn()).compactMap { $0 as? ReplyTextView }
-                        .first { !$0.visibleRect.isEmpty }!
-                    let point = text.convert(NSPoint(x: text.visibleRect.minX + 8, y: text.visibleRect.minY + 8),
-                                             to: page.contentView!.superview)
-                    let target = page.contentView!.hitTest(point)
-                    // Native block padding may hit its stack rather than NSTextView;
-                    // either must remain inside the transcript, never the context strip.
-                    precondition(target?.isDescendant(of: readingColumn()) == true,
-                                 "Compact context must leave the transcript available to pointer input: width=\(width), target=\(String(describing: target))")
-                }
-                if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
-                   let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-                    view.cacheDisplay(in: view.bounds, to: bitmap)
-                    try bitmap.representation(using: .png, properties: [:])?.write(to:
-                        URL(fileURLWithPath: directory).appendingPathComponent("layout-\(Int(width))-\(Int(height))-\(appearance == .aqua ? "light" : "dark").png"))
-                }
-            }
-        }
-    }
-    page.setContentSize(NSSize(width: 1200, height: 780))
-    page.appearance = NSAppearance(named: .aqua)
-    model.taskContextWindow.locked = nil
-    try await Task.sleep(for: .milliseconds(200))
+    let composer = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.first!
+    let pointer = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
+                                   to: page.contentView)
+    precondition(page.contentView!.hitTest(pointer) === composer,
+                 "The adjacent inspector must leave the composer available to pointer input")
+
     if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
        let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
         view.cacheDisplay(in: view.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])?.write(to:
-            URL(fileURLWithPath: directory).appendingPathComponent("layout-documents.png"))
+            URL(fileURLWithPath: directory).appendingPathComponent("layout-inspector.png"))
     }
-    // The full card still exposes detach; returning to a compact page keeps
-    // the reading position and draft in the same mounted conversation.
-    click(1200 - 68, 44 + 12 + 22, in: page)
-    try await Task.sleep(for: .milliseconds(150))
-    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible)
-    model.taskContextWindow.embed(model: model)
-    page.setContentSize(NSSize(width: 800, height: 500))
-    page.appearance = NSAppearance(named: .darkAqua)
-    try await Task.sleep(for: .milliseconds(150))
-    let composer = editors(page.contentView!).first!
-    page.makeKeyAndOrderFront(nil)
-    // Check AppKit's actual pointer target separately from keyboard focus. A
-    // synthetic NSWindow.sendEvent doesn't reliably focus NSTextView here.
-    func checkInputTarget() {
-        let point = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
-                                     to: page.contentView!.superview)
-        precondition(page.contentView!.hitTest(point) === composer,
-                     "The compact card must leave the actual composer available to pointer input")
-    }
-    checkInputTarget()
-    precondition(page.makeFirstResponder(composer))
-    composer.insertText(String(repeating: "\n补充验证依据", count: 8),
-                        replacementRange: NSRange(location: composer.string.utf16.count, length: 0))
-    try await Task.sleep(for: .milliseconds(200))
-    precondition(connection.drafts["b"]!.contains("补充验证依据") && composer.visibleRect.height > 80)
-    checkInputTarget()
-    connection.drafts["b"] = "其他任务草稿"
-    try await Task.sleep(for: .milliseconds(150))
-    model.taskContextWindow.locked = b
-    try await Task.sleep(for: .milliseconds(200))
-    if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
-       let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        try bitmap.representation(using: .png, properties: [:])?.write(to:
-            URL(fileURLWithPath: directory).appendingPathComponent("layout-compact-documents.png"))
-    }
-    model.taskContextWindow.locked = a
-    click(800 - 32, 22, in: page)
-    try await Task.sleep(for: .milliseconds(200))
-    precondition(!model.taskContextWindow.embeddedVisible && abs(contentView!.bounds.width - 800) < 1)
-    let hiddenReads = reads.filter { $0 == "/sessions/a?turns=20" }.count
+
+    // Workbench and new-task destinations hide the inspector without erasing the
+    // user's expanded preference. Returning restores the same native split item.
+    model.showDashboard = true
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    let dashboardReads = reads.filter { $0 == "/sessions/a?turns=20" }.count
     try await Task.sleep(for: .milliseconds(2200))
-    precondition(reads.filter { $0 == "/sessions/a?turns=20" }.count == hiddenReads,
-                 "Collapsing the in-page card ends its reads")
-    click(800 - 32, 22, in: page)
-    try await Task.sleep(for: .milliseconds(150))
-    // Compact context opens its independent window without covering the page.
-    click(660, 44 + 24, in: page)
+    precondition(reads.filter { $0 == "/sessions/a?turns=20" }.count == dashboardReads,
+                 "A destination-hidden inspector must end its reads")
+    model.showDashboard = false
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(!inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    model.draftingNewTask = true
     try await Task.sleep(for: .milliseconds(200))
-    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible)
+    precondition(inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    model.draftingNewTask = false
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(!inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+
+    // A user collapse from the native divider is reflected back into model state.
+    inspectorItem.isCollapsed = true
+    split.splitView.adjustSubviews()
+    split.splitView.layoutSubtreeIfNeeded()
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(!model.taskContextWindow.embeddedVisible,
+                 "Collapsing the native inspector must update the task-panel preference")
+    let collapsedReads = reads.filter { $0 == "/sessions/a?turns=20" }.count
+    try await Task.sleep(for: .milliseconds(2200))
+    precondition(reads.filter { $0 == "/sessions/a?turns=20" }.count == collapsedReads,
+                 "Collapsing the native inspector must end its reads")
+
+    model.taskContextWindow.embeddedVisible = true
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(!inspectorItem.isCollapsed)
+    model.taskContextWindow.show(model: model)
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible && inspectorItem.isCollapsed)
     let detached = model.taskContextWindow.window!
     click(detached.contentView!.bounds.width - 50, 26, in: detached)
-    try await Task.sleep(for: .milliseconds(200))
-    precondition(model.taskContextWindow.embeddedVisible && !model.taskContextWindow.visible && model.taskContextWindow.window == nil,
-                 "Docking returns to the page and releases the separate window")
-    precondition(contentMounts == 1 && model.selectedReference == b && connection.drafts["b"] == "其他任务草稿",
-                 "Panel layout changes must preserve transcript identity, selection and draft")
-    page.makeKeyAndOrderFront(nil)
-    click(728, 44 + 24, in: page)
-    try await Task.sleep(for: .milliseconds(150))
-    precondition(!model.taskContextWindow.embeddedVisible, "The card close control collapses it")
-    print("PASS: task context fixed reading/composer widths, synchronized shifting and recentering, adaptive card and compact transcript/composer hit testing, content-fit/expand/collapse/overflow heights, multiline input, native windows, wide/compact light/dark, toggle/detach/dock/close/pin/draft controls, stable transcript, source isolation, stop targeting, cancellation and file route")
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(model.taskContextWindow.embeddedVisible && !model.taskContextWindow.visible &&
+                 model.taskContextWindow.window == nil && !inspectorItem.isCollapsed,
+                 "Docking must return to the native inspector and release the panel")
+
+    inspectorItem.isCollapsed = true
+    split.splitView.adjustSubviews()
+    split.splitView.layoutSubtreeIfNeeded()
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(contentMounts == 1 && model.selectedReference == b &&
+                 connection.drafts["b"] == "其他任务草稿",
+                 "Inspector changes must preserve transcript identity, selection, and draft")
+    model.taskContextWindow.locked = nil
+    print("PASS: task context native full-height inspector, standard divider collapse, destination suspension and restore, no conversation overlay, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
 }
 
 /// Layout fixtures must exercise viewports larger than the CI runner's display.
 /// Production windows keep AppKit's normal screen constraints.
 private final class TaskContextFixtureWindow: NSWindow {
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
+}
+
+private struct TaskContextInspectorFixture: View {
+    let model: WorkbenchModel
+    let connection: NativeAgentConnection
+    let contentMounted: (NSView) -> Void
+
+    var body: some View {
+        let inspectorVisible = model.taskContextWindow.embeddedVisible &&
+            !model.showDashboard && !model.draftingNewTask
+        WorkspaceSplitView(
+            newConversation: {},
+            inspectorVisible: inspectorVisible,
+            inspectorVisibilityChanged: { visible in
+                if !model.showDashboard && !model.draftingNewTask {
+                    model.taskContextWindow.embeddedVisible = visible
+                }
+            },
+            sidebar: { Color.clear },
+            header: { Text("准备调研报告") },
+            actions: { TaskContextButton(model: model) },
+            inspector: {
+                TaskContextView(model: model,
+                    detach: { model.taskContextWindow.show(model: model) },
+                    close: { model.taskContextWindow.embeddedVisible = false })
+            },
+            content: {
+                NativeAgentView(connection: connection, onResultDisplayed: { _ in })
+                    .background(TaskContextContentProbe(mounted: contentMounted))
+            })
+    }
 }
 
 private struct TaskContextContentProbe: NSViewRepresentable {

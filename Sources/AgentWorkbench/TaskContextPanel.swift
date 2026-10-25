@@ -64,67 +64,11 @@ struct TaskContextButton: View {
     }
 }
 
-/// Reserve a side lane only when the full reading column fits. At smaller sizes,
-/// a compact entry above the conversation opens the independent panel instead.
-/// Padding changes preserve the transcript and composer at one structural identity.
-struct TaskContextWorkspace<Content: View>: View {
-    let model: WorkbenchModel
-    @ViewBuilder let content: Content
-    private var shown: Bool {
-        model.taskContextWindow.embeddedVisible && !model.showDashboard && !model.draftingNewTask
-    }
-    var body: some View {
-        GeometryReader { geometry in
-            let available = geometry.size.width - ReplyStyle.readingWidth - 2 * ReplyStyle.horizontalPadding - 24
-            let alongside = available >= 280
-            let cardWidth = min(340, available)
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.trailing, shown && alongside ? cardWidth + 24 : 0)
-                .padding(.top, shown && !alongside ? 48 : 0)
-                .overlay(alignment: .topTrailing) {
-                    if shown && alongside {
-                        TaskContextView(model: model, maximumHeight: min(620, max(0, geometry.size.height - 24)),
-                                        detach: { model.taskContextWindow.show(model: model) },
-                                        close: { model.taskContextWindow.embeddedVisible = false })
-                            .frame(width: cardWidth)
-                            .contentShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
-                            .background(WorkbenchTheme.contentBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
-                                    .strokeBorder(.primary.opacity(0.10), lineWidth: 0.5)
-                            }
-                            .shadow(color: .black.opacity(0.04), radius: 12, y: 3)
-                            .padding(12)
-                    } else if shown {
-                        HStack(spacing: 12) {
-                            Text("任务面板").foregroundStyle(.secondary)
-                            Spacer(minLength: 0)
-                            Button { model.taskContextWindow.show(model: model) } label: {
-                                Label("在浮窗中查看", systemImage: "arrow.up.left.and.arrow.down.right")
-                            }
-                            Button { model.taskContextWindow.embeddedVisible = false } label: {
-                                Image(systemName: "xmark").frame(width: 24, height: 24)
-                            }.help("收起任务面板").accessibilityLabel("收起任务面板")
-                        }.font(.callout).buttonStyle(.borderless)
-                            .frame(maxWidth: ReplyStyle.readingWidth).frame(height: 48)
-                            .padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity)
-                    }
-                }
-        }
-    }
-}
-
 struct TaskContextView: View {
     let model: WorkbenchModel
     var detached = false
-    var maximumHeight: CGFloat?
     var detach: (() -> Void)?
     var close: (() -> Void)?
-    @State private var headerHeight: CGFloat?
-    @State private var contentHeight: CGFloat?
-    @State private var footerHeight: CGFloat?
     @State private var state = TaskContextState()
     @State private var allFiles = false
     @State private var allTasks = false
@@ -138,7 +82,10 @@ struct TaskContextView: View {
         model.taskContextWindow.locked ?? (model.showDashboard ? nil : model.selectedReference)
     }
     private var item: WorkspaceSession? { model.allSessions.first { $0.reference == reference } }
-    private var active: Bool { !detached || model.taskContextWindow.visible }
+    private var active: Bool {
+        if detached { return model.taskContextWindow.visible }
+        return model.taskContextWindow.embeddedVisible && !model.showDashboard && !model.draftingNewTask
+    }
     private var current: TaskContextSnapshot? { state.reference == reference ? state.snapshot : nil }
     private struct LoadKey: Equatable {
         let reference: SessionReference?
@@ -150,16 +97,9 @@ struct TaskContextView: View {
         LoadKey(reference: active && reference?.kind != .terminal ? reference : nil,
                 online: item?.online == true, refresh: state.refresh, language: language)
     }
-    private var fittedHeight: CGFloat? {
-        guard let maximumHeight else { return nil }
-        guard let headerHeight, let contentHeight else { return maximumHeight }
-        return min(maximumHeight, headerHeight + contentHeight + (detached && item != nil ? footerHeight ?? 0 : 0))
-    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-                .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
+            header.fixedSize(horizontal: false, vertical: true)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let error = state.error {
@@ -181,7 +121,6 @@ struct TaskContextView: View {
                         Text("终端任务请在完整会话中查看。").foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
             if detached, let item {
                 VStack(spacing: 0) {
@@ -195,10 +134,8 @@ struct TaskContextView: View {
                         }
                     }.buttonStyle(.borderless).padding(14)
                 }.fixedSize(horizontal: false, vertical: true)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .frame(height: fittedHeight)
             .background(detached ? Color(nsColor: .windowBackgroundColor) : WorkbenchTheme.contentBackground)
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
             .task(id: key) {
