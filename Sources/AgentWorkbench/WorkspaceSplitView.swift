@@ -356,12 +356,12 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     override func viewWillTransition(to newSize: NSSize) {
         super.viewWillTransition(to: newSize)
-        collapsePanesThatDoNotFit(availableWidth: newSize.width)
+        adaptPanesToAvailableWidth(newSize.width)
     }
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        collapsePanesThatDoNotFit()
+        adaptPanesToAvailableWidth(splitView.bounds.width)
     }
 
     override func viewDidAppear() {
@@ -373,8 +373,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.toolbar = workspaceToolbar
     }
 
-    private func collapsePanesThatDoNotFit(availableWidth: CGFloat? = nil) {
-        let availableWidth = availableWidth ?? splitView.bounds.width
+    private func adaptPanesToAvailableWidth(_ availableWidth: CGFloat) {
         guard !adaptingToAvailableWidth, availableWidth > 0 else { return }
 
         func requiredWidth(_ items: [NSSplitViewItem]) -> CGFloat {
@@ -382,18 +381,26 @@ final class WorkbenchSplitController: NSSplitViewController {
             return items.reduce(dividers) { $0 + $1.minimumThickness }
         }
 
-        var visibleItems = splitViewItems.filter { !$0.isCollapsed }
-        guard requiredWidth(visibleItems) > availableWidth + 0.5 else { return }
-        adaptingToAvailableWidth = true
-        defer { adaptingToAvailableWidth = false }
-
-        let collapsibleItems = visibleItems.filter(\.canCollapse).sorted {
+        var targetVisibleItems = splitViewItems
+        guard requiredWidth(targetVisibleItems) > availableWidth + 0.5 else { return }
+        let collapsibleItems = splitViewItems.filter(\.canCollapse).sorted {
             $0.holdingPriority.rawValue < $1.holdingPriority.rawValue
         }
+        var targetCollapsedItems: [NSSplitViewItem] = []
         for item in collapsibleItems {
+            guard requiredWidth(targetVisibleItems) > availableWidth + 0.5 else { break }
+            targetCollapsedItems.append(item)
+            targetVisibleItems.removeAll { $0 === item }
+        }
+
+        adaptingToAvailableWidth = true
+        defer { adaptingToAvailableWidth = false }
+        for item in targetCollapsedItems where !item.isCollapsed {
             item.isCollapsed = true
-            visibleItems.removeAll { $0 === item }
-            if requiredWidth(visibleItems) <= availableWidth + 0.5 { break }
+        }
+        let targetCollapsedIDs = Set(targetCollapsedItems.map { ObjectIdentifier($0) })
+        for item in collapsibleItems where item.isCollapsed && !targetCollapsedIDs.contains(ObjectIdentifier(item)) {
+            item.isCollapsed = false
         }
     }
 }
