@@ -216,8 +216,12 @@ import WorkbenchCore
     let sidebarItem = split.splitViewItems[0]
     let detailItem = split.splitViewItems[1]
     let inspectorItem = split.splitViewItems[2]
+    func splitFrame(_ item: NSSplitViewItem) -> NSRect {
+        let view = item.viewController.view
+        return view.convert(view.bounds, to: split.splitView)
+    }
     precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v2" &&
-                 sidebarItem.viewController.view.frame.width >= 219,
+                 splitFrame(sidebarItem).width >= 219,
                  "The three-pane layout must not restore the legacy two-pane autosave state")
     precondition(UserDefaults.standard.array(forKey: legacySplitFramesKey)?.count == 2,
                  "Mounting the new split layout must leave the legacy autosave value isolated")
@@ -227,8 +231,8 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(300))
     split.splitView.layoutSubtreeIfNeeded()
     page.displayIfNeeded()
-    var detailFrame = detailItem.viewController.view.frame
-    var inspectorFrame = inspectorItem.viewController.view.frame
+    var detailFrame = splitFrame(detailItem)
+    var inspectorFrame = splitFrame(inspectorItem)
     precondition(!inspectorItem.isCollapsed)
     precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
                  "Inspector width must stay within its native 280–420 point range: \(inspectorFrame)")
@@ -243,14 +247,14 @@ import WorkbenchCore
     page.setContentSize(NSSize(width: 1000, height: 780))
     try await Task.sleep(for: .milliseconds(250))
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-    detailFrame = detailItem.viewController.view.frame
+    detailFrame = splitFrame(detailItem)
     precondition(inspectorItem.isCollapsed && !sidebarItem.isCollapsed && detailFrame.width >= 599,
                  "At 1000 points the lower-priority inspector must yield before the sidebar or conversation")
 
     page.setContentSize(NSSize(width: 800, height: 780))
     try await Task.sleep(for: .milliseconds(250))
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-    detailFrame = detailItem.viewController.view.frame
+    detailFrame = splitFrame(detailItem)
     precondition(inspectorItem.isCollapsed && sidebarItem.isCollapsed && detailFrame.width >= 599,
                  "At 800 points both collapsible panes must yield to the conversation")
 
@@ -259,12 +263,12 @@ import WorkbenchCore
     model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(300))
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-    detailFrame = detailItem.viewController.view.frame
-    inspectorFrame = inspectorItem.viewController.view.frame
+    detailFrame = splitFrame(detailItem)
+    inspectorFrame = splitFrame(inspectorItem)
     precondition(!sidebarItem.isCollapsed && !inspectorItem.isCollapsed && detailFrame.width >= 599 &&
                  inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
                  "Restoring a wide window must support the native three-pane layout")
-    let visibleFrames = split.splitViewItems.filter { !$0.isCollapsed }.map { $0.viewController.view.frame }
+    let visibleFrames = split.splitViewItems.filter { !$0.isCollapsed }.map(splitFrame)
     for (left, right) in zip(visibleFrames, visibleFrames.dropFirst()) {
         precondition(right.minX >= left.maxX && right.minX - left.maxX <= split.splitView.dividerThickness + 1,
                      "Visible split panes must stay adjacent without overlap")
