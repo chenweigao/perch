@@ -283,15 +283,34 @@ import WorkbenchCore
     let pointerHit = page.contentView!.hitTest(pointer)
     let hitsComposer = pointerHit === composer || pointerHit === composerSurface ||
         (pointerHit?.isDescendant(of: composerSurface) ?? false)
-    let pointerHitDescription = pointerHit.map { String(describing: type(of: $0)) } ?? "nil"
-    precondition(hitsComposer,
-                 "The adjacent inspector must leave the composer available to pointer input; hit=\(pointerHitDescription), pointer=\(pointer), composer=\(composerSurface.convert(composerSurface.bounds, to: page.contentView))")
 
     if let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
        let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
         view.cacheDisplay(in: view.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])?.write(to:
             URL(fileURLWithPath: directory).appendingPathComponent("layout-inspector.png"))
+    }
+
+    if !hitsComposer {
+        func ancestry(_ view: NSView?) -> String {
+            var entries: [String] = []
+            var current = view
+            while let node = current {
+                let frame = node.window === page ? node.convert(node.bounds, to: page.contentView) : .zero
+                entries.append("\(type(of: node)){frame=\(frame),hidden=\(node.isHidden),clips=\(node.clipsToBounds)}")
+                current = node.superview
+            }
+            return entries.joined(separator: " <- ")
+        }
+        let inspectorRoot = inspectorItem.viewController.view
+        let detailRoot = detailItem.viewController.view
+        let replyPrefix = (pointerHit as? ReplyTextView)?.string.prefix(120)
+            .replacingOccurrences(of: "\n", with: "\\n") ?? "n/a"
+        let drafts = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.map { draft in
+            "DraftTextView{window=\(draft.window === page),hidden=\(draft.isHidden),editable=\(draft.isEditable),frame=\(draft.convert(draft.bounds, to: page.contentView))}"
+        }.joined(separator: "; ")
+        let pointerHitDescription = pointerHit.map { String(describing: type(of: $0)) } ?? "nil"
+        preconditionFailure("The adjacent inspector must leave the composer available to pointer input; hit=\(pointerHitDescription), pointer=\(pointer), composer=\(composerSurface.convert(composerSurface.bounds, to: page.contentView)), replyPrefix=\(replyPrefix), inInspector=\(pointerHit?.isDescendant(of: inspectorRoot) ?? false), inDetail=\(pointerHit?.isDescendant(of: detailRoot) ?? false), hitAncestry=\(ancestry(pointerHit)), composerAncestry=\(ancestry(composer)), drafts=[\(drafts)]")
     }
 
     // Workbench and new-task destinations hide the inspector without erasing the
