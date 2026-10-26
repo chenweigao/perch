@@ -3,6 +3,17 @@ import SwiftUI
 import WorkbenchCore
 
 @MainActor func checkTaskContextPanel() async throws {
+    func precondition(_ condition: @autoclosure () -> Bool,
+                      _ message: @autoclosure () -> String = String(),
+                      file: StaticString = #filePath,
+                      line: UInt = #line) {
+        guard condition() else {
+            let detail = message()
+            FileHandle.standardOutput.write(Data("TASK-CONTEXT-FAIL line=\(line): \(detail)\n".utf8))
+            Swift.preconditionFailure(detail, file: file, line: line)
+        }
+    }
+
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     let legacySplitFramesKey = "NSSplitView Subview Frames WorkbenchWorkspace"
     UserDefaults.standard.set([
