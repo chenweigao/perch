@@ -3,7 +3,7 @@ import WorkbenchCore
 
 enum SidebarPage { case home, inbox, archive, sessions, groups, other }
 
-/// Only the middle scrolls. The system split-view item owns the floating glass.
+/// Only the middle scrolls. The workspace overlay owns the floating glass.
 struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let page: SidebarPage
     let attentionCount: Int

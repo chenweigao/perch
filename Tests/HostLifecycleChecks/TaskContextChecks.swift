@@ -212,29 +212,46 @@ import WorkbenchCore
         return nil
     }
     guard let split = splitController(from: contentView) else { fatalError("The production split controller must mount") }
-    precondition(split.splitViewItems.count == 3, "The workspace must expose sidebar, detail, and inspector items")
-    let sidebarItem = split.splitViewItems[0]
-    let detailItem = split.splitViewItems[1]
-    let inspectorItem = split.splitViewItems[2]
+    precondition(split.splitViewItems.count == 2,
+                 "The workspace split must contain only the full canvas and inline inspector")
+    let detailItem = split.splitViewItems[0]
+    let inspectorItem = split.splitViewItems[1]
     func splitFrame(_ item: NSSplitViewItem) -> NSRect {
         let view = item.viewController.view
-        return view.convert(view.bounds, to: split.splitView)
+        return view.convert(view.bounds, to: split.view)
     }
-    precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v2" &&
-                 splitFrame(sidebarItem).width >= 219,
-                 "The three-pane layout must not restore the legacy two-pane autosave state")
+    func frame(_ view: NSView?) -> NSRect {
+        guard let view else { return .zero }
+        return view.convert(view.bounds, to: split.view)
+    }
+    func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+
+    precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v3",
+                 "The floating-sidebar layout must not restore an older split topology")
     precondition(UserDefaults.standard.array(forKey: legacySplitFramesKey)?.count == 2,
-                 "Mounting the new split layout must leave the legacy autosave value isolated")
+                 "Mounting the new layout must leave the legacy autosave value isolated")
     precondition(inspectorItem.isCollapsed && !model.taskContextWindow.embeddedVisible)
+    var detailFrame = splitFrame(detailItem)
+    var sidebarFrame = frame(split.floatingSidebarView)
+    let safeFrame = split.view.safeAreaRect
+    precondition(split.isFloatingSidebarVisible && !split.floatingSidebarView!.isHidden &&
+                 abs(sidebarFrame.minX - WorkspaceLayoutMetrics.sidebarInset) < 1 &&
+                 sidebarFrame.minY >= WorkspaceLayoutMetrics.sidebarInset - 1 &&
+                 safeFrame.maxY - sidebarFrame.maxY >= WorkspaceLayoutMetrics.sidebarInset - 1,
+                 "The sidebar must float with visible left, top, and bottom margins: panel=\(sidebarFrame), safe=\(safeFrame)")
+    precondition(detailFrame.intersection(sidebarFrame).width >= sidebarFrame.width - 1,
+                 "The floating sidebar must overlap the full canvas instead of consuming a split column")
 
     model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(300))
     split.splitView.layoutSubtreeIfNeeded()
     page.displayIfNeeded()
-    var detailFrame = splitFrame(detailItem)
+    detailFrame = splitFrame(detailItem)
+    sidebarFrame = frame(split.floatingSidebarView)
     var inspectorFrame = splitFrame(inspectorItem)
+    var hostedContentFrame = frame(split.detailContentView)
     precondition(!inspectorItem.isCollapsed,
-                 "Opening at 1280 points must keep the inspector visible; sidebarCollapsed=\(sidebarItem.isCollapsed), split=\(split.splitView.bounds), window=\(String(describing: page.contentView?.bounds))")
+                 "Opening at 1280 points must keep the inline inspector visible")
     precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
                  "Inspector width must stay within its native 280–420 point range: \(inspectorFrame)")
     precondition(abs(inspectorFrame.height - split.splitView.bounds.height) < 1 &&
@@ -243,39 +260,67 @@ import WorkbenchCore
     precondition(inspectorFrame.minX >= detailFrame.maxX &&
                  inspectorFrame.minX - detailFrame.maxX <= split.splitView.dividerThickness + 1,
                  "Inspector must be adjacent to, not overlay, the conversation")
+    precondition(split.detailContentLeadingInset > 0 &&
+                 hostedContentFrame.minX >= sidebarFrame.maxX + WorkspaceLayoutMetrics.sidebarGap - 1,
+                 "A wide canvas must keep hosted content clear of the floating sidebar")
     precondition(contentView?.window === page)
 
     page.setContentSize(NSSize(width: 1000, height: 780))
     try await Task.sleep(for: .milliseconds(250))
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
     detailFrame = splitFrame(detailItem)
-    precondition(inspectorItem.isCollapsed && !sidebarItem.isCollapsed && detailFrame.width >= 599,
-                 "At 1000 points the inspector must yield first; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarCollapsed=\(sidebarItem.isCollapsed), detail=\(detailFrame), split=\(split.splitView.bounds), window=\(String(describing: page.contentView?.bounds))")
+    precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
+                 split.detailContentLeadingInset > 0 && detailFrame.width >= 999,
+                 "At 1000 points the inspector must yield before the sidebar stops avoiding content")
 
     page.setContentSize(NSSize(width: 800, height: 780))
     try await Task.sleep(for: .milliseconds(250))
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
     detailFrame = splitFrame(detailItem)
-    precondition(inspectorItem.isCollapsed && sidebarItem.isCollapsed && detailFrame.width >= 599,
-                 "At 800 points both collapsible panes must yield to the conversation")
+    precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
+                 split.isSidebarOverlayingContent && split.detailContentLeadingInset == 0 &&
+                 detailFrame.width >= 799,
+                 "At 800 points the sidebar must overlay, not compress, the full conversation canvas")
 
     page.setContentSize(NSSize(width: 1280, height: 780))
-    sidebarItem.isCollapsed = false
-    model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(300))
     split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
     detailFrame = splitFrame(detailItem)
     inspectorFrame = splitFrame(inspectorItem)
-    precondition(!sidebarItem.isCollapsed && !inspectorItem.isCollapsed && detailFrame.width >= 599 &&
+    precondition(!inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
+                 !split.isSidebarOverlayingContent && detailFrame.width >= 599 &&
                  inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
-                 "Restoring a wide window must support the native three-pane layout")
-    let visibleFrames = split.splitViewItems.filter { !$0.isCollapsed }.map(splitFrame)
-    for (left, right) in zip(visibleFrames, visibleFrames.dropFirst()) {
-        precondition(right.minX >= left.maxX && right.minX - left.maxX <= split.splitView.dividerThickness + 1,
-                     "Visible split panes must stay adjacent without overlap")
-    }
+                 "Restoring a wide window must restore the inline inspector and sidebar avoidance")
 
-    func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+    let canvasBeforeToggle = detailFrame
+    split.toggleSidebar(nil)
+    split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    detailFrame = splitFrame(detailItem)
+    hostedContentFrame = frame(split.detailContentView)
+    let composerForCentering = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.first!
+    let composerSurfaceForCentering = composerForCentering.enclosingScrollView ?? composerForCentering
+    let centeredComposerFrame = composerSurfaceForCentering.convert(composerSurfaceForCentering.bounds, to: split.view)
+    precondition(!split.isFloatingSidebarVisible && split.floatingSidebarView!.isHidden &&
+                 split.detailContentLeadingInset == 0 && detailFrame == canvasBeforeToggle &&
+                 abs(hostedContentFrame.minX - detailFrame.minX) < 1 &&
+                 abs(hostedContentFrame.width - detailFrame.width) < 1 &&
+                 abs(centeredComposerFrame.midX - detailFrame.midX) < 2 &&
+                 UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) == false,
+                 "Hiding the sidebar must leave the canvas fixed and center reading controls in the full detail area")
+    split.toggleSidebar(nil)
+    split.setFloatingSidebarWidth(10_000)
+    precondition(split.floatingSidebarWidth == WorkspaceLayoutMetrics.sidebarMaximumWidth)
+    split.setFloatingSidebarWidth(1)
+    split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    let restoredSidebarState = WorkbenchSplitController()
+    precondition(split.isFloatingSidebarVisible &&
+                 split.floatingSidebarWidth == WorkspaceLayoutMetrics.sidebarMinimumWidth &&
+                 restoredSidebarState.isFloatingSidebarVisible &&
+                 restoredSidebarState.floatingSidebarWidth == WorkspaceLayoutMetrics.sidebarMinimumWidth &&
+                 UserDefaults.standard.double(forKey: WorkbenchSplitController.sidebarWidthDefaultsKey) ==
+                    Double(WorkspaceLayoutMetrics.sidebarMinimumWidth) &&
+                 UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey),
+                 "Sidebar visibility and clamped resize width must persist")
     let composer = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.first!
     let composerSurface = composer.enclosingScrollView ?? composer
     let pointer = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
@@ -362,7 +407,7 @@ import WorkbenchCore
                  connection.drafts["b"] == "其他任务草稿",
                  "Inspector changes must preserve transcript identity, selection, and draft")
     model.taskContextWindow.locked = nil
-    print("PASS: task context native full-height inspector, standard divider collapse, destination suspension and restore, no conversation overlay, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
+    print("PASS: floating sidebar margins, wide avoidance, narrow overlay, full-canvas centering, persisted resize and visibility, native inspector collapse, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
 }
 
 /// Layout fixtures must exercise viewports larger than the CI runner's display.
