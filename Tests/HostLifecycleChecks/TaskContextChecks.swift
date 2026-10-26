@@ -225,6 +225,11 @@ import WorkbenchCore
         return view.convert(view.bounds, to: split.view)
     }
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+    func traceLayout(_ stage: String) {
+        let parent = split.splitView.superview.map { String(describing: type(of: $0)) } ?? "nil"
+        let line = "TASK-CONTEXT-LAYOUT \(stage): collapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(splitFrame(detailItem)), inspector=\(splitFrame(inspectorItem)), split=\(frame(split.splitView)), root=\(split.view.bounds), parent=\(parent), directChild=\(split.splitView.superview === split.view), translates=\(split.splitView.translatesAutoresizingMaskIntoConstraints), autoresizing=\(split.splitView.autoresizingMask.rawValue), window=\(String(describing: page.contentView?.bounds))"
+        FileHandle.standardOutput.write(Data((line + "\n").utf8))
+    }
 
     precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v3",
                  "The floating-sidebar layout must not restore an older split topology")
@@ -234,6 +239,7 @@ import WorkbenchCore
     var detailFrame = splitFrame(detailItem)
     var sidebarFrame = frame(split.floatingSidebarView)
     let safeFrame = split.view.safeAreaRect
+    traceLayout("mounted")
     precondition(split.isFloatingSidebarVisible && !split.floatingSidebarView!.isHidden &&
                  abs(sidebarFrame.minX - WorkspaceLayoutMetrics.sidebarInset) < 1 &&
                  sidebarFrame.minY >= WorkspaceLayoutMetrics.sidebarInset - 1 &&
@@ -250,6 +256,7 @@ import WorkbenchCore
     sidebarFrame = frame(split.floatingSidebarView)
     var inspectorFrame = splitFrame(inspectorItem)
     var hostedContentFrame = frame(split.detailContentView)
+    traceLayout("wide")
     precondition(!inspectorItem.isCollapsed,
                  "Opening at 1280 points must keep the inline inspector visible")
     precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
@@ -273,6 +280,7 @@ import WorkbenchCore
     }
     detailFrame = splitFrame(detailItem)
     var splitBoundsFrame = frame(split.splitView)
+    traceLayout("responsive")
     let collapsedDividerAllowance = split.splitView.dividerThickness + 1
     precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  split.detailContentLeadingInset > 0 &&
@@ -290,6 +298,7 @@ import WorkbenchCore
     }
     detailFrame = splitFrame(detailItem)
     splitBoundsFrame = frame(split.splitView)
+    traceLayout("responsive")
     precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  split.isSidebarOverlayingContent && split.detailContentLeadingInset == 0 &&
                  abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
@@ -307,6 +316,7 @@ import WorkbenchCore
     detailFrame = splitFrame(detailItem)
     inspectorFrame = splitFrame(inspectorItem)
     splitBoundsFrame = frame(split.splitView)
+    traceLayout("responsive")
     precondition(!inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  !split.isSidebarOverlayingContent && detailFrame.width >= 599 &&
                  inspectorFrame.width >= 279 && inspectorFrame.width <= 421 &&
