@@ -76,7 +76,6 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
             limit = 150 if preview else 60
             environment = os.environ.copy()
             environment["NSUnbufferedIO"] = "YES"
-            environment["SWIFT_BACKTRACE"] = "enable=yes,interactive=no,output-to=stdout"
             faulthandler.dump_traceback_later(limit + 15)
             process = subprocess.Popen(command, env=environment)
             try:

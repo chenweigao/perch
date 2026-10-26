@@ -14,7 +14,11 @@ import WorkbenchCore
         }
     }
 
-    FileHandle.standardOutput.write(Data("TASK-CONTEXT-START\n".utf8))
+    func trace(_ stage: String) {
+        FileHandle.standardOutput.write(Data("TASK-CONTEXT-STAGE \(stage)\n".utf8))
+    }
+
+    trace("start")
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     let legacySplitFramesKey = "NSSplitView Subview Frames WorkbenchWorkspace"
     UserDefaults.standard.set([
@@ -30,6 +34,7 @@ import WorkbenchCore
     let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "Task panel fixture", destination: "")
     let a = SessionReference(hostID: host.id, terminalID: "a", kind: .claude)
     let b = SessionReference(hostID: host.id, terminalID: "b", kind: .claude)
+    trace("fixture-ready")
     var reads: [String] = [], stops: [String] = []
     var stopped = false
     func summary(_ id: String) -> [String: Any] {
@@ -81,6 +86,7 @@ import WorkbenchCore
     model.registerEnvironment(kimi: KimiConnection(host: host), native: connection)
     try await connection.refresh()
     try await Task.sleep(for: .milliseconds(100))
+    trace("connection-ready")
     let second = model.allSessions.first { $0.reference == b }!
     model.open(second)
     try await Task.sleep(for: .milliseconds(150))
@@ -96,6 +102,7 @@ import WorkbenchCore
     do { try await connection.stopTaskContextAgent("research", session: "a"); fatalError("Cannot stop a finished task") }
     catch { precondition(stops.count == 1) }
     stopped = false
+    trace("task-api-ready")
 
     // A cancellation-ignoring A read cannot replace the newer B presentation.
     let state = TaskContextState()
@@ -112,6 +119,7 @@ import WorkbenchCore
     newer.cancel(); await newer.value
     await state.follow(nil, online: false) { fatalError("Hidden panels do not read") }
     precondition(state.snapshot == nil)
+    trace("state-ready")
 
     model.taskContextWindow.locked = a
     model.taskContextWindow.show(model: model)
@@ -133,6 +141,7 @@ import WorkbenchCore
             }
         }
     }
+    trace("panel-window-ready")
     func click(_ x: CGFloat, _ distanceFromTop: CGFloat, in target: NSWindow? = nil) {
         let window = target ?? window
         let view = window.contentView!
@@ -150,6 +159,7 @@ import WorkbenchCore
     click(window.contentView!.bounds.width - 26, 26)
     try await Task.sleep(for: .milliseconds(150))
     precondition(model.taskContextWindow.locked == b, "The native pin control captures the current task")
+    trace("panel-pin-ready")
     model.taskContextWindow.locked = a
     try await Task.sleep(for: .milliseconds(150))
     connection.drafts["a"] = "原有草稿"
@@ -169,6 +179,7 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(200))
     precondition(connection.drafts["a"] == "原有草稿\n\n补充验证依据" && connection.drafts["b"] == "其他任务草稿")
     precondition(!reads.contains { $0.contains("/prompt") }, "Adding a draft must never send")
+    trace("panel-draft-ready")
     model.open(second)
     try await Task.sleep(for: .milliseconds(150))
     model.openWorkspaceFile(GroupOutcome(title: "方案", link: read.files[0].path, source: a))
@@ -178,6 +189,7 @@ import WorkbenchCore
     model.taskContextWindow.locked = nil
     try await Task.sleep(for: .milliseconds(200))
     precondition(model.selectedReference == b && connection.selectedID == b.terminalID)
+    trace("panel-file-ready")
     model.taskContextWindow.close()
     try await Task.sleep(for: .milliseconds(100))
     let count = reads.count
@@ -187,6 +199,7 @@ import WorkbenchCore
     model.taskContextWindow.show(model: model)
     precondition(model.taskContextWindow.window != nil, "A closed panel can be reopened")
     model.taskContextWindow.close()
+    trace("detached-panel-ready")
 
     // Exercise the production AppKit split container with a real transcript and
     // composer. The conversation host must survive inspector and destination changes.
@@ -207,6 +220,7 @@ import WorkbenchCore
     model.draftingNewTask = false
     model.taskContextWindow.locked = a
     try await Task.sleep(for: .milliseconds(300))
+    trace("split-host-ready")
 
     func splitController(from mountedView: NSView?) -> WorkbenchSplitController? {
         var responder: NSResponder? = mountedView
