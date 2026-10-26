@@ -27,8 +27,8 @@ struct ActivityNarrativeHistoryView: View {
     }
 }
 
-/// Process records keep source order inside one compact disclosure. Active,
-/// failed and uncertain tools remain visible even when the stage is collapsed.
+/// Process records keep source order inside one compact disclosure. Active and
+/// uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
     /// Core lookups (recent targets) read the app language; depending on the
@@ -74,7 +74,7 @@ struct KimiActivityView: View {
             // and tools originating in the same provider message without collisions.
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
-                    if expanded || tool.staysVisible || tool.status == .failed {
+                    if expanded || tool.staysVisible {
                         KimiToolCard(tool: tool)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
                             .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
@@ -121,8 +121,8 @@ struct KimiToolCard: View {
         case .awaitingApproval: return "hand.raised"
         }
     }
-    private func attention(exitReport: Int?) -> Bool {
-        ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) && exitReport == nil) || !tool.hasCall
+    private func attention() -> Bool {
+        [.missingResult, .disconnected, .awaitingApproval].contains(tool.status) || !tool.hasCall
     }
     private func resolvedExitReport() -> Int? {
         #if TRANSCRIPT_CHECKS
@@ -142,7 +142,7 @@ struct KimiToolCard: View {
         let exitReport = resolvedExitReport()
         let summary = ToolPresentation.compactTarget(tool)
         // Named apart from the method so the local never shadows its own initializer.
-        let showsAttention = attention(exitReport: exitReport)
+        let showsAttention = attention()
         // The activity details name the same states with the same words.
         let statusLabel = ConversationActivity.status(of: tool, exitCode: exitReport)
         #if TRANSCRIPT_CHECKS
@@ -166,7 +166,9 @@ struct KimiToolCard: View {
                 Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
                 Spacer(minLength: 0)
-                if showsAttention || tool.status == .running || exitReport != nil {
+                // A returned error keeps its quiet status label; only uncertainty
+                // or a user decision earns the orange attention treatment.
+                if showsAttention || tool.status == .running || tool.status == .failed {
                     Image(systemName: symbol(exitReport: exitReport)).font(.system(size: 11)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: 11)).fixedSize()
                 }

@@ -9,8 +9,9 @@ public struct VisibleTool: Identifiable, Equatable {
     public let progress: JSONValue?
     public let status: Status
     public let hasCall: Bool
-    /// A shell result that reports its own non-zero exit in the output text is an
-    /// observed outcome the agent reads and continues from, not a tool failure.
+    /// The exit code a shell result reports in its own output text, carried onto
+    /// the label. Like every returned error it is an observed outcome the agent
+    /// reads and continues from, not an attention item.
     public var exitCodeReport: Int? {
         guard status == .failed, let text = output?.display,
               let marker = text.range(of: "Command failed with exit code: ", options: .literal)
@@ -18,7 +19,13 @@ public struct VisibleTool: Identifiable, Equatable {
         let digits = text[marker.upperBound...].prefix(while: { $0.isNumber })
         return digits.isEmpty ? nil : Int(digits)
     }
-    public var staysVisible: Bool { (status != .succeeded && status != .returned && exitCodeReport == nil) || !hasCall }
+    /// A returned error folds away like a success: the agent saw it and moved on.
+    /// Only work in flight, uncertainty about the record (no result, a lost
+    /// connection, a missing call) or a decision only the user can make stays
+    /// visible.
+    public var staysVisible: Bool {
+        [.running, .missingResult, .disconnected, .awaitingApproval].contains(status) || !hasCall
+    }
 
     public init(id: String, name: String, input: JSONValue?, output: JSONValue? = nil,
                 progress: JSONValue? = nil, status: Status, hasCall: Bool = true) {

@@ -1528,6 +1528,18 @@ extension NavigationRunner {
                   let scroll = findScrollView(host) else { throw NavigationError("missing \(kind) disclosure") }
             scroll.contentView.scroll(to: NSPoint(x: 0, y: withContext ? max(0, scroll.contentView.bounds.minY - 80) : 0))
             try await Task.sleep(for: .milliseconds(350))
+            // A returned error folds away with its stage: expand the enclosing
+            // activity stage first so the tool card mounts and can be toggled.
+            if kind == "Bash", let stage = ConversationDisclosureFixture.bindings
+                .filter({ $0.key.hasPrefix("disclosure-Bash:activity:") && !$0.key.contains(":tool:bash:tool:") })
+                .sorted(by: { $0.key.count < $1.key.count }).first?.value {
+                stage.wrappedValue = true
+                guard await flushAndWait(host, until: {
+                    ConversationDisclosureFixture.bindings.keys.contains {
+                        $0.hasPrefix("disclosure-Bash:activity:") && $0.contains(":tool:bash:tool:")
+                    }
+                }) != nil else { throw NavigationError("Bash tool card did not mount inside the expanded stage") }
+            }
             var fullSource: String?
             if full {
                 binding(for: kind)!.wrappedValue = true
