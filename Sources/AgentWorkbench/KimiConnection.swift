@@ -186,6 +186,10 @@ final class KimiConnection {
     @ObservationIgnored private var autoCompactWasRunning: Set<String> = []
     @ObservationIgnored private var taskRefresh: Task<Void, Never>?
     @ObservationIgnored private var goalRefresh: Task<Void, Never>?
+    /// Coalescing state for event-driven snapshot reads; a catch-up burst would
+    /// otherwise fetch the whole snapshot once per event.
+    @ObservationIgnored private var snapshotRefreshGeneration = 0
+    @ObservationIgnored private var snapshotRefreshResubscribe = false
     @ObservationIgnored private var freshnessCheck: Task<Void, Never>?
     private let probesInstalledVersion: Bool
     @ObservationIgnored private var archivingBatch = false
@@ -334,6 +338,7 @@ final class KimiConnection {
         freshnessCheck?.cancel(); freshnessCheck = nil
         runtime = .unknown; staleRuntimeNotice = nil; managedService = nil; managedCheckedAt = nil
         task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
+        snapshotRefreshGeneration += 1; snapshotRefreshResubscribe = false
         snapshotReady = false; goal = nil; goalIsStale = true
         subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
@@ -633,9 +638,29 @@ final class KimiConnection {
         if event.type == "goal.updated" { scheduleGoalRefresh() }
         let needsSnapshot = conversation!.apply(event)
         autoCompactTick()
-        if needsSnapshot {
-            try await refreshConversation(selectionToken: selectionGeneration)
-            if event.volatile == true, let id = selectedId { try await subscribe(id) }
+        if needsSnapshot { scheduleSnapshotRefresh(resubscribe: event.volatile == true) }
+    }
+    /// Snapshot-needing events arrive in bursts during catch-up; reading the
+    /// whole snapshot per event multiplies the relayout churn the reader sees.
+    /// One read after the burst quiets down carries the same state.
+    private func scheduleSnapshotRefresh(resubscribe: Bool) {
+        snapshotRefreshResubscribe = snapshotRefreshResubscribe || resubscribe
+        snapshotRefreshGeneration += 1
+        let generation = snapshotRefreshGeneration
+        Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            guard let self, generation == snapshotRefreshGeneration, online else { return }
+            do {
+                try await refreshConversation(selectionToken: selectionGeneration)
+                let resubscribe = snapshotRefreshResubscribe
+                snapshotRefreshResubscribe = false
+                if resubscribe, let id = selectedId { try await subscribe(id) }
+            } catch is CancellationError { return } catch {
+                snapshotRefreshResubscribe = false
+                // The immediate path surfaced a failed read by reconnecting;
+                // keep that recovery by dropping the socket.
+                socket?.cancel(with: .goingAway, reason: nil)
+            }
         }
     }
     /// The raw frame stays available: a transcript delivery is decoded into its
