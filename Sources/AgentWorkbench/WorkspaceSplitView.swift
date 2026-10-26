@@ -367,8 +367,9 @@ private final class WorkbenchCanvasView: NSView {
     override var wantsUpdateLayer: Bool { true }
 
     override func updateLayer() {
-        layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.resolvedColor(
-            with: effectiveAppearance).cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
+        }
     }
 
     override func viewDidChangeEffectiveAppearance() {

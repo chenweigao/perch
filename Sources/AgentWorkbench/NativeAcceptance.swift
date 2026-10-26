@@ -1539,18 +1539,13 @@ private struct ReferenceComposerFixtureView: View {
                     && rows().contains { $0.item.id == outside.id && $0.selected }
             }
         }
-        func findSplit(_ view: NSView?) -> NSSplitView? {
-            guard let view else { return nil }
-            if let split = view as? NSSplitView { return split }
-            return view.subviews.lazy.compactMap { findSplit($0) }.first
+        guard let workspace = workspaceSplit(in: window) else {
+            throw WorkbenchError("Missing floating-sidebar workspace")
         }
-        guard let split = findSplit(window.contentView) else {
-            throw WorkbenchError("Missing native split view")
-        }
-        split.setPosition(220, ofDividerAt: 0)
+        workspace.setFloatingSidebarWidth(WorkspaceLayoutMetrics.sidebarMinimumWidth)
         flush(window)
         guard rows().contains(where: { $0.item.id == outside.id }) else { throw WorkbenchError("Narrow sidebar lost selection") }
-        split.setPosition(300, ofDividerAt: 0)
+        workspace.setFloatingSidebarWidth(300)
         model.navigationState.tabs.close(outside.id)
         model.navigationState.tabs.select(fixture.sessions[0].id)
         try await settle(window, "restore selected row") { rows().contains { $0.item.id == self.fixture.sessions[0].id && $0.selected } }

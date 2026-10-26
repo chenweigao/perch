@@ -1,5 +1,5 @@
 #!/bin/bash
-# Uses the production native split view and sidebar shell, without loading sessions.
+# Uses the production floating workspace container and sidebar shell, without loading sessions.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 app_dir="$PWD/build/Sidebar Preview.app"
