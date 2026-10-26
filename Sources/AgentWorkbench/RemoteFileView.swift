@@ -85,6 +85,15 @@ final class RemoteFileBrowser {
 
     var hostName: String { host?.name ?? L("未选择主机") }
 
+    /// The inspector's changes page reads the working tree only: it neither
+    /// reopens the file window's document tabs nor restores its review range,
+    /// base or branch metadata.
+    let workingTreeOnly: Bool
+
+    init(workingTreeOnly: Bool = false) {
+        self.workingTreeOnly = workingTreeOnly
+    }
+
     /// Switching sessions must never leave another host's path or content on screen.
     func configure(host: SSHHost?, cwd: String, directoryHints: [String] = []) {
         guard self.host?.id != host?.id || self.cwd != cwd else {
@@ -120,7 +129,7 @@ final class RemoteFileBrowser {
         gitSelectionExplicit = false
         targetLine = nil
         previewData = nil
-        if let selected = documents.selected { open(selected) }
+        if !workingTreeOnly, let selected = documents.selected { open(selected) }
     }
 
     func submit() { open(input) }
@@ -275,7 +284,7 @@ final class RemoteFileBrowser {
             if let root = status.root {
                 browser.gitDirectory = root
                 browser.gitInput = root
-                if previousRoot != root {
+                if previousRoot != root && !browser.workingTreeOnly {
                     browser.gitRefs = []
                     browser.gitBaseInput = UserDefaults.standard.string(forKey: browser.preferenceKey(root: root)) ?? ""
                     if let range = UserDefaults.standard.string(forKey: browser.preferenceKey(root: root) + ".range").flatMap(GitReviewRange.init(rawValue:)) {
@@ -285,7 +294,7 @@ final class RemoteFileBrowser {
             } else {
                 browser.gitWorktrees = []
             }
-            if status.root != nil { browser.loadGitMetadata() }
+            if status.root != nil && !browser.workingTreeOnly { browser.loadGitMetadata() }
         } failed: { browser in
             browser.gitStatus = nil
         }
@@ -302,6 +311,14 @@ final class RemoteFileBrowser {
             if let match = matches.max(by: { $0.path.count < $1.path.count }) { return match }
         }
         return nil
+    }
+
+    /// A working-tree entry reads from the range that holds its change: the
+    /// worktree while it has unstaged edits, the index once only staged ones remain.
+    /// The range is not saved as a review preference.
+    func loadWorkingChange(_ entry: RemoteGitEntry) {
+        gitRange = entry.hasStaged && !entry.hasUnstaged ? .staged : .unstaged
+        loadGitDiff(entry)
     }
 
     func loadGitDiff(_ entry: RemoteGitEntry) {

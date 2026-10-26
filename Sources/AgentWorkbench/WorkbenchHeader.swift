@@ -84,27 +84,31 @@ struct WorkbenchHeaderActions: View {
                     Text(status).font(.system(size: 11))
                 }.foregroundStyle(.secondary).fixedSize()
             }
-            if !model.showDashboard, model.selectedHost != nil {
-                TaskContextButton(model: model)
-                Button { model.toggleFileViewer() } label: {
-                    WorkbenchToolbarSymbol(name: "doc.text.magnifyingglass").workbenchControlSurface()
-                }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")
-            }
             if !model.showDashboard {
-                Menu {
-                    if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
-                    else if model.showNative { Button("重新连接") { native.connect() } }
-                    else {
-                        Button(model.selectedConnection?.wantsConnection == true ? L("断开本地连接") : L("连接终端")) {
-                            if model.selectedConnection?.wantsConnection == true { model.selectedConnection?.disconnect() }
-                            else { model.selectedConnection?.connect() }
-                        }
-                        Button("新建远端终端…") { model.showNewTerminal = true }
+                // One glass capsule holds the conversation's controls.
+                HStack(spacing: 0) {
+                    if model.selectedHost != nil {
+                        ChangesButton(model: model)
+                        TaskContextButton(model: model)
+                        Button { model.toggleFileViewer() } label: {
+                            WorkbenchToolbarSymbol(name: "doc.text.magnifyingglass")
+                        }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")
                     }
-                    if let item { Divider(); SessionActionsMenu(model: model, item: item) }
-                } label: { WorkbenchToolbarSymbol(name: "ellipsis").workbenchControlSurface() }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                    .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
+                    Menu {
+                        if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
+                        else if model.showNative { Button("重新连接") { native.connect() } }
+                        else {
+                            Button(model.selectedConnection?.wantsConnection == true ? L("断开本地连接") : L("连接终端")) {
+                                if model.selectedConnection?.wantsConnection == true { model.selectedConnection?.disconnect() }
+                                else { model.selectedConnection?.connect() }
+                            }
+                            Button("新建远端终端…") { model.showNewTerminal = true }
+                        }
+                        if let item { Divider(); SessionActionsMenu(model: model, item: item) }
+                    } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
+                }.padding(.horizontal, 4).workbenchControlSurface()
             } else {
                 // Both sidebar and toolbar enter the same scoped workbench.
                 if showsScope {

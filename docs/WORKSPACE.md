@@ -107,23 +107,37 @@ owns the shortcut, use the menu bar; Settings reports registration failure.
 
 ## Task context panel
 
-The conversation header's **Task panel** toggles a floating Liquid Glass
-inspector above the conversation's trailing edge, containing pending requests,
-documents, background tasks/subagents, and current-turn tool activity. Empty
-sections stay hidden; completed calls start collapsed. The panel is a 280–420
-point wide glass surface with 12-point margins, drag-resizable from its leading
-edge; the width persists. It floats over the canvas: the transcript and composer
-keep their full-width layout and reading position whether the panel is up or not.
+The window is a frame of cards. The frame is the system's behind-window material,
+so its tint follows the desktop picture and the window's active state; the toolbar
+sits on it. The conversation is an opaque card with a 16-point radius and 12-point
+frame margins, the sidebar is native glass, and the inspector is a card like the
+conversation.
+
+The conversation header's **Task panel** and **Changes** buttons, grouped with
+Files and the session menu in one glass capsule, toggle the inspector on its
+**Task** or **Changes** page; a segmented control switches pages. The task page
+holds pending requests, documents, background tasks/subagents, and current-turn
+tool activity. Empty sections stay hidden; completed calls start collapsed. The
+changes page lists the selected session's uncommitted files from the agent's
+current worktree and shows the chosen file's diff below the list, the unstaged
+edit first or the staged one when only that remains. It reads while the page is
+showing, refreshes on demand, and hands the full review (ranges, branch
+comparison, staging) to the file window's Git page. Its reads use their own
+browser, so they never move the file window's tabs or review preferences.
+The panel is 280–420 points wide with 12-point margins, drag-resizable from its
+leading edge; the width persists. It floats over the canvas: the transcript and
+composer keep their full-width layout and reading position whether the panel is
+up or not.
 
 The left sidebar is not a split column either. It is a 220–480 point Liquid Glass
-panel floating above a conversation canvas that always reaches the window's left
-edge, with 12-point margins around the panel. On a wide window, a leading layout
-guide keeps hosted page content clear of the sidebar while the canvas background
-continues under it. When that would leave less than 600 points for content, the
-sidebar overlays the page instead of compressing it. Hiding the sidebar leaves
-the canvas fixed and re-centers the existing reading column and composer in the
-full detail area. Sidebar visibility and width persist; the inspector's width
-persists while its visibility follows the task-panel toggle.
+panel floating above a transparent canvas that always reaches the window's left
+edge, with 12-point margins around the panel. On a wide window, the conversation
+card starts one 12-point gap past the sidebar. When that would leave less than
+600 points inside the card, the sidebar overlays the card instead of compressing
+it. Hiding the sidebar leaves the canvas fixed; the card spans the full detail
+area between the frame margins and re-centers the existing reading column and
+composer. Sidebar visibility and width persist; the inspector's width persists
+while its visibility follows the panel toggles.
 
 The inspector stays open while interacting with the conversation and closes from
 its close control or the header button. Resizing and toggling retain the same

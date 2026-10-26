@@ -88,11 +88,7 @@ private struct WorkbenchWorkspace: View, Equatable {
             sidebar: { WorkbenchSidebar(model: model) },
             header: { WorkbenchHeader(model: model) },
             actions: { WorkbenchHeaderActions(model: model, kimi: model.kimi, native: model.native) },
-            inspector: {
-                TaskContextView(model: model,
-                    detach: { model.taskContextWindow.show(model: model) },
-                    close: { model.taskContextWindow.embeddedVisible = false })
-            },
+            inspector: { WorkspaceInspector(model: model) },
             content: { WorkbenchDetail(model: model) }
         )
     }

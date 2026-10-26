@@ -6,6 +6,10 @@ Settings offers light/dark overrides. Acceptance and preview fixtures stay pinne
 to light.
 
 - Do not copy code or assets from herdrm (PolyForm Noncommercial).
+- The window is a frame of cards: the system behind-window material is the frame
+  (its tint follows the desktop), and the conversation and inspector are opaque
+  cards with `WorkbenchTheme.Radius.panel` inside 12-point frame margins
+  (`WorkspaceSplitView`). Do not paint the frame with a fixed color.
 - Preserve the existing native Liquid Glass appearance, including its adaptive
   background tint, on the sidebar and composer. UI simplification should change
   inner controls and layout only; do not replace the outer glass material with

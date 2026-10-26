@@ -862,7 +862,7 @@ private struct ReferenceComposerFixtureView: View {
                 "inspector_close_ms": closeStats, "inspector_process_cpu_seconds": cpuSeconds,
                 "inspector_idle_cpu_seconds_over_2s": idleCPU,
                 "inspector_context_reads": fixture.requests.filter { $0 == route }.count,
-                "workspace_topology": "full canvas with independently hosted floating sidebar and floating glass inspector",
+                "workspace_topology": "full canvas in a behind-window frame, conversation card, independently hosted floating glass sidebar and floating inspector card",
                 "inspector_contract": "200-turn locked context decoded and projected in the floating inspector; single-item split state, transcript/document/composer identity, selection and draft verified after every toggle"]
     }
     private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
