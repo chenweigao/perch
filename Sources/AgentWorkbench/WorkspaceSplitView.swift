@@ -203,7 +203,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             inspectorItem = item
             inspectorCollapseObservation = item.observe(\.isCollapsed, options: [.new]) { [weak self] _, change in
                 guard let self, let collapsed = change.newValue else { return }
-                if self.controller?.isApplyingResponsiveLayout == true { return }
+                if self.controller?.isApplyingResponsiveLayout == true ||
+                    self.controller?.isResponsiveInspectorCollapse(collapsed) == true { return }
                 let visible = !collapsed
                 self.controller?.recordInspectorVisibility(visible)
                 guard visible != self.desiredInspectorVisible else { return }
@@ -512,6 +513,19 @@ final class WorkbenchSplitController: NSSplitViewController {
         desiredInspectorVisible = visible
     }
 
+    func isResponsiveInspectorCollapse(_ collapsed: Bool) -> Bool {
+        collapsed && desiredInspectorVisible && !inspectorFits(in: view.bounds.width)
+    }
+
+    private func inspectorFits(in availableWidth: CGFloat) -> Bool {
+        let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
+            WorkspaceLayoutMetrics.sidebarGap
+        let divider = inspectorItem == nil ? 0 : splitView.dividerThickness
+        let requiredWidth = WorkspaceLayoutMetrics.contentMinimumWidth +
+            (isFloatingSidebarVisible ? avoidance : 0) + lastInspectorWidth + divider
+        return availableWidth >= requiredWidth - 0.5
+    }
+
     private func updateWorkspaceLayout() {
         guard !applyingLayout, view.bounds.width > 0 else { return }
         applyingLayout = true
@@ -529,9 +543,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
             WorkspaceLayoutMetrics.sidebarGap
         let divider = inspectorItem == nil ? 0 : splitView.dividerThickness
-        let widthWithInspector = WorkspaceLayoutMetrics.contentMinimumWidth +
-            (isFloatingSidebarVisible ? avoidance : 0) + lastInspectorWidth + divider
-        let showInspector = desiredInspectorVisible && availableWidth >= widthWithInspector - 0.5
+        let showInspector = desiredInspectorVisible && inspectorFits(in: availableWidth)
 
         if let inspectorItem, inspectorItem.isCollapsed == showInspector {
             isApplyingResponsiveLayout = true

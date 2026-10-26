@@ -295,14 +295,17 @@ import WorkbenchCore
                  "At 800 points the sidebar must overlay, not compress, the full conversation canvas; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     page.setContentSize(NSSize(width: 1280, height: 780))
-    try await Task.sleep(for: .milliseconds(300))
-    split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    for _ in 0..<20 {
+        split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+        if !inspectorItem.isCollapsed && !split.isSidebarOverlayingContent { break }
+        try await Task.sleep(for: .milliseconds(25))
+    }
     detailFrame = splitFrame(detailItem)
     inspectorFrame = splitFrame(inspectorItem)
     precondition(!inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  !split.isSidebarOverlayingContent && detailFrame.width >= 599 &&
                  inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
-                 "Restoring a wide window must restore the inline inspector and sidebar avoidance")
+                 "Restoring a wide window must restore the inline inspector and sidebar avoidance; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), inspector=\(inspectorFrame), split=\(frame(split.splitView)), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     let canvasBeforeToggle = detailFrame
     split.toggleSidebar(nil)
