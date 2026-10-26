@@ -1920,3 +1920,14 @@
 "收起任务面板" = "Collapse task panel";
 
 "在浮窗中查看" = "Open floating panel";
+
+"面板页面" = "Panel page";
+"任务" = "Task";
+"改动" = "Changes";
+"查看改动" = "View changes";
+"%lld 个文件" = "%lld files";
+"没有未提交的改动" = "No uncommitted changes";
+"选择一个会话，查看它的改动。" = "Select a session to see its changes.";
+"刷新改动" = "Refresh changes";
+"在文件窗口中审阅" = "Review in file window";
+"收起面板" = "Collapse panel";

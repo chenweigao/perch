@@ -160,6 +160,8 @@ final class WorkbenchModel {
     @ObservationIgnored private var navigatingHistory = false
     var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
+    /// The inspector's changes page reads independently of the file window.
+    let changesBrowser = RemoteFileBrowser(workingTreeOnly: true)
     @ObservationIgnored let fileWindow = FileWindowController()
     let taskContextWindow = TaskContextWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -597,6 +599,10 @@ final class WorkbenchModel {
         if fileBrowser.host?.id == host.id {
             fileBrowser.source = nil
             fileBrowser.configure(host: nil, cwd: "")
+        }
+        if changesBrowser.host?.id == host.id {
+            changesBrowser.source = nil
+            changesBrowser.configure(host: nil, cwd: "")
         }
         rebuildCatalog(); saveWorkspace()
     }
@@ -1321,9 +1327,30 @@ final class WorkbenchModel {
         syncFileViewer()
         fileWindow.show(model: self)
     }
+    /// The inspector's changes page hands the full review to the file window's
+    /// Git page; a window being created reads status itself.
+    func reviewChangesInFileWindow() {
+        showFileViewer = true
+        syncFileViewer()
+        fileBrowser.mode = .git
+        if fileWindow.window != nil, fileBrowser.gitStatus == nil, !fileBrowser.loading { fileBrowser.loadGitStatus() }
+        fileWindow.show(model: self)
+    }
     private func syncFileViewer() {
         guard showFileViewer else { return }
         let directory = selectedItem?.directory ?? ""
+        pendingFileOutcome = nil
+        fileBrowser.source = selectedReference
+        fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: selectedDirectoryHints(directory))
+    }
+    /// Points the inspector's changes page at the selected session's host and
+    /// working directory, preferring the worktrees its agent recently touched.
+    func syncChangesBrowser() {
+        let directory = selectedItem?.directory ?? ""
+        changesBrowser.source = selectedReference
+        changesBrowser.configure(host: selectedHost, cwd: directory, directoryHints: selectedDirectoryHints(directory))
+    }
+    private func selectedDirectoryHints(_ directory: String) -> [String] {
         var messages: [KimiMessage] = []
         var liveTools: [KimiLiveTool] = []
         if let reference = selectedReference, reference.kind == .kimi,
@@ -1337,11 +1364,8 @@ final class WorkbenchModel {
                   snapshot.id == reference.terminalID {
             messages = snapshot.messages
         }
-        let hints = RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
-                                                       sessionDirectory: directory)
-        pendingFileOutcome = nil
-        fileBrowser.source = selectedReference
-        fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: hints)
+        return RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
+                                                  sessionDirectory: directory)
     }
     func forgetRestoration(_ saved: SavedTerminal) { close(saved.session.id) }
     func saveWorkspace() {

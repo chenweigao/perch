@@ -37,6 +37,18 @@
   `ReplyStyle.Code` / `Quote` / `ListLayout`；SwiftUI 行与原生缓存行必须从同一组常量取值，
   流式结束切换渲染时不得跳动。详见 `docs/design/visual-refresh.md`。
 
+## 窗口框架
+
+`WorkbenchSplitController` / `WorkbenchDetailController`（`Sources/AgentWorkbench/WorkspaceSplitView.swift`）。
+
+- **框里放卡片。** 框架是系统 behind-window 材质（`NSVisualEffectView`，跟随窗口激活状态），
+  颜色随桌面背景变化，工具栏直接放在框架上；不给框架涂固定色。
+- **一种面板几何**：对话卡片、检查器卡片与侧栏玻璃共用 12pt 框架边距（`WorkspaceLayoutMetrics.frameInset`）
+  和 `WorkbenchTheme.Radius.panel`（16pt）。卡片是不透明内容底色加发丝线，裁切内部页面，终端与滚动内容不越过圆角。
+- **画布不动，卡片让位。** 画布始终铺满窗口；侧栏避让只移动卡片前缘，卡片里至少留 600pt；
+  检查器浮在卡片上，不压缩对话。
+- **工具栏按钮一组胶囊**：改动、任务面板、文件和会话菜单共用一个玻璃胶囊，单个按钮不再各带底。
+
 ## 侧栏
 
 - **一套行几何**：导航、分区头、项目、会话共用 `SidebarMetrics`（`Sources/AgentWorkbench/SidebarMetrics.swift`）

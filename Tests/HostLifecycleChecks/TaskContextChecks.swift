@@ -262,12 +262,29 @@ import WorkbenchCore
     sidebarFrame = frame(split.floatingSidebarView)
     var hostedContentFrame = frame(split.detailContentView)
     precondition(inspectorFloating(true, "open"),
-                 "Opening must show the floating glass inspector with trailing, top, and bottom margins: inspector=\(inspectorFrame()), root=\(split.view.bounds)")
+                 "Opening must show the floating inspector card with trailing, top, and bottom margins: inspector=\(inspectorFrame()), root=\(split.view.bounds)")
     precondition(detailFrame.intersection(inspectorFrame()).width >= inspectorFrame().width - 1,
                  "The floating inspector must overlay the canvas instead of pushing it: inspector=\(inspectorFrame()), detail=\(detailFrame)")
     precondition(split.detailContentLeadingInset > 0 &&
                  hostedContentFrame.minX >= sidebarFrame.maxX + WorkspaceLayoutMetrics.sidebarGap - 1,
                  "A wide canvas must keep hosted content clear of the floating sidebar")
+    let frameInset = WorkspaceLayoutMetrics.frameInset
+    let backdropFrame = frame(split.frameMaterialView)
+    precondition(split.frameMaterialView?.blendingMode == .behindWindow &&
+                 split.frameMaterialView?.state == .followsWindowActiveState &&
+                 abs(backdropFrame.width - split.view.bounds.width) < 1 &&
+                 abs(backdropFrame.height - split.view.bounds.height) < 1,
+                 "The window frame must be the system behind-window material under every panel: frame=\(backdropFrame), root=\(split.view.bounds)")
+    let cardFrame = frame(split.detailCardView)
+    precondition(split.detailCardView?.layer?.cornerRadius == WorkbenchTheme.Radius.panel &&
+                 split.detailCardView?.layer?.masksToBounds == true &&
+                 abs(cardFrame.minX - (sidebarFrame.maxX + WorkspaceLayoutMetrics.sidebarGap)) < 1 &&
+                 abs(split.view.bounds.maxX - cardFrame.maxX - frameInset) < 1 &&
+                 abs(cardFrame.minY - frameInset) < 1 &&
+                 safeFrame.maxY - cardFrame.maxY >= frameInset - 1 &&
+                 abs(hostedContentFrame.minX - cardFrame.minX) < 1 &&
+                 abs(hostedContentFrame.width - cardFrame.width) < 1,
+                 "The conversation must sit in a rounded card with frame margins beside the sidebar: card=\(cardFrame), sidebar=\(sidebarFrame), hosted=\(hostedContentFrame), safe=\(safeFrame), root=\(split.view.bounds)")
     precondition(contentView?.window === page)
 
     page.setContentSize(NSSize(width: 1000, height: 780))
@@ -326,11 +343,11 @@ import WorkbenchCore
     let centeredComposerFrame = composerSurfaceForCentering.convert(composerSurfaceForCentering.bounds, to: split.view)
     precondition(!split.isFloatingSidebarVisible && split.floatingSidebarView!.isHidden &&
                  split.detailContentLeadingInset == 0 && detailFrame == canvasBeforeToggle &&
-                 abs(hostedContentFrame.minX - detailFrame.minX) < 1 &&
-                 abs(hostedContentFrame.width - detailFrame.width) < 1 &&
+                 abs(hostedContentFrame.minX - (detailFrame.minX + frameInset)) < 1 &&
+                 abs(hostedContentFrame.width - (detailFrame.width - 2 * frameInset)) < 1 &&
                  abs(centeredComposerFrame.midX - detailFrame.midX) < 2 &&
                  UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) == false,
-                 "Hiding the sidebar must leave the canvas fixed and center reading controls in the full detail area")
+                 "Hiding the sidebar must leave the canvas fixed and center reading controls in the full-width card: hosted=\(hostedContentFrame), canvas=\(detailFrame)")
     split.toggleSidebar(nil)
     split.setFloatingSidebarWidth(10_000)
     precondition(split.floatingSidebarWidth == WorkspaceLayoutMetrics.sidebarMaximumWidth)
@@ -444,7 +461,7 @@ import WorkbenchCore
                  connection.drafts["b"] == "其他任务草稿",
                  "Inspector changes must preserve transcript identity, selection, and draft")
     model.taskContextWindow.locked = nil
-    print("PASS: floating sidebar margins, wide avoidance, narrow overlay, full-canvas centering, persisted resize and visibility, floating inspector margins, overlay and persistence, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
+    print("PASS: behind-window frame, rounded conversation card, floating sidebar margins, wide avoidance, narrow overlay, full-width card centering, persisted resize and visibility, floating inspector margins, overlay and persistence, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
 }
 
 /// Layout fixtures must exercise viewports larger than the CI runner's display.

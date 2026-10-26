@@ -84,6 +84,9 @@ extension WorkbenchTheme {
         static let row: CGFloat = 7
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
+        /// The window frame's panels: sidebar, conversation card and inspector.
+        /// Concentric with the window corner across the frame's 12 pt margin.
+        static let panel: CGFloat = 16
     }
 }
 

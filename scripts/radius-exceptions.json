@@ -13,7 +13,6 @@
     { "file": "Sources/AgentWorkbench/ToolActivityView.swift", "line": ".background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))", "reason": "Tool paper card" },
     { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": "modifier(WorkbenchGlassSurface(cornerRadius: 20))", "reason": "Composer glass panel, intentional per AGENTS.md" },
     { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": "modifier(WorkbenchGlassSurface(cornerRadius: 16))", "reason": "Control glass surface, intentional per AGENTS.md" },
-    { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": ".background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6))", "reason": "Glass inner wash" },
-    { "file": "Sources/AgentWorkbench/WorkspaceSplitView.swift", "line": ".clipShape(RoundedRectangle(cornerRadius: 16))", "reason": "Floating sidebar content follows the native glass contour" }
+    { "file": "Sources/AgentWorkbench/WorkbenchGlass.swift", "line": ".background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6))", "reason": "Glass inner wash" }
   ]
 }

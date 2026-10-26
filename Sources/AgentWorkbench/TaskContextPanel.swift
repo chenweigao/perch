@@ -3,10 +3,25 @@ import Observation
 import SwiftUI
 import WorkbenchCore
 
+enum WorkspaceInspectorPage: String, Hashable { case task, changes }
+
 @MainActor @Observable final class TaskContextWindowController: NSObject, NSWindowDelegate {
     var locked: SessionReference?
     var embeddedVisible = false
+    /// The inspector's page. Not persisted: a launch starts on the task panel.
+    var page: WorkspaceInspectorPage = .task
     private(set) var visible = false
+    func isShowing(_ page: WorkspaceInspectorPage) -> Bool { embeddedVisible && self.page == page }
+    /// Only one task-panel presentation reads at a time, so showing the task page
+    /// returns a detached panel to the inspector; the changes page lives only here.
+    func showPage(_ page: WorkspaceInspectorPage, model: WorkbenchModel) {
+        self.page = page
+        if page == .task && visible { embed(model: model) } else { embeddedVisible = true }
+    }
+    /// A toolbar button closes its own page and switches over from the other one.
+    func togglePage(_ page: WorkspaceInspectorPage, model: WorkbenchModel) {
+        if isShowing(page) { embeddedVisible = false } else { showPage(page, model: model) }
+    }
     @ObservationIgnored private(set) var window: NSPanel?
     func show(model: WorkbenchModel) {
         embeddedVisible = false
@@ -49,18 +64,16 @@ private final class TaskContextPanel: NSPanel {
     override func cancelOperation(_ sender: Any?) { close() }
 }
 
+/// Shares the toolbar's grouped glass capsule; it draws no surface of its own.
 struct TaskContextButton: View {
     let model: WorkbenchModel
     var body: some View {
-        Button {
-            if model.taskContextWindow.visible { model.taskContextWindow.embed(model: model) }
-            else { model.taskContextWindow.embeddedVisible.toggle() }
-        } label: {
+        let open = model.taskContextWindow.isShowing(.task)
+        Button { model.taskContextWindow.togglePage(.task, model: model) } label: {
             WorkbenchToolbarSymbol(name: "sidebar.right")
-                .foregroundStyle(model.taskContextWindow.embeddedVisible ? WorkbenchTheme.accent : .secondary)
-                .workbenchControlSurface()
+                .foregroundStyle(open ? WorkbenchTheme.accent : .secondary)
         }.buttonStyle(.plain).help("任务面板").accessibilityLabel("任务面板")
-            .accessibilityValue(model.taskContextWindow.embeddedVisible ? "已展开" : "已收起")
+            .accessibilityValue(open ? "已展开" : "已收起")
     }
 }
 

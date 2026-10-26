@@ -12,7 +12,9 @@ enum WorkbenchChrome {
 }
 
 enum WorkspaceLayoutMetrics {
-    static let sidebarInset: CGFloat = 12
+    /// The window frame's margin around every panel: sidebar, conversation card, inspector.
+    static let frameInset: CGFloat = 12
+    static let sidebarInset: CGFloat = frameInset
     static let sidebarGap: CGFloat = 12
     static let sidebarDefaultWidth: CGFloat = 276
     static let sidebarMinimumWidth: CGFloat = 220
@@ -34,9 +36,11 @@ struct WorkbenchToolbarSymbol: View {
     }
 }
 
-/// AppKit owns the floating glass sidebar, the floating glass inspector, the
-/// responsive layout, and the unified toolbar. Neither panel is a split column:
-/// both float above the conversation canvas with 12-point margins.
+/// AppKit owns the window frame, the floating glass sidebar, the floating
+/// inspector card, the responsive layout, and the unified toolbar. The frame is
+/// the system's behind-window material; the conversation sits in an opaque card
+/// inside it. Neither side panel is a split column: both float above the canvas
+/// with 12-point margins.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
     let newConversation: () -> Void
@@ -99,7 +103,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
 
         let detailController = WorkbenchDetailController(content: coordinator.contentHost)
         let contentItem = NSSplitViewItem(viewController: detailController)
-        contentItem.minimumThickness = WorkspaceLayoutMetrics.contentMinimumWidth
+        // The canvas holds the conversation card plus the frame margins on both sides.
+        contentItem.minimumThickness = WorkspaceLayoutMetrics.contentMinimumWidth + 2 * WorkspaceLayoutMetrics.frameInset
         contentItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 249)
         controller.addSplitViewItem(contentItem)
 
@@ -129,7 +134,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.contentHost.rootView = WorkspaceLocalizedRoot(content: content, locale: locale)
         coordinator.headerHost.rootView = WorkspaceLocalizedRoot(content: header, locale: locale)
         coordinator.actionsHost.rootView = WorkspaceLocalizedRoot(content: actions, locale: locale)
-        if let inspector { coordinator.inspectorHost?.rootView = WorkspaceFloatingPanelRoot(content: inspector, locale: locale) }
+        if let inspector { coordinator.inspectorHost?.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale) }
         coordinator.setInspectorVisible(inspectorVisible)
         coordinator.updateToolbarLanguage()
     }
@@ -144,7 +149,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let contentHost: NSHostingController<WorkspaceLocalizedRoot<Content>>
         let headerHost: NSHostingView<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
-        let inspectorHost: NSHostingController<WorkspaceFloatingPanelRoot<AnyView>>?
+        let inspectorHost: NSHostingController<WorkspaceInspectorPanelRoot<AnyView>>?
         weak var controller: WorkbenchSplitController?
         var locale: Locale
         var newConversation: () -> Void
@@ -164,7 +169,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             headerHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
             actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
             inspectorHost = view.inspector.map {
-                NSHostingController(rootView: WorkspaceFloatingPanelRoot(content: $0, locale: view.locale))
+                NSHostingController(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale))
             }
             locale = view.locale
             newConversation = view.newConversation
@@ -292,10 +297,14 @@ private final class WorkbenchNavigationToolbarItem: NSToolbarItem {
     }
 }
 
+/// The full-width canvas is transparent, so the window frame shows around the
+/// conversation card. The card carries the content surface and its rounded edge.
 final class WorkbenchDetailController: NSViewController {
     let content: NSViewController
-    private var contentLeadingConstraint: NSLayoutConstraint?
+    private var cardLeadingConstraint: NSLayoutConstraint?
+    /// Sidebar avoidance; 0 while the sidebar is hidden or overlays the card.
     private(set) var contentLeadingInset: CGFloat = 0
+    private(set) var cardView: NSView?
 
     init(content: NSViewController) {
         self.content = content
@@ -305,40 +314,73 @@ final class WorkbenchDetailController: NSViewController {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override func loadView() {
-        view = WorkbenchCanvasView()
+        view = NSView()
         addChild(content)
+        let card = WorkbenchContentCardView()
+        card.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(card)
+        cardView = card
         let detail = content.view
         detail.translatesAutoresizingMaskIntoConstraints = false
         detail.clipsToBounds = true
-        view.addSubview(detail)
-        let leading = detail.leadingAnchor.constraint(equalTo: view.leadingAnchor)
-        contentLeadingConstraint = leading
+        card.addSubview(detail)
+        let inset = WorkspaceLayoutMetrics.frameInset
+        let leading = card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: inset)
+        cardLeadingConstraint = leading
         NSLayoutConstraint.activate([
-            detail.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            card.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: inset),
             leading,
-            detail.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            detail.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset),
+            card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset),
+            detail.topAnchor.constraint(equalTo: card.topAnchor),
+            detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            detail.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
         ])
     }
 
+    /// The avoidance already ends one sidebar gap past the panel; without it the
+    /// card keeps the frame margin.
     func setContentLeadingInset(_ inset: CGFloat) {
         guard abs(inset - contentLeadingInset) > 0.5 else { return }
         contentLeadingInset = inset
-        contentLeadingConstraint?.constant = inset
+        cardLeadingConstraint?.constant = max(WorkspaceLayoutMetrics.frameInset, inset)
     }
 }
 
-private final class WorkbenchCanvasView: NSView {
+/// An opaque content surface inside the window frame. It clips its page to the
+/// panel radius so scrolling content and terminals keep the rounded edge; the
+/// hairline is drawn above the page.
+private final class WorkbenchContentCardView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        // AppKit keeps the layer's masking in step with this flag.
+        clipsToBounds = true
+        layer?.cornerRadius = WorkbenchTheme.Radius.panel
+        layer?.cornerCurve = .continuous
+        layer?.masksToBounds = true
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
     override var wantsUpdateLayer: Bool { true }
 
     override func updateLayer() {
+        layer?.borderWidth = 1 / max(1, window?.backingScaleFactor ?? 2)
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
+            layer?.borderColor = NSColor.labelColor.withAlphaComponent(WorkbenchTheme.Stroke.hairline).cgColor
         }
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
         needsDisplay = true
     }
 }
@@ -370,9 +412,11 @@ final class WorkbenchSplitController: NSSplitViewController {
     private(set) var floatingInspectorWidth: CGFloat
     private(set) var isFloatingInspectorVisible = false
 
+    private(set) var frameMaterialView: NSVisualEffectView?
     var floatingSidebarView: NSView? { floatingSidebarController?.view }
     var floatingInspectorView: NSView? { floatingInspectorController?.view }
     var detailCanvasView: NSView? { detailController?.view }
+    var detailCardView: NSView? { detailController?.cardView }
     var detailContentView: NSView? { detailController?.content.view }
     var detailContentLeadingInset: CGFloat { detailController?.contentLeadingInset ?? 0 }
 
@@ -398,9 +442,22 @@ final class WorkbenchSplitController: NSSplitViewController {
         splitView = NSSplitView()
         splitView.isVertical = true
         view = NSView()
+        // The frame behind every panel is the system's behind-window material, so
+        // its tint follows the desktop picture and the window's active state.
+        let backdrop = NSVisualEffectView()
+        backdrop.material = .sidebar
+        backdrop.blendingMode = .behindWindow
+        backdrop.state = .followsWindowActiveState
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(backdrop)
+        frameMaterialView = backdrop
         splitView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(splitView)
         NSLayoutConstraint.activate([
+            backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backdrop.topAnchor.constraint(equalTo: view.topAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             splitView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             splitView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             splitView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -535,12 +592,14 @@ final class WorkbenchSplitController: NSSplitViewController {
         defer { applyingLayout = false }
 
         // The inspector floats above the canvas and never compresses it; only the
-        // sidebar reserves content space when the window is wide enough.
+        // sidebar reserves content space when the window is wide enough. The
+        // conversation card still keeps the frame margin on its trailing edge.
         let availableWidth = view.bounds.width
         let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
             WorkspaceLayoutMetrics.sidebarGap
         let avoidSidebar = isFloatingSidebarVisible &&
-            availableWidth >= WorkspaceLayoutMetrics.contentMinimumWidth + avoidance - 0.5
+            availableWidth >= WorkspaceLayoutMetrics.contentMinimumWidth + avoidance +
+                WorkspaceLayoutMetrics.frameInset - 0.5
         detailController?.setContentLeadingInset(avoidSidebar ? avoidance : 0)
         isSidebarOverlayingContent = isFloatingSidebarVisible && !avoidSidebar
         floatingSidebarView?.isHidden = !isFloatingSidebarVisible
@@ -574,7 +633,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     }
 }
 
-/// One glass treatment for every floating workspace panel: sidebar and inspector.
+/// The sidebar's native glass, floating on the window frame.
 struct WorkspaceFloatingPanelRoot<Content: View>: View {
     let content: Content
     let locale: Locale
@@ -583,8 +642,25 @@ struct WorkspaceFloatingPanelRoot<Content: View>: View {
         content
             .environment(\.locale, locale)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel))
             .workbenchFloatingSurface()
+    }
+}
+
+/// The inspector is a card of the frame like the conversation: the same opaque
+/// surface, radius and hairline, floating over the canvas' trailing lane.
+struct WorkspaceInspectorPanelRoot<Content: View>: View {
+    let content: Content
+    let locale: Locale
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel, style: .continuous)
+        content
+            .environment(\.locale, locale)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(WorkbenchTheme.contentBackground)
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(Color.primary.opacity(WorkbenchTheme.Stroke.hairline), lineWidth: 1))
     }
 }
 
