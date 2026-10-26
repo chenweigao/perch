@@ -136,7 +136,9 @@ struct TaskContextView: View {
                 }.fixedSize(horizontal: false, vertical: true)
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(detached ? Color(nsColor: .windowBackgroundColor) : WorkbenchTheme.contentBackground)
+            // Embedded in the floating glass panel the workspace owns the surface;
+            // detached needs the window's own opaque background.
+            .background(detached ? Color(nsColor: .windowBackgroundColor) : Color.clear)
             #if PERCH_ACCEPTANCE
             .background(NativeTaskContextProbe(reference: state.reference, loading: state.loading,
                                                ready: current != nil))

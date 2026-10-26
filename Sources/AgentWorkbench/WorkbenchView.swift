@@ -85,11 +85,6 @@ private struct WorkbenchWorkspace: View, Equatable {
             canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
             inspectorVisible: inspectorVisible,
-            inspectorVisibilityChanged: { visible in
-                if !model.showDashboard && !model.draftingNewTask {
-                    model.taskContextWindow.embeddedVisible = visible
-                }
-            },
             sidebar: { WorkbenchSidebar(model: model) },
             header: { WorkbenchHeader(model: model) },
             actions: { WorkbenchHeaderActions(model: model, kimi: model.kimi, native: model.native) },

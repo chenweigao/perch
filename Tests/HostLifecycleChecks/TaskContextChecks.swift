@@ -212,10 +212,9 @@ import WorkbenchCore
         return nil
     }
     guard let split = splitController(from: contentView) else { fatalError("The production split controller must mount") }
-    precondition(split.splitViewItems.count == 2,
-                 "The workspace split must contain only the full canvas and inline inspector")
+    precondition(split.splitViewItems.count == 1,
+                 "The workspace split must be the full canvas alone; sidebar and inspector float above it")
     let detailItem = split.splitViewItems[0]
-    let inspectorItem = split.splitViewItems[1]
     func splitFrame(_ item: NSSplitViewItem) -> NSRect {
         let view = item.viewController.view
         return view.convert(view.bounds, to: split.view)
@@ -225,12 +224,25 @@ import WorkbenchCore
         return view.convert(view.bounds, to: split.view)
     }
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+    func inspectorFrame() -> NSRect { frame(split.floatingInspectorView) }
+    func inspectorFloating(_ visible: Bool, _ context: String) -> Bool {
+        guard let panel = split.floatingInspectorView else { return false }
+        let panelFrame = frame(panel)
+        let safeFrame = split.view.safeAreaRect
+        let margins = visible &&
+            abs(split.view.bounds.maxX - panelFrame.maxX - WorkspaceLayoutMetrics.sidebarInset) < 1 &&
+            panelFrame.minY >= WorkspaceLayoutMetrics.sidebarInset - 1 &&
+            safeFrame.maxY - panelFrame.maxY >= WorkspaceLayoutMetrics.sidebarInset - 1
+        return split.isFloatingInspectorVisible == visible && panel.isHidden == !visible &&
+            (!visible || (margins && panelFrame.width >= WorkspaceLayoutMetrics.inspectorMinimumWidth - 1 &&
+                panelFrame.width <= WorkspaceLayoutMetrics.inspectorMaximumWidth + 1))
+    }
 
-    precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v3",
-                 "The floating-sidebar layout must not restore an older split topology; autosave=\(String(describing: split.splitView.autosaveName)), identifier=\(String(describing: split.splitView.identifier))")
+    precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v4",
+                 "The floating-panel layout must not restore an older split topology; autosave=\(String(describing: split.splitView.autosaveName)), identifier=\(String(describing: split.splitView.identifier))")
     precondition(UserDefaults.standard.array(forKey: legacySplitFramesKey)?.count == 2,
                  "Mounting the new layout must leave the legacy autosave value isolated")
-    precondition(inspectorItem.isCollapsed && !model.taskContextWindow.embeddedVisible)
+    precondition(inspectorFloating(false, "initial") && !model.taskContextWindow.embeddedVisible)
     var detailFrame = splitFrame(detailItem)
     var sidebarFrame = frame(split.floatingSidebarView)
     let safeFrame = split.view.safeAreaRect
@@ -244,22 +256,15 @@ import WorkbenchCore
 
     model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(300))
-    split.splitView.layoutSubtreeIfNeeded()
+    split.view.layoutSubtreeIfNeeded()
     page.displayIfNeeded()
     detailFrame = splitFrame(detailItem)
     sidebarFrame = frame(split.floatingSidebarView)
-    var inspectorFrame = splitFrame(inspectorItem)
     var hostedContentFrame = frame(split.detailContentView)
-    precondition(!inspectorItem.isCollapsed,
-                 "Opening at 1280 points must keep the inline inspector visible")
-    precondition(inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
-                 "Inspector width must stay within its native 280–420 point range: \(inspectorFrame)")
-    precondition(abs(inspectorFrame.height - split.splitView.bounds.height) < 1 &&
-                 abs(detailFrame.height - inspectorFrame.height) < 1,
-                 "Inspector and detail must share the full split-view height")
-    precondition(inspectorFrame.minX >= detailFrame.maxX &&
-                 inspectorFrame.minX - detailFrame.maxX <= split.splitView.dividerThickness + 1,
-                 "Inspector must be adjacent to, not overlay, the conversation")
+    precondition(inspectorFloating(true, "open"),
+                 "Opening must show the floating glass inspector with trailing, top, and bottom margins: inspector=\(inspectorFrame()), root=\(split.view.bounds)")
+    precondition(detailFrame.intersection(inspectorFrame()).width >= inspectorFrame().width - 1,
+                 "The floating inspector must overlay the canvas instead of pushing it: inspector=\(inspectorFrame()), detail=\(detailFrame)")
     precondition(split.detailContentLeadingInset > 0 &&
                  hostedContentFrame.minX >= sidebarFrame.maxX + WorkspaceLayoutMetrics.sidebarGap - 1,
                  "A wide canvas must keep hosted content clear of the floating sidebar")
@@ -268,51 +273,48 @@ import WorkbenchCore
     page.setContentSize(NSSize(width: 1000, height: 780))
     for _ in 0..<20 {
         split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-        if inspectorItem.isCollapsed && split.detailContentLeadingInset > 0 { break }
+        if inspectorFloating(true, "1000") && split.detailContentLeadingInset > 0 { break }
         try await Task.sleep(for: .milliseconds(25))
     }
     detailFrame = splitFrame(detailItem)
     var splitBoundsFrame = frame(split.splitView)
-    let collapsedDividerAllowance = split.splitView.dividerThickness + 1
-    precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
+    precondition(inspectorFloating(true, "1000") && split.isFloatingSidebarVisible &&
                  split.detailContentLeadingInset > 0 &&
                  abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
                  abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1 &&
                  abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
-                 splitBoundsFrame.maxX - detailFrame.maxX <= collapsedDividerAllowance,
-                 "At 1000 points the inspector must yield before the sidebar stops avoiding content; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
+                 abs(detailFrame.maxX - splitBoundsFrame.maxX) < 1,
+                 "At 1000 points the floating inspector must stay up without compressing the canvas; inspector=\(inspectorFrame()), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     page.setContentSize(NSSize(width: 800, height: 780))
     for _ in 0..<20 {
         split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-        if inspectorItem.isCollapsed && split.isSidebarOverlayingContent { break }
+        if inspectorFloating(true, "800") && split.isSidebarOverlayingContent { break }
         try await Task.sleep(for: .milliseconds(25))
     }
     detailFrame = splitFrame(detailItem)
     splitBoundsFrame = frame(split.splitView)
-    precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
+    precondition(inspectorFloating(true, "800") && split.isFloatingSidebarVisible &&
                  split.isSidebarOverlayingContent && split.detailContentLeadingInset == 0 &&
                  abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
                  abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1 &&
                  abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
-                 splitBoundsFrame.maxX - detailFrame.maxX <= collapsedDividerAllowance,
-                 "At 800 points the sidebar must overlay, not compress, the full conversation canvas; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
+                 abs(detailFrame.maxX - splitBoundsFrame.maxX) < 1,
+                 "At 800 points both panels must overlay, not compress, the full conversation canvas; inspector=\(inspectorFrame()), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     page.setContentSize(NSSize(width: 1280, height: 780))
     for _ in 0..<20 {
         split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-        if !inspectorItem.isCollapsed && !split.isSidebarOverlayingContent { break }
+        if inspectorFloating(true, "restore") && !split.isSidebarOverlayingContent { break }
         try await Task.sleep(for: .milliseconds(25))
     }
     detailFrame = splitFrame(detailItem)
-    inspectorFrame = splitFrame(inspectorItem)
     splitBoundsFrame = frame(split.splitView)
-    precondition(!inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
+    precondition(inspectorFloating(true, "restore") && split.isFloatingSidebarVisible &&
                  !split.isSidebarOverlayingContent && detailFrame.width >= 599 &&
-                 inspectorFrame.width >= 279 && inspectorFrame.width <= 421 &&
                  abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
                  abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1,
-                 "Restoring a wide window must restore the inline inspector and sidebar avoidance; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), inspector=\(inspectorFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
+                 "Restoring a wide window must keep both floating panels and sidebar avoidance; inspector=\(inspectorFrame()), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     let canvasBeforeToggle = detailFrame
     split.toggleSidebar(nil)
@@ -343,9 +345,22 @@ import WorkbenchCore
                     Double(WorkspaceLayoutMetrics.sidebarMinimumWidth) &&
                  UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey),
                  "Sidebar visibility and clamped resize width must persist")
+    split.setFloatingInspectorWidth(10_000)
+    precondition(split.floatingInspectorWidth == WorkspaceLayoutMetrics.inspectorMaximumWidth)
+    split.setFloatingInspectorWidth(1)
+    let restoredInspectorState = WorkbenchSplitController()
+    precondition(split.floatingInspectorWidth == WorkspaceLayoutMetrics.inspectorMinimumWidth &&
+                 restoredInspectorState.floatingInspectorWidth == WorkspaceLayoutMetrics.inspectorMinimumWidth &&
+                 UserDefaults.standard.double(forKey: WorkbenchSplitController.inspectorWidthDefaultsKey) ==
+                    Double(WorkspaceLayoutMetrics.inspectorMinimumWidth),
+                 "Inspector resize width must clamp and persist")
+    split.setFloatingInspectorWidth(WorkspaceLayoutMetrics.inspectorDefaultWidth)
+    split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
     let composer = descendants(page.contentView!).compactMap { $0 as? DraftTextView }.first!
     let composerSurface = composer.enclosingScrollView ?? composer
-    let pointer = composer.convert(NSPoint(x: composer.visibleRect.maxX - 25, y: composer.visibleRect.minY + 8),
+    // The floating inspector covers the canvas' trailing lane; probe the composer
+    // where the panel does not reach.
+    let pointer = composer.convert(NSPoint(x: composer.visibleRect.midX, y: composer.visibleRect.minY + 8),
                                    to: page.contentView)
     let hitPoint = page.contentView!.convert(pointer, to: page.contentView!.superview)
     let pointerHit = page.contentView!.hitTest(hitPoint)
@@ -370,7 +385,6 @@ import WorkbenchCore
             }
             return entries.joined(separator: " <- ")
         }
-        let inspectorRoot = inspectorItem.viewController.view
         let detailRoot = detailItem.viewController.view
         let replyPrefix = (pointerHit as? ReplyTextView)?.string.prefix(120)
             .replacingOccurrences(of: "\n", with: "\\n") ?? "n/a"
@@ -378,58 +392,59 @@ import WorkbenchCore
             "DraftTextView{window=\(draft.window === page),hidden=\(draft.isHidden),editable=\(draft.isEditable),frame=\(draft.convert(draft.bounds, to: page.contentView))}"
         }.joined(separator: "; ")
         let pointerHitDescription = pointerHit.map { String(describing: type(of: $0)) } ?? "nil"
-        preconditionFailure("The adjacent inspector must leave the composer available to pointer input; hit=\(pointerHitDescription), pointer=\(pointer), composer=\(composerSurface.convert(composerSurface.bounds, to: page.contentView)), replyPrefix=\(replyPrefix), inInspector=\(pointerHit?.isDescendant(of: inspectorRoot) ?? false), inDetail=\(pointerHit?.isDescendant(of: detailRoot) ?? false), hitAncestry=\(ancestry(pointerHit)), composerAncestry=\(ancestry(composer)), drafts=[\(drafts)]")
+        preconditionFailure("The floating inspector must leave the composer available to pointer input; hit=\(pointerHitDescription), pointer=\(pointer), composer=\(composerSurface.convert(composerSurface.bounds, to: page.contentView)), replyPrefix=\(replyPrefix), inInspector=\(pointerHit?.isDescendant(of: split.floatingInspectorView ?? NSView()) ?? false), inDetail=\(pointerHit?.isDescendant(of: detailRoot) ?? false), hitAncestry=\(ancestry(pointerHit)), composerAncestry=\(ancestry(composer)), drafts=[\(drafts)]")
     }
 
-    // Workbench and new-task destinations hide the inspector without erasing the
-    // user's expanded preference. Returning restores the same native split item.
+    // Workbench and new-task destinations hide the floating inspector without
+    // erasing the user's expanded preference. Returning restores the panel.
     model.showDashboard = true
     try await Task.sleep(for: .milliseconds(250))
-    precondition(inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    precondition(inspectorFloating(false, "dashboard") && model.taskContextWindow.embeddedVisible)
     let dashboardReads = reads.filter { $0 == "/sessions/a?turns=20" }.count
     try await Task.sleep(for: .milliseconds(2200))
     precondition(reads.filter { $0 == "/sessions/a?turns=20" }.count == dashboardReads,
                  "A destination-hidden inspector must end its reads")
     model.showDashboard = false
     try await Task.sleep(for: .milliseconds(250))
-    precondition(!inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    precondition(inspectorFloating(true, "dashboard return") && model.taskContextWindow.embeddedVisible)
     model.draftingNewTask = true
     try await Task.sleep(for: .milliseconds(200))
-    precondition(inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    precondition(inspectorFloating(false, "new task") && model.taskContextWindow.embeddedVisible)
     model.draftingNewTask = false
     try await Task.sleep(for: .milliseconds(250))
-    precondition(!inspectorItem.isCollapsed && model.taskContextWindow.embeddedVisible)
+    precondition(inspectorFloating(true, "new task return") && model.taskContextWindow.embeddedVisible)
 
-    // Direct observation must reflect a native collapse without waiting for a split-view resize notification.
-    inspectorItem.isCollapsed = true
+    // Closing the panel from its own control flows back through the model flag.
+    model.taskContextWindow.embeddedVisible = false
     try await Task.sleep(for: .milliseconds(250))
-    precondition(!model.taskContextWindow.embeddedVisible,
-                 "Collapsing the native inspector must update the task-panel preference")
+    precondition(inspectorFloating(false, "closed"),
+                 "Closing the floating inspector must hide the panel")
     let collapsedReads = reads.filter { $0 == "/sessions/a?turns=20" }.count
     try await Task.sleep(for: .milliseconds(2200))
     precondition(reads.filter { $0 == "/sessions/a?turns=20" }.count == collapsedReads,
-                 "Collapsing the native inspector must end its reads")
+                 "Closing the floating inspector must end its reads")
 
     model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(250))
-    precondition(!inspectorItem.isCollapsed)
+    precondition(inspectorFloating(true, "reopened"))
     model.taskContextWindow.show(model: model)
     try await Task.sleep(for: .milliseconds(250))
-    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible && inspectorItem.isCollapsed)
+    precondition(model.taskContextWindow.visible && !model.taskContextWindow.embeddedVisible &&
+                 inspectorFloating(false, "detached"))
     let detached = model.taskContextWindow.window!
     click(detached.contentView!.bounds.width - 50, 26, in: detached)
     try await Task.sleep(for: .milliseconds(250))
     precondition(model.taskContextWindow.embeddedVisible && !model.taskContextWindow.visible &&
-                 model.taskContextWindow.window == nil && !inspectorItem.isCollapsed,
-                 "Docking must return to the native inspector and release the panel")
+                 model.taskContextWindow.window == nil && inspectorFloating(true, "docked"),
+                 "Docking must return to the floating inspector and release the panel")
 
-    inspectorItem.isCollapsed = true
+    model.taskContextWindow.embeddedVisible = false
     try await Task.sleep(for: .milliseconds(250))
-    precondition(!model.taskContextWindow.embeddedVisible && contentMounts == 1 && model.selectedReference == b &&
+    precondition(inspectorFloating(false, "final close") && contentMounts == 1 && model.selectedReference == b &&
                  connection.drafts["b"] == "其他任务草稿",
                  "Inspector changes must preserve transcript identity, selection, and draft")
     model.taskContextWindow.locked = nil
-    print("PASS: floating sidebar margins, wide avoidance, narrow overlay, full-canvas centering, persisted resize and visibility, native inspector collapse, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
+    print("PASS: floating sidebar margins, wide avoidance, narrow overlay, full-canvas centering, persisted resize and visibility, floating inspector margins, overlay and persistence, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
 }
 
 /// Layout fixtures must exercise viewports larger than the CI runner's display.
@@ -449,11 +464,6 @@ private struct TaskContextInspectorFixture: View {
         WorkspaceSplitView(
             newConversation: {},
             inspectorVisible: inspectorVisible,
-            inspectorVisibilityChanged: { visible in
-                if !model.showDashboard && !model.draftingNewTask {
-                    model.taskContextWindow.embeddedVisible = visible
-                }
-            },
             sidebar: { Color.clear },
             header: { Text("准备调研报告") },
             actions: { TaskContextButton(model: model) },

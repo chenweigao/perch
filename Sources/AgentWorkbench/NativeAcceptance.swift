@@ -791,12 +791,13 @@ private struct ReferenceComposerFixtureView: View {
         NSApp.terminate(nil)
     }
     private func inspector(_ window: NSWindow) async throws -> [String: Any] {
-        guard let split = workspaceSplit(in: window), split.splitViewItems.count == 2,
+        guard let split = workspaceSplit(in: window), split.splitViewItems.count == 1,
               split.floatingSidebarView?.window === window,
+              split.floatingInspectorView?.window === window,
               split.detailCanvasView?.window === window else {
-            throw WorkbenchError("Missing floating-sidebar workspace and inline inspector")
+            throw WorkbenchError("Missing floating-sidebar workspace and floating inspector")
         }
-        let inspectorItem = split.splitViewItems[1]
+        let inspectorPanel = split.floatingInspectorView!
         let source = fixture.sessions[1].reference
         let route = "/sessions/\(source.terminalID)?turns=20"
         let draft = "Inspector 性能验收草稿"
@@ -804,7 +805,7 @@ private struct ReferenceComposerFixtureView: View {
         model.taskContextWindow.locked = source
         model.taskContextWindow.embeddedVisible = false
         try await settle(window, "inspector baseline") {
-            inspectorItem.isCollapsed && self.probe.taskContextReference == nil &&
+            inspectorPanel.isHidden && self.probe.taskContextReference == nil &&
                 self.containsText(draft, in: window.contentView)
         }
         guard let reader = transcript(in: window),
@@ -827,8 +828,8 @@ private struct ReferenceComposerFixtureView: View {
             var start = CACurrentMediaTime()
             model.taskContextWindow.embeddedVisible = true
             try await settle(window, "inspector open \(step)") {
-                !inspectorItem.isCollapsed && inspectorItem.viewController.view.frame.width >= 279 &&
-                    inspectorItem.viewController.view.frame.width <= 421 &&
+                !inspectorPanel.isHidden && inspectorPanel.frame.width >= 279 &&
+                    inspectorPanel.frame.width <= 421 &&
                     self.probe.taskContextView?.window === window &&
                     self.probe.taskContextReference == source && !self.probe.taskContextLoading &&
                     self.probe.taskContextReady && self.fixture.requests.dropFirst(requestCount).contains(route)
@@ -839,7 +840,7 @@ private struct ReferenceComposerFixtureView: View {
             start = CACurrentMediaTime()
             model.taskContextWindow.embeddedVisible = false
             try await settle(window, "inspector close \(step)") {
-                inspectorItem.isCollapsed && self.probe.taskContextReference == nil &&
+                inspectorPanel.isHidden && self.probe.taskContextReference == nil &&
                     !self.probe.taskContextLoading && !self.probe.taskContextReady
             }
             closes.append((CACurrentMediaTime() - start) * 1000)
@@ -855,14 +856,14 @@ private struct ReferenceComposerFixtureView: View {
         let idleStart = processCPU()
         try await Task.sleep(for: .seconds(2))
         let idleCPU = processCPU() - idleStart
-        guard idleCPU < 1 else { throw WorkbenchError("Collapsed inspector kept consuming CPU: \(idleCPU)s / 2s") }
+        guard idleCPU < 1 else { throw WorkbenchError("Hidden inspector kept consuming CPU: \(idleCPU)s / 2s") }
         model.taskContextWindow.locked = nil
         return ["inspector_toggles": opens.count, "inspector_open_ms": openStats,
                 "inspector_close_ms": closeStats, "inspector_process_cpu_seconds": cpuSeconds,
                 "inspector_idle_cpu_seconds_over_2s": idleCPU,
                 "inspector_context_reads": fixture.requests.filter { $0 == route }.count,
-                "workspace_topology": "full canvas plus inline inspector with an independently hosted floating sidebar",
-                "inspector_contract": "200-turn locked context decoded and projected in the native inspector; two-item split state, transcript/document/composer identity, selection and draft verified after every toggle"]
+                "workspace_topology": "full canvas with independently hosted floating sidebar and floating glass inspector",
+                "inspector_contract": "200-turn locked context decoded and projected in the floating inspector; single-item split state, transcript/document/composer identity, selection and draft verified after every toggle"]
     }
     private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
         // Allow initial tasks/layout to settle before measuring unrelated writes.

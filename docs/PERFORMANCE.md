@@ -59,8 +59,8 @@ That result is separate from the rendering table above.
 ## Native window design
 
 The toolbar uses `NSToolbar` with the unified window style. The split view contains
-only the full conversation canvas and the optional inline inspector. The sidebar is
-an independently hosted overlay with 12-point outer margins and native Liquid Glass
+only the full conversation canvas. The sidebar and the task-context inspector are
+independently hosted overlays with 12-point outer margins and native Liquid Glass
 on macOS 26. Wide layouts move the hosted content behind a leading layout guide;
 narrow layouts keep the 600-point canvas and let the sidebar overlay it. Hiding the
 sidebar therefore never moves or shrinks the canvas. Interactive floating controls
