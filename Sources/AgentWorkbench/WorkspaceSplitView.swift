@@ -424,6 +424,20 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    override func loadView() {
+        splitView = NSSplitView()
+        splitView.isVertical = true
+        view = NSView()
+        splitView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(splitView)
+        NSLayoutConstraint.activate([
+            splitView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            splitView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            splitView.topAnchor.constraint(equalTo: view.topAnchor),
+            splitView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
     func installFloatingSidebar(_ sidebar: NSViewController,
                                 detailController: WorkbenchDetailController,
                                 inspectorItem: NSSplitViewItem?,
@@ -432,11 +446,6 @@ final class WorkbenchSplitController: NSSplitViewController {
         self.detailController = detailController
         self.inspectorItem = inspectorItem
         desiredInspectorVisible = inspectorVisible
-
-        if splitView.superview === view {
-            splitView.frame = view.bounds
-            splitView.autoresizingMask = [.width, .height]
-        }
 
         let panel = sidebar.view
         panel.translatesAutoresizingMaskIntoConstraints = false
@@ -470,9 +479,6 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        if splitView.superview === view, splitView.frame != view.bounds {
-            splitView.frame = view.bounds
-        }
         updateWorkspaceLayout()
     }
 
