@@ -43,7 +43,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 }.padding(.bottom, 8)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
-            }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 6)
+            }.padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
