@@ -245,8 +245,8 @@ struct TaskContextView: View {
         if !value.tools.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("工具活动", count: value.tools.count)
-                ForEach(value.tools.filter { $0.staysVisible || $0.status == .failed }) { tool in toolRow(tool) }
-                let completed = value.tools.filter { !$0.staysVisible && $0.status != .failed }
+                ForEach(value.tools.filter { $0.staysVisible }) { tool in toolRow(tool) }
+                let completed = value.tools.filter { !$0.staysVisible }
                 if !completed.isEmpty {
                     DisclosureGroup("已结束的调用 · \(completed.count)", isExpanded: $completedTools) {
                         ForEach(completed.suffix(20).reversed()) { tool in toolRow(tool) }
@@ -276,11 +276,11 @@ struct TaskContextView: View {
         } label: {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: tool.status == .failed ? "exclamationmark.circle" : tool.staysVisible ? "circle.dashed" : "checkmark.circle")
-                    .foregroundStyle(tool.status == .failed ? Color.red : .secondary).frame(width: 16)
+                    .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : .secondary).frame(width: 16)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ConversationActivity.summary(of: tool)).lineLimit(2).foregroundStyle(.primary)
                     Text(ConversationActivity.status(of: tool)).font(.system(size: 11))
-                        .foregroundStyle(tool.status == .failed ? Color.red : .secondary)
+                        .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : .secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }.padding(.vertical, 4)
         }.font(.system(size: 13))

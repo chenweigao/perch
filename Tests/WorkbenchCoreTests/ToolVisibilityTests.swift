@@ -42,7 +42,8 @@ func checkToolVisibility() throws {
     precondition(process.contains { $0.thinking == "思考可以折叠" },
                  "Completed thoughts remain available inside the folded process stage")
     let failure = p.update(user + call + failed, sessionID: "kimi", running: ["t"])
-    precondition(failure.tools["t"]?.status == .failed && failure.tools["t"]?.staysVisible == true)
+    precondition(failure.tools["t"]?.status == .failed && failure.tools["t"]?.staysVisible == false,
+                 "A returned error is an observed outcome the agent reads and continues from, not an attention item")
     let exitFailure = try messages(#"[{"id":"r","role":"tool","created_at":"4","content":[{"type":"tool_result","tool_call_id":"t","output":"xcrun: error: unable to find utility\nCommand failed with exit code: 1.","is_error":true}]}]"#)
     let probed = p.update(user + call + exitFailure, sessionID: "kimi")
     precondition(probed.tools["t"]?.status == .failed && probed.tools["t"]?.exitCodeReport == 1,
