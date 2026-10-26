@@ -527,6 +527,9 @@ private final class ConversationDocumentView: NSView {
         guard let row = geometry.readingRow(at: max(0, viewportRect.minY)), contents.indices.contains(row) else { return nil }
         return (contents[row].entry.id, viewportRect.minY - offsets[row])
     }
+    /// The gesture mark a wheel tick sets, for fixtures that scroll the clip
+    /// programmatically before approaching the top edge.
+    fileprivate func markUserScroll() { viewport?.userScrolled() }
     #endif
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -1215,14 +1218,17 @@ private final class ConversationDocumentView: NSView {
             self?.loadEarlierIfNearTop()
         }
     }
-    /// Wheel, trackpad, keyboard and programmatic moves all flow through this
-    /// bounds stream. Prefetch one viewport before the loaded top edge so the
-    /// page arrives while the reader is still scrolling toward it.
+    /// Wheel, trackpad and scrollbar moves flow through this bounds stream, but
+    /// so do content growth, restore pins and reveal jumps. Only a recent reader
+    /// gesture pages: a clip parked at the top while pages prepend would
+    /// otherwise keep loading until the whole history is read. Keyboard and
+    /// VoiceOver reach the same page through the top "load earlier" button.
     private func loadEarlierIfNearTop() {
         let visible = viewportRect
         guard observedClip != nil, !suspended, !preparingInitialViewport,
-              visible.minY <= max(480, visible.height) else { return }
-        viewport?.nearTop?()
+              visible.minY <= max(480, visible.height), let viewport,
+              Date().timeIntervalSince(viewport.lastUserScroll) < 1 else { return }
+        viewport.nearTop?()
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -1286,6 +1292,12 @@ extension ConversationTranscript {
             if let anchor = readingAnchor(in: view) { return anchor }
         }
         return nil
+    }
+    /// Mark the reader gesture that precedes an approach to the top edge, so a
+    /// fixture's programmatic scroll pages the same way a wheel tick does.
+    static func markUserScroll(in root: NSView) {
+        if let document = root as? ConversationDocumentView { document.markUserScroll(); return }
+        for view in root.subviews { markUserScroll(in: view) }
     }
     /// Fixture-only inspection includes detached hosts, which a view-tree count misses.
     static func retainedHosts(in root: NSView) -> (retained: Int, mounted: Int, retired: Int)? {
@@ -1999,12 +2011,16 @@ final class ConversationViewport {
     var pauseFollowing: (() -> Void)?
     /// Reaching the loaded history's top edge asks the owner for the next page.
     var nearTop: (() -> Void)?
+    /// Last reader-driven scroll; separates approach-to-top paging from clip
+    /// moves caused by content growth or position restoration.
+    private(set) var lastUserScroll = Date.distantPast
     let navigator = ConversationTurnNavigation()
     private let rows = NSHashTable<NSView>.weakObjects()
     private var scheduled = false
     fileprivate func add(_ row: NSView) { rows.add(row); refresh() }
     fileprivate func remove(_ row: NSView) { rows.remove(row); refresh() }
     func userScrolled() {
+        lastUserScroll = Date()
         for row in rows.allObjects {
             (row as? ConversationDocumentView)?.cancelPendingRestoration()
         }
