@@ -119,7 +119,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             inspectorItem = item
         }
         controller.splitView.dividerStyle = .thin
-        controller.splitView.autosaveName = "WorkbenchWorkspace.v3"
+        controller.configureSplitPersistence()
         controller.installFloatingSidebar(coordinator.sidebarHost, detailController: detailController,
                                           inspectorItem: inspectorItem,
                                           inspectorVisible: inspectorVisible)
@@ -484,11 +484,18 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     override func viewDidAppear() {
         super.viewDidAppear()
+        configureSplitPersistence()
         guard let window = view.window else { return }
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
         window.toolbar = workspaceToolbar
+    }
+
+    func configureSplitPersistence() {
+        let name = "WorkbenchWorkspace.v3"
+        splitView.identifier = NSUserInterfaceItemIdentifier(name)
+        splitView.autosaveName = name
     }
 
     override func toggleSidebar(_ sender: Any?) {

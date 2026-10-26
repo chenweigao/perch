@@ -263,7 +263,7 @@ import WorkbenchCore
     }
 
     precondition(split.splitView.autosaveName == "WorkbenchWorkspace.v3",
-                 "The floating-sidebar layout must not restore an older split topology")
+                 "The floating-sidebar layout must not restore an older split topology; autosave=\(String(describing: split.splitView.autosaveName)), identifier=\(String(describing: split.splitView.identifier))")
     precondition(UserDefaults.standard.array(forKey: legacySplitFramesKey)?.count == 2,
                  "Mounting the new layout must leave the legacy autosave value isolated")
     precondition(inspectorItem.isCollapsed && !model.taskContextWindow.embeddedVisible)
