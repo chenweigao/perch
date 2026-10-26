@@ -103,7 +103,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let detailController = WorkbenchDetailController(content: coordinator.contentHost)
         let contentItem = NSSplitViewItem(viewController: detailController)
         contentItem.minimumThickness = WorkspaceLayoutMetrics.contentMinimumWidth
-        contentItem.holdingPriority = .required
+        contentItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 249)
         controller.addSplitViewItem(contentItem)
 
         var inspectorItem: NSSplitViewItem?
