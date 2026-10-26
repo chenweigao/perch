@@ -432,7 +432,6 @@ final class WorkbenchSplitController: NSSplitViewController {
         self.inspectorItem = inspectorItem
         desiredInspectorVisible = inspectorVisible
 
-        addChild(sidebar)
         let panel = sidebar.view
         panel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(panel)
