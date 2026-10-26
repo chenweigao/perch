@@ -180,8 +180,9 @@ appears only while away from the bottom; clicking it resumes following. AppKit's
 [didLiveScrollNotification](https://developer.apple.com/documentation/appkit/nsscrollview/didlivescrollnotification)
 distinguishes user scrolling from programmatic stream updates.
 
-The sidebar uses native NSSplitViewController with a saved width between 220 and 420 pt.
-Floating controls use the public macOS 26
+The sidebar is independently hosted above the full detail canvas with persisted
+visibility and a saved width between 220 and 480 pt. It and the floating controls
+use the public macOS 26
 [Liquid Glass modifier](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views),
 available on every supported macOS version (26+). Reduce Transparency keeps its
 accessible opaque surface; transcript text does not use glass.
@@ -190,9 +191,10 @@ accessible opaque surface; transcript text does not use glass.
 draft synchronization checks. `scripts/build-composer-preview.sh` builds an
 isolated input window with a 100 ms refresh, two drafts and local-only submissions.
 
-The native workspace split extends under the unified titlebar. AppKit owns the
-glass sidebar's toolbar avoidance; the outer SwiftUI view does not duplicate that
-top inset. No fixed negative offsets or manual titlebar padding are added.
+The detail canvas extends under the unified titlebar. Its hosted content remains
+inside the safe area and uses one dynamic leading inset to avoid the glass sidebar
+when space permits. The panel itself begins 12 points inside the safe area; no fixed
+negative offsets or manual titlebar padding are added.
 
 ## Independent transcript channels
 

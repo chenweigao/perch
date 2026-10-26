@@ -1,6 +1,6 @@
 # Offline public demo
 
-This standalone window uses the production split view, sidebar shell, session row,
+This standalone window uses the production workspace container, sidebar shell, session row,
 conversation renderer, tool cards, Markdown, model picker, glass and input editor.
 All conversations and tool outputs are synthetic. It does not instantiate an agent
 connection or load the user's workspace, credentials or conversation history.

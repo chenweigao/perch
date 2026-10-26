@@ -112,11 +112,17 @@ containing pending requests, documents, background tasks/subagents, and
 current-turn tool activity. Empty sections stay hidden; completed calls start
 collapsed. The inspector is a full-height 280–420 point column beside the
 conversation, with the standard macOS divider, resizing, and collapse behavior.
-It never overlays the transcript or composer. As a window narrows, the inspector
-yields first, then the left sidebar, so the conversation keeps its minimum reading
-width. Three-pane divider positions use a versioned layout record; upgrading from
-the former two-pane workspace resets divider widths once instead of applying an
-incompatible saved layout.
+It never overlays the transcript or composer.
+
+The left sidebar is not a split column. It is a 220–480 point Liquid Glass panel
+floating above a conversation canvas that always reaches the window's left edge,
+with 12-point margins around the panel. On a wide window, a leading layout guide
+keeps hosted page content clear of the sidebar while the canvas background continues
+under it. When that would leave less than 600 points for content, the right inspector
+collapses first. If the window is still narrow, the sidebar overlays the page instead
+of compressing it. Hiding the sidebar leaves the canvas fixed and re-centers the
+existing reading column and composer in the full detail area. Visibility and width
+persist independently from the versioned two-item detail/inspector split record.
 
 The inspector stays open while interacting with the conversation and can be
 collapsed with its close control, the header button, or the native divider.

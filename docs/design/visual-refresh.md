@@ -71,8 +71,8 @@ No text is set below 11 pt. On macOS `.caption` and `.caption2` are 10 pt, so
 secondary notes, errors and hints use `.subheadline` (11 pt) or an explicit 11 pt
 size; tertiary ink only appears on text of at least that size. Sizes of 8–10 pt
 remain only for SF Symbols such as chevrons and badges. The 置顶 add button stays a solid control. The native glass
-sidebar item (`WorkspaceSplitView`) and the composer glass are unchanged; only the
-inner rows and headers changed.
+floating sidebar (`WorkspaceSplitView`) and the composer glass retain their adaptive
+material; this refresh changes only the inner rows and headers.
 
 ## Verification
 

@@ -15,8 +15,9 @@ enum WorkbenchTheme {
     /// Content surfaces: white in light; dark is a blue-tinted near-black instead
     /// of the system's neutral gray — a designed dark reads intentional, not default.
     /// Sidebar and composer glass keep their system materials and are unaffected.
-    static let contentBackground = Color(nsColor: nsColor(
-        light: (1, 1, 1), dark: (0.104, 0.108, 0.125)))
+    static let contentBackgroundNS = nsColor(
+        light: (1, 1, 1), dark: (0.104, 0.108, 0.125))
+    static let contentBackground = Color(nsColor: contentBackgroundNS)
 
     /// Glyph color atop the accent-colored primary action circle.
     static let actionGlyph = color(light: (1, 1, 1), dark: (0.13, 0.13, 0.14))

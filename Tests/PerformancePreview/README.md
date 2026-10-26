@@ -16,7 +16,7 @@ The baseline is pinned to `5596b6c4184c17f80f7992b11e6f1b8d647e46d8`.
 The script independently compiles the matching Core and relevant UI sources for each
 variant with the same optimizer, compiler, fixture, and Markdown dependencies.
 No working checkout is reset and no real conversation is opened. The actual baseline/current
-AppKit split and hosting implementations are included with an identical synthetic sidebar;
+AppKit workspace and hosting implementations are included with an identical synthetic sidebar;
 this covers intrinsic-size measurement changes, though it does not construct the entire real
 workspace model or terminal tabs. The measured hosting surface is fixed at 1180 × 600 points.
 
@@ -61,8 +61,8 @@ the production thought viewport separately and are not blended into Markdown thr
 
 The v2 reports include the actual `content_viewport_width/height`, `reading_width`,
 `reading_document_height`, fixed host bounds, and full window frame dimensions.
-Native split/toolbar versions may have slightly different sidebar widths (for example,
-270 vs 278 points), so their outer transcript viewport widths can differ. Both still
+Workspace/toolbar versions may have slightly different floating-sidebar widths (for
+example, 270 vs 278 points), so their outer transcript viewport widths can differ. Both still
 use the same measured fixed 760-point reading column, which fixes text line wrapping.
 The comparison requires equal reading width and viewport height; it emits both outer
 viewport widths so any margin difference remains visible in the evidence. Earlier v1

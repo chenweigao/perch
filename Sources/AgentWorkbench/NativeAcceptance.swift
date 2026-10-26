@@ -791,10 +791,12 @@ private struct ReferenceComposerFixtureView: View {
         NSApp.terminate(nil)
     }
     private func inspector(_ window: NSWindow) async throws -> [String: Any] {
-        guard let split = workspaceSplit(in: window), split.splitViewItems.count == 3 else {
-            throw WorkbenchError("Missing three-pane workspace split")
+        guard let split = workspaceSplit(in: window), split.splitViewItems.count == 2,
+              split.floatingSidebarView?.window === window,
+              split.detailCanvasView?.window === window else {
+            throw WorkbenchError("Missing floating-sidebar workspace and inline inspector")
         }
-        let inspectorItem = split.splitViewItems[2]
+        let inspectorItem = split.splitViewItems[1]
         let source = fixture.sessions[1].reference
         let route = "/sessions/\(source.terminalID)?turns=20"
         let draft = "Inspector 性能验收草稿"
@@ -859,7 +861,8 @@ private struct ReferenceComposerFixtureView: View {
                 "inspector_close_ms": closeStats, "inspector_process_cpu_seconds": cpuSeconds,
                 "inspector_idle_cpu_seconds_over_2s": idleCPU,
                 "inspector_context_reads": fixture.requests.filter { $0 == route }.count,
-                "inspector_contract": "200-turn locked context decoded and projected in the native inspector; split state, transcript/document/composer identity, selection and draft verified after every toggle"]
+                "workspace_topology": "full canvas plus inline inspector with an independently hosted floating sidebar",
+                "inspector_contract": "200-turn locked context decoded and projected in the native inspector; two-item split state, transcript/document/composer identity, selection and draft verified after every toggle"]
     }
     private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
         // Allow initial tasks/layout to settle before measuring unrelated writes.
@@ -1536,18 +1539,13 @@ private struct ReferenceComposerFixtureView: View {
                     && rows().contains { $0.item.id == outside.id && $0.selected }
             }
         }
-        func findSplit(_ view: NSView?) -> NSSplitView? {
-            guard let view else { return nil }
-            if let split = view as? NSSplitView { return split }
-            return view.subviews.lazy.compactMap { findSplit($0) }.first
+        guard let workspace = workspaceSplit(in: window) else {
+            throw WorkbenchError("Missing floating-sidebar workspace")
         }
-        guard let split = findSplit(window.contentView) else {
-            throw WorkbenchError("Missing native split view")
-        }
-        split.setPosition(220, ofDividerAt: 0)
+        workspace.setFloatingSidebarWidth(WorkspaceLayoutMetrics.sidebarMinimumWidth)
         flush(window)
         guard rows().contains(where: { $0.item.id == outside.id }) else { throw WorkbenchError("Narrow sidebar lost selection") }
-        split.setPosition(300, ofDividerAt: 0)
+        workspace.setFloatingSidebarWidth(300)
         model.navigationState.tabs.close(outside.id)
         model.navigationState.tabs.select(fixture.sessions[0].id)
         try await settle(window, "restore selected row") { rows().contains { $0.item.id == self.fixture.sessions[0].id && $0.selected } }
