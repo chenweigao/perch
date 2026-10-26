@@ -14,6 +14,7 @@ import WorkbenchCore
         }
     }
 
+    FileHandle.standardOutput.write(Data("TASK-CONTEXT-START\n".utf8))
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     let legacySplitFramesKey = "NSSplitView Subview Frames WorkbenchWorkspace"
     UserDefaults.standard.set([
