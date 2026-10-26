@@ -1874,6 +1874,7 @@ private struct ReferenceComposerFixtureView: View {
         }
         // Reaching the top edge loads the next page without a click; the row at
         // the edge stays put while older turns are prepended above it.
+        ConversationTranscript.markUserScroll(in: scroll)
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 200))
         scroll.reflectScrolledClipView(scroll.contentView)
         guard let top = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing top anchor") }
