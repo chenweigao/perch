@@ -15,8 +15,8 @@ enum WorkspaceLayoutMetrics {
     static let sidebarInset: CGFloat = 12
     static let sidebarGap: CGFloat = 12
     static let sidebarDefaultWidth: CGFloat = 276
-    static let sidebarMinimumWidth: CGFloat = 240
-    static let sidebarMaximumWidth: CGFloat = 380
+    static let sidebarMinimumWidth: CGFloat = 220
+    static let sidebarMaximumWidth: CGFloat = 480
     static let contentMinimumWidth: CGFloat = 600
     static let inspectorDefaultWidth: CGFloat = 340
     static let inspectorMinimumWidth: CGFloat = 280
@@ -390,7 +390,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     static let sidebarWidthDefaultsKey = "perch.workspace.sidebar.width.v3"
 
     var workspaceToolbar: NSToolbar?
-    private weak var floatingSidebarController: NSViewController?
+    private var floatingSidebarController: NSViewController?
     private weak var detailController: WorkbenchDetailController?
     private weak var inspectorItem: NSSplitViewItem?
     private var sidebarWidthConstraint: NSLayoutConstraint?

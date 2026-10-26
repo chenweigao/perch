@@ -114,7 +114,7 @@ collapsed. The inspector is a full-height 280–420 point column beside the
 conversation, with the standard macOS divider, resizing, and collapse behavior.
 It never overlays the transcript or composer.
 
-The left sidebar is not a split column. It is a 240–380 point Liquid Glass panel
+The left sidebar is not a split column. It is a 220–480 point Liquid Glass panel
 floating above a conversation canvas that always reaches the window's left edge,
 with 12-point margins around the panel. On a wide window, a leading layout guide
 keeps hosted page content clear of the sidebar while the canvas background continues

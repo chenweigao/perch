@@ -6,7 +6,7 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
 ## Sidebar behavior
 
 - Host the sidebar independently above the full conversation canvas: native
-  floating glass, persisted visibility, and a draggable 240–380 pt width.
+  floating glass, persisted visibility, and a draggable 220–480 pt width.
 - Fixed top: Perch, new session (⌘N), task search (⌘K), workbench, attention inbox.
 - The sidebar sits below the unified toolbar with 12-point left, top, and bottom
   margins. Wide layouts reserve content space beside it; narrow layouts let it

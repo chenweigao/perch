@@ -266,21 +266,33 @@ import WorkbenchCore
     precondition(contentView?.window === page)
 
     page.setContentSize(NSSize(width: 1000, height: 780))
-    try await Task.sleep(for: .milliseconds(250))
-    split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    for _ in 0..<20 {
+        split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+        if inspectorItem.isCollapsed && split.detailContentLeadingInset > 0 { break }
+        try await Task.sleep(for: .milliseconds(25))
+    }
     detailFrame = splitFrame(detailItem)
+    var splitBoundsFrame = frame(split.splitView)
+    let collapsedDividerAllowance = split.splitView.dividerThickness + 1
     precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
-                 split.detailContentLeadingInset > 0 && detailFrame.width >= 999,
-                 "At 1000 points the inspector must yield before the sidebar stops avoiding content")
+                 split.detailContentLeadingInset > 0 &&
+                 abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
+                 splitBoundsFrame.maxX - detailFrame.maxX <= collapsedDividerAllowance,
+                 "At 1000 points the inspector must yield before the sidebar stops avoiding content; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     page.setContentSize(NSSize(width: 800, height: 780))
-    try await Task.sleep(for: .milliseconds(250))
-    split.splitView.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    for _ in 0..<20 {
+        split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+        if inspectorItem.isCollapsed && split.isSidebarOverlayingContent { break }
+        try await Task.sleep(for: .milliseconds(25))
+    }
     detailFrame = splitFrame(detailItem)
+    splitBoundsFrame = frame(split.splitView)
     precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  split.isSidebarOverlayingContent && split.detailContentLeadingInset == 0 &&
-                 detailFrame.width >= 799,
-                 "At 800 points the sidebar must overlay, not compress, the full conversation canvas")
+                 abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
+                 splitBoundsFrame.maxX - detailFrame.maxX <= collapsedDividerAllowance,
+                 "At 800 points the sidebar must overlay, not compress, the full conversation canvas; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     page.setContentSize(NSSize(width: 1280, height: 780))
     try await Task.sleep(for: .milliseconds(300))

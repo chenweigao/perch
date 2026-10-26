@@ -181,7 +181,7 @@ appears only while away from the bottom; clicking it resumes following. AppKit's
 distinguishes user scrolling from programmatic stream updates.
 
 The sidebar is independently hosted above the full detail canvas with persisted
-visibility and a saved width between 240 and 380 pt. It and the floating controls
+visibility and a saved width between 220 and 480 pt. It and the floating controls
 use the public macOS 26
 [Liquid Glass modifier](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views),
 available on every supported macOS version (26+). Reduce Transparency keeps its
