@@ -433,6 +433,11 @@ final class WorkbenchSplitController: NSSplitViewController {
         self.inspectorItem = inspectorItem
         desiredInspectorVisible = inspectorVisible
 
+        if splitView.superview === view {
+            splitView.frame = view.bounds
+            splitView.autoresizingMask = [.width, .height]
+        }
+
         let panel = sidebar.view
         panel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(panel)
@@ -465,6 +470,10 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
+        if splitView.superview === view, splitView.frame != view.bounds {
+            splitView.frame = view.bounds
+            splitView.layoutSubtreeIfNeeded()
+        }
         updateWorkspaceLayout()
     }
 

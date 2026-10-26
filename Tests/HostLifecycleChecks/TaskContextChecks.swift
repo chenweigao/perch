@@ -276,6 +276,8 @@ import WorkbenchCore
     let collapsedDividerAllowance = split.splitView.dividerThickness + 1
     precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  split.detailContentLeadingInset > 0 &&
+                 abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
+                 abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1 &&
                  abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
                  splitBoundsFrame.maxX - detailFrame.maxX <= collapsedDividerAllowance,
                  "At 1000 points the inspector must yield before the sidebar stops avoiding content; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
@@ -290,6 +292,8 @@ import WorkbenchCore
     splitBoundsFrame = frame(split.splitView)
     precondition(inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  split.isSidebarOverlayingContent && split.detailContentLeadingInset == 0 &&
+                 abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
+                 abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1 &&
                  abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
                  splitBoundsFrame.maxX - detailFrame.maxX <= collapsedDividerAllowance,
                  "At 800 points the sidebar must overlay, not compress, the full conversation canvas; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
@@ -302,10 +306,13 @@ import WorkbenchCore
     }
     detailFrame = splitFrame(detailItem)
     inspectorFrame = splitFrame(inspectorItem)
+    splitBoundsFrame = frame(split.splitView)
     precondition(!inspectorItem.isCollapsed && split.isFloatingSidebarVisible &&
                  !split.isSidebarOverlayingContent && detailFrame.width >= 599 &&
-                 inspectorFrame.width >= 279 && inspectorFrame.width <= 421,
-                 "Restoring a wide window must restore the inline inspector and sidebar avoidance; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), inspector=\(inspectorFrame), split=\(frame(split.splitView)), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
+                 inspectorFrame.width >= 279 && inspectorFrame.width <= 421 &&
+                 abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
+                 abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1,
+                 "Restoring a wide window must restore the inline inspector and sidebar avoidance; inspectorCollapsed=\(inspectorItem.isCollapsed), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), overlay=\(split.isSidebarOverlayingContent), detail=\(detailFrame), inspector=\(inspectorFrame), split=\(splitBoundsFrame), root=\(split.view.bounds), window=\(String(describing: page.contentView?.bounds))")
 
     let canvasBeforeToggle = detailFrame
     split.toggleSidebar(nil)
