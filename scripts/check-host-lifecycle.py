@@ -2,7 +2,6 @@
 """After scripts/build.sh, check the production model without SSH or real preferences."""
 import argparse
 import faulthandler
-import os
 import pathlib
 import platform
 import plistlib
@@ -74,10 +73,8 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
                 print(f"File reader preview app: {app}", flush=True)
             command = [str(executable), phase, *(["preview"] if preview else [])]
             limit = 150 if preview else 60
-            environment = os.environ.copy()
-            environment["NSUnbufferedIO"] = "YES"
             faulthandler.dump_traceback_later(limit + 15)
-            process = subprocess.Popen(command, env=environment)
+            process = subprocess.Popen(command)
             try:
                 process.wait(timeout=limit)
             except subprocess.TimeoutExpired:
