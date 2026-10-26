@@ -472,7 +472,6 @@ final class WorkbenchSplitController: NSSplitViewController {
         super.viewDidLayout()
         if splitView.superview === view, splitView.frame != view.bounds {
             splitView.frame = view.bounds
-            splitView.layoutSubtreeIfNeeded()
         }
         updateWorkspaceLayout()
     }

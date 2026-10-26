@@ -207,18 +207,23 @@ import WorkbenchCore
                                        styleMask: [.titled, .resizable], backing: .buffered, defer: false)
     page.isReleasedWhenClosed = false
     defer { page.close(); page.contentViewController = nil }
+    trace("split-page-created")
     var contentMounts = 0
     var contentView: NSView?
     let hosting = NSHostingController(rootView: TaskContextInspectorFixture(
         model: model, connection: connection,
         contentMounted: { view in contentMounts += 1; contentView = view }))
     hosting.sizingOptions = []
+    trace("split-host-created")
     page.contentViewController = hosting
+    trace("split-host-bound")
     page.makeKeyAndOrderFront(nil)
     page.setContentSize(NSSize(width: 1280, height: 780))
+    trace("split-window-visible")
     model.showDashboard = false
     model.draftingNewTask = false
     model.taskContextWindow.locked = a
+    trace("split-state-ready")
     try await Task.sleep(for: .milliseconds(300))
     trace("split-host-ready")
 
