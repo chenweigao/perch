@@ -13,12 +13,16 @@ private struct WorkbenchHostedTask<Key: Equatable>: NSViewRepresentable {
     let action: @MainActor () async -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> NSView { NSView() }
-    func updateNSView(_ view: NSView, context: Context) {
+    func makeNSView(context: Context) -> WorkbenchTaskLifetimeView {
+        let view = WorkbenchTaskLifetimeView()
+        view.onDetach = { [weak coordinator = context.coordinator] in coordinator?.cancel() }
+        return view
+    }
+    func updateNSView(_ view: WorkbenchTaskLifetimeView, context: Context) {
         context.coordinator.update(id: id, action: action)
     }
-    static func dismantleNSView(_ view: NSView, coordinator: Coordinator) {
-        coordinator.task?.cancel()
+    static func dismantleNSView(_ view: WorkbenchTaskLifetimeView, coordinator: Coordinator) {
+        coordinator.cancel()
     }
 
     @MainActor final class Coordinator {
@@ -35,6 +39,21 @@ private struct WorkbenchHostedTask<Key: Equatable>: NSViewRepresentable {
             }
         }
 
+        func cancel() {
+            task?.cancel()
+            task = nil
+            id = nil
+        }
+
         deinit { task?.cancel() }
+    }
+}
+
+private final class WorkbenchTaskLifetimeView: NSView {
+    var onDetach: (() -> Void)?
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil { onDetach?() }
+        super.viewWillMove(toWindow: newWindow)
     }
 }

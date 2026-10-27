@@ -352,14 +352,17 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     }
 }
 
+enum InspectorHeightRegion { case header, content }
+
 final class WorkbenchInspectorSizing {
     private(set) var height: CGFloat = 144
-    private var contributions: [UUID: CGFloat] = [:]
+    private var contributions: [InspectorHeightRegion: (id: UUID, height: CGFloat)] = [:]
     weak var controller: WorkbenchSplitController?
 
-    func update(_ id: UUID, height: CGFloat?) {
-        contributions[id] = height
-        let total = contributions.values.reduce(0, +)
+    func update(_ region: InspectorHeightRegion, id: UUID, height: CGFloat?) {
+        if let height { contributions[region] = (id, height) }
+        else if contributions[region]?.id == id { contributions[region] = nil }
+        let total = contributions.values.reduce(0) { $0 + $1.height }
         guard total > 0 else { return }
         self.height = total
         controller?.setInspectorContentHeight(total)
@@ -876,16 +879,18 @@ private extension EnvironmentValues {
 }
 
 extension View {
-    func inspectorHeightContribution() -> some View {
-        background(InspectorHeightProbe())
+    func inspectorHeightContribution(_ region: InspectorHeightRegion) -> some View {
+        background(InspectorHeightProbe(region: region))
     }
 }
 
 private struct InspectorHeightProbe: NSViewRepresentable {
+    let region: InspectorHeightRegion
     @Environment(\.inspectorSizing) private var sizing
 
     func makeNSView(context: Context) -> InspectorHeightView {
         let view = InspectorHeightView()
+        view.region = region
         view.sizing = sizing
         return view
     }
@@ -898,12 +903,14 @@ private struct InspectorHeightProbe: NSViewRepresentable {
     static func dismantleNSView(_ view: InspectorHeightView, coordinator: ()) {
         let sizing = view.sizing
         let id = view.measurementID
-        DispatchQueue.main.async { sizing?.update(id, height: nil) }
+        let region = view.region
+        DispatchQueue.main.async { sizing?.update(region, id: id, height: nil) }
     }
 }
 
 private final class InspectorHeightView: NSView {
     let measurementID = UUID()
+    var region: InspectorHeightRegion = .content
     weak var sizing: WorkbenchInspectorSizing?
     private var lastHeight: CGFloat = -1
 
@@ -917,7 +924,8 @@ private final class InspectorHeightView: NSView {
         guard height > 0, height != lastHeight else { return }
         lastHeight = height
         let id = measurementID
-        DispatchQueue.main.async { [weak sizing] in sizing?.update(id, height: height) }
+        let region = region
+        DispatchQueue.main.async { [weak sizing] in sizing?.update(region, id: id, height: height) }
     }
 }
 

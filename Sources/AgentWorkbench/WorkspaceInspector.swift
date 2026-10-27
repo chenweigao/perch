@@ -64,9 +64,9 @@ struct ChangesInspectorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.inspectorHeightContribution()
+            header.inspectorHeightContribution(.header)
             ScrollView {
-                content.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution()
+                content.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.content)
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .workbenchHostedTask(id: key) {

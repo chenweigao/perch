@@ -97,7 +97,7 @@ struct TaskContextView: View {
     private var item: WorkspaceSession? { model.allSessions.first { $0.reference == reference } }
     private var active: Bool {
         if detached { return model.taskContextWindow.visible }
-        return model.taskContextWindow.embeddedVisible && !model.showDashboard && !model.draftingNewTask
+        return model.taskContextWindow.isShowing(.task) && !model.showDashboard && !model.draftingNewTask
     }
     private var current: TaskContextSnapshot? { state.reference == reference ? state.snapshot : nil }
     private struct LoadKey: Equatable {
@@ -112,7 +112,7 @@ struct TaskContextView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution()
+            header.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.header)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let error = state.error {
@@ -136,7 +136,7 @@ struct TaskContextView: View {
                         Text("暂无任务活动").foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                    .inspectorHeightContribution()
+                    .inspectorHeightContribution(.content)
             }
             if detached, let item {
                 VStack(spacing: 0) {
