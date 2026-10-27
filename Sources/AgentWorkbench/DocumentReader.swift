@@ -134,7 +134,7 @@ struct DocumentReader: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ReplyBlocks(blocks: section.blocks)
                                 .environment(\.documentReadingStyle, true)
-                                .environment(\.documentFontScale, CGFloat(fontSize / 14))
+                                .environment(\.documentFontScale, CGFloat(fontSize) / ReplyStyle.bodySize)
                                 .environment(\.documentQuery, browser.findQuery)
                                 .environment(\.documentOpenLink, { url in
                                     guard browser.path == path else { return true }

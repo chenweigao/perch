@@ -114,8 +114,9 @@ enum ReplyStyle {
 /// How prose in a reply reads: the body, or quiet secondary notes (compaction notes, runtime context).
 enum ReplyTone: Equatable { case body, quiet }
 
-/// Document metrics are normalized to the shared 14 pt renderer. The reader's
-/// font scale produces a 16 pt body, 26/18 pt headings and 28 pt lines by default.
+/// Document metrics are normalized to the shared renderer's `ReplyStyle.bodySize`.
+/// The reader's font scale (its size over that body) produces a 16 pt body,
+/// 26/18 pt headings and 28 pt lines by default.
 enum DocumentTypography {
     static let unit: CGFloat = ReplyStyle.bodySize / 16
     static func headingSize(_ level: Int) -> CGFloat { (level == 1 ? 26 : level == 2 ? 18 : 16) * unit }
