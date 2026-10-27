@@ -97,12 +97,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let coordinator = context.coordinator
         let controller = WorkbenchSplitController()
         coordinator.controller = controller
-        // Install the measurement callback before loading the host's view.
-        // Its first preference can arrive while the native constraints are not yet mounted.
-        if let inspectorHost = coordinator.inspectorHost, let inspector {
-            inspectorHost.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
-                heightChanged: { [weak controller] in controller?.setInspectorContentHeight($0) })
-        }
+        coordinator.inspectorSizing.controller = controller
+        controller.setInspectorContentHeight(coordinator.inspectorSizing.height)
         coordinator.sidebarHost.view.setFrameSize(NSSize(width: WorkspaceLayoutMetrics.sidebarDefaultWidth, height: 620))
         coordinator.contentHost.view.setFrameSize(NSSize(width: 900, height: 620))
         coordinator.inspectorHost?.view.setFrameSize(
@@ -147,7 +143,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.actionsHost.rootView = WorkspaceLocalizedRoot(content: actions, locale: locale)
         if let inspector {
             coordinator.inspectorHost?.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
-                heightChanged: { [weak controller] in controller?.setInspectorContentHeight($0) })
+                heightChanged: coordinator.inspectorSizing.update)
         }
         coordinator.setInspectorVisible(inspectorVisible)
         coordinator.updateToolbarLanguage()
@@ -164,6 +160,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let headerHost: WorkbenchToolbarTitleHost<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
         let inspectorHost: NSHostingController<WorkspaceInspectorPanelRoot<AnyView>>?
+        let inspectorSizing: WorkbenchInspectorSizing
         weak var controller: WorkbenchSplitController?
         var locale: Locale
         var newConversation: () -> Void
@@ -186,8 +183,11 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             contentHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.content, locale: view.locale))
             headerHost = WorkbenchToolbarTitleHost(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
             actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
+            let sizing = WorkbenchInspectorSizing()
+            inspectorSizing = sizing
             inspectorHost = view.inspector.map {
-                NSHostingController(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale))
+                NSHostingController(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale,
+                    heightChanged: sizing.update))
             }
             locale = view.locale
             newConversation = view.newConversation
@@ -339,6 +339,17 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         @objc private func compose() { newConversation() }
         @objc private func goBack() { navigate(-1); controller?.workspaceToolbar?.validateVisibleItems() }
         @objc private func goForward() { navigate(1); controller?.workspaceToolbar?.validateVisibleItems() }
+    }
+}
+
+final class WorkbenchInspectorSizing {
+    private(set) var height: CGFloat = 144
+    weak var controller: WorkbenchSplitController?
+
+    func update(_ height: CGFloat) {
+        guard height > 0 else { return }
+        self.height = height
+        controller?.setInspectorContentHeight(height)
     }
 }
 
@@ -825,7 +836,7 @@ struct WorkspaceFloatingPanelRoot<Content: View>: View {
 struct WorkspaceInspectorPanelRoot<Content: View>: View {
     let content: Content
     let locale: Locale
-    var heightChanged: (CGFloat) -> Void = { _ in }
+    let heightChanged: (CGFloat) -> Void
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel, style: .continuous)
