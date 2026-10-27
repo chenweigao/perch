@@ -823,6 +823,15 @@ private struct ReferenceComposerFixtureView: View {
         NSApp.terminate(nil)
     }
     private func inspector(_ window: NSWindow) async throws -> [String: Any] {
+        // The inspector host installs on first use, not at launch.
+        model.taskContextWindow.embeddedVisible = true
+        try await settle(window, "inspector install") {
+            self.workspaceSplit(in: window)?.floatingInspectorView?.window === window
+        }
+        model.taskContextWindow.embeddedVisible = false
+        try await settle(window, "inspector hidden") {
+            self.workspaceSplit(in: window)?.floatingInspectorView?.isHidden == true
+        }
         guard let split = workspaceSplit(in: window), split.splitViewItems.count == 1,
               split.floatingSidebarView?.window === window,
               split.floatingInspectorView?.window === window,
