@@ -44,7 +44,6 @@ struct WorkbenchToolbarSymbol: View {
 /// reading sheet and inspector float above it; their hosts survive resizing.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
-    @AppStorage(AppAppearance.defaultsKey) private var appearance: AppAppearance = .system
     let newConversation: () -> Void
     let canNavigate: (Int) -> Bool
     let navigate: (Int) -> Void
@@ -97,7 +96,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     func makeNSViewController(context: Context) -> WorkbenchSplitController {
         let coordinator = context.coordinator
         let controller = WorkbenchSplitController()
-        controller.setAppearance(appearance)
         coordinator.controller = controller
         coordinator.inspectorSizing.controller = controller
         controller.setInspectorContentHeight(coordinator.inspectorSizing.height)
@@ -134,7 +132,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     }
 
     func updateNSViewController(_ controller: WorkbenchSplitController, context: Context) {
-        controller.setAppearance(appearance)
         let coordinator = context.coordinator
         coordinator.newConversation = newConversation
         coordinator.canNavigate = canNavigate
@@ -549,6 +546,7 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     var workspaceToolbar: NSToolbar?
     private var appAppearance: AppAppearance = .system
+    private var appearanceObserver: NSObjectProtocol?
     var alignToolbar: ((CGFloat) -> Void)?
     private(set) var floatingSidebarView: NSView?
     private(set) var floatingInspectorView: NSView?
@@ -590,9 +588,17 @@ final class WorkbenchSplitController: NSSplitViewController {
             isFloatingSidebarVisible = defaults.bool(forKey: Self.sidebarVisibilityDefaultsKey)
         }
         super.init(nibName: nil, bundle: nil)
+        syncAppearancePreference()
+        appearanceObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.syncAppearancePreference() }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    deinit {
+        if let appearanceObserver { NotificationCenter.default.removeObserver(appearanceObserver) }
+    }
 
     override func loadView() {
         splitView = NSSplitView()
@@ -729,6 +735,10 @@ final class WorkbenchSplitController: NSSplitViewController {
         guard appearance != appAppearance else { return }
         appAppearance = appearance
         if isViewLoaded { applyAppearance() }
+    }
+
+    private func syncAppearancePreference() {
+        setAppearance(AppAppearance(rawValue: UserDefaults.standard.string(forKey: AppAppearance.defaultsKey) ?? "system") ?? .system)
     }
 
     private func applyAppearance() {
