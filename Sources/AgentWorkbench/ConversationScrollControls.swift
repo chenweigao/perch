@@ -146,10 +146,10 @@ struct ConversationScrollView<Content: View>: View {
                     .environment(\.conversationViewport, conversationViewport)
                     .padding(.vertical, 12)
                     .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 2 * ReplyStyle.horizontalPadding)), alignment: .leading)
-                    // The reading rail is fixed to the pane edge, matching the
-                    // activity line and composer while the inspector floats.
+                    // Center the reading column in the card's current viewport.
+                    // Opening the inspector changes this viewport, not host identity.
                     .padding(.horizontal, ReplyStyle.horizontalPadding)
-                    .frame(width: viewport.size.width, alignment: .leading)
+                    .frame(width: viewport.size.width, alignment: .center)
                     .coordinateSpace(name: "conversation-content")
                     .background {
                         ConversationScrollObserver(onScroll: { following in

@@ -9,9 +9,9 @@ final class WorkbenchWindowBackdropView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        materialView.material = .underWindowBackground
+        materialView.material = .sidebar
         materialView.blendingMode = .behindWindow
-        materialView.state = .followsWindowActiveState
+        materialView.state = .active
         neutralWash.wantsLayer = true
         for child in [materialView, neutralWash] {
             child.translatesAutoresizingMaskIntoConstraints = false
@@ -31,7 +31,7 @@ final class WorkbenchWindowBackdropView: NSView {
 
     override func updateLayer() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
-            neutralWash.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.55).cgColor
+            neutralWash.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.08).cgColor
         }
     }
 

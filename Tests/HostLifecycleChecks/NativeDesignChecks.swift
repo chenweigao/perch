@@ -164,8 +164,31 @@ import WorkbenchCore
     precondition(abs(draftX - replyX) < 2, "Composer and reply must share the reading rail: draft=\(draftX), reply=\(replyX)")
     let title = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchTitle" }!.view!
     let titleX = title.convert(title.bounds, to: window.contentView).minX
-    precondition(abs(titleX - replyX) < 2,
-                 "The native toolbar title must follow the same reading rail: title=\(titleX), reply=\(replyX)")
+    precondition(abs(titleX - cardFrame.minX - WorkbenchTheme.Reading.inset) < 2,
+                 "The toolbar title stays anchored to the pane while the reading column centers")
+    precondition(abs(draftFrame.midX - cardFrame.midX) < 2 &&
+                 abs(replyX - (cardFrame.midX - ReplyStyle.readingWidth / 2)) < 2,
+                 "Reply and editor must center in the space remaining beside the inspector")
+    let savedDraft = draft.string
+    model.taskContextWindow.embeddedVisible = false
+    try await Task.sleep(for: .milliseconds(300))
+    window.contentView!.layoutSubtreeIfNeeded()
+    let closedCardFrame = card.convert(card.bounds, to: window.contentView)
+    let closedDraftFrame = draft.convert(draft.bounds, to: window.contentView)
+    let closedReply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
+    let closedReplyFrame = closedReply.convert(closedReply.bounds, to: window.contentView)
+    precondition(closedCardFrame.width > cardFrame.width + 300 &&
+                 closedDraftFrame.minX > draftX + 100 &&
+                 abs(closedDraftFrame.midX - closedCardFrame.midX) < 2 &&
+                 abs(closedReplyFrame.minX - closedDraftFrame.minX) < 2 &&
+                 draft.string == savedDraft,
+                 "Closing the inspector must re-center the same composer and reply in the enlarged card")
+    model.taskContextWindow.embeddedVisible = true
+    try await Task.sleep(for: .milliseconds(300))
+    window.contentView!.layoutSubtreeIfNeeded()
+    precondition(abs(draft.convert(draft.bounds, to: window.contentView).minX - draftX) < 2 &&
+                 descendants(window.contentView!).compactMap { $0 as? DraftTextView }.first === draft,
+                 "Reopening the inspector must restore centering without replacing the editor")
     precondition(model.changesBrowser.gitStatus != nil && model.selectedReference == first.reference)
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         func rectangle(_ rect: NSRect) -> [String: Double] {
@@ -175,6 +198,7 @@ import WorkbenchCore
             "scope": "native window geometry; view-cache PNGs exclude composited Liquid Glass",
             "window": rectangle(window.contentView!.bounds), "conversation": rectangle(cardFrame),
             "inspector": rectangle(inspectorFrame), "reply": rectangle(replyFrame), "composerText": rectangle(draftFrame),
+            "inspectorClosedConversation": rectangle(closedCardFrame), "inspectorClosedComposerText": rectangle(closedDraftFrame),
             "titleX": Double(titleX), "sidebarWidth": Double(split.floatingSidebarWidth),
         ]
         try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys])

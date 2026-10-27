@@ -271,8 +271,8 @@ import WorkbenchCore
     let frameInset = WorkspaceLayoutMetrics.frameInset
     let backdropFrame = frame(split.frameMaterialView)
     precondition(split.frameMaterialView?.blendingMode == .behindWindow &&
-                 split.frameMaterialView?.material == .underWindowBackground &&
-                 split.frameMaterialView?.state == .followsWindowActiveState &&
+                 split.frameMaterialView?.material == .sidebar &&
+                 split.frameMaterialView?.state == .active &&
                  abs(backdropFrame.width - split.view.bounds.width) < 1 &&
                  abs(backdropFrame.height - split.view.bounds.height) < 1,
                  "The window frame must be the system behind-window material under every panel: frame=\(backdropFrame), root=\(split.view.bounds)")
@@ -351,9 +351,9 @@ import WorkbenchCore
                  split.detailContentLeadingInset == 0 && detailFrame == canvasBeforeToggle &&
                  abs(hostedContentFrame.minX - (detailFrame.minX + frameInset)) < 1 &&
                  abs(hostedContentFrame.maxX - (inspectorFrame().minX - WorkspaceLayoutMetrics.sidebarGap)) < 1 &&
-                 abs(centeredComposerFrame.minX - (hostedContentFrame.minX + ReplyStyle.horizontalPadding)) < 2 &&
+                 abs(centeredComposerFrame.midX - hostedContentFrame.midX) < 2 &&
                  UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) == false,
-                 "Hiding the sidebar must leave the canvas fixed and align reading controls to the card's leading reading rail: composer=\(centeredComposerFrame), hosted=\(hostedContentFrame), canvas=\(detailFrame)")
+                 "Hiding the sidebar must leave the canvas mounted and re-center the editor in the enlarged reading card: composer=\(centeredComposerFrame), hosted=\(hostedContentFrame), canvas=\(detailFrame)")
     split.toggleSidebar(nil)
     split.setFloatingSidebarWidth(10_000)
     precondition(split.floatingSidebarWidth == WorkspaceLayoutMetrics.sidebarMaximumWidth)

@@ -15,8 +15,8 @@ enum ReplyStyle {
     static let readingWidth: CGFloat = 680
     static let horizontalPadding = WorkbenchTheme.Reading.inset
     static let composerInset: CGFloat = 12
-    /// Fills the default 776pt conversation card with 12pt on either side.
-    static let composerWidth: CGFloat = 752
+    /// The editor text and transcript share the same centered reading column.
+    static let composerWidth: CGFloat = readingWidth + 2 * composerInset
     static let composerPadding = horizontalPadding - composerInset
     static let bodySize = WorkbenchTheme.Reading.bodySize
     static let lineHeight: CGFloat = 26

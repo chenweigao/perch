@@ -355,15 +355,12 @@ final class WorkbenchDetailController: NSViewController {
 
     override func loadView() {
         view = NSView()
-        view.wantsLayer = true
-        view.layer?.shadowColor = NSColor.black.cgColor
-        view.layer?.shadowOpacity = 0.12
-        view.layer?.shadowRadius = 12
-        view.layer?.shadowOffset = CGSize(width: 0, height: -3)
+        view.clipsToBounds = false
         addChild(content)
         let card = WorkbenchContentCardView()
         card.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(card)
+        WorkbenchPanelShadowView.install(behind: card, in: view)
         cardView = card
         let detail = content.view
         detail.translatesAutoresizingMaskIntoConstraints = false
@@ -384,13 +381,6 @@ final class WorkbenchDetailController: NSViewController {
             detail.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
         ])
-    }
-
-    override func viewDidLayout() {
-        super.viewDidLayout()
-        guard let cardView else { return }
-        view.layer?.shadowPath = CGPath(roundedRect: cardView.frame,
-            cornerWidth: WorkbenchTheme.Radius.panel, cornerHeight: WorkbenchTheme.Radius.panel, transform: nil)
     }
 
     /// The same mounted card adapts to the two floating panels. In wide windows
@@ -451,6 +441,52 @@ private final class WorkspaceSidebarResizeHandle: NSView {
     }
 }
 
+/// Separate from clipped AppKit content and SwiftUI-owned hosting layers so
+/// their rendering cannot mask or replace the elevation shadow.
+private final class WorkbenchPanelShadowView: NSView {
+    @discardableResult static func install(behind panel: NSView, in parent: NSView) -> WorkbenchPanelShadowView {
+        let shadow = WorkbenchPanelShadowView()
+        shadow.translatesAutoresizingMaskIntoConstraints = false
+        shadow.wantsLayer = true
+        shadow.clipsToBounds = false
+        shadow.layer?.cornerRadius = WorkbenchTheme.Radius.panel
+        shadow.layer?.cornerCurve = .continuous
+        parent.addSubview(shadow, positioned: .below, relativeTo: panel)
+        NSLayoutConstraint.activate([
+            shadow.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+            shadow.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+            shadow.topAnchor.constraint(equalTo: panel.topAnchor),
+            shadow.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
+        ])
+        return shadow
+    }
+
+    override var wantsUpdateLayer: Bool { true }
+
+    override func updateLayer() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
+            let elevation = NSShadow()
+            elevation.shadowColor = NSColor.black.withAlphaComponent(
+                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.20)
+            elevation.shadowBlurRadius = 18
+            elevation.shadowOffset = NSSize(width: 0, height: -5)
+            shadow = elevation
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        layer?.shadowPath = CGPath(roundedRect: bounds,
+            cornerWidth: WorkbenchTheme.Radius.panel, cornerHeight: WorkbenchTheme.Radius.panel, transform: nil)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+}
+
 final class WorkbenchSplitController: NSSplitViewController {
     static let sidebarVisibilityDefaultsKey = "perch.workspace.sidebar.visible.v3"
     static let sidebarWidthDefaultsKey = "perch.workspace.sidebar.width.v5"
@@ -466,6 +502,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     private var sidebarResizeHandle: WorkspaceSidebarResizeHandle?
     private var inspectorResizeHandle: WorkspaceSidebarResizeHandle?
     private var sidebarOverlayBackdrop: WorkbenchWindowBackdropView?
+    private var inspectorShadowView: WorkbenchPanelShadowView?
     private var applyingLayout = false
     private(set) var isSidebarOverlayingContent = false
     private(set) var isInspectorOverlayingContent = false
@@ -597,12 +634,8 @@ final class WorkbenchSplitController: NSSplitViewController {
         inspectorResizeHandle = handle
         inspector.view.isHidden = !visible
         handle.isHidden = !visible
-        inspector.view.wantsLayer = true
-        inspector.view.layer?.masksToBounds = false
-        inspector.view.layer?.shadowColor = NSColor.black.cgColor
-        inspector.view.layer?.shadowOpacity = 0.10
-        inspector.view.layer?.shadowRadius = 16
-        inspector.view.layer?.shadowOffset = CGSize(width: 0, height: -4)
+        inspectorShadowView = WorkbenchPanelShadowView.install(behind: inspector.view, in: view)
+        inspectorShadowView?.isHidden = !visible
     }
 
     override func viewDidLayout() {
@@ -614,6 +647,8 @@ final class WorkbenchSplitController: NSSplitViewController {
         super.viewDidAppear()
         configureSplitPersistence()
         guard let window = view.window else { return }
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
@@ -704,11 +739,8 @@ final class WorkbenchSplitController: NSSplitViewController {
         floatingSidebarView?.isHidden = !isFloatingSidebarVisible
         sidebarResizeHandle?.isHidden = !isFloatingSidebarVisible
         floatingInspectorView?.isHidden = !isFloatingInspectorVisible
+        inspectorShadowView?.isHidden = !isFloatingInspectorVisible
         inspectorResizeHandle?.isHidden = !isFloatingInspectorVisible
-        if let panel = floatingInspectorView {
-            panel.layer?.shadowPath = CGPath(roundedRect: panel.bounds,
-                cornerWidth: WorkbenchTheme.Radius.panel, cornerHeight: WorkbenchTheme.Radius.panel, transform: nil)
-        }
         if let card = detailCardView {
             let cardFrame = card.convert(card.bounds, to: view)
             let trailing = isInspectorOverlayingContent
