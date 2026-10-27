@@ -451,18 +451,39 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                                                          sessions: fixture.sessions, native: connection,
                                                          kimi: ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"]?.hasPrefix("kimi-") == true
                                                             ? KimiAcceptanceProtocol.connection(host: NativeAcceptanceFixture.host) : nil))
+        let model = _model.wrappedValue
+        NotificationCenter.default.addObserver(forName: NSApplication.didFinishLaunchingNotification,
+                                               object: nil, queue: .main) { _ in
+            Task { @MainActor in NativeAcceptanceApp.drive(model: model, fixture: fixture) }
+        }
     }
     var body: some Scene {
-        WindowGroup("Perch · 隔离性能验收") {
+        // The fixture window is created directly: once the workspace grew a
+        // toolbar and floating hosts, scene appearance callbacks stopped firing
+        // reliably in CI, and an acceptance run must not depend on scene timing.
+        WindowGroup("Perch · 隔离性能验收") { EmptyView() }
+            .defaultLaunchBehavior(.suppressed).restorationBehavior(.disabled)
+    }
+
+    private static var window: NSWindow?
+
+    @MainActor private static func drive(model: WorkbenchModel, fixture: NativeAcceptanceFixture) {
+        let window = NSWindow(contentRect: NSRect(x: 60, y: 80, width: 1280, height: 820),
+                              styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                              backing: .buffered, defer: false)
+        window.title = "Perch · 隔离性能验收"
+        window.isReleasedWhenClosed = false
+        window.contentViewController = NSHostingController(rootView:
             WorkbenchView(model: model).preferredColorScheme(.light)
-                .environment(\.locale, Locale(identifier: "zh-Hans"))
-                .frame(width: 1280, height: 820)
-                .task {
-                    model.open(fixture.sessions[0])
-                    guard let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] else { return }
-                    await NativeAcceptanceRunner(model: model, fixture: fixture).run(mode)
-                }
-        }.defaultSize(width: 1280, height: 820).windowStyle(.hiddenTitleBar)
+                .environment(\.locale, Locale(identifier: "zh-Hans")))
+        window.setContentSize(NSSize(width: 1280, height: 820))
+        window.makeKeyAndOrderFront(nil)
+        self.window = window
+        Task {
+            model.open(fixture.sessions[0])
+            guard let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] else { return }
+            await NativeAcceptanceRunner(model: model, fixture: fixture).run(mode)
+        }
     }
 }
 
@@ -542,6 +563,17 @@ private struct ReferenceComposerFixtureView: View {
                 report.merge(try await dashboard(window)) { _, new in new }
             }
             if mode == "all" {
+                // The final turn's reply fills the viewport at the 16 pt reading
+                // size, so a bottom-anchored session may mount no user prompt row.
+                // Reveal the previous turn first: the reconciliation fixture needs
+                // a visible and an offscreen user row.
+                if let scroll = transcript(in: window),
+                   let navigator = ConversationTranscript.navigator(in: scroll),
+                   navigator.snapshot.turns.count > 1 {
+                    navigator.select(navigator.snapshot.turns.count - 2)
+                    try await Task.sleep(for: .milliseconds(500))
+                    flush(window)
+                }
                 guard let root = window.contentView, let checks = try ConversationTranscript.checkReconciliation(in: root) else {
                     throw WorkbenchError("Missing mounted row reconciliation fixture")
                 }

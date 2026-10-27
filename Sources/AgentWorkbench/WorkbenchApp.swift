@@ -10,6 +10,12 @@ struct WorkbenchApp: App {
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: appLanguage.resolvedLocale) }
+
+    init() {
+        // Startup must not depend on scene appearance callbacks: the delegate
+        // starts the model even if the first window's onAppear is never delivered.
+        AppDelegate.activeModel = model
+    }
     var body: some Scene {
         WindowGroup("Perch", id: "main") {
             WorkbenchView(model: model).preferredColorScheme(appAppearance.colorScheme)
@@ -102,12 +108,15 @@ struct WorkbenchApp: App {
 #endif
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// The scene's model before any window appears; the scene also sets `model`.
+    static weak var activeModel: WorkbenchModel?
     weak var model: WorkbenchModel?
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Idle unless Settings → 诊断 → 性能诊断 is on.
         FrameHitchMonitor.shared.install()
+        (model ?? AppDelegate.activeModel)?.start()
     }
     func applicationWillTerminate(_ notification: Notification) { CompanionWindowController.shared.shutdown(); model?.shutdown() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
