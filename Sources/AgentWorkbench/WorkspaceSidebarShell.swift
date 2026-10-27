@@ -30,9 +30,14 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 2) {
                 HStack(spacing: 4) {
-                    // A field-like target: tinted, never bordered, same height as rows.
-                    navigation("搜索项目与会话", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
-                        .background(.primary.opacity(WorkbenchTheme.Fill.surface), in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
+                    // Lift the row onto the titlebar's control centerline (52 pt
+                    // titlebar, 36 pt row, panel's 12 pt top inset).
+                    Spacer(minLength: 112)
+                    Button(action: onSearch) {
+                        Image(systemName: "magnifyingglass")
+                            .frame(width: SidebarMetrics.rowHeight, height: SidebarMetrics.rowHeight)
+                    }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话")
+                        .accessibilityLabel("搜索项目与会话")
                         .accessibilityIdentifier("sidebar.search")
                     Button(action: onNew) {
                         Image(systemName: "square.and.pencil")
@@ -40,10 +45,11 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                             .frame(width: SidebarMetrics.rowHeight, height: SidebarMetrics.rowHeight)
                     }.buttonStyle(SidebarNavigationStyle()).help("新建会话")
                         .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
-                }.padding(.bottom, 8)
+                }.padding(.top, (WorkbenchChrome.headerHeight - SidebarMetrics.rowHeight) / 2 - WorkspaceLayoutMetrics.sidebarInset)
+                .padding(.bottom, 8)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
-            }.padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
+            }.padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 6)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
@@ -116,7 +122,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         }
                     }
             }.padding(.horizontal, 10).padding(.bottom, 10)
-        }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.font(.system(size: 14)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,

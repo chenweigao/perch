@@ -57,7 +57,7 @@ struct KimiWorkspaceView: View {
                     onTasksRefresh: { Task { await connection.refreshTasks() } },
                     onOpenTranscript: { transcriptSubject = $0 })
                     .id(conversation.snapshot.session.id)
-                    .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity).padding(.top, 4)
+                    .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity, alignment: .center).padding(.top, 4)
                 KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
                     .id(conversation.snapshot.session.id)
             } else if let id = connection.selectedId {
@@ -150,24 +150,28 @@ private struct KimiComposerView: View {
                                 pastes: connection.pastes).id(sessionID)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
-                    let sessionModel = connection.conversation?.snapshot.session.model ?? ""
-                    let choice = connection.modelChoices[sessionID] ?? ""
-                    ComposerModelPicker(models: connection.catalog,
-                                        modelID: choice.isEmpty ? sessionModel : choice,
-                                        thinking: connection.thinkingChoices[sessionID],
-                                        disabledReason: !connection.online ? L("连接恢复后可修改设置。")
-                                            : !connection.snapshotReady ? L("正在同步会话，请稍候。")
-                                            : connection.sending ? L("消息发送中，请稍候。") : nil,
-                                        catalogError: connection.modelsError,
-                                        onRefreshCatalog: { await connection.refreshModels() },
-                                        sessionModel: sessionModel, usesSessionModel: choice.isEmpty,
-                                        onUseSessionModel: {
-                                            connection.modelChoices[sessionID] = ""
-                                            connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
-                                        }, scope: L("下一条消息生效"), onSelectModel: { model in
-                                            connection.modelChoices[sessionID] = model.id
-                                            connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
-                                        }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
+                    Group {
+                        let sessionModel = connection.conversation?.snapshot.session.model ?? ""
+                        let choice = connection.modelChoices[sessionID] ?? ""
+                        ComposerModelPicker(models: connection.catalog,
+                                            modelID: choice.isEmpty ? sessionModel : choice,
+                                            thinking: connection.thinkingChoices[sessionID],
+                                            disabledReason: !connection.online ? L("连接恢复后可修改设置。")
+                                                : !connection.snapshotReady ? L("正在同步会话，请稍候。")
+                                                : connection.sending ? L("消息发送中，请稍候。") : nil,
+                                            catalogError: connection.modelsError,
+                                            onRefreshCatalog: { await connection.refreshModels() },
+                                            sessionModel: sessionModel, usesSessionModel: choice.isEmpty,
+                                            onUseSessionModel: {
+                                                connection.modelChoices[sessionID] = ""
+                                                connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
+                                            }, scope: L("下一条消息生效"), onSelectModel: { model in
+                                                connection.modelChoices[sessionID] = model.id
+                                                connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
+                                            }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
+                    }
+                    ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
+                                            directory: connection.conversation?.snapshot.session.cwd ?? "")
                     PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
                                      disabled: connection.sending) { mode in
                         connection.setPermission(mode, for: sessionID)
@@ -187,7 +191,7 @@ private struct KimiComposerView: View {
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: nextTurnSend)
                 }
-            }.padding(12).workbenchControlSurface()
+            }.padding(ReplyStyle.composerInset).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in
@@ -211,7 +215,7 @@ private struct KimiComposerView: View {
                 } catch { connection.actionError = error.localizedDescription }
             }
             return accepted
-        }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
+        }.frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding).frame(maxWidth: .infinity, alignment: .center).padding(.bottom, 16).padding(.top, 8)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do {
                     let urls = try result.get()

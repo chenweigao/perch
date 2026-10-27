@@ -47,7 +47,7 @@ class PreviewSourceTests(unittest.TestCase):
         (app / "RevealFrameDriver.swift").write_text("// working tree reveal driver\n")
         # New reply rendering sources exist only in the working tree: historical refs skip them.
         for name in ("CodeHighlighting", "ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle", "ReplyMermaid",
-            "PerfDiagnostics", "AttachmentImageDecoder"):
+            "PerfDiagnostics", "AttachmentImageDecoder", "WorkbenchWindowBackdrop"):
             (app / f"{name}.swift").write_text("// working tree reply block\n")
         stubs = self.repo / "stubs"
         stubs.mkdir()

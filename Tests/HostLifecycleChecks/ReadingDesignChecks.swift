@@ -66,22 +66,31 @@ private struct ReadingDesignFixture: View {
         precondition(views.filter { $0.string.contains("正文清楚呈现") || $0.string.contains("let answer") }.allSatisfy { $0.isSelectable }, "Reply and code text must remain selectable")
         let heading = views.first { $0.string == "让回复成为阅读的主角" }!
         let headingFont = heading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
-        precondition(headingFont.pointSize == 16, "Native heading uses the shared hierarchy")
+        precondition(headingFont.pointSize == 20, "Native heading uses the shared hierarchy")
         let body = views.first { $0.string.contains("正文清楚呈现") }!
         let bodyFont = body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
         let paragraph = body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle
         let subheading = views.first { $0.string == "本次调整" }!
-        precondition(bodyFont.pointSize == 14 && paragraph.minimumLineHeight == 22,
-                     "Body reads at 14 pt on a 22 pt line in both renderers")
+        precondition(bodyFont.pointSize == 16 && paragraph.minimumLineHeight == 26,
+                     "Body reads at 16 pt on a 26 pt line in both renderers")
         precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == bodyFont.pointSize,
                      "Ordinary headings keep the body size; hierarchy comes from weight and spacing")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot bitmap") }
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(label + ".png"))
     }
-    // Click the same native fixture controls shown in the exported 1000x880 preview.
-    func click(x: CGFloat, yFromTop: CGFloat) {
-        let point = host.convert(NSPoint(x: x, y: host.isFlipped ? yFromTop : host.bounds.height - yFromTop), to: nil)
+    // Locate the production row anchors instead of assuming a prompt height:
+    // body font, wrapping, and reading width may move both disclosure headers.
+    func descendants(_ root: NSView) -> [NSView] { [root] + root.subviews.flatMap(descendants) }
+    func mounted(_ identifier: String) -> NSView {
+        guard let view = descendants(host).first(where: { $0.identifier?.rawValue == identifier }) else {
+            fatalError("Missing production disclosure row: \(identifier)")
+        }
+        return view
+    }
+    func clickHeader(_ view: NSView, height: CGFloat) {
+        let y = view.isFlipped ? view.bounds.minY + height / 2 : view.bounds.maxY - height / 2
+        let point = view.convert(NSPoint(x: view.bounds.midX, y: y), to: nil)
         for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             let event = NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
@@ -89,15 +98,20 @@ private struct ReadingDesignFixture: View {
             window.sendEvent(event)
         }
     }
-    click(x: 220, yFromTop: 150)
+    let thoughtEntry = ConversationTimelineEntry.make(messages).first { $0.messages.contains { $0.id == "thought" } }!
+    let foldID = ConversationTimelineEntry.processFold(firstEntry: thoughtEntry).id
+    let fold = mounted(foldID)
+    let foldHeaderHeight = fold.bounds.height
+    clickHeader(fold, height: foldHeaderHeight)
     try await Task.sleep(for: .milliseconds(400))
-    click(x: 220, yFromTop: 190)
+    let thought = mounted("process-entry:" + thoughtEntry.id)
+    clickHeader(thought, height: thought.bounds.height)
     try await Task.sleep(for: .milliseconds(400))
     guard let expanded = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot") }
     host.cacheDisplay(in: host.bounds, to: expanded)
     try expanded.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("expanded.png"))
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") }, "Process contents remain reachable")
-    click(x: 220, yFromTop: 150)
+    clickHeader(mounted(foldID), height: foldHeaderHeight)
     try await Task.sleep(for: .milliseconds(400))
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
     // Fallback Markdown uses the same hierarchy and complete link/text contents.
@@ -105,6 +119,6 @@ private struct ReadingDesignFixture: View {
     window.contentView = fallback
     try await Task.sleep(for: .milliseconds(400))
     let fallbackHeading = readingTextViews(fallback).first { $0.string == "让回复成为阅读的主角" }!
-    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 16)
+    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 20)
     print("PASS: reading design wide/narrow/dark, collapsed process, complete code, selectable text and native/fallback heading parity; snapshots /private/tmp/perch-reading-design")
 }

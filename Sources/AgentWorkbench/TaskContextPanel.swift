@@ -70,7 +70,7 @@ struct TaskContextButton: View {
     var body: some View {
         let open = model.taskContextWindow.isShowing(.task)
         Button { model.taskContextWindow.togglePage(.task, model: model) } label: {
-            WorkbenchToolbarSymbol(name: "sidebar.right")
+            WorkbenchToolbarSymbol(name: "info.circle")
                 .foregroundStyle(open ? WorkbenchTheme.accent : .secondary)
         }.buttonStyle(.plain).help("任务面板").accessibilityLabel("任务面板")
             .accessibilityValue(open ? "已展开" : "已收起")
@@ -97,7 +97,7 @@ struct TaskContextView: View {
     private var item: WorkspaceSession? { model.allSessions.first { $0.reference == reference } }
     private var active: Bool {
         if detached { return model.taskContextWindow.visible }
-        return model.taskContextWindow.embeddedVisible && !model.showDashboard && !model.draftingNewTask
+        return model.taskContextWindow.isShowing(.task) && !model.showDashboard && !model.draftingNewTask
     }
     private var current: TaskContextSnapshot? { state.reference == reference ? state.snapshot : nil }
     private struct LoadKey: Equatable {
@@ -112,7 +112,7 @@ struct TaskContextView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.fixedSize(horizontal: false, vertical: true)
+            header.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.header)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let error = state.error {
@@ -132,8 +132,11 @@ struct TaskContextView: View {
                         Text("此任务已不在工作台中，请取消锁定后选择其他会话。").foregroundStyle(.secondary)
                     } else if reference?.kind == .terminal {
                         Text("终端任务请在完整会话中查看。").foregroundStyle(.secondary)
+                    } else if state.error == nil {
+                        Text("暂无任务活动").foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                    .inspectorHeightContribution(.content)
             }
             if detached, let item {
                 VStack(spacing: 0) {
@@ -157,15 +160,15 @@ struct TaskContextView: View {
                                                ready: current != nil))
             #endif
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
-            .task(id: key) {
+            .workbenchHostedTask(id: key) {
                 let input = key
+                if state.reference != input.reference {
+                    allFiles = false; allTasks = false; expandedTasks = []; completedTools = false; outputTask = nil
+                }
                 await state.follow(input.reference, online: input.online) {
                     guard let source = input.reference else { throw CancellationError() }
                     return try await model.readTaskContext(source)
                 }
-            }
-            .onChange(of: reference) { _, _ in
-                allFiles = false; allTasks = false; expandedTasks = []; completedTools = false; outputTask = nil
             }
             .sheet(item: $draftSource) { source in
                 TaskContextDraft(model: model, source: source)

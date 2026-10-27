@@ -184,7 +184,7 @@ struct ConversationActivityBar: View {
     private var titleRow: some View {
         HStack(spacing: 6) {
             Text(verbatim: title).fontWeight(blocking ? .medium : .regular)
-                .foregroundStyle(blocking ? Color.orange : isRunning ? Color.primary : Color.secondary)
+                .foregroundStyle(blocking ? Color.orange : Color.secondary)
                 .lineLimit(1).truncationMode(.tail).layoutPriority(1)
             if let target = actionTarget {
                 Text(verbatim: target).foregroundStyle(.secondary)
@@ -200,7 +200,9 @@ struct ConversationActivityBar: View {
         if pendingCount > 0 { return L("等待你确认 · \(pendingCount) 项") }
         if stopping { return L(key: activity.title) }
         if turnEnded { return L("本轮结束") }
-        if isRunning, let narrative { return narrative.headline }
+        // Long assistant progress can contain a whole Markdown reply. Keep it
+        // in the details instead of duplicating the transcript in this one line.
+        if isRunning, let narrative, narrative.headline.count <= 48 { return narrative.headline }
         if let description = activity.operationDescription { return description }
         return L(key: activity.title)
     }

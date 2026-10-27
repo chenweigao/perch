@@ -19,7 +19,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     Sources/AgentWorkbench/ActivitySummaryController.swift Sources/AgentWorkbench/ActivitySummarySettings.swift \
     Sources/AgentWorkbench/HostIdentityIcon.swift Sources/AgentWorkbench/SessionGroupsSheet.swift \
     Sources/AgentWorkbench/BatchArchiveControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
-    Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
+    Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
     Sources/AgentWorkbench/TaskGroupPage.swift Sources/AgentWorkbench/WorkItemGroupEditor.swift \
     Sources/AgentWorkbench/GroupProgressView.swift Sources/AgentWorkbench/TaskGroupOverview.swift \
     Tests/TaskGroupPreview/App.swift \

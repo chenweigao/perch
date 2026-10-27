@@ -11,14 +11,14 @@ ui-radius 规范启发；数值以 Perch 的既有 token 为准。执行方式�
 | 用途 | 数值 | token |
 |---|---|---|
 | 小元素、chip、缩略图 | 5 | `WorkbenchTheme.Radius.chip` |
-| 行高亮、紧凑控件、会话行 | 7 | `WorkbenchTheme.Radius.row` |
+| 行高亮、紧凑控件、会话行 | 10 | `WorkbenchTheme.Radius.row` |
 | 分组内容、卡片、通知 | 10 | `WorkbenchTheme.Radius.card` |
-| 窗口框架里的面板：侧栏、对话卡片、检查器 | 16 | `WorkbenchTheme.Radius.panel` |
+| 对话卡片、检查器、窄窗口侧栏覆盖层 | 20 | `WorkbenchTheme.Radius.panel` |
 
-家族常量（如 `UserMessageStyle.cornerRadius` 12、`ReplyStyle.Code.cornerRadius` 8）
+家族常量（如 `UserMessageStyle.cornerRadius` 18、`ReplyStyle.Code.cornerRadius` 8）
 是组件族的几何声明，保留原名，但必须钉在例外清单里——清单即目录，翻看它就知道
-全 App 有哪些圆角。玻璃表面（`WorkbenchGlass` 的 16/20）是有意设计，按
-AGENTS.md 不动。面板档与窗口圆角隔着框架的 12 pt 边距同心，侧栏玻璃的 16 与它一致。
+全 App 有哪些圆角。侧栏与标题栏共用整窗半透明底板，不单独加圆角外框；输入框保留 20pt 的系统玻璃。
+右浮层与正文卡片用 12pt 材质沟槽分离。
 
 ## 规则
 

@@ -70,6 +70,24 @@ with (out / "process.log").open("w") as log:
     try:
         manifest["exit_code"] = process.wait(timeout=95 if args.capture != "none" else max(60, args.seconds + 60))
     except subprocess.TimeoutExpired:
+        # Keep evidence before killing: a stack sample, the screen, and the
+        # app's console log. A timed-out fixture previously left only its pid.
+        try:
+            sample = subprocess.run(["sample", str(process.pid), "2"], capture_output=True, text=True, timeout=10)
+            (out / "hang-sample.txt").write_text(sample.stdout + sample.stderr)
+        except Exception as error:
+            (out / "hang-sample.txt").write_text(f"sample failed: {error}")
+        try:
+            subprocess.run(["/usr/sbin/screencapture", "-x", str(out / "hang-screen.png")], timeout=10)
+        except Exception:
+            pass
+        try:
+            logs = subprocess.run(["log", "show", "--last", "5m", "--style", "compact",
+                                   "--predicate", f'process == "{binary.name}"'],
+                                  capture_output=True, text=True, timeout=60)
+            (out / "hang-console.txt").write_text((logs.stdout + logs.stderr)[-200000:])
+        except Exception as error:
+            (out / "hang-console.txt").write_text(f"log show failed: {error}")
         os.killpg(process.pid, signal.SIGTERM)
         try:
             process.wait(timeout=3)

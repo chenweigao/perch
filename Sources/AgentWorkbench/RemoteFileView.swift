@@ -1339,6 +1339,9 @@ struct RemoteSourceText: NSViewRepresentable {
     let line: Int?
     var diff = false
     var numbered = false
+    /// Embedded inspectors inherit their card's surface; full readers keep the
+    /// native text background by default.
+    var transparentBackground = false
     var onSelection: ((NSRange) -> Void)? = nil
     var initialOffset: Double? = nil
     var onSaveOffset: ((Double) -> Void)? = nil
@@ -1375,8 +1378,10 @@ struct RemoteSourceText: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = SourceScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
+        scroll.drawsBackground = !transparentBackground
         // TextKit 1 from the start: sizing below and the gutter read its layout.
         let view = NSTextView(usingTextLayoutManager: false); view.isEditable = false; view.isSelectable = true
+        view.drawsBackground = !transparentBackground
         view.identifier = NSUserInterfaceItemIdentifier("PerchReviewSource")
         view.delegate = context.coordinator
         let highlighting = CodeHighlightController(view: view)
@@ -1400,6 +1405,8 @@ struct RemoteSourceText: NSViewRepresentable {
     }
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? NSTextView else { return }
+        scroll.drawsBackground = !transparentBackground
+        view.drawsBackground = !transparentBackground
         let coordinator = context.coordinator
         coordinator.onSelection = onSelection
         coordinator.onSaveOffset = onSaveOffset
