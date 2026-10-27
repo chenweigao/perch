@@ -166,6 +166,19 @@ import WorkbenchCore
     let titleX = title.convert(title.bounds, to: window.contentView).minX
     precondition(abs(titleX - cardFrame.minX - WorkbenchTheme.Reading.inset) < 2,
                  "The toolbar title stays anchored to the pane while the reading column centers")
+    let toolbarActions = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchActions" }!.view!
+    let actionsRight = toolbarActions.convert(toolbarActions.bounds, to: window.contentView).maxX
+    precondition(window.contentView!.bounds.maxX - actionsRight < 40 && actionsRight > inspectorFrame.maxX - 40,
+                 "Toolbar actions belong at the window edge, above the inspector")
+    for changedTitle in ["短标题", "恢复后的长会话标题：检查工具栏对齐和右侧悬浮面板开合时的位置"] {
+        model.rename(first, title: changedTitle)
+        try await Task.sleep(for: .milliseconds(200))
+        window.contentView!.layoutSubtreeIfNeeded()
+        precondition(abs(title.convert(title.bounds, to: window.contentView).minX - titleX) < 2,
+                     "A changing session title must not move the toolbar's left alignment")
+    }
+    model.rename(first, title: first.title)
+    try await Task.sleep(for: .milliseconds(200))
     precondition(abs(draftFrame.midX - cardFrame.midX) < 2 &&
                  abs(replyX - (cardFrame.midX - ReplyStyle.readingWidth / 2)) < 2,
                  "Reply and editor must center in the space remaining beside the inspector")
@@ -175,6 +188,9 @@ import WorkbenchCore
     window.contentView!.layoutSubtreeIfNeeded()
     let closedCardFrame = card.convert(card.bounds, to: window.contentView)
     let closedDraftFrame = draft.convert(draft.bounds, to: window.contentView)
+    precondition(abs(toolbarActions.convert(toolbarActions.bounds, to: window.contentView).maxX - actionsRight) < 2 &&
+                 abs(title.convert(title.bounds, to: window.contentView).minX - titleX) < 2,
+                 "Inspector toggles must not shift the toolbar title or actions")
     let closedReply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     let closedReplyFrame = closedReply.convert(closedReply.bounds, to: window.contentView)
     precondition(closedCardFrame.width > cardFrame.width + 300 &&

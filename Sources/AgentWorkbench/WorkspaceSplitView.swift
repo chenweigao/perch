@@ -116,15 +116,15 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             controller.installFloatingInspector(inspectorHost, visible: inspectorVisible)
         }
 
-        // Keep legacy saved item order from omitting the new pane-alignment spacers.
-        let toolbar = NSToolbar(identifier: "WorkbenchToolbar.v2")
+        // Retire the saved trailing spacer: actions belong at the window edge.
+        let toolbar = NSToolbar(identifier: "WorkbenchToolbar.v3")
         toolbar.delegate = coordinator
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = true
         toolbar.autosavesConfiguration = true
         controller.workspaceToolbar = toolbar
-        controller.alignToolbar = { [weak coordinator] leading, trailing in
-            coordinator?.alignToolbar(leading: leading, trailing: trailing)
+        controller.alignToolbar = { [weak coordinator] leading in
+            coordinator?.alignToolbar(leading: leading)
         }
         return controller
     }
@@ -152,7 +152,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     final class Coordinator: NSObject, NSToolbarDelegate {
         let sidebarHost: NSHostingController<WorkspaceFloatingPanelRoot<Sidebar>>
         let contentHost: NSHostingController<WorkspaceLocalizedRoot<Content>>
-        let headerHost: NSHostingView<WorkspaceLocalizedRoot<Header>>
+        let headerHost: WorkbenchToolbarTitleHost<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
         let inspectorHost: NSHostingController<WorkspaceInspectorPanelRoot<AnyView>>?
         weak var controller: WorkbenchSplitController?
@@ -167,15 +167,15 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private let titleID = NSToolbarItem.Identifier("WorkbenchTitle")
         private let actionsID = NSToolbarItem.Identifier("WorkbenchActions")
         private let leadingID = NSToolbarItem.Identifier("WorkbenchLeadingAlignment")
-        private let trailingID = NSToolbarItem.Identifier("WorkbenchTrailingAlignment")
         private var leadingWidth: NSLayoutConstraint?
-        private var trailingWidth: NSLayoutConstraint?
+        private var titleLeading: CGFloat = 0
+        private var alignmentScheduled = false
 
         init(_ view: WorkspaceSplitView) {
             sidebarHost = NSHostingController(rootView: WorkspaceFloatingPanelRoot(
                 content: view.sidebar, locale: view.locale))
             contentHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.content, locale: view.locale))
-            headerHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
+            headerHost = WorkbenchToolbarTitleHost(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
             actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
             inspectorHost = view.inspector.map {
                 NSHostingController(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale))
@@ -192,6 +192,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             inspectorHost?.safeAreaRegions = []
             headerHost.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             headerHost.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            headerHost.didLayout = { [weak self] in self?.scheduleTitleAlignment() }
         }
 
         func setInspectorVisible(_ visible: Bool) {
@@ -199,7 +200,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, leadingID, titleID, .flexibleSpace, actionsID, trailingID]
+            [toggleID, leadingID, titleID, .flexibleSpace, actionsID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
             toolbarDefaultItemIdentifiers(toolbar) + [composeID, backID, forwardID]
@@ -207,7 +208,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
             let L = LocalizedUIStrings(locale: locale)
-            if id == leadingID || id == trailingID {
+            if id == leadingID {
                 let item = NSToolbarItem(itemIdentifier: id)
                 let spacer = NSView()
                 spacer.translatesAutoresizingMaskIntoConstraints = false
@@ -216,7 +217,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.view = spacer
                 item.isBordered = false
                 item.visibilityPriority = .high
-                if id == leadingID { leadingWidth = width } else { trailingWidth = width }
+                leadingWidth = width
                 return item
             }
             if id == backID || id == forwardID {
@@ -265,19 +266,25 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             }
             return item
         }
-        /// Native toolbar spacing follows the mounted pane edges, including a
-        /// resized sidebar and the inspector's reserved trailing lane.
-        func alignToolbar(leading: CGFloat, trailing: CGFloat) {
-            guard let controller, headerHost.window != nil, actionsHost.window != nil else { return }
+        /// Only the title follows the pane. The system keeps actions at the
+        /// window's trailing edge, independent of inspector visibility.
+        func alignToolbar(leading: CGFloat) {
+            titleLeading = leading
+            guard let controller, headerHost.window != nil, let leadingWidth else { return }
             let titleX = headerHost.convert(headerHost.bounds, to: controller.view).minX
-            let actionsX = actionsHost.convert(actionsHost.bounds, to: controller.view).maxX
-            if let leadingWidth {
-                let width = max(1, leadingWidth.constant + leading - titleX)
-                if abs(width - leadingWidth.constant) > 0.5 { leadingWidth.constant = width }
-            }
-            if let trailingWidth {
-                let width = max(1, trailingWidth.constant + actionsX - trailing)
-                if abs(width - trailingWidth.constant) > 0.5 { trailingWidth.constant = width }
+            let width = max(1, leadingWidth.constant + leading - titleX)
+            if abs(width - leadingWidth.constant) > 0.5 { leadingWidth.constant = width }
+        }
+
+        private func scheduleTitleAlignment() {
+            guard !alignmentScheduled else { return }
+            alignmentScheduled = true
+            // Toolbar intrinsic-size changes can finish after the workspace's
+            // layout pass, for example when a restored session supplies its title.
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.alignmentScheduled = false
+                self.alignToolbar(leading: self.titleLeading)
             }
         }
         func updateToolbarLanguage() {
@@ -323,6 +330,15 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         @objc private func compose() { newConversation() }
         @objc private func goBack() { navigate(-1); controller?.workspaceToolbar?.validateVisibleItems() }
         @objc private func goForward() { navigate(1); controller?.workspaceToolbar?.validateVisibleItems() }
+    }
+}
+
+final class WorkbenchToolbarTitleHost<Content: View>: NSHostingView<Content> {
+    var didLayout: (() -> Void)?
+
+    override func layout() {
+        super.layout()
+        didLayout?()
     }
 }
 
@@ -493,7 +509,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
-    var alignToolbar: ((CGFloat, CGFloat) -> Void)?
+    var alignToolbar: ((CGFloat) -> Void)?
     private var floatingSidebarController: NSViewController?
     private var floatingInspectorController: NSViewController?
     private weak var detailController: WorkbenchDetailController?
@@ -743,10 +759,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         inspectorResizeHandle?.isHidden = !isFloatingInspectorVisible
         if let card = detailCardView {
             let cardFrame = card.convert(card.bounds, to: view)
-            let trailing = isInspectorOverlayingContent
-                ? view.bounds.maxX - WorkspaceLayoutMetrics.sidebarInset - floatingInspectorWidth - WorkspaceLayoutMetrics.sidebarGap
-                : cardFrame.maxX - WorkbenchTheme.Reading.inset
-            alignToolbar?(cardFrame.minX + WorkbenchTheme.Reading.inset, trailing)
+            alignToolbar?(cardFrame.minX + WorkbenchTheme.Reading.inset)
         }
     }
 
