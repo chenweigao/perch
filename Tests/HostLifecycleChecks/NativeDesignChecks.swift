@@ -98,7 +98,7 @@ import WorkbenchCore
     if !model.workspace.starred.contains(pin.reference) { model.toggleStar(pin.reference) }
     model.open(first)
     try await Task.sleep(for: .milliseconds(150))
-    let window = NSWindow(contentRect: NSRect(x: 30, y: 40, width: 1440, height: 900),
+    let window = NativeDesignWindow(contentRect: NSRect(x: 30, y: 40, width: 1440, height: 900),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
     window.title = "Perch · 原生设计对照"
     window.isReleasedWhenClosed = false
@@ -109,6 +109,10 @@ import WorkbenchCore
     window.contentViewController = hosting
     window.setContentSize(NSSize(width: 1440, height: 900))
     window.makeKeyAndOrderFront(nil)
+    // The 1440 × 900 design geometry must not depend on the display: CI screens
+    // are smaller, and AppKit would otherwise shrink the window to fit them.
+    window.setFrame(NSRect(origin: window.frame.origin, size: window.frameRect(forContentRect:
+        NSRect(origin: .zero, size: NSSize(width: 1440, height: 900))).size), display: true)
     let keepAlive = Task { @MainActor in
         while !Task.isCancelled {
             try await connection.poll()
@@ -283,7 +287,9 @@ import WorkbenchCore
         // View caches omit what the window server composites: Liquid Glass and
         // shadows. System captures keep them where the session may record the
         // screen; elsewhere they fail or come back empty, which is not a defect.
-        let screenHeight = NSScreen.screens.first?.frame.height ?? window.frame.maxY
+        // Glass beyond the display has nothing to sample, so only whole windows.
+        guard let screen = window.screen, screen.frame.contains(window.frame) else { return }
+        let screenHeight = NSScreen.screens.first?.frame.height ?? screen.frame.maxY
         let area = window.frame.insetBy(dx: -32, dy: -32)
         let region = [area.minX, screenHeight - area.maxY, area.width, area.height].map { String(Int($0.rounded())) }
         for (suffix, target) in [("window", ["-l", String(window.windowNumber)]), ("screen", ["-R", region.joined(separator: ",")])] {
@@ -307,15 +313,28 @@ import WorkbenchCore
     UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
     precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua)
-    // Narrow windows float the sidebar over the card on its own glass panel.
-    let wideSize = window.contentView!.bounds.size
-    window.setContentSize(NSSize(width: 900, height: 760))
-    try await Task.sleep(for: .milliseconds(300))
-    window.contentView!.layoutSubtreeIfNeeded()
+    // On-screen frames: the largest window this display holds, then a narrow one
+    // whose sidebar floats over the card on its own glass panel.
+    let wideFrame = window.frame
+    let visible = (window.screen ?? NSScreen.main)?.visibleFrame.insetBy(dx: 20, dy: 20) ?? wideFrame
+    func place(width: CGFloat) async throws {
+        window.setFrame(NSRect(x: visible.minX, y: visible.minY, width: min(width, visible.width),
+                               height: min(wideFrame.height, visible.height)), display: true)
+        try await Task.sleep(for: .milliseconds(300))
+        window.contentView!.layoutSubtreeIfNeeded()
+    }
+    try await place(width: wideFrame.width)
+    try await capture("native-fit-light")
+    UserDefaults.standard.set(AppAppearance.dark.rawValue, forKey: AppAppearance.defaultsKey)
+    try await Task.sleep(for: .milliseconds(200))
+    try await capture("native-fit-dark")
+    UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
+    try await Task.sleep(for: .milliseconds(200))
+    try await place(width: 900)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
                  "A narrow window must back the overlaying sidebar with its glass panel")
     try await capture("native-narrow-light")
-    window.setContentSize(wideSize)
+    window.setFrame(wideFrame, display: true)
     try await Task.sleep(for: .milliseconds(300))
     window.contentView!.layoutSubtreeIfNeeded()
     print("PASS: production workspace, aligned reply/composer, independent changes inspector, native light and dark")
@@ -349,6 +368,11 @@ import WorkbenchCore
         precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
         print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
     }
+}
+
+/// Keeps the requested design size on displays smaller than the design.
+private final class NativeDesignWindow: NSWindow {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
 /// Preview-only controls let visual reviews capture the same live window in
