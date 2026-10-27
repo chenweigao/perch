@@ -41,14 +41,14 @@
 
 `WorkbenchSplitController` / `WorkbenchDetailController`（`Sources/AgentWorkbench/WorkspaceSplitView.swift`）。
 
-- **一整块通透的磨砂底板。** `WorkbenchWindowBackdropView` 使用系统 sidebar 材质与 behind-window 模糊，
-  仅叠加 8% 的语义 window-background 色；窗口背景透明，材质保持 active，跟随浅深色外观。
+- **一整块通透的磨砂底板。** `WorkbenchWindowBackdropView` 使用系统 under-window 材质与 behind-window 模糊，
+  模糊材质透明度为 78%，仅叠加 2% 的语义 window-background 色；开启“减少透明度”时恢复系统完整覆盖；窗口背景透明，材质保持 active，跟随浅深色外观。
   侧栏和工具栏共用底板；侧栏不再单独加玻璃外框、描边或阴影。
 - **内容浮在底板上**：对话卡片与检查器使用 `WorkbenchTheme.Radius.panel`（20pt），
   不透明内容底色、发丝线和独立 AppKit 阴影层；阴影不能放在裁切内容或 SwiftUI 管理的图层上。
   裁切内部页面，终端与滚动内容不越过圆角。
 - **正文为主，检查器为辅助浮层。** 画布与对话 hosting root 始终保留；宽窗口中对话卡片避让侧栏和检查器，
-  面板之间露出 12pt 底板；检查器顶部比正文再下沉 12pt，优先高度 680pt，底部至少留 24pt，不能铺成等高的第三列。
+  面板之间露出 12pt 底板；检查器顶部比正文再下沉 12pt，高度随标题和内容实测收缩，上限 680pt，超出时内部滚动，底部至少留 24pt，不能铺成等高的第三列。
   1440pt 窗口采用左栏 304pt、主卡片 776pt、右浮层 312pt；空间不足以保留 600pt 主卡片时，右浮层才覆盖内容。
 - **标题锚定窗格，阅读栏居中**：工具栏标题为 14pt semibold，距卡片左侧 24pt，标题恢复或更换后仍保持此对齐；正文、活动条和输入区在卡片当前可用宽度内居中。
   右栏展开或关闭、左右侧栏缩放后必须重新居中，不能把正文固定在左边。对话和草稿宿主保持挂载。

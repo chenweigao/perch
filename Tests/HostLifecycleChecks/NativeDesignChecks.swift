@@ -150,8 +150,10 @@ import WorkbenchCore
     }
     precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
                  distanceFromTop(inspectorFrame) > distanceFromTop(cardFrame) &&
-                 inspectorFrame.height <= WorkspaceLayoutMetrics.inspectorPreferredHeight + 1,
+                 inspectorFrame.height <= WorkspaceLayoutMetrics.inspectorMaximumHeight + 1,
                  "The reading sheet must float below the toolbar, with a shorter inset inspector")
+    precondition(inspectorFrame.height < 500,
+                 "A short diff must size to its contents rather than fill a 680pt inspector")
     precondition(connection.models(for: .codex).count == 2 &&
                  connection.model(for: connection.snapshot!)?.supportsThinking == true,
                  "The design fixture must include a real model catalog and adjustable reasoning controls")
@@ -206,6 +208,17 @@ import WorkbenchCore
                  descendants(window.contentView!).compactMap { $0 as? DraftTextView }.first === draft,
                  "Reopening the inspector must restore centering without replacing the editor")
     precondition(model.changesBrowser.gitStatus != nil && model.selectedReference == first.reference)
+    model.taskContextWindow.page = .task
+    try await Task.sleep(for: .milliseconds(500))
+    window.contentView!.layoutSubtreeIfNeeded()
+    let compactHeight = split.floatingInspectorView!.bounds.height
+    precondition(compactHeight >= 64 && compactHeight < 240,
+                 "An empty task inspector must shrink to a compact card: \(compactHeight)")
+    model.taskContextWindow.page = .changes
+    try await Task.sleep(for: .milliseconds(500))
+    window.contentView!.layoutSubtreeIfNeeded()
+    precondition(split.floatingInspectorView!.bounds.height > compactHeight + 80,
+                 "Switching from an empty task to a diff must grow the same mounted panel")
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         func rectangle(_ rect: NSRect) -> [String: Double] {
             ["x": Double(rect.minX), "y": Double(rect.minY), "width": Double(rect.width), "height": Double(rect.height)]

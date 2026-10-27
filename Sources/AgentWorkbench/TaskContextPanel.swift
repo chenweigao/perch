@@ -112,7 +112,7 @@ struct TaskContextView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.fixedSize(horizontal: false, vertical: true)
+            header.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution()
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let error = state.error {
@@ -132,8 +132,11 @@ struct TaskContextView: View {
                         Text("此任务已不在工作台中，请取消锁定后选择其他会话。").foregroundStyle(.secondary)
                     } else if reference?.kind == .terminal {
                         Text("终端任务请在完整会话中查看。").foregroundStyle(.secondary)
+                    } else if state.error == nil {
+                        Text("暂无任务活动").foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                    .inspectorHeightContribution()
             }
             if detached, let item {
                 VStack(spacing: 0) {

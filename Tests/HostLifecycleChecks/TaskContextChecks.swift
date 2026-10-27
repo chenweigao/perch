@@ -271,7 +271,7 @@ import WorkbenchCore
     let frameInset = WorkspaceLayoutMetrics.frameInset
     let backdropFrame = frame(split.frameMaterialView)
     precondition(split.frameMaterialView?.blendingMode == .behindWindow &&
-                 split.frameMaterialView?.material == .sidebar &&
+                 split.frameMaterialView?.material == .underWindowBackground &&
                  split.frameMaterialView?.state == .active &&
                  abs(backdropFrame.width - split.view.bounds.width) < 1 &&
                  abs(backdropFrame.height - split.view.bounds.height) < 1,

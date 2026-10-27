@@ -64,8 +64,10 @@ struct ChangesInspectorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-            content
+            header.inspectorHeightContribution()
+            ScrollView {
+                content.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution()
+            }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .task(id: key) {
                 guard key.reference != nil else { browser.cancel(); return }
@@ -119,7 +121,7 @@ struct ChangesInspectorView: View {
             VStack(spacing: 10) {
                 notice(error, symbol: "exclamationmark.triangle")
                 Button("重试") { refresh += 1 }.disabled(browser.loading)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }.frame(maxWidth: .infinity)
         } else {
             switch browser.gitStatus {
             case nil:
@@ -191,6 +193,7 @@ struct ChangesInspectorView: View {
                     // File metadata is already in the list and title. Keep the
                     // complete original patch available in the full review.
                     RemoteSourceText(text: body, line: nil, diff: true, transparentBackground: true)
+                        .frame(height: min(360, max(100, CGFloat(body.split(separator: "\n", omittingEmptySubsequences: false).count) * 20 + 24)))
                         .id("inspector-diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitRange.rawValue)")
                         .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
                         .padding(.horizontal, 16).padding(.bottom, 16)
@@ -208,14 +211,14 @@ struct ChangesInspectorView: View {
         VStack(spacing: 10) {
             ProgressView().controlSize(.small)
             Text("正在读取…").font(.system(size: 12)).foregroundStyle(.secondary)
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.frame(maxWidth: .infinity)
     }
 
     private func notice(_ text: String, symbol: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: symbol).font(.system(size: 20, weight: .light)).foregroundStyle(.tertiary)
             Text(text).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
-        }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.padding(24).frame(maxWidth: .infinity)
     }
 
     /// After a status read, show the chosen file again, or the first change.

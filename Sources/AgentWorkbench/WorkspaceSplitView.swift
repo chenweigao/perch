@@ -17,7 +17,7 @@ enum WorkspaceLayoutMetrics {
     static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + frameInset
     static let inspectorTopInset: CGFloat = contentTopInset + 12
     static let inspectorBottomInset: CGFloat = 24
-    static let inspectorPreferredHeight: CGFloat = 680
+    static let inspectorMaximumHeight: CGFloat = 680
     static let sidebarInset: CGFloat = frameInset
     static let sidebarGap: CGFloat = 12
     static let sidebarDefaultWidth: CGFloat = 304
@@ -112,7 +112,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         controller.splitView.dividerStyle = .thin
         controller.configureSplitPersistence()
         controller.installFloatingSidebar(coordinator.sidebarHost, detailController: detailController)
-        if let inspectorHost = coordinator.inspectorHost {
+        if let inspectorHost = coordinator.inspectorHost, let inspector {
+            inspectorHost.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
+                heightChanged: { [weak controller] in controller?.setInspectorContentHeight($0) })
             controller.installFloatingInspector(inspectorHost, visible: inspectorVisible)
         }
 
@@ -139,7 +141,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.contentHost.rootView = WorkspaceLocalizedRoot(content: content, locale: locale)
         coordinator.headerHost.rootView = WorkspaceLocalizedRoot(content: header, locale: locale)
         coordinator.actionsHost.rootView = WorkspaceLocalizedRoot(content: actions, locale: locale)
-        if let inspector { coordinator.inspectorHost?.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale) }
+        if let inspector {
+            coordinator.inspectorHost?.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
+                heightChanged: { [weak controller] in controller?.setInspectorContentHeight($0) })
+        }
         coordinator.setInspectorVisible(inspectorVisible)
         coordinator.updateToolbarLanguage()
     }
@@ -515,6 +520,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     private weak var detailController: WorkbenchDetailController?
     private var sidebarWidthConstraint: NSLayoutConstraint?
     private var inspectorWidthConstraint: NSLayoutConstraint?
+    private var inspectorHeightConstraint: NSLayoutConstraint?
     private var sidebarResizeHandle: WorkspaceSidebarResizeHandle?
     private var inspectorResizeHandle: WorkspaceSidebarResizeHandle?
     private var sidebarOverlayBackdrop: WorkbenchWindowBackdropView?
@@ -595,7 +601,8 @@ final class WorkbenchSplitController: NSSplitViewController {
             ? panel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -WorkspaceLayoutMetrics.sidebarInset)
             : panel.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -WorkspaceLayoutMetrics.inspectorBottomInset)
         if !leading {
-            let height = panel.heightAnchor.constraint(equalToConstant: WorkspaceLayoutMetrics.inspectorPreferredHeight)
+            let height = panel.heightAnchor.constraint(equalToConstant: 144)
+            inspectorHeightConstraint = height
             height.priority = .init(rawValue: 999)
             height.isActive = true
         }
@@ -652,6 +659,12 @@ final class WorkbenchSplitController: NSSplitViewController {
         handle.isHidden = !visible
         inspectorShadowView = WorkbenchPanelShadowView.install(behind: inspector.view, in: view)
         inspectorShadowView?.isHidden = !visible
+    }
+
+    func setInspectorContentHeight(_ height: CGFloat) {
+        guard height > 0, let constraint = inspectorHeightConstraint else { return }
+        let desired = min(WorkspaceLayoutMetrics.inspectorMaximumHeight, max(64, ceil(height)))
+        if abs(constraint.constant - desired) > 0.5 { constraint.constant = desired }
     }
 
     override func viewDidLayout() {
@@ -805,6 +818,7 @@ struct WorkspaceFloatingPanelRoot<Content: View>: View {
 struct WorkspaceInspectorPanelRoot<Content: View>: View {
     let content: Content
     let locale: Locale
+    var heightChanged: (CGFloat) -> Void = { _ in }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel, style: .continuous)
@@ -814,6 +828,22 @@ struct WorkspaceInspectorPanelRoot<Content: View>: View {
             .background(WorkbenchTheme.contentBackground)
             .clipShape(shape)
             .overlay(shape.strokeBorder(Color.primary.opacity(WorkbenchTheme.Stroke.hairline), lineWidth: 1))
+            .onPreferenceChange(InspectorContentHeightKey.self, perform: heightChanged)
+    }
+}
+
+/// Natural heights of the header and scrollable contents, independent of the
+/// viewport. This lets the native card shrink as sections collapse or disappear.
+struct InspectorContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value += nextValue() }
+}
+
+extension View {
+    func inspectorHeightContribution() -> some View {
+        background(GeometryReader { geometry in
+            Color.clear.preference(key: InspectorContentHeightKey.self, value: geometry.size.height)
+        })
     }
 }
 
