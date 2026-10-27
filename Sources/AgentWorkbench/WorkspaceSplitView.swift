@@ -3,7 +3,8 @@ import SwiftUI
 import WorkbenchCore
 
 enum WorkbenchChrome {
-    static let headerHeight: CGFloat = 44
+    /// Measured height of the hidden-title-bar window with the unified toolbar.
+    static let headerHeight: CGFloat = 52
     static let symbolSize: CGFloat = 15
     static let controlSize: CGFloat = 32
     static let controlSpacing: CGFloat = 16
@@ -12,9 +13,9 @@ enum WorkbenchChrome {
 }
 
 enum WorkspaceLayoutMetrics {
-    /// The reading sheet floats below the unified window toolbar.
+    /// The reading sheet floats just below the unified window toolbar.
     static let frameInset: CGFloat = 12
-    static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + frameInset
+    static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + 4
     static let inspectorTopInset: CGFloat = contentTopInset + 12
     static let inspectorBottomInset: CGFloat = 24
     static let inspectorMaximumHeight: CGFloat = 680
