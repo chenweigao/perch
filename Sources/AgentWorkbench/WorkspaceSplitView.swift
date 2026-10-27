@@ -97,6 +97,12 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let coordinator = context.coordinator
         let controller = WorkbenchSplitController()
         coordinator.controller = controller
+        // Install the measurement callback before loading the host's view.
+        // Its first preference can arrive while the native constraints are not yet mounted.
+        if let inspectorHost = coordinator.inspectorHost, let inspector {
+            inspectorHost.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
+                heightChanged: { [weak controller] in controller?.setInspectorContentHeight($0) })
+        }
         coordinator.sidebarHost.view.setFrameSize(NSSize(width: WorkspaceLayoutMetrics.sidebarDefaultWidth, height: 620))
         coordinator.contentHost.view.setFrameSize(NSSize(width: 900, height: 620))
         coordinator.inspectorHost?.view.setFrameSize(
@@ -112,9 +118,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         controller.splitView.dividerStyle = .thin
         controller.configureSplitPersistence()
         controller.installFloatingSidebar(coordinator.sidebarHost, detailController: detailController)
-        if let inspectorHost = coordinator.inspectorHost, let inspector {
-            inspectorHost.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
-                heightChanged: { [weak controller] in controller?.setInspectorContentHeight($0) })
+        if let inspectorHost = coordinator.inspectorHost {
             controller.installFloatingInspector(inspectorHost, visible: inspectorVisible)
         }
 
@@ -521,6 +525,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     private var sidebarWidthConstraint: NSLayoutConstraint?
     private var inspectorWidthConstraint: NSLayoutConstraint?
     private var inspectorHeightConstraint: NSLayoutConstraint?
+    private var inspectorContentHeight: CGFloat = 144
     private var sidebarResizeHandle: WorkspaceSidebarResizeHandle?
     private var inspectorResizeHandle: WorkspaceSidebarResizeHandle?
     private var sidebarOverlayBackdrop: WorkbenchWindowBackdropView?
@@ -601,7 +606,7 @@ final class WorkbenchSplitController: NSSplitViewController {
             ? panel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -WorkspaceLayoutMetrics.sidebarInset)
             : panel.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -WorkspaceLayoutMetrics.inspectorBottomInset)
         if !leading {
-            let height = panel.heightAnchor.constraint(equalToConstant: 144)
+            let height = panel.heightAnchor.constraint(equalToConstant: inspectorContentHeight)
             inspectorHeightConstraint = height
             height.priority = .init(rawValue: 999)
             height.isActive = true
@@ -662,9 +667,11 @@ final class WorkbenchSplitController: NSSplitViewController {
     }
 
     func setInspectorContentHeight(_ height: CGFloat) {
-        guard height > 0, let constraint = inspectorHeightConstraint else { return }
-        let desired = min(WorkspaceLayoutMetrics.inspectorMaximumHeight, max(64, ceil(height)))
-        if abs(constraint.constant - desired) > 0.5 { constraint.constant = desired }
+        guard height > 0 else { return }
+        inspectorContentHeight = min(WorkspaceLayoutMetrics.inspectorMaximumHeight, max(64, ceil(height)))
+        if let constraint = inspectorHeightConstraint, abs(constraint.constant - inspectorContentHeight) > 0.5 {
+            constraint.constant = inspectorContentHeight
+        }
     }
 
     override func viewDidLayout() {

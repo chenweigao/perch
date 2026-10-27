@@ -98,7 +98,6 @@ import WorkbenchCore
     if !model.workspace.starred.contains(pin.reference) { model.toggleStar(pin.reference) }
     model.open(first)
     try await Task.sleep(for: .milliseconds(150))
-    model.taskContextWindow.showPage(.changes, model: model)
     let window = NSWindow(contentRect: NSRect(x: 30, y: 40, width: 1440, height: 900),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
     window.title = "Perch · 原生设计对照"
@@ -141,6 +140,14 @@ import WorkbenchCore
     let split = splitController(draft)!
     let inspector = split.floatingInspectorView!
     let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
+    model.taskContextWindow.showPage(.task, model: model)
+    try await Task.sleep(for: .milliseconds(400))
+    window.contentView!.layoutSubtreeIfNeeded()
+    precondition(split.floatingInspectorView!.bounds.height < 120,
+                 "The first opening of an initially hidden empty inspector must use its measured content height")
+    model.taskContextWindow.showPage(.changes, model: model)
+    try await Task.sleep(for: .milliseconds(500))
+    window.contentView!.layoutSubtreeIfNeeded()
     let card = split.detailCardView!
     let cardFrame = card.convert(card.bounds, to: window.contentView)
     let draftFrame = draft.convert(draft.bounds, to: window.contentView)

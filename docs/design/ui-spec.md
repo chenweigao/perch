@@ -42,7 +42,7 @@
 `WorkbenchSplitController` / `WorkbenchDetailController`（`Sources/AgentWorkbench/WorkspaceSplitView.swift`）。
 
 - **一整块通透的磨砂底板。** `WorkbenchWindowBackdropView` 使用系统 under-window 材质与 behind-window 模糊，
-  模糊材质透明度为 78%，仅叠加 2% 的语义 window-background 色；开启“减少透明度”时恢复系统完整覆盖；窗口背景透明，材质保持 active，跟随浅深色外观。
+  模糊材质覆盖强度（alpha）为 78%，仅叠加 2% 的语义 window-background 色；开启“减少透明度”时恢复系统完整覆盖；窗口背景透明，材质保持 active，跟随浅深色外观。
   侧栏和工具栏共用底板；侧栏不再单独加玻璃外框、描边或阴影。
 - **内容浮在底板上**：对话卡片与检查器使用 `WorkbenchTheme.Radius.panel`（20pt），
   不透明内容底色、发丝线和独立 AppKit 阴影层；阴影不能放在裁切内容或 SwiftUI 管理的图层上。
