@@ -12,8 +12,12 @@ enum WorkbenchChrome {
 }
 
 enum WorkspaceLayoutMetrics {
-    /// The window frame's margin around every panel: sidebar, conversation card, inspector.
+    /// The reading sheet floats below the unified window toolbar.
     static let frameInset: CGFloat = 12
+    static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + frameInset
+    static let inspectorTopInset: CGFloat = contentTopInset + 12
+    static let inspectorBottomInset: CGFloat = 24
+    static let inspectorPreferredHeight: CGFloat = 680
     static let sidebarInset: CGFloat = frameInset
     static let sidebarGap: CGFloat = 12
     static let sidebarDefaultWidth: CGFloat = 304
@@ -36,11 +40,8 @@ struct WorkbenchToolbarSymbol: View {
     }
 }
 
-/// AppKit owns the window frame, the floating glass sidebar, the floating
-/// inspector card, the responsive layout, and the unified toolbar. The frame is
-/// the system's behind-window material; the conversation sits in an opaque card
-/// inside it. Neither side panel is a split column: both float above the canvas
-/// with 12-point margins.
+/// One translucent window backdrop contains navigation and the toolbar. The
+/// reading sheet and inspector float above it; their hosts survive resizing.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
     let newConversation: () -> Void
@@ -354,6 +355,11 @@ final class WorkbenchDetailController: NSViewController {
 
     override func loadView() {
         view = NSView()
+        view.wantsLayer = true
+        view.layer?.shadowColor = NSColor.black.cgColor
+        view.layer?.shadowOpacity = 0.12
+        view.layer?.shadowRadius = 12
+        view.layer?.shadowOffset = CGSize(width: 0, height: -3)
         addChild(content)
         let card = WorkbenchContentCardView()
         card.translatesAutoresizingMaskIntoConstraints = false
@@ -369,15 +375,22 @@ final class WorkbenchDetailController: NSViewController {
         cardLeadingConstraint = leading
         cardTrailingConstraint = trailing
         NSLayoutConstraint.activate([
-            card.topAnchor.constraint(equalTo: view.topAnchor, constant: inset),
+            card.topAnchor.constraint(equalTo: view.topAnchor, constant: WorkspaceLayoutMetrics.contentTopInset),
             leading,
             trailing,
             card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset),
-            detail.topAnchor.constraint(equalTo: card.topAnchor, constant: WorkbenchChrome.headerHeight),
+            detail.topAnchor.constraint(equalTo: card.topAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
         ])
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        guard let cardView else { return }
+        view.layer?.shadowPath = CGPath(roundedRect: cardView.frame,
+            cornerWidth: WorkbenchTheme.Radius.panel, cornerHeight: WorkbenchTheme.Radius.panel, transform: nil)
     }
 
     /// The same mounted card adapts to the two floating panels. In wide windows
@@ -452,6 +465,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     private var inspectorWidthConstraint: NSLayoutConstraint?
     private var sidebarResizeHandle: WorkspaceSidebarResizeHandle?
     private var inspectorResizeHandle: WorkspaceSidebarResizeHandle?
+    private var sidebarOverlayBackdrop: WorkbenchWindowBackdropView?
     private var applyingLayout = false
     private(set) var isSidebarOverlayingContent = false
     private(set) var isInspectorOverlayingContent = false
@@ -491,15 +505,10 @@ final class WorkbenchSplitController: NSSplitViewController {
         splitView = NSSplitView()
         splitView.isVertical = true
         view = NSView()
-        // The frame behind every panel is the system's behind-window material, so
-        // its tint follows the desktop picture and the window's active state.
-        let backdrop = NSVisualEffectView()
-        backdrop.material = .sidebar
-        backdrop.blendingMode = .behindWindow
-        backdrop.state = .followsWindowActiveState
+        let backdrop = WorkbenchWindowBackdropView()
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(backdrop)
-        frameMaterialView = backdrop
+        frameMaterialView = backdrop.materialView
         splitView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(splitView)
         NSLayoutConstraint.activate([
@@ -529,12 +538,19 @@ final class WorkbenchSplitController: NSSplitViewController {
         let handleHorizontal = leading
             ? handle.leadingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -5)
             : handle.trailingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 5)
+        let bottom = leading
+            ? panel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -WorkspaceLayoutMetrics.sidebarInset)
+            : panel.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -WorkspaceLayoutMetrics.inspectorBottomInset)
+        if !leading {
+            let height = panel.heightAnchor.constraint(equalToConstant: WorkspaceLayoutMetrics.inspectorPreferredHeight)
+            height.priority = .init(rawValue: 999)
+            height.isActive = true
+        }
         NSLayoutConstraint.activate([
             horizontal,
             panel.topAnchor.constraint(equalTo: view.topAnchor,
-                                       constant: WorkspaceLayoutMetrics.sidebarInset),
-            panel.bottomAnchor.constraint(equalTo: view.bottomAnchor,
-                                          constant: -WorkspaceLayoutMetrics.sidebarInset),
+                                       constant: leading ? WorkspaceLayoutMetrics.sidebarInset : WorkspaceLayoutMetrics.inspectorTopInset),
+            bottom,
             widthConstraint,
             handleHorizontal,
             handle.widthAnchor.constraint(equalToConstant: 10),
@@ -554,6 +570,21 @@ final class WorkbenchSplitController: NSSplitViewController {
         sidebarResizeHandle = handle
         sidebar.view.isHidden = !isFloatingSidebarVisible
         handle.isHidden = !isFloatingSidebarVisible
+        // Only narrow overlay mode needs its own backing, otherwise navigation
+        // is drawn directly on the single window material.
+        let overlay = WorkbenchWindowBackdropView()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.wantsLayer = true
+        overlay.layer?.cornerRadius = WorkbenchTheme.Radius.panel
+        overlay.clipsToBounds = true
+        view.addSubview(overlay, positioned: .below, relativeTo: sidebar.view)
+        NSLayoutConstraint.activate([
+            overlay.leadingAnchor.constraint(equalTo: sidebar.view.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: sidebar.view.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: sidebar.view.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: sidebar.view.bottomAnchor),
+        ])
+        sidebarOverlayBackdrop = overlay
         updateWorkspaceLayout()
     }
 
@@ -668,6 +699,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         detailController?.setContentInsets(leading: avoidSidebar ? avoidance : 0,
                                           trailing: avoidInspector ? inspectorAvoidance : 0)
         isSidebarOverlayingContent = isFloatingSidebarVisible && !avoidSidebar
+        sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = isFloatingInspectorVisible && !avoidInspector
         floatingSidebarView?.isHidden = !isFloatingSidebarVisible
         sidebarResizeHandle?.isHidden = !isFloatingSidebarVisible
@@ -711,7 +743,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     }
 }
 
-/// The sidebar's native glass, floating on the window frame.
+/// Navigation shares the window backdrop instead of adding another glass card.
 struct WorkspaceFloatingPanelRoot<Content: View>: View {
     let content: Content
     let locale: Locale
@@ -720,8 +752,6 @@ struct WorkspaceFloatingPanelRoot<Content: View>: View {
         content
             .environment(\.locale, locale)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel))
-            .workbenchFloatingSurface()
     }
 }
 

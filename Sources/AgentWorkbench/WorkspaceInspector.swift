@@ -65,7 +65,6 @@ struct ChangesInspectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            Divider()
             content
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .task(id: key) {
@@ -85,7 +84,7 @@ struct ChangesInspectorView: View {
 
     private var header: some View {
         HStack(spacing: 4) {
-            VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("改动").font(.system(size: 16, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
                 Text(summary).font(.system(size: 12)).foregroundStyle(WorkbenchTheme.quiet)
             }
@@ -136,7 +135,7 @@ struct ChangesInspectorView: View {
                             ForEach(entries) { entry in row(entry) }
                         }.padding(.horizontal, 8).padding(.vertical, 8)
                     }.frame(height: CGFloat(min(entries.count, 5)) * Self.fileRowHeight + 16)
-                    Divider()
+                    Divider().padding(.horizontal, 20)
                     diffPane
                 }
             }

@@ -40,6 +40,9 @@ app_files=(
 # Preserve the selected revision's source set, including baselines before themes.
 theme_ref="$source_ref"
 if [[ "$variant" == baseline ]]; then theme_ref="$baseline_ref"; fi
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift" 2>/dev/null; then
+    app_files+=(Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift)
+fi
 # Revisions before the extracted assistant blocks do not carry the file.
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/NativeAssistantBlocks.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/NativeAssistantBlocks.swift)

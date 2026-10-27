@@ -150,15 +150,12 @@ private struct KimiComposerView: View {
                                 pastes: connection.pastes).id(sessionID)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
-                    HStack(spacing: 8) {
-                        ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
-                                                directory: connection.conversation?.snapshot.session.cwd ?? "")
+                    Group {
                         let sessionModel = connection.conversation?.snapshot.session.model ?? ""
                         let choice = connection.modelChoices[sessionID] ?? ""
                         ComposerModelPicker(models: connection.catalog,
                                             modelID: choice.isEmpty ? sessionModel : choice,
                                             thinking: connection.thinkingChoices[sessionID],
-                                            agentLabel: "Kimi",
                                             disabledReason: !connection.online ? L("连接恢复后可修改设置。")
                                                 : !connection.snapshotReady ? L("正在同步会话，请稍候。")
                                                 : connection.sending ? L("消息发送中，请稍候。") : nil,
@@ -172,9 +169,9 @@ private struct KimiComposerView: View {
                                                 connection.modelChoices[sessionID] = model.id
                                                 connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
                                             }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
-                            .padding(.horizontal, 8)
-                            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule())
                     }
+                    ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
+                                            directory: connection.conversation?.snapshot.session.cwd ?? "")
                     PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
                                      disabled: connection.sending) { mode in
                         connection.setPermission(mode, for: sessionID)

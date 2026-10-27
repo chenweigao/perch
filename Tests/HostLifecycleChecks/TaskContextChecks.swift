@@ -271,6 +271,7 @@ import WorkbenchCore
     let frameInset = WorkspaceLayoutMetrics.frameInset
     let backdropFrame = frame(split.frameMaterialView)
     precondition(split.frameMaterialView?.blendingMode == .behindWindow &&
+                 split.frameMaterialView?.material == .underWindowBackground &&
                  split.frameMaterialView?.state == .followsWindowActiveState &&
                  abs(backdropFrame.width - split.view.bounds.width) < 1 &&
                  abs(backdropFrame.height - split.view.bounds.height) < 1,
@@ -282,7 +283,7 @@ import WorkbenchCore
                  abs(inspectorFrame().minX - cardFrame.maxX - WorkspaceLayoutMetrics.sidebarGap) < 1 &&
                  !split.isInspectorOverlayingContent && split.detailContentTrailingInset > 0 &&
                  abs(cardFrame.minY - frameInset) < 1 &&
-                 safeFrame.maxY - cardFrame.maxY >= frameInset - 1 &&
+                 abs(safeFrame.maxY - cardFrame.maxY - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
                  abs(hostedContentFrame.minX - cardFrame.minX) < 1 &&
                  abs(hostedContentFrame.width - cardFrame.width) < 1,
                  "The conversation must be an independent rounded card, separated from both floating panels by frame-material gutters: card=\(cardFrame), sidebar=\(sidebarFrame), inspector=\(inspectorFrame()), hosted=\(hostedContentFrame), root=\(split.view.bounds)")
@@ -497,7 +498,7 @@ private struct TaskContextInspectorFixture: View {
             content: {
                 NativeAgentView(connection: connection, onResultDisplayed: { _ in })
                     .background(TaskContextContentProbe(mounted: contentMounted))
-            })
+            }).ignoresSafeArea(.container, edges: .top)
     }
 }
 

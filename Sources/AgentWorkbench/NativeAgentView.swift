@@ -253,12 +253,8 @@ private struct NativeComposerView: View {
                                 pastes: connection.pastes).id(s.id)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: supportsAttachments, disabled: connection.sending) { chooseFiles = true }
-                    HStack(spacing: 8) {
-                        ComposerEnvironmentMenu(host: connection.host, provider: s.provider.label, directory: s.cwd)
-                        NativeModelControls(connection: connection, snapshot: s)
-                            .padding(.horizontal, 8)
-                            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule())
-                    }
+                    NativeModelControls(connection: connection, snapshot: s)
+                    ComposerEnvironmentMenu(host: connection.host, provider: s.provider.label, directory: s.cwd)
                     PermissionPicker(
                         provider: s.provider,
                         capability: connection.sessions.first { $0.id == s.id }?.permission
@@ -388,10 +384,10 @@ struct NativeModelControls: View {
         ComposerModelPicker(models: connection.models(for: snapshot.provider),
                             modelID: session?.model ?? snapshot.model,
                             thinking: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
-                            agentLabel: snapshot.provider.label,
                             disabledReason: disabledReason,
                             unavailableReason: editable ? nil : L("此 Agent 暂不支持模型与思考设置。"),
                             catalogError: connection.modelsError,
+                            onRefreshCatalog: { await connection.loadModels() },
                             scope: L("下一轮生效"),
                             onSelectModel: { connection.setModel($0, for: snapshot.id) },
                             onSelectThinking: { connection.setThinking($0, for: snapshot.id) })

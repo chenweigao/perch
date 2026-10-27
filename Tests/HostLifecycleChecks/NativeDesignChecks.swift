@@ -35,25 +35,50 @@ import WorkbenchCore
                   "DeepSeek-V4.1-Flash 跨机缓存加载慢", "长文本阅读体验", "随手记与问题收集"]
     let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "Mac mini", destination: "")
     var running = true
+    var revision = 1
     var abortedTurns: [String] = []
+    var selectedModels: [Int: String] = [:]
+    var selectedEfforts: [Int: String] = [:]
+    let modelOptions: [[String: Any]] = [
+        ["id": "gpt-5.4", "name": "GPT-5.4", "provider": "openai", "agent": "codex",
+         "thinking": ["low", "medium", "high", "xhigh"], "defaultThinking": "high"],
+        ["id": "gpt-5.4-mini", "name": "GPT-5.4 mini", "provider": "openai", "agent": "codex",
+         "thinking": ["low", "medium", "high"], "defaultThinking": "medium"],
+    ]
     func summary(_ index: Int) -> [String: Any] {
         ["id": "design-\(index)", "provider": "codex", "title": titles[index], "cwd": root.path,
          "busy": index == 0 && running, "archived": false, "updated": Date().timeIntervalSince1970 - Double(index * 120),
-         "completed": 1, "pending": index == 2 ? 1 : 0, "model": "gpt-5.4", "turnId": "design-turn-\(index)",
+         "completed": 1, "pending": index == 2 ? 1 : 0,
+         "model": selectedModels[index] ?? "gpt-5.4", "thinking": selectedEfforts[index] ?? "high",
+         "turnId": "design-turn-\(index)",
          "turnState": running ? "running" : "stopped"]
     }
     let connection = NativeAgentConnection(host: host) { path, body in
+        if path == "/models" {
+            return try JSONSerialization.data(withJSONObject: ["models": modelOptions])
+        }
         if path.hasSuffix("/abort") {
             abortedTurns.append(body.flatMap { $0["turnId"].string } ?? "")
             running = false
+            revision += 1
             return Data("{}".utf8)
         }
         if path == "/sessions" {
             return try JSONSerialization.data(withJSONObject: ["sessions": titles.indices.map(summary)])
         }
         let index = Int(path.components(separatedBy: "design-").last?.prefix(1) ?? "0") ?? 0
+        if path.hasSuffix("/model") {
+            selectedModels[index] = body?["model"].string
+            revision += 1
+            return Data("{}".utf8)
+        }
+        if path.hasSuffix("/thinking") {
+            selectedEfforts[index] = body?["level"].string
+            revision += 1
+            return Data("{}".utf8)
+        }
         var data = summary(index)
-        data["revision"] = running ? 1 : 2
+        data["revision"] = revision
         data["messages"] = [
             ["id": "question", "role": "user", "created_at": "", "content": [["type": "text", "text": "检查快速切换会话时的状态隔离，给出最小修改。"]]],
             ["id": "answer", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "已检查会话加载与草稿恢复逻辑。\n\n### 初步发现\n\n- 加载状态应随会话独立保存。\n- 草稿与滚动位置需要分别恢复。\n\n接下来会核对快速切换时的请求取消与状态恢复。"]]]
@@ -120,6 +145,16 @@ import WorkbenchCore
     let cardFrame = card.convert(card.bounds, to: window.contentView)
     let draftFrame = draft.convert(draft.bounds, to: window.contentView)
     let replyFrame = reply.convert(reply.bounds, to: window.contentView)
+    func distanceFromTop(_ frame: NSRect) -> CGFloat {
+        window.contentView!.isFlipped ? frame.minY : window.contentView!.bounds.maxY - frame.maxY
+    }
+    precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
+                 distanceFromTop(inspectorFrame) > distanceFromTop(cardFrame) &&
+                 inspectorFrame.height <= WorkspaceLayoutMetrics.inspectorPreferredHeight + 1,
+                 "The reading sheet must float below the toolbar, with a shorter inset inspector")
+    precondition(connection.models(for: .codex).count == 2 &&
+                 connection.model(for: connection.snapshot!)?.supportsThinking == true,
+                 "The design fixture must include a real model catalog and adjustable reasoning controls")
     precondition(cardFrame.maxX + WorkspaceLayoutMetrics.sidebarGap <= inspectorFrame.minX + 1,
                  "The floating inspector must have its own lane and visible gap: card=\(cardFrame), inspector=\(inspectorFrame)")
     precondition(replyFrame.maxX < inspectorFrame.minX && draftFrame.maxX < inspectorFrame.minX,
@@ -172,5 +207,18 @@ import WorkbenchCore
                      "The preview's stop control must reach the runtime-confirmed stopped state")
         precondition(abortedTurns == ["design-turn-0"], "Stop must target the visible turn exactly once")
         print("PASS: preview stop reaches confirmed stopped state")
+        connection.setModel(connection.models(for: .codex)[1], for: "design-0")
+        for _ in 0..<80 where connection.configuringSessions.contains("design-0") {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        try await connection.poll()
+        precondition(connection.snapshot?.model == "gpt-5.4-mini" && selectedModels[0] == "gpt-5.4-mini")
+        connection.setThinking(.medium, for: "design-0")
+        for _ in 0..<80 where connection.configuringSessions.contains("design-0") {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        try await connection.poll()
+        precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
+        print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
     }
 }
