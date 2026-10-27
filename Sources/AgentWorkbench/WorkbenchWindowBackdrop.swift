@@ -1,53 +1,83 @@
 import AppKit
+import SwiftUI
 
-/// A single frosted window surface. A semantic neutral wash softens desktop
-/// color without painting separate sidebar and titlebar surfaces.
+/// The window's one translucent surface: system Liquid Glass over a non-opaque
+/// window, so the blurred desktop tints the frame, navigation and toolbar while
+/// the cards above stay opaque. Panels that float over content reuse it with
+/// their own radius. Reduce Transparency swaps the glass for the window color.
 final class WorkbenchWindowBackdropView: NSView {
-    let materialView = NSVisualEffectView()
-    private let neutralWash = NSView()
-    private var accessibilityObserver: NSObjectProtocol?
+    /// `nil` follows the window's corner, so the glass rim meets the window edge.
+    let fixedCornerRadius: CGFloat?
+    private let outline = WorkbenchBackdropOutline()
 
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        materialView.material = .underWindowBackground
-        materialView.blendingMode = .behindWindow
-        materialView.state = .active
-        neutralWash.wantsLayer = true
-        accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.needsDisplay = true }
-        for child in [materialView, neutralWash] {
-            child.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(child)
-            NSLayoutConstraint.activate([
-                child.leadingAnchor.constraint(equalTo: leadingAnchor),
-                child.trailingAnchor.constraint(equalTo: trailingAnchor),
-                child.topAnchor.constraint(equalTo: topAnchor),
-                child.bottomAnchor.constraint(equalTo: bottomAnchor),
-            ])
-        }
-    }
-
-    deinit {
-        if let accessibilityObserver { NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver) }
+    init(cornerRadius: CGFloat? = nil) {
+        fixedCornerRadius = cornerRadius
+        super.init(frame: .zero)
+        outline.cornerRadius = cornerRadius ?? 0
+        let host = NSHostingView(rootView: WorkbenchBackdropGlass(outline: outline))
+        host.sizingOptions = []
+        host.safeAreaRegions = []
+        host.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(host)
+        NSLayoutConstraint.activate([
+            host.leadingAnchor.constraint(equalTo: leadingAnchor),
+            host.trailingAnchor.constraint(equalTo: trailingAnchor),
+            host.topAnchor.constraint(equalTo: topAnchor),
+            host.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var wantsUpdateLayer: Bool { true }
+    var glassCornerRadius: CGFloat { outline.cornerRadius }
 
-    override func updateLayer() {
-        // Keep the system blur but let the real window backdrop contribute more
-        // than its default opaque tint. Respect Reduce Transparency immediately.
-        materialView.alphaValue = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency ? 1 : 0.78
-        effectiveAppearance.performAsCurrentDrawingAppearance {
-            neutralWash.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.02).cgColor
-        }
+    /// Decorative only: clicks belong to the panels above it or to the window.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        updateCornerRadius()
     }
 
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        needsDisplay = true
+    override func layout() {
+        super.layout()
+        // Entering or leaving full screen changes the window's corner.
+        updateCornerRadius()
+    }
+
+    /// Also called when the window's chrome changes without resizing this view,
+    /// such as installing the toolbar.
+    func updateCornerRadius() {
+        let radius = fixedCornerRadius ?? window.map(Self.windowCornerRadius(of:)) ?? 0
+        if abs(outline.cornerRadius - radius) > 0.25 { outline.cornerRadius = radius }
+    }
+
+    /// AppKit publishes no window-corner API; Ghostty's glass background reads the
+    /// same key. Unknown releases fall back to square glass, which the window clips.
+    static func windowCornerRadius(of window: NSWindow) -> CGFloat {
+        guard !window.styleMask.contains(.fullScreen),
+              window.responds(to: Selector(("_cornerRadius"))) else { return 0 }
+        return window.value(forKey: "_cornerRadius") as? CGFloat ?? 0
+    }
+}
+
+/// Square until the window reports its corner.
+@Observable private final class WorkbenchBackdropOutline {
+    var cornerRadius = CGFloat.zero
+}
+
+private struct WorkbenchBackdropGlass: View {
+    let outline: WorkbenchBackdropOutline
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: outline.cornerRadius, style: .continuous)
+        Group {
+            if reduceTransparency {
+                shape.fill(Color(nsColor: .windowBackgroundColor))
+            } else {
+                Color.clear.glassEffect(.regular, in: shape)
+            }
+        }.ignoresSafeArea()
     }
 }

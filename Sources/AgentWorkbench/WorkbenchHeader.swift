@@ -67,53 +67,55 @@ struct WorkbenchHeaderActions: View {
                         .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
                 }.padding(.horizontal, 4).workbenchControlSurface()
             } else {
+                // The same single glass capsule as the conversation's controls.
                 // Both sidebar and toolbar enter the same scoped workbench.
-                if showsScope {
-                    Menu {
-                        Picker("任务组", selection: groupScope) {
-                            Text("全部任务组").tag(UUID?.none)
-                            ForEach(model.workspace.groups) { group in Text(group.name).tag(Optional(group.id)) }
-                        }
-                        Picker("机器", selection: hostScope) {
-                            Text("全部机器").tag(UUID?.none)
-                            ForEach(model.connections) { connection in
-                                Text(connection.host.name).tag(Optional(connection.id))
+                HStack(spacing: 0) {
+                    if showsScope {
+                        Menu {
+                            Picker("任务组", selection: groupScope) {
+                                Text("全部任务组").tag(UUID?.none)
+                                ForEach(model.workspace.groups) { group in Text(group.name).tag(Optional(group.id)) }
                             }
+                            Picker("机器", selection: hostScope) {
+                                Text("全部机器").tag(UUID?.none)
+                                ForEach(model.connections) { connection in
+                                    Text(connection.host.name).tag(Optional(connection.id))
+                                }
+                            }
+                            if !model.activeScope.isEmpty {
+                                Divider()
+                                Button("清除筛选") { model.clearScope() }
+                            }
+                        } label: {
+                            WorkbenchToolbarSymbol(name: model.activeScope.isEmpty
+                                ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                         }
-                        if !model.activeScope.isEmpty {
-                            Divider()
-                            Button("清除筛选") { model.clearScope() }
-                        }
-                    } label: {
-                        WorkbenchToolbarSymbol(name: model.activeScope.isEmpty
-                            ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
-                            .workbenchControlSurface()
+                            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                            .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize)
+                            .help("筛选工作台").accessibilityLabel("筛选工作台")
                     }
-                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize)
-                        .help("筛选工作台").accessibilityLabel("筛选工作台")
-                }
-                if model.selectedGroup != nil {
-                    Button { model.editGroup(model.selectedGroup) } label: { WorkbenchToolbarSymbol(name: "pencil").workbenchControlSurface() }
-                        .buttonStyle(.plain).help("编辑任务组").accessibilityLabel("编辑任务组")
-                }
-                Menu {
-                    Button("会话…") { model.startNewTask() }
-                    Button("远端终端…") { model.showNewTerminal = true }.disabled(model.selectedConnection?.online != true)
-                    Button("任务组…") { model.editGroup() }
-                } label: { WorkbenchToolbarSymbol(name: "plus").workbenchControlSurface() }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                    .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("新建").accessibilityLabel("新建")
-                if isHome {
-                    let projection = model.dashboardProjection
+                    if model.selectedGroup != nil {
+                        Button { model.editGroup(model.selectedGroup) } label: { WorkbenchToolbarSymbol(name: "pencil") }
+                            .buttonStyle(.plain).help("编辑任务组").accessibilityLabel("编辑任务组")
+                    }
                     Menu {
-                        Button(L("归档已查看结果 · \(projection.archiveCount)")) { model.runBatchArchive(projection.archivePlan) }
-                            .disabled(projection.archiveCount == 0 || model.isArchiving)
-                        Text("仅归档本轮正常结束且已查看的会话。")
-                        if let reason = projection.blockedSummary { Text(reason) }
-                    } label: { WorkbenchToolbarSymbol(name: "ellipsis").workbenchControlSurface() }
-                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("工作台操作").accessibilityLabel("工作台操作")
-                }
+                        Button("会话…") { model.startNewTask() }
+                        Button("远端终端…") { model.showNewTerminal = true }.disabled(model.selectedConnection?.online != true)
+                        Button("任务组…") { model.editGroup() }
+                    } label: { WorkbenchToolbarSymbol(name: "plus") }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("新建").accessibilityLabel("新建")
+                    if isHome {
+                        let projection = model.dashboardProjection
+                        Menu {
+                            Button(L("归档已查看结果 · \(projection.archiveCount)")) { model.runBatchArchive(projection.archivePlan) }
+                                .disabled(projection.archiveCount == 0 || model.isArchiving)
+                            Text("仅归档本轮正常结束且已查看的会话。")
+                            if let reason = projection.blockedSummary { Text(reason) }
+                        } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
+                            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                            .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("工作台操作").accessibilityLabel("工作台操作")
+                    }
+                }.padding(.horizontal, 4).workbenchControlSurface()
             }
         }.fixedSize(horizontal: true, vertical: false)
     }

@@ -567,7 +567,8 @@ final class WorkbenchSplitController: NSSplitViewController {
     private(set) var floatingInspectorWidth: CGFloat
     private(set) var isFloatingInspectorVisible = false
 
-    private(set) var frameMaterialView: NSVisualEffectView?
+    private(set) var windowBackdropView: WorkbenchWindowBackdropView?
+    var sidebarOverlayBackdropView: WorkbenchWindowBackdropView? { sidebarOverlayBackdrop }
     var detailCanvasView: NSView? { detailController?.view }
     var detailCardView: NSView? { detailController?.cardView }
     var detailContentView: NSView? { detailController?.content.view }
@@ -607,7 +608,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         let backdrop = WorkbenchWindowBackdropView()
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(backdrop)
-        frameMaterialView = backdrop.materialView
+        windowBackdropView = backdrop
         splitView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(splitView)
         NSLayoutConstraint.activate([
@@ -670,13 +671,11 @@ final class WorkbenchSplitController: NSSplitViewController {
         sidebarResizeHandle = handle
         sidebar.isHidden = !isFloatingSidebarVisible
         handle.isHidden = !isFloatingSidebarVisible
-        // Only narrow overlay mode needs its own backing, otherwise navigation
-        // is drawn directly on the single window material.
-        let overlay = WorkbenchWindowBackdropView()
+        // Only narrow overlay mode needs its own backing: a floating glass panel
+        // over the card. Otherwise navigation sits directly on the window glass.
+        // Unclipped, so the glass keeps its rim and shadow.
+        let overlay = WorkbenchWindowBackdropView(cornerRadius: WorkbenchTheme.Radius.panel)
         overlay.translatesAutoresizingMaskIntoConstraints = false
-        overlay.wantsLayer = true
-        overlay.layer?.cornerRadius = WorkbenchTheme.Radius.panel
-        overlay.clipsToBounds = true
         view.addSubview(overlay, positioned: .below, relativeTo: sidebar)
         NSLayoutConstraint.activate([
             overlay.leadingAnchor.constraint(equalTo: sidebar.leadingAnchor),
@@ -728,7 +727,12 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.toolbarStyle = .unified
         window.toolbar = workspaceToolbar
         if appAppearance != .system { applyAppearance() }
-        DispatchQueue.main.async { [weak self] in self?.updateWorkspaceLayout() }
+        // The toolbar style sets the window's corner; the glass follows it.
+        windowBackdropView?.updateCornerRadius()
+        DispatchQueue.main.async { [weak self] in
+            self?.windowBackdropView?.updateCornerRadius()
+            self?.updateWorkspaceLayout()
+        }
     }
 
     func setAppearance(_ appearance: AppAppearance) {

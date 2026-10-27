@@ -41,9 +41,11 @@
 
 `WorkbenchSplitController` / `WorkbenchDetailController`（`Sources/AgentWorkbench/WorkspaceSplitView.swift`）。
 
-- **一整块通透的磨砂底板。** `WorkbenchWindowBackdropView` 使用系统 under-window 材质与 behind-window 模糊，
-  模糊材质覆盖强度（alpha）为 78%，仅叠加 2% 的语义 window-background 色；开启“减少透明度”时恢复系统完整覆盖；窗口背景透明，材质保持 active，跟随浅深色外观。
+- **一整块液态玻璃底板。** `WorkbenchWindowBackdropView` 是铺满窗口的系统 Liquid Glass（`.regular`），
+  窗口不透明度关闭，玻璃直接采样窗口后方的桌面，颜色随壁纸和后方窗口变化；圆角读取窗口自身圆角，玻璃边缘高光与窗口边缘重合。
+  不叠加固定色、不降低玻璃 alpha（降低 alpha 会透出未模糊的桌面）；开启“减少透明度”时换成不透明的 window-background 色。
   侧栏和工具栏共用底板；侧栏不再单独加玻璃外框、描边或阴影。
+  视图缓存截图（`cacheDisplay`）不含玻璃；`native-design` 阶段另存 `*-composited-*.png` 系统截图用于检查实际效果。
 - **内容浮在底板上**：对话卡片与检查器使用 `WorkbenchTheme.Radius.panel`（20pt），
   不透明内容底色、发丝线和独立 AppKit 阴影层；阴影不能放在裁切内容或 SwiftUI 管理的图层上。
   裁切内部页面，终端与滚动内容不越过圆角。
@@ -69,7 +71,9 @@
 - **项目子会话图标在项目图标正下方**（缩进 `childIndent`），标题与项目标题对齐。
 - **分区头一种样式**：`SidebarSectionTitle`（12pt 半粗，62% 墨色，计数在后，箭头在后）。
   置顶等分区头不能淡到像禁用；置顶的「+」保持实心控件。
-- 侧栏直接绘制在整窗半透明底板上；仅窄窗口覆盖正文时补同款底板，避免文字叠加。
+- 侧栏直接绘制在整窗玻璃底板上；仅窄窗口覆盖正文时补一块 `Radius.panel` 的浮动玻璃面板（不裁切，保留玻璃边缘与阴影），避免文字叠加。
+- **选中行是一张小卡片**：`SidebarHighlight` 选中时为浅色卡片（`WorkbenchTheme.rowCard`，浅色 92% 白、深色 11% 白）加 1pt 发丝线和轻阴影，
+  与正文卡片同一语言；悬停为半强度卡片，按下再叠一层浅灰。玻璃上不用灰色涂层表示选中。
 - 默认宽度 304pt，可调范围 280–400pt；顶部搜索与新建使用图标按钮。
   初次使用默认显示最近会话，已有项目分组偏好继续保留，工作台、待处理、全部会话与任务组入口可用。
 - 会话标题 14pt，图标 14pt；时间与运行状态保留稳定空间，hover 不得临时挤压标题。置顶和归档通过会话上下文菜单保留。

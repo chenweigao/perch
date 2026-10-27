@@ -157,6 +157,16 @@ import WorkbenchCore
     func distanceFromTop(_ frame: NSRect) -> CGFloat {
         window.contentView!.isFlipped ? frame.minY : window.contentView!.bounds.maxY - frame.maxY
     }
+    let backdrop = split.windowBackdropView!
+    let backdropFrame = backdrop.convert(backdrop.bounds, to: window.contentView)
+    let windowCorner = WorkbenchWindowBackdropView.windowCornerRadius(of: window)
+    precondition(!window.isOpaque && backdrop.fixedCornerRadius == nil && abs(backdrop.glassCornerRadius - windowCorner) < 0.5 &&
+                 abs(backdropFrame.width - window.contentView!.bounds.width) < 1 &&
+                 abs(backdropFrame.height - window.contentView!.bounds.height) < 1,
+                 "The window must be one Liquid Glass backdrop shaped like the window: backdrop=\(backdropFrame), corner=\(backdrop.glassCornerRadius), window corner=\(windowCorner), opaque=\(window.isOpaque)")
+    precondition(split.sidebarOverlayBackdropView?.fixedCornerRadius == WorkbenchTheme.Radius.panel &&
+                 split.sidebarOverlayBackdropView?.isHidden == true,
+                 "Wide windows draw navigation straight on the window glass; only the narrow overlay gets its own glass panel")
     precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
                  distanceFromTop(inspectorFrame) > distanceFromTop(cardFrame) &&
                  inspectorFrame.height <= WorkspaceLayoutMetrics.inspectorMaximumHeight + 1,
@@ -228,35 +238,86 @@ import WorkbenchCore
     window.contentView!.layoutSubtreeIfNeeded()
     precondition(split.floatingInspectorView!.bounds.height > compactHeight + 80,
                  "Switching from an empty task to a diff must grow the same mounted panel")
+    /// Distances from the window's top edge, so titlebar controls can be compared
+    /// with the floating panels regardless of view flipping.
+    func fromTop(_ view: NSView?) -> [String: Double] {
+        guard let view, view.window === window else { return [:] }
+        let rect = view.convert(view.bounds, to: nil)
+        return ["minX": Double(rect.minX), "maxX": Double(rect.maxX),
+                "top": Double(window.frame.height - rect.maxY), "midY": Double(window.frame.height - rect.midY),
+                "height": Double(rect.height)]
+    }
+    let toggle = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchSidebarToggle" }?.view
+    let chrome: [String: Any] = [
+        "windowCornerRadius": Double(windowCorner),
+        "titlebarHeight": Double(window.frame.height - window.contentLayoutRect.height),
+        "closeButton": fromTop(window.standardWindowButton(.closeButton)), "sidebarToggle": fromTop(toggle),
+        "title": fromTop(title), "actions": fromTop(toolbarActions),
+        "sidebar": fromTop(split.floatingSidebarView), "conversation": fromTop(card),
+    ]
+    print("Native window chrome: \(chrome)")
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         func rectangle(_ rect: NSRect) -> [String: Double] {
             ["x": Double(rect.minX), "y": Double(rect.minY), "width": Double(rect.width), "height": Double(rect.height)]
         }
         let geometry: [String: Any] = [
-            "scope": "native window geometry; view-cache PNGs exclude composited Liquid Glass",
+            "scope": "native window geometry; view-cache PNGs exclude composited Liquid Glass, *-composited-*.png include it",
             "window": rectangle(window.contentView!.bounds), "conversation": rectangle(cardFrame),
             "inspector": rectangle(inspectorFrame), "reply": rectangle(replyFrame), "composerText": rectangle(draftFrame),
             "inspectorClosedConversation": rectangle(closedCardFrame), "inspectorClosedComposerText": rectangle(closedDraftFrame),
-            "titleX": Double(titleX), "sidebarWidth": Double(split.floatingSidebarWidth),
+            "titleX": Double(titleX), "sidebarWidth": Double(split.floatingSidebarWidth), "chrome": chrome,
         ]
         try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys])
             .write(to: URL(fileURLWithPath: folder).appendingPathComponent("native-layout.json"))
     }
-    func capture(_ name: String) {
+    func capture(_ name: String) async throws {
         guard let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
-              let view = window.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: folder).appendingPathComponent(name + ".png"))
+              let view = window.contentView else { return }
+        view.layoutSubtreeIfNeeded()
+        window.displayIfNeeded()
+        try await Task.sleep(for: .milliseconds(300))
+        if let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: folder).appendingPathComponent(name + ".png"))
+        }
+        // View caches omit what the window server composites: Liquid Glass and
+        // shadows. System captures keep them where the session may record the
+        // screen; elsewhere they fail or come back empty, which is not a defect.
+        let screenHeight = NSScreen.screens.first?.frame.height ?? window.frame.maxY
+        let area = window.frame.insetBy(dx: -32, dy: -32)
+        let region = [area.minX, screenHeight - area.maxY, area.width, area.height].map { String(Int($0.rounded())) }
+        for (suffix, target) in [("window", ["-l", String(window.windowNumber)]), ("screen", ["-R", region.joined(separator: ",")])] {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            process.arguments = ["-x", "-t", "png"] + target +
+                [URL(fileURLWithPath: folder).appendingPathComponent("\(name)-composited-\(suffix).png").path]
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            guard (try? process.run()) != nil else { continue }
+            for _ in 0..<50 where process.isRunning { try await Task.sleep(for: .milliseconds(100)) }
+            if process.isRunning { process.terminate() }
+        }
     }
-    capture("native-light")
+    try await capture("native-light")
     UserDefaults.standard.set(AppAppearance.dark.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
     precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua,
                  "The appearance setting must reach the native window and every floating host")
-    capture("native-dark")
+    try await capture("native-dark")
     UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
     precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua)
+    // Narrow windows float the sidebar over the card on its own glass panel.
+    let wideSize = window.contentView!.bounds.size
+    window.setContentSize(NSSize(width: 900, height: 760))
+    try await Task.sleep(for: .milliseconds(300))
+    window.contentView!.layoutSubtreeIfNeeded()
+    precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
+                 "A narrow window must back the overlaying sidebar with its glass panel")
+    try await capture("native-narrow-light")
+    window.setContentSize(wideSize)
+    try await Task.sleep(for: .milliseconds(300))
+    window.contentView!.layoutSubtreeIfNeeded()
     print("PASS: production workspace, aligned reply/composer, independent changes inspector, native light and dark")
     if Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true && !CommandLine.arguments.contains("native-design") {
         let appearanceMenu = NativeDesignAppearanceMenu(window: window)

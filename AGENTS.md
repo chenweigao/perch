@@ -6,10 +6,11 @@ Settings offers light/dark overrides. Acceptance and preview fixtures stay pinne
 to light.
 
 - Do not copy code or assets from herdrm (PolyForm Noncommercial).
-- The window has one neutral translucent backdrop shared by navigation and the
-  toolbar (`WorkbenchWindowBackdropView`). Use system material plus the semantic
-  window-background wash to moderate desktop tint, not a fixed colored fill.
-  The sidebar has no separate glass card, outline, or shadow in the wide layout.
+- The window is one system Liquid Glass backdrop (`WorkbenchWindowBackdropView`,
+  `.regular` glass over a non-opaque window, shaped like the window corner), shared
+  by navigation and the toolbar. Its tint comes from the desktop; do not add a
+  fixed colored fill or lower its opacity. The sidebar has no separate glass card,
+  outline, or shadow in the wide layout; its selection is a light row card.
 - The opaque conversation sheet floats below the toolbar; the shorter inspector
   floats beside it. Keep `WorkbenchTheme.Radius.panel`, light shadows and visible
   backdrop gutters. Preserve native Liquid Glass on the composer and controls.

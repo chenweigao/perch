@@ -18,6 +18,10 @@ enum WorkbenchTheme {
     static let contentBackgroundNS = nsColor(
         light: (1, 1, 1), dark: (0.104, 0.108, 0.125))
     static let contentBackground = Color(nsColor: contentBackgroundNS)
+    /// Selected sidebar rows: a small light card on the window glass. Translucent,
+    /// so the desktop tint still reads through it.
+    static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),
+                                                dark: NSColor(white: 1, alpha: 0.11)))
 
     /// Glyph color atop the accent-colored primary action circle.
     static let actionGlyph = color(light: (1, 1, 1), dark: (0.13, 0.13, 0.14))
@@ -72,8 +76,9 @@ extension WorkbenchTheme {
 }
 
 extension WorkbenchTheme {
-    /// Row and control highlights, at the sidebar's strengths: pressed > selected > hovered.
-    /// Keyboard selection is `selected`, so it never reads as a hover.
+    /// Row and control highlights on opaque surfaces: pressed > selected > hovered.
+    /// Keyboard selection is `selected`, so it never reads as a hover. Sidebar rows
+    /// on the window glass use `rowCard` instead.
     enum Fill {
         static let hover: Double = 0.045
         static let selected: Double = 0.08

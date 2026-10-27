@@ -14,6 +14,8 @@ struct WorkbenchApp: App {
         WindowGroup("Perch", id: "main") {
             WorkbenchView(model: model).preferredColorScheme(appAppearance.colorScheme)
                 .frame(minWidth: 940, minHeight: 620)
+                // The workspace paints its own Liquid Glass backdrop; the scene must not fill behind it.
+                .containerBackground(Color.clear, for: .window)
                 .background(CompanionRegistration(model: model))
                 .environment(\.locale, appLanguage.resolvedLocale)
                 .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }

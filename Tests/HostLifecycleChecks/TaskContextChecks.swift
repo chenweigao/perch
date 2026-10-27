@@ -269,13 +269,12 @@ import WorkbenchCore
                  hostedContentFrame.minX >= sidebarFrame.maxX + WorkspaceLayoutMetrics.sidebarGap - 1,
                  "A wide canvas must keep hosted content clear of the floating sidebar")
     let frameInset = WorkspaceLayoutMetrics.frameInset
-    let backdropFrame = frame(split.frameMaterialView)
-    precondition(split.frameMaterialView?.blendingMode == .behindWindow &&
-                 split.frameMaterialView?.material == .underWindowBackground &&
-                 split.frameMaterialView?.state == .active &&
+    let backdropFrame = frame(split.windowBackdropView)
+    precondition(split.windowBackdropView?.fixedCornerRadius == nil && page.isOpaque == false &&
+                 abs((split.windowBackdropView?.glassCornerRadius ?? -1) - WorkbenchWindowBackdropView.windowCornerRadius(of: page)) < 0.5 &&
                  abs(backdropFrame.width - split.view.bounds.width) < 1 &&
                  abs(backdropFrame.height - split.view.bounds.height) < 1,
-                 "The window frame must be the system behind-window material under every panel: frame=\(backdropFrame), root=\(split.view.bounds)")
+                 "The window frame must be one Liquid Glass backdrop under every panel, shaped like the window: frame=\(backdropFrame), root=\(split.view.bounds)")
     let cardFrame = frame(split.detailCardView)
     precondition(split.detailCardView?.layer?.cornerRadius == WorkbenchTheme.Radius.panel &&
                  split.detailCardView?.layer?.masksToBounds == true &&

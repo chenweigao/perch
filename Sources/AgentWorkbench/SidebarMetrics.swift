@@ -54,16 +54,16 @@ enum SidebarMetrics {
     /// Hover fades: row highlights and the actions they reveal.
     static let highlightDuration: Double = 0.1
 
-    /// Row highlight strength: pressed > selected > hovered.
-    static func fill(selected: Bool, hovered: Bool, pressed: Bool = false) -> Double {
-        pressed ? WorkbenchTheme.Fill.pressed
-            : selected ? WorkbenchTheme.Fill.selected
-            : hovered ? WorkbenchTheme.Fill.hover : 0
+    /// Strength of the row card: the selection is a full card, hover or a press
+    /// a fainter one. A press additionally shades the row.
+    static func cardOpacity(selected: Bool, hovered: Bool, pressed: Bool = false) -> Double {
+        selected ? 1 : hovered || pressed ? 0.5 : 0
     }
 }
 
-/// The highlight behind every sidebar row and header control: one shape, the
-/// three strengths and one fade. It tints the glass; it never replaces it.
+/// The highlight behind every sidebar row and header control: one shape and one
+/// fade. On the window glass a gray wash reads as dirt, so the selection is a
+/// small light card with a hairline, like the conversation sheet beside it.
 struct SidebarHighlight: View {
     var selected = false
     var hovered = false
@@ -71,9 +71,15 @@ struct SidebarHighlight: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let opacity = SidebarMetrics.fill(selected: selected, hovered: hovered, pressed: pressed)
-        RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius).fill(Color.primary.opacity(opacity))
-            .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: opacity)
+        let shape = RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+        let card = SidebarMetrics.cardOpacity(selected: selected, hovered: hovered, pressed: pressed)
+        let animation: Animation? = reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration)
+        shape.fill(WorkbenchTheme.rowCard.opacity(card))
+            .overlay(shape.strokeBorder(Color.primary.opacity(selected ? WorkbenchTheme.Stroke.hairline : 0), lineWidth: 1))
+            .overlay(shape.fill(Color.primary.opacity(pressed ? WorkbenchTheme.Fill.hover : 0)))
+            .shadow(color: .black.opacity(selected ? 0.06 : 0), radius: 1.5, y: 0.5)
+            .animation(animation, value: card)
+            .animation(animation, value: pressed)
     }
 }
 

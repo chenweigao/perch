@@ -72,6 +72,11 @@ def main():
     env.pop("WORKBENCH_LIVE_HOST", None)
     env.pop("WORKBENCH_GIT_WRITE_HOST", None)
     env.pop("PERCH_ACCEPTANCE_ALLOW_INVALIDATION", None)
+    if args.suite == "macos":
+        # Retain the native design phase's geometry and window captures with the logs.
+        captures = out / "native-design"
+        captures.mkdir()
+        env["PERCH_DESIGN_CAPTURES"] = str(captures)
     for name, command, timeout in commands:
         print("Running " + name, flush=True)
         started = time.monotonic()
