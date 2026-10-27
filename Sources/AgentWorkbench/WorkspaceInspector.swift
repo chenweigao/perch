@@ -96,7 +96,7 @@ struct ChangesInspectorView: View {
                 Button("在文件窗口中审阅") { model.reviewChangesInFileWindow() }.disabled(item == nil)
             } label: { Image(systemName: "ellipsis").foregroundStyle(.secondary).frame(width: 24, height: 24) }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .accessibilityLabel("会话操作")
+                .help("改动操作").accessibilityLabel("改动操作")
             Button(action: close) {
                 Image(systemName: "xmark").foregroundStyle(.secondary).frame(width: 32, height: 32)
                     .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Circle())
@@ -187,8 +187,7 @@ struct ChangesInspectorView: View {
                     if truncated {
                         Label("差异过大，已截断", systemImage: "scissors")
                             .font(.system(size: 11)).foregroundStyle(.orange)
-                            .padding(.horizontal, 16).padding(.vertical, 6)
-                        Divider()
+                            .padding(.horizontal, 20).padding(.bottom, 8)
                     }
                     // File metadata is already in the list and title. Keep the
                     // complete original patch available in the full review.
