@@ -194,7 +194,9 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(200))
     print("PASS: production workspace, aligned reply/composer, independent changes inspector, native light and dark")
     if Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true && !CommandLine.arguments.contains("native-design") {
+        let appearanceMenu = NativeDesignAppearanceMenu(window: window)
         while window.isVisible { try await Task.sleep(for: .seconds(1)) }
+        withExtendedLifetime(appearanceMenu) {}
     } else if CommandLine.arguments.contains("preview") {
         print("Native design preview: \(Bundle.main.bundleURL.path)")
         try await Task.sleep(for: .seconds(120))
@@ -220,5 +222,34 @@ import WorkbenchCore
         try await connection.poll()
         precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
         print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
+    }
+}
+
+/// Preview-only controls let visual reviews capture the same live window in
+/// both appearances, including system-composited material and shadows.
+@MainActor private final class NativeDesignAppearanceMenu: NSObject {
+    private weak var window: NSWindow?
+    private let menu = NSMenu(title: "外观")
+
+    init(window: NSWindow) {
+        self.window = window
+        super.init()
+        for (title, tag) in [("浅色", 0), ("深色", 1)] {
+            let item = NSMenuItem(title: title, action: #selector(selectAppearance(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = tag
+            item.state = tag == 0 ? .on : .off
+            menu.addItem(item)
+        }
+        let main = NSApp.mainMenu ?? NSMenu()
+        let item = NSMenuItem(title: "外观", action: nil, keyEquivalent: "")
+        item.submenu = menu
+        main.addItem(item)
+        NSApp.mainMenu = main
+    }
+
+    @objc private func selectAppearance(_ sender: NSMenuItem) {
+        window?.appearance = NSAppearance(named: sender.tag == 0 ? .aqua : .darkAqua)
+        for item in menu.items { item.state = item === sender ? .on : .off }
     }
 }
