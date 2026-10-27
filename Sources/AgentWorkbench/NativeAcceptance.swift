@@ -686,6 +686,9 @@ private struct ReferenceComposerFixtureView: View {
                 let oldDocument = oldScroll.flatMap { ConversationTranscript.document(in: $0) }
                 let start = CACurrentMediaTime()
                 model.open(items[index])
+                // Height publication is deferred one pass by design; sample only
+                // after the reveal's bottom pin has landed.
+                await Task.yield(); flush(window)
                 var samples: [[String: Any]] = []
                 for _ in 0..<60 {
                     await Task.yield(); flush(window)
