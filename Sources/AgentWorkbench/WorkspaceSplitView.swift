@@ -44,6 +44,7 @@ struct WorkbenchToolbarSymbol: View {
 /// reading sheet and inspector float above it; their hosts survive resizing.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
+    @AppStorage(AppAppearance.defaultsKey) private var appearance: AppAppearance = .system
     let newConversation: () -> Void
     let canNavigate: (Int) -> Bool
     let navigate: (Int) -> Void
@@ -96,6 +97,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     func makeNSViewController(context: Context) -> WorkbenchSplitController {
         let coordinator = context.coordinator
         let controller = WorkbenchSplitController()
+        controller.setAppearance(appearance)
         coordinator.controller = controller
         coordinator.inspectorSizing.controller = controller
         controller.setInspectorContentHeight(coordinator.inspectorSizing.height)
@@ -132,6 +134,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     }
 
     func updateNSViewController(_ controller: WorkbenchSplitController, context: Context) {
+        controller.setAppearance(appearance)
         let coordinator = context.coordinator
         coordinator.newConversation = newConversation
         coordinator.canNavigate = canNavigate
@@ -545,6 +548,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
+    private var appAppearance: AppAppearance = .system
     var alignToolbar: ((CGFloat) -> Void)?
     private(set) var floatingSidebarView: NSView?
     private(set) var floatingInspectorView: NSView?
@@ -717,7 +721,22 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
         window.toolbar = workspaceToolbar
+        if appAppearance != .system { applyAppearance() }
         DispatchQueue.main.async { [weak self] in self?.updateWorkspaceLayout() }
+    }
+
+    func setAppearance(_ appearance: AppAppearance) {
+        guard appearance != appAppearance else { return }
+        appAppearance = appearance
+        if isViewLoaded { applyAppearance() }
+    }
+
+    private func applyAppearance() {
+        switch appAppearance {
+        case .system: view.window?.appearance = nil
+        case .light: view.window?.appearance = NSAppearance(named: .aqua)
+        case .dark: view.window?.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     func configureSplitPersistence() {

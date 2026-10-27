@@ -249,11 +249,14 @@ import WorkbenchCore
         try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: folder).appendingPathComponent(name + ".png"))
     }
     capture("native-light")
-    window.appearance = NSAppearance(named: .darkAqua)
+    UserDefaults.standard.set(AppAppearance.dark.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
+    precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua,
+                 "The appearance setting must reach the native window and every floating host")
     capture("native-dark")
-    window.appearance = NSAppearance(named: .aqua)
+    UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
+    precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua)
     print("PASS: production workspace, aligned reply/composer, independent changes inspector, native light and dark")
     if Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true && !CommandLine.arguments.contains("native-design") {
         let appearanceMenu = NativeDesignAppearanceMenu(window: window)
