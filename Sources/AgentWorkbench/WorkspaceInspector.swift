@@ -9,13 +9,6 @@ struct WorkspaceInspector: View {
     var body: some View {
         let controller = model.taskContextWindow
         VStack(spacing: 0) {
-            Picker("面板页面", selection: Binding(get: { controller.page },
-                                              set: { controller.showPage($0, model: model) })) {
-                Text("任务").tag(WorkspaceInspectorPage.task)
-                Text("改动").tag(WorkspaceInspectorPage.changes)
-            }.pickerStyle(.segmented).labelsHidden().fixedSize()
-                .frame(maxWidth: .infinity).padding(.horizontal, 16).padding(.top, 12)
-                .accessibilityIdentifier("inspector.page")
             switch controller.page {
             case .task:
                 TaskContextView(model: model,
@@ -45,6 +38,7 @@ struct ChangesButton: View {
 /// fills the rest of the panel. Reads start when the page is showing and stop
 /// when it hides; the full review stays in the file window.
 struct ChangesInspectorView: View {
+    private static let fileRowHeight: CGFloat = 44
     @UILocalization private var L
     let model: WorkbenchModel
     let close: () -> Void
@@ -92,25 +86,23 @@ struct ChangesInspectorView: View {
     private var header: some View {
         HStack(spacing: 4) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(summary).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
-                if let root = browser.gitStatus?.root {
-                    Text(URL(fileURLWithPath: root).lastPathComponent)
-                        .font(.system(size: 11)).lineLimit(1).truncationMode(.middle).help(root)
-                }
+                Text("改动").font(.system(size: 16, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
+                Text(summary).font(.system(size: 12)).foregroundStyle(WorkbenchTheme.quiet)
             }
             Spacer(minLength: 4)
-            Button { refresh += 1 } label: {
-                Image(systemName: "arrow.clockwise").frame(width: 24, height: 24)
-            }.disabled(item == nil || browser.loading)
-                .help("刷新改动").accessibilityLabel("刷新改动")
-            Button { model.reviewChangesInFileWindow() } label: {
-                Image(systemName: "arrow.up.forward.app").frame(width: 24, height: 24)
-            }.disabled(item == nil)
-                .help("在文件窗口中审阅").accessibilityLabel("在文件窗口中审阅")
-            Button(action: close) { Image(systemName: "xmark").frame(width: 24, height: 24) }
+            Menu {
+                Button("刷新改动") { refresh += 1 }.disabled(item == nil || browser.loading)
+                Button("在文件窗口中审阅") { model.reviewChangesInFileWindow() }.disabled(item == nil)
+            } label: { Image(systemName: "ellipsis").foregroundStyle(.secondary).frame(width: 24, height: 24) }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                .accessibilityLabel("会话操作")
+            Button(action: close) {
+                Image(systemName: "xmark").foregroundStyle(.secondary).frame(width: 32, height: 32)
+                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Circle())
+            }
                 .help("收起面板").accessibilityLabel("收起面板")
-        }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.borderless)
-            .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 8)
+        }.font(.system(size: 12)).buttonStyle(.borderless)
+            .padding(.horizontal, 20).padding(.vertical, 16)
     }
 
     private var summary: String {
@@ -142,8 +134,8 @@ struct ChangesInspectorView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 1) {
                             ForEach(entries) { entry in row(entry) }
-                        }.padding(.horizontal, 8).padding(.vertical, 6)
-                    }.frame(height: CGFloat(min(entries.count, 5)) * 42 + 12)
+                        }.padding(.horizontal, 8).padding(.vertical, 8)
+                    }.frame(height: CGFloat(min(entries.count, 5)) * Self.fileRowHeight + 16)
                     Divider()
                     diffPane
                 }
@@ -152,30 +144,29 @@ struct ChangesInspectorView: View {
     }
 
     private func row(_ entry: RemoteGitEntry) -> some View {
-        let directory = (entry.path as NSString).deletingLastPathComponent
         return Button {
             preferredPath = entry.path
             browser.loadWorkingChange(entry)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: symbol(for: entry)).foregroundStyle(.secondary).frame(width: 16)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text((entry.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
-                    Text(directory.isEmpty ? entry.label : directory + " · " + entry.label)
-                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
-                }
+                Text((entry.path as NSString).lastPathComponent).font(.system(size: 14))
+                    .lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 0)
-            }.padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                Text(entry.untracked ? "?" : String(entry.worktreeStatus == " " ? entry.indexStatus : entry.worktreeStatus))
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.tertiary)
+            }.padding(.horizontal, 12).frame(maxWidth: .infinity, minHeight: Self.fileRowHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle(selected: entry.path == browser.gitPath))
-            .help(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
+            .accessibilityValue(entry.label)
+            .help((entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path) + "\n" + entry.label)
     }
 
     private func symbol(for entry: RemoteGitEntry) -> String {
         if entry.untracked || entry.indexStatus == "A" { return "plus.circle" }
         if entry.indexStatus == "D" || entry.worktreeStatus == "D" { return "minus.circle" }
         if entry.originalPath != nil { return "arrow.right.circle" }
-        return "pencil.circle"
+        return "doc.text"
     }
 
     @ViewBuilder private var diffPane: some View {
@@ -186,15 +177,24 @@ struct ChangesInspectorView: View {
         } else {
             switch browser.gitDiff {
             case .text(let diff, let truncated):
+                let body = diff.range(of: "\n@@").map { String(diff[diff.index(after: $0.lowerBound)...]) } ?? diff
                 VStack(alignment: .leading, spacing: 0) {
+                    Text(browser.gitPath.map { ($0 as NSString).lastPathComponent } ?? "")
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1).truncationMode(.middle)
+                        .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
                     if truncated {
                         Label("差异过大，已截断", systemImage: "scissors")
                             .font(.system(size: 11)).foregroundStyle(.orange)
                             .padding(.horizontal, 16).padding(.vertical, 6)
                         Divider()
                     }
-                    RemoteSourceText(text: diff, line: nil, diff: true)
+                    // File metadata is already in the list and title. Keep the
+                    // complete original patch available in the full review.
+                    RemoteSourceText(text: body, line: nil, diff: true, transparentBackground: true)
                         .id("inspector-diff:\(browser.gitDirectory):\(browser.gitPath ?? ""):\(browser.gitRange.rawValue)")
+                        .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+                        .padding(.horizontal, 16).padding(.bottom, 16)
                 }
             case .binary: notice(L("二进制文件差异，不做预览。"), symbol: "doc.zipper")
             case .empty: notice(L("该文件在当前范围内没有差异。"), symbol: "equal.circle")

@@ -8,19 +8,23 @@ import WorkbenchCore
 /// here — SwiftUI rows while a reply streams, native cached rows once it settles —
 /// so a settled row keeps the geometry of the row it replaces.
 ///
-/// A 14 pt system body on a 22 pt line (≈1.57) with an ~48-character CJK measure:
-/// the native macOS reading size rather than a web-sized one. Hierarchy comes from
+/// A 16 pt system body on a 26 pt line with a comfortable CJK measure.
+/// Hierarchy comes from
 /// weight and space; only H1 steps up in size.
 enum ReplyStyle {
     static let readingWidth: CGFloat = 680
-    static let horizontalPadding: CGFloat = 36
-    static let bodySize: CGFloat = 14
-    static let lineHeight: CGFloat = 22
+    static let horizontalPadding = WorkbenchTheme.Reading.inset
+    static let composerInset: CGFloat = 12
+    /// Fills the default 776pt conversation card with 12pt on either side.
+    static let composerWidth: CGFloat = 752
+    static let composerPadding = horizontalPadding - composerInset
+    static let bodySize = WorkbenchTheme.Reading.bodySize
+    static let lineHeight: CGFloat = 26
     static let lineHeightRatio: CGFloat = lineHeight / bodySize
-    static let paragraphSpacing: CGFloat = 10
+    static let paragraphSpacing: CGFloat = 12
     /// Between paragraphs inside list items, quotes and alerts.
     static let compactParagraphSpacing: CGFloat = 6
-    static let codeSize: CGFloat = 12.5
+    static let codeSize: CGFloat = 13
     static let codeLineSpacing: CGFloat = 4
     /// Between the parts of one transcript entry, and above a reply's actions.
     static let entryPartSpacing: CGFloat = 10
@@ -28,7 +32,7 @@ enum ReplyStyle {
     static let entrySpacing: CGFloat = 16
     static let processEntrySpacing: CGFloat = 6
     static let ink = Color.primary.opacity(0.9)
-    static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 16 : bodySize }
+    static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 20 : bodySize }
     static func headingLineHeight(_ level: Int) -> CGFloat { lineHeight }
     static let paper = Color.primary.opacity(0.035)
     // Preserve a dynamic color in cached attributed text. Applying alpha to
@@ -40,8 +44,8 @@ enum ReplyStyle {
     }
     /// `ReplyTone.quiet`: compaction notes and runtime context read one step down,
     /// in secondary ink. Weight still marks headings and strong text.
-    static let quietSize: CGFloat = 12
-    static let quietLineHeight: CGFloat = 18
+    static let quietSize: CGFloat = 14
+    static let quietLineHeight: CGFloat = 22
     static let quietInk = NSColor.secondaryLabelColor
     /// Code and tables wider than the column fade out over this trailing width.
     /// No wider than their 12 pt trailing inset (`Code.inset`, table cell padding),
@@ -149,12 +153,12 @@ extension ReplyStyle.BlockKind {
 
 enum UserMessageStyle {
     /// Nine lines of a folded long prompt; prompts past eleven lines fold.
-    static let collapsedHeight: CGFloat = 189
-    static let foldThreshold: CGFloat = 231
-    static let lineHeight: CGFloat = 21
-    static let horizontalPadding: CGFloat = 12
-    static let verticalPadding: CGFloat = 7
-    static let cornerRadius: CGFloat = 12
+    static let lineHeight = ReplyStyle.lineHeight
+    static let collapsedHeight = lineHeight * 9
+    static let foldThreshold = lineHeight * 11
+    static let horizontalPadding: CGFloat = 16
+    static let verticalPadding: CGFloat = 10
+    static let cornerRadius: CGFloat = 18
     static let maxWidthRatio: CGFloat = 0.85
     static let topSpacing: CGFloat = 8
     static let paragraphSpacing: CGFloat = ReplyStyle.paragraphSpacing

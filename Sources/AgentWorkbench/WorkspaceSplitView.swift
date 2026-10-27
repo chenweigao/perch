@@ -4,8 +4,8 @@ import WorkbenchCore
 
 enum WorkbenchChrome {
     static let headerHeight: CGFloat = 44
-    static let symbolSize: CGFloat = 13
-    static let controlSize: CGFloat = 28
+    static let symbolSize: CGFloat = 15
+    static let controlSize: CGFloat = 32
     static let controlSpacing: CGFloat = 16
     static let labelSpacing: CGFloat = 8
     static let sidebarSymbolWidth: CGFloat = 17
@@ -16,13 +16,13 @@ enum WorkspaceLayoutMetrics {
     static let frameInset: CGFloat = 12
     static let sidebarInset: CGFloat = frameInset
     static let sidebarGap: CGFloat = 12
-    static let sidebarDefaultWidth: CGFloat = 276
-    static let sidebarMinimumWidth: CGFloat = 220
-    static let sidebarMaximumWidth: CGFloat = 480
+    static let sidebarDefaultWidth: CGFloat = 304
+    static let sidebarMinimumWidth: CGFloat = 280
+    static let sidebarMaximumWidth: CGFloat = 400
     static let contentMinimumWidth: CGFloat = 600
-    static let inspectorDefaultWidth: CGFloat = 340
+    static let inspectorDefaultWidth: CGFloat = 312
     static let inspectorMinimumWidth: CGFloat = 280
-    static let inspectorMaximumWidth: CGFloat = 420
+    static let inspectorMaximumWidth: CGFloat = 400
 }
 
 struct WorkbenchToolbarSymbol: View {
@@ -115,12 +115,16 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             controller.installFloatingInspector(inspectorHost, visible: inspectorVisible)
         }
 
-        let toolbar = NSToolbar(identifier: "WorkbenchToolbar")
+        // Keep legacy saved item order from omitting the new pane-alignment spacers.
+        let toolbar = NSToolbar(identifier: "WorkbenchToolbar.v2")
         toolbar.delegate = coordinator
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = true
         toolbar.autosavesConfiguration = true
         controller.workspaceToolbar = toolbar
+        controller.alignToolbar = { [weak coordinator] leading, trailing in
+            coordinator?.alignToolbar(leading: leading, trailing: trailing)
+        }
         return controller
     }
 
@@ -161,6 +165,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private let composeID = NSToolbarItem.Identifier("WorkbenchCompose")
         private let titleID = NSToolbarItem.Identifier("WorkbenchTitle")
         private let actionsID = NSToolbarItem.Identifier("WorkbenchActions")
+        private let leadingID = NSToolbarItem.Identifier("WorkbenchLeadingAlignment")
+        private let trailingID = NSToolbarItem.Identifier("WorkbenchTrailingAlignment")
+        private var leadingWidth: NSLayoutConstraint?
+        private var trailingWidth: NSLayoutConstraint?
 
         init(_ view: WorkspaceSplitView) {
             sidebarHost = NSHostingController(rootView: WorkspaceFloatingPanelRoot(
@@ -177,8 +185,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             navigate = view.navigate
             super.init()
             sidebarHost.sizingOptions = []
+            sidebarHost.safeAreaRegions = []
             contentHost.sizingOptions = []
             inspectorHost?.sizingOptions = []
+            inspectorHost?.safeAreaRegions = []
             headerHost.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             headerHost.setContentHuggingPriority(.defaultLow, for: .horizontal)
         }
@@ -188,14 +198,26 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, backID, forwardID, titleID, .flexibleSpace, actionsID]
+            [toggleID, leadingID, titleID, .flexibleSpace, actionsID, trailingID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            toolbarDefaultItemIdentifiers(toolbar) + [composeID]
+            toolbarDefaultItemIdentifiers(toolbar) + [composeID, backID, forwardID]
         }
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
             let L = LocalizedUIStrings(locale: locale)
+            if id == leadingID || id == trailingID {
+                let item = NSToolbarItem(itemIdentifier: id)
+                let spacer = NSView()
+                spacer.translatesAutoresizingMaskIntoConstraints = false
+                let width = spacer.widthAnchor.constraint(equalToConstant: 1)
+                NSLayoutConstraint.activate([width, spacer.heightAnchor.constraint(equalToConstant: 1)])
+                item.view = spacer
+                item.isBordered = false
+                item.visibilityPriority = .high
+                if id == leadingID { leadingWidth = width } else { trailingWidth = width }
+                return item
+            }
             if id == backID || id == forwardID {
                 let direction = id == backID ? -1 : 1
                 let item = WorkbenchNavigationToolbarItem(itemIdentifier: id)
@@ -241,6 +263,21 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.view = navigationButton(for: item)
             }
             return item
+        }
+        /// Native toolbar spacing follows the mounted pane edges, including a
+        /// resized sidebar and the inspector's reserved trailing lane.
+        func alignToolbar(leading: CGFloat, trailing: CGFloat) {
+            guard let controller, headerHost.window != nil, actionsHost.window != nil else { return }
+            let titleX = headerHost.convert(headerHost.bounds, to: controller.view).minX
+            let actionsX = actionsHost.convert(actionsHost.bounds, to: controller.view).maxX
+            if let leadingWidth {
+                let width = max(1, leadingWidth.constant + leading - titleX)
+                if abs(width - leadingWidth.constant) > 0.5 { leadingWidth.constant = width }
+            }
+            if let trailingWidth {
+                let width = max(1, trailingWidth.constant + actionsX - trailing)
+                if abs(width - trailingWidth.constant) > 0.5 { trailingWidth.constant = width }
+            }
         }
         func updateToolbarLanguage() {
             let L = LocalizedUIStrings(locale: locale)
@@ -302,8 +339,10 @@ private final class WorkbenchNavigationToolbarItem: NSToolbarItem {
 final class WorkbenchDetailController: NSViewController {
     let content: NSViewController
     private var cardLeadingConstraint: NSLayoutConstraint?
+    private var cardTrailingConstraint: NSLayoutConstraint?
     /// Sidebar avoidance; 0 while the sidebar is hidden or overlays the card.
     private(set) var contentLeadingInset: CGFloat = 0
+    private(set) var contentTrailingInset: CGFloat = 0
     private(set) var cardView: NSView?
 
     init(content: NSViewController) {
@@ -326,25 +365,32 @@ final class WorkbenchDetailController: NSViewController {
         card.addSubview(detail)
         let inset = WorkspaceLayoutMetrics.frameInset
         let leading = card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: inset)
+        let trailing = card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset)
         cardLeadingConstraint = leading
+        cardTrailingConstraint = trailing
         NSLayoutConstraint.activate([
-            card.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: inset),
+            card.topAnchor.constraint(equalTo: view.topAnchor, constant: inset),
             leading,
-            card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset),
+            trailing,
             card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset),
-            detail.topAnchor.constraint(equalTo: card.topAnchor),
+            detail.topAnchor.constraint(equalTo: card.topAnchor, constant: WorkbenchChrome.headerHeight),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
         ])
     }
 
-    /// The avoidance already ends one sidebar gap past the panel; without it the
-    /// card keeps the frame margin.
-    func setContentLeadingInset(_ inset: CGFloat) {
-        guard abs(inset - contentLeadingInset) > 0.5 else { return }
-        contentLeadingInset = inset
-        cardLeadingConstraint?.constant = max(WorkspaceLayoutMetrics.frameInset, inset)
+    /// The same mounted card adapts to the two floating panels. In wide windows
+    /// the frame material remains visible between every pair of rounded surfaces.
+    func setContentInsets(leading: CGFloat, trailing: CGFloat) {
+        if abs(leading - contentLeadingInset) > 0.5 {
+            contentLeadingInset = leading
+            cardLeadingConstraint?.constant = max(WorkspaceLayoutMetrics.frameInset, leading)
+        }
+        if abs(trailing - contentTrailingInset) > 0.5 {
+            contentTrailingInset = trailing
+            cardTrailingConstraint?.constant = -max(WorkspaceLayoutMetrics.frameInset, trailing)
+        }
     }
 }
 
@@ -394,10 +440,11 @@ private final class WorkspaceSidebarResizeHandle: NSView {
 
 final class WorkbenchSplitController: NSSplitViewController {
     static let sidebarVisibilityDefaultsKey = "perch.workspace.sidebar.visible.v3"
-    static let sidebarWidthDefaultsKey = "perch.workspace.sidebar.width.v3"
-    static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v1"
+    static let sidebarWidthDefaultsKey = "perch.workspace.sidebar.width.v5"
+    static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
+    var alignToolbar: ((CGFloat, CGFloat) -> Void)?
     private var floatingSidebarController: NSViewController?
     private var floatingInspectorController: NSViewController?
     private weak var detailController: WorkbenchDetailController?
@@ -407,6 +454,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     private var inspectorResizeHandle: WorkspaceSidebarResizeHandle?
     private var applyingLayout = false
     private(set) var isSidebarOverlayingContent = false
+    private(set) var isInspectorOverlayingContent = false
     private(set) var floatingSidebarWidth: CGFloat
     private(set) var isFloatingSidebarVisible: Bool
     private(set) var floatingInspectorWidth: CGFloat
@@ -419,6 +467,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     var detailCardView: NSView? { detailController?.cardView }
     var detailContentView: NSView? { detailController?.content.view }
     var detailContentLeadingInset: CGFloat { detailController?.contentLeadingInset ?? 0 }
+    var detailContentTrailingInset: CGFloat { detailController?.contentTrailingInset ?? 0 }
 
     init() {
         let defaults = UserDefaults.standard
@@ -482,7 +531,7 @@ final class WorkbenchSplitController: NSSplitViewController {
             : handle.trailingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 5)
         NSLayoutConstraint.activate([
             horizontal,
-            panel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor,
+            panel.topAnchor.constraint(equalTo: view.topAnchor,
                                        constant: WorkspaceLayoutMetrics.sidebarInset),
             panel.bottomAnchor.constraint(equalTo: view.bottomAnchor,
                                           constant: -WorkspaceLayoutMetrics.sidebarInset),
@@ -517,6 +566,12 @@ final class WorkbenchSplitController: NSSplitViewController {
         inspectorResizeHandle = handle
         inspector.view.isHidden = !visible
         handle.isHidden = !visible
+        inspector.view.wantsLayer = true
+        inspector.view.layer?.masksToBounds = false
+        inspector.view.layer?.shadowColor = NSColor.black.cgColor
+        inspector.view.layer?.shadowOpacity = 0.10
+        inspector.view.layer?.shadowRadius = 16
+        inspector.view.layer?.shadowOffset = CGSize(width: 0, height: -4)
     }
 
     override func viewDidLayout() {
@@ -529,9 +584,12 @@ final class WorkbenchSplitController: NSSplitViewController {
         configureSplitPersistence()
         guard let window = view.window else { return }
         window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
         window.toolbar = workspaceToolbar
+        DispatchQueue.main.async { [weak self] in self?.updateWorkspaceLayout() }
     }
 
     func configureSplitPersistence() {
@@ -576,6 +634,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         isFloatingInspectorVisible = visible
         floatingInspectorView?.isHidden = !visible
         inspectorResizeHandle?.isHidden = !visible
+        updateWorkspaceLayout()
     }
 
     func setFloatingInspectorWidth(_ width: CGFloat) {
@@ -584,6 +643,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         floatingInspectorWidth = clamped
         inspectorWidthConstraint?.constant = clamped
         UserDefaults.standard.set(Double(clamped), forKey: Self.inspectorWidthDefaultsKey)
+        updateWorkspaceLayout()
     }
 
     private func updateWorkspaceLayout() {
@@ -591,21 +651,39 @@ final class WorkbenchSplitController: NSSplitViewController {
         applyingLayout = true
         defer { applyingLayout = false }
 
-        // The inspector floats above the canvas and never compresses it; only the
-        // sidebar reserves content space when the window is wide enough. The
-        // conversation card still keeps the frame margin on its trailing edge.
+        // The canvas and conversation host stay mounted. When there is room for
+        // 600pt of content, the card yields to both panels so their rounded edges
+        // sit on the frame material instead of disappearing into one white sheet.
         let availableWidth = view.bounds.width
         let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
             WorkspaceLayoutMetrics.sidebarGap
         let avoidSidebar = isFloatingSidebarVisible &&
             availableWidth >= WorkspaceLayoutMetrics.contentMinimumWidth + avoidance +
                 WorkspaceLayoutMetrics.frameInset - 0.5
-        detailController?.setContentLeadingInset(avoidSidebar ? avoidance : 0)
+        let leading = avoidSidebar ? avoidance : WorkspaceLayoutMetrics.frameInset
+        let inspectorAvoidance = WorkspaceLayoutMetrics.sidebarInset + floatingInspectorWidth +
+            WorkspaceLayoutMetrics.sidebarGap
+        let avoidInspector = isFloatingInspectorVisible && availableWidth - leading - inspectorAvoidance >=
+            WorkspaceLayoutMetrics.contentMinimumWidth - 0.5
+        detailController?.setContentInsets(leading: avoidSidebar ? avoidance : 0,
+                                          trailing: avoidInspector ? inspectorAvoidance : 0)
         isSidebarOverlayingContent = isFloatingSidebarVisible && !avoidSidebar
+        isInspectorOverlayingContent = isFloatingInspectorVisible && !avoidInspector
         floatingSidebarView?.isHidden = !isFloatingSidebarVisible
         sidebarResizeHandle?.isHidden = !isFloatingSidebarVisible
         floatingInspectorView?.isHidden = !isFloatingInspectorVisible
         inspectorResizeHandle?.isHidden = !isFloatingInspectorVisible
+        if let panel = floatingInspectorView {
+            panel.layer?.shadowPath = CGPath(roundedRect: panel.bounds,
+                cornerWidth: WorkbenchTheme.Radius.panel, cornerHeight: WorkbenchTheme.Radius.panel, transform: nil)
+        }
+        if let card = detailCardView {
+            let cardFrame = card.convert(card.bounds, to: view)
+            let trailing = isInspectorOverlayingContent
+                ? view.bounds.maxX - WorkspaceLayoutMetrics.sidebarInset - floatingInspectorWidth - WorkspaceLayoutMetrics.sidebarGap
+                : cardFrame.maxX - WorkbenchTheme.Reading.inset
+            alignToolbar?(cardFrame.minX + WorkbenchTheme.Reading.inset, trailing)
+        }
     }
 
     @objc private func resizeSidebar(_ recognizer: NSPanGestureRecognizer) {

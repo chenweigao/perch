@@ -11,52 +11,20 @@ struct WorkbenchHeader: View {
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
-        HStack(spacing: WorkbenchChrome.labelSpacing) {
-            Group {
-                if let item {
-                    AgentMark(kind: item.reference.kind, size: 15)
-                } else {
-                    // The same symbols as the sidebar destinations.
-                    Image(systemName: model.showArchived ? "archivebox" : model.onlyAttention ? "tray"
-                          : model.showSessionDirectory ? "bubble.left.and.bubble.right"
-                          : model.selectedGroup != nil || model.showAllTaskGroups ? "square.stack.3d.up" : "square.grid.2x2")
-                        .font(.system(size: WorkbenchChrome.symbolSize, weight: .regular)).imageScale(.medium).foregroundStyle(.secondary)
-                }
-            }.frame(width: WorkbenchChrome.sidebarSymbolWidth)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).truncationMode(.tail)
-                if let item {
-                    HStack(spacing: 5) {
-                        Text(item.reference.kind.label)
-                        if !item.hostName.isEmpty {
-                            Text("·")
-                            HostIdentityLabel(hostID: item.reference.hostID, name: item.hostName)
-                        }
-                    }
-                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
-                }
-            }
-        }.frame(minWidth: 100, maxWidth: 440, alignment: .leading)
+        Text(title).font(.system(size: 16, weight: .semibold))
+            .lineLimit(1).truncationMode(.tail)
+            .frame(minWidth: 100, maxWidth: 440, alignment: .leading)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
 
-/// Only toolbar status observes the active stream; title and sidebar do not.
+/// Conversation controls stay in one native glass group.
 struct WorkbenchHeaderActions: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
     let kimi: KimiConnection
     let native: NativeAgentConnection
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
-    private var status: String? {
-        if model.showDashboard { return nil }
-        if model.showKimi, let session = kimi.conversation?.snapshot.session, session.isTurnRunning { return session.status }
-        if model.showNative, let session = native.snapshot {
-            if !session.interactions.isEmpty { return L("等你处理") }
-            if session.busy { return L("运行中") }
-        }
-        return nil
-    }
     private var isHome: Bool { model.showDashboard && !model.onlyAttention && !model.showArchived && !model.showSessionDirectory }
     /// The scope narrows the action queue, so it is offered on the workbench and on its
     /// inbox. The archive and the session directory list everything on purpose.
@@ -73,26 +41,15 @@ struct WorkbenchHeaderActions: View {
     }
     var body: some View {
         HStack(spacing: WorkbenchChrome.controlSpacing) {
-            if let item, !item.directory.isEmpty {
-                Label(URL(fileURLWithPath: item.directory).lastPathComponent, systemImage: "folder")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    .frame(maxWidth: 110).fixedSize(horizontal: true, vertical: false).help(item.directory)
-            }
-            if let status {
-                HStack(spacing: 5) {
-                    Circle().fill((model.showKimi ? kimi.conversation?.snapshot.pendingApprovals.isEmpty == false || kimi.conversation?.snapshot.pendingQuestions.isEmpty == false : native.snapshot?.interactions.isEmpty == false) ? Color.orange : Color.secondary).frame(width: 5, height: 5)
-                    Text(status).font(.system(size: 11))
-                }.foregroundStyle(.secondary).fixedSize()
-            }
             if !model.showDashboard {
                 // One glass capsule holds the conversation's controls.
                 HStack(spacing: 0) {
                     if model.selectedHost != nil {
                         ChangesButton(model: model)
-                        TaskContextButton(model: model)
                         Button { model.toggleFileViewer() } label: {
-                            WorkbenchToolbarSymbol(name: "doc.text.magnifyingglass")
+                            WorkbenchToolbarSymbol(name: "doc.text")
                         }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")
+                        TaskContextButton(model: model)
                     }
                     Menu {
                         if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }

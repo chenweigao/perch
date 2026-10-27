@@ -55,7 +55,7 @@ struct ComposerActionButton: View {
                         Image(systemName: isRunning ? "stop.fill" : "arrow.up")
                             .font(.system(size: isRunning ? 12 : 15, weight: .semibold)).foregroundStyle(WorkbenchTheme.actionGlyph)
                     }
-                }.frame(width: 32, height: 32)
+                }.frame(width: 36, height: 36)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)
                 .help(isRunning || isStopping ? title : L("Return to send · Shift Return for a new line"))
         }
@@ -76,6 +76,30 @@ struct ComposerAddButton: View {
             .accessibilityLabel(supportsFiles ? L("Add images or files") : L("Attachments unavailable"))
     }
 }
+/// Environment details belong to the composer, without retargeting a running session.
+struct ComposerEnvironmentMenu: View {
+    let host: SSHHost
+    let provider: String
+    let directory: String
+
+    var body: some View {
+        Menu {
+            Text(host.name)
+            Text(provider)
+            if !directory.isEmpty { Divider(); Text(directory) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: host.isLocal ? "desktopcomputer" : "server.rack")
+                Text(host.name).lineLimit(1).truncationMode(.middle).frame(maxWidth: 88)
+                Image(systemName: "chevron.down").font(.system(size: 9))
+            }.font(.system(size: 13)).padding(.horizontal, 10).frame(height: 32)
+                .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule())
+        }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            .accessibilityLabel("机器").accessibilityValue(host.name)
+            .help(directory.isEmpty ? host.name : host.name + "\n" + directory)
+    }
+}
+
 struct ComposerDeliveryHint: View {
     let sending: Bool
     let saveError: String?

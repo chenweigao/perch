@@ -41,6 +41,51 @@ struct SessionRowChrome<Indicator: View>: View {
         return subtitle == nil ? SidebarMetrics.rowHeight : SidebarMetrics.subtitleRowHeight
     }
     var body: some View {
+        Group {
+            if compact { conversationRow }
+            else { standardRow }
+        }
+        .background { SidebarHighlight(selected: selected, hovered: hovered) }
+        .contentShape(Rectangle()).onHover { hovered = $0 }
+        .help(Text(verbatim: tooltip))
+    }
+
+    /// Titles own the space. Stable status width and intrinsic height keep a long
+    /// title readable on two lines; pin/archive remain in the row's context menu.
+    private var conversationRow: some View {
+        Button(action: onOpen) {
+            HStack(alignment: .top, spacing: SidebarMetrics.labelSpacing) {
+                indicator.frame(width: SidebarMetrics.iconWidth, height: 18).padding(.top, 1)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: selected ? .medium : .regular))
+                        .lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if let subtitle {
+                        Text(subtitle).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Group {
+                    if running {
+                        ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
+                    } else if updatedAt > 0 {
+                        TimelineView(.periodic(from: .now, by: 60)) { context in
+                            Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
+                                .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+                    }
+                }.frame(width: 28, height: 18, alignment: .trailing).padding(.top, 1)
+            }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 10)
+                .frame(maxWidth: .infinity, minHeight: SidebarMetrics.sessionMinimumHeight, alignment: .leading)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
+            .accessibilityLabel(title)
+            .accessibilityValue(([hostName, directory, detail, updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
+    }
+
+    private var standardRow: some View {
         HStack(spacing: 0) {
             Button {
                 onOpen()
@@ -122,11 +167,6 @@ struct SessionRowChrome<Indicator: View>: View {
                     .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: showActions)
             }.frame(width: trailingWidth, alignment: .trailing)
         }.padding(.trailing, 5).frame(height: rowHeight)
-            .background { SidebarHighlight(selected: selected, hovered: hovered) }
-            .contentShape(Rectangle()).onHover { hovered = $0 }
-            // Native tooltip carries what the row cannot show: the full title
-            // plus host and directory. A custom card covered the reading area.
-            .help(Text(verbatim: tooltip))
     }
 
     /// Full title, with host and directory on a second line when present.

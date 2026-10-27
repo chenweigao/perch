@@ -3,7 +3,7 @@ import SwiftUI
 extension View {
     /// Native glass is confined to navigation and floating controls, never transcript text.
     func workbenchFloatingSurface() -> some View {
-        modifier(WorkbenchGlassSurface(cornerRadius: 16))
+        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.panel))
     }
 
     func workbenchControlSurface() -> some View {

@@ -11,6 +11,7 @@ struct ComposerModelPicker: View {
     let models: [AgentModel]
     let modelID: String
     let thinking: ThinkingLevel?
+    var agentLabel: String?
     var disabledReason: String?
     var unavailableReason: String?
     var catalogError: String?
@@ -28,7 +29,8 @@ struct ComposerModelPicker: View {
     @State private var thinkingPresented = false
 
     private var model: AgentModel? { models.first { $0.id == modelID } }
-    private var title: String { model?.name ?? (modelID.isEmpty ? L("默认模型") : modelID) }
+    private var modelTitle: String { model?.name ?? (modelID.isEmpty ? L("默认模型") : modelID) }
+    private var title: String { agentLabel ?? modelTitle }
     private var thinkingTitle: String {
         guard let model else { return modelID.isEmpty ? L("模型默认") : L("不可调") }
         guard model.supportsThinking else { return L("不可调") }
@@ -44,13 +46,13 @@ struct ComposerModelPicker: View {
                         Text("· \(thinkingTitle)").foregroundStyle(.secondary).fixedSize()
                         chevron
                     }
-                    .font(.system(size: 12))
+                    .font(.system(size: 13))
                     .padding(.vertical, 6).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(disabledReason ?? L("模型与思考"))
                 .accessibilityLabel(L("模型与思考"))
-                .accessibilityValue("\(title) · \(thinkingTitle)")
+                .accessibilityValue("\(modelTitle) · \(thinkingTitle)")
                 .accessibilityIdentifier("composer-model-thinking")
                 .popover(isPresented: $presented, arrowEdge: .top) {
                     panel.task { await onRefreshCatalog?() }
@@ -64,13 +66,13 @@ struct ComposerModelPicker: View {
                             Text(title).lineLimit(1).truncationMode(.middle)
                             chevron
                         }
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .padding(.vertical, 6).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help(L("选择模型"))
+                    .help(L("选择模型") + " · " + modelTitle)
                     .accessibilityLabel(L("选择模型"))
-                    .accessibilityValue(title)
+                    .accessibilityValue(modelTitle)
                     .accessibilityIdentifier("composer-model-thinking")
                     .popover(isPresented: $presented, arrowEdge: .top) {
                         panel.task { await onRefreshCatalog?() }
@@ -82,7 +84,7 @@ struct ComposerModelPicker: View {
                             Text(verbatim: thinkingTitle)
                             chevron
                         }
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
                         .padding(.vertical, 6).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain).fixedSize()

@@ -13,17 +13,20 @@ import WorkbenchCore
             .appendingPathComponent(domain)
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
-        if CommandLine.arguments.contains("preview") {
+        let designPreview = Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true
+        let nativeDesign = designPreview || CommandLine.arguments.contains("native-design")
+        if CommandLine.arguments.contains("preview") || nativeDesign {
             // Interactive fixtures need AppKit's event loop for native window events
             // and accessibility, unlike the command-line layout checks below.
-            NSApp.setActivationPolicy(.accessory)
+            NSApp.setActivationPolicy(designPreview ? .regular : .accessory)
             Task { @MainActor in
                 do {
-                    if CommandLine.arguments.contains("document-reading") { try await checkDocumentReadingUI() }
+                    if nativeDesign { try await checkNativeDesign() }
+                    else if CommandLine.arguments.contains("document-reading") { try await checkDocumentReadingUI() }
                     else { try await checkFileReaderWindow() }
                     NSApp.terminate(nil)
                 }
-                catch { fatalError("Reader preview failed: \(error)") }
+                catch { fatalError("Native fixture failed: \(error)") }
             }
             NSApp.run()
             return

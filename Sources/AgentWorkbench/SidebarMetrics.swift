@@ -11,15 +11,17 @@ import SwiftUI
 /// A project's sessions start under the project's icon, so their titles align
 /// with the project title. Section headers start at the icon column.
 enum SidebarMetrics {
-    static let rowHeight: CGFloat = 32
+    static let rowHeight: CGFloat = 36
     /// Session rows that carry a status line (offline, waiting for input).
-    static let subtitleRowHeight: CGFloat = 44
+    static let subtitleRowHeight: CGFloat = 50
+    /// Conversation titles may occupy two lines without being squeezed by actions.
+    static let sessionMinimumHeight: CGFloat = 44
     /// Inside the shell's 10 pt list padding.
     static let rowInset: CGFloat = 8
-    static let iconWidth: CGFloat = 16
-    static let iconSize: CGFloat = 13
-    static let labelSpacing: CGFloat = 8
-    static let titleSize: CGFloat = 13
+    static let iconWidth: CGFloat = 18
+    static let iconSize: CGFloat = 14
+    static let labelSpacing: CGFloat = 10
+    static let titleSize: CGFloat = 14
     static let detailSize: CGFloat = 11
     /// Keyboard shortcut hints after a row title (⌘K, ⌘,): one size everywhere.
     static let shortcutSize: CGFloat = 11
@@ -34,10 +36,10 @@ enum SidebarMetrics {
 
     /// Section headers: small semibold labels starting at the icon column. Darker
     /// than secondary text, so headers such as 置顶 never read as disabled.
-    static let sectionTitleSize: CGFloat = 11
+    static let sectionTitleSize: CGFloat = 12
     static let sectionTitleOpacity: Double = 0.62
     static let sectionHeaderHeight: CGFloat = 24
-    static let sectionTopSpacing: CGFloat = 14
+    static let sectionTopSpacing: CGFloat = 18
     static let sectionBottomSpacing: CGFloat = 2
     static let sectionHeight: CGFloat = sectionTopSpacing + sectionHeaderHeight + sectionBottomSpacing
 

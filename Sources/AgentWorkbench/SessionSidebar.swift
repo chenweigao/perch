@@ -10,7 +10,7 @@ struct WorkbenchSidebar: View {
     @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
     @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
     @AppStorage("sidebar.projects.collapsed") private var collapsedProjectsJSON = "[]"
-    @AppStorage("sidebar.projects.grouped") private var groupedByProject = true
+    @AppStorage("sidebar.projects.grouped") private var groupedByProject = false
     @State private var projectLimit = 8
     @State private var sessionLimit = 40
     @State private var showPinPicker = false
@@ -590,7 +590,7 @@ private struct SessionSidebarRow: View {
         #if PERCH_ACCEPTANCE
         let _ = recordBody()
         #endif
-        SessionRowChrome(title: item.title, subtitle: compact ? nil : subtitle,
+        SessionRowChrome(title: item.title, subtitle: subtitle,
                          hostName: item.hostName, hostID: item.reference.hostID,
                          directory: item.directory, detail: item.detail,
                          groups: groups, updatedAt: item.updatedAt, compact: compact,

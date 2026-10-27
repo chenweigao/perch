@@ -181,7 +181,7 @@ struct NativeAgentView: View {
                 },
                 taskStopErrors: subagentStopErrors)
                 .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding)
-                .frame(maxWidth: .infinity).padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6)
             // Long upstream errors scroll inside the notice instead of displacing the conversation.
             if let error = connection.actionError ?? s.error { ConversationNotice(text: error) }
             if let command = s.commandResult {
@@ -253,7 +253,12 @@ private struct NativeComposerView: View {
                                 pastes: connection.pastes).id(s.id)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: supportsAttachments, disabled: connection.sending) { chooseFiles = true }
-                    NativeModelControls(connection: connection, snapshot: s)
+                    HStack(spacing: 8) {
+                        ComposerEnvironmentMenu(host: connection.host, provider: s.provider.label, directory: s.cwd)
+                        NativeModelControls(connection: connection, snapshot: s)
+                            .padding(.horizontal, 8)
+                            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule())
+                    }
                     PermissionPicker(
                         provider: s.provider,
                         capability: connection.sessions.first { $0.id == s.id }?.permission
@@ -278,10 +283,10 @@ private struct NativeComposerView: View {
                                          onStop: { if isCurrent { connection.stop() } },
                                          onQueue: nextTurnSend)
                 }
-            }.padding(12).workbenchControlSurface()
+            }.padding(ReplyStyle.composerInset).workbenchControlSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[s.id] ?? "").count)
-        }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity).padding(.bottom, 16)
+        }.frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding).frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 16)
         .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             do { addAttachments(try result.get()) } catch { connection.actionError = error.localizedDescription }
         }
@@ -383,6 +388,7 @@ struct NativeModelControls: View {
         ComposerModelPicker(models: connection.models(for: snapshot.provider),
                             modelID: session?.model ?? snapshot.model,
                             thinking: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
+                            agentLabel: snapshot.provider.label,
                             disabledReason: disabledReason,
                             unavailableReason: editable ? nil : L("此 Agent 暂不支持模型与思考设置。"),
                             catalogError: connection.modelsError,

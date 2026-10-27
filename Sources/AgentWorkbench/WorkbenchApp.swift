@@ -23,7 +23,7 @@ struct WorkbenchApp: App {
                     model.refreshLocalizedCatalog()
                 }
         }
-        .defaultSize(width: 1280, height: 820)
+        .defaultSize(width: 1440, height: 900)
         .windowStyle(.hiddenTitleBar)
         .commands {
             SidebarCommands()

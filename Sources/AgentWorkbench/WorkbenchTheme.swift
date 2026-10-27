@@ -54,6 +54,12 @@ enum WorkbenchTheme {
 }
 
 extension WorkbenchTheme {
+    /// Shared by the window title and the conversation's reading controls.
+    enum Reading {
+        static let inset: CGFloat = 24
+        static let bodySize: CGFloat = 16
+    }
+
     /// Sheets and dialogs share one outer padding.
     enum Dialog { static let padding: CGFloat = 24 }
 
@@ -81,12 +87,12 @@ extension WorkbenchTheme {
     }
     /// Corner radii of highlights and containers. Glass surfaces and reply blocks keep their own.
     enum Radius {
-        static let row: CGFloat = 7
+        static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
         /// The window frame's panels: sidebar, conversation card and inspector.
         /// Concentric with the window corner across the frame's 12 pt margin.
-        static let panel: CGFloat = 16
+        static let panel: CGFloat = 20
     }
 }
 

@@ -11,17 +11,20 @@ import tempfile
 import time
 import uuid
 
-PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context"]
+PHASES = ["seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "stream-reveal", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context", "native-design"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")
 parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")
 parser.add_argument("--preview-file-reader", action="store_true", help="Keep the isolated file-reader fixture open for 120 seconds after checks")
 parser.add_argument("--preview-document-reader", action="store_true", help="Keep the isolated document reader open for 120 seconds")
+parser.add_argument("--preview-native-design", action="store_true", help="Build a persistent, isolated production-workspace preview and run its checks")
 args = parser.parse_args()
 if args.preview_file_reader:
     args.phase = [phase for phase in args.phase or [] if phase != "file-reader"] + ["file-reader"]
 if args.preview_document_reader:
     args.phase = [phase for phase in args.phase or [] if phase != "document-reading"] + ["document-reading"]
+if args.preview_native_design:
+    args.phase = [phase for phase in args.phase or [] if phase != "native-design"] + ["native-design"]
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
@@ -63,6 +66,21 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     # Stage a fresh executable inode before signing the isolated app bundle.
     shutil.copy2(compiled, executable)
     subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
+    if args.preview_native_design or (args.phase and "native-design" in args.phase):
+        review = ROOT / "build/Perch Design Preview.app"
+        shutil.copytree(app, review, dirs_exist_ok=True)
+        for locale in (ROOT / "Resources/Localization").glob("*.lproj"):
+            shutil.copytree(locale, review / "Contents/Resources" / locale.name, dirs_exist_ok=True)
+        info = review / "Contents/Info.plist"
+        metadata = plistlib.loads(info.read_bytes())
+        metadata["CFBundleIdentifier"] = "dev.agentworkbench.hostqa.native-design.preview"
+        metadata["PerchDesignPreview"] = True
+        metadata["CFBundleName"] = "Perch Design Preview"
+        metadata["CFBundleDisplayName"] = "Perch Design Preview"
+        metadata["LSUIElement"] = False
+        info.write_bytes(plistlib.dumps(metadata))
+        subprocess.run(["codesign", "--force", "--sign", "-", str(review)], check=True)
+        print(f"Persistent native design preview: {review}", flush=True)
     print(f"Host lifecycle fixture ready in {time.monotonic() - started:.2f} s", flush=True)
     try:
         for phase in args.phase or PHASES:
@@ -70,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
             print(f"Running host lifecycle phase: {phase}", flush=True)
             preview = (args.preview_file_reader and phase == "file-reader") or (args.preview_document_reader and phase == "document-reading")
             if preview:
-                print(f"File reader preview app: {app}", flush=True)
+                print(f"Native preview app: {app}", flush=True)
             command = [str(executable), phase, *(["preview"] if preview else [])]
             limit = 150 if preview else 60
             faulthandler.dump_traceback_later(limit + 15)
