@@ -69,14 +69,14 @@ struct ChangesInspectorView: View {
                 content.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution()
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .task(id: key) {
+            .workbenchHostedTask(id: key) {
                 guard key.reference != nil else { browser.cancel(); return }
                 model.syncChangesBrowser()
                 browser.loadGitStatus()
             }
-            .onChange(of: item?.reference) { _, _ in preferredPath = nil }
-            .onChange(of: browser.gitStatus) { _, _ in selectDefaultEntry() }
-            .onChange(of: browser.loading) { _, _ in selectDefaultEntry() }
+            .workbenchHostedTask(id: item?.reference) { preferredPath = nil }
+            .workbenchHostedTask(id: browser.gitStatus) { selectDefaultEntry() }
+            .workbenchHostedTask(id: browser.loading) { selectDefaultEntry() }
     }
 
     private var entries: [RemoteGitEntry] {

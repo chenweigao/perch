@@ -142,8 +142,18 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.headerHost.rootView = WorkspaceLocalizedRoot(content: header, locale: locale)
         coordinator.actionsHost.rootView = WorkspaceLocalizedRoot(content: actions, locale: locale)
         if let inspector {
-            coordinator.inspectorHost?.rootView = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
-                heightChanged: coordinator.inspectorSizing.update)
+            let root = WorkspaceInspectorPanelRoot(content: inspector, locale: locale,
+                                                   sizing: coordinator.inspectorSizing)
+            if let host = coordinator.inspectorHost {
+                host.rootView = root
+            } else if inspectorVisible {
+                let host = NSHostingView(rootView: root)
+                host.sizingOptions = []
+                host.safeAreaRegions = []
+                host.setFrameSize(NSSize(width: WorkspaceLayoutMetrics.inspectorDefaultWidth, height: 144))
+                coordinator.inspectorHost = host
+                controller.installFloatingInspector(host, visible: true)
+            }
         }
         coordinator.setInspectorVisible(inspectorVisible)
         coordinator.updateToolbarLanguage()
@@ -159,7 +169,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let contentHost: NSHostingController<WorkspaceLocalizedRoot<Content>>
         let headerHost: WorkbenchToolbarTitleHost<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
-        let inspectorHost: NSHostingView<WorkspaceInspectorPanelRoot<AnyView>>?
+        var inspectorHost: NSHostingView<WorkspaceInspectorPanelRoot<AnyView>>?
         let inspectorSizing: WorkbenchInspectorSizing
         weak var controller: WorkbenchSplitController?
         var locale: Locale
@@ -185,9 +195,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             actionsHost = NSHostingView(rootView: WorkspaceLocalizedRoot(content: view.actions, locale: view.locale))
             let sizing = WorkbenchInspectorSizing()
             inspectorSizing = sizing
-            inspectorHost = view.inspector.map {
+            inspectorHost = (view.inspectorVisible ? view.inspector : nil).map {
                 NSHostingView(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale,
-                    heightChanged: sizing.update))
+                    sizing: sizing))
             }
             locale = view.locale
             newConversation = view.newConversation
@@ -344,12 +354,15 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
 
 final class WorkbenchInspectorSizing {
     private(set) var height: CGFloat = 144
+    private var contributions: [UUID: CGFloat] = [:]
     weak var controller: WorkbenchSplitController?
 
-    func update(_ height: CGFloat) {
-        guard height > 0 else { return }
-        self.height = height
-        controller?.setInspectorContentHeight(height)
+    func update(_ id: UUID, height: CGFloat?) {
+        contributions[id] = height
+        let total = contributions.values.reduce(0, +)
+        guard total > 0 else { return }
+        self.height = total
+        controller?.setInspectorContentHeight(total)
     }
 }
 
@@ -673,6 +686,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         handle.isHidden = !visible
         inspectorShadowView = WorkbenchPanelShadowView.install(behind: inspector, in: view)
         inspectorShadowView?.isHidden = !visible
+        updateWorkspaceLayout()
     }
 
     func setInspectorContentHeight(_ height: CGFloat) {
@@ -834,7 +848,7 @@ struct WorkspaceFloatingPanelRoot<Content: View>: View {
 struct WorkspaceInspectorPanelRoot<Content: View>: View {
     let content: Content
     let locale: Locale
-    let heightChanged: (CGFloat) -> Void
+    let sizing: WorkbenchInspectorSizing
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel, style: .continuous)
@@ -844,22 +858,66 @@ struct WorkspaceInspectorPanelRoot<Content: View>: View {
             .background(WorkbenchTheme.contentBackground)
             .clipShape(shape)
             .overlay(shape.strokeBorder(Color.primary.opacity(WorkbenchTheme.Stroke.hairline), lineWidth: 1))
-            .onPreferenceChange(InspectorContentHeightKey.self, perform: heightChanged)
+            .environment(\.inspectorSizing, sizing)
     }
 }
 
 /// Natural heights of the header and scrollable contents, independent of the
 /// viewport. This lets the native card shrink as sections collapse or disappear.
-struct InspectorContentHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value += nextValue() }
+private struct InspectorSizingKey: EnvironmentKey {
+    static let defaultValue: WorkbenchInspectorSizing? = nil
+}
+
+private extension EnvironmentValues {
+    var inspectorSizing: WorkbenchInspectorSizing? {
+        get { self[InspectorSizingKey.self] }
+        set { self[InspectorSizingKey.self] = newValue }
+    }
 }
 
 extension View {
     func inspectorHeightContribution() -> some View {
-        background(GeometryReader { geometry in
-            Color.clear.preference(key: InspectorContentHeightKey.self, value: geometry.size.height)
-        })
+        background(InspectorHeightProbe())
+    }
+}
+
+private struct InspectorHeightProbe: NSViewRepresentable {
+    @Environment(\.inspectorSizing) private var sizing
+
+    func makeNSView(context: Context) -> InspectorHeightView {
+        let view = InspectorHeightView()
+        view.sizing = sizing
+        return view
+    }
+
+    func updateNSView(_ view: InspectorHeightView, context: Context) {
+        view.sizing = sizing
+        view.reportHeight()
+    }
+
+    static func dismantleNSView(_ view: InspectorHeightView, coordinator: ()) {
+        let sizing = view.sizing
+        let id = view.measurementID
+        DispatchQueue.main.async { sizing?.update(id, height: nil) }
+    }
+}
+
+private final class InspectorHeightView: NSView {
+    let measurementID = UUID()
+    weak var sizing: WorkbenchInspectorSizing?
+    private var lastHeight: CGFloat = -1
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        reportHeight()
+    }
+
+    func reportHeight() {
+        let height = ceil(bounds.height)
+        guard height > 0, height != lastHeight else { return }
+        lastHeight = height
+        let id = measurementID
+        DispatchQueue.main.async { [weak sizing] in sizing?.update(id, height: height) }
     }
 }
 

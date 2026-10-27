@@ -160,15 +160,15 @@ struct TaskContextView: View {
                                                ready: current != nil))
             #endif
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
-            .task(id: key) {
+            .workbenchHostedTask(id: key) {
                 let input = key
+                if state.reference != input.reference {
+                    allFiles = false; allTasks = false; expandedTasks = []; completedTools = false; outputTask = nil
+                }
                 await state.follow(input.reference, online: input.online) {
                     guard let source = input.reference else { throw CancellationError() }
                     return try await model.readTaskContext(source)
                 }
-            }
-            .onChange(of: reference) { _, _ in
-                allFiles = false; allTasks = false; expandedTasks = []; completedTools = false; outputTask = nil
             }
             .sheet(item: $draftSource) { source in
                 TaskContextDraft(model: model, source: source)

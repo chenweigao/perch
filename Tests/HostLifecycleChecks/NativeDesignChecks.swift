@@ -138,9 +138,8 @@ import WorkbenchCore
         return nil
     }
     let split = splitController(draft)!
-    let inspector = split.floatingInspectorView!
+    precondition(split.floatingInspectorView == nil, "Do not create a hidden inspector hosting tree at launch")
     precondition(split.splitViewItems.count == 1, "Floating panels must not become split columns")
-    let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
     model.taskContextWindow.showPage(.task, model: model)
     try await Task.sleep(for: .milliseconds(400))
     window.contentView!.layoutSubtreeIfNeeded()
@@ -149,6 +148,8 @@ import WorkbenchCore
     model.taskContextWindow.showPage(.changes, model: model)
     try await Task.sleep(for: .milliseconds(500))
     window.contentView!.layoutSubtreeIfNeeded()
+    let inspector = split.floatingInspectorView!
+    let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
     let card = split.detailCardView!
     let cardFrame = card.convert(card.bounds, to: window.contentView)
     let draftFrame = draft.convert(draft.bounds, to: window.contentView)

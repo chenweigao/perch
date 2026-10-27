@@ -226,7 +226,7 @@ import WorkbenchCore
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     func inspectorFrame() -> NSRect { frame(split.floatingInspectorView) }
     func inspectorFloating(_ visible: Bool, _ context: String) -> Bool {
-        guard let panel = split.floatingInspectorView else { return false }
+        guard let panel = split.floatingInspectorView else { return !visible && !split.isFloatingInspectorVisible }
         let panelFrame = frame(panel)
         let safeFrame = split.view.bounds
         let margins = visible &&
