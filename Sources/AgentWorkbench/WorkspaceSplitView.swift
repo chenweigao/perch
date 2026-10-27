@@ -639,6 +639,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     func installFloatingSidebar(_ sidebar: NSViewController,
                                 detailController: WorkbenchDetailController) {
         floatingSidebarController = sidebar
+        addChild(sidebar)
         self.detailController = detailController
         let (width, handle) = installFloatingPanel(sidebar.view, leading: true, width: floatingSidebarWidth,
                                                    handleAction: #selector(resizeSidebar(_:)))
@@ -666,6 +667,9 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     func installFloatingInspector(_ inspector: NSViewController, visible: Bool) {
         floatingInspectorController = inspector
+        // A floating view is still a child controller. Without containment the
+        // SwiftUI scene can omit appearance, task and preference delivery.
+        addChild(inspector)
         isFloatingInspectorVisible = visible
         let (width, handle) = installFloatingPanel(inspector.view, leading: false, width: floatingInspectorWidth,
                                                    handleAction: #selector(resizeInspector(_:)))

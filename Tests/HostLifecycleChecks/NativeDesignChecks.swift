@@ -139,6 +139,10 @@ import WorkbenchCore
     }
     let split = splitController(draft)!
     let inspector = split.floatingInspectorView!
+    precondition(split.children.contains { $0.view === inspector },
+                 "The floating inspector must belong to the controller hierarchy for SwiftUI scene lifecycle delivery")
+    precondition(split.children.contains { $0.view === split.floatingSidebarView },
+                 "The floating sidebar must belong to the controller hierarchy")
     let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
     model.taskContextWindow.showPage(.task, model: model)
     try await Task.sleep(for: .milliseconds(400))
