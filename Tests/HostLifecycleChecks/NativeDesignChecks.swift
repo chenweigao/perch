@@ -139,9 +139,10 @@ import WorkbenchCore
     }
     let split = splitController(draft)!
     let inspector = split.floatingInspectorView!
-    precondition(split.children.contains { $0.view === inspector },
+    precondition(split.splitViewItems.count == 1, "Floating panels must not become split columns")
+    precondition(split.children.flatMap(\.children).contains { $0.view === inspector },
                  "The floating inspector must belong to the controller hierarchy for SwiftUI scene lifecycle delivery")
-    precondition(split.children.contains { $0.view === split.floatingSidebarView },
+    precondition(split.children.flatMap(\.children).contains { $0.view === split.floatingSidebarView },
                  "The floating sidebar must belong to the controller hierarchy")
     let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
     model.taskContextWindow.showPage(.task, model: model)
