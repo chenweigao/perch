@@ -99,9 +99,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.controller = controller
         coordinator.inspectorSizing.controller = controller
         controller.setInspectorContentHeight(coordinator.inspectorSizing.height)
-        coordinator.sidebarHost.view.setFrameSize(NSSize(width: WorkspaceLayoutMetrics.sidebarDefaultWidth, height: 620))
+        coordinator.sidebarHost.setFrameSize(NSSize(width: WorkspaceLayoutMetrics.sidebarDefaultWidth, height: 620))
         coordinator.contentHost.view.setFrameSize(NSSize(width: 900, height: 620))
-        coordinator.inspectorHost?.view.setFrameSize(
+        coordinator.inspectorHost?.setFrameSize(
             NSSize(width: WorkspaceLayoutMetrics.inspectorDefaultWidth, height: 620))
 
         let detailController = WorkbenchDetailController(content: coordinator.contentHost)
@@ -155,11 +155,11 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     }
 
     final class Coordinator: NSObject, NSToolbarDelegate {
-        let sidebarHost: NSHostingController<WorkspaceFloatingPanelRoot<Sidebar>>
+        let sidebarHost: NSHostingView<WorkspaceFloatingPanelRoot<Sidebar>>
         let contentHost: NSHostingController<WorkspaceLocalizedRoot<Content>>
         let headerHost: WorkbenchToolbarTitleHost<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
-        let inspectorHost: NSHostingController<WorkspaceInspectorPanelRoot<AnyView>>?
+        let inspectorHost: NSHostingView<WorkspaceInspectorPanelRoot<AnyView>>?
         let inspectorSizing: WorkbenchInspectorSizing
         weak var controller: WorkbenchSplitController?
         var locale: Locale
@@ -178,7 +178,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private var alignmentScheduled = false
 
         init(_ view: WorkspaceSplitView) {
-            sidebarHost = NSHostingController(rootView: WorkspaceFloatingPanelRoot(
+            sidebarHost = NSHostingView(rootView: WorkspaceFloatingPanelRoot(
                 content: view.sidebar, locale: view.locale))
             contentHost = NSHostingController(rootView: WorkspaceLocalizedRoot(content: view.content, locale: view.locale))
             headerHost = WorkbenchToolbarTitleHost(rootView: WorkspaceLocalizedRoot(content: view.header, locale: view.locale))
@@ -186,7 +186,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             let sizing = WorkbenchInspectorSizing()
             inspectorSizing = sizing
             inspectorHost = view.inspector.map {
-                NSHostingController(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale,
+                NSHostingView(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale,
                     heightChanged: sizing.update))
             }
             locale = view.locale
@@ -530,8 +530,8 @@ final class WorkbenchSplitController: NSSplitViewController {
 
     var workspaceToolbar: NSToolbar?
     var alignToolbar: ((CGFloat) -> Void)?
-    private var floatingSidebarController: NSViewController?
-    private var floatingInspectorController: NSViewController?
+    private(set) var floatingSidebarView: NSView?
+    private(set) var floatingInspectorView: NSView?
     private weak var detailController: WorkbenchDetailController?
     private var sidebarWidthConstraint: NSLayoutConstraint?
     private var inspectorWidthConstraint: NSLayoutConstraint?
@@ -550,8 +550,6 @@ final class WorkbenchSplitController: NSSplitViewController {
     private(set) var isFloatingInspectorVisible = false
 
     private(set) var frameMaterialView: NSVisualEffectView?
-    var floatingSidebarView: NSView? { floatingSidebarController?.view }
-    var floatingInspectorView: NSView? { floatingInspectorController?.view }
     var detailCanvasView: NSView? { detailController?.view }
     var detailCardView: NSView? { detailController?.cardView }
     var detailContentView: NSView? { detailController?.content.view }
@@ -636,16 +634,15 @@ final class WorkbenchSplitController: NSSplitViewController {
         return (widthConstraint, handle)
     }
 
-    func installFloatingSidebar(_ sidebar: NSViewController,
+    func installFloatingSidebar(_ sidebar: NSView,
                                 detailController: WorkbenchDetailController) {
-        floatingSidebarController = sidebar
-        detailController.addChild(sidebar)
+        floatingSidebarView = sidebar
         self.detailController = detailController
-        let (width, handle) = installFloatingPanel(sidebar.view, leading: true, width: floatingSidebarWidth,
+        let (width, handle) = installFloatingPanel(sidebar, leading: true, width: floatingSidebarWidth,
                                                    handleAction: #selector(resizeSidebar(_:)))
         sidebarWidthConstraint = width
         sidebarResizeHandle = handle
-        sidebar.view.isHidden = !isFloatingSidebarVisible
+        sidebar.isHidden = !isFloatingSidebarVisible
         handle.isHidden = !isFloatingSidebarVisible
         // Only narrow overlay mode needs its own backing, otherwise navigation
         // is drawn directly on the single window material.
@@ -654,30 +651,27 @@ final class WorkbenchSplitController: NSSplitViewController {
         overlay.wantsLayer = true
         overlay.layer?.cornerRadius = WorkbenchTheme.Radius.panel
         overlay.clipsToBounds = true
-        view.addSubview(overlay, positioned: .below, relativeTo: sidebar.view)
+        view.addSubview(overlay, positioned: .below, relativeTo: sidebar)
         NSLayoutConstraint.activate([
-            overlay.leadingAnchor.constraint(equalTo: sidebar.view.leadingAnchor),
-            overlay.trailingAnchor.constraint(equalTo: sidebar.view.trailingAnchor),
-            overlay.topAnchor.constraint(equalTo: sidebar.view.topAnchor),
-            overlay.bottomAnchor.constraint(equalTo: sidebar.view.bottomAnchor),
+            overlay.leadingAnchor.constraint(equalTo: sidebar.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: sidebar.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: sidebar.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: sidebar.bottomAnchor),
         ])
         sidebarOverlayBackdrop = overlay
         updateWorkspaceLayout()
     }
 
-    func installFloatingInspector(_ inspector: NSViewController, visible: Bool) {
-        floatingInspectorController = inspector
-        // A floating view is still a child controller. Without containment the
-        // SwiftUI scene can omit appearance, task and preference delivery.
-        detailController?.addChild(inspector)
+    func installFloatingInspector(_ inspector: NSView, visible: Bool) {
+        floatingInspectorView = inspector
         isFloatingInspectorVisible = visible
-        let (width, handle) = installFloatingPanel(inspector.view, leading: false, width: floatingInspectorWidth,
+        let (width, handle) = installFloatingPanel(inspector, leading: false, width: floatingInspectorWidth,
                                                    handleAction: #selector(resizeInspector(_:)))
         inspectorWidthConstraint = width
         inspectorResizeHandle = handle
-        inspector.view.isHidden = !visible
+        inspector.isHidden = !visible
         handle.isHidden = !visible
-        inspectorShadowView = WorkbenchPanelShadowView.install(behind: inspector.view, in: view)
+        inspectorShadowView = WorkbenchPanelShadowView.install(behind: inspector, in: view)
         inspectorShadowView?.isHidden = !visible
     }
 
