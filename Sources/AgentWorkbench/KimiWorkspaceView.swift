@@ -179,28 +179,31 @@ private struct KimiComposerView: View {
                                                 connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
                                             }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
                     }
-                    ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
-                                            directory: connection.conversation?.snapshot.session.cwd ?? "")
-                    PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
-                                     disabled: connection.sending) { mode in
-                        connection.setPermission(mode, for: sessionID)
-                    }
-                    ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
-                        onInput()
-                        let existing = connection.drafts[sessionID] ?? ""
-                        connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
-                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
-                    }
-                    ContextMeter(budget: connection.conversation?.snapshot.session.budget,
-                                 isStale: !connection.online || !connection.snapshotReady,
-                                 autoCompactHost: connection.host.id, autoCompactSession: sessionID)
+                    HStack(spacing: 6) {
+                        ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
+                                                directory: connection.conversation?.snapshot.session.cwd ?? "")
+                        PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
+                                         disabled: connection.sending) { mode in
+                            connection.setPermission(mode, for: sessionID)
+                        }
+                        ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
+                            onInput()
+                            let existing = connection.drafts[sessionID] ?? ""
+                            connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
+                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                        }
+                        ContextMeter(budget: connection.conversation?.snapshot.session.budget,
+                                     isStale: !connection.online || !connection.snapshotReady,
+                                     autoCompactHost: connection.host.id, autoCompactSession: sessionID)
+                    }.foregroundStyle(.secondary).padding(.leading, 10)
+                        .overlay(alignment: .leading) { Divider().frame(height: 16) }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: nextTurnSend)
                 }
-            }.padding(ReplyStyle.composerInset).workbenchControlSurface()
+            }.padding(ReplyStyle.composerInset).workbenchComposerSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in

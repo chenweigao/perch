@@ -11,12 +11,14 @@ to light.
   by navigation and the toolbar. Its tint comes from the desktop; do not add a
   fixed colored fill or lower its opacity. The sidebar has no separate glass card,
   outline, or shadow in the wide layout; its selection is a light row card.
-- The opaque conversation sheet floats below the toolbar; the shorter inspector
-  floats beside it, sharing its top edge. Keep their radius concentric with the
-  window corner (`WorkbenchTheme.Radius.framePanel`), light shadows and visible
-  backdrop gutters. Preserve native Liquid Glass on the composer and controls.
-  These surfaces follow the user's unified-glass direction of 2026-10-27 and the
-  Apple concentric-corner direction of 2026-10-28.
+- The opaque workspace sheet floats below the toolbar. The full-height inspector
+  is an internal auxiliary lane separated by a hairline, without its own rounded
+  card or shadow; opening it resizes the reader and composer together. Keep the
+  outer sheet concentric with the window corner (`WorkbenchTheme.Radius.framePanel`)
+  and its elevation light. Sidebar width remains user-adjustable and persisted;
+  navigation uses compact, secondary controls. Preserve native Liquid Glass on the
+  composer and controls. This follows the user's integrated-inspector direction
+  of 2026-10-28.
 - Keep credentials in the user's existing SSH configuration and agent.
 - Disconnecting a client must not close a remote pane or stop an agent.
 - Do not attach with --takeover or enable agent permission bypass implicitly.
