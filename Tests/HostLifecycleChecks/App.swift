@@ -33,6 +33,8 @@ import WorkbenchCore
         }
 
         switch CommandLine.arguments[1] {
+        case "startup":
+            try checkAppStartup()
         case "document-reading":
             try await checkDocumentReadingUI()
         case "task-context":

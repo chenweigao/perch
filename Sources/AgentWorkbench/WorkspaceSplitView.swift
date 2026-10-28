@@ -290,9 +290,12 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         /// window's trailing edge, independent of inspector visibility.
         func alignToolbar(leading: CGFloat) {
             titleLeading = leading
-            guard let controller, headerHost.window != nil, let leadingWidth else { return }
+            guard let controller, headerHost.window != nil, let leadingWidth,
+                  let spacer = leadingWidth.firstItem as? NSView else { return }
             let titleX = headerHost.convert(headerHost.bounds, to: controller.view).minX
-            let width = max(1, leadingWidth.constant + leading - titleX)
+            // Measure both values from the same rendered layout. The constraint
+            // may already contain a correction that AppKit has not applied yet.
+            let width = max(1, spacer.bounds.width + leading - titleX)
             if abs(width - leadingWidth.constant) > 0.5 { leadingWidth.constant = width }
         }
 
@@ -308,6 +311,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             }
         }
         func updateToolbarLanguage() {
+            // Reading items while AppKit is materializing toolbar placeholders
+            // can reenter the delegate through hosted SwiftUI updates.
+            guard controller?.workspaceToolbarInstalled == true else { return }
             let L = LocalizedUIStrings(locale: locale)
             for item in controller?.workspaceToolbar?.items ?? [] {
                 switch item.itemIdentifier {
@@ -546,6 +552,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
+    private(set) var workspaceToolbarInstalled = false
     private var appAppearance: AppAppearance = .system
     private var appearanceObserver: NSObjectProtocol?
     var alignToolbar: ((CGFloat) -> Void)?
@@ -726,13 +733,20 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.titlebarSeparatorStyle = .none
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
-        window.toolbar = workspaceToolbar
         if appAppearance != .system { applyAppearance() }
         // The toolbar style sets the window's corner; the glass follows it.
         windowBackdropView?.updateCornerRadius()
         DispatchQueue.main.async { [weak self] in
-            self?.windowBackdropView?.updateCornerRadius()
-            self?.updateWorkspaceLayout()
+            guard let self, let window = self.view.window else { return }
+            // Let the WindowGroup finish its appearance transaction before
+            // AppKit materializes hosted toolbar items on that same window.
+            if window.toolbar !== self.workspaceToolbar {
+                self.workspaceToolbarInstalled = false
+                window.toolbar = self.workspaceToolbar
+                self.workspaceToolbarInstalled = true
+            }
+            self.windowBackdropView?.updateCornerRadius()
+            self.updateWorkspaceLayout()
         }
     }
 
@@ -837,9 +851,11 @@ final class WorkbenchSplitController: NSSplitViewController {
         floatingInspectorView?.isHidden = !isFloatingInspectorVisible
         inspectorShadowView?.isHidden = !isFloatingInspectorVisible
         inspectorResizeHandle?.isHidden = !isFloatingInspectorVisible
-        if let card = detailCardView {
-            let cardFrame = card.convert(card.bounds, to: view)
-            alignToolbar?(cardFrame.minX + WorkbenchTheme.Reading.inset)
+        if let canvas = detailCanvasView {
+            // Insets above describe the new layout; the card's frame still
+            // describes the previous one until AppKit lays out its descendants.
+            let canvasX = canvas.convert(canvas.bounds, to: view).minX
+            alignToolbar?(canvasX + leading + WorkbenchTheme.Reading.inset)
         }
     }
 
