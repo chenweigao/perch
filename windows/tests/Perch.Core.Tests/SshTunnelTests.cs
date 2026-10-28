@@ -8,8 +8,18 @@ public sealed class FakeSshProcess : ISshProcess
 {
     private readonly MemoryStream _stdout = new();
     private readonly MemoryStream _stderr;
+    private int _exitCode;
+    private bool _disposed;
     public bool HasExited { get; private set; }
-    public int ExitCode { get; private set; }
+    public int ExitCode
+    {
+        get
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return _exitCode;
+        }
+        private set => _exitCode = value;
+    }
     public bool Killed { get; private set; }
     public int Id { get; } = Random.Shared.Next(1000, 9999);
     public Stream StandardOutput => _stdout;
@@ -37,7 +47,7 @@ public sealed class FakeSshProcess : ISshProcess
     public Task WaitForExitAsync(CancellationToken cancellationToken) =>
         HasExited ? Task.CompletedTask : Task.Delay(Timeout.Infinite, cancellationToken);
 
-    public void Dispose() { }
+    public void Dispose() => _disposed = true;
 }
 
 /// Records the argv it was asked to run and hands back a scripted process.

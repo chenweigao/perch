@@ -54,6 +54,22 @@ public sealed class MainViewModelTests
     });
 
     [Fact]
+    public Task UnknownReceiptPreservesTheDraftAndSurfacesTheError() => OnDispatcher(async () =>
+    {
+        await using var scenario = new Scenario();
+        await scenario.ConnectAsync();
+        var view = scenario.View;
+        view.SelectedSession = view.Sessions.Single(s => s.Id == "ses-idle");
+        view.Composer = "original";
+        var sending = view.SendAsync();
+        await scenario.Bridges[0].SendEntered.Task;
+        scenario.Bridges[0].SendResult.SetResult("""{"id":"fixture-request","status":"unknown","error":"runtime unavailable"}""");
+        await sending;
+        Assert.Equal("original", view.Composer);
+        Assert.Equal("runtime unavailable", view.ErrorText);
+    });
+
+    [Fact]
     public Task RejectedSendPreservesTheDraft() => OnDispatcher(async () =>
     {
         await using var scenario = new Scenario();

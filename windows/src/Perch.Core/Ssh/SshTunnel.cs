@@ -124,8 +124,9 @@ public sealed class SshTunnel : IAsyncDisposable
             if (process.HasExited)
             {
                 var detail = await stderr.TextAsync().ConfigureAwait(false);
+                var exitCode = process.ExitCode;
                 KillTunnel();
-                throw new TunnelException(DescribeForwardFailure(process.ExitCode, detail));
+                throw new TunnelException(DescribeForwardFailure(exitCode, detail));
             }
             if (await probe(localPort).ConfigureAwait(false)) return;
             if (Environment.TickCount64 > deadline)

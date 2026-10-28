@@ -254,6 +254,8 @@ public sealed class SessionController
 
         ApplyReceipt(entry, receipt);
         _observer.OnOutboxChanged();
+        if (entry.State is OutboxState.Failed or OutboxState.Unknown)
+            throw new PerchException(entry.Error!);
         return requestId;
     }
 

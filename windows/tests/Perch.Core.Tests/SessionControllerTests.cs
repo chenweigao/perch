@@ -236,6 +236,28 @@ public class SessionControllerTests
     }
 
     [Fact]
+    public async Task UnknownReceiptIsSurfacedAsARecoverableSendFailure()
+    {
+        var bridge = new FixtureBridge()
+            .WithSnapshot("/sessions/ses-idle?turns=25", "session-snapshot-idle.json");
+        bridge.NextReceipt = Fixtures.Read<RequestReceipt>("prompt-receipt.json") with
+        {
+            Status = "unknown", Error = "runtime unavailable",
+        };
+        var controller = MakeController(bridge);
+        controller.BeginOnlineSession();
+        controller.Select("ses-idle");
+        await controller.PollOnceAsync(default);
+
+        var ex = await Assert.ThrowsAsync<PerchException>(() => controller.SendAsync("keep draft", default));
+
+        Assert.Equal("runtime unavailable", ex.Message);
+        var entry = Assert.Single(controller.Outbox.Entries);
+        Assert.Equal(OutboxState.Unknown, entry.State);
+        Assert.Equal("runtime unavailable", entry.Error);
+    }
+
+    [Fact]
     public async Task SendWhenBusyPostsSteerNotPrompt()
     {
         var bridge = new FixtureBridge()

@@ -62,6 +62,10 @@ public sealed class HttpBridgeTransport : IBridgeTransport, IDisposable
             response = await _client.SendAsync(message, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
         }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new BridgeException("等待远端桥接服务响应超时，请检查连接后重试。", ex);
+        }
         catch (HttpRequestException ex)
         {
             throw new BridgeException("无法访问远端桥接服务（隧道可能已断开）：" + ex.Message, ex);
