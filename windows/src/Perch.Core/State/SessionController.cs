@@ -67,6 +67,7 @@ public sealed class SessionController
     private readonly BridgeClient _client;
     private readonly ISessionObserver _observer;
     private readonly Outbox _outbox = new();
+    private readonly object _stateGate = new();
 
     private long _connectionGeneration;
     private long _selectionGeneration;
@@ -108,13 +109,19 @@ public sealed class SessionController
     /// superseded this call mid-flight, so the caller stops the loop.
     public async Task<bool> PollOnceAsync(CancellationToken cancellationToken)
     {
-        var connectionToken = _connectionGeneration;
-        var selectionToken = _selectionGeneration;
+        long connectionToken, selectionToken;
+        string? selectedId;
+        lock (_stateGate)
+        {
+            connectionToken = _connectionGeneration;
+            selectionToken = _selectionGeneration;
+            selectedId = SelectedId;
+        }
 
         await RefreshCatalogAsync(connectionToken, cancellationToken).ConfigureAwait(false);
         if (connectionToken != _connectionGeneration) return false;
 
-        if (SelectedId is { } id)
+        if (selectedId is { } id)
         {
             var applied = await RefreshSelectedAsync(id, connectionToken, selectionToken, cancellationToken)
                 .ConfigureAwait(false);
@@ -131,20 +138,25 @@ public sealed class SessionController
     private async Task RefreshCatalogAsync(long connectionToken, CancellationToken cancellationToken)
     {
         var sessions = await _client.SessionsAsync(cancellationToken).ConfigureAwait(false);
-        if (connectionToken != _connectionGeneration) return;
-        // Newest first, matching the sidebar the macOS client shows.
-        var ordered = sessions.OrderByDescending(s => s.Updated).ThenBy(s => s.Id, StringComparer.Ordinal).ToList();
-        var changed = !SequenceEqual(ordered, Sessions);
-        Sessions = ordered;
-        // A selection that vanished (deleted remotely) is cleared rather than left stale.
-        if (SelectedId is { } id && ordered.All(s => s.Id != id))
+        bool changed, selectionCleared = false;
+        lock (_stateGate)
         {
-            SelectedId = null;
-            Transcript = null;
-            Snapshot = null;
-            Interlocked.Increment(ref _selectionGeneration);
-            _observer.OnSelectionChanged();
+            if (connectionToken != _connectionGeneration) return;
+            // Newest first, matching the sidebar the macOS client shows.
+            var ordered = sessions.OrderByDescending(s => s.Updated).ThenBy(s => s.Id, StringComparer.Ordinal).ToList();
+            changed = !SequenceEqual(ordered, Sessions);
+            Sessions = ordered;
+            // A selection that vanished (deleted remotely) is cleared rather than left stale.
+            if (SelectedId is { } id && ordered.All(s => s.Id != id))
+            {
+                SelectedId = null;
+                Transcript = null;
+                Snapshot = null;
+                Interlocked.Increment(ref _selectionGeneration);
+                selectionCleared = true;
+            }
         }
+        if (selectionCleared) _observer.OnSelectionChanged();
         if (changed) _observer.OnCatalogChanged();
     }
 
@@ -161,53 +173,65 @@ public sealed class SessionController
     private async Task<bool> RefreshSelectedAsync(string id, long connectionToken, long selectionToken,
         CancellationToken cancellationToken)
     {
-        // A first read of a selection is paged, establishing the history window. Later
-        // reads are deltas pinned to that window and the revision we hold.
-        SnapshotQuery query = Transcript is { Epoch: { } epoch } && Snapshot?.Id == id
-            ? SnapshotQuery.Delta((int)Transcript.Revision, Transcript.Start, epoch)
-            : SnapshotQuery.FirstPage();
+        SnapshotQuery query;
+        lock (_stateGate)
+        {
+            // A first read of a selection is paged, establishing the history window. Later
+            // reads are deltas pinned to that window and the revision we hold.
+            query = Transcript is { Epoch: { } epoch } && Snapshot?.Id == id
+                ? SnapshotQuery.Delta((int)Transcript.Revision, Transcript.Start, epoch)
+                : SnapshotQuery.FirstPage();
+        }
 
         var response = await _client.SnapshotAsync(id, query, cancellationToken).ConfigureAwait(false);
-        if (connectionToken != _connectionGeneration || selectionToken != _selectionGeneration || id != SelectedId)
-            return false;
-
-        if (response.Unchanged) return false;
-
-        var snapshot = response.Snapshot!;
-        if (snapshot.Id != id) return false;
-        Snapshot = snapshot;
-
-        if (Transcript is null || Transcript.SessionId != id)
+        lock (_stateGate)
         {
-            Transcript = Transcript.FromFull(snapshot);
-            return true;
-        }
-        if (Transcript.TryApplyDelta(snapshot, out var needsFullRead)) return true;
-        if (!needsFullRead)
-        {
-            Transcript = Transcript.FromFull(snapshot);
-            return true;
+            if (connectionToken != _connectionGeneration || selectionToken != _selectionGeneration || id != SelectedId)
+                return false;
+            if (response.Unchanged) return false;
+
+            var snapshot = response.Snapshot!;
+            if (snapshot.Id != id) return false;
+            Snapshot = snapshot;
+
+            if (Transcript is null || Transcript.SessionId != id)
+            {
+                Transcript = Transcript.FromFull(snapshot);
+                return true;
+            }
+            if (Transcript.TryApplyDelta(snapshot, out var needsFullRead)) return true;
+            if (!needsFullRead)
+            {
+                Transcript = Transcript.FromFull(snapshot);
+                return true;
+            }
         }
         // The window moved or the epoch changed while the delta was in flight: re-read
         // the first page and replace, so no position is duplicated or dropped.
         var full = await _client.SnapshotAsync(id, SnapshotQuery.FirstPage(), cancellationToken).ConfigureAwait(false);
-        if (connectionToken != _connectionGeneration || selectionToken != _selectionGeneration || id != SelectedId)
-            return false;
-        if (full.Unchanged || full.Snapshot is null) return false;
-        Snapshot = full.Snapshot;
-        Transcript = Transcript.FromFull(full.Snapshot);
-        return true;
+        lock (_stateGate)
+        {
+            if (connectionToken != _connectionGeneration || selectionToken != _selectionGeneration || id != SelectedId)
+                return false;
+            if (full.Unchanged || full.Snapshot is null) return false;
+            Snapshot = full.Snapshot;
+            Transcript = Transcript.FromFull(full.Snapshot);
+            return true;
+        }
     }
 
     /// Selects a session. Clears the previous transcript and bumps the selection
     /// generation so an in-flight poll for the old session is discarded.
     public void Select(string? id)
     {
-        if (SelectedId == id) return;
-        Interlocked.Increment(ref _selectionGeneration);
-        SelectedId = id;
-        Transcript = null;
-        Snapshot = null;
+        lock (_stateGate)
+        {
+            if (SelectedId == id) return;
+            Interlocked.Increment(ref _selectionGeneration);
+            SelectedId = id;
+            Transcript = null;
+            Snapshot = null;
+        }
         _observer.OnSelectionChanged();
     }
 

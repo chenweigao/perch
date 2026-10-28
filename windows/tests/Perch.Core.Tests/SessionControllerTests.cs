@@ -191,6 +191,27 @@ public class SessionControllerTests
     }
 
     [Fact]
+    public async Task SelectionAndSnapshotPublicationAreSerialized()
+    {
+        var bridge = new FixtureBridge()
+            .WithSnapshot("/sessions/ses-busy?turns=25", "session-snapshot-paged.json")
+            .WithSnapshot("/sessions/ses-idle?turns=25", "session-snapshot-idle.json");
+        for (var iteration = 0; iteration < 50; iteration++)
+        {
+            var controller = MakeController(bridge);
+            controller.BeginOnlineSession();
+            controller.Select("ses-busy");
+
+            var polling = controller.PollOnceAsync(default);
+            var selecting = Task.Run(() => controller.Select("ses-idle"));
+            await Task.WhenAll(polling, selecting);
+
+            Assert.Equal("ses-idle", controller.SelectedId);
+            Assert.True(controller.Transcript is null || controller.Transcript.SessionId == "ses-idle");
+        }
+    }
+
+    [Fact]
     public async Task LateResponseAfterDisconnectIsIgnored()
     {
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
