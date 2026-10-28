@@ -3,7 +3,7 @@ import Observation
 import SwiftUI
 import WorkbenchCore
 
-enum WorkspaceInspectorPage: String, Hashable { case task, changes }
+enum WorkspaceInspectorPage: String, Hashable { case task, changes, files }
 
 @MainActor @Observable final class TaskContextWindowController: NSObject, NSWindowDelegate {
     var locked: SessionReference?

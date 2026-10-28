@@ -1933,3 +1933,11 @@
 "收起面板" = "Collapse panel";
 "暂无任务活动" = "No task activity yet";
 "改动操作" = "Change actions";
+
+"展开阅读" = "Expand Reader";
+
+"返回工作目录" = "Back to Working Directory";
+
+"返回目录" = "Back to Directory";
+
+"选择一个会话，浏览它的工作目录。" = "Select a session to browse its working directory.";

@@ -676,6 +676,8 @@ struct RemoteFilePanel: View {
     @UILocalization private var L
     @Bindable var browser: RemoteFileBrowser
     var showsCloseButton = true
+    /// The floating inspector supplies its own directory/navigation chrome.
+    var compact = false
     var onAddContext: ((String) -> Void)? = nil
     var onShowDraft: (() -> Void)? = nil
     var contextDestination: String? = nil
@@ -709,7 +711,16 @@ struct RemoteFilePanel: View {
     private var isDocumentReading: Bool {
         browser.mode == .file && browser.previewKind == .markdown && browser.documents.current?.reading == true
     }
-    var body: some View {
+    @ViewBuilder var body: some View {
+        if compact {
+            fileContent.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .popover(isPresented: $showLocation) { locationEditor }
+                .workbenchHostedTask(id: browser.fileRequest?.id) {
+                    if let request = browser.fileRequest { await browser.loadFile(request) }
+                }
+        } else { fullPanel }
+    }
+    private var fullPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
             if browser.mode == .file, !browser.documents.tabs.isEmpty,
                !isDocumentReading || browser.documents.tabs.count > 1 {

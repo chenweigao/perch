@@ -162,6 +162,8 @@ final class WorkbenchModel {
     let fileBrowser = RemoteFileBrowser()
     /// The inspector's changes page reads independently of the file window.
     let changesBrowser = RemoteFileBrowser(workingTreeOnly: true)
+    /// File navigation in the inspector must not replace a detached reader's tabs.
+    let inspectorFiles = RemoteFileBrowser()
     @ObservationIgnored let fileWindow = FileWindowController()
     let taskContextWindow = TaskContextWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -603,6 +605,10 @@ final class WorkbenchModel {
         if changesBrowser.host?.id == host.id {
             changesBrowser.source = nil
             changesBrowser.configure(host: nil, cwd: "")
+        }
+        if inspectorFiles.host?.id == host.id {
+            inspectorFiles.source = nil
+            inspectorFiles.configure(host: nil, cwd: "")
         }
         rebuildCatalog(); saveWorkspace()
     }
@@ -1323,8 +1329,30 @@ final class WorkbenchModel {
         return connections.first { $0.id == reference.hostID }?.host
     }
     func toggleFileViewer() {
+        taskContextWindow.togglePage(.files, model: self)
+    }
+    func syncInspectorFiles() {
+        let directory = selectedItem?.directory ?? ""
+        let changed = inspectorFiles.source != selectedReference ||
+            inspectorFiles.host?.id != selectedHost?.id || inspectorFiles.cwd != directory
+        inspectorFiles.source = selectedReference
+        inspectorFiles.configure(host: selectedHost, cwd: directory,
+                                 directoryHints: selectedDirectoryHints(directory))
+        if selectedHost != nil, changed || inspectorFiles.path.isEmpty {
+            inspectorFiles.open(directory.isEmpty ? "." : directory)
+        } else if selectedHost != nil, inspectorFiles.error != nil || inspectorFiles.content == nil {
+            inspectorFiles.open(inspectorFiles.path)
+        }
+    }
+    /// Expanding is an explicit handoff to the full reader; the inspector keeps
+    /// its own location and can remain open beside the conversation.
+    func expandInspectorFile() {
+        guard let host = inspectorFiles.host, !inspectorFiles.path.isEmpty else { return }
+        pendingFileOutcome = nil
+        fileBrowser.source = inspectorFiles.source
+        fileBrowser.configure(host: host, cwd: inspectorFiles.cwd)
+        fileBrowser.open(inspectorFiles.path, line: inspectorFiles.targetLine, source: inspectorFiles.source)
         showFileViewer = true
-        syncFileViewer()
         fileWindow.show(model: self)
     }
     /// The inspector's changes page hands the full review to the file window's
@@ -1560,6 +1588,7 @@ final class WorkbenchModel {
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
         taskContextWindow.close()
+        inspectorFiles.cancel()
         fileWindow.close()
         followUpLoop?.cancel(); followUpLoop = nil
         conversationPresentations.removeAll()
