@@ -29,7 +29,7 @@ struct ComposerActionButton: View {
         HStack(spacing: 8) {
             if isRunning && canSend && !isStopping {
                 Button(L(key: queuedSendTitle), action: onSend).buttonStyle(.plain)
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                     .accessibilityLabel(queuedSendTitle == "Queue" ? L("Queue message") : L(key: queuedSendTitle))
                     .help(queuedSendHelp)
                 if let onQueue {
@@ -92,7 +92,7 @@ struct ComposerEnvironmentMenu: View {
                 Image(systemName: host.isLocal ? "desktopcomputer" : "server.rack")
                 Text(host.name).lineLimit(1).truncationMode(.middle).frame(maxWidth: 88)
                 Image(systemName: "chevron.down").font(.system(size: 9))
-            }.font(.system(size: 12)).foregroundStyle(.secondary).frame(height: 32)
+            }.font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).frame(height: 32)
         }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
             .accessibilityLabel("机器").accessibilityValue(host.name)
             .help(directory.isEmpty ? host.name : host.name + "\n" + directory)
@@ -105,10 +105,10 @@ struct ComposerDeliveryHint: View {
     /// Character count of a long draft, so a wall of text is visible at a glance.
     var draftLength: Int = 0
     var body: some View {
-        if let saveError { Text(saveError).font(.system(size: 11)).foregroundStyle(.orange).textSelection(.enabled) }
-        else if sending { Text("Sending…").font(.system(size: 11)).foregroundStyle(.secondary) }
+        if let saveError { Text(saveError).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange).textSelection(.enabled) }
+        else if sending { Text("Sending…").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary) }
         else if draftLength >= 200 {
-            Text("草稿 \(draftLength) 字").font(.system(size: 11)).foregroundStyle(.tertiary)
+            Text("草稿 \(draftLength) 字").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.tertiary)
         }
     }
 }

@@ -39,7 +39,7 @@ struct ModelPicker: View {
                     }
                     Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium))
                         .foregroundStyle(.secondary)
-                }.font(.system(size: 12))
+                }.font(.system(size: WorkbenchTheme.Typography.body))
                     .padding(.vertical, 6).contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .help(Text("选择新任务的默认模型"))
@@ -89,11 +89,11 @@ private struct ModelPickerPanel: View {
                         Text(group.id).tag(group.id)
                     }
                 }.pickerStyle(.menu)
-            }.font(.system(size: 13)).padding(14)
+            }.font(.system(size: WorkbenchTheme.Typography.body)).padding(14)
             Divider()
             if effortUnavailable {
                 Text("此模型未提供思考档位设置。")
-                    .font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
+                    .font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).padding(12)
             }
             ModelPickerRow(title: current.isEmpty ? Text("使用默认模型") : Text("沿用会话模型"),
                            detail: current.isEmpty ? nil : current, selected: selection.isEmpty) {
@@ -121,12 +121,12 @@ private struct ModelPickerPanel: View {
                                 Text("请调整搜索词或渠道筛选。")
                                     .foregroundStyle(.secondary)
                             }
-                        }.font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                        }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, alignment: .leading).padding(12)
                     }
                 }.padding(6)
             }.frame(height: 280)
             Divider()
-            Text("新任务默认使用此模型").font(.system(size: 11)).foregroundStyle(.secondary).padding(12)
+            Text("新任务默认使用此模型").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).padding(12)
         }.frame(width: 360)
             .onAppear { searchFocused = true }
             .onExitCommand(perform: dismiss)
@@ -144,9 +144,9 @@ struct ModelPickerRow: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    title.font(.system(size: 13)).lineLimit(1).truncationMode(.middle)
+                    title.font(.system(size: WorkbenchTheme.Typography.body)).lineLimit(1).truncationMode(.middle)
                     if let detail {
-                        Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(detail).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                             .lineLimit(1).truncationMode(.middle)
                     }
                 }

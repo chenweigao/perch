@@ -23,6 +23,7 @@ private struct ReadingDesignFixture: View {
     (view as? NSTextView).map { [$0] } ?? view.subviews.flatMap(readingTextViews)
 }
 @MainActor func checkReadingDesign() async throws {
+    ReadingBodySize.shared.set(ReadingBodySize.standard)
     let text = """
     # 让回复成为阅读的主角
 
@@ -66,15 +67,15 @@ private struct ReadingDesignFixture: View {
         precondition(views.filter { $0.string.contains("正文清楚呈现") || $0.string.contains("let answer") }.allSatisfy { $0.isSelectable }, "Reply and code text must remain selectable")
         let heading = views.first { $0.string == "让回复成为阅读的主角" }!
         let headingFont = heading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
-        precondition(headingFont.pointSize == 20, "Native heading uses the shared hierarchy")
+        precondition(headingFont.pointSize == 18, "Native heading uses the shared hierarchy")
         let body = views.first { $0.string.contains("正文清楚呈现") }!
         let bodyFont = body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
         let paragraph = body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle
         let subheading = views.first { $0.string == "本次调整" }!
         let minorHeading = views.first { $0.string == "继续阅读" }!
-        precondition(bodyFont.pointSize == 16 && paragraph.minimumLineHeight == 26,
-                     "Body reads at 16 pt on a 26 pt line in both renderers")
-        precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 18,
+        precondition(bodyFont.pointSize == 14 && paragraph.minimumLineHeight == 22,
+                     "Body reads at 14 pt on a 22 pt line in both renderers")
+        precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 16,
                      "H2 steps up two points from the body")
         precondition((minorHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == bodyFont.pointSize,
                      "H3 and below keep the body size; hierarchy comes from weight and spacing")
@@ -114,6 +115,9 @@ private struct ReadingDesignFixture: View {
     host.cacheDisplay(in: host.bounds, to: expanded)
     try expanded.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("expanded.png"))
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") }, "Process contents remain reachable")
+    let thoughtText = readingTextViews(host).first { $0.string.contains("PRIVATE_PROCESS_MARKER") }!
+    let thoughtFont = thoughtText.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
+    precondition(thoughtFont.pointSize == 14, "Expanded thoughts remain as readable as the reply")
     clickHeader(mounted(foldID), height: foldHeaderHeight)
     try await Task.sleep(for: .milliseconds(400))
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
@@ -128,7 +132,7 @@ private struct ReadingDesignFixture: View {
               let headingFont = heading.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont else { return nil }
         return (font.pointSize, paragraph.minimumLineHeight, headingFont.pointSize)
     }
-    for (size, line, heading) in [(14.0, 23.0, 18.0), (18.0, 29.0, 22.0), (16.0, 26.0, 20.0)] as [(CGFloat, CGFloat, CGFloat)] {
+    for (size, line, heading) in [(18.0, 28.0, 22.0), (16.0, 25.0, 20.0), (14.0, 22.0, 18.0)] as [(CGFloat, CGFloat, CGFloat)] {
         ReadingBodySize.shared.set(size)
         var metrics = bodyMetrics()
         for _ in 0..<40 where metrics.map({ $0.body != size }) ?? true {
@@ -139,12 +143,12 @@ private struct ReadingDesignFixture: View {
         precondition(metrics.map { $0.body == size && $0.line == line && $0.heading == heading } ?? false,
                      "Changing the reading size to \(size) must re-render mounted rows at \(size)/\(line), H1 \(heading): \(String(describing: metrics))")
     }
-    precondition(UserDefaults.standard.double(forKey: ReadingBodySize.defaultsKey) == 16, "The reading size persists")
+    precondition(UserDefaults.standard.double(forKey: ReadingBodySize.defaultsKey) == 14, "The reading size persists")
     // Fallback Markdown uses the same hierarchy and complete link/text contents.
     let fallback = NSHostingView(rootView: KimiMarkdown(text: text).frame(width: 460))
     window.contentView = fallback
     try await Task.sleep(for: .milliseconds(400))
     let fallbackHeading = readingTextViews(fallback).first { $0.string == "让回复成为阅读的主角" }!
-    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 20)
+    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 18)
     print("PASS: reading design wide/narrow/dark, collapsed process, complete code, selectable text and native/fallback heading parity; snapshots /private/tmp/perch-reading-design")
 }

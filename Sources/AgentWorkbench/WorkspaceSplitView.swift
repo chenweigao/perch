@@ -147,6 +147,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         toolbar.allowsUserCustomization = true
         toolbar.autosavesConfiguration = true
         controller.workspaceToolbar = toolbar
+        controller.didInstallToolbar = { [weak coordinator] in coordinator?.mountToolbarViews() }
         controller.alignToolbar = { [weak coordinator] leading in
             coordinator?.alignToolbar(leading: leading)
         }
@@ -206,6 +207,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private var leadingWidth: NSLayoutConstraint?
         private var titleLeading: CGFloat = 0
         private var alignmentScheduled = false
+        private let toolbarItems = NSHashTable<NSToolbarItem>.weakObjects()
+        private weak var titleItem: NSToolbarItem?
+        private weak var actionsItem: NSToolbarItem?
 
         init(_ view: WorkspaceSplitView) {
             sidebarHost = NSHostingView(rootView: WorkspaceFloatingPanelRoot(
@@ -246,6 +250,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             let L = LocalizedUIStrings(locale: locale)
             if id == leadingID {
                 let item = NSToolbarItem(itemIdentifier: id)
+                toolbarItems.add(item)
                 let spacer = NSView()
                 spacer.translatesAutoresizingMaskIntoConstraints = false
                 let width = spacer.widthAnchor.constraint(equalToConstant: 1)
@@ -259,6 +264,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             if id == backID || id == forwardID {
                 let direction = id == backID ? -1 : 1
                 let item = WorkbenchNavigationToolbarItem(itemIdentifier: id)
+                toolbarItems.add(item)
                 item.label = L(direction == -1 ? "Back" : "Forward")
                 item.toolTip = item.label + (direction == -1 ? " · ⌘[" : " · ⌘]")
                 item.image = NSImage(systemSymbolName: direction == -1 ? "arrow.left" : "arrow.right",
@@ -272,6 +278,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 return item
             }
             let item = NSToolbarItem(itemIdentifier: id)
+            toolbarItems.add(item)
             if id == toggleID {
                 item.label = L("切换侧栏")
                 item.toolTip = L("显示或隐藏侧栏")
@@ -288,12 +295,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.isBordered = false
             } else if id == titleID {
                 item.label = L("当前会话")
-                installHostedView(headerHost, in: item)
+                if flag { titleItem = item; prepareHostedView(in: item) }
+                else { item.view = NSTextField(labelWithString: item.label) }
                 item.isBordered = false
                 item.visibilityPriority = .high
             } else if id == actionsID {
                 item.label = L("会话操作")
-                installHostedView(actionsHost, in: item)
+                if flag { actionsItem = item; prepareHostedView(in: item) }
+                else { item.view = NSTextField(labelWithString: item.label) }
                 item.isBordered = false
                 item.visibilityPriority = .user
             }
@@ -302,16 +311,18 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             }
             return item
         }
-        private func installHostedView(_ host: NSView, in item: NSToolbarItem) {
-            // Return a plain view while NSToolbar expands its placeholder items.
-            // Attaching NSHostingView here can synchronously reenter WindowGroup
-            // and invalidate AppKit's current-item indices during a cold launch.
-            // Mount SwiftUI after the delegate/placeholder transaction returns.
+        private func prepareHostedView(in item: NSToolbarItem) {
+            // A run-loop delay alone is insufficient: AppKit can drain it while
+            // expanding placeholders. Mount only after setToolbar has returned.
             item.view = NSView(frame: .zero)
-            DispatchQueue.main.async { [weak item, weak host] in
-                guard let item, let host else { return }
-                item.view = host
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.controller?.workspaceToolbarInstalled == true else { return }
+                self.mountToolbarViews()
             }
+        }
+        func mountToolbarViews() {
+            if let titleItem, titleItem.view !== headerHost { titleItem.view = headerHost }
+            if let actionsItem, actionsItem.view !== actionsHost { actionsItem.view = actionsHost }
         }
 
         /// Only the title follows the pane. The system keeps actions at the
@@ -343,7 +354,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             // can reenter the delegate through hosted SwiftUI updates.
             guard controller?.workspaceToolbarInstalled == true else { return }
             let L = LocalizedUIStrings(locale: locale)
-            for item in controller?.workspaceToolbar?.items ?? [] {
+            // Never ask NSToolbar.items to expand placeholders from a SwiftUI update.
+            for item in toolbarItems.allObjects {
                 switch item.itemIdentifier {
                 case backID: item.label = L("Back"); item.toolTip = item.label + " · ⌘["
                 case forwardID: item.label = L("Forward"); item.toolTip = item.label + " · ⌘]"
@@ -675,6 +687,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
+    var didInstallToolbar: (() -> Void)?
     private(set) var workspaceToolbarInstalled = false
     private var appAppearance: AppAppearance = .system
     private var appearanceObserver: NSObjectProtocol?
@@ -878,6 +891,7 @@ final class WorkbenchSplitController: NSSplitViewController {
                 window.toolbar = self.workspaceToolbar
                 self.installingToolbar = false
                 self.workspaceToolbarInstalled = true
+                self.didInstallToolbar?()
             }
             self.windowBackdropView?.updateCornerRadius()
             self.updateWorkspaceLayout()

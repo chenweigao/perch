@@ -6,6 +6,7 @@ import WorkbenchCore
     var busy = false
     var holdHistory = false
     var holdDelta = false
+    var snapshotDelay: Duration = .zero
     var revision = 1
     var changes: [Int: String] = [:]
     var pendingDelta: (CheckedContinuation<Data, Error>, Data)?
@@ -19,6 +20,7 @@ import WorkbenchCore
              "archived": false, "updated": 1, "completed": 0, "pending": 0, "model": "m", "revision": revision]
         }
         if url.path == "/sessions" { return try JSONSerialization.data(withJSONObject: ["sessions": [summary("a"), summary("b")]]) }
+        if snapshotDelay > .zero { try await Task.sleep(for: snapshotDelay) }
         let id = String(url.path.split(separator: "/").last!)
         let end = Int(query["before"] ?? "240")!
         let start = Int(query["start"] ?? "") ?? max(0, end - 100)
@@ -68,6 +70,9 @@ import WorkbenchCore
     queuedClient.disconnect()
     precondition(!queuedClient.enqueueFollowUp("offline", for: "a", messageID: "followup-two"))
     let fixture = LoadingTransport()
+    // Reads can take real time on a loaded runner; yielding a fixed number of
+    // times must not be treated as a deadline for selection or pagination.
+    fixture.snapshotDelay = .milliseconds(150)
     let client = NativeAgentConnection(host: host, transport: fixture.request)
     try await client.refresh(); client.select("a")
     await ConnectionChecks.settle { client.snapshot?.id == "a" }
