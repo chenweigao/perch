@@ -14,133 +14,198 @@ struct WorkbenchSettings: View {
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .codex, .claude]
+    @AppStorage("settings.pane") private var pane = SettingsPane.agents
     var body: some View {
-        Form {
-            Section {
-                Picker("界面语言", selection: $appLanguage) {
-                    ForEach(AppLanguage.allCases) { language in Text(language.displayName).tag(language) }
-                }
-                .onChange(of: appLanguage) { _, newValue in AppLanguage.applyToSystem(newValue) }
-            } header: {
-                SettingsSectionHeader("语言 / Language", systemImage: "globe", tint: .blue)
+        NavigationSplitView {
+            List(SettingsPane.allCases, selection: $pane) { pane in
+                SettingsSectionHeader(pane.title, systemImage: pane.systemImage, tint: pane.tint)
             }
-            Section {
-                SettingsRow(action: { showLocal = true }) {
-                    HostIdentityIcon(hostID: ExecutionEnvironment.localHostID).frame(width: 20)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("本机 Agent").foregroundStyle(.primary)
-                        localAgentStatus
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+        } detail: {
+            Form {
+                switch pane {
+                case .language: languagePane
+                case .agents: agentsPane
+                case .permissions: permissionsPane
+                case .notifications: notificationsPane
+                case .appearance: appearancePane
+                case .diagnostics: diagnosticsPane
+                case .about: aboutPane
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle(pane.title)
+        }
+        .frame(width: 800, height: 740)
+        .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
+        .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
+        .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
+    }
+
+    private var languagePane: some View {
+        Section {
+            Picker("界面语言", selection: $appLanguage) {
+                ForEach(AppLanguage.allCases) { language in Text(language.displayName).tag(language) }
+            }
+            .onChange(of: appLanguage) { _, newValue in AppLanguage.applyToSystem(newValue) }
+        }
+    }
+
+    private var agentsPane: some View {
+        Section {
+            SettingsRow(action: { showLocal = true }) {
+                HostIdentityIcon(hostID: ExecutionEnvironment.localHostID).frame(width: 20)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("本机 Agent").foregroundStyle(.primary)
+                    localAgentStatus
+                }
+            }
+            ForEach(model.connections) { connection in
+                VStack(alignment: .leading, spacing: 10) {
+                    HostSettingsRow(connection: connection) {
+                        if connection.host.isLocal { showLocal = true }
+                        else { editingHost = connection.host; showSSH = true }
+                    }
+                    if let agents = model.agentConnections(for: connection.id) {
+                        HostConnectionControls(model: model, connection: connection,
+                                               kimi: agents.kimi, native: agents.native)
                     }
                 }
-                ForEach(model.connections) { connection in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HostSettingsRow(connection: connection) {
-                            if connection.host.isLocal { showLocal = true }
-                            else { editingHost = connection.host; showSSH = true }
-                        }
-                        if let agents = model.agentConnections(for: connection.id) {
-                            HostConnectionControls(model: model, connection: connection,
-                                                   kimi: agents.kimi, native: agents.native)
-                        }
+            }
+            Button { editingHost = nil; showSSH = true } label: {
+                Label("添加机器…", systemImage: "plus")
+                    .padding(.horizontal, 6).padding(.vertical, 4)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(WorkbenchTheme.accent)
+        } footer: {
+            Text("开启自动连接后立即连接，并在 Perch 启动时连接。关闭会断开当前连接；也可用按钮临时连接或断开，不改变启动偏好。远端任务继续运行。")
+        }
+    }
+
+    private var permissionsPane: some View {
+        Section {
+            ForEach(permissionProviders, id: \.rawValue) { provider in
+                PermissionPicker(provider: provider,
+                                 capability: PermissionCatalog.capability(for: provider, selected: permissionMode(for: provider)),
+                                 layout: .form, allowsSelection: true) { mode in
+                    permissionModes[provider] = mode
+                    PermissionDefaults.set(mode, for: provider)
+                }
+            }
+            PermissionPicker(provider: .dsh,
+                             capability: PermissionCatalog.capability(for: .dsh),
+                             layout: .form, allowsSelection: false) { _ in }
+            HStack {
+                Spacer()
+                Button("恢复安全默认") {
+                    for provider in permissionProviders {
+                        PermissionDefaults.restoreSafeDefault(for: provider)
+                        permissionModes[provider] = PermissionDefaults.mode(for: provider)
                     }
                 }
-                Button { editingHost = nil; showSSH = true } label: {
-                    Label("添加机器…", systemImage: "plus")
-                        .padding(.horizontal, 6).padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(WorkbenchTheme.accent)
-            } header: {
-                SettingsSectionHeader("Agent 与执行环境", systemImage: "server.rack", tint: .teal)
-            } footer: {
-                Text("开启自动连接后立即连接，并在 Perch 启动时连接。关闭会断开当前连接；也可用按钮临时连接或断开，不改变启动偏好。远端任务继续运行。")
             }
-            Section {
-                ForEach(permissionProviders, id: \.rawValue) { provider in
-                    PermissionPicker(provider: provider,
-                                     capability: PermissionCatalog.capability(for: provider, selected: permissionMode(for: provider)),
-                                     layout: .form, allowsSelection: true) { mode in
-                        permissionModes[provider] = mode
-                        PermissionDefaults.set(mode, for: provider)
-                    }
+        } footer: {
+            Text("只影响新建会话。Kimi、Qoder 与 Claude Code 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
+        }
+    }
+
+    private var notificationsPane: some View {
+        Section {
+            Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
+            if let error = model.companionShortcutError { Text(error).font(.subheadline).foregroundStyle(.orange) }
+            Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
+            Toggle("仅通知需要我处理的任务", isOn: $model.notifyAttentionOnly)
+                .disabled(!model.notificationsEnabled)
+            if let error = model.notificationError { Text(error).font(.subheadline).foregroundStyle(.orange) }
+        } footer: {
+            Text("完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。")
+        }
+    }
+
+    private var appearancePane: some View {
+        Section {
+            Picker("外观", selection: $appAppearance) {
+                ForEach(AppAppearance.allCases) { appearance in
+                    Text(appearance.title).tag(appearance)
                 }
-                PermissionPicker(provider: .dsh,
-                                 capability: PermissionCatalog.capability(for: .dsh),
-                                 layout: .form, allowsSelection: false) { _ in }
-                HStack {
-                    Spacer()
-                    Button("恢复安全默认") {
-                        for provider in permissionProviders {
-                            PermissionDefaults.restoreSafeDefault(for: provider)
-                            permissionModes[provider] = PermissionDefaults.mode(for: provider)
-                        }
-                    }
-                }
-            } header: {
-                SettingsSectionHeader("新会话默认权限", systemImage: "lock.shield", tint: .orange)
-            } footer: {
-                Text("只影响新建会话。Kimi、Qoder 与 Claude Code 可在会话输入框旁调整；OMP 与 Codex 的权限在创建时固定。")
             }
-            Section {
-                Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
-                if let error = model.companionShortcutError { Text(error).font(.subheadline).foregroundStyle(.orange) }
-                Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
-                Toggle("仅通知需要我处理的任务", isOn: $model.notifyAttentionOnly)
-                    .disabled(!model.notificationsEnabled)
-                if let error = model.notificationError { Text(error).font(.subheadline).foregroundStyle(.orange) }
-            } header: {
-                SettingsSectionHeader("Task notifications", systemImage: "bell.badge", tint: .red)
-            } footer: {
-                Text("完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。")
+            SettingsRow(action: { showSummary = true }) {
+                Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
+                Text("活动叙事与 Recap").foregroundStyle(.primary)
+            } trailing: {
+                (summarySettings.configuration.enabled ? Text("已开启") : Text("默认关闭"))
+                    .font(.subheadline)
+                    .foregroundStyle(summarySettings.configuration.enabled ? Color.green : Color.secondary)
             }
-            Section {
-                Picker("外观", selection: $appAppearance) {
-                    ForEach(AppAppearance.allCases) { appearance in
-                        Text(appearance.title).tag(appearance)
-                    }
-                }
-                SettingsRow(action: { showSummary = true }) {
-                    Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
-                    Text("活动叙事与 Recap").foregroundStyle(.primary)
-                } trailing: {
-                    (summarySettings.configuration.enabled ? Text("已开启") : Text("默认关闭"))
-                        .font(.subheadline)
-                        .foregroundStyle(summarySettings.configuration.enabled ? Color.green : Color.secondary)
-                }
-                if summarySettings.configuration.enabled {
-                    Button("关闭活动叙事") { summarySettings.disable() }
-                }
-            } header: {
-                SettingsSectionHeader("界面", systemImage: "paintbrush", tint: .purple)
-            } footer: {
-                Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+            if summarySettings.configuration.enabled {
+                Button("关闭活动叙事") { summarySettings.disable() }
             }
-            Section {
-                Toggle("性能诊断", isOn: $diagnosticsOn)
-                    .onChange(of: diagnosticsOn) { _, on in PerfDiagnostics.shared.setEnabled(on) }
-                Button("导出诊断报告…") { PerfDiagnostics.shared.exportReport() }
-                    .disabled(!diagnosticsOn)
-                if diagnosticsOn {
-                    Button("注入一次 120ms 卡顿（校验）") { PerfDiagnostics.injectCalibrationStall() }
-                }
-            } header: {
-                SettingsSectionHeader("诊断", systemImage: "stethoscope", tint: .indigo)
-            } footer: {
-                Text("开启后记录正文渲染各阶段耗时与掉帧，以及掉帧期间主线程上的工作，并发送 Instruments 的 Points of Interest signpost。复现卡顿：开启后在一段真实的长对话里滚动，直到出现卡顿，再导出诊断报告。校验按钮让主线程停顿 120ms，报告中应出现一次 calibration_stall。报告不含消息内容；关闭即清空并停止记录。")
+        } footer: {
+            Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+        }
+    }
+
+    private var diagnosticsPane: some View {
+        Section {
+            Toggle("性能诊断", isOn: $diagnosticsOn)
+                .onChange(of: diagnosticsOn) { _, on in PerfDiagnostics.shared.setEnabled(on) }
+            Button("导出诊断报告…") { PerfDiagnostics.shared.exportReport() }
+                .disabled(!diagnosticsOn)
+            if diagnosticsOn {
+                Button("注入一次 120ms 卡顿（校验）") { PerfDiagnostics.injectCalibrationStall() }
             }
-            Section {
-                LabeledContent("版本", value: versionLabel)
-                LabeledContent("更新") { updateCheck }
-            } header: {
-                SettingsSectionHeader("关于", systemImage: "info.circle", tint: .gray)
-            } footer: {
-                Text("有新版本时可在发布页下载安装包，或拉取最新代码重新构建。")
+        } footer: {
+            Text("开启后记录正文渲染各阶段耗时与掉帧，以及掉帧期间主线程上的工作，并发送 Instruments 的 Points of Interest signpost。复现卡顿：开启后在一段真实的长对话里滚动，直到出现卡顿，再导出诊断报告。校验按钮让主线程停顿 120ms，报告中应出现一次 calibration_stall。报告不含消息内容；关闭即清空并停止记录。")
+        }
+    }
+
+    private var aboutPane: some View {
+        Section {
+            LabeledContent("版本", value: versionLabel)
+            LabeledContent("更新") { updateCheck }
+        } footer: {
+            Text("有新版本时可在发布页下载安装包，或拉取最新代码重新构建。")
+        }
+    }
+
+    private enum SettingsPane: String, CaseIterable, Identifiable {
+        case language, agents, permissions, notifications, appearance, diagnostics, about
+        var id: Self { self }
+        var title: LocalizedStringKey {
+            switch self {
+            case .language: "语言 / Language"
+            case .agents: "Agent 与执行环境"
+            case .permissions: "新会话默认权限"
+            case .notifications: "Task notifications"
+            case .appearance: "界面"
+            case .diagnostics: "诊断"
+            case .about: "关于"
             }
-        }.formStyle(.grouped).frame(width: 560, height: 740)
-            .sheet(isPresented: $showLocal) { LocalAgentSetupSheet(model: model) }
-            .sheet(isPresented: $showSummary) { ActivitySummarySettingsSheet() }
-            .sheet(isPresented: $showSSH, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: editingHost) }
+        }
+        var systemImage: String {
+            switch self {
+            case .language: "globe"
+            case .agents: "server.rack"
+            case .permissions: "lock.shield"
+            case .notifications: "bell.badge"
+            case .appearance: "paintbrush"
+            case .diagnostics: "stethoscope"
+            case .about: "info.circle"
+            }
+        }
+        var tint: Color {
+            switch self {
+            case .language: .blue
+            case .agents: .teal
+            case .permissions: .orange
+            case .notifications: .red
+            case .appearance: .purple
+            case .diagnostics: .indigo
+            case .about: .gray
+            }
+        }
     }
 
     private var versionLabel: String {
