@@ -12,7 +12,7 @@ enum WorkbenchTheme {
     /// Monochrome accent: near-black in light, near-white in dark.
     static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.90, 0.90, 0.92))
     /// De-emphasised ink for status lines and timestamps.
-    static let quiet = color(light: (0.48, 0.51, 0.58), dark: (0.60, 0.62, 0.68))
+    static let quiet = color(light: (0.42, 0.45, 0.51), dark: (0.66, 0.68, 0.73))
     /// Content surfaces: white in light; dark is a blue-tinted near-black instead
     /// of the system's neutral gray — a designed dark reads intentional, not default.
     /// Sidebar and composer glass keep their system materials and are unaffected.
@@ -104,6 +104,8 @@ extension WorkbenchTheme {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
+        /// Input remains subordinate to the surrounding reading sheet.
+        static let composer: CGFloat = 12
         /// Floating glass controls (return-to-latest, selection bar, bookmarks).
         /// Frame panels use `framePanel(windowCorner:inset:)` instead.
         static let panel: CGFloat = 20

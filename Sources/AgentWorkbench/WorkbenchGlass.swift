@@ -9,6 +9,10 @@ extension View {
     func workbenchControlSurface() -> some View {
         modifier(WorkbenchGlassSurface(cornerRadius: 20))
     }
+
+    func workbenchComposerSurface() -> some View {
+        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.composer))
+    }
 }
 
 private struct WorkbenchGlassSurface: ViewModifier {

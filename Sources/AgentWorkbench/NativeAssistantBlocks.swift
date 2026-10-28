@@ -242,6 +242,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private var codeText: ReplyTextView?
     private var gutter: ReplyTextView?
     private var source = ""
+    private var compact = true
 
     override init(links: SelectableReplyText.Coordinator) {
         copy = NSHostingView(rootView: ReplyCopyButton(text: "", label: "复制代码"))
@@ -292,6 +293,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         codeText.update(text)
         codeText.highlightCode(language: language)
         let lineCount = CodeLineNumbers.count(in: source)
+        compact = lineCount == 1
         if lineCount > 1 {
             let gutter = self.gutter ?? {
                 let view = SelectableReplyText.acquire(delegate: links)
@@ -313,7 +315,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private func textSize() -> CGSize { codeText?.measure(width: nil) ?? .zero }
     private func gutterSize() -> CGSize { gutter?.measure(width: nil) ?? .zero }
     override func contentHeight(width: CGFloat) -> CGFloat {
-        ReplyStyle.Code.headerHeight + 1 + textSize().height + ReplyStyle.Code.inset * 2
+        (compact ? 0 : ReplyStyle.Code.headerHeight + 1) + textSize().height + ReplyStyle.Code.inset * 2
     }
     override func placeContent(width: CGFloat) {
         typealias Card = ReplyStyle.Code
@@ -328,13 +330,18 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
                                 width: min(labelSize.width, max(0, width - Card.headerHorizontalPadding * 2 - Card.copyButtonSize - 8)),
                                 height: labelSize.height)
         if label.frame != labelFrame { label.frame = labelFrame }
-        let copyFrame = CGRect(x: width - Card.headerHorizontalPadding - Card.copyButtonSize, y: Card.headerVerticalPadding,
+        label.isHidden = compact
+        separator.isHidden = compact
+        let copyY = compact ? (text.height + Card.inset * 2 - Card.copyButtonSize) / 2 : Card.headerVerticalPadding
+        let copyFrame = CGRect(x: width - Card.headerHorizontalPadding - Card.copyButtonSize, y: copyY,
                                width: Card.copyButtonSize, height: Card.copyButtonSize)
         if copy.frame != copyFrame { copy.frame = copyFrame }
         let separatorFrame = CGRect(x: 0, y: Card.headerHeight, width: width, height: 1)
         if separator.frame != separatorFrame { separator.frame = separatorFrame }
         separator.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.055).cgColor
-        let scrollFrame = CGRect(x: 0, y: Card.headerHeight + 1, width: width, height: text.height + Card.inset * 2)
+        let scrollFrame = CGRect(x: 0, y: compact ? 0 : Card.headerHeight + 1,
+                                 width: compact ? width - Card.copyButtonSize - Card.inset : width,
+                                 height: text.height + Card.inset * 2)
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
         let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + Card.inset, height: text.height + Card.inset * 2)
         if document.frame != documentFrame { document.frame = documentFrame }
