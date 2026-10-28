@@ -180,7 +180,11 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
                             onScroll(following)
                         }, onNearTop: onNearTop)
                     }
-            }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
+            }
+                // On the scroll view itself: the bar's pocket reads the style from
+                // its scroll view, and the automatic style draws a hard divider.
+                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }, onNearTop: onNearTop))
                 .overlay(alignment: .leading) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
