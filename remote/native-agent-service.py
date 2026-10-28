@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 9
+SERVICE_VERSION = 10
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -59,6 +59,7 @@ LOCK = threading.RLock()
 SESSIONS = {}
 MODELS = None
 CODEX_MODELS = None
+QODER_MODELS = {}
 MODEL_LOCK = threading.Lock()
 DSH_MODELS = None
 PERMISSION_MODES = {
@@ -101,6 +102,75 @@ def model_catalog():
             items=payload['models'] if isinstance(payload,dict) else payload
             MODELS=[{k:m[k] for k in ('id','provider','name','contextWindow','thinking') if k in m} for m in items]
         return MODELS
+
+def qoder_public_model(entry):
+    fields = ('id', 'provider', 'name', 'contextWindow', 'thinking', 'defaultThinking', 'reasoning', 'isDefault')
+    return {key:entry[key] for key in fields if key in entry}
+
+def qoder_catalog(provider, live=False):
+    global QODER_MODELS
+    if provider not in QODER_SDK: raise ValueError('Unknown Qoder provider')
+    with MODEL_LOCK:
+        if not live and provider in QODER_MODELS: return QODER_MODELS[provider]
+        node = shutil.which('node'); binary = shutil.which(QODER_CLI[provider])
+        if not node: raise ValueError('未找到 node')
+        if not binary: raise ValueError('未找到 ' + QODER_CLI[provider])
+        if not (ROOT / 'node_modules' / QODER_SDK[provider] / 'package.json').is_file():
+            raise ValueError('未安装 ' + QODER_SDK[provider])
+        cfg = {'operation':'catalog', 'sdk':QODER_SDK[provider], 'binary':binary, 'cwd':str(ROOT)}
+        out = subprocess.run([node, str(ROOT/'qoder-worker.mjs'), json.dumps(cfg)], cwd=str(ROOT),
+                             env=proxy_aware_spawn_env(), capture_output=True, text=True, timeout=60)
+        if out.returncode != 0:
+            raise ValueError('读取 Qoder 模型列表失败：' + (out.stderr or out.stdout or 'unknown error').strip()[:200])
+        lines = [line for line in out.stdout.splitlines() if line.strip()]
+        if len(lines) != 1: raise ValueError('Qoder 模型列表返回格式无效')
+        payload = json.loads(lines[0])
+        items = payload.get('models') if isinstance(payload, dict) and payload.get('type') == 'models' else None
+        if not isinstance(items, list): raise ValueError('Qoder 模型列表返回格式无效')
+        models = []
+        for item in items:
+            if not isinstance(item, dict) or item.get('isEnabled') is False: continue
+            model = item.get('value') or item.get('modelId')
+            if not isinstance(model, str) or not model: continue
+            efforts = []
+            for effort in item.get('efforts') or []:
+                if isinstance(effort, str) and effort and effort not in efforts: efforts.append(effort)
+            vendor = item.get('provider') or item.get('outerProvider') or item.get('agent') or provider
+            if not isinstance(vendor, str) or not vendor: vendor = provider
+            entry = {'id':model, 'provider':vendor,
+                     'name':item.get('displayName') if isinstance(item.get('displayName'), str) and item.get('displayName') else model,
+                     'thinking':efforts, 'isDefault':item.get('isDefault') is True}
+            context = item.get('maxInputTokens')
+            if isinstance(context, int) and not isinstance(context, bool) and context > 0: entry['contextWindow'] = context
+            if isinstance(item.get('isReasoning'), bool): entry['reasoning'] = item['isReasoning']
+            default = item.get('defaultEffort')
+            if isinstance(default, str) and default in efforts: entry['defaultThinking'] = default
+            outer = item.get('outerProvider')
+            if isinstance(outer, str) and outer: entry['_outerProvider'] = outer
+            models.append(entry)
+        QODER_MODELS[provider] = models
+        return models
+
+def qoder_selection(provider, model, thinking=None, catalog=None):
+    if not model:
+        if thinking: raise ValueError('使用 Qoder 默认模型时不能指定思考强度')
+        return None, None
+    source = qoder_catalog(provider) if catalog is None else catalog
+    entry = next((item for item in source if item.get('id') == model), None)
+    if entry is None: raise ValueError('Qoder 不认识该模型，请刷新模型列表后重试')
+    if thinking and thinking not in entry.get('thinking', []): raise ValueError('当前 Qoder 模型不支持该思考强度')
+    return entry, thinking or entry.get('defaultThinking')
+
+def apply_qoder_selection(state, entry, thinking):
+    if entry is None:
+        state['model'] = ''; state['thinking'] = None
+        for key in ('provider_id', 'qoderOuterProvider', 'qoderContextWindow'): state.pop(key, None)
+        return
+    state['model'] = entry['id']; state['thinking'] = thinking; state['provider_id'] = entry['provider']
+    if entry.get('_outerProvider'): state['qoderOuterProvider'] = entry['_outerProvider']
+    else: state.pop('qoderOuterProvider', None)
+    if entry.get('contextWindow'): state['qoderContextWindow'] = entry['contextWindow']
+    else: state.pop('qoderContextWindow', None)
 
 def dsh_binary():
     if os.environ.get('DSH_BIN'): return os.environ['DSH_BIN']
@@ -193,8 +263,19 @@ def setup_status(provider):
     elif provider in ('qoder', 'qoderintl'):
         result['sdkInstalled'] = (ROOT / 'node_modules' / QODER_SDK[provider] / 'package.json').is_file()
         result['nodeInstalled'] = bool(shutil.which('node'))
-        # The SDK resolves the model and login at the first query; no model-list API.
-        result['modelCheck'] = 'runtime-default'
+        if not result['sdkInstalled'] or not result['nodeInstalled']:
+            result['modelCheck'] = 'missing'
+            return result
+        try:
+            catalog = qoder_catalog(provider, live=True)
+        except Exception:
+            result['credentialCheck'] = 'missing'
+            result['modelCheck'] = 'missing'
+            result['error'] = 'Could not read the Qoder model catalog. Run ' + QODER_CLI[provider] + ' login in an SSH terminal.'
+            return result
+        result['credentialCheck'] = 'present'
+        result['models'] = [qoder_public_model(model) for model in catalog]
+        result['modelCheck'] = 'configured' if result['models'] else 'missing'
     elif provider == 'claude':
         result['sdkInstalled'] = (ROOT / 'node_modules/@anthropic-ai/claude-agent-sdk/package.json').is_file()
         result['nodeInstalled'] = bool(shutil.which('node'))
@@ -374,15 +455,18 @@ def codex_selection(model, thinking=None, catalog=None):
     return entry, thinking or entry.get('defaultThinking')
 
 def catalog_entries(value, agent):
-    # OMP emits {"models": [...]}; dsh and Codex provide normalized lists.
+    # OMP emits {"models": [...]}; the other adapters provide normalized lists.
     if isinstance(value, dict):
         value = next((value[name] for name in ('models', 'items') if isinstance(value.get(name), list)), [])
     if not isinstance(value, list): return []
+    if agent in QODER_SDK: value = [qoder_public_model(entry) for entry in value if isinstance(entry, dict)]
     return [dict(entry, agent=agent) for entry in value if isinstance(entry, dict)]
 
 def combined_catalog():
     entries = catalog_entries(dsh_catalog(), 'dsh'); errors = []
-    for agent, discover in (('omp', model_catalog), ('codex', codex_catalog)):
+    sources = (('omp', model_catalog), ('qoder', lambda:qoder_catalog('qoder')),
+               ('qoderintl', lambda:qoder_catalog('qoderintl')), ('codex', codex_catalog))
+    for agent, discover in sources:
         try:
             values = discover()
             entries.extend(catalog_entries(values, agent))
@@ -702,6 +786,12 @@ class Session:
             else:
                 message={'type':'prompt','id':request_id,'message':text}
                 if s['provider'] in ('qoder','qoderintl','claude'): message['permissionMode']=s['permissionMode']
+                if s['provider'] in QODER_SDK:
+                    message['model']=s.get('model','')
+                    if s.get('model'):
+                        if s.get('thinking'): message['thinking']=s['thinking']
+                        if s.get('qoderOuterProvider'): message['outerProvider']=s['qoderOuterProvider']
+                        if s.get('qoderContextWindow'): message['contextWindow']=s['qoderContextWindow']
                 if stored: message['attachments']=stored
                 self.send(message)
                 receipt['status']='submitted'; s['turnState']='submitted'
@@ -2261,16 +2351,23 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, setup_status(provider))
             if self.path=='/models' and not post:
                 return self.respond(200,{'models':combined_catalog()})
-            codex_models=None; selected_home=None
+            codex_models=None; selected_home=None; qoder_models=None; qoder_agent=None; qoder_has_model=False
             if post and self.path=='/sessions' and body.get('provider')=='codex':
                 selected_home=codex_home()
                 codex_models=codex_catalog(selected_home)
+            elif post and self.path=='/sessions' and body.get('provider') in QODER_SDK and body.get('model'):
+                qoder_agent=body['provider']; qoder_models=qoder_catalog(qoder_agent)
             elif post and len(path)>=4 and path[1]=='sessions' and path[3] in ('model','thinking'):
                 with LOCK:
                     target=SESSIONS.get(path[2])
-                    needs_codex_catalog=target is not None and target.state.get('provider')=='codex'
+                    target_provider=target.state.get('provider') if target is not None else None
+                    needs_codex_catalog=target_provider=='codex'
                     if needs_codex_catalog: selected_home=target.state['codexHome']
+                    if target_provider in QODER_SDK:
+                        qoder_agent=target_provider
+                        qoder_has_model=bool(target.state.get('model'))
                 if needs_codex_catalog: codex_models=codex_catalog(selected_home)
+                if qoder_agent and (body.get('model') or (path[3]=='thinking' and qoder_has_model)): qoder_models=qoder_catalog(qoder_agent)
             elif not post and len(path)==5 and path[1]=='sessions' and path[3]=='subagents':
                 # A Codex child's own history is read from the runtime outside the lock.
                 with LOCK:
@@ -2287,11 +2384,14 @@ class Handler(BaseHTTPRequestHandler):
                     provider=body.get('provider')
                     if provider not in PERMISSION_MODES or not os.path.isabs(body.get('cwd','')) or not os.path.isdir(body['cwd']): raise ValueError('请选择有效的远端绝对目录')
                     mode=permission_mode(provider,body.get('permissionMode'))
-                    model=body.get('model',''); thinking=body.get('thinking')
+                    model=body.get('model',''); thinking=body.get('thinking'); qoder_entry=None
                     if provider=='codex':
                         codex_permission_params(mode)
                         _,thinking=codex_selection(model,thinking,codex_models)
+                    elif provider in QODER_SDK:
+                        qoder_entry,thinking=qoder_selection(provider,model,thinking,qoder_models)
                     sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':provider,'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'permissionMode':mode,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
+                    if provider in QODER_SDK: apply_qoder_selection(s.state,qoder_entry,thinking)
                     SESSIONS[sid]=s
                     if body['provider']=='codex':
                         s.state['codexHome']=selected_home
@@ -2333,11 +2433,16 @@ class Handler(BaseHTTPRequestHandler):
                         elif action=='steer':
                             result=s.steer(body)
                         elif action=='model':
-                            if s.state['provider'] not in ('omp','dsh','codex'): raise ValueError('当前 Agent 不支持切换模型')
+                            if s.state['provider'] not in ('omp','qoder','qoderintl','dsh','codex'): raise ValueError('当前 Agent 不支持切换模型')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                             provider,model=body.get('provider',''),body.get('model','')
-                            if not provider or not model: raise ValueError('请同时指定 provider 和模型')
-                            if s.state['provider']=='codex':
+                            if s.state['provider'] in QODER_SDK:
+                                entry,selected=qoder_selection(s.state['provider'],model,catalog=qoder_models)
+                                current=s.state.get('thinking')
+                                if entry is not None and current in entry.get('thinking',[]): selected=current
+                                apply_qoder_selection(s.state,entry,selected); s.touch(True)
+                            elif not provider or not model: raise ValueError('请同时指定 provider 和模型')
+                            elif s.state['provider']=='codex':
                                 if provider!='codex': raise ValueError('Codex 不认识该模型，请刷新模型列表后重试')
                                 entry,_=codex_selection(model,catalog=codex_models)
                                 s.state['model']=model; s.state['context']=None
@@ -2369,10 +2474,14 @@ class Handler(BaseHTTPRequestHandler):
                             s.state['permissionMode']=mode; s.touch(True)
                             result={'ok':True,'permission':permission_capability(s.state)}
                         elif action=='thinking':
-                            if s.state['provider'] not in ('omp','dsh','codex'): raise ValueError('当前 Agent 不支持设置思考强度')
+                            if s.state['provider'] not in ('omp','qoder','qoderintl','dsh','codex'): raise ValueError('当前 Agent 不支持设置思考强度')
                             level=body.get('level','')
                             if not level: raise ValueError('请指定思考强度')
-                            if s.state['provider']=='codex':
+                            if s.state['provider'] in QODER_SDK:
+                                if s.state['busy']: raise ValueError('请先停止或完成当前任务')
+                                qoder_selection(s.state['provider'],s.state.get('model'),level,qoder_models)
+                                s.state['thinking']=level; s.touch(True)
+                            elif s.state['provider']=='codex':
                                 if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                                 codex_selection(s.state.get('model'),level,codex_models)
                                 s.state['thinking']=level; s.touch(True)

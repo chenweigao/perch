@@ -45,12 +45,12 @@
 | 其他 CLI Agent | Herdr + SSH | 终端 |
 
 原生接入共用对话组件。欢迎扩展 RPC、SDK 或 ACP 适配器；目前不宣称任意协议即插即用。
-已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / dsh / Codex / Claude Code](docs/NATIVE-AGENTS.md)。
+已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / Qoder / dsh / Codex / Claude Code](docs/NATIVE-AGENTS.md)。
 凭据和模型由对应 CLI 配置，Perch 不直连模型服务商。
 
 本机已接通 Kimi 与 Codex，其他 Agent 仍仅支持发现；见[本机 Agent](docs/LOCAL-AGENTS.md)。Kimi、远端 OMP 与 Codex 支持运行中即时引导，
 也可显式选择下一轮发送。Codex 沿用原生 thread ID 和历史，模型与思考强度来自 `model/list`；
-app-server 发起的每个审批与提问都会显示并等待明确回答，不会自动允许或静默拒绝。Qoder CN / dsh /
+app-server 发起的每个审批与提问都会显示并等待明确回答，不会自动允许或静默拒绝。Qoder CN / Qoder / dsh /
 Claude Code 支持停止与下一轮消息排队；Herdr 中的现有会话继续使用终端。
 
 ## 下载

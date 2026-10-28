@@ -47,7 +47,7 @@ presentation only; no private conversations or live command results are shown.
 
 Native integrations share the same conversation UI. Additional RPC, SDK or ACP
 adapters are welcome; arbitrary protocol compatibility is not automatic.
-See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / dsh / Codex / Claude Code setup](docs/NATIVE-AGENTS.md)
+See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / Qoder / dsh / Codex / Claude Code setup](docs/NATIVE-AGENTS.md)
 for tested versions and recovery limits. Agent credentials and model configuration
 stay with the CLI; Perch does not connect directly to model providers.
 
@@ -55,7 +55,7 @@ Local Kimi and Codex conversations are available; other local agents remain
 discovery-only. See [local agents](docs/LOCAL-AGENTS.md). Kimi, remote OMP and Codex support steering during a running task, with an
 explicit next-turn option. Codex keeps its native thread ID and history, takes model
 and reasoning-effort choices from `model/list`, and surfaces every app-server approval
-or question for an explicit response. Qoder CN / dsh / Claude Code support stopping and next-turn
+or question for an explicit response. Qoder CN / Qoder / dsh / Claude Code support stopping and next-turn
 queueing. Pending messages appear in the conversation until runtime history confirms
 them. Existing Herdr sessions remain terminal sessions.
 

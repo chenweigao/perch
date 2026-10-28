@@ -1,4 +1,4 @@
-import importlib.util, base64, io, json, os, pathlib, subprocess, sys, tempfile, threading, time, unittest
+import importlib.util, base64, io, json, os, pathlib, shutil, subprocess, sys, tempfile, threading, time, unittest
 from unittest.mock import patch
 
 def setUpModule():
@@ -44,6 +44,144 @@ class ProxySpawnEnvironmentTests(unittest.TestCase):
             self.assertEqual(broker.proxy_aware_spawn_env(), {'PATH':'/usr/bin', 'https_proxy':'http://127.0.0.1:7890',
                                                        'no_proxy':'localhost,127.0.0.1', 'NO_PROXY':'localhost,127.0.0.1'})
             probe.assert_called_once_with('http://127.0.0.1:9090/version', timeout=1)
+
+class QoderWorkerTests(unittest.TestCase):
+    def run_worker(self, sdk, config, prompt=None, env=None):
+        node = shutil.which('node')
+        if not node: self.skipTest('node is not installed')
+        worker = pathlib.Path(__file__).with_name('qoder-worker.mjs')
+        result = subprocess.run([node, str(worker), json.dumps({'sdk':str(sdk), **config})],
+                                input=(json.dumps(prompt) + '\n') if prompt else None,
+                                env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+
+    def test_catalog_uses_daemon_live_models_without_creating_query(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = pathlib.Path(directory); sdk = directory/'fake-sdk.mjs'; log = directory/'calls.jsonl'
+            sdk.write_text("""import {appendFileSync} from 'node:fs';
+const record = value => appendFileSync(process.env.QODER_FAKE_LOG, JSON.stringify(value) + '\\n');
+export const qodercliAuth = () => ({fixture:true});
+export async function startDaemon(options) {
+  record({call:'startDaemon', options});
+  return {
+    async getModels(options) { record({call:'getModels', options}); return [{value:'qoder-pro'}]; },
+    async stop() { record({call:'stop'}); }
+  };
+}
+export function query() { record({call:'query'}); throw new Error('catalog must not create a query'); }
+""")
+            env = dict(os.environ, QODER_FAKE_LOG=str(log))
+            lines = self.run_worker(sdk, {'operation':'catalog', 'cwd':str(directory), 'binary':'/fixture/qoder'}, env=env)
+            self.assertEqual(lines, [{'type':'models', 'models':[{'value':'qoder-pro'}]}])
+            calls = [json.loads(line) for line in log.read_text().splitlines()]
+            self.assertEqual([item['call'] for item in calls], ['startDaemon','getModels','stop'])
+            self.assertEqual(calls[1]['options'], {'fetchStrategy':'live'})
+            self.assertEqual(calls[0]['options']['pathToQoderCLIExecutable'], '/fixture/qoder')
+
+    def test_selected_model_only_overrides_main_and_plan_purposes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = pathlib.Path(directory); sdk = directory/'fake-sdk.mjs'
+            sdk.write_text("""export const qodercliAuth = () => ({fixture:true});
+export function query({prompt, options}) {
+  const purposes = ['main','plan','title','compact','subagent','compression','utility'];
+  const resolved = Object.fromEntries(purposes.map(purpose => [purpose, options.resolveModel?.({purpose}) ?? null]));
+  return {async interrupt() {}, async *[Symbol.asyncIterator]() {
+    yield {type:'capture', prompt, topModel:options.model ?? null, resolved};
+  }};
+}
+""")
+            command = {'type':'prompt', 'id':'turn-1', 'message':'work', 'model':'qoder-pro', 'thinking':'high',
+                       'outerProvider':'alibaba', 'contextWindow':131072}
+            lines = self.run_worker(sdk, {'cwd':str(directory), 'binary':'/fixture/qoder'}, command)
+            capture = next(item for item in lines if item.get('type') == 'capture')
+            selected = {'model':'qoder-pro', 'parameters':{'contextWindow':131072,
+                        'reasoningEffort':'high', 'outerProvider':'alibaba'}}
+            self.assertEqual(capture['topModel'], 'qoder-pro')
+            self.assertEqual(capture['resolved']['main'], selected)
+            self.assertEqual(capture['resolved']['plan'], selected)
+            for purpose in ('title','compact','subagent','compression','utility'):
+                self.assertIsNone(capture['resolved'][purpose])
+
+            default_lines = self.run_worker(sdk, {'cwd':str(directory), 'binary':'/fixture/qoder', 'model':'stale'},
+                                            {'type':'prompt', 'id':'turn-2', 'message':'default', 'model':''})
+            default_capture = next(item for item in default_lines if item.get('type') == 'capture')
+            self.assertIsNone(default_capture['topModel'])
+            self.assertTrue(all(value is None for value in default_capture['resolved'].values()))
+
+class QoderCatalogTests(unittest.TestCase):
+    def result(self, payload, code=0, stderr=''):
+        return type('Result', (), {'returncode':code, 'stdout':json.dumps(payload), 'stderr':stderr})()
+
+    def test_catalog_normalizes_sdk_models_and_keeps_routing_private(self):
+        raw = [{'value':'qoder-pro','displayName':'Qoder Pro','provider':'catalog-vendor',
+                'outerProvider':'trusted-route','maxInputTokens':131072,
+                'efforts':['low','high','low',None],'defaultEffort':'high',
+                'isReasoning':True,'isDefault':True},
+               {'value':'disabled','isEnabled':False},
+               {'modelId':'qoder-lite','agent':'agent-vendor','efforts':[],
+                'defaultEffort':'unsupported','isDefault':False},
+               {'displayName':'missing id'}]
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            package = root/'node_modules'/'@qodercn-ai'/'qodercn-agent-sdk'/'package.json'
+            package.parent.mkdir(parents=True); package.write_text('{}')
+            def which(binary):
+                return {'node':'/fixture/node','qoderclicn':'/fixture/qoderclicn'}.get(binary)
+            output = self.result({'type':'models','models':raw})
+            with patch.object(broker,'ROOT',root), patch.object(broker,'QODER_MODELS',{}), \
+                 patch.object(broker.shutil,'which',side_effect=which), \
+                 patch.object(broker.subprocess,'run',return_value=output) as run:
+                models = broker.qoder_catalog('qoder')
+                self.assertIs(models, broker.qoder_catalog('qoder'))
+            self.assertEqual(run.call_count, 1)
+        self.assertEqual(models, [
+            {'id':'qoder-pro','provider':'catalog-vendor','name':'Qoder Pro',
+             'thinking':['low','high'],'isDefault':True,'contextWindow':131072,
+             'reasoning':True,'defaultThinking':'high','_outerProvider':'trusted-route'},
+            {'id':'qoder-lite','provider':'agent-vendor','name':'qoder-lite',
+             'thinking':[],'isDefault':False}])
+        public = broker.qoder_public_model(models[0])
+        self.assertNotIn('_outerProvider', public)
+        self.assertNotIn('trusted-route', json.dumps(broker.catalog_entries(models,'qoder')))
+
+    def test_cn_and_international_catalogs_use_their_own_sdk_and_cli(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory); calls = []
+            for sdk in broker.QODER_SDK.values():
+                package = root/'node_modules'/sdk/'package.json'; package.parent.mkdir(parents=True,exist_ok=True); package.write_text('{}')
+            def which(binary): return '/fixture/' + binary
+            def run(command, **kwargs):
+                cfg = json.loads(command[-1]); calls.append((command,cfg,kwargs))
+                return self.result({'type':'models','models':[{'value':cfg['sdk']} ]})
+            with patch.object(broker,'ROOT',root), patch.object(broker,'QODER_MODELS',{}), \
+                 patch.object(broker.shutil,'which',side_effect=which), \
+                 patch.object(broker.subprocess,'run',side_effect=run):
+                cn = broker.qoder_catalog('qoder'); international = broker.qoder_catalog('qoderintl')
+            self.assertEqual(cn[0]['id'], '@qodercn-ai/qodercn-agent-sdk')
+            self.assertEqual(international[0]['id'], '@qoder-ai/qoder-agent-sdk')
+            self.assertEqual([cfg['binary'] for _,cfg,_ in calls], ['/fixture/qoderclicn','/fixture/qodercli'])
+            self.assertEqual([cfg['sdk'] for _,cfg,_ in calls],
+                             ['@qodercn-ai/qodercn-agent-sdk','@qoder-ai/qoder-agent-sdk'])
+            self.assertTrue(all(cfg['operation'] == 'catalog' for _,cfg,_ in calls))
+            self.assertTrue(all(kwargs['timeout'] == 60 for _,_,kwargs in calls))
+
+    def test_selection_accepts_runtime_default_and_validates_effort(self):
+        catalog = [{'id':'pro','provider':'vendor','thinking':['low','high'],
+                    'defaultThinking':'high','_outerProvider':'route','contextWindow':1000}]
+        self.assertEqual(broker.qoder_selection('qoder','',catalog=catalog),(None,None))
+        with self.assertRaisesRegex(ValueError,'默认模型'):
+            broker.qoder_selection('qoder','',thinking='high',catalog=catalog)
+        with self.assertRaisesRegex(ValueError,'不认识'):
+            broker.qoder_selection('qoder','unknown',catalog=catalog)
+        with self.assertRaisesRegex(ValueError,'不支持'):
+            broker.qoder_selection('qoder','pro',thinking='max',catalog=catalog)
+        entry, effort = broker.qoder_selection('qoder','pro',catalog=catalog)
+        state = {'model':'','thinking':None}; broker.apply_qoder_selection(state,entry,effort)
+        self.assertEqual((state['model'],state['thinking'],state['provider_id']),('pro','high','vendor'))
+        self.assertEqual((state['qoderOuterProvider'],state['qoderContextWindow']),('route',1000))
+        broker.apply_qoder_selection(state,None,None)
+        self.assertEqual(state,{'model':'','thinking':None})
 
 class ProtocolTests(unittest.TestCase):
     def session(self, provider='omp'):
@@ -91,7 +229,7 @@ class ProtocolTests(unittest.TestCase):
         # show "unknown" instead of a full bar.
         s.event({'type':'response','command':'get_state','success':True,'data':{'model':{'id':'x'},'contextUsage':{}}})
         self.assertIsNone(s.state['context'])
-    def test_model_switch_requires_idle_and_both_fields(self):
+    def test_omp_model_switch_requires_idle_and_both_fields(self):
         s=self.session()
         s.state['busy']=True
         with self.assertRaises(ValueError): self.apply_model(s,{'provider':'openai-codex','model':'gpt-5.4-mini'})
@@ -100,9 +238,6 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.apply_model(s,{'provider':'openai-codex'})
         self.apply_model(s,{'provider':'openai-codex','model':'gpt-5.4-mini'})
         self.assertEqual(s.state['model'],'gpt-5.4-mini')
-        # Qoder has no such command; it must not be silently accepted.
-        q=self.session('qoder')
-        with self.assertRaises(ValueError): self.apply_model(q,{'provider':'p','model':'m'})
     def apply_model(self,s,body):
         if s.state['provider']!='omp': raise ValueError('当前 Agent 不支持切换模型')
         if s.state['busy']: raise ValueError('请先停止或完成当前任务')
@@ -120,15 +255,25 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(args[args.index('--approval-mode')+1],'write')
         self.assertEqual(args[args.index('--model')+1],'gpt-5.4-mini')
         self.assertEqual(args[args.index('--thinking')+1],'xhigh')
-    def test_qoder_prompt_carries_current_permission_mode(self):
+    def test_qoder_prompt_carries_current_permission_and_server_selection(self):
         s=self.session('qoder'); s.state['permissionMode']='dontAsk'
         sent=[]; s.send=lambda value:sent.append(value)
         s.process=type('Process',(),{'poll':lambda self:None})()
         s.prompt({'text':'continue','requestId':'qoder-permission'})
-        self.assertEqual(sent[-1],{'type':'prompt','id':'qoder-permission','message':'continue','permissionMode':'dontAsk'})
+        self.assertEqual(sent[-1],{'type':'prompt','id':'qoder-permission','message':'continue',
+                                  'permissionMode':'dontAsk','model':''})
         self.assertEqual(s.summary()['permission'],{'selected':'dontAsk',
             'options':['default','acceptEdits','plan','dontAsk','auto','bypassPermissions'],'scope':'next-turn'})
         self.assertEqual(s.snapshot()['permission'],s.summary()['permission'])
+
+        selected=self.session('qoderintl'); selected.state.update(model='qoder-pro',thinking='high',
+            qoderOuterProvider='trusted-provider',qoderContextWindow=131072)
+        selected_sent=[]; selected.send=lambda value:selected_sent.append(value)
+        selected.process=type('Process',(),{'poll':lambda self:None})()
+        selected.prompt({'text':'work','requestId':'qoder-model','outerProvider':'forged'})
+        self.assertEqual(selected_sent[-1],{'type':'prompt','id':'qoder-model','message':'work',
+            'permissionMode':'default','model':'qoder-pro','thinking':'high',
+            'outerProvider':'trusted-provider','contextWindow':131072})
     def test_available_commands_reach_snapshot_without_churning_revision(self):
         s=self.session()
         commands=[{'name':'compact','description':'Compact the conversation',
@@ -833,6 +978,84 @@ class CodexHandlerContractTests(unittest.TestCase):
         self.assertEqual(self.request('/sessions/native-thread/delete',{})[0],200)
         self.assertIn(('thread/delete',{'threadId':'native-thread'}),self.fake.calls)
         self.assertNotIn('native-thread',broker.SESSIONS)
+
+class QoderHandlerContractTests(unittest.TestCase):
+    CATALOGS = {
+        'qoder': [
+            {'id':'pro','provider':'catalog-vendor','name':'Pro','thinking':['low','high'],
+             'defaultThinking':'high','_outerProvider':'trusted-route','contextWindow':131072},
+            {'id':'lite','provider':'catalog-vendor','name':'Lite','thinking':['low'],'defaultThinking':'low'}],
+        'qoderintl': [
+            {'id':'intl-pro','provider':'intl-vendor','name':'Intl Pro','thinking':['medium'],
+             'defaultThinking':'medium','_outerProvider':'intl-route'}]
+    }
+    def setUp(self):
+        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.QODER_MODELS={}
+    def request(self,path,body=None):
+        handler=object.__new__(broker.Handler); raw=json.dumps(body or {}).encode()
+        handler.path=path; handler.headers={'Authorization':'Bearer test-token','Content-Length':str(len(raw))}
+        handler.rfile=io.BytesIO(raw); result=[]
+        handler.respond=lambda code,payload:result.append((code,payload))
+        handler.handle_request(body is not None)
+        return result[0]
+    def catalog(self, provider, live=False):
+        return self.CATALOGS[provider]
+    def session(self, provider='qoder', model='pro'):
+        entry = next((item for item in self.CATALOGS[provider] if item['id'] == model), None) if model else None
+        state = dict(id='qoder-contract',provider=provider,cwd=folder.name,title='Qoder',model='',thinking=None,
+                     busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None)
+        broker.apply_qoder_selection(state,entry,entry.get('defaultThinking') if entry else None)
+        session=broker.Session(state); broker.SESSIONS[state['id']]=session
+        return session
+
+    def test_create_allows_runtime_default_and_validates_catalog_selection(self):
+        with patch.object(broker,'qoder_catalog',side_effect=self.catalog) as discover:
+            code,default=self.request('/sessions',{'provider':'qoder','cwd':folder.name})
+            self.assertEqual(code,200); self.assertEqual((default['model'],default['thinking']),('',None))
+            self.assertEqual(discover.call_count,0)
+            self.assertEqual(self.request('/sessions',{'provider':'qoder','cwd':folder.name,'thinking':'high'})[0],400)
+            code,selected=self.request('/sessions',{'provider':'qoder','cwd':folder.name,'model':'pro',
+                                                    'thinking':'low','outerProvider':'forged'})
+            self.assertEqual(code,200)
+            state=broker.SESSIONS[selected['id']].state
+            self.assertEqual((state['model'],state['thinking'],state['provider_id']),('pro','low','catalog-vendor'))
+            self.assertEqual((state['qoderOuterProvider'],state['qoderContextWindow']),('trusted-route',131072))
+            self.assertEqual(self.request('/sessions',{'provider':'qoder','cwd':folder.name,'model':'unknown'})[0],400)
+            self.assertEqual(self.request('/sessions',{'provider':'qoder','cwd':folder.name,'model':'pro','thinking':'max'})[0],400)
+            self.assertEqual(self.request('/sessions',{'provider':'qoderintl','cwd':folder.name,'model':'pro'})[0],400)
+            code,international=self.request('/sessions',{'provider':'qoderintl','cwd':folder.name,'model':'intl-pro'})
+            self.assertEqual(code,200); self.assertEqual(international['thinking'],'medium')
+
+    def test_model_and_effort_changes_preserve_or_fall_back_then_allow_default(self):
+        session=self.session()
+        with patch.object(broker,'qoder_catalog',side_effect=self.catalog):
+            self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'low'})[0],200)
+            self.assertEqual(self.request('/sessions/qoder-contract/model',{'provider':'forged','model':'lite'})[0],200)
+            self.assertEqual((session.state['model'],session.state['thinking']),('lite','low'))
+            self.assertEqual(self.request('/sessions/qoder-contract/model',{'model':'pro'})[0],200)
+            self.assertEqual((session.state['model'],session.state['thinking']),('pro','low'))
+            self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'high'})[0],200)
+            self.assertEqual(self.request('/sessions/qoder-contract/model',{'model':'lite'})[0],200)
+            self.assertEqual((session.state['model'],session.state['thinking']),('lite','low'))
+            self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'max'})[0],400)
+            self.assertEqual(self.request('/sessions/qoder-contract/model',{'model':''})[0],200)
+            self.assertEqual((session.state['model'],session.state['thinking']),('',None))
+            self.assertNotIn('qoderOuterProvider',session.state)
+            self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'low'})[0],400)
+        session.state['busy']=True
+        with patch.object(broker,'qoder_catalog',side_effect=self.catalog):
+            self.assertEqual(self.request('/sessions/qoder-contract/model',{'model':'pro'})[0],400)
+            self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'low'})[0],400)
+
+    def test_qoder_catalog_discovery_runs_outside_session_lock(self):
+        observed=[]
+        def discover(provider, live=False):
+            acquired=broker.LOCK.acquire(blocking=False); observed.append(acquired)
+            if acquired: broker.LOCK.release()
+            return self.CATALOGS[provider]
+        with patch.object(broker,'qoder_catalog',side_effect=discover):
+            self.assertEqual(self.request('/sessions',{'provider':'qoder','cwd':folder.name,'model':'pro'})[0],200)
+        self.assertEqual(observed,[True])
 
 class DshProtocolTests(unittest.TestCase):
     OPTIONS = [
@@ -2377,18 +2600,29 @@ class SetupTests(unittest.TestCase):
     def result(self, stdout='', code=0):
         return type('Result', (), {'returncode': code, 'stdout': stdout, 'stderr': ''})()
 
-    def test_qoder_does_not_require_or_discover_omp(self):
-        calls = []
+    def test_qoder_reads_live_catalog_without_discovering_omp(self):
+        calls = []; catalog = [{'id':'qoder-pro','provider':'vendor','name':'Qoder Pro',
+            'thinking':['low','high'],'defaultThinking':'high','isDefault':True,
+            '_outerProvider':'PRIVATE-ROUTE','headers':{'Authorization':'PRIVATE'}}]
         def which(binary):
             calls.append(binary)
             return '/fixture/' + binary if binary in ('qoderclicn', 'node') else None
-        with patch.object(broker.shutil, 'which', side_effect=which), patch.object(broker.subprocess, 'run', return_value=self.result('1.1.58')) as run:
-            status = broker.setup_status('qoder')
+        with tempfile.TemporaryDirectory() as directory:
+            root=pathlib.Path(directory); package=root/'node_modules'/'@qodercn-ai'/'qodercn-agent-sdk'/'package.json'
+            package.parent.mkdir(parents=True); package.write_text('{}')
+            with patch.object(broker,'ROOT',root), patch.object(broker.shutil,'which',side_effect=which), \
+                 patch.object(broker.subprocess,'run',return_value=self.result('1.1.58')) as run, \
+                 patch.object(broker,'qoder_catalog',return_value=catalog) as models:
+                status = broker.setup_status('qoder')
         self.assertTrue(status['installed'])
         self.assertNotIn('omp', calls)
-        self.assertEqual(run.call_count, 1)
-        self.assertEqual(status['credentialCheck'], 'unverified')
-        self.assertEqual(status['modelCheck'], 'runtime-default')
+        run.assert_called_once_with(['/fixture/qoderclicn','--version'],capture_output=True,text=True,timeout=10)
+        models.assert_called_once_with('qoder',live=True)
+        self.assertEqual(status['credentialCheck'], 'present')
+        self.assertEqual(status['modelCheck'], 'configured')
+        self.assertEqual(status['models'], [{'id':'qoder-pro','provider':'vendor','name':'Qoder Pro',
+            'thinking':['low','high'],'defaultThinking':'high','isDefault':True}])
+        self.assertNotIn('PRIVATE',json.dumps(status))
 
     def test_omp_rechecks_catalog_and_returns_no_credentials(self):
         catalog = [{'id':'fixture', 'provider':'test', 'name':'Fixture', 'apiKey':'PRIVATE', 'headers':{'Authorization':'PRIVATE'}}]
@@ -2454,18 +2688,39 @@ class SetupTests(unittest.TestCase):
             run.assert_not_called()
 
     def test_qoderintl_uses_qodercli_and_intl_sdk(self):
-        calls = []
+        calls = []; catalog=[{'id':'intl-pro','provider':'intl','name':'Intl Pro','thinking':[]}]
         def which(binary):
             calls.append(binary)
             return '/fixture/' + binary if binary in ('qodercli', 'node') else None
-        with patch.object(broker.shutil, 'which', side_effect=which), patch.object(broker.subprocess, 'run', return_value=self.result('1.1.67')) as run:
-            status = broker.setup_status('qoderintl')
+        with tempfile.TemporaryDirectory() as directory:
+            root=pathlib.Path(directory); package=root/'node_modules'/'@qoder-ai'/'qoder-agent-sdk'/'package.json'
+            package.parent.mkdir(parents=True); package.write_text('{}')
+            with patch.object(broker,'ROOT',root), patch.object(broker.shutil,'which',side_effect=which), \
+                 patch.object(broker.subprocess,'run',return_value=self.result('1.1.67')) as run, \
+                 patch.object(broker,'qoder_catalog',return_value=catalog) as models:
+                status = broker.setup_status('qoderintl')
         self.assertTrue(status['installed'])
         self.assertEqual(run.call_count, 1)
         self.assertNotIn('qoderclicn', calls)
-        self.assertFalse(status['sdkInstalled'])
-        self.assertEqual(status['modelCheck'], 'runtime-default')
+        self.assertTrue(status['sdkInstalled'])
+        self.assertEqual(status['modelCheck'], 'configured')
+        self.assertEqual(status['credentialCheck'], 'present')
+        self.assertEqual(status['models'],catalog)
+        models.assert_called_once_with('qoderintl',live=True)
         self.assertEqual(broker.PERMISSION_DEFAULTS['qoderintl'], 'default')
+
+    def test_qoder_catalog_failure_reports_the_matching_login_command(self):
+        for provider, cli, sdk in [('qoder','qoderclicn','@qodercn-ai/qodercn-agent-sdk'),
+                                   ('qoderintl','qodercli','@qoder-ai/qoder-agent-sdk')]:
+            with self.subTest(provider=provider), tempfile.TemporaryDirectory() as directory:
+                root=pathlib.Path(directory); package=root/'node_modules'/sdk/'package.json'
+                package.parent.mkdir(parents=True); package.write_text('{}')
+                with patch.object(broker,'ROOT',root), patch.object(broker.shutil,'which',side_effect=lambda name:'/fixture/'+name), \
+                     patch.object(broker.subprocess,'run',return_value=self.result('1.0')), \
+                     patch.object(broker,'qoder_catalog',side_effect=ValueError('not logged in')):
+                    status=broker.setup_status(provider)
+                self.assertEqual((status['credentialCheck'],status['modelCheck']),('missing','missing'))
+                self.assertIn(cli + ' login',status['error'])
 
     def test_empty_models_and_failed_version_are_not_ready(self):
         with patch.object(broker.shutil, 'which', return_value='/fixture/omp'), patch.object(broker.subprocess, 'run', side_effect=[self.result('18.1.16'), self.result('[]')]):

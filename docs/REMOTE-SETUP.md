@@ -20,8 +20,9 @@ controls. This takes inspiration from [Codex's SSH connection workflow](https://
   token is still read over SSH and retained only in memory.
 - Setup connections do not load drafts or outboxes. A probe cannot drain an
   existing user's queued messages or replace their selected conversation.
-- Checking a service does not invoke model inference. Qoder authentication and
-  dsh's model handshake are explicitly reported as first-message/session checks.
+- Checking a service does not invoke model inference. Qoder setup reads the
+  selected regional SDK's model catalog to verify CLI login without sending a
+  prompt. dsh's model handshake remains a first-session check.
 - Failed/cancelled checks cannot save a host or open a task. Remote installation
   and service startup are explicit buttons; cancellation does not undo them.
 - Kimi detection first uses the non-interactive SSH `PATH`, then checks

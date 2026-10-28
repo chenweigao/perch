@@ -409,7 +409,15 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             }
         }
         guard body == nil else { throw WorkbenchError("隔离验收不执行写请求：\(path)") }
-        if path == "/models" { return Data(#"{"models":[]}"#.utf8) }
+        if path == "/models" {
+            let models: [[String: Any]] = [
+                ["agent": "qoder", "provider": "qoder-cn", "id": "qoder-cn-pro", "name": "Qoder CN Pro",
+                 "thinking": ["low", "medium", "high"], "defaultThinking": "medium", "reasoning": true],
+                ["agent": "qoderintl", "provider": "qoder-global", "id": "qoder-global-pro", "name": "Qoder Global Pro",
+                 "thinking": ["off", "high"], "defaultThinking": "high", "reasoning": true]
+            ]
+            return try JSONSerialization.data(withJSONObject: ["models": models])
+        }
         let id = path.split(separator: "?")[0].replacingOccurrences(of: "/sessions/", with: "")
         guard path.hasPrefix("/sessions/"), let data = snapshots[id] else {
             throw WorkbenchError("隔离验收仅预置会话 0000–0007：\(path)")

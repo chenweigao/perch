@@ -382,7 +382,12 @@ struct NativeModelControls: View {
     let connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
-    private var editable: Bool { [.omp, .dsh, .codex].contains(snapshot.provider) }
+    private var editable: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
+    private var currentModel: String { session?.model ?? snapshot.model }
+    private var defaultModelAction: (() -> Void)? {
+        guard [.qoder, .qoderintl].contains(snapshot.provider) else { return nil }
+        return { connection.useDefaultModel(for: snapshot.id) }
+    }
     private var disabledReason: String? {
         if !connection.online { return L("连接恢复后可修改设置。") }
         if connection.configuringSessions.contains(snapshot.id) { return L("正在更新模型设置…") }
@@ -392,12 +397,15 @@ struct NativeModelControls: View {
 
     var body: some View {
         ComposerModelPicker(models: connection.models(for: snapshot.provider),
-                            modelID: session?.model ?? snapshot.model,
+                            modelID: currentModel,
                             thinking: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
                             disabledReason: disabledReason,
                             unavailableReason: editable ? nil : L("此 Agent 暂不支持模型与思考设置。"),
                             catalogError: connection.modelsError,
                             onRefreshCatalog: { await connection.loadModels() },
+                            layout: .split,
+                            usesDefaultModel: currentModel.isEmpty,
+                            onUseDefaultModel: defaultModelAction,
                             scope: L("下一轮生效"),
                             onSelectModel: { connection.setModel($0, for: snapshot.id) },
                             onSelectThinking: { connection.setThinking($0, for: snapshot.id) })

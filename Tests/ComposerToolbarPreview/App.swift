@@ -26,7 +26,7 @@ private struct ToolbarPreview: View {
     @State private var stopCount = 0
     @State private var sendCount = 0
     @State private var lastPayload = "Not sent"
-    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .dsh, .codex, .claude]
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude]
     private var selectedProvider: SessionKind { SessionKind(rawValue: permissionProvider) ?? .kimi }
     private var permissionCapability: PermissionCapability {
         PermissionCatalog.capability(for: selectedProvider, selected: permissionMode)
@@ -91,10 +91,13 @@ private struct ToolbarPreview: View {
                     ComposerAddButton(supportsFiles: true) {}
                     ComposerModelPicker(models: emptyModels ? [] : models, modelID: model, thinking: effort,
                                         disabledReason: disabledReason,
-                                        unavailableReason: [.qoder, .claude].contains(selectedProvider) ? L("此 Agent 暂不支持模型与思考设置。") : nil,
+                                        unavailableReason: selectedProvider == .claude ? L("此 Agent 暂不支持模型与思考设置。") : nil,
                                         sessionModel: "fixture/reasoner", usesSessionModel: usesSessionModel, onUseSessionModel: {
                                             usesSessionModel = true; model = "fixture/reasoner"; effort = models[0].resolve(effort)
-                                        }, scope: L(selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
+                                        }, usesDefaultModel: [.qoder, .qoderintl].contains(selectedProvider) && model.isEmpty,
+                                        onUseDefaultModel: [.qoder, .qoderintl].contains(selectedProvider) ? {
+                                            usesSessionModel = false; model = ""; effort = nil
+                                        } : nil, scope: L(selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
                                         onSelectModel: { usesSessionModel = false; model = $0.id; effort = $0.resolve(effort) },
                                         onSelectThinking: { effort = $0 })
                         .background(ToolbarButtonProbe())
@@ -102,7 +105,7 @@ private struct ToolbarPreview: View {
                             ToolbarProbe.selection = value
                         }
                     PermissionPicker(provider: selectedProvider, capability: permissionCapability,
-                                     disabled: offline, allowsSelection: [.kimi, .qoder, .claude].contains(selectedProvider)) {
+                                     disabled: offline, allowsSelection: [.kimi, .qoder, .qoderintl, .claude].contains(selectedProvider)) {
                         permissionMode = $0
                     }.background(ToolbarButtonProbe(id: "permission"))
                     Menu("模板") { Button("示例模板") {} }

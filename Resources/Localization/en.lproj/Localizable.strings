@@ -456,7 +456,9 @@
 "Kimi 端口须为 1–65535。" = "The Kimi port must be between 1 and 65535.";
 "OMP 未返回模型。请在远端配置模型后重试。" = "OMP returned no models. Configure a model on the remote machine and retry.";
 "Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。" = "Perch installs the selected agent's bridge components: Qoder downloads its SDK and DeepSeek installs its runtime; Codex uses the existing remote CLI. Existing tasks keep running.";
-"Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Qoder uses the remote CLI login and default model. The SDK verifies authentication with the first message.";
+"Qoder CLI 尚未登录。请在远端完成登录后重试。" = "Qoder CLI is not signed in. Sign in on the remote machine, then retry.";
+"Qoder SDK 未返回模型。请检查远端 Qoder 安装与登录。" = "Qoder SDK returned no models. Check the remote Qoder installation and sign-in.";
+"已确认 Qoder 登录并读取 SDK 模型目录；检查未发送任务。" = "Qoder sign-in and the SDK model catalog were verified; no task was sent.";
 "Claude Code 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Claude Code uses the remote CLI login and default model. The SDK verifies authentication with the first message.";
 "SSH 别名或 user@host" = "SSH alias or user@host";
 "SSH 已连接，但未能读取远端主目录。请检查远端 shell 的启动输出。" = "SSH connected, but the home directory could not be read. Check the remote shell startup output.";
