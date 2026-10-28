@@ -272,12 +272,12 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.isBordered = false
             } else if id == titleID {
                 item.label = L("当前会话")
-                item.view = headerHost
+                installHostedView(headerHost, in: item)
                 item.isBordered = false
                 item.visibilityPriority = .high
             } else if id == actionsID {
                 item.label = L("会话操作")
-                item.view = actionsHost
+                installHostedView(actionsHost, in: item)
                 item.isBordered = false
                 item.visibilityPriority = .user
             }
@@ -286,6 +286,18 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             }
             return item
         }
+        private func installHostedView(_ host: NSView, in item: NSToolbarItem) {
+            // Return a plain view while NSToolbar expands its placeholder items.
+            // Attaching NSHostingView here can synchronously reenter WindowGroup
+            // and invalidate AppKit's current-item indices during a cold launch.
+            // Mount SwiftUI after the delegate/placeholder transaction returns.
+            item.view = NSView(frame: .zero)
+            DispatchQueue.main.async { [weak item, weak host] in
+                guard let item, let host else { return }
+                item.view = host
+            }
+        }
+
         /// Only the title follows the pane. The system keeps actions at the
         /// window's trailing edge, independent of inspector visibility.
         func alignToolbar(leading: CGFloat) {
