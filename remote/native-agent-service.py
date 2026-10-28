@@ -697,7 +697,8 @@ class Session:
             'permission':permission_capability(self.state),
             'turnId':self.state.get('turnId'), 'turnState':self.state.get('turnState'),
             'steer':self.state['provider'] in ('omp','codex'),
-            'runningSubagents':sum(1 for x in self.state.get('subagentRoster') or [] if x.get('status') in SUBAGENT_LIVE)}
+            'runningSubagents':sum(1 for x in self.state.get('subagentRoster') or [] if x.get('status') in SUBAGENT_LIVE),
+            'qoderRequestedModel':qoder_requested_model(self.state) if self.state['provider'] in QODER_SDK else None}
     def active_receipt(self):
         turn = self.state.get('turnId')
         direct = self.state.get('requests',{}).get(turn)

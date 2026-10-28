@@ -45,6 +45,10 @@ func checkNativeAgents() throws {
     precondition(restored.starred == refs)
     let codex = try NativeAgentWire.decode(NativeAgentSession.self, from: Data(#"{"id":"0199-thread","provider":"codex","title":"Codex","cwd":"/tmp","busy":false,"archived":false,"updated":0,"completed":0,"pending":0,"model":"gpt-6-astra","error":null}"#.utf8))
     precondition(codex.id == "0199-thread" && codex.provider == .codex)
+    let qoder = try NativeAgentWire.decode(NativeAgentSession.self, from: Data(#"{"id":"qoder-default","provider":"qoder","title":"Qoder","cwd":"/tmp","busy":false,"archived":false,"updated":0,"completed":0,"pending":0,"model":"resolved-default","qoderRequestedModel":"","error":null}"#.utf8))
+    precondition(qoder.model == "resolved-default" && qoder.qoderRequestedModel == "")
+    let qoderSnapshot = try NativeAgentWire.decode(NativeSnapshotResponse.self, from: Data(#"{"id":"qoder-default","provider":"qoder","title":"Qoder","cwd":"/tmp","busy":false,"revision":1,"completed":0,"model":"resolved-default","qoderRequestedModel":"","messages":[],"interactions":[]}"#.utf8))
+    precondition(qoderSnapshot.snapshot?.model == "resolved-default" && qoderSnapshot.snapshot?.qoderRequestedModel == "")
 
     let expectedPermissions: [(SessionKind, [String], String, PermissionChangeScope)] = [
         (.kimi, ["manual", "yolo", "auto"], "manual", .nextMessage),

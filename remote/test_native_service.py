@@ -1056,6 +1056,8 @@ class QoderHandlerContractTests(unittest.TestCase):
         session.event({'type':'system','subtype':'init','session_id':'qoder-session','model':'resolved-default'})
         self.assertEqual(session.state['model'],'resolved-default')
         self.assertEqual(session.state['qoderRequestedModel'],'')
+        self.assertEqual(session.summary()['qoderRequestedModel'],'')
+        self.assertEqual(session.snapshot()['qoderRequestedModel'],'')
         session.state['busy']=False
         session.prompt({'text':'second','requestId':'default-second'})
         self.assertEqual([item['model'] for item in sent],['',''])

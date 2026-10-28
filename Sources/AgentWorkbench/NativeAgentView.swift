@@ -383,7 +383,9 @@ struct NativeModelControls: View {
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
     private var editable: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
-    private var currentModel: String { session?.model ?? snapshot.model }
+    private var currentModel: String {
+        session?.qoderRequestedModel ?? snapshot.qoderRequestedModel ?? session?.model ?? snapshot.model
+    }
     private var defaultModelAction: (() -> Void)? {
         guard [.qoder, .qoderintl].contains(snapshot.provider) else { return nil }
         return { connection.useDefaultModel(for: snapshot.id) }
