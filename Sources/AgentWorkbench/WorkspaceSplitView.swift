@@ -659,6 +659,10 @@ final class WorkbenchSplitController: NSSplitViewController {
     private var inspectorCard: WorkbenchContentCardView?
     private var inspectorShadowView: WorkbenchPanelShadowView?
     private var applyingLayout = false
+    /// Installing the toolbar changes the window corner and lays the window out
+    /// while AppKit materializes toolbar items; updating hosted panels then can
+    /// flush SwiftUI into those items mid-load. The pass after install applies it.
+    private var installingToolbar = false
     private(set) var isSidebarOverlayingContent = false
     private(set) var isInspectorOverlayingContent = false
     /// Too narrow for sidebar, a 600 pt card and the inspector, yet wide enough
@@ -869,7 +873,9 @@ final class WorkbenchSplitController: NSSplitViewController {
             // AppKit materializes hosted toolbar items on that same window.
             if window.toolbar !== self.workspaceToolbar {
                 self.workspaceToolbarInstalled = false
+                self.installingToolbar = true
                 window.toolbar = self.workspaceToolbar
+                self.installingToolbar = false
                 self.workspaceToolbarInstalled = true
             }
             self.windowBackdropView?.updateCornerRadius()
@@ -1012,6 +1018,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     /// The window corner changes with the toolbar style and full screen; every
     /// frame panel follows it so all of them stay concentric with the window.
     private func updatePanelCornerRadius() {
+        guard !installingToolbar else { return }
         let corner = view.window.map(WorkbenchWindowBackdropView.windowCornerRadius(of:)) ?? 0
         let radius = WorkbenchTheme.Radius.framePanel(windowCorner: corner, inset: WorkspaceLayoutMetrics.frameInset)
         guard abs(radius - panelCornerRadius) > 0.25 else { return }
