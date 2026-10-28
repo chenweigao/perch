@@ -1007,11 +1007,8 @@ final class WorkbenchSplitController: NSSplitViewController {
         if let canvas = detailCanvasView {
             // Insets above describe the new layout; the card's frame still
             // describes the previous one until AppKit lays out its descendants.
-            // A sidebar overlaying the card owns the titlebar above it, where its
-            // search and new-session buttons sit: the title starts past it.
             let canvasX = canvas.convert(canvas.bounds, to: view).minX
-            let titleLeading = sidebarShown ? avoidance : WorkspaceLayoutMetrics.frameInset
-            alignToolbar?(canvasX + titleLeading + WorkbenchTheme.Reading.inset)
+            alignToolbar?(canvasX + leading + WorkbenchTheme.Reading.inset)
         }
     }
 
