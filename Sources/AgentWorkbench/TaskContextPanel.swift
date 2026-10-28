@@ -72,7 +72,7 @@ struct TaskContextButton: View {
         Button { model.taskContextWindow.togglePage(.task, model: model) } label: {
             WorkbenchToolbarSymbol(name: "checklist")
                 .foregroundStyle(open ? WorkbenchTheme.accent : .secondary)
-        }.buttonStyle(.plain).help("任务面板").accessibilityLabel("任务面板")
+        }.buttonStyle(WorkbenchToolbarButtonStyle(selected: open)).help("任务面板").accessibilityLabel("任务面板")
             .accessibilityValue(open ? "已展开" : "已收起")
     }
 }

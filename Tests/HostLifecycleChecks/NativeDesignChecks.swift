@@ -306,6 +306,19 @@ import WorkbenchCore
         "title": fromTop(title), "actions": fromTop(toolbarActions),
         "sidebar": fromTop(split.floatingSidebarView), "conversation": fromTop(card),
     ]
+    let actualTitlebarHeight = window.frame.height - window.contentLayoutRect.height
+    precondition(window.toolbarStyle == .unifiedCompact && actualTitlebarHeight <= 44,
+                 "Use the native compact toolbar rather than sliding content underneath a tall toolbar: \(actualTitlebarHeight)")
+    let liveCardFrame = card.convert(card.bounds, to: nil)
+    let liveCardTop = window.frame.height - liveCardFrame.maxY
+    precondition(abs(liveCardTop - 44) < 1 && liveCardTop >= actualTitlebarHeight &&
+                 abs(liveCardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1,
+                 "The reading sheet must start at 44 pt with a clear toolbar and a balanced bottom gutter")
+    let closeFrame = fromTop(window.standardWindowButton(.closeButton))
+    for control in [title, toolbarActions, toggle].compactMap({ $0 }) {
+        precondition(abs((fromTop(control)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,
+                     "Title, sidebar toggle and actions must share the window controls' vertical center")
+    }
     print("Native window chrome: \(chrome)")
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         func rectangle(_ rect: NSRect) -> [String: Double] {
