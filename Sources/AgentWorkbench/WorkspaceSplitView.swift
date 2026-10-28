@@ -3,9 +3,9 @@ import SwiftUI
 import WorkbenchCore
 
 enum WorkbenchChrome {
-    /// Measured height of the hidden-title-bar window with the unified toolbar.
-    static let headerHeight: CGFloat = 52
-    static let symbolSize: CGFloat = 15
+    /// Compact native toolbar, with a small gutter above the reading sheet.
+    static let headerHeight: CGFloat = 40
+    static let symbolSize: CGFloat = 14
     static let controlSize: CGFloat = 32
     static let controlSpacing: CGFloat = 16
     static let labelSpacing: CGFloat = 8
@@ -37,6 +37,30 @@ struct WorkbenchToolbarSymbol: View {
             .imageScale(.medium)
             .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize)
             .contentShape(Rectangle())
+    }
+}
+
+/// One quiet state treatment inside the shared toolbar glass, with no extra elevation.
+struct WorkbenchToolbarButtonStyle: ButtonStyle {
+    var selected = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        ToolbarButton(configuration: configuration, selected: selected)
+    }
+
+    private struct ToolbarButton: View {
+        let configuration: ButtonStyleConfiguration
+        let selected: Bool
+        @State private var hovered = false
+
+        var body: some View {
+            configuration.label.background {
+                RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous)
+                    .fill(Color.primary.opacity(configuration.isPressed ? WorkbenchTheme.Fill.pressed
+                        : selected ? WorkbenchTheme.Fill.selected : hovered ? WorkbenchTheme.Fill.hover : 0))
+                    .padding(2)
+            }.onHover { hovered = $0 }
+        }
     }
 }
 
@@ -840,7 +864,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
         window.styleMask.insert(.fullSizeContentView)
-        window.toolbarStyle = .unified
+        window.toolbarStyle = .unifiedCompact
         if appAppearance != .system { applyAppearance() }
         // The toolbar style sets the window's corner; the glass follows it.
         windowBackdropView?.updateCornerRadius()
