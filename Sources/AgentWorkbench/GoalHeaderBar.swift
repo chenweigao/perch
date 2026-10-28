@@ -50,6 +50,8 @@ struct GoalHeaderBar: View {
                             .fixedSize().help("目标操作")
                             .accessibilityLabel(L("目标操作"))
                     }.disabled(!controlsEnabled || isStale)
+                        // With or without the continuation button, one row height.
+                        .frame(minHeight: max(20, (WorkbenchTheme.Reading.captionSize + 8).rounded()))
                 }.font(.system(size: WorkbenchTheme.Reading.captionSize)).fixedSize(horizontal: true, vertical: false)
             }
             if expanded {
@@ -82,6 +84,7 @@ struct GoalHeaderBar: View {
                 Label("待同步", systemImage: "arrow.clockwise")
             }.buttonStyle(.borderless).foregroundStyle(.secondary)
                 .disabled(!controlsEnabled).help("重新同步目标")
+                .frame(minHeight: Self.statusHeight)
         } else {
             HStack(spacing: 6) {
                 if isRunning {
@@ -95,7 +98,10 @@ struct GoalHeaderBar: View {
                 case "blocked": Label("需处理", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
                 default: Label("状态未知", systemImage: "questionmark.circle").foregroundStyle(.secondary)
                 }
-            }.frame(minHeight: 16)
+            }.frame(minHeight: Self.statusHeight)
         }
     }
+    /// Taller than any status label at the current caption size, so a spinner,
+    /// a symbol or a label never changes the header's height.
+    private static var statusHeight: CGFloat { max(16, (WorkbenchTheme.Reading.captionSize + 6).rounded()) }
 }
