@@ -345,7 +345,11 @@ public sealed class MainViewModelTests
                 return """{"ok":true}""";
             }
             if (SnapshotError is not null)
-                return Fixture("session-snapshot-idle.json").Replace("\"error\":null", "\"error\":\"" + SnapshotError + "\"");
+            {
+                var snapshot = System.Text.Json.Nodes.JsonNode.Parse(Fixture("session-snapshot-idle.json"))!;
+                snapshot["error"] = SnapshotError;
+                return snapshot.ToJsonString();
+            }
             return Fixture("session-snapshot-idle.json");
         }
 
