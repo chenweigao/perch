@@ -79,7 +79,7 @@ public sealed class MainViewModel : Observable, ISessionObserver
     public Visibility OfflineVisibility => IsOnline ? Visibility.Collapsed : Visibility.Visible;
 
     /// Set by the window from the PasswordBox (which cannot be data-bound for security).
-    /// Held only in memory for the duration of a connect; never persisted or logged.
+    /// Held only in memory for connection attempts; never persisted or logged.
     public System.Security.SecureString? SecureToken { get; set; }
 
     // --- Session state (bound to the main panel) ---
@@ -240,7 +240,6 @@ public sealed class MainViewModel : Observable, ISessionObserver
         Messages.Clear();
         Interactions.Clear();
         SelectedSession = null;
-        SecureToken = null;
         OnPropertyChanged(nameof(HasInteractions));
         OnPropertyChanged(nameof(CanSend));
         OnPropertyChanged(nameof(CanCancel));
@@ -337,6 +336,7 @@ public sealed class MainViewModel : Observable, ISessionObserver
         {
             // Set the backing field to avoid re-entering controller.Select.
             Set(ref _selectedSession, row);
+            OnPropertyChanged(nameof(SelectedSession));
             foreach (var each in Sessions) each.IsSelected = ReferenceEquals(each, row);
         }
         RebuildTranscript();
@@ -372,7 +372,10 @@ public sealed class MainViewModel : Observable, ISessionObserver
         var selectedId = controller.SelectedId;
         var selectedRow = selectedId is null ? null : Sessions.FirstOrDefault(s => s.Id == selectedId);
         if (!ReferenceEquals(selectedRow, _selectedSession))
+        {
             Set(ref _selectedSession, selectedRow);
+            OnPropertyChanged(nameof(SelectedSession));
+        }
         foreach (var row in Sessions) row.IsSelected = ReferenceEquals(row, selectedRow);
     }
 

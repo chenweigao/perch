@@ -155,6 +155,45 @@ public sealed class MainViewModelTests
     });
 
     [Fact]
+    public Task CatalogRefreshRestoresSelectionWithABindingNotification() => OnDispatcher(async () =>
+    {
+        await using var scenario = new Scenario();
+        await scenario.ConnectAsync();
+        var view = scenario.View;
+        view.SelectedSession = view.Sessions.Single(s => s.Id == "ses-idle");
+        var notifications = 0;
+        view.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(view.SelectedSession)) notifications++;
+        };
+        view.Sessions.CollectionChanged += (_, args) =>
+        {
+            if (args.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                view.SelectedSession = null;
+        };
+
+        view.OnCatalogChanged();
+
+        Assert.Equal("ses-idle", view.SelectedSession?.Id);
+        Assert.True(notifications > 0);
+        Assert.True(view.Sessions.Single(s => s.Id == "ses-idle").IsSelected);
+    });
+
+    [Fact]
+    public Task SecureTokenRemainsAvailableForRetryAfterDisconnect() => OnDispatcher(async () =>
+    {
+        await using var scenario = new Scenario();
+        await scenario.ConnectAsync();
+        var view = scenario.View;
+        await view.DisconnectAsync();
+
+        await view.ConnectAsync();
+
+        Assert.True(view.IsOnline);
+        Assert.Equal(2, scenario.Bridges.Count);
+    });
+
+    [Fact]
     public Task DisconnectCancelsAnInProgressConnection() => OnDispatcher(async () =>
     {
         await using var scenario = new Scenario(probeReady: false);
