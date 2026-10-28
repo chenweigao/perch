@@ -43,7 +43,7 @@ struct NewTaskView: View {
         availableModels.first { $0.id == agentModel }
     }
     private var supportsModelCatalog: Bool {
-        [.kimi, .omp, .dsh, .codex].contains(provider)
+        [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex].contains(provider)
     }
     private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
     private var modelCatalogID: String {
@@ -226,7 +226,7 @@ struct NewTaskView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
+                if provider != .kimi && supportsModelCatalog, let modelsError = native.modelsError {
                     Text(modelsError).font(.subheadline).foregroundStyle(.orange)
                 }
                 connectionStatus
@@ -292,9 +292,9 @@ struct NewTaskView: View {
                 if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) }
             }
             .task(id: catalogID) {
-                // A native catalog is now needed before any session exists. Qoder
-                // reports none and Kimi reads its own connection.
-                guard native.online && (provider == .omp || provider == .dsh || provider == .codex) else { return }
+                // Native catalogs are needed before a session exists; Kimi reads its
+                // own connection while the remaining catalog-backed agents use the bridge.
+                guard native.online && [.omp, .qoder, .qoderintl, .dsh, .codex].contains(provider) else { return }
                 await native.loadModels()
                 guard !Task.isCancelled else { return }
                 if provider == .codex { selectCodexModel() }

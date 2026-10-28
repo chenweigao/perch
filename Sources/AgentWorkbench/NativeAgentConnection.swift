@@ -43,9 +43,9 @@ final class NativeAgentConnection {
     private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
     func historyEntries(for id: String) -> [String] { history[id] ?? [] }
     var stops = StopController()
-    /// The bridge's combined catalog: OMP answers `omp models`, Codex answers
-    /// `model/list`, and dsh contributes its ACP config options after each handshake.
-    /// Qoder keeps an empty list rather than being offered models it cannot switch to.
+    /// The bridge's combined catalog: OMP answers `omp models`, Qoder uses each
+    /// regional SDK daemon, Codex answers `model/list`, and dsh contributes its ACP
+    /// config options after each handshake.
     private(set) var models: [AgentModel] = []
     /// Reading the catalog is asked for by the conversation header and by the
     /// new-task sheet, so its failure belongs to whichever control is showing a
@@ -675,7 +675,6 @@ final class NativeAgentConnection {
         } catch { modelsError = error.localizedDescription }
     }
     /// The catalog is combined, so a runtime is only offered the models that claim it.
-    /// Qoder's SDK reports no catalog at all and stays with a typed model id.
     func models(for kind: SessionKind) -> [AgentModel] {
         ModelSelectionCatalog.forAgent(kind, in: models)
     }
@@ -697,6 +696,14 @@ final class NativeAgentConnection {
                     try await action(id, "thinking", ["level": .string(resolved.rawValue)])
                 }
             } catch { actionError = error.localizedDescription }
+        }
+    }
+    func useDefaultModel(for id: String) {
+        guard configuringSessions.insert(id).inserted else { return }
+        Task {
+            defer { configuringSessions.remove(id) }
+            do { try await action(id, "model", ["provider": .string(""), "model": .string("")]) }
+            catch { actionError = error.localizedDescription }
         }
     }
     func setThinking(_ level: ThinkingLevel, for id: String) {

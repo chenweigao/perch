@@ -88,7 +88,7 @@ private final class TransportFixture {
             let id = parts[1], mode = body["mode"].string!
             guard let raw = sessions[id]?["provider"] as? String,
                   let provider = SessionKind(rawValue: raw),
-                  [.qoder, .claude].contains(provider) else {
+                  [.qoder, .qoderintl, .claude].contains(provider) else {
                 throw WorkbenchError("permission is fixed")
             }
             sessions[id]?["permission"] = Self.permission(provider, mode)
@@ -409,13 +409,21 @@ struct ConnectionChecks {
         let fixture = TransportFixture()
         fixture.modelsCatalog = [
             ["agent": "omp", "provider": "openai-codex", "id": "gpt-5.4-mini", "name": "GPT-5.4 mini"],
+            ["agent": "qoder", "provider": "qoder-cn", "id": "qoder-cn-pro", "name": "Qoder CN Pro",
+             "thinking": ["low", "medium", "high"], "defaultThinking": "medium", "reasoning": true],
+            ["agent": "qoderintl", "provider": "qoder-global", "id": "qoder-global-pro", "name": "Qoder Global Pro",
+             "thinking": ["off", "high"], "defaultThinking": "high", "reasoning": true],
             ["agent": "dsh", "provider": "deepseek-official", "id": "deepseek-v4-flash", "name": "DeepSeek-V4-Flash"]]
         let client = NativeAgentConnection(host: SSHHost(name: "Catalog", destination: "fixture"), transport: fixture.request)
         await client.loadModels()
         precondition(fixture.modelRequests == 1)
         precondition(client.models(for: .omp).map(\.id) == ["gpt-5.4-mini"])
         precondition(client.models(for: .dsh).map(\.id) == ["deepseek-v4-flash"])
-        precondition(client.models(for: .qoder).isEmpty, "Qoder reports no catalog and must not borrow another runtime's")
+        let qoderCN = client.models(for: .qoder)
+        precondition(qoderCN.map(\.id) == ["qoder-cn-pro"] && qoderCN[0].defaultThinking == .medium)
+        precondition(qoderCN[0].thinking == [.low, .medium, .high] && qoderCN[0].resolve(.off) == .medium)
+        precondition(client.models(for: .qoderintl).map(\.id) == ["qoder-global-pro"])
+        precondition(client.models(for: .codex).isEmpty, "Qoder models must not leak into Codex")
         precondition(client.models(for: .claude).isEmpty, "Claude reports no catalog and must not borrow another runtime's")
         precondition(client.modelsError == nil && client.actionError == nil)
         // A failed read keeps the last good list and reports to the model control,
@@ -423,7 +431,7 @@ struct ConnectionChecks {
         fixture.failModels = true
         await client.loadModels()
         precondition(client.modelsError != nil && client.actionError == nil)
-        precondition(client.models(for: .omp).map(\.id) == ["gpt-5.4-mini"], "A failed catalog read must not empty the picker")
+        precondition(client.models(for: .qoder).map(\.id) == ["qoder-cn-pro"], "A failed catalog read must not empty the picker")
         // A bridge that predates tagging still lists everything it knows.
         fixture.failModels = false
         fixture.modelsCatalog = [["provider": "bailian", "id": "kimi-k3", "name": "Kimi K3"]]
@@ -431,7 +439,7 @@ struct ConnectionChecks {
         precondition(client.modelsError == nil)
         precondition(client.models(for: .omp).map(\.id) == ["kimi-k3"] && client.models(for: .dsh).map(\.id) == ["kimi-k3"])
         client.disconnect()
-        print("PASS: native model catalog split per runtime, last good list kept on failure, untagged bridge tolerated")
+        print("PASS: native model catalog split across both Qoder regions and other runtimes, last good list kept on failure, untagged bridge tolerated")
     }
 
     @MainActor
@@ -568,9 +576,16 @@ struct ConnectionChecks {
     static func checkQoderPermission() async throws {
         let fixture = TransportFixture()
         let client = NativeAgentConnection(host: SSHHost(name: "Qoder", destination: "fixture"), transport: fixture.request)
-        let session = try await client.create(provider: .qoder, cwd: "/fixture", model: "", permissionMode: "acceptEdits")
+        let session = try await client.create(provider: .qoder, cwd: "/fixture", model: "qoder-cn-pro",
+                                              thinking: .high, permissionMode: "acceptEdits")
         precondition(session.permission?.selected == "acceptEdits" && session.permission?.scope == .nextTurn)
-        precondition(fixture.creates.first?.2 == "acceptEdits")
+        precondition(fixture.creates.first?.1 == "qoder-cn-pro" && fixture.creates.first?.2 == "acceptEdits"
+                     && fixture.creates.first?.3 == "high")
+        client.useDefaultModel(for: session.id)
+        await settle { !client.configuringSessions.contains(session.id) && fixture.modelChanges.count == 1 }
+        precondition(fixture.modelChanges[0].1.isEmpty && fixture.modelChanges[0].2.isEmpty)
+        precondition(fixture.thinkingChanges.isEmpty && client.sessions.first { $0.id == session.id }?.model == "",
+                     "Restoring the Qoder SDK default must clear the model without sending a stale effort")
         fixture.sessions[session.id]?["busy"] = true
         try await client.refresh()
         client.setPermission("bypassPermissions", for: session.id)
@@ -583,7 +598,7 @@ struct ConnectionChecks {
         precondition(client.sessions.first { $0.id == session.id }?.permission?.selected == "bypassPermissions",
                      "Qoder permission changes must be saved while the current turn is busy")
         client.disconnect()
-        print("PASS: Qoder permission selection applies to the next turn while busy")
+        print("PASS: Qoder SDK-default model restoration and next-turn permission selection")
     }
 
     @MainActor

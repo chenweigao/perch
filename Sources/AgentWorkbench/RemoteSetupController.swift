@@ -344,7 +344,18 @@ final class RemoteSetupController: ObservableObject {
                 mark("service", .needsAction); failedCheck = "service"
                 throw WorkbenchError(L("缺少 Qoder SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。"))
             }
-            mark("models", .information, L("Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。"))
+            guard status["credentialCheck"].string == "present" else {
+                throw WorkbenchError(L("Qoder CLI 尚未登录。请在远端完成登录后重试。"))
+            }
+            let entries = ModelSelectionCatalog.parseOMP(status["models"])
+            models = entries.map { ModelOption(id: $0.id, provider: $0.provider, name: $0.name) }
+            guard !models.isEmpty else { throw WorkbenchError(L("Qoder SDK 未返回模型。请检查远端 Qoder 安装与登录。")) }
+            if !models.contains(where: { $0.id == modelID }) {
+                let defaultID = status["models"].array.first { $0["isDefault"] == .bool(true) }?["id"].string
+                modelID = defaultID.flatMap { value in models.first(where: { $0.id == value })?.id }
+                    ?? models.first?.id ?? ""
+            }
+            mark("models", .passed, L("已确认 Qoder 登录并读取 SDK 模型目录；检查未发送任务。"))
         case .claude:
             guard status["sdkInstalled"] == .bool(true), status["nodeInstalled"] == .bool(true) else {
                 mark("service", .needsAction); failedCheck = "service"

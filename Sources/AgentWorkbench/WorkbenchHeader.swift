@@ -1,7 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Title changes follow workspace selection, independently of streaming state.
+/// A quiet, text-only title follows selection independently of streaming state.
 struct WorkbenchHeader: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
@@ -11,9 +11,9 @@ struct WorkbenchHeader: View {
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
-        Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+        Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
             .lineLimit(1).truncationMode(.tail)
-            .frame(minWidth: 100, maxWidth: 440, alignment: .leading)
+            .frame(minWidth: 80, maxWidth: 360, alignment: .leading)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
@@ -49,7 +49,8 @@ struct WorkbenchHeaderActions: View {
                         Button { model.toggleFileViewer() } label: {
                             WorkbenchToolbarSymbol(name: "folder")
                                 .foregroundStyle(model.taskContextWindow.isShowing(.files) ? WorkbenchTheme.accent : .secondary)
-                        }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")
+                        }.buttonStyle(WorkbenchToolbarButtonStyle(selected: model.taskContextWindow.isShowing(.files)))
+                            .help("查看文件（只读）").accessibilityLabel("查看文件")
                             .accessibilityValue(model.taskContextWindow.isShowing(.files) ? "已展开" : "已收起")
                         TaskContextButton(model: model)
                     }

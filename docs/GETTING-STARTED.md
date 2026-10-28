@@ -33,14 +33,15 @@ Fresh installations have no preset host.
    If a fingerprint or login needs attention, the error explains the next step
    and opens Terminal on that host. Ports, jump hosts and keys remain in your
    system SSH configuration. Perch does not store SSH passwords or bypass host-key checks.
-2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, DeepSeek, Codex, Claude Code or Herdr terminals, then
+2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, Qoder, DeepSeek, Codex, Claude Code or Herdr terminals, then
    click **Check agent**. Each check displays its result and repair actions.
    CLI installation and login open in Terminal; the displayed install commands
    use the documented tested versions. Agent credentials stay on the server.
 3. **Start task.** Browse the remote folders or enter an absolute project path.
    Perch checks that the directory exists and is accessible. Select a configured
-   Kimi/OMP model, or keep the native agent's default. Continue into the task
-   composer with the machine, agent, directory and model already selected.
+   Kimi, OMP, Qoder or Codex model when its catalog is available, or keep the
+   runtime's default. Continue into the task composer with the machine, agent,
+   directory and model already selected.
    You can also save the setup and start later.
 
 For example, your SSH config can contain:
@@ -57,15 +58,16 @@ Host my-server
 | --- | --- | --- |
 | Kimi | Install CLI, sign in/configure models, start Kimi Web | CLI version, service authentication and protocol, configured models |
 | OMP | Install CLI, configure models, install bridge | CLI version, bridge health, fresh model catalog |
-| Qoder CN | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
-| Qoder | Install CLI (`curl -fsSL https://qoder.com/install | bash`), sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
+| Qoder CN | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health, CLI login and the Qoder CN SDK model catalog |
+| Qoder | Install CLI (`curl -fsSL https://qoder.com/install | bash`), sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health, CLI login and the international SDK model catalog |
 | Claude Code | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
 | DeepSeek | Install bridge with bundled dsh runtime; configure remote `DEEPSEEK_API_KEY` | Runtime version and credential presence in the bridge environment; models are read during the first ACP session handshake |
 | Herdr terminal | Install and start Herdr | Runtime and Unix socket forwarding; CLI agents inside terminals manage their own models |
 
-Checks do not send model prompts or prove successful model inference. Reading a
-model list is distinct from validating that model's credentials. The wizard shows
-these boundaries directly, including login checks deferred to the first message.
+Checks do not send model prompts or prove successful model inference. For Qoder,
+the selected regional SDK catalog confirms CLI login without running a model turn.
+Claude Code and provider-managed runtimes can still defer effective model access
+to the first message; the wizard shows these boundaries directly.
 
 The packaged app includes the first-party bridge installer. **Install / update
 bridge** installs only the selected adapter's dependencies: OMP needs Python 3,
@@ -105,7 +107,7 @@ deletion. Active work cannot be quick-archived. `⌘T` opens a remote terminal.
 
 Kimi and remote OMP send running-task messages as steering by default. Choose
 “Send next turn” from the adjacent menu to queue instead. Pending text and its
-delivery state remain visible in the conversation. Qoder CN / dsh / Claude Code queue for the
+delivery state remain visible in the conversation. Qoder CN / Qoder / dsh / Claude Code queue for the
 next turn. Update the remote native bridge to enable OMP steering.
 Local Agent setup discovers installed Kimi and Codex, connects their authenticated
 loopback services, and adds this Mac as a separate task environment. Other detected

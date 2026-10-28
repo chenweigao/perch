@@ -183,7 +183,7 @@ private struct WorkbenchDetail: View {
                         .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: 600, maxWidth: .infinity, maxHeight: .infinity)
+        }.frame(minWidth: WorkspaceLayoutMetrics.inspectorReadingMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
             .background(WorkbenchTheme.contentBackground)
     }
 

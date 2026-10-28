@@ -72,12 +72,12 @@ struct SessionRowChrome<Indicator: View>: View {
                     } else if updatedAt > 0 {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
-                                .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(.tertiary)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
                                 .lineLimit(1)
                         }
                     }
                 }.frame(width: 28, height: 18, alignment: .trailing).padding(.top, 1)
-            }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 10)
+            }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 8)
                 .frame(maxWidth: .infinity, minHeight: SidebarMetrics.sessionMinimumHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)

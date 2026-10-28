@@ -1619,15 +1619,23 @@ struct ReplyCode: View {
     let source: String
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                // NativeCodeCardView shows the same label once the reply settles.
-                Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                ReplyCopyButton(text: source, label: "复制代码")
-            }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
-            Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
-            ReplyCodeBody(source: source, language: language)
+            if CodeLineNumbers.count(in: source) == 1 {
+                HStack(spacing: 0) {
+                    ReplyCodeBody(source: source, language: language)
+                    ReplyCopyButton(text: source, label: "复制代码")
+                        .padding(.trailing, ReplyStyle.Code.inset)
+                }
+            } else {
+                HStack {
+                    // NativeCodeCardView shows the same label once the reply settles.
+                    Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    ReplyCopyButton(text: source, label: "复制代码")
+                }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
+                Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
+                ReplyCodeBody(source: source, language: language)
+            }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }

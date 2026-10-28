@@ -37,13 +37,13 @@ Mac 保持 400ms 调度周期；目录在有运行任务时每 2 秒、全空闲
 
 ## 模型选择
 
-桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤，因此 OMP 不会被提供 dsh 的路由，反之亦然。
+桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），Qoder CN 与 Qoder 分别来自各自 SDK daemon 的 `getModels({ fetchStrategy: "live" })`，dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤；两套 Qoder 目录分别标记 `qoder` 与 `qoderintl`，不会跨区域串用。
 
-新建任务面板里 Kimi、OMP、dsh 共用同一个可搜索下拉；模型输入框保留，既显示将要发送的 id，也接受目录里没有的 id（`omp models --no-extensions` 不含扩展提供的模型）。Qoder CN 与 Claude Code 的 SDK 不提供模型清单，因此只有输入框：Qoder 留空即 `Qwen3.8-Flash`，Claude Code 留空使用远端 CLI 默认模型。会话内模型和思考强度使用两个轻量入口。模型弹层提供搜索和按 Agent 过滤的列表；思考弹层只展示服务端声明的档位，名称保留英文，不猜测未声明的默认值。设置用于后续轮次。运行中、离线或正在更新设置时仍可打开查看，修改控件禁用并说明原因。Qoder 与 Claude Code 只读展示，并明确说明 Agent 尚未提供设置。未读取到模型能力与模型未提供档位分别提示。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。窄窗口下工具栏自动分为两行：主行保留附件、模型/思考与发送，次行放置权限和上下文余量。
+新建任务面板里 Kimi、OMP、Qoder CN、Qoder、dsh 与 Codex 都可从对应的可搜索目录选择模型；只有运行时允许的入口继续接受目录外 id。模型留空表示沿用运行时默认，不注入模型或思考强度。Claude Code 的 SDK 不提供模型清单，继续留空使用远端 CLI 默认模型。会话内模型和思考强度使用两个轻量入口。模型弹层提供搜索和按 Agent 过滤的列表；思考弹层只展示当前模型由服务端声明的档位，名称保留英文，不从模型名称猜测能力。Qoder 选中模型时会校验 id 与档位；旧档位不适用时回退到该模型声明的默认档位，目录未声明则不发送。Qoder 会话可为后续轮次切换模型与思考强度，也可恢复 SDK 默认；运行中、离线或正在更新设置时仍可打开查看，修改控件禁用并说明原因。Claude Code 仍只读展示。未读取到模型能力与模型未提供档位分别提示。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。窄窗口下工具栏自动分为两行：主行保留附件、模型/思考与发送，次行放置权限和上下文余量。
 
-旧版桥不打标；客户端此时不过滤、沿用合并列表，所以升级 Mac 客户端不要求同时升级桥。要拿到按 Agent 过滤的目录需重装桥，并按文末约束等自己的运行中会话结束后再重启托管服务。
+旧版桥不打标；客户端此时不过滤、沿用合并列表，所以升级 Mac 客户端不要求同时升级桥。Qoder 模型目录与会话内切换需 native service v10；要使用这些能力需重装桥，并按文末约束等自己的运行中会话结束后再重启托管服务。
 
-组合控件的隔离回归：先运行 `scripts/build.sh`，再运行 `scripts/check-composer-toolbar.sh`。测试在预览 App 内向真实控件发送鼠标和文本编辑事件，覆盖六种 Agent、模型与档位联动、选模型后保持弹层、无档位、九档换行、540 pt 输入区、中英文、离线/运行中/空目录及发送配置；结果保存在 `.local/composer-toolbar-checks/`。不连接真实远端，也不替代真实模型调用或人工视觉验收。预览可独立打开 `build/Composer Toolbar Preview.app`。
+组合控件的隔离回归：先运行 `scripts/build.sh`，再运行 `scripts/check-composer-toolbar.sh`。测试在预览 App 内向真实控件发送鼠标和文本编辑事件，覆盖七种 Agent（含两区 Qoder）、模型与档位联动、选模型后保持弹层、无档位、九档换行、540 pt 输入区、中英文、离线/运行中/空目录及发送配置；结果保存在 `.local/composer-toolbar-checks/`。不连接真实远端，也不替代真实模型调用或人工视觉验收。预览可独立打开 `build/Composer Toolbar Preview.app`。
 
 ## 恢复能力分别处理
 
@@ -87,7 +87,7 @@ OMP、Qoder、Claude 与 dsh 的归档只属于远端工作台目录，删除工
 
 ## 运行中引导
 
-OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选“下一轮发送”。需要同步更新 Mac 客户端和远端桥接脚本；客户端仅在服务端会话声明 `steer` 能力时提供引导。Qoder CN / dsh / Claude Code 继续使用下一轮队列。
+OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选“下一轮发送”。需要同步更新 Mac 客户端和远端桥接脚本；客户端仅在服务端会话声明 `steer` 能力时提供引导。Qoder CN / Qoder / dsh / Claude Code 继续使用下一轮队列。
 
 消息发送后在会话正文显示完整文字和状态。RPC 确认只表示已接收；观察到运行时的 user message 回显后才合并到历史。引导不会替换当前 turnId，停止仍针对当前任务。失败或未确认的消息保持可见，不自动重放。
 
@@ -98,7 +98,7 @@ OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选
 向导通过经鉴权的 `GET /setup?provider=omp|qoder|qoderintl|dsh|codex|claude` 检查所选运行时；
 不会因为缺少未选 Agent 而报错。检查在会话锁之外执行，不向模型发送消息。
 OMP 每次重新读取模型配置，只返回名称、provider 和 id，不返回 headers 或密钥。
-Qoder 与 Claude 的 SDK 没有独立登录检查接口，首条消息验证鉴权；dsh 只检查桥接进程是否具有
+Qoder CN 与 Qoder 的检查分别启动对应 SDK daemon 并实时调用 `getModels({ fetchStrategy: "live" })`；成功返回脱敏目录即确认该区 CLI 登录，不发送 prompt，也不读取另一地区目录。Claude 的 SDK 没有独立登录检查接口，仍由首条消息验证鉴权；dsh 只检查桥接进程是否具有
 `DEEPSEEK_API_KEY`，不读取或返回值，模型在首次 ACP 会话握手时读取。Codex 使用所选
 HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已有账号；不要求 OpenAI
 登录的供应商返回 `provider-managed`，界面明确提示实际鉴权在首条消息时验证。随后通过
@@ -125,7 +125,7 @@ HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已
 
 ## 权限模式
 
-设置 → 新会话默认权限可分别配置 Kimi、OMP、Qoder CN、Codex 与 Claude Code；新建任务时仍可覆盖，修改默认值不会改变已有会话。输入框旁会显示当前模式和生效范围：Kimi 可为下一条消息切换，Qoder 与 Claude Code 可为下一轮切换；OMP 与 Codex 在创建时固定，只读展示。dsh 不伪造全局权限模式，继续使用 ACP 运行时审批卡片逐次确认。
+设置 → 新会话默认权限可分别配置 Kimi、OMP、Qoder CN、Qoder、Codex 与 Claude Code；新建任务时仍可覆盖，修改默认值不会改变已有会话。输入框旁会显示当前模式和生效范围：Kimi 可为下一条消息切换，Qoder CN、Qoder 与 Claude Code 可为下一轮切换；OMP 与 Codex 在创建时固定，只读展示。dsh 不伪造全局权限模式，继续使用 ACP 运行时审批卡片逐次确认。
 
 | Agent | 模式（粗体为安全默认） | 传递方式 | 生效范围 |
 |---|---|---|---|
@@ -150,4 +150,4 @@ Codex 的 reviewer 始终为 `user`，四档映射如下：
 
 Perch 不修改远端 `config.toml`，也不会在恢复时放宽会话权限。旧 Codex 默认值 `ask`、`auto-review` 安全迁移为 `workspace-ask`，`full-access` 保留。管理策略或运行时不接受所选权限时，错误仍通过任务错误通道展示，不自动降级或放宽。
 
-权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，Claude Agent SDK 0.3.302 需 v8 起，Codex 子线程需 v9 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
+权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，Claude Agent SDK 0.3.302 需 v8 起，Codex 子线程需 v9 起，Qoder 双区模型目录与切换需 v10 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。

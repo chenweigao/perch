@@ -159,6 +159,7 @@ extension NavigationRunner {
         if assistant {
             // Rich blocks admitted natively: headings, code cards, rules, quotes, lists.
             cases += [
+                ("单行命令：\n\n```sh\npwd\n```\n\n命令后的说明。", ["单行命令", "pwd", "命令后的说明"]),
                 ("## 结论标题\n\n先看这一段说明文字。\n\n```swift\nlet markerCode = \"代码块\"\nprint(markerCode)\n```\n\n结尾段落。", ["结论标题", "说明文字", "markerCode", "结尾段落"]),
                 ("引用前导。\n\n> 引用里的内容保持紧凑。\n\n---\n\n分隔之后。", ["引用前导", "引用里的内容", "分隔之后"]),
                 ("- 第一项内容\n- 第二项内容\n  - 嵌套项对齐检查\n- 第三项内容", ["第一项内容", "嵌套项对齐检查", "第三项内容"]),
@@ -594,6 +595,29 @@ extension NavigationRunner {
         try await settle()
         ownChange = board.changeCount
         guard board.string(forType: .string) == codeSourceText else { throw NavigationError("Code copy button did not copy the code source") }
+        // Reuse the mounted block across multi/single-line changes. Compact cards
+        // keep a visible copy target outside their horizontal scrolling viewport.
+        for singleLine in ["pwd", longLine] {
+            host.rootView = root([try message("前文段落。\n\n```sh\n" + singleLine + "\n```")])
+            try await settle()
+            guard let row = nativeRows().first,
+                  let compactCopy = descendants(row).compactMap({ $0 as? NSHostingView<ReplyCopyButton> }).first(where: { $0 !== actions }),
+                  let card = compactCopy.superview,
+                  let scroll = descendants(card).compactMap({ $0 as? NSScrollView }).first else {
+                throw NavigationError("Compact code card lost its copy control or viewport")
+            }
+            guard descendants(card).compactMap({ $0 as? NSTextField }).allSatisfy(\.isHidden),
+                  scroll.frame.minY == 0, !scroll.frame.intersects(compactCopy.frame),
+                  compactCopy.frame.minY >= 0 && compactCopy.frame.maxY <= card.bounds.height else {
+                throw NavigationError("Compact code header remained visible or copy overlaps the viewport")
+            }
+            try click(compactCopy)
+            try await settle()
+            ownChange = board.changeCount
+            guard board.string(forType: .string) == singleLine else {
+                throw NavigationError("Compact code copy lost the complete source")
+            }
+        }
         for excluded in [try message(source, metadata: ["origin": ["kind": "compaction_summary"]]),
                          try message("<system-reminder>Runtime</system-reminder>"),
                          try message("Skill summary\n<skill-loaded trigger=\"user-slash\">Context</skill-loaded>")] {
