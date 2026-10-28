@@ -120,6 +120,8 @@ extension WorkbenchTheme {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
+        /// Input remains subordinate to the surrounding reading sheet.
+        static let composer: CGFloat = 12
         /// Floating glass controls (return-to-latest, selection bar, bookmarks).
         /// Frame panels use `framePanel(windowCorner:inset:)` instead.
         static let panel: CGFloat = 20

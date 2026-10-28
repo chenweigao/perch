@@ -47,7 +47,7 @@ func checkSessionNaming() throws {
                  "A prompt longer than the excerpt bound still matches its echoed title")
     precondition(!SessionNaming.isPlaceholder("", kind: .terminal, firstUserText: prompt),
                  "Terminal titles come from the shell and are never named")
-    for kind in [SessionKind.omp, .qoder, .dsh, .codex, .claude] {
+    for kind in [SessionKind.omp, .qoder, .qoderintl, .dsh, .codex, .claude] {
         precondition(SessionNaming.isPlaceholder("", kind: kind, firstUserText: prompt))
         precondition(SessionNaming.isPlaceholder("新对话", kind: kind, firstUserText: prompt))
         let bridgeTitle = String(prompt.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))

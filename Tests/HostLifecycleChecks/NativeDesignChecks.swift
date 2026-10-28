@@ -149,8 +149,8 @@ import WorkbenchCore
     model.taskContextWindow.showPage(.task, model: model)
     try await Task.sleep(for: .milliseconds(400))
     window.contentView!.layoutSubtreeIfNeeded()
-    precondition(split.floatingInspectorView!.bounds.height < 120,
-                 "The first opening of an initially hidden empty inspector must use its measured content height")
+    precondition(abs(split.floatingInspectorView!.bounds.height - split.detailCardView!.bounds.height) < 1,
+                 "The first opening of an empty inspector must fill the workspace sheet")
     model.taskContextWindow.showPage(.changes, model: model)
     try await Task.sleep(for: .milliseconds(500))
     window.contentView!.layoutSubtreeIfNeeded()
@@ -182,23 +182,20 @@ import WorkbenchCore
     let panelRadius = WorkbenchTheme.Radius.framePanel(windowCorner: windowCorner, inset: WorkspaceLayoutMetrics.frameInset)
     precondition(abs(split.panelCornerRadius - panelRadius) < 0.5 &&
                  card.layer?.cornerRadius == split.panelCornerRadius &&
-                 inspector.layer?.cornerRadius == split.panelCornerRadius &&
                  split.sidebarOverlayBackdropView?.fixedCornerRadius == split.panelCornerRadius,
                  "Frame panels must be concentric with the window corner: window=\(windowCorner), panels=\(split.panelCornerRadius), expected=\(panelRadius)")
     precondition(split.sidebarOverlayBackdropView?.isHidden == true,
                  "Wide windows draw navigation straight on the window glass; only the narrow overlay gets its own glass panel")
     precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
                  abs(distanceFromTop(inspectorFrame) - distanceFromTop(cardFrame)) < 1 &&
-                 inspectorFrame.height < cardFrame.height &&
-                 inspectorFrame.height <= WorkspaceLayoutMetrics.inspectorMaximumHeight + 1,
-                 "The reading sheet floats below the toolbar; the shorter inspector shares its top edge: card=\(cardFrame), inspector=\(inspectorFrame)")
-    precondition(inspectorFrame.height < 500,
-                 "A short diff must size to its contents rather than fill a 680pt inspector")
+                 abs(inspectorFrame.height - cardFrame.height) < 1 &&
+                 abs(inspectorFrame.maxX - cardFrame.maxX) < 1,
+                 "The full-height inspector must share the workspace sheet's top, bottom and trailing edge")
+    precondition(inspector.superview === card && (inspector.layer?.shadowOpacity ?? 0) == 0,
+                 "The inspector belongs inside the sheet without a separate elevation")
     precondition(connection.models(for: .codex).count == 2 &&
                  connection.model(for: connection.snapshot!)?.supportsThinking == true,
                  "The design fixture must include a real model catalog and adjustable reasoning controls")
-    precondition(cardFrame.maxX + WorkspaceLayoutMetrics.sidebarGap <= inspectorFrame.minX + 1,
-                 "The floating inspector must have its own lane and visible gap: card=\(cardFrame), inspector=\(inspectorFrame)")
     precondition(replyFrame.maxX < inspectorFrame.minX && draftFrame.maxX < inspectorFrame.minX,
                  "The inspector must not cover the reply or composer/send lane: reply=\(replyFrame), composer=\(draftFrame), inspector=\(inspectorFrame)")
     let draftX = draft.convert(draft.bounds, to: window.contentView).minX
@@ -227,8 +224,9 @@ import WorkbenchCore
     }
     model.rename(first, title: first.title)
     try await Task.sleep(for: .milliseconds(200))
-    precondition(abs(draftFrame.midX - cardFrame.midX) < 2 &&
-                 abs(replyX - (cardFrame.midX - ReplyStyle.readingWidth / 2)) < 2,
+    let readingCenterX = (cardFrame.minX + inspectorFrame.minX) / 2
+    precondition(abs(draftFrame.midX - readingCenterX) < 2 &&
+                 abs(replyX - (readingCenterX - ReplyStyle.readingWidth / 2)) < 2,
                  "Reply and editor must center in the space remaining beside the inspector")
     // Exercise the sidebar toolbar action, including multiple changes before
     // AppKit has applied the preceding spacer constraint.
@@ -267,12 +265,12 @@ import WorkbenchCore
                  "Inspector toggles must not shift the toolbar title or actions")
     let closedReply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     let closedReplyFrame = closedReply.convert(closedReply.bounds, to: window.contentView)
-    precondition(closedCardFrame.width > cardFrame.width + 300 &&
+    precondition(abs(closedCardFrame.width - cardFrame.width) < 1 &&
                  closedDraftFrame.minX > draftX + 100 &&
                  abs(closedDraftFrame.midX - closedCardFrame.midX) < 2 &&
                  abs(closedReplyFrame.minX - closedDraftFrame.minX) < 2 &&
                  draft.string == savedDraft,
-                 "Closing the inspector must re-center the same composer and reply in the enlarged card")
+                 "Closing the inspector must re-center the same composer and reply inside the unchanged sheet")
     model.taskContextWindow.embeddedVisible = true
     try await Task.sleep(for: .milliseconds(300))
     window.contentView!.layoutSubtreeIfNeeded()
@@ -284,13 +282,13 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(500))
     window.contentView!.layoutSubtreeIfNeeded()
     let compactHeight = split.floatingInspectorView!.bounds.height
-    precondition(compactHeight >= 64 && compactHeight < 240,
-                 "An empty task inspector must shrink to a compact card: \(compactHeight)")
+    precondition(abs(compactHeight - card.bounds.height) < 1,
+                 "An empty task inspector keeps the sheet's full height")
     model.taskContextWindow.page = .changes
     try await Task.sleep(for: .milliseconds(500))
     window.contentView!.layoutSubtreeIfNeeded()
-    precondition(split.floatingInspectorView!.bounds.height > compactHeight + 80,
-                 "Switching from an empty task to a diff must grow the same mounted panel")
+    precondition(split.floatingInspectorView === inspector && abs(inspector.bounds.height - compactHeight) < 1,
+                 "Switching task and diff pages must keep the same full-height inspector")
     /// Distances from the window's top edge, so titlebar controls can be compared
     /// with the floating panels regardless of view flipping.
     func fromTop(_ view: NSView?) -> [String: Double] {
@@ -308,6 +306,19 @@ import WorkbenchCore
         "title": fromTop(title), "actions": fromTop(toolbarActions),
         "sidebar": fromTop(split.floatingSidebarView), "conversation": fromTop(card),
     ]
+    let actualTitlebarHeight = window.frame.height - window.contentLayoutRect.height
+    precondition(window.toolbarStyle == .unifiedCompact && actualTitlebarHeight <= 44,
+                 "Use the native compact toolbar rather than sliding content underneath a tall toolbar: \(actualTitlebarHeight)")
+    let liveCardFrame = card.convert(card.bounds, to: nil)
+    let liveCardTop = window.frame.height - liveCardFrame.maxY
+    precondition(abs(liveCardTop - 44) < 1 && liveCardTop >= actualTitlebarHeight &&
+                 abs(liveCardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1,
+                 "The reading sheet must start at 44 pt with a clear toolbar and a balanced bottom gutter")
+    let closeFrame = fromTop(window.standardWindowButton(.closeButton))
+    for control in [title, toolbarActions, toggle].compactMap({ $0 }) {
+        precondition(abs((fromTop(control)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,
+                     "Title, sidebar toggle and actions must share the window controls' vertical center")
+    }
     print("Native window chrome: \(chrome)")
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         func rectangle(_ rect: NSRect) -> [String: Double] {
@@ -394,17 +405,26 @@ import WorkbenchCore
     split.toggleSidebar(nil)
     try await Task.sleep(for: .milliseconds(200))
     window.contentView!.layoutSubtreeIfNeeded()
-    precondition(split.isSidebarShown && !split.isSidebarYieldingToInspector && split.isInspectorOverlayingContent,
-                 "Asking for a yielding sidebar must bring it back")
+    precondition(split.isSidebarShown && !split.isSidebarYieldingToInspector && !split.isInspectorOverlayingContent,
+                 "Asking for a yielding sidebar must bring it back without overlaying the inspector")
     try await place(width: 900)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
                  "A narrow window must back the overlaying sidebar with its glass panel")
     checkSidebarEdges()
     try await capture("native-narrow-light")
+    split.setFloatingSidebarVisible(false)
+    try await place(width: 700)
+    let narrowDraftFrame = draft.convert(draft.bounds, to: window.contentView)
+    let narrowInspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
+    try await capture("native-compact-light")
+    precondition(narrowDraftFrame.maxX < narrowInspectorFrame.minX &&
+                 abs(inspector.bounds.height - card.bounds.height) < 1,
+                 "At 700 pt the integrated inspector must not cover the composer: editor=\(narrowDraftFrame), inspector=\(narrowInspectorFrame)")
+    split.setFloatingSidebarVisible(true)
     window.setFrame(wideFrame, display: true)
     try await Task.sleep(for: .milliseconds(300))
     window.contentView!.layoutSubtreeIfNeeded()
-    print("PASS: production workspace, aligned reply/composer, independent changes inspector, native light and dark")
+    print("PASS: production workspace, aligned reply/composer, integrated full-height inspector, native light and dark")
     let files = model.inspectorFiles
     func waitForFile(_ ready: () -> Bool) async throws {
         for _ in 0..<60 where !ready() { try await Task.sleep(for: .milliseconds(50)) }
@@ -419,15 +439,15 @@ import WorkbenchCore
     precondition(model.taskContextWindow.isShowing(.files) && model.fileWindow.window == nil && !model.showFileViewer,
                  "The files toolbar action must browse the working directory without opening a reader window")
     let directoryHeight = split.floatingInspectorView!.bounds.height
-    precondition(directoryHeight < 360, "A short directory must use a compact floating panel")
+    precondition(abs(directoryHeight - card.bounds.height) < 1, "A short directory fills the integrated lane")
     files.open(root.appendingPathComponent("SessionState.swift").path)
     try await waitForFile {
         if case .text(let text, _, _) = files.content { return text == after }
         return false
     }
     try await Task.sleep(for: .milliseconds(150))
-    precondition(split.floatingInspectorView!.bounds.height > directoryHeight + 100 && model.fileWindow.window == nil,
-                 "Selecting a file must expand the same inspector for inline reading")
+    precondition(abs(split.floatingInspectorView!.bounds.height - directoryHeight) < 1 && model.fileWindow.window == nil,
+                 "Selecting a file keeps the inspector's height and reads inline")
     files.openParent()
     try await waitForFile { if case .directory = files.content { return files.path == root.path }; return false }
     model.toggleFileViewer()
@@ -444,8 +464,8 @@ import WorkbenchCore
         return false
     }
     try await Task.sleep(for: .milliseconds(150))
-    precondition(split.floatingInspectorView!.bounds.height < 300,
-                 "An empty directory must shrink and never retain another session's file")
+    precondition(abs(split.floatingInspectorView!.bounds.height - directoryHeight) < 1,
+                 "An empty directory keeps the lane height and never retains another session's file")
     model.open(first)
     try await waitForFile { files.source == first.reference && files.path == root.path && !files.loading }
     files.open(root.appendingPathComponent("SessionState.swift").path)

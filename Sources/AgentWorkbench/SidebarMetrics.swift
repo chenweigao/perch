@@ -12,6 +12,8 @@ import SwiftUI
 /// with the project title. Section headers start at the icon column.
 enum SidebarMetrics {
     static let rowHeight: CGFloat = 36
+    static let navigationHeight: CGFloat = 32
+    static let navigationSize: CGFloat = 13
     /// Session rows that carry a status line (offline, waiting for input).
     static let subtitleRowHeight: CGFloat = 50
     /// Conversation titles may occupy two lines without being squeezed by actions.
@@ -39,7 +41,7 @@ enum SidebarMetrics {
     static let sectionTitleSize: CGFloat = 12
     static let sectionTitleOpacity: Double = 0.62
     static let sectionHeaderHeight: CGFloat = 24
-    static let sectionTopSpacing: CGFloat = 18
+    static let sectionTopSpacing: CGFloat = 12
     static let sectionBottomSpacing: CGFloat = 2
     static let sectionHeight: CGFloat = sectionTopSpacing + sectionHeaderHeight + sectionBottomSpacing
 

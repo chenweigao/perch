@@ -155,16 +155,23 @@ func checkModelSelection() throws {
     // route it; `provider` is the model's vendor and cannot answer that.
     let tagged = try json("""
     [{"agent":"omp","provider":"openai-codex","id":"gpt-5.4-mini","name":"GPT-5.4 mini","thinking":["low","high"]},
+     {"agent":"qoder","provider":"qoder-cn","id":"qoder-cn-pro","name":"Qoder CN Pro","contextWindow":262144,
+      "thinking":["low","medium","high"],"defaultThinking":"medium","reasoning":true},
+     {"agent":"qoderintl","provider":"qoder-global","id":"qoder-global-pro","name":"Qoder Global Pro",
+      "thinking":["off","high"],"defaultThinking":"high","reasoning":true},
      {"agent":"dsh","provider":"deepseek-official","id":"deepseek-v4-flash","name":"DeepSeek-V4-Flash","thinking":["high"]},
      {"agent":"dsh","provider":"deepseek-official","id":"deepseek-v4-pro","name":"DeepSeek-V4-Pro"}]
     """)
     let taggedModels = ModelSelectionCatalog.parseOMP(tagged)
-    precondition(taggedModels.map(\.agent) == [.omp, .dsh, .dsh])
+    precondition(taggedModels.map(\.agent) == [.omp, .qoder, .qoderintl, .dsh, .dsh])
     precondition(ModelSelectionCatalog.forAgent(.omp, in: taggedModels).map(\.id) == ["gpt-5.4-mini"])
+    precondition(ModelSelectionCatalog.forAgent(.qoder, in: taggedModels).map(\.id) == ["qoder-cn-pro"])
+    precondition(ModelSelectionCatalog.forAgent(.qoderintl, in: taggedModels).map(\.id) == ["qoder-global-pro"])
     precondition(ModelSelectionCatalog.forAgent(.dsh, in: taggedModels).map(\.id) == ["deepseek-v4-flash", "deepseek-v4-pro"])
-    // Qoder's SDK reports no catalog, so it is offered nothing rather than a list
-    // belonging to another runtime.
-    precondition(ModelSelectionCatalog.forAgent(.qoder, in: taggedModels).isEmpty)
+    let qoderCN = ModelSelectionCatalog.forAgent(.qoder, in: taggedModels)[0]
+    precondition(qoderCN.thinking == [.low, .medium, .high] && qoderCN.defaultThinking == .medium)
+    precondition(qoderCN.resolve(.off) == .medium && qoderCN.contextWindow == 262144)
+    precondition(ModelSelectionCatalog.forAgent(.codex, in: taggedModels).isEmpty)
     // An agent this client cannot launch parses as no agent at all, so among tagged
     // entries it is dropped instead of being offered to every runtime.
     let foreign = ModelSelectionCatalog.parseOMP(try json(#"""
@@ -181,9 +188,9 @@ func checkModelSelection() throws {
     // Starting a session sends only the id, so two vendors sharing one id are a
     // single choice — and a single identity for the picker's list.
     let options = ModelCatalog.options(taggedModels)
-    precondition(options.map(\.id) == ["gpt-5.4-mini", "deepseek-v4-flash", "deepseek-v4-pro"])
+    precondition(options.map(\.id) == ["gpt-5.4-mini", "qoder-cn-pro", "qoder-global-pro", "deepseek-v4-flash", "deepseek-v4-pro"])
     precondition(options.allSatisfy { $0.capabilities.isEmpty })
     let collide = ModelCatalog.options([AgentModel(id: "x", provider: "a", name: "X"), AgentModel(id: "x", provider: "b", name: "X")])
     precondition(collide.count == 1 && Set(options.map(\.id)).count == options.count)
-    print("PASS: OMP and Kimi model catalogs, provider/id separation, per-runtime catalog split with untagged-bridge fallback, effort validation and fallback, context budget with unknown and over-limit states")
+    print("PASS: OMP, Qoder and Kimi model catalogs, provider/id separation, regional runtime filtering, effort validation and fallback, context budget with unknown and over-limit states")
 }

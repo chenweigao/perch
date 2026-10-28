@@ -39,6 +39,7 @@ public struct NativeAgentSession: Decodable, Identifiable, Equatable {
     public let completed: Int
     public let pending: Int
     public let model: String
+    public let qoderRequestedModel: String?
     public let error: String?
     public let cancelled: Bool?
     public let permission: PermissionCapability?
@@ -69,6 +70,7 @@ public struct NativeAgentSnapshot: Decodable {
     public let revision: Int
     public let completed: Int
     public let model: String
+    public let qoderRequestedModel: String?
     public var messages: [KimiMessage]
     public var history: NativeHistoryWindow?
     public let interactions: [JSONValue]
