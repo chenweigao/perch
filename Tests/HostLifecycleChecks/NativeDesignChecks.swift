@@ -207,6 +207,31 @@ import WorkbenchCore
     precondition(abs(draftFrame.midX - cardFrame.midX) < 2 &&
                  abs(replyX - (cardFrame.midX - ReplyStyle.readingWidth / 2)) < 2,
                  "Reply and editor must center in the space remaining beside the inspector")
+    // Exercise the sidebar toolbar action, including multiple changes before
+    // AppKit has applied the preceding spacer constraint.
+    let sidebarToggle = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchSidebarToggle" }!.view!
+    for cycle in 0..<3 {
+        split.toggleSidebar(nil)
+        try await Task.sleep(for: .milliseconds(200))
+        window.contentView!.layoutSubtreeIfNeeded()
+        let collapsedTitle = title.convert(title.bounds, to: window.contentView)
+        let toggleFrame = sidebarToggle.convert(sidebarToggle.bounds, to: window.contentView)
+        precondition(collapsedTitle.minX >= toggleFrame.maxX && collapsedTitle.minX < titleX - 100,
+                     "Collapsed sidebar must place the title after window controls: cycle=\(cycle), title=\(collapsedTitle), toggle=\(toggleFrame)")
+        split.toggleSidebar(nil)
+        try await Task.sleep(for: .milliseconds(200))
+        window.contentView!.layoutSubtreeIfNeeded()
+        let reopenedX = title.convert(title.bounds, to: window.contentView).minX
+        precondition(abs(reopenedX - titleX) < 2,
+                     "Reopening sidebar must restore title alignment without accumulated offsets: cycle=\(cycle), expected=\(titleX), actual=\(reopenedX)")
+    }
+    for _ in 0..<10 { split.toggleSidebar(nil) }
+    try await Task.sleep(for: .milliseconds(200))
+    window.contentView!.layoutSubtreeIfNeeded()
+    precondition(abs(title.convert(title.bounds, to: window.contentView).minX - titleX) < 2 &&
+                 abs(toolbarActions.convert(toolbarActions.bounds, to: window.contentView).maxX - actionsRight) < 2,
+                 "Rapid sidebar toggles must not drift the title or trailing actions")
+    print("PASS: sidebar close/reopen and rapid toggles preserve toolbar alignment")
     let savedDraft = draft.string
     model.taskContextWindow.embeddedVisible = false
     try await Task.sleep(for: .milliseconds(300))

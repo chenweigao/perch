@@ -290,9 +290,12 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         /// window's trailing edge, independent of inspector visibility.
         func alignToolbar(leading: CGFloat) {
             titleLeading = leading
-            guard let controller, headerHost.window != nil, let leadingWidth else { return }
+            guard let controller, headerHost.window != nil, let leadingWidth,
+                  let spacer = leadingWidth.firstItem as? NSView else { return }
             let titleX = headerHost.convert(headerHost.bounds, to: controller.view).minX
-            let width = max(1, leadingWidth.constant + leading - titleX)
+            // Measure both values from the same rendered layout. The constraint
+            // may already contain a correction that AppKit has not applied yet.
+            let width = max(1, spacer.bounds.width + leading - titleX)
             if abs(width - leadingWidth.constant) > 0.5 { leadingWidth.constant = width }
         }
 
@@ -848,9 +851,11 @@ final class WorkbenchSplitController: NSSplitViewController {
         floatingInspectorView?.isHidden = !isFloatingInspectorVisible
         inspectorShadowView?.isHidden = !isFloatingInspectorVisible
         inspectorResizeHandle?.isHidden = !isFloatingInspectorVisible
-        if let card = detailCardView {
-            let cardFrame = card.convert(card.bounds, to: view)
-            alignToolbar?(cardFrame.minX + WorkbenchTheme.Reading.inset)
+        if let canvas = detailCanvasView {
+            // Insets above describe the new layout; the card's frame still
+            // describes the previous one until AppKit lays out its descendants.
+            let canvasX = canvas.convert(canvas.bounds, to: view).minX
+            alignToolbar?(canvasX + leading + WorkbenchTheme.Reading.inset)
         }
     }
 
