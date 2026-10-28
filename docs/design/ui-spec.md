@@ -116,8 +116,9 @@
 
 `ConversationActivityBar`（`Sources/AgentWorkbench/ConversationActivityBar.swift`），位于正文与输入框之间。
 它与提示条、输入框一起构成对话滚动视图的底部安全区栏（`ConversationScrollView` 的 `bar`，`safeAreaBar`）：
-正文从输入框玻璃下方滚过，系统 soft 边缘效果淡出栏下的文字（显式指定 `.soft`，macOS 27 SDK 的 automatic 会变成硬边），
-跟随到底时最后一行停在栏的上沿。
+正文从输入框玻璃下方滚过，跟随到底时最后一行停在栏的上沿。系统滚动边缘效果关闭（`scrollEdgeEffectHidden`）：
+在工作区分栏里它总被画成带分隔线的硬边，与请求的 `.soft` 无关；改由栏背后一条 28pt、卡片底色的渐变把正文淡入栏内
+（普通渐变视图，不给整段正文加遮罩）。`reading-canvas` 与 `native-design` 阶段检查栏上沿没有横贯卡片的分隔线。
 
 - **一行、透明、恒定高度。** 所有状态共用 `ConversationActivityBar.height`（32pt），不加整条玻璃、卡片或底色；
   开始运行、等待确认、断连或失败都不改变正文视口高度。注意力只体现在颜色和显式按钮上。

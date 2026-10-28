@@ -180,11 +180,7 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
                             onScroll(following)
                         }, onNearTop: onNearTop)
                     }
-            }
-                // On the scroll view itself: the bar's pocket reads the style from
-                // its scroll view, and the automatic style draws a hard divider.
-                .scrollEdgeEffectStyle(.soft, for: .bottom)
-                .scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
+            }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }, onNearTop: onNearTop))
                 .overlay(alignment: .leading) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
@@ -233,22 +229,37 @@ extension ConversationScrollView where Bar == EmptyView {
 }
 
 /// Without a bar the floating controls sit on the transcript's bottom edge. With
-/// one, the bar becomes the scroll view's bottom safe-area bar, so content
-/// insets, scroll-to-bottom and the soft edge effect all follow its height,
-/// and the controls ride on its top edge.
+/// one, the bar becomes the scroll view's bottom safe-area bar, so content insets
+/// and scroll-to-bottom follow its height, and the controls ride on its top edge.
+///
+/// The system scroll-edge effect is off: inside the workspace's split view macOS
+/// draws it as a hard pocket with a divider across the card, whatever style is
+/// asked for. A plain gradient in the card's own color fades the reply into the
+/// bar instead — no divider, no offscreen mask over the transcript.
 private struct ConversationBottomBar<Bar: View, Controls: View>: ViewModifier {
     let bar: Bar
     let controls: Controls
+    static var fadeHeight: CGFloat { 28 }
     @ViewBuilder func body(content: Content) -> some View {
         if Bar.self == EmptyView.self {
             content.overlay(alignment: .bottom) { controls }
         } else {
-            // Explicitly soft: with the macOS 27 SDK the automatic style resolves
-            // to a hard edge under a safe-area bar.
             content
-                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .scrollEdgeEffectHidden(true, for: .bottom)
                 .safeAreaBar(edge: .bottom, spacing: 0) {
                     bar.frame(maxWidth: .infinity)
+                        .background(alignment: .bottom) {
+                            VStack(spacing: 0) {
+                                LinearGradient(colors: [WorkbenchTheme.contentBackground.opacity(0),
+                                                        WorkbenchTheme.contentBackground],
+                                               startPoint: .top, endPoint: .bottom)
+                                    .frame(height: Self.fadeHeight)
+                                WorkbenchTheme.contentBackground
+                            }
+                            .padding(.top, -Self.fadeHeight)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                        }
                         .overlay(alignment: .top) {
                             controls.alignmentGuide(.top) { $0[.bottom] }
                         }

@@ -204,6 +204,12 @@ import WorkbenchCore
     let draftX = draft.convert(draft.bounds, to: window.contentView).minX
     let replyX = reply.convert(reply.bounds, to: window.contentView).minX
     precondition(abs(draftX - replyX) < 2, "Composer and reply must share the reading rail: draft=\(draftX), reply=\(replyX)")
+    // The composer bar floats over the transcript without a divider across the card.
+    let contentHeight = window.contentView!.bounds.height
+    let draftTop = window.contentView!.isFlipped ? draftFrame.minY : contentHeight - draftFrame.maxY
+    let divider = horizontalRule(in: window.contentView!, from: draftTop - 110, to: draftTop - 20,
+                                 xRange: (cardFrame.minX + 30)...(cardFrame.maxX - 30))
+    precondition(divider == nil, "The composer bar must not draw a divider across the reading card: y=\(String(describing: divider)), composer top=\(draftTop)")
     let title = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchTitle" }!.view!
     let titleX = title.convert(title.bounds, to: window.contentView).minX
     precondition(abs(titleX - cardFrame.minX - WorkbenchTheme.Reading.inset) < 2,

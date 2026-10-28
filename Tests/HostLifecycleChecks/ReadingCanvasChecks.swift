@@ -42,11 +42,12 @@ private struct CanvasNavigationFixture: View {
         }
     }
 }
-/// A horizontal rule within ±3 pt of `y` (window coordinates from the top): one
-/// pixel row darker than the rows just above and below across most of the width.
-/// Text never darkens a whole row this way.
-@MainActor private func hasHorizontalRule(in host: NSView, nearY y: CGFloat) -> Bool {
-    guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return false }
+/// The first horizontal rule between `top` and `bottom` (host coordinates from
+/// the top), or nil: one pixel row darker than the rows 3 pt above and below it
+/// across most of `xRange`. Text never darkens a whole row this way.
+@MainActor func horizontalRule(in host: NSView, from top: CGFloat, to bottom: CGFloat,
+                               xRange: ClosedRange<CGFloat>? = nil) -> CGFloat? {
+    guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return nil }
     host.cacheDisplay(in: host.bounds, to: bitmap)
     let scale = CGFloat(bitmap.pixelsHigh) / max(1, host.bounds.height)
     func luminance(_ x: Int, _ row: Int) -> CGFloat {
@@ -57,18 +58,20 @@ private struct CanvasNavigationFixture: View {
         return 0.2126 * (color.redComponent * a + 1 - a) + 0.7152 * (color.greenComponent * a + 1 - a)
             + 0.0722 * (color.blueComponent * a + 1 - a)
     }
-    let columns = Array(stride(from: bitmap.pixelsWide / 10, to: bitmap.pixelsWide * 9 / 10, by: 4))
-    let center = Int((y * scale).rounded())
+    let span = xRange ?? (host.bounds.width * 0.1)...(host.bounds.width * 0.9)
+    let columns = Array(stride(from: Int(span.lowerBound * scale), to: Int(span.upperBound * scale), by: 4))
+    guard !columns.isEmpty else { return nil }
     let reach = Int((3 * scale).rounded())
-    for row in (center - reach)...(center + reach) {
+    for row in Int(top * scale)...Int(bottom * scale) {
         let darker = columns.filter { x in
             let value = luminance(x, row)
-            return value < luminance(x, row - reach - 1) - 0.03 && value < luminance(x, row + reach + 1) - 0.03
+            return value < luminance(x, row - reach) - 0.03 && value < luminance(x, row + reach) - 0.03
         }.count
-        if !columns.isEmpty, Double(darker) / Double(columns.count) > 0.8 { return true }
+        if Double(darker) / Double(columns.count) > 0.8 { return CGFloat(row) / scale }
     }
-    return false
+    return nil
 }
+
 @MainActor func checkReadingCanvas() async throws {
     func scrollViews(_ view: NSView) -> [NSScrollView] {
         (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
@@ -107,9 +110,9 @@ private struct CanvasNavigationFixture: View {
             // The transcript runs beneath the bar, but its tail stops on the bar's top edge.
             precondition(state.bar.height > 1 && state.tail.maxY <= state.bar.minY + 1 && state.tail.minY >= state.bar.minY - 40,
                          "Return must land the tail just above the composer bar, not beneath it: tail=\(state.tail), bar=\(state.bar)")
-            // A soft scroll edge fades the text; a hard one draws a full-width divider.
-            precondition(!hasHorizontalRule(in: host, nearY: state.bar.minY),
-                         "The composer bar must use the soft scroll-edge effect, without a divider across the transcript")
+            // The reply fades into the bar; no hard scroll-edge divider crosses the transcript.
+            let rule = horizontalRule(in: host, from: state.bar.minY - 4, to: state.bar.minY + 4)
+            precondition(rule == nil, "The composer bar must not draw a divider across the transcript: y=\(String(describing: rule))")
         } else {
             // The bottom marker precedes ConversationScrollView's 12pt outer padding.
             precondition(abs(scroll.documentView!.bounds.maxY - scroll.documentVisibleRect.maxY - 12) < 1,
