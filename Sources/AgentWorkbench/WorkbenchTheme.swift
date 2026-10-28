@@ -95,9 +95,20 @@ extension WorkbenchTheme {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
-        /// The window frame's panels: sidebar, conversation card and inspector.
-        /// Concentric with the window corner across the frame's 12 pt margin.
+        /// Floating glass controls (return-to-latest, selection bar, bookmarks).
+        /// Frame panels use `framePanel(windowCorner:inset:)` instead.
         static let panel: CGFloat = 20
+        /// The corner of a toolbar window on macOS 26 and later, used while the
+        /// window reports none (full screen, or before the window exists).
+        static let toolbarWindowCorner: CGFloat = 26
+
+        /// The window frame's panels — conversation card, inspector and the
+        /// narrow-window sidebar overlay — sit `inset` inside the window edge and
+        /// share the window corner's center, as macOS concentric shapes do:
+        /// R = window corner − inset, never tighter than `card`.
+        static func framePanel(windowCorner: CGFloat, inset: CGFloat) -> CGFloat {
+            max(card, (windowCorner > 0 ? windowCorner : toolbarWindowCorner) - inset)
+        }
     }
 }
 

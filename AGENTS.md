@@ -12,9 +12,11 @@ to light.
   fixed colored fill or lower its opacity. The sidebar has no separate glass card,
   outline, or shadow in the wide layout; its selection is a light row card.
 - The opaque conversation sheet floats below the toolbar; the shorter inspector
-  floats beside it. Keep `WorkbenchTheme.Radius.panel`, light shadows and visible
+  floats beside it, sharing its top edge. Keep their radius concentric with the
+  window corner (`WorkbenchTheme.Radius.framePanel`), light shadows and visible
   backdrop gutters. Preserve native Liquid Glass on the composer and controls.
-  These surfaces follow the user's unified-glass direction of 2026-10-27.
+  These surfaces follow the user's unified-glass direction of 2026-10-27 and the
+  Apple concentric-corner direction of 2026-10-28.
 - Keep credentials in the user's existing SSH configuration and agent.
 - Disconnecting a client must not close a remote pane or stop an agent.
 - Do not attach with --takeover or enable agent permission bypass implicitly.
