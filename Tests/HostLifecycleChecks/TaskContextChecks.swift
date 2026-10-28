@@ -276,7 +276,11 @@ import WorkbenchCore
                  abs(backdropFrame.height - split.view.bounds.height) < 1,
                  "The window frame must be one Liquid Glass backdrop under every panel, shaped like the window: frame=\(backdropFrame), root=\(split.view.bounds)")
     let cardFrame = frame(split.detailCardView)
-    precondition(split.detailCardView?.layer?.cornerRadius == WorkbenchTheme.Radius.panel &&
+    let concentricRadius = WorkbenchTheme.Radius.framePanel(
+        windowCorner: WorkbenchWindowBackdropView.windowCornerRadius(of: page), inset: frameInset)
+    precondition(abs(split.panelCornerRadius - concentricRadius) < 0.5 &&
+                 split.detailCardView?.layer?.cornerRadius == split.panelCornerRadius &&
+                 split.floatingInspectorView?.layer?.cornerRadius == split.panelCornerRadius &&
                  split.detailCardView?.layer?.masksToBounds == true &&
                  abs(cardFrame.minX - (sidebarFrame.maxX + WorkspaceLayoutMetrics.sidebarGap)) < 1 &&
                  abs(inspectorFrame().minX - cardFrame.maxX - WorkspaceLayoutMetrics.sidebarGap) < 1 &&
@@ -291,19 +295,28 @@ import WorkbenchCore
     page.setContentSize(NSSize(width: 1000, height: 780))
     for _ in 0..<20 {
         split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
-        if inspectorFloating(true, "1000") && split.detailContentLeadingInset > 0 { break }
+        if inspectorFloating(true, "1000") && split.isSidebarYieldingToInspector { break }
         try await Task.sleep(for: .milliseconds(25))
     }
     detailFrame = splitFrame(detailItem)
     var splitBoundsFrame = frame(split.splitView)
     precondition(inspectorFloating(true, "1000") && split.isFloatingSidebarVisible &&
-                 split.detailContentLeadingInset > 0 &&
-                 split.isInspectorOverlayingContent && split.detailContentTrailingInset == 0 &&
+                 split.isSidebarYieldingToInspector && split.floatingSidebarView!.isHidden &&
+                 split.detailContentLeadingInset == 0 &&
+                 !split.isInspectorOverlayingContent && split.detailContentTrailingInset > 0 &&
+                 frame(split.detailCardView).width >= WorkspaceLayoutMetrics.contentMinimumWidth - 1 &&
+                 UserDefaults.standard.object(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) as? Bool != false &&
                  abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
                  abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1 &&
                  abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
                  abs(detailFrame.maxX - splitBoundsFrame.maxX) < 1,
-                 "At 1000 points the inspector floats above the mounted canvas rather than squeezing the reading card below 600pt; inspector=\(inspectorFrame()), sidebarVisible=\(split.isFloatingSidebarVisible), inset=\(split.detailContentLeadingInset), detail=\(detailFrame), root=\(split.view.bounds)")
+                 "At 1000 points the sidebar steps aside so the inspector sits beside a 600pt reading card instead of covering it; inspector=\(inspectorFrame()), card=\(frame(split.detailCardView)), sidebarVisible=\(split.isFloatingSidebarVisible), yielding=\(split.isSidebarYieldingToInspector), detail=\(detailFrame), root=\(split.view.bounds)")
+    split.toggleSidebar(nil)
+    split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
+    precondition(!split.isSidebarYieldingToInspector && split.isSidebarShown && !split.floatingSidebarView!.isHidden &&
+                 split.detailContentLeadingInset > 0 && split.isInspectorOverlayingContent &&
+                 UserDefaults.standard.object(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) as? Bool != false,
+                 "Asking for a yielding sidebar brings it back, with the inspector floating over the card, and keeps the saved preference")
 
     page.setContentSize(NSSize(width: 800, height: 780))
     for _ in 0..<20 {

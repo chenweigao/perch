@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import SwiftUI
 
 /// Perch keeps one monochrome palette in both appearances: the same hues, with
@@ -61,7 +62,15 @@ extension WorkbenchTheme {
     /// Shared by the window title and the conversation's reading controls.
     enum Reading {
         static let inset: CGFloat = 24
-        static let bodySize: CGFloat = 16
+        /// The reader's chosen body size; see `ReadingBodySize`.
+        static var bodySize: CGFloat { ReadingBodySize.shared.value }
+        /// The conversation's one type ramp at the current body size.
+        static var scale: ReadingScale { ReadingScale(body: bodySize) }
+        /// Conversation chrome outside Markdown prose: thoughts and questions,
+        /// process rows and notices, and small counts and hints.
+        static var secondarySize: CGFloat { scale.secondary }
+        static var labelSize: CGFloat { scale.label }
+        static var captionSize: CGFloat { scale.caption }
     }
 
     /// Sheets and dialogs share one outer padding.
@@ -95,9 +104,20 @@ extension WorkbenchTheme {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
-        /// The window frame's panels: sidebar, conversation card and inspector.
-        /// Concentric with the window corner across the frame's 12 pt margin.
+        /// Floating glass controls (return-to-latest, selection bar, bookmarks).
+        /// Frame panels use `framePanel(windowCorner:inset:)` instead.
         static let panel: CGFloat = 20
+        /// The corner of a toolbar window on macOS 26 and later, used while the
+        /// window reports none (full screen, or before the window exists).
+        static let toolbarWindowCorner: CGFloat = 26
+
+        /// The window frame's panels — conversation card, inspector and the
+        /// narrow-window sidebar overlay — sit `inset` inside the window edge and
+        /// share the window corner's center, as macOS concentric shapes do:
+        /// R = window corner − inset, never tighter than `card`.
+        static func framePanel(windowCorner: CGFloat, inset: CGFloat) -> CGFloat {
+            max(card, (windowCorner > 0 ? windowCorner : toolbarWindowCorner) - inset)
+        }
     }
 }
 
@@ -125,4 +145,67 @@ enum AppAppearance: String, CaseIterable, Identifiable {
         case .dark: return "深色"
         }
     }
+}
+
+/// The conversation body size the reader chose in Settings › 界面 › 正文字号 or
+/// with View › 放大 / 缩小 / 实际大小 (⌘= ⌘− ⌘0). Observable: every SwiftUI body
+/// that reads the reading scale re-renders when it changes, and native row caches
+/// compare it before reusing prepared text.
+@Observable final class ReadingBodySize {
+    static let shared = ReadingBodySize()
+    static let defaultsKey = "perch.reading.bodySize"
+    /// Mixed CJK and Latin prose reads best one step above the 13 pt macOS UI
+    /// body; 16 pt keeps about 42 CJK characters on the 680 pt reading column.
+    static let standard: CGFloat = 16
+    static let sizes: [CGFloat] = [14, 15, 16, 17, 18]
+
+    private(set) var value: CGFloat
+
+    private init() {
+        let stored = CGFloat(UserDefaults.standard.double(forKey: Self.defaultsKey))
+        value = Self.sizes.contains(stored) ? stored : Self.standard
+    }
+
+    var canIncrease: Bool { value < Self.sizes[Self.sizes.count - 1] }
+    var canDecrease: Bool { value > Self.sizes[0] }
+
+    /// Snaps to the nearest offered size and persists it.
+    func set(_ size: CGFloat) {
+        let nearest = Self.sizes.min { abs($0 - size) < abs($1 - size) } ?? Self.standard
+        guard nearest != value else { return }
+        value = nearest
+        UserDefaults.standard.set(Double(nearest), forKey: Self.defaultsKey)
+    }
+
+    /// One offered size larger (+1) or smaller (−1).
+    func step(_ direction: Int) {
+        let index = Self.sizes.firstIndex(of: value) ?? Self.sizes.firstIndex(of: Self.standard) ?? 0
+        set(Self.sizes[min(Self.sizes.count - 1, max(0, index + direction))])
+    }
+}
+
+/// One type ramp for everything inside the conversation, derived from the body
+/// size so the hierarchy keeps its proportions at every setting:
+///
+/// | Role | Size at 16 pt | Used by |
+/// | --- | --- | --- |
+/// | heading 1 / 2 | 20 / 18 semibold | Markdown H1 / H2 (H3+ use the body size) |
+/// | body | 16 on 26 | replies, user prompts, composer text |
+/// | secondary | 14 on 22 | thoughts, quiet notes, code, tables, questions |
+/// | label | 13 | process and tool rows, fold headers, activity bar, notices |
+/// | caption | 12 | counts, chips, code labels, row actions, small hints |
+///
+/// No text drops below the 11 pt floor of the visual refresh.
+struct ReadingScale: Equatable {
+    let body: CGFloat
+    var unit: CGFloat { body / ReadingBodySize.standard }
+    var bodyLine: CGFloat { (body * 1.625).rounded() }
+    var heading1: CGFloat { body + 4 }
+    var heading2: CGFloat { body + 2 }
+    var secondary: CGFloat { max(11, body - 2) }
+    var secondaryLine: CGFloat { (secondary * 1.57).rounded() }
+    var label: CGFloat { max(11, body - 3) }
+    var caption: CGFloat { max(11, body - 4) }
+    /// Vertical rhythm designed at 16 pt, scaled with the body.
+    func spacing(_ points: CGFloat) -> CGFloat { (points * unit).rounded() }
 }

@@ -8,9 +8,10 @@ import WorkbenchCore
 /// here — SwiftUI rows while a reply streams, native cached rows once it settles —
 /// so a settled row keeps the geometry of the row it replaces.
 ///
-/// A 16 pt system body on a 26 pt line with a comfortable CJK measure.
-/// Hierarchy comes from
-/// weight and space; only H1 steps up in size.
+/// Type sizes and vertical rhythm follow the reader's body size through
+/// `ReadingScale` (16 pt on a 26 pt line by default; H1 and H2 step up, the other
+/// headings rely on weight and space). Horizontal geometry — the 680 pt column,
+/// insets — stays fixed at every size.
 enum ReplyStyle {
     static let readingWidth: CGFloat = 680
     static let horizontalPadding = WorkbenchTheme.Reading.inset
@@ -18,13 +19,20 @@ enum ReplyStyle {
     /// The editor text and transcript share the same centered reading column.
     static let composerWidth: CGFloat = readingWidth + 2 * composerInset
     static let composerPadding = horizontalPadding - composerInset
-    static let bodySize = WorkbenchTheme.Reading.bodySize
-    static let lineHeight: CGFloat = 26
-    static let lineHeightRatio: CGFloat = lineHeight / bodySize
-    static let paragraphSpacing: CGFloat = 12
+    static var scale: ReadingScale { WorkbenchTheme.Reading.scale }
+    static var bodySize: CGFloat { scale.body }
+    static var lineHeight: CGFloat { scale.bodyLine }
+    static var lineHeightRatio: CGFloat { lineHeight / bodySize }
+    static var paragraphSpacing: CGFloat { scale.spacing(12) }
     /// Between paragraphs inside list items, quotes and alerts.
-    static let compactParagraphSpacing: CGFloat = 6
-    static let codeSize: CGFloat = 13
+    static var compactParagraphSpacing: CGFloat { scale.spacing(6) }
+    /// Secondary prose: thoughts, quiet notes, code and tables.
+    static var secondarySize: CGFloat { scale.secondary }
+    /// Process and tool rows, fold headers, the activity bar and notices.
+    static var labelSize: CGFloat { scale.label }
+    /// Counts, chips, code labels, row actions and small hints.
+    static var captionSize: CGFloat { scale.caption }
+    static var codeSize: CGFloat { scale.secondary }
     static let codeLineSpacing: CGFloat = 4
     /// Between the parts of one transcript entry, and above a reply's actions.
     static let entryPartSpacing: CGFloat = 10
@@ -32,8 +40,14 @@ enum ReplyStyle {
     static let entrySpacing: CGFloat = 16
     static let processEntrySpacing: CGFloat = 6
     static let ink = Color.primary.opacity(0.9)
-    static func headingSize(_ level: Int) -> CGFloat { level == 1 ? 20 : bodySize }
-    static func headingLineHeight(_ level: Int) -> CGFloat { lineHeight }
+    /// H1 and H2 step up; H3 and below keep the body size, set apart by weight
+    /// and spacing.
+    static func headingSize(_ level: Int) -> CGFloat {
+        level == 1 ? scale.heading1 : level == 2 ? scale.heading2 : bodySize
+    }
+    static func headingLineHeight(_ level: Int) -> CGFloat {
+        max(lineHeight, (headingSize(level) * 1.4).rounded())
+    }
     static let paper = Color.primary.opacity(0.035)
     // Preserve a dynamic color in cached attributed text. Applying alpha to
     // labelColor once can freeze the system appearance before the light window exists.
@@ -44,17 +58,17 @@ enum ReplyStyle {
     }
     /// `ReplyTone.quiet`: compaction notes and runtime context read one step down,
     /// in secondary ink. Weight still marks headings and strong text.
-    static let quietSize: CGFloat = 14
-    static let quietLineHeight: CGFloat = 22
+    static var quietSize: CGFloat { scale.secondary }
+    static var quietLineHeight: CGFloat { scale.secondaryLine }
     static let quietInk = NSColor.secondaryLabelColor
     /// Code and tables wider than the column fade out over this trailing width.
     /// No wider than their 12 pt trailing inset (`Code.inset`, table cell padding),
     /// so scrolled to the end no glyph fades.
     static let overflowFadeWidth: CGFloat = 12
-    static let tableCellSize: CGFloat = 13
+    static var tableCellSize: CGFloat { scale.secondary }
     /// Column totals are arithmetic over estimated content widths, so a table
     /// never probes TextKit for widths and cannot feed the transcript layout.
-    static let tableGeometry = ReplyTableGeometry(fontSize: tableCellSize)
+    static var tableGeometry: ReplyTableGeometry { ReplyTableGeometry(fontSize: tableCellSize) }
 
     /// Block categories that set vertical rhythm. Display math spaces like code.
     enum BlockKind { case paragraph, heading, code, rule, other }
@@ -62,21 +76,21 @@ enum ReplyStyle {
     /// items, quotes and alerts.
     static func blockSpacing(before block: BlockKind, after previous: BlockKind?, compact: Bool) -> CGFloat {
         guard let previous else { return 0 }
-        if previous == .rule { return 20 }
-        if previous == .heading { return 6 }
+        if previous == .rule { return scale.spacing(20) }
+        if previous == .heading { return scale.spacing(6) }
         if previous == .paragraph && block == .paragraph { return compact ? compactParagraphSpacing : paragraphSpacing }
         switch block {
-        case .heading: return compact ? 12 : 20
-        case .rule: return 20
-        case .code: return compact ? 8 : 14
-        case .paragraph, .other: return compact ? 4 : paragraphSpacing
+        case .heading: return scale.spacing(compact ? 12 : 20)
+        case .rule: return scale.spacing(20)
+        case .code: return scale.spacing(compact ? 8 : 14)
+        case .paragraph, .other: return compact ? scale.spacing(4) : paragraphSpacing
         }
     }
 
     /// Code card chrome; the native card and the SwiftUI card place text identically.
     enum Code {
         static let cornerRadius: CGFloat = 8
-        static let labelSize: CGFloat = 11
+        static var labelSize: CGFloat { ReplyStyle.captionSize }
         static let copyButtonSize: CGFloat = 24
         static let headerHorizontalPadding: CGFloat = 12
         static let headerVerticalPadding: CGFloat = 3
@@ -118,7 +132,7 @@ enum ReplyTone: Equatable { case body, quiet }
 /// The reader's font scale (its size over that body) produces a 16 pt body,
 /// 26/18 pt headings and 28 pt lines by default.
 enum DocumentTypography {
-    static let unit: CGFloat = ReplyStyle.bodySize / 16
+    static var unit: CGFloat { ReplyStyle.bodySize / 16 }
     static func headingSize(_ level: Int) -> CGFloat { (level == 1 ? 26 : level == 2 ? 18 : 16) * unit }
     static func headingLineHeight(_ level: Int) -> CGFloat { headingSize(level) * (level == 1 ? 1.35 : 1.5) }
     static func blockSpacing(before block: ReplyStyle.BlockKind, after previous: ReplyStyle.BlockKind?, compact: Bool) -> CGFloat {
@@ -154,18 +168,18 @@ extension ReplyStyle.BlockKind {
 
 enum UserMessageStyle {
     /// Nine lines of a folded long prompt; prompts past eleven lines fold.
-    static let lineHeight = ReplyStyle.lineHeight
-    static let collapsedHeight = lineHeight * 9
-    static let foldThreshold = lineHeight * 11
+    static var lineHeight: CGFloat { ReplyStyle.lineHeight }
+    static var collapsedHeight: CGFloat { lineHeight * 9 }
+    static var foldThreshold: CGFloat { lineHeight * 11 }
     static let horizontalPadding: CGFloat = 16
     static let verticalPadding: CGFloat = 10
     static let cornerRadius: CGFloat = 18
     static let maxWidthRatio: CGFloat = 0.85
     static let topSpacing: CGFloat = 8
-    static let paragraphSpacing: CGFloat = ReplyStyle.paragraphSpacing
-    /// The fold toggle under a long prompt, as `LongUserPrompt` sets it: 12 pt
+    static var paragraphSpacing: CGFloat { ReplyStyle.paragraphSpacing }
+    /// The fold toggle under a long prompt, as `LongUserPrompt` sets it: label-size
     /// secondary text on a 24 pt row, 6 pt below the prompt.
-    static let toggleFontSize: CGFloat = 12
+    static var toggleFontSize: CGFloat { ReplyStyle.labelSize }
     static let toggleSpacing: CGFloat = 6
     static let toggleHeight: CGFloat = 24
 }
@@ -424,7 +438,7 @@ private struct ReplyAlertBlock: View {
                 Text(kind.title).foregroundStyle(kind.titleInk)
             } icon: {
                 Image(systemName: kind.symbol).foregroundStyle(kind.tint)
-            }.font(.system(size: 12, weight: .semibold))
+            }.font(.system(size: ReplyStyle.labelSize, weight: .semibold))
             AnyView(ReplyBlocks(blocks: blocks, compact: true, coalescesParagraphs: coalescesParagraphs))
         }
         .padding(.leading, ReplyStyle.Quote.leadingInset).padding(.vertical, ReplyStyle.Quote.verticalInset)
@@ -448,8 +462,16 @@ private struct ReplyAlertBlock: View {
         return field
     }()
     /// Markers repeat ("•", "1." …); bounded independently of history length.
+    /// Measured at `measuredSize`; a new body size starts over.
     private static var widths: [String: CGFloat] = [:]
+    private static var measuredSize: CGFloat = 0
     static func markerWidth(_ marker: String) -> CGFloat {
+        let size = ReplyStyle.bodySize
+        if size != measuredSize {
+            measuredSize = size
+            measuringField.font = .systemFont(ofSize: size)
+            widths.removeAll(keepingCapacity: true)
+        }
         if let width = widths[marker] { return width }
         measuringField.stringValue = marker
         let width = measuringField.fittingSize.width
@@ -550,7 +572,7 @@ private struct ReplyListLayout: Layout {
 }
 
 private struct ReplyLineHeightKey: EnvironmentKey {
-    static let defaultValue = ReplyStyle.lineHeight
+    static var defaultValue: CGFloat { ReplyStyle.lineHeight }
 }
 extension EnvironmentValues {
     var replyLineHeight: CGFloat {
@@ -787,7 +809,7 @@ struct SelectableReplyText: NSViewRepresentable {
         self.preservesSelectionOnAppend = preservesSelectionOnAppend
         self.selectable = selectable
     }
-    init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: 11, weight: .regular), lineSpacing: CGFloat = 4, selectable: Bool = true) {
+    init(_ text: String, font: NSFont = .monospacedSystemFont(ofSize: ReplyStyle.captionSize, weight: .regular), lineSpacing: CGFloat = 4, selectable: Bool = true) {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = lineSpacing
         attributed = NSAttributedString(string: text, attributes: [
             .font: font, .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph
@@ -951,6 +973,8 @@ final class NativeUserMessageView: NSView {
     private let bubbleBackground = NSView()
     private let promptClip = UserPromptClipView()
     private let expandButton = NSButton()
+    /// The toggle title's size when it was last set; the reading size can change.
+    private var toggleTitleSize: CGFloat = 0
     var expansionKey: String?
     var expansionWillChange: (() -> Void)?
     var expansionDidChange: (() -> Void)?
@@ -1085,7 +1109,8 @@ final class NativeUserMessageView: NSView {
         expandButton.isHidden = !folds
         if folds {
             let title = L(expanded ? "收起问题" : "展开完整问题")
-            if expandButton.title != title {
+            if expandButton.title != title || toggleTitleSize != UserMessageStyle.toggleFontSize {
+                toggleTitleSize = UserMessageStyle.toggleFontSize
                 let paragraph = NSMutableParagraphStyle(); paragraph.alignment = .left
                 expandButton.attributedTitle = NSAttributedString(string: title, attributes: [
                     .font: NSFont.systemFont(ofSize: UserMessageStyle.toggleFontSize),
@@ -1126,13 +1151,13 @@ private struct NativeAssistantActions: View {
             if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
             if let context, let source {
                 Button { context.post(.quote(source)) } label: {
-                    Image(systemName: "quote.opening").font(.system(size: 11))
+                    Image(systemName: "quote.opening").font(.system(size: ReplyStyle.captionSize))
                         .frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
                     .accessibilityLabel("引用到输入框")
                 if let messageID, !messageID.isEmpty {
                     Button { context.post(.regenerate(before: messageID)) } label: {
-                        Image(systemName: "arrow.clockwise").font(.system(size: 11))
+                        Image(systemName: "arrow.clockwise").font(.system(size: ReplyStyle.captionSize))
                             .frame(width: 24, height: 24).contentShape(Rectangle())
                     }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
                         .accessibilityLabel("重新生成")
@@ -1409,7 +1434,7 @@ struct DisclosureReplyText: View {
                             .buttonStyle(.plain).foregroundStyle(.secondary)
                     }
                     ReplyCopyButton(text: text, label: "复制完整内容")
-                }.font(.system(size: 11))
+                }.font(.system(size: ReplyStyle.captionSize))
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1460,7 +1485,7 @@ struct LongOutputReader: View {
                         .help("下一个匹配").accessibilityLabel("下一个匹配")
                     Button { handle.searchVisible = false } label: { Image(systemName: "xmark") }
                         .help("关闭查找").accessibilityLabel("关闭查找")
-                }.font(.system(size: 11)).frame(height: 28)
+                }.font(.system(size: ReplyStyle.captionSize)).frame(height: 28)
             }
             LongOutputViewport(text: text, attributes: attributes, handle: handle)
                 .frame(height: handle.searchVisible ? 326 : 360)
@@ -1521,7 +1546,7 @@ private struct LongOutputViewport: NSViewRepresentable {
         guard let view = scroll.documentView as? NSTextView else { return }
         handle.textView = view
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 4
-        let style = attributes ?? [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+        let style = attributes ?? [.font: NSFont.monospacedSystemFont(ofSize: ReplyStyle.captionSize, weight: .regular),
                                    .foregroundColor: ReplyStyle.nativeInk, .paragraphStyle: paragraph]
         let dictionary = style as NSDictionary
         guard context.coordinator.text != text || context.coordinator.attributes != dictionary else { return }
@@ -1556,7 +1581,7 @@ struct ReplyCopyButton: View {
             NSPasteboard.general.setString(text, forType: .string)
             copied = true
         } label: {
-            Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: 11))
+            Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: ReplyStyle.captionSize))
                 .frame(width: 24, height: 24).contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(.secondary).help(copied ? "已复制" : label)
             .accessibilityLabel(copied ? "已复制" : label)

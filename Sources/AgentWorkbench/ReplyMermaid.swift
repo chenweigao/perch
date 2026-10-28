@@ -429,7 +429,7 @@ struct ReplyMermaid: View {
                 Spacer()
                 Button { self.showsSource = !showsSource } label: {
                     Image(systemName: showsSource ? "flowchart" : "chevron.left.forwardslash.chevron.right")
-                        .font(.system(size: 11))
+                        .font(.system(size: ReplyStyle.captionSize))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
                 }

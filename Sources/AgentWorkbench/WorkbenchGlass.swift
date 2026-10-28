@@ -16,7 +16,7 @@ private struct WorkbenchGlassSurface: ViewModifier {
     let cornerRadius: CGFloat
 
     @ViewBuilder func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if reduceTransparency {
             content.background(Color(nsColor: .controlBackgroundColor), in: shape)
         } else {
@@ -143,7 +143,7 @@ struct WorkbenchDisclosureButtonStyle: ButtonStyle {
         @State private var hovered = false
         var body: some View {
             configuration.label
-                .background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6))
+                .background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .onHover { hovered = $0 }
         }
         private var wash: Double {

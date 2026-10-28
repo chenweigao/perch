@@ -87,6 +87,14 @@ struct WorkbenchApp: App {
                 Button(L("关闭当前本地视图")) {
                     if let id = model.tabs.selectedID { model.close(id) }
                 }.keyboardShortcut("w", modifiers: [.command, .shift])
+                Divider()
+                // Off while a terminal is in front, so its own font keys keep working.
+                Button(L("放大正文")) { ReadingBodySize.shared.step(1) }
+                    .keyboardShortcut("=", modifiers: .command).disabled(model.selectedTerminal != nil)
+                Button(L("缩小正文")) { ReadingBodySize.shared.step(-1) }
+                    .keyboardShortcut("-", modifiers: .command).disabled(model.selectedTerminal != nil)
+                Button(L("正文默认大小")) { ReadingBodySize.shared.set(ReadingBodySize.standard) }
+                    .keyboardShortcut("0", modifiers: .command).disabled(model.selectedTerminal != nil)
             }
         }
         MenuBarExtra("Perch", systemImage: "bird") {

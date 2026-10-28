@@ -16,7 +16,9 @@ enum WorkspaceLayoutMetrics {
     /// The reading sheet floats just below the unified window toolbar.
     static let frameInset: CGFloat = 12
     static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + 4
-    static let inspectorTopInset: CGFloat = contentTopInset + 12
+    /// Side-by-side floating cards share one top edge; the inspector reads as
+    /// secondary by its width and its content-sized height, not by sinking lower.
+    static let inspectorTopInset: CGFloat = contentTopInset
     static let inspectorBottomInset: CGFloat = 24
     static let inspectorMaximumHeight: CGFloat = 680
     static let sidebarInset: CGFloat = frameInset
@@ -415,7 +417,9 @@ final class WorkbenchDetailController: NSViewController {
     /// Sidebar avoidance; 0 while the sidebar is hidden or overlays the card.
     private(set) var contentLeadingInset: CGFloat = 0
     private(set) var contentTrailingInset: CGFloat = 0
-    private(set) var cardView: NSView?
+    private var card: WorkbenchContentCardView?
+    private var cardShadow: WorkbenchPanelShadowView?
+    var cardView: NSView? { card }
 
     init(content: NSViewController) {
         self.content = content
@@ -431,8 +435,8 @@ final class WorkbenchDetailController: NSViewController {
         let card = WorkbenchContentCardView()
         card.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(card)
-        WorkbenchPanelShadowView.install(behind: card, in: view)
-        cardView = card
+        cardShadow = WorkbenchPanelShadowView.install(behind: card, in: view)
+        self.card = card
         let detail = content.view
         detail.translatesAutoresizingMaskIntoConstraints = false
         detail.clipsToBounds = true
@@ -466,18 +470,29 @@ final class WorkbenchDetailController: NSViewController {
             cardTrailingConstraint?.constant = -max(WorkspaceLayoutMetrics.frameInset, trailing)
         }
     }
+
+    /// Concentric with the window corner; see `WorkbenchTheme.Radius.framePanel`.
+    func setCornerRadius(_ radius: CGFloat) {
+        card?.cornerRadius = radius
+        cardShadow?.cornerRadius = radius
+    }
 }
 
 /// An opaque content surface inside the window frame. It clips its page to the
 /// panel radius so scrolling content and terminals keep the rounded edge; the
-/// hairline is drawn above the page.
+/// hairline is drawn above the page. The conversation and the inspector share it.
 private final class WorkbenchContentCardView: NSView {
+    var cornerRadius: CGFloat = WorkbenchTheme.Radius.framePanel(
+        windowCorner: 0, inset: WorkspaceLayoutMetrics.frameInset) {
+        didSet { if cornerRadius != oldValue { layer?.cornerRadius = cornerRadius } }
+    }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
         // AppKit keeps the layer's masking in step with this flag.
         clipsToBounds = true
-        layer?.cornerRadius = WorkbenchTheme.Radius.panel
+        layer?.cornerRadius = cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
     }
@@ -515,12 +530,21 @@ private final class WorkspaceSidebarResizeHandle: NSView {
 /// Separate from clipped AppKit content and SwiftUI-owned hosting layers so
 /// their rendering cannot mask or replace the elevation shadow.
 private final class WorkbenchPanelShadowView: NSView {
+    var cornerRadius: CGFloat = WorkbenchTheme.Radius.framePanel(
+        windowCorner: 0, inset: WorkspaceLayoutMetrics.frameInset) {
+        didSet {
+            guard cornerRadius != oldValue else { return }
+            layer?.cornerRadius = cornerRadius
+            needsLayout = true
+        }
+    }
+
     @discardableResult static func install(behind panel: NSView, in parent: NSView) -> WorkbenchPanelShadowView {
         let shadow = WorkbenchPanelShadowView()
         shadow.translatesAutoresizingMaskIntoConstraints = false
         shadow.wantsLayer = true
         shadow.clipsToBounds = false
-        shadow.layer?.cornerRadius = WorkbenchTheme.Radius.panel
+        shadow.layer?.cornerRadius = shadow.cornerRadius
         shadow.layer?.cornerCurve = .continuous
         parent.addSubview(shadow, positioned: .below, relativeTo: panel)
         NSLayoutConstraint.activate([
@@ -549,7 +573,60 @@ private final class WorkbenchPanelShadowView: NSView {
     override func layout() {
         super.layout()
         layer?.shadowPath = CGPath(roundedRect: bounds,
-            cornerWidth: WorkbenchTheme.Radius.panel, cornerHeight: WorkbenchTheme.Radius.panel, transform: nil)
+            cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+}
+
+/// Elevation for a translucent panel: the same shadow as an opaque card, cut
+/// out under the panel itself so the glass above still samples the content
+/// behind it instead of a darkened fill.
+private final class WorkbenchOuterShadowView: NSView {
+    var cornerRadius: CGFloat = WorkbenchTheme.Radius.framePanel(
+        windowCorner: 0, inset: WorkspaceLayoutMetrics.frameInset) {
+        didSet { if cornerRadius != oldValue { needsLayout = true } }
+    }
+    private let cutout = CAShapeLayer()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        clipsToBounds = false
+        cutout.fillRule = .evenOdd
+        layer?.mask = cutout
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override var wantsUpdateLayer: Bool { true }
+
+    override func updateLayer() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            let elevation = NSShadow()
+            elevation.shadowColor = NSColor.black.withAlphaComponent(
+                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.20)
+            elevation.shadowBlurRadius = 18
+            elevation.shadowOffset = NSSize(width: 0, height: -5)
+            shadow = elevation
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        let panel = CGPath(roundedRect: bounds, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+        layer?.shadowPath = panel
+        // Keep everything around the panel (where the shadow falls), drop its interior.
+        let mask = CGMutablePath()
+        mask.addRect(bounds.insetBy(dx: -64, dy: -64))
+        mask.addPath(panel)
+        cutout.frame = bounds
+        cutout.path = mask
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -578,14 +655,33 @@ final class WorkbenchSplitController: NSSplitViewController {
     private var sidebarResizeHandle: WorkspaceSidebarResizeHandle?
     private var inspectorResizeHandle: WorkspaceSidebarResizeHandle?
     private var sidebarOverlayBackdrop: WorkbenchWindowBackdropView?
+    private var sidebarOverlayShadow: WorkbenchOuterShadowView?
+    private var inspectorCard: WorkbenchContentCardView?
     private var inspectorShadowView: WorkbenchPanelShadowView?
     private var applyingLayout = false
+    /// Installing the toolbar changes the window corner and lays the window out
+    /// while AppKit materializes toolbar items; updating hosted panels then can
+    /// flush SwiftUI into those items mid-load. The pass after install applies it.
+    private var installingToolbar = false
     private(set) var isSidebarOverlayingContent = false
     private(set) var isInspectorOverlayingContent = false
+    /// Too narrow for sidebar, a 600 pt card and the inspector, yet wide enough
+    /// without the sidebar: the sidebar steps aside, as a split view collapses
+    /// its sidebar on resize, instead of the inspector covering the reply. The
+    /// saved visibility is unchanged; widening the window brings it back.
+    private(set) var isSidebarYieldingToInspector = false
+    /// The reader asked for the sidebar while it was yielding: it then overlays
+    /// as before, until the inspector closes or the window fits all three.
+    private var sidebarRevealedOverInspector = false
+    /// Concentric with the window corner across `frameInset`, for every frame panel.
+    private(set) var panelCornerRadius = WorkbenchTheme.Radius.framePanel(
+        windowCorner: 0, inset: WorkspaceLayoutMetrics.frameInset)
     private(set) var floatingSidebarWidth: CGFloat
     private(set) var isFloatingSidebarVisible: Bool
     private(set) var floatingInspectorWidth: CGFloat
     private(set) var isFloatingInspectorVisible = false
+    /// Whether the sidebar is on screen; it may be visible by preference yet yielding.
+    var isSidebarShown: Bool { isFloatingSidebarVisible && !isSidebarYieldingToInspector }
 
     private(set) var windowBackdropView: WorkbenchWindowBackdropView?
     var sidebarOverlayBackdropView: WorkbenchWindowBackdropView? { sidebarOverlayBackdrop }
@@ -693,8 +789,12 @@ final class WorkbenchSplitController: NSSplitViewController {
         handle.isHidden = !isFloatingSidebarVisible
         // Only narrow overlay mode needs its own backing: a floating glass panel
         // over the card. Otherwise navigation sits directly on the window glass.
-        // Unclipped, so the glass keeps its rim and shadow.
-        let overlay = WorkbenchWindowBackdropView(cornerRadius: WorkbenchTheme.Radius.panel)
+        // Unclipped, so the glass keeps its rim; over a white card the rim alone
+        // does not read, so it adds a hairline and an elevation shadow around it.
+        let overlayShadow = WorkbenchOuterShadowView()
+        overlayShadow.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(overlayShadow, positioned: .below, relativeTo: sidebar)
+        let overlay = WorkbenchWindowBackdropView(cornerRadius: panelCornerRadius, outlined: true)
         overlay.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(overlay, positioned: .below, relativeTo: sidebar)
         NSLayoutConstraint.activate([
@@ -702,21 +802,40 @@ final class WorkbenchSplitController: NSSplitViewController {
             overlay.trailingAnchor.constraint(equalTo: sidebar.trailingAnchor),
             overlay.topAnchor.constraint(equalTo: sidebar.topAnchor),
             overlay.bottomAnchor.constraint(equalTo: sidebar.bottomAnchor),
+            overlayShadow.leadingAnchor.constraint(equalTo: sidebar.leadingAnchor),
+            overlayShadow.trailingAnchor.constraint(equalTo: sidebar.trailingAnchor),
+            overlayShadow.topAnchor.constraint(equalTo: sidebar.topAnchor),
+            overlayShadow.bottomAnchor.constraint(equalTo: sidebar.bottomAnchor),
         ])
         sidebarOverlayBackdrop = overlay
+        sidebarOverlayShadow = overlayShadow
         updateWorkspaceLayout()
     }
 
+    /// The inspector shares the conversation's card surface: opaque fill,
+    /// concentric radius, hairline and clipping all come from the same view.
     func installFloatingInspector(_ inspector: NSView, visible: Bool) {
-        floatingInspectorView = inspector
+        let card = WorkbenchContentCardView()
+        card.cornerRadius = panelCornerRadius
+        inspector.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(inspector)
+        NSLayoutConstraint.activate([
+            inspector.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            inspector.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            inspector.topAnchor.constraint(equalTo: card.topAnchor),
+            inspector.bottomAnchor.constraint(equalTo: card.bottomAnchor),
+        ])
+        inspectorCard = card
+        floatingInspectorView = card
         isFloatingInspectorVisible = visible
-        let (width, handle) = installFloatingPanel(inspector, leading: false, width: floatingInspectorWidth,
+        let (width, handle) = installFloatingPanel(card, leading: false, width: floatingInspectorWidth,
                                                    handleAction: #selector(resizeInspector(_:)))
         inspectorWidthConstraint = width
         inspectorResizeHandle = handle
-        inspector.isHidden = !visible
+        card.isHidden = !visible
         handle.isHidden = !visible
-        inspectorShadowView = WorkbenchPanelShadowView.install(behind: inspector, in: view)
+        inspectorShadowView = WorkbenchPanelShadowView.install(behind: card, in: view)
+        inspectorShadowView?.cornerRadius = panelCornerRadius
         inspectorShadowView?.isHidden = !visible
         updateWorkspaceLayout()
     }
@@ -754,7 +873,9 @@ final class WorkbenchSplitController: NSSplitViewController {
             // AppKit materializes hosted toolbar items on that same window.
             if window.toolbar !== self.workspaceToolbar {
                 self.workspaceToolbarInstalled = false
+                self.installingToolbar = true
                 window.toolbar = self.workspaceToolbar
+                self.installingToolbar = false
                 self.workspaceToolbarInstalled = true
             }
             self.windowBackdropView?.updateCornerRadius()
@@ -791,6 +912,13 @@ final class WorkbenchSplitController: NSSplitViewController {
     override func splitView(_ splitView: NSSplitView, shouldHideDividerAt dividerIndex: Int) -> Bool { false }
 
     override func toggleSidebar(_ sender: Any?) {
+        // A yielding sidebar is hidden by width, not by preference: asking for
+        // it brings it back over the card rather than flipping the preference.
+        if isSidebarYieldingToInspector {
+            sidebarRevealedOverInspector = true
+            updateWorkspaceLayout()
+            return
+        }
         setFloatingSidebarVisible(!isFloatingSidebarVisible)
     }
 
@@ -802,9 +930,10 @@ final class WorkbenchSplitController: NSSplitViewController {
     func setFloatingSidebarVisible(_ visible: Bool) {
         guard visible != isFloatingSidebarVisible else { return }
         isFloatingSidebarVisible = visible
+        if !visible { sidebarRevealedOverInspector = false }
         UserDefaults.standard.set(visible, forKey: Self.sidebarVisibilityDefaultsKey)
-        floatingSidebarView?.isHidden = !visible
-        sidebarResizeHandle?.isHidden = !visible
+        floatingSidebarView?.isHidden = !(visible && !isSidebarYieldingToInspector)
+        sidebarResizeHandle?.isHidden = !(visible && !isSidebarYieldingToInspector)
         updateWorkspaceLayout()
     }
 
@@ -820,6 +949,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     func setInspectorDesiredVisible(_ visible: Bool) {
         guard visible != isFloatingInspectorVisible else { return }
         isFloatingInspectorVisible = visible
+        if !visible { sidebarRevealedOverInspector = false }
         floatingInspectorView?.isHidden = !visible
         inspectorResizeHandle?.isHidden = !visible
         updateWorkspaceLayout()
@@ -838,28 +968,39 @@ final class WorkbenchSplitController: NSSplitViewController {
         guard !applyingLayout, view.bounds.width > 0 else { return }
         applyingLayout = true
         defer { applyingLayout = false }
+        updatePanelCornerRadius()
 
         // The canvas and conversation host stay mounted. When there is room for
         // 600pt of content, the card yields to both panels so their rounded edges
         // sit on the frame material instead of disappearing into one white sheet.
         let availableWidth = view.bounds.width
+        let minimum = WorkspaceLayoutMetrics.contentMinimumWidth - 0.5
         let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
             WorkspaceLayoutMetrics.sidebarGap
-        let avoidSidebar = isFloatingSidebarVisible &&
-            availableWidth >= WorkspaceLayoutMetrics.contentMinimumWidth + avoidance +
-                WorkspaceLayoutMetrics.frameInset - 0.5
-        let leading = avoidSidebar ? avoidance : WorkspaceLayoutMetrics.frameInset
         let inspectorAvoidance = WorkspaceLayoutMetrics.sidebarInset + floatingInspectorWidth +
             WorkspaceLayoutMetrics.sidebarGap
-        let avoidInspector = isFloatingInspectorVisible && availableWidth - leading - inspectorAvoidance >=
-            WorkspaceLayoutMetrics.contentMinimumWidth - 0.5
+        let fitsSidebar = availableWidth - avoidance - WorkspaceLayoutMetrics.frameInset >= minimum
+        let fitsBoth = availableWidth - avoidance - inspectorAvoidance >= minimum
+        let fitsInspectorAlone = availableWidth - WorkspaceLayoutMetrics.frameInset - inspectorAvoidance >= minimum
+        let bothOpen = isFloatingSidebarVisible && isFloatingInspectorVisible
+        if !bothOpen || fitsBoth { sidebarRevealedOverInspector = false }
+        // The reply keeps priority over navigation: rather than letting the
+        // inspector cover it, the sidebar steps aside while the card still fits.
+        isSidebarYieldingToInspector = bothOpen && fitsSidebar && !fitsBoth && fitsInspectorAlone &&
+            !sidebarRevealedOverInspector
+        let sidebarShown = isSidebarShown
+        let avoidSidebar = sidebarShown && fitsSidebar
+        let leading = avoidSidebar ? avoidance : WorkspaceLayoutMetrics.frameInset
+        let avoidInspector = isFloatingInspectorVisible &&
+            availableWidth - leading - inspectorAvoidance >= minimum
         detailController?.setContentInsets(leading: avoidSidebar ? avoidance : 0,
                                           trailing: avoidInspector ? inspectorAvoidance : 0)
-        isSidebarOverlayingContent = isFloatingSidebarVisible && !avoidSidebar
+        isSidebarOverlayingContent = sidebarShown && !avoidSidebar
         sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
+        sidebarOverlayShadow?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = isFloatingInspectorVisible && !avoidInspector
-        floatingSidebarView?.isHidden = !isFloatingSidebarVisible
-        sidebarResizeHandle?.isHidden = !isFloatingSidebarVisible
+        floatingSidebarView?.isHidden = !sidebarShown
+        sidebarResizeHandle?.isHidden = !sidebarShown
         floatingInspectorView?.isHidden = !isFloatingInspectorVisible
         inspectorShadowView?.isHidden = !isFloatingInspectorVisible
         inspectorResizeHandle?.isHidden = !isFloatingInspectorVisible
@@ -869,6 +1010,21 @@ final class WorkbenchSplitController: NSSplitViewController {
             let canvasX = canvas.convert(canvas.bounds, to: view).minX
             alignToolbar?(canvasX + leading + WorkbenchTheme.Reading.inset)
         }
+    }
+
+    /// The window corner changes with the toolbar style and full screen; every
+    /// frame panel follows it so all of them stay concentric with the window.
+    private func updatePanelCornerRadius() {
+        guard !installingToolbar else { return }
+        let corner = view.window.map(WorkbenchWindowBackdropView.windowCornerRadius(of:)) ?? 0
+        let radius = WorkbenchTheme.Radius.framePanel(windowCorner: corner, inset: WorkspaceLayoutMetrics.frameInset)
+        guard abs(radius - panelCornerRadius) > 0.25 else { return }
+        panelCornerRadius = radius
+        detailController?.setCornerRadius(radius)
+        inspectorCard?.cornerRadius = radius
+        inspectorShadowView?.cornerRadius = radius
+        sidebarOverlayBackdrop?.fixedCornerRadius = radius
+        sidebarOverlayShadow?.cornerRadius = radius
     }
 
     @objc private func resizeSidebar(_ recognizer: NSPanGestureRecognizer) {
@@ -908,21 +1064,18 @@ struct WorkspaceFloatingPanelRoot<Content: View>: View {
     }
 }
 
-/// The inspector is a card of the frame like the conversation: the same opaque
-/// surface, radius and hairline, floating over the canvas' trailing lane.
+/// The inspector's SwiftUI root. Its card (`WorkbenchContentCardView`) supplies
+/// the opaque surface, concentric radius, hairline and clipping it shares with
+/// the conversation, floating over the canvas' trailing lane.
 struct WorkspaceInspectorPanelRoot<Content: View>: View {
     let content: Content
     let locale: Locale
     let sizing: WorkbenchInspectorSizing
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel, style: .continuous)
         content
             .environment(\.locale, locale)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(WorkbenchTheme.contentBackground)
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(Color.primary.opacity(WorkbenchTheme.Stroke.hairline), lineWidth: 1))
             .environment(\.inspectorSizing, sizing)
     }
 }

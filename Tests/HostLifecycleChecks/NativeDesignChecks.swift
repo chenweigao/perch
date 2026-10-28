@@ -179,13 +179,19 @@ import WorkbenchCore
                  abs(backdropFrame.width - window.contentView!.bounds.width) < 1 &&
                  abs(backdropFrame.height - window.contentView!.bounds.height) < 1,
                  "The window must be one Liquid Glass backdrop shaped like the window: backdrop=\(backdropFrame), corner=\(backdrop.glassCornerRadius), window corner=\(windowCorner), opaque=\(window.isOpaque)")
-    precondition(split.sidebarOverlayBackdropView?.fixedCornerRadius == WorkbenchTheme.Radius.panel &&
-                 split.sidebarOverlayBackdropView?.isHidden == true,
+    let panelRadius = WorkbenchTheme.Radius.framePanel(windowCorner: windowCorner, inset: WorkspaceLayoutMetrics.frameInset)
+    precondition(abs(split.panelCornerRadius - panelRadius) < 0.5 &&
+                 card.layer?.cornerRadius == split.panelCornerRadius &&
+                 inspector.layer?.cornerRadius == split.panelCornerRadius &&
+                 split.sidebarOverlayBackdropView?.fixedCornerRadius == split.panelCornerRadius,
+                 "Frame panels must be concentric with the window corner: window=\(windowCorner), panels=\(split.panelCornerRadius), expected=\(panelRadius)")
+    precondition(split.sidebarOverlayBackdropView?.isHidden == true,
                  "Wide windows draw navigation straight on the window glass; only the narrow overlay gets its own glass panel")
     precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
-                 distanceFromTop(inspectorFrame) > distanceFromTop(cardFrame) &&
+                 abs(distanceFromTop(inspectorFrame) - distanceFromTop(cardFrame)) < 1 &&
+                 inspectorFrame.height < cardFrame.height &&
                  inspectorFrame.height <= WorkspaceLayoutMetrics.inspectorMaximumHeight + 1,
-                 "The reading sheet must float below the toolbar, with a shorter inset inspector")
+                 "The reading sheet floats below the toolbar; the shorter inspector shares its top edge: card=\(cardFrame), inspector=\(inspectorFrame)")
     precondition(inspectorFrame.height < 500,
                  "A short diff must size to its contents rather than fill a 680pt inspector")
     precondition(connection.models(for: .codex).count == 2 &&
@@ -198,6 +204,12 @@ import WorkbenchCore
     let draftX = draft.convert(draft.bounds, to: window.contentView).minX
     let replyX = reply.convert(reply.bounds, to: window.contentView).minX
     precondition(abs(draftX - replyX) < 2, "Composer and reply must share the reading rail: draft=\(draftX), reply=\(replyX)")
+    // The composer bar floats over the transcript without a divider across the card.
+    let contentHeight = window.contentView!.bounds.height
+    let draftTop = window.contentView!.isFlipped ? draftFrame.minY : contentHeight - draftFrame.maxY
+    let divider = horizontalRule(in: window.contentView!, from: draftTop - 110, to: draftTop - 20,
+                                 xRange: (cardFrame.minX + 30)...(cardFrame.maxX - 30))
+    precondition(divider == nil, "The composer bar must not draw a divider across the reading card: y=\(String(describing: divider)), composer top=\(draftTop)")
     let title = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchTitle" }!.view!
     let titleX = title.convert(title.bounds, to: window.contentView).minX
     precondition(abs(titleX - cardFrame.minX - WorkbenchTheme.Reading.inset) < 2,
@@ -367,6 +379,23 @@ import WorkbenchCore
     try await capture("native-fit-dark")
     UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
+    // Too narrow for all three, wide enough without navigation: the sidebar steps
+    // aside instead of the inspector covering the reply, and comes back on request.
+    window.setFrame(NSRect(x: visible.minX, y: visible.minY, width: 1100,
+                           height: min(wideFrame.height, visible.height)), display: true)
+    try await Task.sleep(for: .milliseconds(300))
+    window.contentView!.layoutSubtreeIfNeeded()
+    let yieldingReply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
+    let yieldingReplyFrame = yieldingReply.convert(yieldingReply.bounds, to: window.contentView)
+    let yieldingInspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
+    precondition(split.isSidebarYieldingToInspector && split.floatingSidebarView!.isHidden &&
+                 !split.isInspectorOverlayingContent && yieldingReplyFrame.maxX < yieldingInspectorFrame.minX,
+                 "At 1100 pt the inspector must sit beside the reply, not over it: reply=\(yieldingReplyFrame), inspector=\(yieldingInspectorFrame)")
+    split.toggleSidebar(nil)
+    try await Task.sleep(for: .milliseconds(200))
+    window.contentView!.layoutSubtreeIfNeeded()
+    precondition(split.isSidebarShown && !split.isSidebarYieldingToInspector && split.isInspectorOverlayingContent,
+                 "Asking for a yielding sidebar must bring it back")
     try await place(width: 900)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
                  "A narrow window must back the overlaying sidebar with its glass panel")

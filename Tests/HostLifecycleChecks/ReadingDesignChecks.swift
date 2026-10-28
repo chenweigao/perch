@@ -71,10 +71,13 @@ private struct ReadingDesignFixture: View {
         let bodyFont = body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
         let paragraph = body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle
         let subheading = views.first { $0.string == "本次调整" }!
+        let minorHeading = views.first { $0.string == "继续阅读" }!
         precondition(bodyFont.pointSize == 16 && paragraph.minimumLineHeight == 26,
                      "Body reads at 16 pt on a 26 pt line in both renderers")
-        precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == bodyFont.pointSize,
-                     "Ordinary headings keep the body size; hierarchy comes from weight and spacing")
+        precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 18,
+                     "H2 steps up two points from the body")
+        precondition((minorHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == bodyFont.pointSize,
+                     "H3 and below keep the body size; hierarchy comes from weight and spacing")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot bitmap") }
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(label + ".png"))
@@ -114,6 +117,29 @@ private struct ReadingDesignFixture: View {
     clickHeader(mounted(foldID), height: foldHeaderHeight)
     try await Task.sleep(for: .milliseconds(400))
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
+    // The reader's body size re-renders mounted native rows: every size of the
+    // ramp follows, and returning to the default restores the original metrics.
+    func bodyMetrics() -> (body: CGFloat, line: CGFloat, heading: CGFloat)? {
+        let views = readingTextViews(host)
+        guard let body = views.first(where: { $0.string.contains("正文清楚呈现") }),
+              let heading = views.first(where: { $0.string == "让回复成为阅读的主角" }),
+              let font = body.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont,
+              let paragraph = body.textStorage?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle,
+              let headingFont = heading.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont else { return nil }
+        return (font.pointSize, paragraph.minimumLineHeight, headingFont.pointSize)
+    }
+    for (size, line, heading) in [(14.0, 23.0, 18.0), (18.0, 29.0, 22.0), (16.0, 26.0, 20.0)] as [(CGFloat, CGFloat, CGFloat)] {
+        ReadingBodySize.shared.set(size)
+        var metrics = bodyMetrics()
+        for _ in 0..<40 where metrics.map({ $0.body != size }) ?? true {
+            try await Task.sleep(for: .milliseconds(50))
+            window.contentView?.layoutSubtreeIfNeeded()
+            metrics = bodyMetrics()
+        }
+        precondition(metrics.map { $0.body == size && $0.line == line && $0.heading == heading } ?? false,
+                     "Changing the reading size to \(size) must re-render mounted rows at \(size)/\(line), H1 \(heading): \(String(describing: metrics))")
+    }
+    precondition(UserDefaults.standard.double(forKey: ReadingBodySize.defaultsKey) == 16, "The reading size persists")
     // Fallback Markdown uses the same hierarchy and complete link/text contents.
     let fallback = NSHostingView(rootView: KimiMarkdown(text: text).frame(width: 460))
     window.contentView = fallback

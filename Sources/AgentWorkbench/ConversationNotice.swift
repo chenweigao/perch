@@ -2,10 +2,10 @@ import SwiftUI
 
 extension ReplyStyle {
     /// Conversation notices (an error, a lost connection, a stale sync) look the same
-    /// for every agent: a 12 pt line with a symbol and at most one action, set in the
+    /// for every agent: a label-size line with a symbol and at most one action, set in the
     /// reading column.
     enum Notice {
-        static let textSize: CGFloat = 12
+        static var textSize: CGFloat { ReplyStyle.labelSize }
         /// Between the symbol, the text and the action.
         static let spacing: CGFloat = 8
         static let horizontalPadding: CGFloat = 12

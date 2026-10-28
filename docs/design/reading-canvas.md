@@ -4,18 +4,18 @@ The conversation keeps a centered reading column and the existing native
 sidebar/composer glass. All metrics live in `ReplyStyle` (`ReplyMarkdownView.swift`);
 see [the visual refresh](visual-refresh.md) for the complete scale and rationale.
 
-- System body text: 14 pt on a 22 pt line with 10 pt paragraph separation, in a
-  680-point column (about 48 CJK characters per line). 16 pt read as web-sized in a
-  native window.
-- Ordinary Markdown headings: 14 pt semibold; H1: 16 pt. All use the same 22 pt
-  line height. Heading spacing (20 pt above, 6 pt below), rather than a large
-  type-size ladder, signals hierarchy.
-- Lists, quotes and alerts use compact 6 pt paragraph gaps. Code uses 12.5 pt
-  monospaced text and tables 13 pt. User messages share the body size on a slightly
-  tighter 21 pt line.
-- Thoughts: 13 pt regular, upright, on a 20 pt line in secondary ink; no italic,
-  because PingFang has none and only the Latin glyphs would slant. The streaming
-  preview caps at four lines; the full-text popover uses the body style.
+- Body text follows the reader's setting (14–18 pt, default 16 on a 26 pt line,
+  12 pt paragraph separation) in a fixed 680-point column — about 42 CJK characters
+  per line at the default. See [ui-spec 正文刻度](ui-spec.md#正文刻度) for the ramp.
+- H1 and H2 step up 4 and 2 pt; H3 and below keep the body size. Heading spacing
+  (20 pt above, 6 pt below at the default), rather than a large type-size ladder,
+  signals hierarchy.
+- Lists, quotes and alerts use compact paragraph gaps. Code and tables use the
+  secondary size (14 pt at the default). User messages share the body size and line.
+- Thoughts: secondary size (14 on 22 at the default), regular, upright, in secondary
+  ink; no italic, because PingFang has none and only the Latin glyphs would slant.
+  A thought that is still streaming has no row of its own; once settled its
+  header reads 已思考 N秒 when this app watched it.
 - SwiftUI and native cached rows share the same text attributes, block rhythm
   (`ReplyStyle.blockSpacing`), code card, quote and list metrics. A code card's
   horizontal scroller never takes height: the native card overlays it, and the

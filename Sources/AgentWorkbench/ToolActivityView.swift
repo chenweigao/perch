@@ -7,7 +7,7 @@ struct ActivityNarrativeHistoryView: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: narrative.phase == .blocked ? "exclamationmark.circle" : "checkmark.circle")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: ReplyStyle.captionSize, weight: .medium))
                 .foregroundStyle(narrative.phase == .blocked ? Color.orange : Color.secondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
@@ -15,7 +15,7 @@ struct ActivityNarrativeHistoryView: View {
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = narrative.detail, !detail.isEmpty {
-                    Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(detail).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -169,8 +169,8 @@ struct KimiToolCard: View {
                 // A returned error keeps its quiet status label; only uncertainty
                 // or a user decision earns the orange attention treatment.
                 if showsAttention || tool.status == .running || tool.status == .failed {
-                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: 11)).accessibilityHidden(true)
-                    Text(statusLabel).font(.system(size: 11)).fixedSize()
+                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
+                    Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
                 }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : Color.secondary)
                 .accessibilityElement(children: .combine)
@@ -186,7 +186,7 @@ struct KimiToolCard: View {
             if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
             if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
             if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(.secondary) }
-        }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
+        }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)

@@ -6,7 +6,7 @@ extension UserMessageStyle {
     /// prompt's bubble, so the echo takes its place without moving the text.
     enum Pending {
         /// Its state and controls under the bubble, in secondary ink.
-        static let detailSize: CGFloat = 11
+        static var detailSize: CGFloat { ReplyStyle.captionSize }
         /// Between the bubble and that line, as the fold toggle under a long prompt.
         static let detailSpacing: CGFloat = 6
         /// Between the items of that line.

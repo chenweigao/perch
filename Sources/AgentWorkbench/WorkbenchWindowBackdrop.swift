@@ -7,13 +7,19 @@ import SwiftUI
 /// their own radius. Reduce Transparency swaps the glass for the window color.
 final class WorkbenchWindowBackdropView: NSView {
     /// `nil` follows the window's corner, so the glass rim meets the window edge.
-    let fixedCornerRadius: CGFloat?
+    /// Floating panels set their concentric radius as the window corner changes.
+    var fixedCornerRadius: CGFloat? {
+        didSet { if fixedCornerRadius != oldValue { updateCornerRadius() } }
+    }
     private let outline = WorkbenchBackdropOutline()
 
-    init(cornerRadius: CGFloat? = nil) {
+    /// `outlined` draws a hairline on the glass rim, for a panel that floats over
+    /// an opaque card where the glass alone would not show an edge.
+    init(cornerRadius: CGFloat? = nil, outlined: Bool = false) {
         fixedCornerRadius = cornerRadius
         super.init(frame: .zero)
         outline.cornerRadius = cornerRadius ?? 0
+        outline.outlined = outlined
         let host = NSHostingView(rootView: WorkbenchBackdropGlass(outline: outline))
         host.sizingOptions = []
         host.safeAreaRegions = []
@@ -64,6 +70,7 @@ final class WorkbenchWindowBackdropView: NSView {
 /// Square until the window reports its corner.
 @Observable private final class WorkbenchBackdropOutline {
     var cornerRadius = CGFloat.zero
+    var outlined = false
 }
 
 private struct WorkbenchBackdropGlass: View {
@@ -78,6 +85,12 @@ private struct WorkbenchBackdropGlass: View {
             } else {
                 Color.clear.glassEffect(.regular, in: shape)
             }
-        }.ignoresSafeArea()
+        }
+        .overlay {
+            if outline.outlined {
+                shape.strokeBorder(Color.primary.opacity(WorkbenchTheme.Stroke.hairline), lineWidth: 1)
+            }
+        }
+        .ignoresSafeArea()
     }
 }
