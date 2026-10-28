@@ -114,12 +114,15 @@ public sealed class SessionController
         lock (_stateGate)
         {
             connectionToken = _connectionGeneration;
-            selectionToken = _selectionGeneration;
-            selectedId = SelectedId;
         }
 
         await RefreshCatalogAsync(connectionToken, cancellationToken).ConfigureAwait(false);
-        if (connectionToken != _connectionGeneration) return false;
+        lock (_stateGate)
+        {
+            if (connectionToken != _connectionGeneration) return false;
+            selectionToken = _selectionGeneration;
+            selectedId = SelectedId;
+        }
 
         if (selectedId is { } id)
         {
