@@ -11,7 +11,7 @@ struct WorkbenchHeader: View {
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
-        Text(title).font(.system(size: 14, weight: .semibold))
+        Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             .lineLimit(1).truncationMode(.tail)
             .frame(minWidth: 100, maxWidth: 440, alignment: .leading)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)

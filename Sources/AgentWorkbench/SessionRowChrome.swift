@@ -72,7 +72,7 @@ struct SessionRowChrome<Indicator: View>: View {
                     } else if updatedAt > 0 {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
-                                .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(.tertiary)
                                 .lineLimit(1)
                         }
                     }
@@ -96,18 +96,18 @@ struct SessionRowChrome<Indicator: View>: View {
                         Text(title).font(.system(size: SidebarMetrics.titleSize)).lineLimit(1).truncationMode(.tail)
                         #if PERCH_ACCEPTANCE
                         if NativeAcceptanceProbe.shared.persistentSubtitle {
-                            Text(subtitle ?? "").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                            Text(subtitle ?? "").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).lineLimit(1)
                                 .frame(height: subtitle == nil ? 0 : nil).clipped()
                                 .padding(.top, subtitle == nil ? -3 : 0)
                                 .accessibilityHidden(subtitle == nil)
                         } else {
                         if let subtitle {
-                            Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                            Text(subtitle).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).lineLimit(1)
                         }
                         }
                         #else
                         if let subtitle {
-                            Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                            Text(subtitle).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).lineLimit(1)
                         }
                         #endif
                     }.frame(maxWidth: .infinity, alignment: .leading)
@@ -118,7 +118,7 @@ struct SessionRowChrome<Indicator: View>: View {
                     if updatedAt > 0 && !compact {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             Text(SessionTime.label(since: updatedAt, waiting: false, now: context.date) ?? "")
-                                .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(.tertiary)
                                 .fixedSize()
                         }
                     }
@@ -131,11 +131,11 @@ struct SessionRowChrome<Indicator: View>: View {
                 if compact && !running && updatedAt > 0 {
                     TimelineView(.periodic(from: .now, by: 60)) { context in
                         Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
-                            .font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).lineLimit(1)
+                            .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(.tertiary).lineLimit(1)
                     }.opacity(showActions ? 0 : 1).accessibilityHidden(true)
                 } else if hostName != nil && !compact {
                     HostIdentityIcon(hostID: hostID)
-                        .font(.system(size: 12)).frame(width: 28)
+                        .font(.system(size: WorkbenchTheme.Typography.body)).frame(width: 28)
                         .opacity(showActions && actionWidth > 0 ? 0 : 1)
                         .accessibilityHidden(true)
                 }
@@ -156,7 +156,7 @@ struct SessionRowChrome<Indicator: View>: View {
                             .accessibilityLabel(archived ? L("恢复会话") : L("归档会话")).disabled(busy)
                             .focused($focus, equals: .archive)
                     }
-                }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
+                }.buttonStyle(.plain).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                     .frame(width: actionWidth, alignment: .trailing).clipped()
                     .background {
                         if compact && showActions {

@@ -127,6 +127,7 @@ import WorkbenchCore
     precondition(window.contentView!.bounds.width >= 1000, "Design checks require a real window-sized viewport")
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     let draft = descendants(window.contentView!).compactMap { $0 as? DraftTextView }.first!
+    precondition(draft.font?.pointSize == 14, "The mounted composer shares the default 14 pt reading size")
     let reply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     func splitController(_ view: NSView) -> WorkbenchSplitController? {
         var responder: NSResponder? = view

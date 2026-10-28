@@ -9,7 +9,7 @@ import WorkbenchCore
 /// so a settled row keeps the geometry of the row it replaces.
 ///
 /// Type sizes and vertical rhythm follow the reader's body size through
-/// `ReadingScale` (16 pt on a 26 pt line by default; H1 and H2 step up, the other
+/// `ReadingScale` (14 pt on a 22 pt line by default; H1 and H2 step up, the other
 /// headings rely on weight and space). Horizontal geometry — the 680 pt column,
 /// insets — stays fixed at every size.
 enum ReplyStyle {
@@ -26,7 +26,7 @@ enum ReplyStyle {
     static var paragraphSpacing: CGFloat { scale.spacing(12) }
     /// Between paragraphs inside list items, quotes and alerts.
     static var compactParagraphSpacing: CGFloat { scale.spacing(6) }
-    /// Secondary prose: thoughts, quiet notes, code and tables.
+    /// Secondary prose shares the body size: thoughts, quiet notes, code and tables.
     static var secondarySize: CGFloat { scale.secondary }
     /// Process and tool rows, fold headers, the activity bar and notices.
     static var labelSize: CGFloat { scale.label }
@@ -56,7 +56,7 @@ enum ReplyStyle {
         appearance.performAsCurrentDrawingAppearance { ink = NSColor.labelColor.withAlphaComponent(0.9) }
         return ink
     }
-    /// `ReplyTone.quiet`: compaction notes and runtime context read one step down,
+    /// `ReplyTone.quiet`: compaction notes and runtime context share the reading size,
     /// in secondary ink. Weight still marks headings and strong text.
     static var quietSize: CGFloat { scale.secondary }
     static var quietLineHeight: CGFloat { scale.secondaryLine }
@@ -129,8 +129,8 @@ enum ReplyStyle {
 enum ReplyTone: Equatable { case body, quiet }
 
 /// Document metrics are normalized to the shared renderer's `ReplyStyle.bodySize`.
-/// The reader's font scale (its size over that body) produces a 16 pt body,
-/// 26/18 pt headings and 28 pt lines by default.
+/// The reader's font scale preserves document proportions independently of
+/// conversation zoom. The 16 pt reference yields 26/18 pt headings and 28 pt lines.
 enum DocumentTypography {
     static var unit: CGFloat { ReplyStyle.bodySize / 16 }
     static func headingSize(_ level: Int) -> CGFloat { (level == 1 ? 26 : level == 2 ? 18 : 16) * unit }
@@ -1677,7 +1677,7 @@ private struct ReplyTable: View {
     let headers: [[ReplyInline]]
     let rows: [[[ReplyInline]]]
     let alignments: [ReplyAlignment]
-    private var cellSize: CGFloat { documentReadingStyle ? 13 * DocumentTypography.unit : ReplyStyle.tableCellSize }
+    private var cellSize: CGFloat { ReplyStyle.tableCellSize }
     private var geometry: ReplyTableGeometry {
         documentReadingStyle ? ReplyTableGeometry(fontSize: cellSize * documentFontScale) : ReplyStyle.tableGeometry
     }

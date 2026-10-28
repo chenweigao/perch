@@ -127,7 +127,7 @@ private struct KimiComposerView: View {
     var body: some View {
         VStack(spacing: 10) {
             if let feedback = connection.commandFeedback[sessionID] {
-                Text(feedback).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(feedback).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary).textSelection(.enabled)
                     .lineLimit(4).help(feedback)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -317,7 +317,7 @@ private struct KimiQueuedMessages: View {
         let items = connection.queue.items(for: reference)
         // A queue paused at restart also holds messages queued while offline.
         if connection.queue.isPaused(reference), !items.isEmpty {
-            Button("继续发送排队消息") { connection.resumeQueue(for: sessionID) }.font(.subheadline)
+            Button("继续发送排队消息") { connection.resumeQueue(for: sessionID) }.font(.system(size: WorkbenchTheme.Typography.secondary))
                 .disabled(!connection.online)
         }
         ForEach(items) { message in
@@ -424,7 +424,7 @@ private struct KimiTimeline<Bar: View>: View {
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(c.snapshot.pendingApprovals) { approval in
                         VStack(alignment: .leading, spacing: 12) {
-                            Label("需要你的确认", systemImage: "hand.raised").font(.headline).foregroundStyle(.orange)
+                            Label("需要你的确认", systemImage: "hand.raised").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(.orange)
                             Text(approval.action).font(.system(size: ReplyStyle.labelSize))
                             KimiToolCard(tool: VisibleTool(id: approval.id, name: approval.toolName, input: approval.toolInputDisplay, status: .awaitingApproval))
                             HStack {
@@ -513,7 +513,7 @@ struct KimiQuestionView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("等你回答", systemImage: "bubble.left.and.exclamationmark.bubble.right").font(.headline)
+            Label("等你回答", systemImage: "bubble.left.and.exclamationmark.bubble.right").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             ForEach(Array(question.questions.enumerated()), id: \.element.id) { index, q in
                 let isCurrent = q.id == currentID
                 let isDone = done(q)
@@ -528,7 +528,7 @@ struct KimiQuestionView: View {
                                 confirmed.remove(q.id)
                                 // Keep the answer while returning to its editable form.
                                 editing = q.id
-                            }.font(.subheadline).buttonStyle(.plain)
+                            }.font(.system(size: WorkbenchTheme.Typography.secondary)).buttonStyle(.plain)
                         }
                     }
                     if let body = q.body, !isDone { KimiMarkdown(text: body) }

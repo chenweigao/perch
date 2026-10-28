@@ -11,7 +11,7 @@ struct ThinkingPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("思考强度").font(.system(size: 12, weight: .medium))
+            Text("思考强度").font(.system(size: WorkbenchTheme.Typography.body, weight: .medium))
                 .padding(.horizontal, 10)
             if let unavailableReason {
                 explanation(unavailableReason)
@@ -26,7 +26,7 @@ struct ThinkingPicker: View {
                     }
                 }
                 Text("较高强度会花更多时间思考。")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else if model?.hasThinkingCapability == true {
                 explanation(L("支持思考，但尚未声明可选档位。请补充 Agent 的模型配置。"))
@@ -37,7 +37,7 @@ struct ThinkingPicker: View {
     }
 
     private func explanation(_ text: String) -> some View {
-        Text(text).font(.system(size: 12)).foregroundStyle(.secondary)
+        Text(text).font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -82,16 +82,16 @@ struct ContextMeter: View {
                     }
                 }.frame(width: 14, height: 14)
                 if isStale {
-                    Text(L("未同步")).font(.system(size: 11))
+                    Text(L("未同步")).font(.system(size: WorkbenchTheme.Typography.caption))
                 } else if let budget, budget.pressure != .comfortable {
-                    Text(L("上下文将满")).font(.system(size: 11))
+                    Text(L("上下文将满")).font(.system(size: WorkbenchTheme.Typography.caption))
                 }
             }.foregroundStyle(tint).frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
         }.buttonStyle(.plain).fixedSize()
             .help(summary).accessibilityLabel(summary)
             .popover(isPresented: $presented) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(summary).font(.headline)
+                    Text(summary).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                     if let budget {
                         Text(L("已用 \(ContextBudget.short(budget.used)) / \(ContextBudget.short(budget.limit)) tokens"))
                             .monospacedDigit()
@@ -106,9 +106,9 @@ struct ContextMeter: View {
                             Text(L("上报时间"))
                             Text(Date(timeIntervalSince1970: reportedAt), style: .date)
                             Text(Date(timeIntervalSince1970: reportedAt), style: .time)
-                        }.font(.subheadline).foregroundStyle(.secondary)
+                        }.font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                     } else {
-                        Text(L("上报时间未提供")).font(.subheadline).foregroundStyle(.secondary)
+                        Text(L("上报时间未提供")).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                     }
                     if let autoCompactHost, let autoCompactSession {
                         Divider()
@@ -132,7 +132,7 @@ struct ContextMeter: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                }.font(.callout).padding(16).frame(width: 290, alignment: .leading)
+                }.font(.system(size: WorkbenchTheme.Typography.body)).padding(16).frame(width: 290, alignment: .leading)
             }
     }
 }

@@ -673,6 +673,7 @@ private struct DiffText: View {
 }
 
 struct RemoteFilePanel: View {
+    static let directoryRowHeight: CGFloat = 32
     @UILocalization private var L
     @Bindable var browser: RemoteFileBrowser
     var showsCloseButton = true
@@ -745,7 +746,7 @@ struct RemoteFilePanel: View {
                     if isDocumentReading && browser.documents.tabs.count == 1 {
                         Image(systemName: "doc.text").foregroundStyle(.secondary).padding(.leading, 4)
                         Text((browser.path as NSString).lastPathComponent)
-                            .font(.system(size: 13)).lineLimit(1).truncationMode(.middle).help(browser.path)
+                            .font(.system(size: WorkbenchTheme.Typography.body)).lineLimit(1).truncationMode(.middle).help(browser.path)
                     }
                 }
                 Spacer(minLength: 0)
@@ -779,7 +780,7 @@ struct RemoteFilePanel: View {
                 VStack(alignment: .leading, spacing: 9) {
                     HStack(spacing: 7) {
                         TextField("Git 仓库或 worktree 目录", text: $browser.gitInput)
-                            .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                            .textFieldStyle(.roundedBorder).font(.system(size: WorkbenchTheme.Typography.body))
                             .onSubmit { browser.submitGitDirectory() }
                         if browser.loading {
                             Button("取消") { browser.cancel() }.controlSize(.small)
@@ -793,7 +794,7 @@ struct RemoteFilePanel: View {
                     }
                     if !browser.gitWorktrees.isEmpty {
                         HStack(spacing: 7) {
-                            Text("工作树").font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text("工作树").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                             Picker("工作树", selection: Binding(
                                 get: { browser.gitDirectory },
                                 set: { browser.selectGitWorktree($0) }
@@ -823,7 +824,7 @@ struct RemoteFilePanel: View {
                                 }
                             } label: {
                                 Label(branches.current ?? L("游离 HEAD"), systemImage: "arrow.triangle.branch")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: WorkbenchTheme.Typography.body))
                             }.menuStyle(.borderlessButton).fixedSize()
                                 .help("切换分支，直接作用于远端工作区")
                                 .disabled(browser.gitWriting)
@@ -846,14 +847,14 @@ struct RemoteFilePanel: View {
                         if browser.gitWriting { ProgressView().controlSize(.mini) }
                     }
                     if let writeError = browser.gitWriteError {
-                        Text(writeError).font(.system(size: 11)).foregroundStyle(.orange)
+                        Text(writeError).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if case .changes(_, _, let entries) = browser.gitStatus,
                        entries.contains(where: { $0.hasStaged }) {
                         HStack(spacing: 7) {
                             TextField("提交信息", text: $browser.gitCommitMessage)
-                                .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                                .textFieldStyle(.roundedBorder).font(.system(size: WorkbenchTheme.Typography.body))
                                 .disabled(browser.gitWriting)
                                 .onSubmit { browser.commitGit() }
                             Button("提交") { browser.commitGit() }.controlSize(.small)
@@ -867,16 +868,16 @@ struct RemoteFilePanel: View {
                                 ForEach(log) { commit in
                                     Button { browser.showGitCommit(commit) } label: {
                                         HStack(spacing: 7) {
-                                            Text(commit.hash).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                                            Text(commit.subject).font(.system(size: 11)).lineLimit(1)
+                                            Text(commit.hash).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced)).foregroundStyle(.secondary)
+                                            Text(commit.subject).font(.system(size: WorkbenchTheme.Typography.caption)).lineLimit(1)
                                             Spacer(minLength: 0)
-                                            Text(commit.relativeDate).font(.system(size: 11)).foregroundStyle(.tertiary)
+                                            Text(commit.relativeDate).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.tertiary)
                                         }.frame(maxWidth: .infinity, alignment: .leading)
                                             .padding(.vertical, 2).contentShape(Rectangle())
                                     }.buttonStyle(.plain)
                                 }
                             }.padding(.top, 4)
-                        }.font(.system(size: 11))
+                        }.font(.system(size: WorkbenchTheme.Typography.caption))
                     }
                     if browser.gitRange == .branch {
                         HStack(spacing: 7) {
@@ -892,25 +893,25 @@ struct RemoteFilePanel: View {
                                     .help("选择已有分支").accessibilityLabel("选择已有分支")
                             }
                             TextField("目标分支或提交，如 origin/main", text: $browser.gitBaseInput)
-                                .textFieldStyle(.roundedBorder).font(.system(size: 12))
+                                .textFieldStyle(.roundedBorder).font(.system(size: WorkbenchTheme.Typography.body))
                                 .onSubmit { browser.loadGitComparison() }
                             Button("比较") { browser.loadGitComparison() }.controlSize(.small)
                                 .disabled(browser.loading || browser.gitStatus?.root == nil || browser.gitBaseInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                         if let comparison = browser.gitComparison {
                             Text("\(comparison.entries.count) 个文件 · 已读 \(browser.reviewProgress.reviewed.count) 个")
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                             DisclosureGroup("比较版本") {
                                 Text("\(comparison.baseRef)\n\(comparison.mergeBase) → \(comparison.headCommit)")
-                                    .font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                                    .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced)).textSelection(.enabled)
                                     .fixedSize(horizontal: false, vertical: true)
-                            }.font(.system(size: 11))
+                            }.font(.system(size: WorkbenchTheme.Typography.caption))
                         }
                         Text("比较共同祖先到当前提交的改动，不含未提交内容；引用使用仓库现有数据，不自动 fetch。")
-                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text("暂存、提交与切换分支会直接修改远端工作区；差异与比较仍为只读。")
-                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 14).padding(.vertical, 12)
@@ -921,7 +922,7 @@ struct RemoteFilePanel: View {
                     Label("已加入会话草稿", systemImage: "checkmark.circle").foregroundStyle(.secondary)
                     Spacer()
                     if let showAddedDraft { Button("查看草稿", action: showAddedDraft) }
-                }.font(.system(size: 11)).padding(.horizontal, 14).padding(.vertical, 6)
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).padding(.horizontal, 14).padding(.vertical, 6)
             }
             if browser.mode == .file, showFind, hasContext { FileFindBar(browser: browser, isPresented: $showFind) }
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -949,12 +950,12 @@ struct RemoteFilePanel: View {
                         Spacer()
                         Button("关闭") { browser.gitCommitSheet = nil }.keyboardShortcut(.cancelAction)
                     }
-                    Text("\(commit.author) · \(commit.relativeDate)").font(.subheadline).foregroundStyle(.secondary)
+                    Text("\(commit.author) · \(commit.relativeDate)").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                     switch browser.gitCommitDiff {
                     case .text(let diff, let truncated):
                         if truncated {
                             Label("差异过大，已截断", systemImage: "scissors")
-                                .font(.system(size: 11)).foregroundStyle(.orange)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
                         }
                         RemoteSourceText(text: diff, line: nil, diff: true)
                     case .some(.binary): Text("二进制文件差异，不做预览。").foregroundStyle(.secondary)
@@ -972,13 +973,13 @@ struct RemoteFilePanel: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("代码反馈").font(.headline)
                     Group {
-                        Text(context.reference).font(.subheadline).textSelection(.enabled)
+                        Text(context.reference).font(.system(size: WorkbenchTheme.Typography.secondary)).textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
-                        ScrollView { Text(context.excerpt).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 160)
+                        ScrollView { Text(context.excerpt).font(.system(size: WorkbenchTheme.Typography.body, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 160)
                     }
                     TextField("希望如何修改？", text: $feedback, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder)
-                    if let destination = draft.destination { Text("引用到：\(destination)").font(.subheadline).foregroundStyle(.secondary) }
-                    Text("加入会话草稿，检查后再发送。").font(.subheadline).foregroundStyle(.secondary)
+                    if let destination = draft.destination { Text("引用到：\(destination)").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary) }
+                    Text("加入会话草稿，检查后再发送。").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                     HStack {
                         Spacer()
                         Button("取消") { feedbackContext = nil }.keyboardShortcut(.cancelAction)
@@ -994,7 +995,7 @@ struct RemoteFilePanel: View {
 
     private var locationEditor: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(browser.hostName) · \(browser.cwd)").font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
+            Text("\(browser.hostName) · \(browser.cwd)").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary).textSelection(.enabled)
             TextField("文件路径，可用绝对路径或相对当前目录", text: $browser.input)
                 .textFieldStyle(.roundedBorder).focused($locationFocused).onSubmit { browser.submit(); showLocation = false }
             HStack {
@@ -1012,7 +1013,7 @@ struct RemoteFilePanel: View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("跳转到行", text: $lineInput).textFieldStyle(.roundedBorder).focused($lineFocused)
                 .onSubmit(jumpToLine)
-            Text("仅定位已读取内容中的行号").font(.subheadline).foregroundStyle(.secondary)
+            Text("仅定位已读取内容中的行号").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
             Button("跳转", action: jumpToLine).keyboardShortcut(.defaultAction).disabled(validLine == nil)
         }.padding(16).frame(width: 260).defaultFocus($lineFocused, true)
     }
@@ -1029,15 +1030,15 @@ struct RemoteFilePanel: View {
     private var fileDetails: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text((browser.path as NSString).lastPathComponent).font(.headline)
-            Text(browser.path).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-            Text("\(browser.hostName) · \(browser.cwd)").font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
+            Text(browser.path).font(.system(size: WorkbenchTheme.Typography.body, design: .monospaced)).textSelection(.enabled)
+            Text("\(browser.hostName) · \(browser.cwd)").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary).textSelection(.enabled)
             if case .text(let text, _, let size) = browser.content {
-                Text(byteLabel(size)).font(.subheadline)
+                Text(byteLabel(size)).font(.system(size: WorkbenchTheme.Typography.secondary))
                 if let line = browser.targetLine {
                     Text(line <= RemoteSourceStyle.lineCount(text) ? L("Line \(line)") : L("Line \(line) is outside the loaded content"))
-                        .font(.subheadline)
+                        .font(.system(size: WorkbenchTheme.Typography.secondary))
                 }
-            } else if case .binary(let size) = browser.content { Text(byteLabel(size)).font(.subheadline) }
+            } else if case .binary(let size) = browser.content { Text(byteLabel(size)).font(.system(size: WorkbenchTheme.Typography.secondary)) }
         }.padding(16).frame(width: 360, alignment: .leading)
     }
 
@@ -1102,7 +1103,7 @@ struct RemoteFilePanel: View {
         } else if browser.loading {
             VStack(spacing: 10) {
                 ProgressView()
-                Text("正在读取…").font(.system(size: 12)).foregroundStyle(.secondary)
+                Text("正在读取…").font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if browser.gitRange == .branch, browser.gitStatus?.root != nil {
             if let comparison = browser.gitComparison {
@@ -1134,7 +1135,7 @@ struct RemoteFilePanel: View {
                     Spacer(minLength: 0)
                     Button(browser.reviewProgress.isReviewed(browser.gitPath ?? "") ? L("标为未读") : L("标为已读")) { browser.toggleReviewed() }
                         .disabled(browser.gitDiff == nil)
-                }.font(.system(size: 11)).padding(10)
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).padding(10)
             }
         VSplitView {
             ScrollView {
@@ -1144,14 +1145,14 @@ struct RemoteFilePanel: View {
                             Button { browser.loadGitDiff(entry) } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(entry.originalPath.map { "\($0) → \(entry.path)" } ?? entry.path)
-                                        .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                                        .font(.system(size: WorkbenchTheme.Typography.body)).lineLimit(1).truncationMode(.middle)
                                     HStack(spacing: 6) {
                                         Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label)
                                         if browser.gitRange == .branch {
                                             if browser.reviewProgress.isReviewed(entry.path) { Label("已读", systemImage: "checkmark.circle.fill") }
                                             else if browser.reviewProgress.changed.contains(entry.path) { Text("有新改动").foregroundStyle(.orange) }
                                         }
-                                    }.font(.system(size: 11)).foregroundStyle(.secondary)
+                                    }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                     .contentShape(Rectangle())
                             }.buttonStyle(.plain)
@@ -1179,7 +1180,7 @@ struct RemoteFilePanel: View {
             VStack(alignment: .leading, spacing: 0) {
                 if truncated {
                     Label("差异过大，已截断", systemImage: "scissors")
-                        .font(.system(size: 11)).foregroundStyle(.orange)
+                        .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
                         .padding(.horizontal, 14).padding(.vertical, 6)
                     Divider()
                 }
@@ -1202,19 +1203,19 @@ struct RemoteFilePanel: View {
         } else if browser.loading {
             VStack(spacing: 10) {
                 ProgressView()
-                Text("正在读取…").font(.system(size: 12)).foregroundStyle(.secondary)
+                Text("正在读取…").font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             switch browser.content {
             case .matches(let paths):
                 VStack(alignment: .leading, spacing: 8) {
                     Text("找到多个同名文件，请选择：")
-                        .font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, 14)
+                        .font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).padding(.horizontal, 14)
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 1) {
                             ForEach(paths, id: \.self) { path in
                                 Button { browser.open(path, line: browser.targetLine) } label: {
-                                    Text(path).font(.system(size: 12, design: .monospaced))
+                                    Text(path).font(.system(size: WorkbenchTheme.Typography.body, design: .monospaced))
                                         .multilineTextAlignment(.leading)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
@@ -1232,10 +1233,10 @@ struct RemoteFilePanel: View {
                                 Button { browser.open(RemoteFilePath.child(browser.path, entry.name)) } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: entry.isDirectory ? "folder" : "doc")
-                                            .font(.system(size: 11)).foregroundStyle(.secondary).frame(width: 14)
-                                        Text(entry.name).font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).frame(width: 14)
+                                        Text(entry.name).font(.system(size: WorkbenchTheme.Typography.body)).lineLimit(1).truncationMode(.middle)
                                         Spacer(minLength: 0)
-                                    }.padding(.horizontal, 14).padding(.vertical, 6).contentShape(Rectangle())
+                                    }.padding(.horizontal, 14).padding(.vertical, 6).frame(minHeight: Self.directoryRowHeight).contentShape(Rectangle())
                                 }.buttonStyle(.plain)
                             }
                         }.padding(.vertical, 8)
@@ -1245,7 +1246,7 @@ struct RemoteFilePanel: View {
                 VStack(alignment: .leading, spacing: 0) {
                     if truncated {
                         Label(browser.readingTail ? "正在查看文件尾部" : "仅显示已读取部分", systemImage: "scissors")
-                            .font(.subheadline).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 5)
+                            .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 5)
                     }
                     if browser.previewKind.isBinary {
                         binaryPreview(size: size)
@@ -1334,7 +1335,7 @@ struct RemoteFilePanel: View {
     private func notice(_ text: String, symbol: String, tint: Color) -> some View {
         VStack(spacing: 10) {
             Image(systemName: symbol).font(.system(size: 22)).foregroundStyle(tint)
-            Text(text).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(text).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center).textSelection(.enabled)
         }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
     }

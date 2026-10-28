@@ -55,11 +55,11 @@ import WorkbenchCore
     try await settle()
     precondition(browser.reading.document!.outline.count == 36)
     let title = texts().first { $0.string == "项目方案" }!
-    precondition(abs((title.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 26) < 0.1)
+    precondition(abs((title.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 22.75) < 0.1)
     let body = texts().first { $0.string.contains(introduction) }!
-    precondition(abs((body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 16) < 0.1)
+    precondition(abs((body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 14) < 0.1)
     precondition(!NSFontManager.shared.traits(of: body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).contains(.boldFontMask))
-    precondition(abs((body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle).minimumLineHeight - 28) < 0.1)
+    precondition(abs((body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle).minimumLineHeight - 24.5) < 0.1)
     let readerScroll = title.enclosingScrollView!
     window.setContentSize(NSSize(width: 960, height: 640))
     try await Task.sleep(for: .milliseconds(150))
@@ -119,7 +119,7 @@ import WorkbenchCore
     browser.navigateDocument("#chapter-20")
     try await Task.sleep(for: .milliseconds(250))
     let chapter = texts().first { $0.string == "Chapter 20" }!
-    precondition(abs((chapter.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 18) < 0.1)
+    precondition(abs((chapter.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize - 15.75) < 0.1)
     precondition(chapter.enclosingScrollView!.contentView.bounds.origin.y > 500)
     let offset = chapter.enclosingScrollView!.contentView.bounds.origin.y
     browser.navigateDocument("sub/Next%20page.md")

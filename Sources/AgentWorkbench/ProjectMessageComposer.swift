@@ -62,24 +62,24 @@ struct ProjectMessageComposer: View {
             if queryRange != nil {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("引用项目文件").font(.system(size: 11, weight: .medium))
+                        Text("引用项目文件").font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                         if !matches.isEmpty {
-                            Text("\(matches.count) 个匹配").font(.system(size: 11)).foregroundStyle(.tertiary)
+                            Text("\(matches.count) 个匹配").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.tertiary)
                         }
                         Spacer()
                         Button("刷新") { choice = 0; files.load(host: host, cwd: cwd) }
                         Button("关闭") { dismiss() }
-                    }.font(.system(size: 11))
+                    }.font(.system(size: WorkbenchTheme.Typography.caption))
                     if files.loading { ProgressView().controlSize(.small) }
-                    else if let error = files.error { Text(error).font(.subheadline).foregroundStyle(.orange) }
-                    else if matches.isEmpty { Text("没有匹配文件").font(.subheadline).foregroundStyle(.secondary) }
+                    else if let error = files.error { Text(error).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.orange) }
+                    else if matches.isEmpty { Text("没有匹配文件").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary) }
                     else {
                         ScrollViewReader { proxy in
                             ScrollView {
                                 LazyVStack(alignment: .leading, spacing: 2) {
                                     ForEach(Array(matches.enumerated()), id: \.element) { index, path in
                                         Button { choose(path) } label: {
-                                            Text(path).font(.system(size: 11, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                                            Text(path).font(.system(size: WorkbenchTheme.Typography.body, design: .monospaced)).lineLimit(1).truncationMode(.middle)
                                                 .frame(maxWidth: .infinity, alignment: .leading).frame(height: 23).padding(.horizontal, 5)
                                                 .background(index == choice ? Color.primary.opacity(WorkbenchTheme.Fill.selected) : .clear,
                                                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
@@ -92,7 +92,7 @@ struct ProjectMessageComposer: View {
                         }
                     }
                     Text("↑↓ 选择 · Return / Tab 引用 · Esc 关闭，不会发送消息")
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                        .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                 }.padding(8).background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
                                          in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             }
@@ -114,7 +114,7 @@ struct ProjectMessageComposer: View {
                                 // Kept at glyph size: a larger target would grow the chip row.
                                 Button { remove(reference) } label: { Image(systemName: "xmark.circle.fill") }
                                     .help("移除文件引用").accessibilityLabel("移除文件引用")
-                            }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
+                            }.font(.system(size: WorkbenchTheme.Typography.caption)).buttonStyle(.plain).padding(5)
                                 .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
                                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
                         }
@@ -131,7 +131,7 @@ struct ProjectMessageComposer: View {
                                 PastePreviewButton(paste: paste, store: store, stats: stats)
                                 Button { remove(paste) } label: { Image(systemName: "xmark.circle.fill") }
                                     .help("移除粘贴内容").accessibilityLabel("移除粘贴内容")
-                            }.font(.system(size: 11)).buttonStyle(.plain).padding(5)
+                            }.font(.system(size: WorkbenchTheme.Typography.caption)).buttonStyle(.plain).padding(5)
                                 .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
                                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
                         }
@@ -222,7 +222,7 @@ private struct PastePreviewButton: View {
         .popover(isPresented: $previewing, arrowEdge: .bottom) {
             ScrollView {
                 Text(store.text(for: paste.id) ?? L("粘贴内容已不存在，发送时将缺失这段文字。"))
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
                     .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(12)
             }.frame(width: 420, height: 260)
         }
