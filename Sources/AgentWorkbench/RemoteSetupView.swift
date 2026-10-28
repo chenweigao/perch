@@ -6,7 +6,6 @@ struct AddHostSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var setup: RemoteSetupController
     @State private var saveError: String?
-    @State private var advanced = false
     @State private var showFolders = false
     private var onReady: ((TaskLaunchDefaults) -> Void)?
     private var providers: [SessionKind] { RemoteSetup.agents.filter { onReady == nil || $0 != .terminal } }
@@ -32,16 +31,16 @@ struct AddHostSheet: View {
                 }
             }.padding(WorkbenchTheme.Dialog.padding)
             Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    switch setup.step {
-                    case .machine: machine
-                    case .agent: agent
-                    case .project: project
-                    }
-                    feedback
-                }.padding(WorkbenchTheme.Dialog.padding).frame(maxWidth: .infinity, alignment: .leading)
-            }.frame(minHeight: 340, maxHeight: 450)
+            Form {
+                switch setup.step {
+                case .machine: machine
+                case .agent: agent
+                case .project: project
+                }
+                feedback
+            }
+            .formStyle(.grouped)
+            .frame(minHeight: 340, maxHeight: 450)
             Divider()
             footer.padding(WorkbenchTheme.Dialog.padding)
         }.frame(width: 620)
@@ -60,23 +59,15 @@ struct AddHostSheet: View {
             .accessibilityElement(children: .combine)
     }
     private var machine: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("连接代码所在的机器。Perch 使用你的 SSH 配置与密钥。").foregroundStyle(.secondary)
+        Section {
             if !setup.aliases.isEmpty && setup.original == nil {
                 Menu("从 SSH 配置选择") {
                     ForEach(setup.aliases, id: \.self) { alias in Button(alias) { setup.destination = alias } }
                 }.fixedSize()
             }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("SSH 地址").font(.callout.weight(.medium))
-                TextField("SSH 别名或 user@host", text: $setup.destination).textFieldStyle(.roundedBorder)
-                    .disabled(setup.original != nil)
-                if setup.original != nil { Text("要连接另一台机器，请添加新机器。").font(.subheadline).foregroundStyle(.secondary) }
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("显示名称").font(.callout.weight(.medium))
-                TextField("可选", text: $setup.name).textFieldStyle(.roundedBorder)
-            }
+            TextField("SSH 地址", text: $setup.destination, prompt: Text("SSH 别名或 user@host"))
+                .disabled(setup.original != nil)
+            TextField("显示名称", text: $setup.name, prompt: Text("可选"))
             DisclosureGroup("首次使用 SSH？") {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("端口、密钥与跳板机配置在 ~/.ssh/config。首次连接需在终端确认主机指纹；需要口令的密钥请先加入 SSH agent。")
@@ -85,54 +76,70 @@ struct AddHostSheet: View {
                     Button("在终端连接") { setup.openTerminal() }.disabled(setup.destination.isEmpty)
                 }.font(.callout).padding(.top, 8)
             }
-        }.disabled(setup.busy)
-    }
-    private var agent: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label(setup.destination, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.secondary)
-            Text("选择要使用的 Agent。只检查所选 Agent 所需的环境。").foregroundStyle(.secondary)
-            Picker("Agent", selection: $setup.provider) {
-                ForEach(providers, id: \.self) { kind in Text(kind.label).tag(kind) }
-            }.pickerStyle(.segmented).disabled(setup.busy)
-            if setup.provider == .kimi {
-                DisclosureGroup("高级设置", isExpanded: $advanced) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        LabeledContent("远端端口") { TextField("58627", text: $setup.port).frame(width: 110) }
-                        LabeledContent("远端令牌文件") {
-                            TextField("~/.kimi-code/server.token", text: $setup.tokenPath) // l10n-ignore
-                        }
-                        Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Toggle("由 Perch 托管 Kimi Web", isOn: Binding(get: { setup.kimiManaged },
-                                                                    set: { setup.kimiManaged = $0; setup.invalidateAgent() }))
-                        if setup.kimiManaged {
-                            LabeledContent("启动环境变量") {
-                                TextField("NAME=value", text: $setup.kimiEnvironment) // l10n-ignore
-                            }
-                        }
-                        Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }.textFieldStyle(.roundedBorder).padding(.top, 8)
-                }.disabled(setup.busy)
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("连接代码所在的机器。Perch 使用你的 SSH 配置与密钥。")
+                if setup.original != nil { Text("要连接另一台机器，请添加新机器。") }
             }
-            if let original = setup.original, original.enabledAgents.contains(where: { $0 != setup.provider }) {
-                DisclosureGroup("其他自动连接的 Agent") {
-                    ForEach(original.enabledAgents.filter { $0 != setup.provider }, id: \.self) { kind in
-                        Toggle(isOn: Binding(get: { setup.enabledAgents.contains(kind) }, set: { enabled in
-                            if enabled { setup.enabledAgents.insert(kind) } else { setup.enabledAgents.remove(kind) }
-                        })) {
-                            HStack(spacing: 6) {
-                                AgentMark(kind: kind, size: 14)
-                                Text(kind.label)
-                            }
+        }
+        .disabled(setup.busy)
+    }
+    @ViewBuilder private var agent: some View {
+        Section {
+            Label(setup.destination, systemImage: "checkmark.circle.fill").foregroundStyle(.secondary)
+            Picker("Agent", selection: $setup.provider) {
+                ForEach(providers, id: \.self) { kind in
+                    Label { Text(kind.label) } icon: { AgentMarkMenuImage.image(for: kind) }.tag(kind)
+                }
+            }.disabled(setup.busy)
+        } footer: {
+            Text("选择要使用的 Agent。只检查所选 Agent 所需的环境。")
+        }
+        if setup.provider == .kimi {
+            Section {
+                LabeledContent("远端端口") { TextField("58627", text: $setup.port).frame(width: 110) }
+                LabeledContent("远端令牌文件") {
+                    TextField("~/.kimi-code/server.token", text: $setup.tokenPath) // l10n-ignore
+                }
+                Toggle("由 Perch 托管 Kimi Web", isOn: Binding(get: { setup.kimiManaged },
+                                                            set: { setup.kimiManaged = $0; setup.invalidateAgent() }))
+                if setup.kimiManaged {
+                    LabeledContent("启动环境变量") {
+                        TextField("NAME=value", text: $setup.kimiEnvironment) // l10n-ignore
+                    }
+                }
+            } header: {
+                Text("高级设置")
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
+                    Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。")
+                }
+            }
+            .disabled(setup.busy)
+        }
+        if let original = setup.original, original.enabledAgents.contains(where: { $0 != setup.provider }) {
+            Section {
+                ForEach(original.enabledAgents.filter { $0 != setup.provider }, id: \.self) { kind in
+                    Toggle(isOn: Binding(get: { setup.enabledAgents.contains(kind) }, set: { enabled in
+                        if enabled { setup.enabledAgents.insert(kind) } else { setup.enabledAgents.remove(kind) }
+                    })) {
+                        HStack(spacing: 6) {
+                            AgentMark(kind: kind, size: 14)
+                            Text(kind.label)
                         }
                     }
-                }.font(.callout).disabled(setup.busy)
+                }
+            } header: {
+                Text("其他自动连接的 Agent")
             }
+            .disabled(setup.busy)
+        }
+        Section {
             if setup.checks.isEmpty {
-                Text("检查会读取版本、连接服务并读取模型配置，不发送任务。").font(.callout).foregroundStyle(.secondary)
+                Text("检查会读取版本、连接服务并读取模型配置，不发送任务。").foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 14) { ForEach(setup.checks) { checkRow($0) } }
+                ForEach(setup.checks) { checkRow($0) }
             }
             HStack {
                 if setup.checks.contains(where: \.needsManualRestart) {
@@ -212,37 +219,35 @@ struct AddHostSheet: View {
             }
         }
     }
-    private var project: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    @ViewBuilder private var project: some View {
+        Section {
             Label("Agent 已连接", systemImage: "checkmark.circle.fill").font(.headline)
             HStack(spacing: 6) {
                 AgentMark(kind: setup.provider, size: 14)
                 Text(setup.host.name + " · " + setup.provider.label)
             }.foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 8) {
-                Text("远端项目目录").font(.callout.weight(.medium))
-                HStack {
-                    TextField("绝对路径", text: $setup.directory).textFieldStyle(.roundedBorder)
-                    Button("浏览…") {
-                        showFolders = true
-                        setup.browse(setup.directory.hasPrefix("/") ? setup.directory : setup.remoteHome)
-                    }.popover(isPresented: $showFolders) { folderBrowser }
-                }
-                HStack {
-                    Button("使用主目录") { setup.directory = setup.remoteHome }
-                    Button("检查目录") { setup.verifyProject() }.disabled(setup.busy || setup.directory.isEmpty)
-                    if setup.projectVerified { Label("目录可访问", systemImage: "checkmark.circle").foregroundStyle(.secondary) }
-                }.font(.callout)
-            }.disabled(setup.busy)
-            if !setup.models.isEmpty {
-                HStack {
-                    Text("模型").font(.callout.weight(.medium))
-                    ModelPicker(models: setup.models, selection: $setup.modelID)
-                }
-            } else if setup.provider != .terminal {
-                TextField("模型（留空使用远端默认值）", text: $setup.modelID).textFieldStyle(.roundedBorder)
+        }
+        Section {
+            TextField("远端项目目录", text: $setup.directory, prompt: Text("绝对路径"))
+            HStack {
+                Button("浏览…") {
+                    showFolders = true
+                    setup.browse(setup.directory.hasPrefix("/") ? setup.directory : setup.remoteHome)
+                }.popover(isPresented: $showFolders) { folderBrowser }
+                Button("使用主目录") { setup.directory = setup.remoteHome }
+                Button("检查目录") { setup.verifyProject() }.disabled(setup.busy || setup.directory.isEmpty)
+                if setup.projectVerified { Label("目录可访问", systemImage: "checkmark.circle").foregroundStyle(.secondary) }
             }
-            Text("继续后即可填写首个任务；机器、Agent、目录与模型会自动带入。").font(.callout).foregroundStyle(.secondary)
+        }
+        .disabled(setup.busy)
+        Section {
+            if !setup.models.isEmpty {
+                LabeledContent("模型") { ModelPicker(models: setup.models, selection: $setup.modelID) }
+            } else if setup.provider != .terminal {
+                TextField("模型", text: $setup.modelID, prompt: Text("留空使用远端默认值"))
+            }
+        } footer: {
+            Text("继续后即可填写首个任务；机器、Agent、目录与模型会自动带入。")
         }
     }
     private var folderBrowser: some View {
