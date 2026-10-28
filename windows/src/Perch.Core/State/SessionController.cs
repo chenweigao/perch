@@ -251,7 +251,7 @@ public sealed class SessionController
         var useSteer = busy && session?.Steer == true;
         var requestId = NewRequestId();
         var entry = _outbox.Enqueue(requestId, id, text, useSteer);
-        entry.State = OutboxState.Submitting;
+        entry.State = OutboxState.Sending;
         _observer.OnOutboxChanged();
 
         var connectionToken = _connectionGeneration;
@@ -412,7 +412,7 @@ public sealed class SessionController
         if (Sessions.Any(s => s.Busy)) return true;
         if (Snapshot?.Busy == true) return true;
         if (PendingInteractions.Count > 0) return true;
-        return _outbox.Entries.Any(e => e.State is OutboxState.Submitting or OutboxState.Accepted or OutboxState.Running or OutboxState.Unknown);
+        return _outbox.Entries.Any(e => e.State is OutboxState.Sending or OutboxState.Submitting or OutboxState.Accepted or OutboxState.Running or OutboxState.Unknown);
     }
 
     private static string NewRequestId() => "req-" + Guid.NewGuid().ToString("N");

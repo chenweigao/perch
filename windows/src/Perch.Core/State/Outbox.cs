@@ -6,13 +6,15 @@ public enum OutboxState
 {
     /// Queued locally, not yet sent.
     Draft,
+    /// The initial prompt/steer POST is still in flight; no receipt poll is allowed yet.
+    Sending,
     /// Sent; the bridge has the requestId but has not accepted it yet.
     Submitting,
     /// The bridge accepted the prompt/steer.
     Accepted,
     /// The runtime is running the turn this message belongs to.
     Running,
-    /// Delivered: the message is visible in the transcript, or the turn settled.
+    /// Delivered: the message is visible in the transcript, or a terminal receipt confirms it.
     Delivered,
     /// The bridge refused it; the draft can be restored.
     Failed,

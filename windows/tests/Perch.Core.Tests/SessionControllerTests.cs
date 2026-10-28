@@ -17,6 +17,7 @@ public sealed class FixtureBridge : IBridgeTransport
     /// Canned replies for prompt/steer/abort, keyed by action; set by tests.
     public RequestReceipt? NextReceipt { get; set; }
     public string? NextError { get; set; }
+    public Task? PostGate { get; set; }
     public int AbortCalls { get; private set; }
     public string? LastAbortTurnId { get; private set; }
 
@@ -41,24 +42,25 @@ public sealed class FixtureBridge : IBridgeTransport
         return this;
     }
 
-    public Task<string> SendAsync(BridgeRequest request, CancellationToken cancellationToken)
+    public async Task<string> SendAsync(BridgeRequest request, CancellationToken cancellationToken)
     {
         Requests.Add(request);
         if (request.Method == "POST")
         {
+            if (PostGate is not null) await PostGate;
             if (request.PathAndQuery.EndsWith("/abort"))
             {
                 AbortCalls++;
                 LastAbortTurnId = ExtractTurnId(request.Body);
                 if (NextError is not null) throw new BridgeException(NextError) { StatusCode = 400 };
-                return Task.FromResult("{\"ok\":true}");
+                return "{\"ok\":true}";
             }
             if (NextError is not null) throw new BridgeException(NextError) { StatusCode = 400 };
             var receipt = NextReceipt ?? Fixtures.Read<RequestReceipt>("prompt-receipt.json");
-            return Task.FromResult(BridgeJson.Write(receipt));
+            return BridgeJson.Write(receipt);
         }
         if (_routes.TryGetValue(request.PathAndQuery, out var body))
-            return Task.FromResult(body);
+            return body;
         throw new BridgeException("未知路径：" + request.PathAndQuery) { StatusCode = 400 };
     }
 
@@ -282,6 +284,30 @@ public class SessionControllerTests
         var entry = Assert.Single(controller.Outbox.Entries);
         Assert.Equal(OutboxState.Unknown, entry.State);
         Assert.Equal("runtime unavailable", entry.Error);
+    }
+
+    [Fact]
+    public async Task InitialPostDoesNotPollReceiptBeforeItSettles()
+    {
+        var postGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var bridge = new FixtureBridge()
+            .WithSnapshot("/sessions/ses-idle?turns=25", "session-snapshot-idle.json");
+        bridge.PostGate = postGate.Task;
+        var controller = MakeController(bridge);
+        controller.BeginOnlineSession();
+        controller.Select("ses-idle");
+        await controller.PollOnceAsync(default);
+
+        var sending = controller.SendAsync("initial post", default);
+        await controller.PollOnceAsync(default);
+
+        var entry = Assert.Single(controller.Outbox.Entries);
+        Assert.Equal(OutboxState.Sending, entry.State);
+        Assert.DoesNotContain(bridge.Requests, request => request.PathAndQuery.Contains("/requests/"));
+        Assert.False(sending.IsCompleted);
+        postGate.SetResult();
+        var requestId = await sending;
+        Assert.Equal(OutboxState.Accepted, controller.Outbox.Find(requestId)!.State);
     }
 
     [Fact]
