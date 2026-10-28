@@ -108,11 +108,12 @@ shapes are the ones in `windows/tests/.../fixtures/`, generated from that file.
 | Poll for updates | `GET /sessions/{id}?revision={r}&start={s}&epoch={e}` | Streaming is **revision polling with deltas**, not SSE/WebSocket. Returns `{"unchanged":true}` when `revision` matches, else a snapshot whose `history.indices` name the changed message positions. |
 | Send (idle) | `POST /sessions/{id}/prompt` `{requestId,text}` | `requestId` makes a resend idempotent; the bridge echoes the user message under that id. |
 | Send (busy) | `POST /sessions/{id}/steer` `{requestId,text}` | Codex running guidance; only when the snapshot says the turn is live. |
+| Reconcile a send | `GET /sessions/{id}/requests/{requestId}` | Pending outbox entries poll their receipt; terminal failures are surfaced and unknown outcomes are never inferred as delivered. |
 | Cancel turn | `POST /sessions/{id}/abort` `{turnId}` | `turnId` must match the live turn or the bridge answers “轮次已变化”. **Distinct from disconnect.** |
 
-That is the whole surface the MVP uses. The bridge also serves `/models`, `/setup`,
-`/sessions/{id}/requests/{id}` and older-page reads (`?before=`); this client deliberately
-does not call them, so it carries no route builders or decoders for them.
+That is the whole surface the MVP uses. The bridge also serves `/models`, `/setup` and
+older-page reads (`?before=`); this client deliberately does not call them, so it carries
+no route builders or decoders for them.
 
 **Auth.** `Authorization: Bearer <token>` on every request. The bridge compares it in
 constant time (`hmac.compare_digest`) and answers **401** otherwise. The client treats 401

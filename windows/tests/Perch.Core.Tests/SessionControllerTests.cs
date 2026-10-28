@@ -35,6 +35,12 @@ public sealed class FixtureBridge : IBridgeTransport
         return this;
     }
 
+    public FixtureBridge WithJson(string sessionPath, string body)
+    {
+        _routes[sessionPath] = body;
+        return this;
+    }
+
     public Task<string> SendAsync(BridgeRequest request, CancellationToken cancellationToken)
     {
         Requests.Add(request);
@@ -276,6 +282,34 @@ public class SessionControllerTests
         var entry = Assert.Single(controller.Outbox.Entries);
         Assert.Equal(OutboxState.Unknown, entry.State);
         Assert.Equal("runtime unavailable", entry.Error);
+    }
+
+    [Fact]
+    public async Task PollRefreshesPendingReceiptAndSurfacesFailure()
+    {
+        var bridge = new FixtureBridge()
+            .WithSnapshot("/sessions/ses-idle?turns=25", "session-snapshot-idle.json");
+        bridge.NextReceipt = Fixtures.Read<RequestReceipt>("prompt-receipt.json") with { Status = "submitted" };
+        var observer = new RecordingObserver();
+        var controller = MakeController(bridge, observer);
+        controller.BeginOnlineSession();
+        controller.Select("ses-idle");
+        await controller.PollOnceAsync(default);
+        var requestId = await controller.SendAsync("pending steer", default);
+        var failed = Fixtures.Read<RequestReceipt>("prompt-receipt.json") with
+        {
+            Id = requestId, Status = "failed", Error = "steer rejected",
+        };
+        bridge.WithJson($"/sessions/ses-idle/requests/{requestId}", BridgeJson.Write(failed));
+
+        await controller.PollOnceAsync(default);
+
+        var entry = controller.Outbox.Find(requestId)!;
+        Assert.Equal(OutboxState.Failed, entry.State);
+        Assert.Equal("steer rejected", entry.Error);
+        Assert.Equal("steer rejected", observer.Errors.Single());
+        Assert.Contains(bridge.Requests, request =>
+            request.Method == "GET" && request.PathAndQuery == $"/sessions/ses-idle/requests/{requestId}");
     }
 
     [Fact]

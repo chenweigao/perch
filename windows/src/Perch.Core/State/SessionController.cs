@@ -129,11 +129,8 @@ public sealed class SessionController
             var applied = await RefreshSelectedAsync(id, connectionToken, selectionToken, cancellationToken)
                 .ConfigureAwait(false);
             if (connectionToken != _connectionGeneration) return false;
-            if (applied)
-            {
-                ReconcileOutbox();
-                _observer.OnTranscriptChanged();
-            }
+            await ReconcileOutboxAsync(cancellationToken).ConfigureAwait(false);
+            if (applied) _observer.OnTranscriptChanged();
         }
         return true;
     }
@@ -304,20 +301,20 @@ public sealed class SessionController
             entry.Error = receipt.Error ?? (entry.State == OutboxState.Failed ? "运行时拒绝消息" : "结果未知，请同步后核对，勿重复提交");
     }
 
-    private void ReconcileOutbox()
+    private async Task ReconcileOutboxAsync(CancellationToken cancellationToken)
     {
         var transcript = Transcript;
-        if (transcript is null) return;
-        var visible = transcript.Messages.Select(m => m.Id);
-        _outbox.ReconcileWithTranscript(visible);
-        // A settled turn also settles any in-flight sends for it.
+        if (transcript is not null)
+            _outbox.ReconcileWithTranscript(transcript.Messages.Select(m => m.Id));
         foreach (var entry in _outbox.Entries)
         {
             if (entry.SessionId != SelectedId) continue;
-            if (entry.State is OutboxState.Delivered or OutboxState.Failed) continue;
-            if (Snapshot is { Busy: false } && entry.TurnId is not null && Snapshot.TurnId == entry.TurnId)
-                entry.State = OutboxState.Delivered;
+            if (entry.State is not (OutboxState.Submitting or OutboxState.Accepted or OutboxState.Running or OutboxState.Unknown)) continue;
+            var receipt = await _client.ReceiptAsync(entry.SessionId, entry.RequestId, cancellationToken).ConfigureAwait(false);
+            ApplyReceipt(entry, receipt);
+            if (entry.State == OutboxState.Failed) _observer.OnError(entry.Error!);
         }
+        _observer.OnOutboxChanged();
     }
 
     /// Cancels the current turn only. Distinct from disconnect: the bridge and the

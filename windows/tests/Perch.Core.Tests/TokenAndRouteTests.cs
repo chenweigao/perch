@@ -184,6 +184,12 @@ public class BridgeRouteTests
     }
 
     [Fact]
+    public void ReceiptRouteEncodesSessionAndRequestIds()
+    {
+        Assert.Equal("/sessions/ses%201/requests/req%20%E4%B8%AD", BridgeRoutes.RequestReceipt("ses 1", "req 中"));
+    }
+
+    [Fact]
     public void UrlEncodeNeverUsesPlusForSpace()
     {
         // The bridge's urlparse/unquote expects %20; a '+' would be read as a literal.

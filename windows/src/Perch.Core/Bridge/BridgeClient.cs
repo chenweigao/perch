@@ -8,8 +8,7 @@ namespace Perch.Core.Bridge;
 /// The routes of remote/native-agent-service.py this client uses. Every path segment
 /// that carries a user-influenced value (session id) is percent-encoded so a space, a
 /// Chinese character or a shell/URL metacharacter cannot break the URL or the remote
-/// side. Only the six MVP capabilities are wired: health, catalog, snapshot, prompt,
-/// steer and abort — no models/setup/requests routes this client does not call.
+/// side. Only the MVP capabilities are wired; models and setup stay out of this client.
 public static class BridgeRoutes
 {
     public const string Health = "/health";
@@ -33,6 +32,9 @@ public static class BridgeRoutes
 
     public static string Action(string id, string action) =>
         "/sessions/" + UrlEncode(id) + "/" + UrlEncode(action);
+
+    public static string RequestReceipt(string id, string requestId) =>
+        Session(id) + "/requests/" + UrlEncode(requestId);
 
     /// Percent-encode everything that is not unreserved, matching what the bridge's
     /// urlparse/unquote expects. Spaces become %20, not '+'.
@@ -84,6 +86,13 @@ public sealed class BridgeClient
 
     public async Task<RequestReceipt> SteerAsync(string id, string requestId, string text, CancellationToken cancellationToken = default)
         => await PostReceiptAsync(id, "steer", new { requestId, text }, cancellationToken).ConfigureAwait(false);
+
+    public async Task<RequestReceipt> ReceiptAsync(string id, string requestId, CancellationToken cancellationToken = default)
+    {
+        var body = await _transport.SendAsync(
+            new BridgeRequest("GET", BridgeRoutes.RequestReceipt(id, requestId), null), cancellationToken).ConfigureAwait(false);
+        return BridgeJson.Read<RequestReceipt>(body);
+    }
 
     /// Cancels the current turn only. `turnId` must match the live turn or the bridge
     /// refuses with "轮次已变化"; this is distinct from disconnecting.
