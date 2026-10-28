@@ -156,6 +156,15 @@ import WorkbenchCore
     let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
     let card = split.detailCardView!
     let cardFrame = card.convert(card.bounds, to: window.contentView)
+    func checkSidebarEdges() {
+        let sidebar = split.floatingSidebarView!
+        let sidebarFrame = sidebar.convert(sidebar.bounds, to: window.contentView)
+        let contentFrame = card.convert(card.bounds, to: window.contentView)
+        precondition(abs(sidebarFrame.minY - contentFrame.minY) < 1 &&
+                     abs(sidebarFrame.maxY - contentFrame.maxY) < 1,
+                     "Sidebar controls must stay below the toolbar and share the reading sheet's top/bottom edges: sidebar=\(sidebarFrame), content=\(contentFrame)")
+    }
+    checkSidebarEdges()
     let draftFrame = draft.convert(draft.bounds, to: window.contentView)
     let replyFrame = reply.convert(reply.bounds, to: window.contentView)
     func distanceFromTop(_ frame: NSRect) -> CGFloat {
@@ -222,6 +231,7 @@ import WorkbenchCore
         try await Task.sleep(for: .milliseconds(200))
         window.contentView!.layoutSubtreeIfNeeded()
         let reopenedX = title.convert(title.bounds, to: window.contentView).minX
+        checkSidebarEdges()
         precondition(abs(reopenedX - titleX) < 2,
                      "Reopening sidebar must restore title alignment without accumulated offsets: cycle=\(cycle), expected=\(titleX), actual=\(reopenedX)")
     }
@@ -358,6 +368,7 @@ import WorkbenchCore
     try await place(width: 900)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
                  "A narrow window must back the overlaying sidebar with its glass panel")
+    checkSidebarEdges()
     try await capture("native-narrow-light")
     window.setFrame(wideFrame, display: true)
     try await Task.sleep(for: .milliseconds(300))
