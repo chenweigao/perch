@@ -1,8 +1,8 @@
 import SwiftUI
 import WorkbenchCore
 
-/// The workspace inspector: the task panel, or the selected session's
-/// uncommitted changes read from its working tree.
+/// The floating workspace inspector: tasks, working-tree changes, or files
+/// from the selected session, with an explicit action to expand the reader.
 struct WorkspaceInspector: View {
     let model: WorkbenchModel
 
@@ -16,8 +16,99 @@ struct WorkspaceInspector: View {
                     close: { controller.embeddedVisible = false })
             case .changes:
                 ChangesInspectorView(model: model, close: { controller.embeddedVisible = false })
+            case .files:
+                FilesInspectorView(model: model, close: { controller.embeddedVisible = false })
             }
         }
+    }
+}
+
+/// Directory browsing and file previews share the same floating surface. The
+/// native lifetime bridge owns reads so first reveal works inside WindowGroup.
+struct FilesInspectorView: View {
+    let model: WorkbenchModel
+    let close: () -> Void
+    private var browser: RemoteFileBrowser { model.inspectorFiles }
+    private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
+    private var active: Bool {
+        model.taskContextWindow.isShowing(.files) && !model.showDashboard && !model.draftingNewTask
+    }
+    private var matchesLocation: Bool {
+        browser.source == item?.reference && browser.cwd == item?.directory
+    }
+    private struct Location: Equatable {
+        let reference: SessionReference?
+        let directory: String
+        let online: Bool
+    }
+    private var location: Location {
+        Location(reference: active ? item?.reference : nil, directory: item?.directory ?? "", online: item?.online == true)
+    }
+    private var directory: Bool {
+        if case .directory = browser.content { return true }
+        return false
+    }
+    private var contentHeight: CGFloat {
+        if item == nil || !matchesLocation || browser.loading || browser.error != nil { return 112 }
+        switch browser.content {
+        case .directory(let entries): return entries.isEmpty ? 112 : min(420, CGFloat(entries.count) * 28 + 16)
+        case .text, .binary: return 440
+        case .matches(let paths): return min(420, CGFloat(paths.count) * 32 + 48)
+        default: return 112
+        }
+    }
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Text("文件").font(.system(size: 16, weight: .semibold))
+                    Spacer(minLength: 4)
+                    Menu {
+                        Button("刷新") { browser.open(browser.path) }.disabled(browser.path.isEmpty || browser.loading)
+                        Button("返回工作目录") { browser.open(browser.cwd.isEmpty ? "." : browser.cwd) }
+                            .disabled(item == nil)
+                    } label: { Image(systemName: "ellipsis").frame(width: 24, height: 24) }
+                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .help("文件操作").accessibilityLabel("文件操作")
+                    Button { model.expandInspectorFile() } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right").frame(width: 28, height: 32)
+                    }.help("展开阅读").accessibilityLabel("展开阅读")
+                        .disabled(browser.path.isEmpty || browser.loading || item == nil || !matchesLocation)
+                    Button(action: close) {
+                        Image(systemName: "xmark").frame(width: 32, height: 32)
+                            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Circle())
+                    }.help("收起面板").accessibilityLabel("收起面板")
+                }.buttonStyle(.borderless).padding(.horizontal, 20).padding(.vertical, 16)
+                if item != nil && matchesLocation {
+                    HStack(spacing: 8) {
+                        Button { browser.openParent() } label: { Image(systemName: "chevron.left") }
+                            .help(directory ? "上一级目录" : "返回目录")
+                            .accessibilityLabel(directory ? "上一级目录" : "返回目录")
+                            .disabled(RemoteFilePath.parent(of: browser.path) == nil)
+                        Text((browser.path as NSString).lastPathComponent)
+                            .lineLimit(1).truncationMode(.middle).help(browser.path)
+                        Spacer(minLength: 0)
+                        if !directory { FileDisplayMode(browser: browser) }
+                    }.font(.system(size: 12)).buttonStyle(.borderless)
+                        .padding(.horizontal, 16).padding(.bottom, 12)
+                }
+            }.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.header)
+            Group {
+                if !active { Color.clear }
+                else if item == nil {
+                    Text("选择一个会话，浏览它的工作目录。").font(.system(size: 12)).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if !matchesLocation {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    RemoteFilePanel(browser: browser, showsCloseButton: false, compact: true, onClose: close)
+                }
+            }.frame(height: contentHeight).inspectorHeightContribution(.content)
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .workbenchHostedTask(id: location) {
+                guard active else { browser.cancel(); return }
+                model.syncInspectorFiles()
+            }
     }
 }
 

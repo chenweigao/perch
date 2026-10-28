@@ -11,6 +11,8 @@ import WorkbenchCore
     NSApp.setActivationPolicy(persistentPreview ? .regular : .accessory)
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("perch-design-\(UUID())")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    let emptyDirectory = root.appendingPathComponent("empty")
+    try FileManager.default.createDirectory(at: emptyDirectory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: root) }
     func git(_ arguments: [String]) throws {
         let process = Process()
@@ -46,7 +48,7 @@ import WorkbenchCore
          "thinking": ["low", "medium", "high"], "defaultThinking": "medium"],
     ]
     func summary(_ index: Int) -> [String: Any] {
-        ["id": "design-\(index)", "provider": "codex", "title": titles[index], "cwd": root.path,
+        ["id": "design-\(index)", "provider": "codex", "title": titles[index], "cwd": index == 1 ? emptyDirectory.path : root.path,
          "busy": index == 0 && running, "archived": false, "updated": Date().timeIntervalSince1970 - Double(index * 120),
          "completed": 1, "pending": index == 2 ? 1 : 0,
          "model": selectedModels[index] ?? "gpt-5.4", "thinking": selectedEfforts[index] ?? "high",
@@ -156,6 +158,15 @@ import WorkbenchCore
     let inspectorFrame = inspector.convert(inspector.bounds, to: window.contentView)
     let card = split.detailCardView!
     let cardFrame = card.convert(card.bounds, to: window.contentView)
+    func checkSidebarEdges() {
+        let sidebar = split.floatingSidebarView!
+        let sidebarFrame = sidebar.convert(sidebar.bounds, to: window.contentView)
+        let contentFrame = card.convert(card.bounds, to: window.contentView)
+        precondition(abs(sidebarFrame.minY - contentFrame.minY) < 1 &&
+                     abs(sidebarFrame.maxY - contentFrame.maxY) < 1,
+                     "Sidebar controls must stay below the toolbar and share the reading sheet's top/bottom edges: sidebar=\(sidebarFrame), content=\(contentFrame)")
+    }
+    checkSidebarEdges()
     let draftFrame = draft.convert(draft.bounds, to: window.contentView)
     let replyFrame = reply.convert(reply.bounds, to: window.contentView)
     func distanceFromTop(_ frame: NSRect) -> CGFloat {
@@ -222,6 +233,7 @@ import WorkbenchCore
         try await Task.sleep(for: .milliseconds(200))
         window.contentView!.layoutSubtreeIfNeeded()
         let reopenedX = title.convert(title.bounds, to: window.contentView).minX
+        checkSidebarEdges()
         precondition(abs(reopenedX - titleX) < 2,
                      "Reopening sidebar must restore title alignment without accumulated offsets: cycle=\(cycle), expected=\(titleX), actual=\(reopenedX)")
     }
@@ -358,11 +370,67 @@ import WorkbenchCore
     try await place(width: 900)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
                  "A narrow window must back the overlaying sidebar with its glass panel")
+    checkSidebarEdges()
     try await capture("native-narrow-light")
     window.setFrame(wideFrame, display: true)
     try await Task.sleep(for: .milliseconds(300))
     window.contentView!.layoutSubtreeIfNeeded()
     print("PASS: production workspace, aligned reply/composer, independent changes inspector, native light and dark")
+    let files = model.inspectorFiles
+    func waitForFile(_ ready: () -> Bool) async throws {
+        for _ in 0..<60 where !ready() { try await Task.sleep(for: .milliseconds(50)) }
+        precondition(ready(), "File inspector must finish its page-owned read: path=\(files.path), error=\(String(describing: files.error))")
+        window.contentView!.layoutSubtreeIfNeeded()
+    }
+    model.toggleFileViewer()
+    try await waitForFile {
+        if case .directory(let entries) = files.content { return entries.contains { $0.name == "SessionState.swift" } }
+        return false
+    }
+    precondition(model.taskContextWindow.isShowing(.files) && model.fileWindow.window == nil && !model.showFileViewer,
+                 "The files toolbar action must browse the working directory without opening a reader window")
+    let directoryHeight = split.floatingInspectorView!.bounds.height
+    precondition(directoryHeight < 360, "A short directory must use a compact floating panel")
+    files.open(root.appendingPathComponent("SessionState.swift").path)
+    try await waitForFile {
+        if case .text(let text, _, _) = files.content { return text == after }
+        return false
+    }
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(split.floatingInspectorView!.bounds.height > directoryHeight + 100 && model.fileWindow.window == nil,
+                 "Selecting a file must expand the same inspector for inline reading")
+    files.openParent()
+    try await waitForFile { if case .directory = files.content { return files.path == root.path }; return false }
+    model.toggleFileViewer()
+    try await waitForFile { files.fileRequest == nil && !files.loading }
+    model.toggleFileViewer()
+    try await waitForFile { model.taskContextWindow.isShowing(.files) && files.path == root.path }
+    // Replace an outstanding read by a different session's directory.
+    files.open(root.appendingPathComponent("SessionState.swift").path)
+    model.open(pin)
+    try await waitForFile {
+        if case .directory(let entries) = files.content {
+            return files.source == pin.reference && files.path == emptyDirectory.path && entries.isEmpty
+        }
+        return false
+    }
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(split.floatingInspectorView!.bounds.height < 300,
+                 "An empty directory must shrink and never retain another session's file")
+    model.open(first)
+    try await waitForFile { files.source == first.reference && files.path == root.path && !files.loading }
+    files.open(root.appendingPathComponent("SessionState.swift").path)
+    try await waitForFile { if case .text = files.content { return true }; return false }
+    model.expandInspectorFile()
+    precondition(model.fileWindow.window != nil && model.fileBrowser.path == files.path && model.fileBrowser !== files,
+                 "Expand Reader must explicitly hand off the selected file without sharing navigation state")
+    model.fileWindow.close()
+    precondition(model.taskContextWindow.isShowing(.files) && files.content != nil,
+                 "Closing the detached reader must preserve the inspector preview")
+    window.makeKeyAndOrderFront(nil)
+    model.taskContextWindow.showPage(.changes, model: model)
+    try await Task.sleep(for: .milliseconds(200))
+    print("PASS: file inspector first reveal, inline preview, parent navigation, reopen, session isolation and explicit expansion")
     if Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true && !CommandLine.arguments.contains("native-design") {
         let appearanceMenu = NativeDesignAppearanceMenu(window: window)
         while window.isVisible { try await Task.sleep(for: .seconds(1)) }

@@ -29,24 +29,25 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 2) {
-                HStack(spacing: 4) {
-                    // Lift the row onto the titlebar's control centerline (52 pt
-                    // titlebar, 36 pt row, panel's 12 pt top inset).
-                    Spacer(minLength: 112)
+                HStack(spacing: 8) {
+                    // Content-hosted controls stay below the native toolbar,
+                    // where both mouse clicks and accessibility can reach them.
+                    Button(action: onNew) {
+                        Label("新建会话", systemImage: "plus")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, SidebarMetrics.rowInset)
+                            .frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+                    }.buttonStyle(SidebarNavigationStyle()).help("新建会话 · ⌘N")
+                        .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
                     Button(action: onSearch) {
-                        Image(systemName: "magnifyingglass")
-                            .frame(width: SidebarMetrics.rowHeight, height: SidebarMetrics.rowHeight)
+                        Label("搜索", systemImage: "magnifyingglass")
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.horizontal, SidebarMetrics.rowInset)
+                            .frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
                     }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话")
                         .accessibilityLabel("搜索项目与会话")
                         .accessibilityIdentifier("sidebar.search")
-                    Button(action: onNew) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
-                            .frame(width: SidebarMetrics.rowHeight, height: SidebarMetrics.rowHeight)
-                    }.buttonStyle(SidebarNavigationStyle()).help("新建会话")
-                        .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
-                }.padding(.top, (WorkbenchChrome.headerHeight - SidebarMetrics.rowHeight) / 2 - WorkspaceLayoutMetrics.sidebarInset)
-                .padding(.bottom, 8)
+                }.padding(.bottom, 8)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
             }.padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 6)

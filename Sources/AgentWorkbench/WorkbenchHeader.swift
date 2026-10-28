@@ -47,8 +47,10 @@ struct WorkbenchHeaderActions: View {
                     if model.selectedHost != nil {
                         ChangesButton(model: model)
                         Button { model.toggleFileViewer() } label: {
-                            WorkbenchToolbarSymbol(name: "doc.text")
+                            WorkbenchToolbarSymbol(name: "folder")
+                                .foregroundStyle(model.taskContextWindow.isShowing(.files) ? WorkbenchTheme.accent : .secondary)
                         }.buttonStyle(.plain).help("查看文件（只读）").accessibilityLabel("查看文件")
+                            .accessibilityValue(model.taskContextWindow.isShowing(.files) ? "已展开" : "已收起")
                         TaskContextButton(model: model)
                     }
                     Menu {
