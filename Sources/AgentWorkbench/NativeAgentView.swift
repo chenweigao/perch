@@ -284,7 +284,9 @@ private struct NativeComposerView: View {
                         ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
                                      reportedAt: s.context?.reportedAt, isStale: !connection.online)
                     }.foregroundStyle(.secondary).padding(.leading, 10)
-                        .overlay(alignment: .leading) { Divider().frame(height: 16) }
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                        }
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                          canSend: canSend(s), canStop: connection.canStop,
                                          queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",

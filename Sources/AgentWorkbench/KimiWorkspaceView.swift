@@ -196,7 +196,9 @@ private struct KimiComposerView: View {
                                      isStale: !connection.online || !connection.snapshotReady,
                                      autoCompactHost: connection.host.id, autoCompactSession: sessionID)
                     }.foregroundStyle(.secondary).padding(.leading, 10)
-                        .overlay(alignment: .leading) { Divider().frame(height: 16) }
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                        }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
