@@ -70,7 +70,7 @@ struct TaskContextButton: View {
     var body: some View {
         let open = model.taskContextWindow.isShowing(.task)
         Button { model.taskContextWindow.togglePage(.task, model: model) } label: {
-            WorkbenchToolbarActionLabel(title: "任务", systemImage: "checklist")
+            WorkbenchToolbarSymbol(name: "checklist")
                 .foregroundStyle(open ? WorkbenchTheme.accent : .secondary)
         }.buttonStyle(.plain).help("任务面板").accessibilityLabel("任务面板")
             .accessibilityValue(open ? "已展开" : "已收起")

@@ -41,21 +41,6 @@ struct WorkbenchToolbarSymbol: View {
     }
 }
 
-/// Inspector destinations remain understandable without recognizing a symbol.
-struct WorkbenchToolbarActionLabel: View {
-    let title: LocalizedStringKey
-    let systemImage: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage).font(.system(size: WorkbenchChrome.symbolSize))
-            Text(title).font(.system(size: 13))
-        }.fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, 10).frame(height: WorkbenchChrome.controlSize)
-            .contentShape(Rectangle())
-    }
-}
-
 /// One translucent window backdrop contains navigation and the toolbar. The
 /// reading sheet and inspector float above it; their hosts survive resizing.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
