@@ -97,8 +97,7 @@ public sealed class MessageRow
         _ => string.Empty,
     };
 
-    public Visibility HeaderVisibility => IsTool || IsThinking || IsSystemNote
-        ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility HeaderVisibility => string.IsNullOrEmpty(Header) ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility TextVisibility => string.IsNullOrEmpty(Text) ? Visibility.Collapsed : Visibility.Visible;
 }

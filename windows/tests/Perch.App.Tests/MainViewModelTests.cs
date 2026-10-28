@@ -15,6 +15,17 @@ namespace Perch.App.Tests;
 // controlled dependencies; these tests do not certify rendered UI or live SSH.
 public sealed class MainViewModelTests
 {
+    [Fact]
+    public void UserAndAssistantRowsShowTheirRoleHeaders()
+    {
+        var user = new MessageRow(new MessageBlock(BlockKind.UserPrompt, "user", "hello"));
+        var assistant = new MessageRow(new MessageBlock(BlockKind.AssistantText, "assistant", "reply"));
+        Assert.Equal("你", user.Header);
+        Assert.Equal("Agent", assistant.Header);
+        Assert.Equal(System.Windows.Visibility.Visible, user.HeaderVisibility);
+        Assert.Equal(System.Windows.Visibility.Visible, assistant.HeaderVisibility);
+    }
+
     [Theory]
     [InlineData("next draft 中文")]
     [InlineData("original")]

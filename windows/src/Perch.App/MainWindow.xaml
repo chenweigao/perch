@@ -16,8 +16,7 @@
              style triggers rather than a converter so the row stays declarative. -->
         <DataTemplate x:Key="MessageTemplate" DataType="{x:Type local:MessageRow}">
             <Grid Margin="0,4">
-                <Border CornerRadius="8" Padding="12,8" MaxWidth="640"
-                        HorizontalAlignment="Left" Background="{StaticResource AssistantBubbleBrush}">
+                <Border CornerRadius="8" Padding="12,8" MaxWidth="640">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="HorizontalAlignment" Value="Left"/>
