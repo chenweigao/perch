@@ -537,6 +537,7 @@
 "3. 返回 Perch 点击“重新检查”。运行版本与安装版本一致后，此提示会消失。" = "3. Return to Perch and click “Check again”. This notice disappears once the running version matches the installed version.";
 "“重新检查”只核对状态；重开 Perch 不会重启远端 Kimi Web。" = "“Check again” only verifies the status; reopening Perch does not restart remote Kimi Web.";
 "模型（留空使用远端默认值）" = "Model (leave empty for the remote default)";
+"留空使用远端默认值" = "Leave empty for the remote default";
 "此 SSH 地址已添加。请从环境入口配置已有机器。" = "This SSH address is already added. Configure the existing machine from Environments.";
 "此构建缺少安装组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build is missing installer resources. Use Perch.app packaged by scripts/build.sh.";
 "添加机器后，选择要连接的 Agent。" = "Add a machine, then choose an agent to connect.";
