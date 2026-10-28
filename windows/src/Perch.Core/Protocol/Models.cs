@@ -4,13 +4,13 @@ using System.Text.Json.Serialization;
 
 namespace Perch.Core.Protocol;
 
-/// Wire shapes of remote/native-agent-service.py (bridge protocol v9).
+/// Wire shapes of remote/native-agent-service.py (bridge protocol v10).
 /// Field names are declared explicitly: session/snapshot fields are camelCase while
 /// message parts are snake_case, so no global naming policy can cover both.
 public static class BridgeProtocol
 {
     /// Must equal SERVICE_VERSION in remote/native-agent-service.py.
-    public const int ServiceVersion = 9;
+    public const int ServiceVersion = 10;
 }
 
 public sealed record BridgeHealth(

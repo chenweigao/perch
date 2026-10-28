@@ -29,7 +29,8 @@
       "turnId": "turn-1",
       "turnState": "running",
       "steer": true,
-      "runningSubagents": 0
+      "runningSubagents": 0,
+      "qoderRequestedModel": null
     },
     {
       "id": "ses-approval",
@@ -60,7 +61,8 @@
       "turnId": "turn-9",
       "turnState": "running",
       "steer": true,
-      "runningSubagents": 0
+      "runningSubagents": 0,
+      "qoderRequestedModel": null
     },
     {
       "id": "ses-idle",
@@ -91,7 +93,8 @@
       "turnId": null,
       "turnState": null,
       "steer": true,
-      "runningSubagents": 0
+      "runningSubagents": 0,
+      "qoderRequestedModel": null
     }
   ]
 }

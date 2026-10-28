@@ -6,7 +6,7 @@ Agent sessions** on a remote Linux dev machine, from Windows 10/11 x64.
 This is an independent client added under `windows/`. It does **not** port the macOS
 SwiftUI UI, does **not** modify any Swift or `remote/` source, and copies nothing from
 herdrm. It talks to the same remote bridge as the macOS client —
-`remote/native-agent-service.py` (bridge protocol **v9**) — over an SSH loopback forward.
+`remote/native-agent-service.py` (bridge protocol **v10**) — over an SSH loopback forward.
 
 > **Scope of this MVP.** Connect to an already-running bridge, list sessions, open a
 > session, load and incrementally stream its messages, send a message, and cancel the
@@ -69,7 +69,7 @@ windows/
   Perch.Windows.sln
   global.json                      # pins the SDK band (.NET 8)
   src/Perch.Core/                  # portable: protocol, SSH argv, transport, state, secrets
-    Protocol/Models.cs             #   wire records for bridge v9 + JSON options
+    Protocol/Models.cs             #   wire records for bridge v10 + JSON options
     Bridge/BridgeClient.cs         #   route builders + typed calls
     Ssh/SshCommand.cs              #   argv builder, POSIX quoting, ssh locator
     Ssh/SshTunnel.cs               #   loopback-forward lifecycle (kill = local only)
@@ -95,14 +95,14 @@ marshals controller callbacks onto the WPF dispatcher.
 
 ---
 
-## Protocol mapping (bridge v9 → client)
+## Protocol mapping (bridge v10 → client)
 
 Every route below is what `remote/native-agent-service.py` actually serves; the response
 shapes are the ones in `windows/tests/.../fixtures/`, generated from that file.
 
 | Client action | HTTP | Notes |
 |---|---|---|
-| Verify connection | `GET /health` | `version` must equal `SERVICE_VERSION` (9). Older → “update the bridge”; newer → “update Perch”. Also reads `implementation`/`startedAt`. |
+| Verify connection | `GET /health` | `version` must equal `SERVICE_VERSION` (10). Older → “update the bridge”; newer → “update Perch”. Also reads `implementation`/`startedAt`. |
 | List sessions | `GET /sessions` | `SessionSummary[]`; sorted newest-`updated` first for the sidebar. |
 | Open a session | `GET /sessions/{id}?turns=25` | First paged read establishes `history.epoch/start/total`. |
 | Poll for updates | `GET /sessions/{id}?revision={r}&start={s}&epoch={e}` | Streaming is **revision polling with deltas**, not SSE/WebSocket. Returns `{"unchanged":true}` when `revision` matches, else a snapshot whose `history.indices` name the changed message positions. |
