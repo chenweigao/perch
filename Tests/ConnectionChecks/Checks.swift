@@ -177,12 +177,19 @@ private final class TransportFixture {
 @main
 struct ConnectionChecks {
     @MainActor
-    static func settle(_ condition: () -> Bool) async {
-        for _ in 0..<2000 {
-            if condition() { return }
-            await Task.yield()
+    static func settle(file: StaticString = #filePath, line: UInt = #line, _ condition: () -> Bool) async {
+        // A yield count is not a timeout: it can expire before off-actor decoding
+        // or a delayed transport gets CPU time on a loaded runner.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !condition() {
+            if ContinuousClock.now >= deadline {
+                let message = "Connection did not settle within 5s at \(file):\(line)"
+                // Optimized preconditions may trap without printing their message.
+                FileHandle.standardError.write(Data((message + "\n").utf8))
+                preconditionFailure(message, file: file, line: line)
+            }
+            try? await Task.sleep(for: .milliseconds(1))
         }
-        preconditionFailure("connection did not settle")
     }
     @MainActor
     static func checkIdleSnapshotPolling() async throws {

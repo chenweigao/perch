@@ -75,6 +75,17 @@ enum WorkbenchTheme {
 }
 
 extension WorkbenchTheme {
+    /// Stable interface roles. Reading zoom changes prose, not navigation or controls.
+    /// Titles and secondary labels share the body size; weight and color give hierarchy.
+    enum Typography {
+        static let body: CGFloat = 14
+        static let title: CGFloat = body
+        static let secondary: CGFloat = body
+        static let caption: CGFloat = 12
+    }
+}
+
+extension WorkbenchTheme {
     /// Shared by the window title and the conversation's reading controls.
     enum Reading {
         static let inset: CGFloat = 24
@@ -172,9 +183,8 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 @Observable final class ReadingBodySize {
     static let shared = ReadingBodySize()
     static let defaultsKey = "perch.reading.bodySize"
-    /// Mixed CJK and Latin prose reads best one step above the 13 pt macOS UI
-    /// body; 16 pt keeps about 42 CJK characters on the 680 pt reading column.
-    static let standard: CGFloat = 16
+    /// Match the interface by default; retain any explicit reader preference.
+    static let standard: CGFloat = WorkbenchTheme.Typography.body
     static let sizes: [CGFloat] = [14, 15, 16, 17, 18]
 
     private(set) var value: CGFloat
@@ -202,28 +212,19 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     }
 }
 
-/// One type ramp for everything inside the conversation, derived from the body
-/// size so the hierarchy keeps its proportions at every setting:
-///
-/// | Role | Size at 16 pt | Used by |
-/// | --- | --- | --- |
-/// | heading 1 / 2 | 20 / 18 semibold | Markdown H1 / H2 (H3+ use the body size) |
-/// | body | 16 on 26 | replies, user prompts, composer text |
-/// | secondary | 14 on 22 | thoughts, quiet notes, code, tables, questions |
-/// | label | 13 | process and tool rows, fold headers, activity bar, notices |
-/// | caption | 12 | counts, chips, code labels, row actions, small hints |
-///
-/// No text drops below the 11 pt floor of the visual refresh.
+/// Reading roles share one primary size (14 pt / 22 pt by default). Thoughts,
+/// code, labels and prose use color, weight and spacing to establish hierarchy.
+/// Captions alone step down to 12 pt; document headings may step up.
 struct ReadingScale: Equatable {
     let body: CGFloat
     var unit: CGFloat { body / ReadingBodySize.standard }
-    var bodyLine: CGFloat { (body * 1.625).rounded() }
+    var bodyLine: CGFloat { (body * (22.0 / 14.0)).rounded() }
     var heading1: CGFloat { body + 4 }
     var heading2: CGFloat { body + 2 }
-    var secondary: CGFloat { max(11, body - 2) }
-    var secondaryLine: CGFloat { (secondary * 1.57).rounded() }
-    var label: CGFloat { max(11, body - 3) }
-    var caption: CGFloat { max(11, body - 4) }
-    /// Vertical rhythm designed at 16 pt, scaled with the body.
+    var secondary: CGFloat { body }
+    var secondaryLine: CGFloat { bodyLine }
+    var label: CGFloat { body }
+    var caption: CGFloat { max(WorkbenchTheme.Typography.caption, body - 2) }
+    /// Preserve the default vertical rhythm; enlarge it with reading zoom.
     func spacing(_ points: CGFloat) -> CGFloat { (points * unit).rounded() }
 }

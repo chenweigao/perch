@@ -118,7 +118,7 @@ struct TaskContextView: View {
                     if let error = state.error {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("状态未同步", systemImage: "wifi.exclamationmark")
-                            Text(error).font(.system(size: 11)).textSelection(.enabled)
+                            Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).textSelection(.enabled)
                             Button("重试") { state.refresh += 1 }.disabled(item?.online != true)
                         }.foregroundStyle(.secondary)
                     }
@@ -150,7 +150,7 @@ struct TaskContextView: View {
                     }.buttonStyle(.borderless).padding(14)
                 }.fixedSize(horizontal: false, vertical: true)
             }
-        }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity)
             // Embedded in the integrated lane, the workspace owns the surface;
             // detached needs the window's own opaque background.
             .background(detached ? Color(nsColor: .windowBackgroundColor) : Color.clear)
@@ -177,10 +177,10 @@ struct TaskContextView: View {
         HStack(spacing: 4) {
             if let item {
                 Button { model.open(item); openMain() } label: {
-                    Text(item.title).lineLimit(1).truncationMode(.tail)
+                    Text(item.title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(.primary).lineLimit(1).truncationMode(.tail)
                 }.help("打开会话")
             } else {
-                Text("任务面板")
+                Text("任务面板").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(.primary)
             }
             Spacer(minLength: 4)
             if detached {
@@ -205,7 +205,7 @@ struct TaskContextView: View {
                 Button(action: close) { Image(systemName: "xmark").frame(width: 24, height: 24) }
                     .help("收起任务面板").accessibilityLabel("收起任务面板")
             }
-        }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.borderless)
+        }.font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).buttonStyle(.borderless)
             .padding(.horizontal, 16).padding(.top, 10)
     }
 
@@ -241,22 +241,22 @@ struct TaskContextView: View {
                             Image(systemName: "doc.text").foregroundStyle(.secondary)
                             Text(file.name).lineLimit(1).truncationMode(.middle)
                             Spacer(minLength: 4)
-                            if file.written { Text("本轮更新").font(.system(size: 11)).foregroundStyle(.secondary) }
+                            if file.written { Text("本轮更新").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary) }
                         }.frame(minHeight: 36).contentShape(Rectangle())
                     }.buttonStyle(TaskContextRowStyle()).help(file.path).disabled(!item.online)
                 }
-                if value.files.count > 4 { Button(allFiles ? "收起" : "查看全部文件") { allFiles.toggle() }.font(.system(size: 12)) }
+                if value.files.count > 4 { Button(allFiles ? "收起" : "查看全部文件") { allFiles.toggle() }.font(.system(size: WorkbenchTheme.Typography.body)) }
             }
         }
         if !value.tasks.isEmpty || value.taskError != nil {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("后台任务与子 Agent", count: value.tasks.count)
-                if let error = value.taskError { Text(error).font(.system(size: 11)).foregroundStyle(.secondary) }
+                if let error = value.taskError { Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary) }
                 let ordered = value.tasks.sorted { $0.isRunning && !$1.isRunning }
                 ForEach(allTasks ? ordered : Array(ordered.prefix(4))) { task in
                     taskRow(task, item: item, online: online)
                 }
-                if value.tasks.count > 4 { Button(allTasks ? "收起" : "查看全部任务") { allTasks.toggle() }.font(.system(size: 12)) }
+                if value.tasks.count > 4 { Button(allTasks ? "收起" : "查看全部任务") { allTasks.toggle() }.font(.system(size: WorkbenchTheme.Typography.body)) }
             }
         }
         if !value.tools.isEmpty {
@@ -268,9 +268,9 @@ struct TaskContextView: View {
                     DisclosureGroup("已结束的调用 · \(completed.count)", isExpanded: $completedTools) {
                         ForEach(completed.suffix(20).reversed()) { tool in toolRow(tool) }
                         if completed.count > 20 {
-                            Text("显示最近 20 次调用，完整记录请打开会话。").font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text("显示最近 20 次调用，完整记录请打开会话。").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                         }
-                    }.font(.system(size: 12)).foregroundStyle(.secondary)
+                    }.font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -282,9 +282,9 @@ struct TaskContextView: View {
     }
     private func sectionTitle(_ title: LocalizedStringKey, count: Int) -> some View {
         HStack {
-            Text(title).font(.system(size: 12, weight: .medium))
+            Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             Spacer()
-            Text(count.formatted()).font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
+            Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(.secondary)
         }.padding(.bottom, 4)
     }
     private func toolRow(_ tool: VisibleTool) -> some View {
@@ -296,18 +296,18 @@ struct TaskContextView: View {
                     .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : .secondary).frame(width: 16)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ConversationActivity.summary(of: tool)).lineLimit(2).foregroundStyle(.primary)
-                    Text(ConversationActivity.status(of: tool)).font(.system(size: 11))
+                    Text(ConversationActivity.status(of: tool)).font(.system(size: WorkbenchTheme.Typography.caption))
                         .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : .secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }.padding(.vertical, 4)
-        }.font(.system(size: 13))
+        }.font(.system(size: WorkbenchTheme.Typography.body))
     }
     private func taskRow(_ task: KimiTask, item: WorkspaceSession, online: Bool) -> some View {
         DisclosureGroup(isExpanded: Binding(get: { expandedTasks.contains(task.id) }, set: { expanded in
             if expanded { expandedTasks.insert(task.id) } else { expandedTasks.remove(task.id) }
         })) {
             VStack(alignment: .leading, spacing: 8) {
-                if let latest = task.latestActivity { Text(latest).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(3) }
+                if let latest = task.latestActivity { Text(latest).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).lineLimit(3) }
                 HStack {
                     if item.reference.kind == .kimi && task.kind != "subagent" {
                         Button(outputTask == task.id ? "收起输出" : "查看输出") {
@@ -330,15 +330,15 @@ struct TaskContextView: View {
                             } }
                         }.disabled(state.stopRequested.contains(task.id))
                     }
-                }.font(.system(size: 11)).disabled(!online || state.working.contains(task.id))
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).disabled(!online || state.working.contains(task.id))
                 if outputTask == task.id {
                     ScrollView {
                         Text(state.outputs[task.id] ?? task.outputPreview ?? L("正在读取输出…"))
-                            .font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                            .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced)).textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }.frame(maxHeight: 160)
                 }
-                if let error = state.actionErrors[task.id] { Text(error).font(.system(size: 11)).foregroundStyle(.red) }
+                if let error = state.actionErrors[task.id] { Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.red) }
             }.padding(.vertical, 6)
         } label: {
             HStack(alignment: .top, spacing: 10) {
@@ -350,10 +350,10 @@ struct TaskContextView: View {
                     HStack(spacing: 6) {
                         Text(task.phaseLabel)
                         if let elapsed = task.elapsed(at: Date()) { Text("\(Int(elapsed)) 秒").monospacedDigit() }
-                    }.font(.system(size: 11)).foregroundStyle(.secondary)
+                    }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }.padding(.vertical, 4)
-        }.font(.system(size: 13))
+        }.font(.system(size: WorkbenchTheme.Typography.body))
     }
     private func openMain() {
         close?()
@@ -385,11 +385,11 @@ struct TaskContextDraft: View {
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("补充要求").font(.headline)
-            Text(source.title).font(.callout).foregroundStyle(.secondary).lineLimit(2)
+            Text("补充要求").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+            Text(source.title).font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).lineLimit(2)
             TextField("希望任务如何继续…", text: $text, axis: .vertical)
                 .textFieldStyle(.roundedBorder).lineLimit(3...8).focused($focused)
-            Text("加入该任务的草稿，由你确认后发送。").font(.caption).foregroundStyle(.secondary)
+            Text("加入该任务的草稿，由你确认后发送。").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
             HStack {
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()

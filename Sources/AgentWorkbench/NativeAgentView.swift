@@ -129,7 +129,7 @@ struct NativeAgentView: View {
                         if s.hasOlder {
                             Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
                                 follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
-                            }.font(.subheadline).buttonStyle(.bordered)
+                            }.font(.system(size: WorkbenchTheme.Typography.secondary)).buttonStyle(.bordered)
                                 .disabled(connection.loadingOlder || !connection.online).padding(8)
                         }
                     }
@@ -198,7 +198,7 @@ struct NativeAgentView: View {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }
                     Text(command.status == "running" ? L("正在压缩上下文…") : command.error ?? L("上下文压缩完成"))
-                        .font(.subheadline).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
+                        .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                 }.padding(6)
             }
             NativeComposerView(connection: connection, s: s).id(s.id)
@@ -438,18 +438,18 @@ struct NativeRunControls: View {
                 if phase != .idle {
                     HStack(spacing: 10) {
                         if !phase.isSettled { ProgressView().controlSize(.small) }
-                        Text(phase.label).font(.subheadline)
+                        Text(phase.label).font(.system(size: WorkbenchTheme.Typography.secondary))
                             .foregroundStyle(phase.canRetry ? .orange : .secondary).textSelection(.enabled)
                         if phase.canRetry {
                             Button("Retry stop") {
                                 guard connection.selectedID == sessionID, connection.snapshot?.id == sessionID else { return }
                                 connection.stop()
-                            }.font(.subheadline)
+                            }.font(.system(size: WorkbenchTheme.Typography.secondary))
                         }
                     }
                 }
                 if connection.queue.isPaused(reference) || pending.contains(where: { $0.state == .stoppedBeforeDelivery }) {
-                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.subheadline)
+                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.system(size: WorkbenchTheme.Typography.secondary))
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
@@ -483,7 +483,7 @@ struct NativeRunControls: View {
                     }
                 }
                 if let warning = connection.queue.unsentWarning(for: reference) {
-                    Text(warning).font(.subheadline).foregroundStyle(.secondary)
+                    Text(warning).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
                 .sheet(item: $editingMessage) { message in
@@ -526,12 +526,12 @@ struct NativeInteractionView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("等你处理", systemImage: "hand.raised").font(.headline)
+            Label("等你处理", systemImage: "hand.raised").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             if let subagentSource {
-                Text(subagentSource).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(subagentSource).font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).textSelection(.enabled)
             }
             Text(request["title"].string ?? request["name"].string ?? L("回答问题")).textSelection(.enabled)
-            if let message = request["message"].string { Text(message).font(.callout).textSelection(.enabled) }
+            if let message = request["message"].string { Text(message).font(.system(size: WorkbenchTheme.Typography.body)).textSelection(.enabled) }
             if request["name"].string == "AskUserQuestion" {
                 ForEach(request["input"]["questions"].array, id: \.display) { q in
                     let question = q["question"].string ?? ""
