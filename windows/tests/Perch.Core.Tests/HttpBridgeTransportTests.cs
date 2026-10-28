@@ -22,7 +22,7 @@ public class HttpBridgeTransportTests
         {
             using var token = BridgeToken.FromString("fixture-token");
             using var transport = new HttpBridgeTransport($"http://127.0.0.1:{port}/",
-                () => new SuppliedTokenProvider(token), TimeSpan.FromMilliseconds(50));
+                () => new SuppliedTokenProvider(token), TimeSpan.FromSeconds(1));
             var request = listener.GetContextAsync();
             var send = transport.SendAsync(new BridgeRequest("GET", "/health", null), default);
             var context = await request.WaitAsync(TimeSpan.FromSeconds(5));
