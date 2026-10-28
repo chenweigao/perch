@@ -238,7 +238,7 @@ struct ConversationTranscript: View {
         let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning)
         let foldParents = presented.foldParents
         let clock = ConversationProcessClock.shared
-        clock.observe(session: sessionId, rows: presented.rows, isRunning: isRunning, timing: timing)
+        let _ = clock.observe(session: sessionId, rows: presented.rows, isRunning: isRunning, timing: timing)
         // A thought still streaming has no row of its own: the activity bar owns
         // the live phase. It joins the transcript as "thought for N s" once done.
         let contents = presented.rows.filter { $0.entry.presentation != .thinkingPreview }.map { row in
