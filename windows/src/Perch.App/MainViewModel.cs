@@ -397,6 +397,7 @@ public sealed class MainViewModel : Observable, ISessionObserver
 
         IsBusy = controller?.Snapshot?.Busy == true ||
                  (controller?.SelectedSession?.Busy ?? false);
+        if (controller?.Snapshot?.Error is { } snapshotError) ErrorText = snapshotError;
     }
 
     private void OnUi(Action action)

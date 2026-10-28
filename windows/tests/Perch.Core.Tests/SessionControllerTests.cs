@@ -310,8 +310,10 @@ public class SessionControllerTests
         Assert.Equal(OutboxState.Accepted, controller.Outbox.Find(requestId)!.State);
     }
 
-    [Fact]
-    public async Task PollRefreshesPendingReceiptAndSurfacesFailure()
+    [Theory]
+    [InlineData("failed")]
+    [InlineData("unknown")]
+    public async Task PollRefreshesPendingReceiptAndSurfacesTerminalOutcome(string status)
     {
         var bridge = new FixtureBridge()
             .WithSnapshot("/sessions/ses-idle?turns=25", "session-snapshot-idle.json");
@@ -322,16 +324,17 @@ public class SessionControllerTests
         controller.Select("ses-idle");
         await controller.PollOnceAsync(default);
         var requestId = await controller.SendAsync("pending steer", default);
-        var failed = Fixtures.Read<RequestReceipt>("prompt-receipt.json") with
+        var terminal = Fixtures.Read<RequestReceipt>("prompt-receipt.json") with
         {
-            Id = requestId, Status = "failed", Error = "steer rejected",
+            Id = requestId, Status = status, Error = "steer rejected",
         };
-        bridge.WithJson($"/sessions/ses-idle/requests/{requestId}", BridgeJson.Write(failed));
+        bridge.WithJson($"/sessions/ses-idle/requests/{requestId}", BridgeJson.Write(terminal));
 
+        await controller.PollOnceAsync(default);
         await controller.PollOnceAsync(default);
 
         var entry = controller.Outbox.Find(requestId)!;
-        Assert.Equal(OutboxState.Failed, entry.State);
+        Assert.Equal(status == "failed" ? OutboxState.Failed : OutboxState.Unknown, entry.State);
         Assert.Equal("steer rejected", entry.Error);
         Assert.Equal("steer rejected", observer.Errors.Single());
         Assert.Contains(bridge.Requests, request =>

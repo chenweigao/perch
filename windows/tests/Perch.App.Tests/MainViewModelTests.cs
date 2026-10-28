@@ -26,6 +26,20 @@ public sealed class MainViewModelTests
         Assert.Equal(System.Windows.Visibility.Visible, assistant.HeaderVisibility);
     }
 
+    [Fact]
+    public Task SnapshotErrorIsShownToTheUser() => OnDispatcher(async () =>
+    {
+        await using var scenario = new Scenario();
+        await scenario.ConnectAsync();
+        var view = scenario.View;
+        view.SelectedSession = view.Sessions.Single(s => s.Id == "ses-idle");
+        scenario.Bridges[0].SnapshotError = "provider failed";
+
+        await scenario.Coordinators[0].Controller!.PollOnceAsync(default);
+
+        Assert.Equal("provider failed", view.ErrorText);
+    });
+
     [Theory]
     [InlineData("next draft 中文")]
     [InlineData("original")]
@@ -295,6 +309,7 @@ public sealed class MainViewModelTests
         public bool HoldNextCatalog { get; set; }
         public bool Disposed { get; private set; }
         public int AbortCalls { get; private set; }
+        public string? SnapshotError { get; set; }
         public TaskCompletionSource SendEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<string> SendResult { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource CatalogEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -329,6 +344,8 @@ public sealed class MainViewModelTests
                 AbortCalls++;
                 return """{"ok":true}""";
             }
+            if (SnapshotError is not null)
+                return Fixture("session-snapshot-idle.json").Replace("\"error\":null", "\"error\":\"" + SnapshotError + "\"");
             return Fixture("session-snapshot-idle.json");
         }
 

@@ -310,9 +310,13 @@ public sealed class SessionController
         {
             if (entry.SessionId != SelectedId) continue;
             if (entry.State is not (OutboxState.Submitting or OutboxState.Accepted or OutboxState.Running or OutboxState.Unknown)) continue;
+            var previousState = entry.State;
+            var previousError = entry.Error;
             var receipt = await _client.ReceiptAsync(entry.SessionId, entry.RequestId, cancellationToken).ConfigureAwait(false);
             ApplyReceipt(entry, receipt);
-            if (entry.State == OutboxState.Failed) _observer.OnError(entry.Error!);
+            if (entry.State is OutboxState.Failed or OutboxState.Unknown &&
+                (entry.State != previousState || entry.Error != previousError))
+                _observer.OnError(entry.Error!);
         }
         _observer.OnOutboxChanged();
     }
