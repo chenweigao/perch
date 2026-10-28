@@ -178,10 +178,10 @@ class QoderCatalogTests(unittest.TestCase):
             broker.qoder_selection('qoder','pro',thinking='max',catalog=catalog)
         entry, effort = broker.qoder_selection('qoder','pro',catalog=catalog)
         state = {'model':'','thinking':None}; broker.apply_qoder_selection(state,entry,effort)
-        self.assertEqual((state['model'],state['thinking'],state['provider_id']),('pro','high','vendor'))
+        self.assertEqual((state['model'],state['qoderRequestedModel'],state['thinking'],state['provider_id']),('pro','pro','high','vendor'))
         self.assertEqual((state['qoderOuterProvider'],state['qoderContextWindow']),('route',1000))
         broker.apply_qoder_selection(state,None,None)
-        self.assertEqual(state,{'model':'','thinking':None})
+        self.assertEqual(state,{'model':'','qoderRequestedModel':'','thinking':None})
 
 class ProtocolTests(unittest.TestCase):
     def session(self, provider='omp'):
@@ -1047,6 +1047,21 @@ class QoderHandlerContractTests(unittest.TestCase):
             self.assertEqual(self.request('/sessions/qoder-contract/model',{'model':'pro'})[0],400)
             self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'low'})[0],400)
 
+    def test_default_model_request_survives_sdk_init(self):
+        session=self.session(model='')
+        sent=[]
+        session.send=lambda value:sent.append(value)
+        session.process=type('Process',(),{'poll':lambda self:None})()
+        session.prompt({'text':'first','requestId':'default-first'})
+        session.event({'type':'system','subtype':'init','session_id':'qoder-session','model':'resolved-default'})
+        self.assertEqual(session.state['model'],'resolved-default')
+        self.assertEqual(session.state['qoderRequestedModel'],'')
+        session.state['busy']=False
+        session.prompt({'text':'second','requestId':'default-second'})
+        self.assertEqual([item['model'] for item in sent],['',''])
+        session.state['busy']=False
+        self.assertEqual(self.request('/sessions/qoder-contract/thinking',{'level':'low'})[0],400)
+
     def test_qoder_catalog_discovery_runs_outside_session_lock(self):
         observed=[]
         def discover(provider, live=False):
@@ -1257,6 +1272,19 @@ class DshHandlerContractTests(unittest.TestCase):
         self.assertEqual(payload['models'][0]['provider'],'deepseek-official')
         # Survivors still say which runtime owns them, so the picker can go on filtering.
         self.assertEqual({e['agent'] for e in payload['models']},{'dsh'})
+    def test_combined_catalog_bounds_each_qoder_region(self):
+        calls=[]
+        def discover(provider, live=False, timeout=60):
+            calls.append((provider,timeout))
+            if provider=='qoder': raise subprocess.TimeoutExpired(provider,timeout)
+            return [{'id':'intl-pro','provider':'intl-vendor','name':'Intl Pro'}]
+        with patch.object(broker,'model_catalog',return_value=[]), \
+             patch.object(broker,'qoder_catalog',side_effect=discover), \
+             patch.object(broker,'codex_catalog',return_value=[]):
+            code,payload=self.request('/models')
+        self.assertEqual(code,200)
+        self.assertEqual(calls,[('qoder',10),('qoderintl',10)])
+        self.assertIn(('qoderintl','intl-pro'),[(e['agent'],e['id']) for e in payload['models']])
     def test_combined_catalog_tags_each_runtime(self):
         broker.MODELS=[{'provider':'openai-codex','id':'gpt-5.4-mini','name':'GPT-5.4 mini','selector':'openai-codex/gpt-5.4-mini'}]
         codex=[{'provider':'codex','id':'gpt-codex','thinking':['medium'],'defaultThinking':'medium'}]
