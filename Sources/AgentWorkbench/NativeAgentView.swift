@@ -106,13 +106,14 @@ struct NativeAgentView: View {
                                     follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
                                 }.buttonStyle(.borderless).disabled(!connection.online)
                             }
-                        }.font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
+                        }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
                     ConversationTranscript(messages: s.messages, sessionId: s.id,
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
-                                           isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true)
+                                           isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true,
+                                           timing: connection.timings.turns[s.id])
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id,
                                                                opensSubagents: s.opensSubagents))
@@ -121,6 +122,8 @@ struct NativeAgentView: View {
                     ForEach(s.interactions.filter { NativePlanReview($0) == nil }, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
                     NativePlanReviewDock(connection: connection, sessionID: s.id).id("plan:" + s.id)
                     Color.clear.frame(height: 1).id("bottom")
+                } bar: {
+                    bottomBar(s, readingKey: readingKey)
                 }
                     .overlay(alignment: .topTrailing) {
                         if s.hasOlder {
@@ -147,6 +150,13 @@ struct NativeAgentView: View {
             .task(id: displayedResultKey) {
                 if displayedResultKey != nil { onResultDisplayed(s) }
             }
+        }
+    }
+
+    /// Activity, notices and the composer float over the transcript's bottom
+    /// edge; the reply scrolls beneath the composer glass.
+    @ViewBuilder private func bottomBar(_ s: NativeAgentSnapshot, readingKey: String) -> some View {
+        VStack(spacing: 0) {
             let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
             // Bridge protocol 7 roster; an older bridge reports none and the section stays hidden.
             let subagentBoard = KimiTaskBoard(subagents: (s.subagents ?? []).map(KimiTask.init(native:)))

@@ -39,7 +39,7 @@ private struct CompactionSummaryRow: View {
                     HStack(spacing: 6) {
                         Image(systemName: "rectangle.compress.vertical")
                             .font(.system(size: 10, weight: .medium))
-                        Text("上下文已压缩").font(.system(size: 11))
+                        Text("上下文已压缩").font(.system(size: ReplyStyle.captionSize))
                         Image(systemName: expanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 9, weight: .medium))
                     }.foregroundStyle(.secondary).fixedSize()
@@ -72,7 +72,7 @@ struct LongUserPrompt<Content: View>: View {
                 .clipped()
             if folds {
                 Button(expanded ? "收起问题" : "展开完整问题") { expanded.toggle() }
-                    .buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(.secondary)
+                    .buttonStyle(.plain).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
                     .frame(height: 24, alignment: .leading)
                     .accessibilityIdentifier("user-prompt-toggle")
             }
@@ -145,7 +145,8 @@ struct KimiMessageView: View {
                                      preparation: markdownPreparation)
                             .environment(\.isConversationBodyText, true)
                     }
-                case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
+                case "thinking": ThoughtDisclosure(text: part.thinking ?? "",
+                                                   seconds: ConversationProcessClock.shared.thoughtSeconds(session: sessionId, message: message.id))
                 case "tool_use":
                     if let tool = tools[part.toolCallId ?? ""] { KimiToolCard(tool: tool) }
                 case "image", "file", "video":
@@ -207,6 +208,9 @@ struct ConversationTranscript: View {
     var foldsProcess = false
     /// The owner restores its initial scroll position before this document is exposed.
     var waitsForInitialPosition = false
+    /// The connection's clock for the latest turn; its duration labels that turn's
+    /// process fold once this view has watched the turn end.
+    var timing: ConversationTiming? = nil
     @Environment(\.conversationPresentations) private var presentations
     @State private var presentation = ConversationPresentationHandle()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
@@ -233,9 +237,14 @@ struct ConversationTranscript: View {
         // only presents the latest turn.
         let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning)
         let foldParents = presented.foldParents
-        let contents = presented.rows.map { row in
+        let clock = ConversationProcessClock.shared
+        clock.observe(session: sessionId, rows: presented.rows, isRunning: isRunning, timing: timing)
+        // A thought still streaming has no row of its own: the activity bar owns
+        // the live phase. It joins the transcript as "thought for N s" once done.
+        let contents = presented.rows.filter { $0.entry.presentation != .thinkingPreview }.map { row in
             ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows)
+                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
+                processSeconds: clock.seconds(session: sessionId, entry: row.entry))
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -1330,7 +1339,11 @@ private struct ConversationEntryAppearance: Equatable {
     let actionContext: ConversationActionContext?
     /// Hosted rows are separate SwiftUI roots; the app language reaches them only here.
     let locale: Locale
+    /// The reader's body size. Reading it here also makes the transcript's body
+    /// observe it, so a size change re-renders and re-measures every row.
+    let bodySize: CGFloat
     init(_ environment: EnvironmentValues) {
+        bodySize = ReplyStyle.bodySize
         colorScheme = environment.colorScheme
         layoutDirection = environment.layoutDirection
         displayScale = environment.displayScale
@@ -1371,17 +1384,17 @@ private struct HostedConversationEntry: View {
 }
 
 /// Parse and attributed-string construction are pure functions of the source
-/// text, and the built strings use dynamic colors. Recreated hosts reuse the
-/// earlier preparation instead of parsing the same history on every revisit.
-/// Bounded by entry count and retained source size.
+/// text and the reading body size, and the built strings use dynamic colors.
+/// Recreated hosts reuse the earlier preparation instead of parsing the same
+/// history on every revisit. Bounded by entry count and retained source size.
 private final class NativeRowPreparationCache {
     private enum Value {
-        case user(source: String, preparation: NativeParagraphContent.Preparation)
-        case assistant(source: String, allowsRichBlocks: Bool, preparation: NativeAssistantContent.Preparation)
+        case user(source: String, size: CGFloat, preparation: NativeParagraphContent.Preparation)
+        case assistant(source: String, size: CGFloat, allowsRichBlocks: Bool, preparation: NativeAssistantContent.Preparation)
         var source: String {
             switch self {
-            case .user(let source, _): return source
-            case .assistant(let source, _, _): return source
+            case .user(let source, _, _): return source
+            case .assistant(let source, _, _, _): return source
             }
         }
     }
@@ -1393,29 +1406,31 @@ private final class NativeRowPreparationCache {
     func user(session: String, messageID: String, source: String,
               prepare: () -> NativeParagraphContent.Preparation) -> NativeParagraphContent.Preparation {
         let key = Key(session: session, messageID: messageID)
-        if case .user(let cached, let preparation) = entries[key], cached == source {
+        let size = ReplyStyle.bodySize
+        if case .user(let cached, let cachedSize, let preparation) = entries[key], cached == source, cachedSize == size {
             #if TRANSCRIPT_CHECKS
             NavigationRenderMetrics.count("row_prepare_cache_hit")
             #endif
             return preparation
         }
         let preparation = prepare()
-        store(key, .user(source: source, preparation: preparation))
+        store(key, .user(source: source, size: size, preparation: preparation))
         return preparation
     }
 
     func assistant(session: String, messageID: String, source: String, allowsRichBlocks: Bool,
                    prepare: () -> NativeAssistantContent.Preparation) -> NativeAssistantContent.Preparation {
         let key = Key(session: session, messageID: messageID)
-        if case .assistant(let cached, let cachedAllows, let preparation) = entries[key],
-           cached == source, cachedAllows == allowsRichBlocks {
+        let size = ReplyStyle.bodySize
+        if case .assistant(let cached, let cachedSize, let cachedAllows, let preparation) = entries[key],
+           cached == source, cachedSize == size, cachedAllows == allowsRichBlocks {
             #if TRANSCRIPT_CHECKS
             NavigationRenderMetrics.count("row_prepare_cache_hit")
             #endif
             return preparation
         }
         let preparation = prepare()
-        store(key, .assistant(source: source, allowsRichBlocks: allowsRichBlocks, preparation: preparation))
+        store(key, .assistant(source: source, size: size, allowsRichBlocks: allowsRichBlocks, preparation: preparation))
         return preparation
     }
 
@@ -1620,7 +1635,8 @@ private final class ConversationEntryController: NSViewController {
         #endif
         // A settled reply skips equal blocks, so its looked-up labels would keep
         // the previous language. Rebuild it from the pool; user rows re-place.
-        if appearance.locale != nextAppearance.locale, let nativeAssistant {
+        if appearance.locale != nextAppearance.locale || appearance.bodySize != nextAppearance.bodySize,
+           let nativeAssistant {
             NativeAssistantMessageView.recycle(nativeAssistant)
             self.nativeAssistant = nil
         }
@@ -1988,13 +2004,13 @@ private struct AssistantEntryActions: View {
             ReplyCopyButton(text: text)
             if let context {
                 Button { context.post(.quote(text)) } label: {
-                    Image(systemName: "quote.opening").font(.system(size: 11))
+                    Image(systemName: "quote.opening").font(.system(size: ReplyStyle.captionSize))
                         .frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
                     .accessibilityLabel("引用到输入框")
                 if !messageID.isEmpty {
                     Button { context.post(.regenerate(before: messageID)) } label: {
-                        Image(systemName: "arrow.clockwise").font(.system(size: 11))
+                        Image(systemName: "arrow.clockwise").font(.system(size: ReplyStyle.captionSize))
                             .frame(width: 24, height: 24).contentShape(Rectangle())
                     }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
                         .accessibilityLabel("重新生成")
@@ -2103,6 +2119,8 @@ private struct ConversationEntryView: View, Equatable {
     var markdownPreparation: ReplyMarkdownPreparation? = nil
     /// Rows collapsed behind this fold; non-nil only for process-fold entries.
     var foldedRows: [ConversationPresentationModel.Row]? = nil
+    /// How long this thought streamed, or this fold's turn took, as watched here.
+    var processSeconds: TimeInterval? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2110,6 +2128,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.activityNarrative == rhs.activityNarrative
             && lhs.markdownPreparation == rhs.markdownPreparation
             && lhs.foldedRows == rhs.foldedRows
+            && lhs.processSeconds == rhs.processSeconds
     }
     var body: some View {
         // The native assistant row places its actions with the same gap.
@@ -2135,20 +2154,22 @@ private struct ConversationEntryView: View, Equatable {
                     }.disclosureGroupStyle(ProcessDisclosureStyle())
                         .font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
                 case .thinkingDetails:
-                    ThoughtDisclosure(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"))
+                    ThoughtDisclosure(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"),
+                                      seconds: processSeconds)
                 case .thinkingPreview, .thinkingRecord:
-                    ThoughtOutput(messages: entry.messages, finished: entry.presentation == .thinkingRecord)
+                    ThoughtOutput(messages: entry.messages, finished: entry.presentation == .thinkingRecord,
+                                  seconds: processSeconds)
                         .id(entry.presentation == .thinkingRecord)
                 case .emptyOutput:
                     Text("本轮未返回文字回复，可展开工具记录查看结果。")
-                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
                 case .processFold:
                     if let foldedRows {
-                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId)
+                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId, turnSeconds: processSeconds)
                     }
                 default:
                     if entry.presentation == .record {
-                        Text("过程记录 · 未返回最终回复").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text("过程记录 · 未返回最终回复").font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary)
                     }
                     ForEach(entry.messages) { message in
                         KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
@@ -2180,7 +2201,10 @@ struct ProcessFoldRow: View {
     let rows: [ConversationPresentationModel.Row]
     let api: KimiAPI?
     let sessionId: String
+    /// The turn's duration on its first fold, when this app watched the turn end.
+    var turnSeconds: TimeInterval? = nil
     @UILocalization private var L
+    @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
@@ -2223,7 +2247,8 @@ struct ProcessFoldRow: View {
                     }
                     ForEach(Array(rows[page.range]), id: \.entry.id) { row in
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                              memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
+                                              memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity,
+                                              processSeconds: ConversationProcessClock.shared.seconds(session: sessionId, entry: row.entry))
                             .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
                             .environment(\.isConversationBodyText, true)
                             .background(ProcessFindAnchor(id: row.entry.id))
@@ -2246,19 +2271,114 @@ struct ProcessFoldRow: View {
                 if attention > 0 {
                     Text(L("· \(attention) 项需关注")).foregroundStyle(.orange)
                 }
+                if let turnSeconds {
+                    let duration = ConversationTiming.duration(max(1, turnSeconds.rounded()),
+                                                               chinese: locale.language.languageCode?.identifier == "zh")
+                    Text(verbatim: L("· 用时 \(duration)")).monospacedDigit()
+                }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
             .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
     }
 }
 
+/// Durations this app watched happen: how long each thought streamed before
+/// the next phase replaced it, and how long a turn took, attached to the first
+/// process fold of that turn. Wall time on this Mac, in memory only — history
+/// that was never watched live (or is reloaded after relaunch) shows no figure
+/// rather than a guess. Kimi's live thought settles under a new message id, so
+/// only its turn duration carries over.
+@MainActor final class ConversationProcessClock {
+    static let shared = ConversationProcessClock()
+    private var starts: [String: Date] = [:]
+    /// By entry id ("thinking:<message>:<offset>") and by message id, for
+    /// thoughts that render inside a process group without their entry.
+    private var thoughts: [String: TimeInterval] = [:]
+    private var folds: [String: TimeInterval] = [:]
+    private var live: [String: Set<String>] = [:]
+    private var running: [String: Bool] = [:]
+    private var order: [String] = []
+
+    private func key(_ session: String, _ id: String) -> String { session + "|" + id }
+
+    /// Called with each presentation of a session's transcript; idempotent.
+    func observe(session: String, rows: [ConversationPresentationModel.Row], isRunning: Bool,
+                 timing: ConversationTiming?, now: Date = Date()) {
+        var liveNow: [String: String] = [:]
+        for row in rows where row.entry.presentation == .thinkingPreview {
+            liveNow[row.entry.id] = row.entry.messages.first?.id
+        }
+        let previous = live[session] ?? []
+        let current = Set(liveNow.keys)
+        if previous != current {
+            for id in current.subtracting(previous) where starts[key(session, id)] == nil {
+                starts[key(session, id)] = now
+            }
+            for id in previous.subtracting(current) {
+                guard let start = starts.removeValue(forKey: key(session, id)) else { continue }
+                let seconds = now.timeIntervalSince(start)
+                remember(key(session, id), seconds, fold: false)
+                // "thinking:<message>:<offset>" → the message's running total.
+                let parts = id.split(separator: ":")
+                if parts.count >= 3, parts[0] == "thinking" {
+                    let message = parts[1..<(parts.count - 1)].joined(separator: ":")
+                    let messageKey = key(session, "message:" + message)
+                    remember(messageKey, (thoughts[messageKey] ?? 0) + seconds, fold: false)
+                }
+            }
+            live[session] = current.isEmpty ? nil : current
+        }
+        let wasRunning = running[session] ?? false
+        running[session] = isRunning
+        // Only a turn this view saw finish takes the connection's clock, so a
+        // stale clock from an earlier turn never labels a later one.
+        guard wasRunning, !isRunning, let timing, !timing.observedOnly, let end = timing.endedAt,
+              let fold = Self.firstFoldOfLatestTurn(rows) else { return }
+        // The same figure the activity bar shows as the turn's 用时 when it ends.
+        remember(key(session, fold), timing.elapsed(at: end), fold: true)
+    }
+
+    func seconds(session: String, entry: ConversationTimelineEntry) -> TimeInterval? {
+        switch entry.presentation {
+        case .processFold: return folds[key(session, entry.id)]
+        case .thinkingDetails, .thinkingRecord: return thoughts[key(session, entry.id)]
+        default: return nil
+        }
+    }
+
+    func thoughtSeconds(session: String, message: String) -> TimeInterval? {
+        thoughts[key(session, "message:" + message)]
+    }
+
+    private static func firstFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
+        let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
+        let start = prompt.map { $0 + 1 } ?? 0
+        guard start < rows.count else { return nil }
+        return rows[start...].first { $0.entry.presentation == .processFold }?.entry.id
+    }
+
+    /// Bounded independently of history length.
+    private func remember(_ key: String, _ seconds: TimeInterval, fold: Bool) {
+        if (fold ? folds[key] : thoughts[key]) == nil { order.append(key) }
+        if fold { folds[key] = seconds } else { thoughts[key] = seconds }
+        while order.count > 4_000 {
+            let oldest = order.removeFirst()
+            thoughts.removeValue(forKey: oldest)
+            folds.removeValue(forKey: oldest)
+        }
+    }
+}
+
 /// Live and historical thoughts share one TextKit style. The full-text popover is
 /// a reading surface of its own and uses the body style.
 private enum ThoughtTextStyle {
-    static let attributes = make(size: ReplyStyle.Process.thoughtSize, lineHeight: ReplyStyle.Process.thoughtLineHeight,
-                                 ink: .secondaryLabelColor)
-    static let fullTextAttributes = make(size: ReplyStyle.bodySize, lineHeight: ReplyStyle.lineHeight,
-                                         ink: ReplyStyle.nativeInk)
+    /// Built at the current reading size; cheap enough to rebuild per view update.
+    static var attributes: [NSAttributedString.Key: Any] {
+        make(size: ReplyStyle.Process.thoughtSize, lineHeight: ReplyStyle.Process.thoughtLineHeight, ink: .secondaryLabelColor)
+    }
+    static var fullTextAttributes: [NSAttributedString.Key: Any] {
+        make(size: ReplyStyle.bodySize, lineHeight: ReplyStyle.lineHeight, ink: ReplyStyle.nativeInk)
+    }
     private static func make(size: CGFloat, lineHeight: CGFloat, ink: NSColor) -> [NSAttributedString.Key: Any] {
         let paragraph = NSMutableParagraphStyle()
         paragraph.minimumLineHeight = lineHeight
@@ -2287,12 +2407,29 @@ private struct ThoughtToggle: View {
     }
 }
 
+/// A settled thought reads as how long it took ("已思考 12秒"), the way the
+/// activity bar timed it live; thoughts this app did not watch keep "思考".
+private struct ThoughtTitle {
+    let seconds: TimeInterval?
+    var noResponse = false
+    func text(locale: Locale, L: LocalizedUIStrings) -> Text {
+        guard let seconds else { return noResponse ? Text("Thoughts · No response") : Text("Thoughts") }
+        let duration = ConversationTiming.duration(max(1, seconds.rounded()),
+                                                   chinese: locale.language.languageCode?.identifier == "zh")
+        return Text(verbatim: noResponse ? L("已思考 \(duration) · 未返回回复") : L("已思考 \(duration)"))
+    }
+}
+
 struct ThoughtDisclosure: View {
     let text: String
+    /// How long the thought streamed, when this app watched it live.
+    var seconds: TimeInterval? = nil
     @RememberedExpansion("thought") private var expanded
+    @Environment(\.locale) private var locale
+    @UILocalization private var L
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: Text("Thoughts"), expanded: $expanded)
+            ThoughtToggle(title: ThoughtTitle(seconds: seconds).text(locale: locale, L: L), expanded: $expanded)
             if expanded { ThoughtText(text: text) }
         }
     }
@@ -2301,18 +2438,22 @@ struct ThoughtDisclosure: View {
 private struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
+    var seconds: TimeInterval? = nil
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
     @RememberedExpansion("live-thought") private var expanded
     @State private var showFullText = false
     @State private var previewOverflows = false
+    @Environment(\.locale) private var locale
+    @UILocalization private var L
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"), expanded: $expanded)
+                ThoughtToggle(title: finished ? ThoughtTitle(seconds: seconds, noResponse: true).text(locale: locale, L: L)
+                                              : Text("Thinking"), expanded: $expanded)
                 if expanded && !finished && previewOverflows {
                     Button { showFullText = true } label: {
                         Label("View full thoughts", systemImage: "arrow.up.right")
-                    }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary).fixedSize()
+                    }.buttonStyle(.plain).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).fixedSize()
                 }
             }
             if expanded && finished {

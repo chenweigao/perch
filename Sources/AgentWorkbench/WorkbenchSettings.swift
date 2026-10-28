@@ -13,6 +13,8 @@ struct WorkbenchSettings: View {
     @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
+    @UILocalization private var L
+    private let readingSize = ReadingBodySize.shared
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .codex, .claude]
     @AppStorage("settings.pane") private var pane = SettingsPane.agents
     var body: some View {
@@ -131,6 +133,12 @@ struct WorkbenchSettings: View {
                     Text(appearance.title).tag(appearance)
                 }
             }
+            Picker("正文字号", selection: Binding(get: { readingSize.value }, set: { readingSize.set($0) })) {
+                ForEach(ReadingBodySize.sizes, id: \.self) { size in
+                    Text(verbatim: size == ReadingBodySize.standard ? L("\(Int(size)) pt（默认）") : "\(Int(size)) pt")
+                        .tag(size)
+                }
+            }
             SettingsRow(action: { showSummary = true }) {
                 Image(systemName: "sparkles").frame(width: 20).foregroundStyle(.secondary)
                 Text("活动叙事与 Recap").foregroundStyle(.primary)
@@ -143,7 +151,7 @@ struct WorkbenchSettings: View {
                 Button("关闭活动叙事") { summarySettings.disable() }
             }
         } footer: {
-            Text("侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+            Text("正文字号影响对话、思考与工具记录和输入框，也可用 ⌘= 放大、⌘− 缩小、⌘0 恢复默认。侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
         }
     }
 

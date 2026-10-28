@@ -159,13 +159,19 @@ extension ReplyStyle.BlockKind {
     }
 }
 
-private let nativeMarkerFont = NSFont.systemFont(ofSize: ReplyStyle.bodySize)
-/// First-baseline offset of a body `ReplyText` from its top, matching the SwiftUI
-/// alignment guide so list markers align exactly with wrapped content.
-private let nativeContentFirstBaseline: CGFloat = {
-    let natural = ceil(nativeMarkerFont.ascender - nativeMarkerFont.descender + nativeMarkerFont.leading)
-    return ceil(nativeMarkerFont.ascender) + max(0, ReplyStyle.lineHeight - natural)
-}()
+/// The list marker font at the current body size, and the first-baseline offset
+/// of a body `ReplyText` from its top, matching the SwiftUI alignment guide so
+/// list markers align exactly with wrapped content. Rebuilt when the size changes.
+private var nativeMarkerMetricsCache: (size: CGFloat, font: NSFont, firstBaseline: CGFloat)?
+private func nativeMarkerMetrics() -> (font: NSFont, firstBaseline: CGFloat) {
+    let size = ReplyStyle.bodySize
+    if let cached = nativeMarkerMetricsCache, cached.size == size { return (cached.font, cached.firstBaseline) }
+    let font = NSFont.systemFont(ofSize: size)
+    let natural = ceil(font.ascender - font.descender + font.leading)
+    let firstBaseline = ceil(font.ascender) + max(0, ReplyStyle.lineHeight - natural)
+    nativeMarkerMetricsCache = (size, font, firstBaseline)
+    return (font, firstBaseline)
+}
 
 /// Every block view reports its own height and lays out inside an assigned frame.
 private class NativeAssistantBlockView: NSView {
@@ -267,6 +273,10 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         // The SwiftUI card's label, including a fresh card whose block has no language.
         let title = language.isEmpty ? L("代码") : language
         if label.stringValue != title { label.stringValue = title }
+        // Pooled cards outlive a body-size change.
+        if label.font?.pointSize != ReplyStyle.Code.labelSize {
+            label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
+        }
         if source != self.source {
             self.source = source
             copy.rootView = ReplyCopyButton(text: source, label: "复制代码")
@@ -430,7 +440,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         let content: NativeAssistantStackView
         init(links: SelectableReplyText.Coordinator) {
             content = NativeAssistantStackView(compact: true, links: links)
-            marker.font = nativeMarkerFont
+            marker.font = nativeMarkerMetrics().font
             marker.textColor = ReplyStyle.nativeInk
             marker.alignment = .right
             marker.lineBreakMode = .byClipping
@@ -449,8 +459,10 @@ private final class NativeListBlockView: NativeAssistantBlockView {
             let item = Item(links: links)
             items.append(item); addSubview(item.marker); addSubview(item.content)
         }
+        let markerFont = nativeMarkerMetrics().font
         for (item, entry) in zip(items, entries) {
             if item.marker.stringValue != entry.marker { item.marker.stringValue = entry.marker }
+            if item.marker.font != markerFont { item.marker.font = markerFont }
             item.content.update(entry.blocks)
         }
     }
@@ -459,8 +471,9 @@ private final class NativeListBlockView: NativeAssistantBlockView {
     }
     private func rows(width: CGFloat) -> [CGFloat] {
         let contentWidth = max(1, width - markerWidth() - ReplyStyle.ListLayout.markerGap)
+        let metrics = nativeMarkerMetrics()
         return items.map { max($0.content.contentHeight(width: contentWidth),
-                              nativeContentFirstBaseline - ceil(nativeMarkerFont.ascender) + $0.marker.fittingSize.height) }
+                              metrics.firstBaseline - ceil(metrics.font.ascender) + $0.marker.fittingSize.height) }
     }
     override func contentHeight(width: CGFloat) -> CGFloat {
         let rows = rows(width: width)
@@ -478,7 +491,8 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         var y: CGFloat = 0
         for (index, item) in items.enumerated() {
             if index > 0 { y += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: rows[index]) }
-            let markerOffset = nativeContentFirstBaseline - ceil(nativeMarkerFont.ascender)
+            let metrics = nativeMarkerMetrics()
+            let markerOffset = metrics.firstBaseline - ceil(metrics.font.ascender)
             let markerSize = item.marker.fittingSize
             let markerFrame = CGRect(x: 0, y: y + markerOffset, width: markerWidth, height: markerSize.height)
             if item.marker.frame != markerFrame { item.marker.frame = markerFrame }

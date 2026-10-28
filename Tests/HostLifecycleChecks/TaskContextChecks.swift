@@ -305,7 +305,7 @@ import WorkbenchCore
                  split.detailContentLeadingInset == 0 &&
                  !split.isInspectorOverlayingContent && split.detailContentTrailingInset > 0 &&
                  frame(split.detailCardView).width >= WorkspaceLayoutMetrics.contentMinimumWidth - 1 &&
-                 UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) &&
+                 UserDefaults.standard.object(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) as? Bool != false &&
                  abs(splitBoundsFrame.minX - split.view.bounds.minX) < 1 &&
                  abs(splitBoundsFrame.maxX - split.view.bounds.maxX) < 1 &&
                  abs(detailFrame.minX - splitBoundsFrame.minX) < 1 &&
@@ -315,7 +315,7 @@ import WorkbenchCore
     split.view.layoutSubtreeIfNeeded(); page.displayIfNeeded()
     precondition(!split.isSidebarYieldingToInspector && split.isSidebarShown && !split.floatingSidebarView!.isHidden &&
                  split.detailContentLeadingInset > 0 && split.isInspectorOverlayingContent &&
-                 UserDefaults.standard.bool(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey),
+                 UserDefaults.standard.object(forKey: WorkbenchSplitController.sidebarVisibilityDefaultsKey) as? Bool != false,
                  "Asking for a yielding sidebar brings it back, with the inspector floating over the card, and keeps the saved preference")
 
     page.setContentSize(NSSize(width: 800, height: 780))

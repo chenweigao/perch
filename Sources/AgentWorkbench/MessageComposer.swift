@@ -116,6 +116,12 @@ struct ComposerEditor: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.parent = self
         guard let editor = coordinator.editor else { return }
+        // The composer's text follows the reader's body size, like the transcript.
+        let bodySize = WorkbenchTheme.Reading.bodySize
+        if editor.font?.pointSize != bodySize {
+            editor.font = .systemFont(ofSize: bodySize)
+            editor.needsDisplay = true
+        }
         editor.minSize = NSSize(width: 0, height: minimumHeight)
         editor.isEditable = isEnabled
         editor.canSend = canSend && isEnabled

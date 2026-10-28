@@ -19,8 +19,8 @@ struct GoalHeaderBar: View {
                         Image(systemName: "flag").foregroundStyle(WorkbenchTheme.accent)
                             .padding(.top, 2)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("目标").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-                            Text(goal.objective).font(.system(size: 13, weight: .medium))
+                            Text("目标").font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .medium)).foregroundStyle(.secondary)
+                            Text(goal.objective).font(.system(size: WorkbenchTheme.Reading.labelSize, weight: .medium))
                                 .foregroundStyle(.primary).lineLimit(2)
                                 .multilineTextAlignment(.leading)
                         }
@@ -50,20 +50,20 @@ struct GoalHeaderBar: View {
                             .fixedSize().help("目标操作")
                             .accessibilityLabel(L("目标操作"))
                     }.disabled(!controlsEnabled || isStale)
-                }.font(.system(size: 11)).fixedSize(horizontal: true, vertical: false)
+                }.font(.system(size: WorkbenchTheme.Reading.captionSize)).fixedSize(horizontal: true, vertical: false)
             }
             if expanded {
                 ScrollView {
-                    Text(goal.objective).font(.system(size: 13)).textSelection(.enabled)
+                    Text(goal.objective).font(.system(size: WorkbenchTheme.Reading.labelSize)).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }.frame(maxHeight: 140).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("goal-full-objective")
                 HStack(spacing: 16) {
                     Label(L("已用 \(goal.turnsUsed) 轮"), systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                     Text(L("已用 \(goal.tokensUsed) Token"))
-                }.font(.system(size: 11)).foregroundStyle(.secondary)
+                }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
                 Text("暂停或取消目标不会中断当前这一轮；如需中断，请使用输入区的停止按钮。")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
