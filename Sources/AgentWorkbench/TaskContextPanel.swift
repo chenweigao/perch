@@ -112,7 +112,7 @@ struct TaskContextView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.header)
+            header.fixedSize(horizontal: false, vertical: true)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let error = state.error {
@@ -136,7 +136,6 @@ struct TaskContextView: View {
                         Text("暂无任务活动").foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                    .inspectorHeightContribution(.content)
             }
             if detached, let item {
                 VStack(spacing: 0) {
@@ -152,7 +151,7 @@ struct TaskContextView: View {
                 }.fixedSize(horizontal: false, vertical: true)
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Embedded in the floating glass panel the workspace owns the surface;
+            // Embedded in the integrated lane, the workspace owns the surface;
             // detached needs the window's own opaque background.
             .background(detached ? Color(nsColor: .windowBackgroundColor) : Color.clear)
             #if PERCH_ACCEPTANCE

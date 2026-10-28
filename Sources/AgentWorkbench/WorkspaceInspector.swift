@@ -1,7 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// The floating workspace inspector: tasks, working-tree changes, or files
+/// The integrated workspace inspector: tasks, working-tree changes, or files
 /// from the selected session, with an explicit action to expand the reader.
 struct WorkspaceInspector: View {
     let model: WorkbenchModel
@@ -23,7 +23,7 @@ struct WorkspaceInspector: View {
     }
 }
 
-/// Directory browsing and file previews share the same floating surface. The
+/// Directory browsing and file previews share the same auxiliary lane. The
 /// native lifetime bridge owns reads so first reveal works inside WindowGroup.
 struct FilesInspectorView: View {
     let model: WorkbenchModel
@@ -47,15 +47,6 @@ struct FilesInspectorView: View {
     private var directory: Bool {
         if case .directory = browser.content { return true }
         return false
-    }
-    private var contentHeight: CGFloat {
-        if item == nil || !matchesLocation || browser.loading || browser.error != nil { return 112 }
-        switch browser.content {
-        case .directory(let entries): return entries.isEmpty ? 112 : min(420, CGFloat(entries.count) * 28 + 16)
-        case .text, .binary: return 440
-        case .matches(let paths): return min(420, CGFloat(paths.count) * 32 + 48)
-        default: return 112
-        }
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -92,7 +83,7 @@ struct FilesInspectorView: View {
                     }.font(.system(size: 12)).buttonStyle(.borderless)
                         .padding(.horizontal, 16).padding(.bottom, 12)
                 }
-            }.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.header)
+            }.fixedSize(horizontal: false, vertical: true)
             Group {
                 if !active { Color.clear }
                 else if item == nil {
@@ -103,7 +94,7 @@ struct FilesInspectorView: View {
                 } else {
                     RemoteFilePanel(browser: browser, showsCloseButton: false, compact: true, onClose: close)
                 }
-            }.frame(height: contentHeight).inspectorHeightContribution(.content)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .workbenchHostedTask(id: location) {
                 guard active else { browser.cancel(); return }
@@ -155,9 +146,9 @@ struct ChangesInspectorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.inspectorHeightContribution(.header)
+            header
             ScrollView {
-                content.fixedSize(horizontal: false, vertical: true).inspectorHeightContribution(.content)
+                content.fixedSize(horizontal: false, vertical: true)
             }
         }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .workbenchHostedTask(id: key) {

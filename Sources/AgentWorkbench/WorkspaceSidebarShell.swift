@@ -36,21 +36,22 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         Label("新建会话", systemImage: "plus")
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, SidebarMetrics.rowInset)
-                            .frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+                            .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
                     }.buttonStyle(SidebarNavigationStyle()).help("新建会话 · ⌘N")
                         .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
                     Button(action: onSearch) {
                         Label("搜索", systemImage: "magnifyingglass")
                             .fixedSize(horizontal: true, vertical: false)
                             .padding(.horizontal, SidebarMetrics.rowInset)
-                            .frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+                            .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
                     }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话")
                         .accessibilityLabel("搜索项目与会话")
                         .accessibilityIdentifier("sidebar.search")
-                }.padding(.bottom, 8)
+                }.padding(.bottom, 2)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
-            }.padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 6)
+            }.font(.system(size: SidebarMetrics.navigationSize))
+                .padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 2)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
@@ -95,7 +96,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                 }
                             }
                         Text("设置与环境"); Spacer(); shortcutHint("⌘,")
-                    }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+                    }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
                     .accessibilityIdentifier("sidebar.settings")
                     .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
@@ -122,7 +123,8 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                             }.font(.system(size: 13)).padding(10).frame(width: 220)
                         }
                     }
-            }.padding(.horizontal, 10).padding(.bottom, 10)
+            }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(.secondary)
+                .padding(.horizontal, 10).padding(.bottom, 10)
         }.font(.system(size: 14)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -138,7 +140,9 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         .foregroundStyle(.secondary)
                 }
                 if let shortcut { shortcutHint(shortcut) }
-            }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+            }.font(.system(size: SidebarMetrics.navigationSize))
+                .foregroundStyle(selected ? WorkbenchTheme.ink : Color.secondary)
+                .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
         }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
     }
 

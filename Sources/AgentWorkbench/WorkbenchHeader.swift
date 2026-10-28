@@ -1,7 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// Title changes follow workspace selection, independently of streaming state.
+/// A quiet, text-only title follows selection independently of streaming state.
 struct WorkbenchHeader: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
@@ -11,9 +11,9 @@ struct WorkbenchHeader: View {
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
-        Text(title).font(.system(size: 14, weight: .semibold))
+        Text(title).font(.system(size: 14, weight: .medium))
             .lineLimit(1).truncationMode(.tail)
-            .frame(minWidth: 100, maxWidth: 440, alignment: .leading)
+            .frame(minWidth: 80, maxWidth: 360, alignment: .leading)
             .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
