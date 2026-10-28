@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import WorkbenchCore
 
@@ -6,13 +7,44 @@ import WorkbenchCore
 @MainActor private func controlClick(_ window: NSWindow, x: CGFloat, top: CGFloat) {
     let host = window.contentView!
     let point = host.convert(NSPoint(x: x, y: host.isFlipped ? top : host.bounds.height - top), to: nil)
+    controlClick(window, point: point)
+}
+@MainActor private func controlClick(_ window: NSWindow, point: NSPoint) {
     for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
         window.sendEvent(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
             windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!)
     }
 }
+@MainActor private func controlClick(_ window: NSWindow, identifier: String) {
+    var visited = Set<ObjectIdentifier>()
+    func find(_ value: Any) -> NSObject? {
+        guard let node = value as? NSObject, visited.insert(ObjectIdentifier(node)).inserted else { return nil }
+        // SwiftUI virtual elements expose AX selectors without necessarily
+        // declaring the complete NSAccessibility protocol.
+        func attribute(_ name: String) -> Any? {
+            let selector = NSSelectorFromString(name)
+            return node.responds(to: selector) ? node.perform(selector)?.takeUnretainedValue() : nil
+        }
+        if attribute("accessibilityIdentifier") as? String == identifier { return node }
+        for child in attribute("accessibilityChildren") as? [Any] ?? [] {
+            if let found = find(child) { return found }
+        }
+        return nil
+    }
+    guard let element = find(window.contentView!),
+          element.responds(to: NSSelectorFromString("accessibilityFrame")),
+          let frame = (element.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue,
+          !frame.isEmpty else { preconditionFailure("Missing visible control: \(identifier)") }
+    let rect = window.convertFromScreen(frame)
+    // Click the actual button's center, retaining hit-testing coverage while
+    // allowing its position to change with typography and localization.
+    controlClick(window, point: NSPoint(x: rect.midX, y: rect.midY))
+}
 @MainActor func checkReadingControls() async throws {
     AppLanguage.applyToSystem(.zhHans)
+    let ownAX = AXUIElementCreateApplication(getpid())
+    AXUIElementSetAttributeValue(ownAX, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+    ReadingBodySize.shared.set(ReadingBodySize.standard)
     let memory = ConversationReadingMemory.shared
     let output = URL(fileURLWithPath: "/private/tmp/perch-reading-controls")
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
@@ -80,18 +112,27 @@ import WorkbenchCore
         let entry = ConversationTimelineEntry.make([try message("page-\(index)", "记录 \(index)", thinking: true)]).first!
         return .init(entry: entry, tools: [:], activity: nil)
     }
-    memory.expansions["reading-controls:pages:process-fold"] = true
-    let pages = NSHostingView(rootView: ProcessFoldRow(rows: rows, api: nil, sessionId: "reading-controls")
-        .environment(\.conversationMemoryKey, "reading-controls:pages")
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading))
-    window.contentView = pages; window.setContentSize(NSSize(width: 720, height: 700))
-    try await Task.sleep(for: .milliseconds(300))
-    func mountedEntries() -> [String] { controlViews(pages).compactMap(\.identifier?.rawValue).filter { $0.hasPrefix("process-entry:") } }
-    precondition(mountedEntries().count == 8)
-    controlClick(window, x: 149, top: 48)
-    try await Task.sleep(for: .milliseconds(250))
-    precondition(memory.processPages["reading-controls:pages"] == rows[8].entry.id, "Actual next-page button selects the next bounded page")
-    precondition(mountedEntries().count == 8 && !mountedEntries().contains("process-entry:" + rows[0].entry.id))
+    for size: CGFloat in [14, 18] {
+        ReadingBodySize.shared.set(size)
+        let key = "reading-controls:pages:\(Int(size))"
+        memory.expansions[key + ":process-fold"] = true
+        let pages = NSHostingView(rootView: ProcessFoldRow(rows: rows, api: nil, sessionId: "reading-controls")
+            .environment(\.conversationMemoryKey, key)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading))
+        window.contentView = pages; window.setContentSize(NSSize(width: 720, height: 700))
+        try await Task.sleep(for: .milliseconds(300))
+        func mountedEntries() -> [String] { controlViews(pages).compactMap(\.identifier?.rawValue).filter { $0.hasPrefix("process-entry:") } }
+        precondition(mountedEntries().count == 8)
+        for (button, page) in [("next", 1), ("next", 2), ("previous", 1), ("previous", 0)] {
+            controlClick(window, identifier: "process-\(button)-page")
+            try await Task.sleep(for: .milliseconds(250))
+            let start = page * ConversationProcessPage.size
+            precondition(memory.processPages[key] == rows[start].entry.id, "Actual \(button)-page button selects page \(page + 1) at \(size)pt")
+            let expected = rows[start..<min(start + ConversationProcessPage.size, rows.count)].map { "process-entry:" + $0.entry.id }
+            precondition(Set(mountedEntries()) == Set(expected), "Only the selected bounded page is mounted")
+        }
+    }
+    ReadingBodySize.shared.set(ReadingBodySize.standard)
 
     var messages = [try message("prompt", long + "\nPROMPT_FIND_END", user: true)]
     messages += try (0..<300).map { try message("thought-\($0)", ($0 == 299 ? String(repeating: "长内容 👨‍👩‍👧‍👦 é ", count: 800) : "") + "PAGE_FIND_\($0)", thinking: true) }
