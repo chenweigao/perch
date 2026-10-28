@@ -1,5 +1,7 @@
 # Reply typography
 
+> Current scale (2026-10-28): every size follows the reader's body size through `ReadingScale`; the default and the rules live in [ui-spec 正文刻度](ui-spec.md#正文刻度). Figures below that differ are history.
+
 Reference: locally installed Codex 26.915.31945, desktop default Markdown styles.
 The installed app's static style resources were inspected read-only; no application
 code, fonts, or assets are included in Perch. User font overrides and browser

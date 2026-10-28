@@ -1,5 +1,7 @@
 # Visual refresh: reading scale and sidebar geometry
 
+> Current scale (2026-10-28): every size follows the reader's body size through `ReadingScale`; the default and the rules live in [ui-spec 正文刻度](ui-spec.md#正文刻度). Figures below that differ are history.
+
 Two token sets now own the look of the conversation and the sidebar. Views read
 them instead of local numbers, so the SwiftUI and native renderers, and every kind
 of sidebar row, cannot drift apart. Tune the look here, not in individual views.
