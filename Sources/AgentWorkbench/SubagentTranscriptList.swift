@@ -25,7 +25,7 @@ struct SubagentTranscriptList: View {
             turnHeader(ordinal: ordinal, state: state).padding(.top, row.id == rows.first?.id ? 0 : 10)
         case .text(let text, let role):
             if role == "user" {
-                Text(text).font(.system(size: 12)).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(text).font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.secondary).textSelection(.enabled)
                     .padding(10).frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
             } else {
@@ -40,10 +40,10 @@ struct SubagentTranscriptList: View {
                 Text(message).textSelection(.enabled)
             } icon: {
                 Image(systemName: "exclamationmark.circle")
-            }.font(.system(size: 12))
+            }.font(.system(size: WorkbenchTheme.Reading.labelSize))
                 .foregroundStyle(level == "error" ? Color.orange : Color.secondary)
         case .error(let text):
-            Text(text).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
+            Text(text).font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.orange).textSelection(.enabled)
         }
     }
 
@@ -51,12 +51,12 @@ struct SubagentTranscriptList: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: turnSymbol(state))
-                    .font(.system(size: 11))
+                    .font(.system(size: WorkbenchTheme.Reading.captionSize))
                     .foregroundStyle(state == "failed" ? Color.orange : Color.secondary)
                     .accessibilityHidden(true)
-                Text("第 \(ordinal ?? 0) 轮").font(.system(size: 12, weight: .medium))
+                Text("第 \(ordinal ?? 0) 轮").font(.system(size: WorkbenchTheme.Reading.labelSize, weight: .medium))
                 if let state, state != "completed" {
-                    Text(turnStateLabel(state)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(turnStateLabel(state)).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
                 }
                 Spacer()
             }.accessibilityElement(children: .combine)

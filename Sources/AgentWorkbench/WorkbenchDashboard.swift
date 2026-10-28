@@ -111,7 +111,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     DisclosureGroup {
                         VStack(alignment: .leading, spacing: 0) {
                             Text("连接后才能确认这些会话的当前状态。")
-                                .font(.caption).foregroundStyle(.secondary).padding(.vertical, 10)
+                                .font(.subheadline).foregroundStyle(.secondary).padding(.vertical, 10)
                             ForEach(projection.offline) { row($0, in: .other) }
                         }
                     } label: {
@@ -141,7 +141,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(QuietLinkStyle()) }
             }
             Text("自上次确认后新增或变化的请求与结果；首次使用会包含当前事项。")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.subheadline).foregroundStyle(.secondary)
             ForEach(changes.prefix(5)) { item in
                 Button { onOpen(item) } label: {
                     HStack {
@@ -151,7 +151,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6).contentShape(Rectangle())
                 }.buttonStyle(ChangeRowStyle())
             }
-            if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.caption).foregroundStyle(.secondary) }
+            if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.subheadline).foregroundStyle(.secondary) }
         }.font(.system(size: 12))
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
@@ -274,17 +274,24 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     private func emptyState(_ state: DashboardEmptyState) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
-                .foregroundStyle(.secondary)
+            if state == .noEnvironment {
+                // Fresh-workspace brand moment: the mark carries the welcome,
+                // not a generic symbol.
+                PerchMark().frame(width: 110).padding(.bottom, 2)
+            } else {
+                Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
+                    .foregroundStyle(.secondary)
+            }
             Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
             if state == .noEnvironment {
+                Text("本地与远程 Agent 的一个家。").font(.system(size: 12)).foregroundStyle(.secondary)
                 HStack(spacing: 10) {
                     Button("添加机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
                         .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
                     Button("检测本机 Agent…", action: onStartLocal)
                 }.padding(.top, 4)
                 Text("远程 Agent 沿用你的 SSH 配置；本机可连接已安装的 Kimi 和 Codex。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             } else if state == .noMatches {
                 // Nothing is wrong with the workspace; the filter is hiding everything.
                 // Starting a session would not fix that and would bury the reason.
@@ -305,13 +312,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
         DisclosureGroup("断开期间的任务结果 · \(context.restoreReport.count)") {
             VStack(alignment: .leading, spacing: 10) {
                 Text("断开或离开前正在运行的任务，重新连接后的状态：")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
                 ForEach(context.restoreReport) { entry in
                     HStack {
                         Button { onOpenRestoreEntry?(entry) } label: {
                             Label { Text(entry.title) } icon: { AgentMark(kind: entry.reference.kind, size: 12) }.lineLimit(1)
                         }.buttonStyle(.plain).disabled(entry.outcome == .missing)
-                        Text(entry.hostName).font(.caption).foregroundStyle(.tertiary)
+                        Text(entry.hostName).font(.subheadline).foregroundStyle(.tertiary)
                         Spacer()
                         Label(entry.outcome.label, systemImage: entry.outcome.symbol)
                             .foregroundStyle(entry.outcome.needsAttention ? Color.orange : Color.secondary)
@@ -330,7 +337,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 10) {
                 Text("连接后接回原会话；未找到的会话保留在这里，确认后可以移除。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
                 ForEach(context.pendingRestoration, id: \.session.id) { saved in
                     HStack {
                         Label { Text(saved.title) } icon: { AgentMark(kind: saved.session.kind, size: 12) }.lineLimit(1)

@@ -19,7 +19,8 @@ public struct ConversationActivity {
 
     public init(messages: [KimiMessage], isRunning: Bool, liveTools: [KimiLiveTool] = [],
                 running: Set<String> = [], online: Bool = true, isThinking: Bool = false,
-                isResponding: Bool = false, pendingCount: Int = 0, isStopping: Bool = false) {
+                isResponding: Bool = false, pendingCount: Int = 0, isStopping: Bool = false,
+                editStats: SessionEditStatsCache? = nil) {
         let start = messages.lastIndex { $0.isUserPrompt } ?? 0
         let current = Array(messages.dropFirst(start))
         let projection = ToolVisibilityProjection().update(current, sessionID: "activity", live: liveTools,
@@ -27,7 +28,7 @@ public struct ConversationActivity {
         tools = projection.messages.flatMap(\.content).filter { $0.type == "tool_use" }
             .compactMap { projection.tools[$0.toolCallId ?? ""] }
         todos = ConversationTodo.floating(in: current, isRunning: isRunning)
-        edits = SessionEditStats.derive(from: messages)
+        if let editStats { edits = editStats.derive(from: messages) } else { edits = SessionEditStats.derive(from: messages) }
         let active = tools.filter { $0.status == .running }
         let description = active.first?.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
         operationDescription = online && isRunning && pendingCount == 0 && !isStopping && description?.isEmpty == false

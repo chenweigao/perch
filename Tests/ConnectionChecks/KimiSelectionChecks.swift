@@ -492,6 +492,35 @@ func checkKimiSelectionIsolation() async throws {
     if !failures.isEmpty { throw WorkbenchError(failures.joined(separator: "\n")) }
 }
 
+@MainActor func checkKimiTaskContext() async throws {
+    let client = selectionClient()
+    defer { client.disconnect() }
+    client.select("b")
+    await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+    client.drafts["b"] = "Keep B's draft"
+    let context = try await client.readTaskContext("a")
+    precondition(context.title == "a" && context.tasks.count == 2)
+    precondition(client.selectedId == "b" && client.conversation?.snapshot.session.id == "b")
+    let task = context.tasks.first { $0.id == "task_1" }!
+    let output = try await client.taskContextOperation(task, session: "a", stop: false)
+    precondition(output == "PASS: fixture")
+    _ = try await client.taskContextOperation(task, session: "a", stop: true)
+    precondition(SelectionProtocol.count("/api/v1/sessions/a/tasks/task_1:cancel") == 1)
+    precondition(SelectionProtocol.count("/api/v1/sessions/b/tasks/task_1:cancel") == 0)
+    SelectionProtocol.fail("/api/v1/sessions/a/tasks", true)
+    let partial = try await client.readTaskContext("a")
+    precondition(partial.title == "a" && partial.taskError != nil)
+    precondition(client.drafts["b"] == "Keep B's draft" && client.selectedId == "b")
+    SelectionProtocol.fail("/api/v1/sessions/a/tasks", false)
+    SelectionProtocol.hold("/api/v1/sessions/a/snapshot")
+    let pending = Task { try await client.readTaskContext("a") }
+    await ConnectionChecks.settle { SelectionProtocol.count("/api/v1/sessions/a/snapshot") >= 3 }
+    pending.cancel()
+    SelectionProtocol.release("/api/v1/sessions/a/snapshot")
+    do { _ = try await pending.value; fatalError("Cancelled panel read must not publish") } catch {}
+    print("PASS: Kimi task panel independent reads, task output/stop routes, partial failure and cancellation")
+}
+
 @MainActor
 func checkKimiPromptHistory() async throws {
     for status in ["running", "queued", "blocked"] {

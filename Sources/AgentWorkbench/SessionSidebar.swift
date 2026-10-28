@@ -10,7 +10,7 @@ struct WorkbenchSidebar: View {
     @AppStorage("sidebar.favorites.expanded") private var favoritesExpanded = true
     @AppStorage("sidebar.recent.expanded") private var recentExpanded = true
     @AppStorage("sidebar.projects.collapsed") private var collapsedProjectsJSON = "[]"
-    @AppStorage("sidebar.projects.grouped") private var groupedByProject = true
+    @AppStorage("sidebar.projects.grouped") private var groupedByProject = false
     @State private var projectLimit = 8
     @State private var sessionLimit = 40
     @State private var showPinPicker = false
@@ -484,7 +484,7 @@ private struct SidebarPinPicker: View {
                                 SidebarAgentIndicator(item: item)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.title).font(.system(size: 12)).lineLimit(1)
-                                    Text(item.hostName + " · " + item.directory).font(.system(size: 10))
+                                    Text(item.hostName + " · " + item.directory).font(.system(size: SidebarMetrics.detailSize))
                                         .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                                 }
                                 Spacer(minLength: 0)
@@ -492,7 +492,7 @@ private struct SidebarPinPicker: View {
                             }.padding(6).contentShape(Rectangle())
                         }.buttonStyle(SidebarNavigationStyle()).accessibilityLabel(item.title)
                     }
-                    if sessions.isEmpty { Text("没有可置顶的会话").font(.caption).foregroundStyle(.secondary).padding(8) }
+                    if sessions.isEmpty { Text("没有可置顶的会话").font(.subheadline).foregroundStyle(.secondary).padding(8) }
                 }
             }.frame(height: 280)
         }.padding(14).frame(width: 320).onAppear { searchFocused = true }
@@ -590,7 +590,7 @@ private struct SessionSidebarRow: View {
         #if PERCH_ACCEPTANCE
         let _ = recordBody()
         #endif
-        SessionRowChrome(title: item.title, subtitle: compact ? nil : subtitle,
+        SessionRowChrome(title: item.title, subtitle: subtitle,
                          hostName: item.hostName, hostID: item.reference.hostID,
                          directory: item.directory, detail: item.detail,
                          groups: groups, updatedAt: item.updatedAt, compact: compact,
@@ -783,13 +783,13 @@ private struct ConnectionControls: View {
                     ProgressView().controlSize(.mini).frame(width: 24, height: 24)
                 } else if needsBridgeUpdate, let update {
                     Button(action: update) { Text("更新组件").font(.system(size: 11)).frame(height: 24).contentShape(Rectangle()) }
-                        .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+                        .buttonStyle(.plain).foregroundStyle(WorkbenchTheme.accent)
                         .help("远端桥接组件版本过旧；更新全部组件并自动重连")
                 }
                 Button(action: reconnect) { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }
                     .buttonStyle(.plain).help("重新连接").accessibilityLabel("重新连接")
             }
-            if let error, !online { Text(error).font(.caption).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled) }
+            if let error, !online { Text(error).font(.subheadline).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled) }
         }.padding(.leading, 12)
     }
 }

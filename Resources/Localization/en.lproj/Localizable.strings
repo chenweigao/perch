@@ -13,6 +13,7 @@
 "工作台" = "Workbench";
 "待处理" = "Inbox";
 "已归档" = "Archived";
+"本地与远程 Agent 的一个家。" = "A home for your coding agents.";
 "环境" = "Environment";
 "设置" = "Settings";
 
@@ -146,7 +147,7 @@
 "Agent 与执行环境" = "Agent & Environments";
 "远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。" = "Remote connections reuse this Mac's SSH configuration. Connect, reconnect and remove machines from the environment menu in the sidebar.";
 "界面" = "Appearance";
-"侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
+"正文字号影响对话、思考与工具记录和输入框，也可用 ⌘= 放大、⌘− 缩小、⌘0 恢复默认。侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Reading text size applies to the conversation, thoughts and tool records, and the composer; ⌘= enlarges, ⌘− reduces and ⌘0 restores the default. Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
 
 /* App menu (WorkbenchApp) */
 "新建任务…" = "New Task…";
@@ -455,7 +456,9 @@
 "Kimi 端口须为 1–65535。" = "The Kimi port must be between 1 and 65535.";
 "OMP 未返回模型。请在远端配置模型后重试。" = "OMP returned no models. Configure a model on the remote machine and retry.";
 "Perch 安装所选 Agent 的桥接组件：Qoder 下载 SDK，DeepSeek 安装运行时；Codex 使用远端现有 CLI。已有任务不会被终止。" = "Perch installs the selected agent's bridge components: Qoder downloads its SDK and DeepSeek installs its runtime; Codex uses the existing remote CLI. Existing tasks keep running.";
-"Qoder 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Qoder uses the remote CLI login and default model. The SDK verifies authentication with the first message.";
+"Qoder CLI 尚未登录。请在远端完成登录后重试。" = "Qoder CLI is not signed in. Sign in on the remote machine, then retry.";
+"Qoder SDK 未返回模型。请检查远端 Qoder 安装与登录。" = "Qoder SDK returned no models. Check the remote Qoder installation and sign-in.";
+"已确认 Qoder 登录并读取 SDK 模型目录；检查未发送任务。" = "Qoder sign-in and the SDK model catalog were verified; no task was sent.";
 "Claude Code 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。" = "Claude Code uses the remote CLI login and default model. The SDK verifies authentication with the first message.";
 "SSH 别名或 user@host" = "SSH alias or user@host";
 "SSH 已连接，但未能读取远端主目录。请检查远端 shell 的启动输出。" = "SSH connected, but the home directory could not be read. Check the remote shell startup output.";
@@ -536,6 +539,7 @@
 "3. 返回 Perch 点击“重新检查”。运行版本与安装版本一致后，此提示会消失。" = "3. Return to Perch and click “Check again”. This notice disappears once the running version matches the installed version.";
 "“重新检查”只核对状态；重开 Perch 不会重启远端 Kimi Web。" = "“Check again” only verifies the status; reopening Perch does not restart remote Kimi Web.";
 "模型（留空使用远端默认值）" = "Model (leave empty for the remote default)";
+"留空使用远端默认值" = "Leave empty for the remote default";
 "此 SSH 地址已添加。请从环境入口配置已有机器。" = "This SSH address is already added. Configure the existing machine from Environments.";
 "此构建缺少安装组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build is missing installer resources. Use Perch.app packaged by scripts/build.sh.";
 "添加机器后，选择要连接的 Agent。" = "Add a machine, then choose an agent to connect.";
@@ -848,7 +852,6 @@
 
 "未找到可用的本机 Agent，请重新检测。" = "No usable local agent found. Scan again.";
 
-"本机服务未返回连接信息" = "The local service did not return connection details.";
 
 "本机服务组件缺失，请重新构建应用。" = "Local service resources are missing. Rebuild the app.";
 
@@ -1220,7 +1223,7 @@
 "思考与工具" = "Thoughts and tools";
 
 "%lld 次调用" = "%lld calls";
-"· %lld 次失败" = "· %lld failed";
+"· %lld 项需关注" = "· %lld need attention";
 "· %lld 个文件 +%lld −%lld" = "· %lld files +%lld −%lld";
 
 "%lld 条记录" = "%lld records";
@@ -1663,3 +1666,292 @@
 /* Frame-hitch diagnostics (2026-10-20) */
 "注入一次 120ms 卡顿（校验）" = "Inject one 120 ms stall (calibration)";
 "开启后记录正文渲染各阶段耗时与掉帧，以及掉帧期间主线程上的工作，并发送 Instruments 的 Points of Interest signpost。复现卡顿：开启后在一段真实的长对话里滚动，直到出现卡顿，再导出诊断报告。校验按钮让主线程停顿 120ms，报告中应出现一次 calibration_stall。报告不含消息内容；关闭即清空并停止记录。" = "While on, Perch records per-stage reply rendering costs, dropped frames and the main-thread work during each one, and emits Instruments Points of Interest signposts. To capture jank, turn this on, scroll a real long conversation until it stutters, then export the report. The calibration button stalls the main thread for 120 ms; the report should then show one calibration_stall hitch. Reports contain no message text; turning this off clears and stops recording.";
+
+// Workspace, companion, file reading and follow-ups
+" · 已达到 500 条结果上限" = " · Reached the limit of 500 results";
+"%lld 个会话 · %lld 项待处理 · %lld 项结果待查看" = "%lld sessions · %lld need attention · %lld results to review";
+"%lld 分钟没有更新" = "No updates for %lld minutes";
+"%lld 行" = "%lld rows";
+"%lld 项未能读取" = "%lld items could not be read";
+"CI 已结束" = "CI finished";
+"CI 未通过" = "CI failed";
+"CI 进行中或状态未知" = "CI pending or unknown";
+"CI 通过" = "CI passed";
+"GitHub PR 地址" = "GitHub PR URL";
+"PR %@ · %@" = "PR %@ · %@";
+"Perch · 任务浮窗" = "Perch · Companion";
+"Perch 运行时每 15 秒检查一次。机器离线、会话归档或等待审批时，发送会等待；已有任务仍由原 Agent 执行。" = "Checks every 15 seconds while Perch is running. Sending waits while the host is offline, the session is archived, or approval is pending. Existing tasks continue with their original agent.";
+"⌃⌥P 显示或收起" = "⌃⌥P to show or hide";
+"交付与验收" = "Delivery and acceptance";
+"交付名称" = "Delivery title";
+"交办新任务" = "Assign a new task";
+"人工验收、测试结果、PR/CI 分别记录；回复结束不会改变这些状态。" = "Human acceptance, test results, and PR/CI are recorded separately. A completed reply does not change these states.";
+"仅显示已读取部分" = "Showing the loaded portion";
+"任务浮窗" = "Companion";
+"任务浮窗 · ⌃⌥P" = "Companion · ⌃⌥P";
+"任务长时间没有更新，请检查当前进展。" = "This task has not updated for a while. Check its progress.";
+"会话" = "Sessions";
+"使用项目所在机器已登录的 gh；刷新只读取状态。" = "Uses gh authenticated on the project host. Refresh only reads status.";
+"保存目标与下一步" = "Save goal and next step";
+"全局快捷键不可用，可从菜单栏打开任务浮窗。" = "The global shortcut is unavailable. Open the companion from the menu bar.";
+"全部项目" = "All projects";
+"关注" = "Follow";
+"关注的任务" = "Followed tasks";
+"关注需要持续跟进的任务" = "Follow tasks to keep track of them";
+"关联目标与成果" = "Related goals and outcomes";
+"关闭主窗口后继续在菜单栏运行" = "Keep running in the menu bar after closing the main window";
+"关闭文件 %@" = "Close file %@";
+"刷新 PR 与 CI" = "Refresh PR and CI";
+"历史" = "History";
+"发送" = "Send";
+"发送到：%@ · %@" = "Send to: %@ · %@";
+"发送时发生中断。请先检查来源会话的发送队列和回复，确认后再手动添加托管。" = "Sending was interrupted. Check the source session queue and replies before manually adding another follow-up.";
+"发送时间" = "Send at";
+"取消关注" = "Unfollow";
+"回来后先做什么" = "What to do when you return";
+"在已读取内容中查找" = "Find in loaded content";
+"在项目工作台中点「关注」，它们会出现在这里。" = "Choose Follow in the project workbench to show tasks here.";
+"工作台无法保存，托管消息尚未发送。" = "The workspace cannot be saved. The follow-up has not been sent.";
+"已加入会话草稿" = "Added to the session draft";
+"已加入发送队列" = "Added to the send queue";
+"已加入该会话的发送队列" = "Added to this session's send queue";
+"已检查 %lld / %lld 个在线会话 · %lld 个仅覆盖最近 5000 条消息" = "Checked %lld / %lld online sessions · %lld limited to the latest 5000 messages";
+"已检查 %lld 个文件 · 跳过 %lld 个" = "Checked %lld files · Skipped %lld";
+"已达搜索上限" = "Search limit reached";
+"成果" = "Outcomes";
+"我已完成验收" = "I have verified this revision";
+"打开会话" = "Open session";
+"打开工作台" = "Open workbench";
+"打开待处理请求" = "Open pending request";
+"打开成果" = "Open outcome";
+"打开成果文件" = "Open outcome file";
+"打开来源会话" = "Open source session";
+"托管" = "Follow-ups";
+"指定时间后发送" = "Send at a scheduled time";
+"搜索会话、历史、成果或文件" = "Search sessions, history, outcomes, or files";
+"文件无法预览或超过 16 MiB 预览上限。" = "The file cannot be previewed or exceeds the 16 MiB preview limit.";
+"无 CI 记录" = "No CI records";
+"无来源会话" = "No source session";
+"无法解码图片" = "Unable to decode image";
+"显式读取在线会话历史，每个会话最多 5000 条消息；搜索不会切换当前会话。" = "Reads online session history on request, up to 5000 messages per session. Search keeps the current session selected.";
+"显示" = "Display";
+"显示前 200 行、40 列；完整内容可在源码中查看" = "Showing up to 200 rows and 40 columns. Open source to see the loaded content.";
+"暂无新的请求或结果" = "No new requests or results";
+"有 %lld 个任务长时间没有更新" = "%lld tasks have not updated for a while";
+"有新结果后发送" = "Send after a new result";
+"未发送，请打开会话检查当前状态。" = "Not sent. Open the session to check its status.";
+"未验证" = "Unverified";
+"查看尾部" = "View tail";
+"查看开头" = "View start";
+"检索词：%@" = "Search query: %@";
+"正在查看文件尾部" = "Viewing the end of the file";
+"没有可搜索的在线 Agent 会话" = "No online agent sessions to search";
+"添加一次性托管" = "Add one-time follow-up";
+"源码" = "Source";
+"独立 HTML 预览 · 仅内联资源，网络访问已关闭" = "Standalone HTML preview · Inline resources only, network access disabled";
+"确认看过" = "Mark as seen";
+"等待触发" = "Waiting for trigger";
+"自上次查看后的变化" = "Changes since your last visit";
+"范围" = "Scope";
+"补充一句，下一轮处理…" = "Add a message for the next turn…";
+"触发后发送的指令" = "Instruction to send when triggered";
+"触发条件" = "Trigger";
+"记录交付" = "Record delivery";
+"请先选择文件所在的项目。" = "Select a project to search its files.";
+"请检查发送状态" = "Check send status";
+"请输入 GitHub PR 的完整 HTTPS 地址。" = "Enter the full HTTPS URL of a GitHub pull request.";
+"读取于 %@" = "Retrieved at %@";
+"读取更多" = "Read more";
+"退出 Perch" = "Quit Perch";
+"选择会话" = "Select a session";
+"选择文件所在的会话与环境" = "Select the session and environment containing the file";
+"选择来源环境后预览" = "Select a source environment to preview";
+"选择项目后搜索文件名与正文。最多检查 1000 个文本文件 / 25 MiB，每个文件最多 3 处匹配；跳过构建目录、符号链接和大于 1 MiB 的文件。" = "Select a project to search filenames and content. Checks up to 1000 files / 25 MiB with 3 matches per file; skips build directories, symbolic links, and files over 1 MiB.";
+"通过" = "Passed";
+"长任务托管" = "Long-task follow-ups";
+"长时间无更新时提醒" = "Notify after inactivity";
+"阅读" = "Read";
+"需要检查" = "Needs review";
+"需要连接 Agent 才能搜索历史。" = "Connect to the agent to search history.";
+"项目会话" = "Project sessions";
+"项目工作台" = "Project workbench";
+"项目所在环境已移除，无法读取 PR 状态。" = "The project's environment was removed. PR status cannot be read.";
+"项目目标" = "Project goal";
+"验证对应的完整提交 SHA" = "Full commit SHA for the verification";
+"验证结果" = "Verification result";
+"验证记录、命令、报告路径" = "Verification notes, commands, or report paths";
+"验证记录尚未对应当前 PR HEAD" = "Verification does not match the current PR HEAD";
+"验证：%@ · %@" = "Verification: %@ · %@";
+"已人工验收" = "Accepted by reviewer";
+"待人工验收" = "Awaiting human acceptance";
+"PR 状态：%@ · %@" = "PR status: %@ · %@";
+"项目所在环境已移除，无法读取文件。" = "The project's environment was removed. Files cannot be read.";
+"匹配定位最多 5000 处" = "Locates up to 5000 matches";
+"无法解码 PDF" = "Unable to decode PDF";
+"打开文件…" = "Open File…";
+"打开文件阅读" = "Open a file to read";
+"文件操作" = "File actions";
+"文件详情" = "File details";
+
+/* Managed Kimi Web (2026-10-22) */
+"由 Perch 托管 Kimi Web" = "Let Perch manage Kimi Web";
+"启动环境变量" = "Launch environment";
+"托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。" = "When managed, Perch starts the service if it is not running, and restarts it automatically once every session is idle after a Kimi upgrade or a change to its launch settings. Perch only restarts a Kimi Web it started.";
+"由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它。" = "A Kimi Web started by Perch is managed by Perch: after a Kimi upgrade, Perch restarts it automatically once every session is idle.";
+"由 Perch 托管" = "managed by Perch";
+"正在准备由 Perch 托管的 Kimi Web；远端需要 Python 3。" = "Preparing the Kimi Web managed by Perch; the remote needs Python 3.";
+"Kimi Web 配置待生效" = "Kimi Web settings pending restart";
+"Perch 已自动重启 Kimi Web" = "Perch restarted Kimi Web automatically";
+"Kimi Web 环境变量 %@ 无效。" = "Kimi Web environment variable %@ is invalid.";
+"环境变量须写成 NAME=value，名称只含英文字母、数字和下划线且不以数字开头：%@" = "Write each environment variable as NAME=value. Names use only ASCII letters, digits and underscores, and do not start with a digit: %@";
+"托管的 Kimi Web 未返回连接信息。" = "The managed Kimi Web returned no connection details.";
+"此构建缺少 Kimi Web 托管组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build lacks the Kimi Web management component. Use the Perch.app packaged by scripts/build.sh.";
+"这个 Kimi Web 不是 Perch 启动的，Perch 不会重启它；停止它后，Perch 会在重新连接时接管。" = "This Kimi Web was not started by Perch, so Perch will not restart it. Once it stops, Perch takes over when it reconnects.";
+"Kimi %@ 已安装，当前仍使用 %@，可以继续使用。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@ and keeps working. Sessions still running: %3$@. Once all are idle, Perch restarts Kimi Web automatically.";
+"Kimi %@ 已安装，当前仍使用 %@。Perch 无法确认服务空闲，或重启后版本仍未变化，因此不会自动重启；请在这台机器上手动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@. Perch cannot confirm the service is idle, or a restart left the version unchanged, so it will not restart it automatically. Restart Kimi Web on that machine by hand.";
+"Perch 无法确认 Kimi Web 是否空闲，暂不自动重启。可以在这台机器上手动重启 Kimi Web。" = "Perch cannot confirm that Kimi Web is idle, so it will not restart it automatically for now. You can restart Kimi Web on that machine by hand.";
+"Kimi Web 的启动配置已修改。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启它，新配置随之生效。" = "Kimi Web's launch settings changed. Sessions still running: %@. Once all are idle, Perch restarts it automatically and the new settings take effect.";
+"↑↓ 选择 · 回车打开 · Esc 关闭" = "↑↓ Select · Return to open · Esc to close";
+
+"仅定位已读取内容中的行号" = "Jump within the loaded content";
+
+"其他关注" = "Other followed tasks";
+
+"搜索范围说明" = "Search coverage";
+
+"新完成的结果" = "New results";
+
+"暂无任务" = "No tasks";
+
+"没有找到结果" = "No results";
+
+"跳转" = "Go";
+
+"跳转到行" = "Go to line";
+
+"项目会话（%lld）" = "Project sessions (%lld)";
+
+"项目详情" = "Project details";
+
+"跳转到行…" = "Go to line…";
+
+"上一个文件标签页" = "Previous file tab";
+
+"下一个文件标签页" = "Next file tab";
+
+"引用到：%@" = "Quote to: %@";
+
+"加入会话草稿，检查后再发送。" = "Add to the session draft and review before sending.";
+
+/* Document reading */
+"<P> 个匹配段落" = "<P> matching paragraphs";
+"\n章节：" = "\nSection: ";
+"中（16）" = "Medium (16)";
+"从文档列表移除" = "Remove from document list";
+"关闭反馈提示" = "Dismiss feedback notice";
+"前往下一个文档" = "Forward to next document";
+"加入原会话草稿" = "Add to source conversation draft";
+"反馈已加入原会话草稿" = "Feedback added to the source draft";
+"反馈选中文本…" = "Give feedback on selected text…";
+"取消固定文档" = "Unpin document";
+"固定到项目文档" = "Pin to project documents";
+"大（18）" = "Large (18)";
+"字号" = "Font size";
+"宽" = "Wide";
+"小（14）" = "Small (14)";
+"打开图片" = "Open image";
+"打开引用图片" = "Open referenced image";
+"文档反馈" = "Document feedback";
+"文档操作" = "Document actions";
+"文档目录" = "Document outline";
+"文档：<P><P>\n\n<P>\n\n反馈：<P>" = "Document: <P><P>\n\n<P>\n\nFeedback: <P>";
+"无法打开此文档链接。" = "This document link cannot be opened.";
+"更新于 <P>" = "Modified <P>";
+"最近阅读" = "Recently read";
+"未找到匹配段落" = "No matching paragraphs";
+"未找到链接中的章节" = "The linked section was not found";
+"本文没有章节标题" = "This document has no headings";
+"标准" = "Standard";
+"特大（20）" = "Extra large (20)";
+"窄" = "Narrow";
+"返回上一个文档" = "Back to previous document";
+"阅读于 <P>" = "Read <P>";
+"阅读宽度" = "Reading width";
+"阅读文档后会显示在这里；可在文件菜单中固定常用文档。" = "Documents appear here after reading. Pin frequently used documents from the file menu.";
+"阅读样式" = "Reading style";
+"项目文档" = "Project documents";
+// Task context panel
+"%lld 秒" = "%lld s";
+"任务正在进行，文件和工具活动会显示在这里。" = "This task is running. Files and tool activity will appear here.";
+"任务状态已变化，请刷新后重试。" = "The task state changed. Refresh and try again.";
+"任务面板" = "Task panel";
+"后台任务与子 Agent" = "Background tasks and agents";
+"固定为浮窗" = "Open as floating window";
+"工具活动" = "Tool activity";
+"已结束的调用 · %lld" = "Finished calls · %lld";
+"已请求停止" = "Stop requested";
+"已锁定此任务" = "Locked to this task";
+"打开该任务的输入框，保留已有草稿" = "Open this task’s input, preserving its existing draft";
+"收起" = "Show less";
+"收起输出" = "Hide output";
+"文档与产物" = "Documents and outputs";
+"显示最近 20 次调用，完整记录请打开会话。" = "Showing the latest 20 calls. Open the conversation for the full history.";
+"本轮更新" = "Updated this turn";
+"查看会话" = "View conversation";
+"查看全部任务" = "Show all tasks";
+"查看全部文件" = "Show all files";
+"查看并处理" = "Review and respond";
+"查看输出" = "View output";
+"正在读取任务…" = "Loading task…";
+"正在读取输出…" = "Loading output…";
+"此任务已不在工作台中，请取消锁定后选择其他会话。" = "This task is no longer in the workbench. Unlock the panel and select another conversation.";
+"此任务暂时没有文件或工具活动。" = "This task has no files or tool activity yet.";
+"相关文件" = "Related file";
+"终端任务请在完整会话中查看。" = "Open the conversation to view this terminal task.";
+"补充要求" = "Add instructions";
+"请在完整会话中查看" = "Open the conversation for details";
+"跟随当前会话" = "Follow current conversation";
+"选择一个会话，查看它的文件、活动和待处理事项。" = "Select a conversation to see its files, activity, and pending requests.";
+"锁定此任务" = "Lock to this task";
+"任务执行失败，请查看会话。" = "The task failed. Open the conversation for details.";
+"停止尚未确认，请查看输出或重试。" = "The stop is not confirmed yet. Check the output or try again.";
+"补充到该任务草稿，不自动发送" = "Add to this task’s draft without sending";
+"希望任务如何继续…" = "How should this task continue…";
+"加入该任务的草稿，由你确认后发送。" = "Add to this task’s draft for you to review and send.";
+"加入草稿并查看" = "Add to draft and view";
+"在正文中显示" = "Show in conversation";
+"收起任务面板" = "Collapse task panel";
+
+"在浮窗中查看" = "Open floating panel";
+
+"面板页面" = "Panel page";
+"任务" = "Task";
+"改动" = "Changes";
+"查看改动" = "View changes";
+"%lld 个文件" = "%lld files";
+"没有未提交的改动" = "No uncommitted changes";
+"选择一个会话，查看它的改动。" = "Select a session to see its changes.";
+"刷新改动" = "Refresh changes";
+"在文件窗口中审阅" = "Review in file window";
+"收起面板" = "Collapse panel";
+"暂无任务活动" = "No task activity yet";
+"改动操作" = "Change actions";
+
+"展开阅读" = "Expand Reader";
+
+"返回工作目录" = "Back to Working Directory";
+
+"返回目录" = "Back to Directory";
+
+"选择一个会话，浏览它的工作目录。" = "Select a session to browse its working directory.";
+/* Reading text size */
+"正文字号" = "Reading text size";
+"%lld pt（默认）" = "%lld pt (default)";
+"放大正文" = "Larger Reading Text";
+"缩小正文" = "Smaller Reading Text";
+"正文默认大小" = "Default Reading Text Size";
+
+/* Thought and turn durations */
+"已思考 %@" = "Thought for %@";
+"已思考 %@ · 未返回回复" = "Thought for %@ · No response";
+"· 用时 %@" = "· took %@";

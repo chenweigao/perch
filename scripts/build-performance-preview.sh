@@ -40,12 +40,15 @@ app_files=(
 # Preserve the selected revision's source set, including baselines before themes.
 theme_ref="$source_ref"
 if [[ "$variant" == baseline ]]; then theme_ref="$baseline_ref"; fi
+if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift" 2>/dev/null; then
+    app_files+=(Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift)
+fi
 # Revisions before the extracted assistant blocks do not carry the file.
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/NativeAssistantBlocks.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/NativeAssistantBlocks.swift)
 fi
 # Revisions before message actions/bookmarks/image preview, math or alerts do not carry these.
-for introduced in ConversationActions ConversationBookmarksStore ImagePreviewPanel ReplyMathView ReplyMermaid ReplyAlertBlock ReplySelection ReplyProcessStyle PerfDiagnostics AttachmentImageDecoder; do
+for introduced in CodeHighlighting ConversationActions ConversationBookmarksStore ImagePreviewPanel ReplyMathView ReplyMermaid ReplyAlertBlock ReplySelection ReplyProcessStyle PerfDiagnostics AttachmentImageDecoder; do
     if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/${introduced}.swift" 2>/dev/null; then
         app_files+=("Sources/AgentWorkbench/${introduced}.swift")
     fi
@@ -128,6 +131,7 @@ for path in "${app_files[@]}"; do copied_app_files+=("$snapshot_root/$path"); do
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library "${compile_flags[@]}" -I "$module_dir" "${includes[@]}" \
     "${copied_app_files[@]}" Tests/PerformancePreview/Workload.swift Tests/PerformancePreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/PerformancePreview"
+scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

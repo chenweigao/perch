@@ -28,7 +28,8 @@ func checkConversationActivity() throws {
     let idle = ConversationActivity(messages: user + call + result, isRunning: false)
     precondition(!idle.isVisible)
     let failedResult = try messages(#"[{"id":"r","role":"tool","created_at":"","content":[{"type":"tool_result","tool_call_id":"t","is_error":true,"output":"Failed"}]}]"#)
-    precondition(ConversationActivity(messages: user + call + failedResult, isRunning: false).needsAttention)
+    precondition(!ConversationActivity(messages: user + call + failedResult, isRunning: false).needsAttention,
+                 "A returned error is an observed outcome, not an attention item")
     let mixedTools = try messages(#"""
     [
       {"id":"calls","role":"assistant","created_at":"","content":[
@@ -54,7 +55,8 @@ func checkConversationActivity() throws {
     let mixedMessages = user + call + result + mixedTools
     let mixed = ConversationActivity(messages: mixedMessages, isRunning: true, running: ["active"])
     precondition(mixed.activeTools.map(\.id) == ["active"])
-    precondition(mixed.attentionTools.map(\.id) == ["failed", "missing"])
+    precondition(mixed.attentionTools.map(\.id) == ["missing"],
+                 "A returned error folds away; only a missing result needs attention")
     precondition(mixed.todos.count == 2 && mixed.completedSteps == 1, "Keep the plan after hiding completed TodoList calls")
     precondition(mixed.tools.count == 6, "Filtering the popover must not discard tool history")
     let transcript = ToolVisibilityProjection().update(mixedMessages, sessionID: "fixture", running: ["active"])

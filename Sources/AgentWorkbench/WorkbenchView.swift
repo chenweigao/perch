@@ -25,11 +25,13 @@ struct WorkbenchView: View {
             .sheet(item: $model.inspectingSession, onDismiss: model.endInspection) { item in
                 WorkspaceActionDetail(model: model, item: item).id(item.id)
             }
+            .sheet(item: $model.projectOverview) { location in ProjectWorkbenchSheet(model: model, location: location) }
+            .sheet(isPresented: $model.showFollowUps) { FollowUpManager(model: model) }
             .sheet(isPresented: $model.showGroupSuggestions) { GroupSuggestionsSheet(model: model) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
             .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: model.setupHost) }
             .sheet(isPresented: $model.showSessionSearch) {
-                SessionDirectoryView(model: model, isSearchSheet: true).frame(width: 640, height: 520)
+                UnifiedSearchView(model: model)
             }
             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
             .onAppear {
@@ -37,6 +39,10 @@ struct WorkbenchView: View {
                 actions.quoteAvailable = { [weak model] in model?.canQuoteSelection ?? false }
                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
                 actions.start()
+            }
+            .onChange(of: model.showFileViewer, initial: true) { _, visible in
+                if visible { model.fileWindow.show(model: model) }
+                else { model.fileWindow.close() }
             }
             .onChange(of: model.selectedReference) { _, _ in SelectionActionsController.shared.hide() }
             .onChange(of: model.showDashboard) { _, _ in SelectionActionsController.shared.hide() }
@@ -72,13 +78,17 @@ private struct WorkbenchWorkspace: View, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.model === rhs.model }
 
     var body: some View {
+        let inspectorVisible = model.taskContextWindow.embeddedVisible &&
+            !model.showDashboard && !model.draftingNewTask
         WorkspaceSplitView(
             newConversation: { model.startNewTask() },
             canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
+            inspectorVisible: inspectorVisible,
             sidebar: { WorkbenchSidebar(model: model) },
             header: { WorkbenchHeader(model: model) },
             actions: { WorkbenchHeaderActions(model: model, kimi: model.kimi, native: model.native) },
+            inspector: { WorkspaceInspector(model: model) },
             content: { WorkbenchDetail(model: model) }
         )
     }
@@ -88,49 +98,8 @@ private struct WorkbenchDetail: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
 
-    @AppStorage("files.panel.width") private var filePanelWidth = 460.0
-    @State private var fullWidthReview = false
-    @State private var resizeStart: Double?
-
     var body: some View {
-        GeometryReader { geometry in
-            let visible = model.showFileViewer && !model.showDashboard && !model.draftingNewTask
-            let expanded = visible && (fullWidthReview || geometry.size.width < 706)
-            let width = min(max(320, filePanelWidth), max(320, geometry.size.width - 386))
-            HStack(spacing: 0) {
-                conversation.frame(width: expanded ? 0 : nil).clipped()
-                    .accessibilityHidden(expanded).allowsHitTesting(!expanded)
-                if visible {
-                    if !expanded {
-                        Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 6)
-                            .contentShape(Rectangle())
-                            .gesture(DragGesture().onChanged { value in
-                                if resizeStart == nil { resizeStart = width }
-                                filePanelWidth = min(max(320, resizeStart! - value.translation.width), max(320, geometry.size.width - 386))
-                            }.onEnded { _ in resizeStart = nil })
-                            .accessibilityLabel("调整文件面板宽度")
-                            .accessibilityValue(String(Int(width)))
-                            .accessibilityAdjustableAction { direction in
-                                filePanelWidth = min(max(320, width + (direction == .increment ? 40 : -40)), max(320, geometry.size.width - 386))
-                            }
-                    }
-                    let reference = model.selectedReference
-                    RemoteFilePanel(browser: model.fileBrowser, fullWidth: expanded,
-                        onToggleWidth: geometry.size.width >= 706 ? { fullWidthReview.toggle() } : nil,
-                        onAddContext: model.canQuoteSelection ? { text in
-                            guard let reference else { return }
-                            model.appendReviewContext(text, to: reference)
-                            fullWidthReview = false
-                        } : nil,
-                        onShowDraft: {
-                            model.showFileViewer = false; fullWidthReview = false
-                            DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
-                        },
-                        onClose: { model.toggleFileViewer(); fullWidthReview = false })
-                        .id(reference?.id).frame(width: expanded ? geometry.size.width : width)
-                }
-            }
-        }.environment(\.conversationPresentations, model.conversationPresentations)
+        conversation.environment(\.conversationPresentations, model.conversationPresentations)
     }
 
     @ViewBuilder private var conversation: some View {
@@ -165,7 +134,7 @@ private struct WorkbenchDetail: View {
                             context: model.dashboardContext, group: model.selectedGroup, hasSessionSearch: !model.search.isEmpty,
                             onClearSessionFilters: { model.clearSessionFilters() },
                             groupHeader: AnyView(GroupWorkbenchHeader(model: model)),
-                            groupOverview: AnyView(TaskGroupOverview(model: model)),
+                            groupOverview: AnyView(VStack(alignment: .leading, spacing: 24) { ProjectWorkbenchOverview(model: model); TaskGroupOverview(model: model) }),
                             groupProgress: AnyView(GroupWorkbenchProgress(model: model)),
                             groupHistory: AnyView(GroupWorkbenchHistory(model: model)),
                             isArchiving: model.isArchiving,
@@ -214,7 +183,7 @@ private struct WorkbenchDetail: View {
                         .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: model.showFileViewer ? 380 : 600, maxWidth: .infinity, maxHeight: .infinity)
+        }.frame(minWidth: WorkspaceLayoutMetrics.inspectorReadingMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
             .background(WorkbenchTheme.contentBackground)
     }
 
@@ -257,7 +226,7 @@ private struct StatusBar: View {
             Spacer()
             if let date = connection.updatedAt { Text("状态更新于 \(date.formatted(date: .omitted, time: .standard))") }
             Text("·"); Text("原生终端")
-        }.font(.system(size: 10)).foregroundStyle(quiet).padding(.horizontal, 18).padding(.vertical, 9)
+        }.font(.system(size: 11)).foregroundStyle(quiet).padding(.horizontal, 18).padding(.vertical, 9)
             .help(connection.error ?? L("会话状态每 3 秒同步一次；终端内容实时传输"))
     }
 }

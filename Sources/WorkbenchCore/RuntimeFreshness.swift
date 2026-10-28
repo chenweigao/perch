@@ -67,6 +67,31 @@ public enum RuntimeVersion {
         L("\(agent) \(installed) 已安装，当前仍使用 \(running)，可以继续连接。请等该服务中的会话和后台任务结束后，自行重启远端 \(agent) Web 服务，让更新生效。", locale: locale)
     }
 
+    /// Added to the stale notice when a host is set to managed but the serving Kimi Web
+    /// was started by someone else.
+    public static func foreignServiceNote(locale: Locale = AppLanguage.current.resolvedLocale) -> String {
+        L("这个 Kimi Web 不是 Perch 启动的，Perch 不会重启它；停止它后，Perch 会在重新连接时接管。", locale: locale)
+    }
+
+    /// Notice for the Kimi Web Perch manages: nil when no restart waits, otherwise what
+    /// it waits for, or that Perch will not restart it automatically.
+    public static func managedNotice(_ service: KimiServiceEndpoint,
+                                     locale: Locale = AppLanguage.current.resolvedLocale) -> String? {
+        guard service.owned, let pending = service.restartPending, pending != 0 else { return nil }
+        let installed = service.installedVersion ?? "", running = service.runningVersion ?? ""
+        let versions = service.restartReason == .update && !installed.isEmpty && !running.isEmpty
+        if pending < 0 {
+            return versions
+                ? L("Kimi \(installed) 已安装，当前仍使用 \(running)。Perch 无法确认服务空闲，或重启后版本仍未变化，因此不会自动重启；请在这台机器上手动重启 Kimi Web。", locale: locale)
+                : L("Perch 无法确认 Kimi Web 是否空闲，暂不自动重启。可以在这台机器上手动重启 Kimi Web。", locale: locale)
+        }
+        let count = String(pending)
+        if versions {
+            return L("Kimi \(installed) 已安装，当前仍使用 \(running)，可以继续使用。还有 \(count) 个会话在运行，全部空闲后 Perch 会自动重启 Kimi Web。", locale: locale)
+        }
+        return L("Kimi Web 的启动配置已修改。还有 \(count) 个会话在运行，全部空闲后 Perch 会自动重启它，新配置随之生效。", locale: locale)
+    }
+
     /// `started_at` rendered in local time, or nil when it is absent or malformed.
     public static func startedLabel(_ timestamp: String?,
                                     locale: Locale = AppLanguage.current.resolvedLocale) -> String? {

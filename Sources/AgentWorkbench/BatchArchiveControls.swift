@@ -27,38 +27,38 @@ struct BatchArchiveControls: View {
                 }
                 // Explain why other sessions are left out of the batch.
                 if let blockedSummary {
-                    Text(blockedSummary).font(.caption).foregroundStyle(.secondary)
+                    Text(blockedSummary).font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             if let result, result.isFinished {
                 HStack(spacing: 10) {
-                    Text(result.summary).font(.caption)
+                    Text(result.summary).font(.subheadline)
                     if !result.archived.isEmpty {
-                        Button(result.undoFailures.isEmpty ? "撤销" : "重试恢复失败项") { onUndo() }.font(.caption).disabled(isRunning)
+                        Button(result.undoFailures.isEmpty ? "撤销" : "重试恢复失败项") { onUndo() }.font(.subheadline).disabled(isRunning)
                             .help("仅恢复本次实际归档成功的 \(result.archived.count) 个会话")
                     }
                     if result.retryPlan != nil {
-                        Button("只重试失败项") { onRetry() }.font(.caption).disabled(isRunning)
+                        Button("只重试失败项") { onRetry() }.font(.subheadline).disabled(isRunning)
                     }
                 }
                 if !result.skipped.isEmpty {
                     VStack(alignment: .leading, spacing: 3) {
                         ForEach(result.skipped.prefix(4), id: \.candidate.id) { item in
-                            Text("跳过：\(item.skip.reason)").font(.caption2).foregroundStyle(.secondary)
+                            Text("跳过：\(item.skip.reason)").font(.subheadline).foregroundStyle(.secondary)
                         }
                     }
                 }
                 if !result.failures.isEmpty {
                     VStack(alignment: .leading, spacing: 3) {
                         ForEach(result.failures.prefix(4), id: \.candidate.id) { item in
-                            Text("失败：\(item.message)").font(.caption2).foregroundStyle(.orange)
+                            Text("失败：\(item.message)").font(.subheadline).foregroundStyle(.orange)
                                 .textSelection(.enabled)
                         }
                     }
                 }
                 ForEach(result.undoFailures, id: \.candidate.id) { item in
-                    Text("恢复失败：\(item.message)").font(.caption2).foregroundStyle(.orange).textSelection(.enabled)
+                    Text("恢复失败：\(item.message)").font(.subheadline).foregroundStyle(.orange).textSelection(.enabled)
                 }
             }
         }

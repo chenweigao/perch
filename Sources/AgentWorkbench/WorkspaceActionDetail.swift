@@ -11,7 +11,7 @@ struct WorkspaceActionDetail: View {
                     SessionStatusIndicator(item: item).frame(width: 17, height: 16).padding(.top, 3)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(item.title).font(.title3.weight(.medium)).textSelection(.enabled)
-                        Text("\(item.hostName) · \(item.directory)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        Text("\(item.hostName) · \(item.directory)").font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
                     }
                 }
                 Spacer()
@@ -36,7 +36,7 @@ struct WorkspaceActionDetail: View {
                 Button("打开完整会话") { model.inspectingSession = nil; model.open(item) }
                 Spacer()
                 if item.section == .attention {
-                    Text("处理完成后进入下一项").font(.caption).foregroundStyle(.secondary)
+                    Text("处理完成后进入下一项").font(.subheadline).foregroundStyle(.secondary)
                     Button("下一项") { model.inspectNext(after: item) }
                         .buttonStyle(.borderedProminent)
                         .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
@@ -140,7 +140,7 @@ private struct PublicResultPreview: View {
             if excerpt.isEmpty { Text("没有可预览的文字，请打开完整会话。").foregroundStyle(.secondary) }
             else {
                 KimiMarkdown(text: String(excerpt.prefix(3000)))
-                if excerpt.count > 3000 { Text("此处显示前 3000 字，完整内容请打开会话。").font(.caption).foregroundStyle(.secondary) }
+                if excerpt.count > 3000 { Text("此处显示前 3000 字，完整内容请打开会话。").font(.subheadline).foregroundStyle(.secondary) }
             }
             if completed {
                 HStack {

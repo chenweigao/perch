@@ -6,26 +6,34 @@ import WorkbenchCore
 @main
 struct WorkbenchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var model = WorkbenchModel()
+    private var model: WorkbenchModel { delegate.model }
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: appLanguage.resolvedLocale) }
+
     var body: some Scene {
-        WindowGroup("Perch") {
+        WindowGroup("Perch", id: "main") {
             WorkbenchView(model: model).preferredColorScheme(appAppearance.colorScheme)
                 .frame(minWidth: 940, minHeight: 620)
+                // The workspace paints its own Liquid Glass backdrop; the scene must not fill behind it.
+                .containerBackground(Color.clear, for: .window)
+                .background(CompanionRegistration(model: model))
                 .environment(\.locale, appLanguage.resolvedLocale)
-                .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }
+                .onAppear { AppLanguage.applyToSystem(appLanguage) }
                 .task { await AppUpdateChecker.shared.checkThrottled() }
                 .onChange(of: appLanguage) { _, value in
                     AppLanguage.applyToSystem(value)
                     model.refreshLocalizedCatalog()
                 }
         }
-        .defaultSize(width: 1280, height: 820)
+        .defaultSize(width: 1440, height: 900)
         .windowStyle(.hiddenTitleBar)
         .commands {
             SidebarCommands()
+            CommandMenu(L("工作台")) {
+                Button(L("任务浮窗")) { CompanionWindowController.shared.toggle() }
+                Button(L("长任务托管")) { model.showFollowUps = true }
+            }
             CommandGroup(replacing: .appInfo) {
                 Button(L("About Perch")) {
                     NSApp.orderFrontStandardAboutPanel(options: [
@@ -41,13 +49,23 @@ struct WorkbenchApp: App {
                     .disabled(model.selectedConnection?.online != true)
             }
             CommandMenu(L("Conversation")) {
-                Button(L("搜索项目与会话")) { model.showSessionSearch = true }.keyboardShortcut("k")
+                Button(L("搜索项目与会话")) { CompanionWindowController.shared.showMain(); model.showSessionSearch = true }.keyboardShortcut("k")
                 Button(L("Find in conversation")) {
+                    if model.fileWindow.window?.isKeyWindow == true {
+                        NotificationCenter.default.post(name: .init("PerchFindInFile"), object: nil)
+                        return
+                    }
                     model.showConversationFind = true
                     NotificationCenter.default.post(name: .init("PerchFocusFind"), object: nil)
-                }.keyboardShortcut("f").disabled(!model.showKimi && !model.showNative)
-                Button(L("Next match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }.keyboardShortcut("g").disabled(!model.showConversationFind)
-                Button(L("Previous match")) { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showConversationFind)
+                }.keyboardShortcut("f").disabled(!model.showFileViewer && !model.showKimi && !model.showNative)
+                Button(L("Next match")) {
+                    if model.fileWindow.window?.isKeyWindow == true { model.fileBrowser.findIndex += 1 }
+                    else { NotificationCenter.default.post(name: .init("PerchFindNext"), object: 1) }
+                }.keyboardShortcut("g").disabled(!model.showFileViewer && !model.showConversationFind)
+                Button(L("Previous match")) {
+                    if model.fileWindow.window?.isKeyWindow == true { model.fileBrowser.findIndex -= 1 }
+                    else { NotificationCenter.default.post(name: .init("PerchFindNext"), object: -1) }
+                }.keyboardShortcut("g", modifiers: [.command, .shift]).disabled(!model.showFileViewer && !model.showConversationFind)
                 Divider()
                 Button(L("导出当前会话（Markdown）…")) { model.exportSelectedConversation(markdown: true) }
                     .disabled(!model.showKimi && !model.showNative)
@@ -69,34 +87,25 @@ struct WorkbenchApp: App {
                 Button(L("关闭当前本地视图")) {
                     if let id = model.tabs.selectedID { model.close(id) }
                 }.keyboardShortcut("w", modifiers: [.command, .shift])
+                Divider()
+                // Off while a terminal is in front, so its own font keys keep working.
+                Button(L("放大正文")) { ReadingBodySize.shared.step(1) }
+                    .keyboardShortcut("=", modifiers: .command).disabled(model.selectedTerminal != nil)
+                Button(L("缩小正文")) { ReadingBodySize.shared.step(-1) }
+                    .keyboardShortcut("-", modifiers: .command).disabled(model.selectedTerminal != nil)
+                Button(L("正文默认大小")) { ReadingBodySize.shared.set(ReadingBodySize.standard) }
+                    .keyboardShortcut("0", modifiers: .command).disabled(model.selectedTerminal != nil)
             }
+        }
+        MenuBarExtra("Perch", systemImage: "bird") {
+            Button(L("任务浮窗 · ⌃⌥P")) { CompanionWindowController.shared.show() }
+            Button(L("打开工作台")) { model.showHome(); CompanionWindowController.shared.showMain() }
+            Button(L("长任务托管")) { model.showFollowUps = true; CompanionWindowController.shared.showMain() }
+            Divider()
+            Button(L("退出 Perch")) { NSApp.terminate(nil) }
         }
         Settings { WorkbenchSettings(model: model).environment(\.locale, appLanguage.resolvedLocale) }
     }
 }
 
 #endif
-
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    weak var model: WorkbenchModel?
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        // Idle unless Settings → 诊断 → 性能诊断 is on.
-        FrameHitchMonitor.shared.install()
-    }
-    func applicationWillTerminate(_ notification: Notification) { model?.shutdown() }
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        do { try model?.flushDrafts() }
-        catch {
-            let alert = NSAlert()
-            alert.messageText = L("Drafts could not be saved")
-            alert.informativeText = error.localizedDescription
-            alert.addButton(withTitle: L("Keep Perch open"))
-            alert.addButton(withTitle: L("Quit anyway"))
-            if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
-        }
-        return .terminateNow
-    }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-}

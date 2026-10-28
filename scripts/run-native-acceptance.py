@@ -15,7 +15,7 @@ parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--app", type=Path, help="Use a separately built fixed A/B app")
 parser.add_argument("--capture", choices=["none", "cpu", "frames"], default="none")
 parser.add_argument("--positive-control", action="store_true", help="Inject one 120ms main-thread stop in the isolated frames run")
-parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-pins-unprobed", "sidebar-layout-height", "sidebar-layout-height-fixed", "sidebar-layout-header", "sidebar-layout-membership", "sidebar-layout-pins-fixed-members", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input", "subagents"], default="all")
+parser.add_argument("--mode", choices=["all", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "sidebar-layout-noop", "sidebar-layout-content", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-pins-unprobed", "sidebar-layout-height", "sidebar-layout-height-fixed", "sidebar-layout-header", "sidebar-layout-membership", "sidebar-layout-pins-fixed-members", "paging", "dashboard", "workspace", "review", "branch-review", "invalidation", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input", "subagents"], default="all")
 parser.add_argument("--input-positive-control", action="store_true", help="Inject one 80ms delay into the mounted input measurement")
 parser.add_argument("--seconds", type=int, default=24, help="Duration of the paced joint scenario")
 parser.add_argument("--sidebar-variant", choices=["baseline", "flat", "keep-header", "persistent-subtitle", "table", "projects"], default="flat")
@@ -70,6 +70,24 @@ with (out / "process.log").open("w") as log:
     try:
         manifest["exit_code"] = process.wait(timeout=95 if args.capture != "none" else max(60, args.seconds + 60))
     except subprocess.TimeoutExpired:
+        # Keep evidence before killing: a stack sample, the screen, and the
+        # app's console log. A timed-out fixture previously left only its pid.
+        try:
+            sample = subprocess.run(["sample", str(process.pid), "2"], capture_output=True, text=True, timeout=10)
+            (out / "hang-sample.txt").write_text(sample.stdout + sample.stderr)
+        except Exception as error:
+            (out / "hang-sample.txt").write_text(f"sample failed: {error}")
+        try:
+            subprocess.run(["/usr/sbin/screencapture", "-x", str(out / "hang-screen.png")], timeout=10)
+        except Exception:
+            pass
+        try:
+            logs = subprocess.run(["log", "show", "--last", "5m", "--style", "compact",
+                                   "--predicate", f'process == "{binary.name}"'],
+                                  capture_output=True, text=True, timeout=60)
+            (out / "hang-console.txt").write_text((logs.stdout + logs.stderr)[-200000:])
+        except Exception as error:
+            (out / "hang-console.txt").write_text(f"log show failed: {error}")
         os.killpg(process.pid, signal.SIGTERM)
         try:
             process.wait(timeout=3)

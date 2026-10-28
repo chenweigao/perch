@@ -45,9 +45,9 @@ class PreviewSourceTests(unittest.TestCase):
         (self.repo / THEME).write_text("// working tree theme\n")
         (self.repo / PRESENTATION).write_text("// presentation environment\n")
         (app / "RevealFrameDriver.swift").write_text("// working tree reveal driver\n")
-        # Math, alert, selection, mermaid and diagnostics sources exist only in the working tree: historical refs skip them.
-        for name in ("ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle", "ReplyMermaid",
-            "PerfDiagnostics", "AttachmentImageDecoder"):
+        # New reply rendering sources exist only in the working tree: historical refs skip them.
+        for name in ("CodeHighlighting", "ReplyMathView", "ReplyAlertBlock", "ReplySelection", "ReplyProcessStyle", "ReplyMermaid",
+            "PerfDiagnostics", "AttachmentImageDecoder", "WorkbenchWindowBackdrop"):
             (app / f"{name}.swift").write_text("// working tree reply block\n")
         stubs = self.repo / "stubs"
         stubs.mkdir()

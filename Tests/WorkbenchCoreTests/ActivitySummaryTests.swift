@@ -74,6 +74,18 @@ func checkActivitySummaries() throws {
         entries: probeEntries, tools: ["probe": exitProbe], isRunning: true).current
     precondition(exitProbe.exitCodeReport == 1 && probeNarrative?.phase != .blocked,
                  "A self-reported exit code must not mark the stage blocked")
+    let plainFailure = VisibleTool(id: "probe", name: "Bash", input: .object(["command": .string("python3")]),
+        output: .string("permission denied"), status: .failed)
+    let failureNarrative = ActivityNarrativeProjection.make(
+        entries: probeEntries, tools: ["probe": plainFailure], isRunning: true).current
+    precondition(failureNarrative?.phase != .blocked,
+                 "A returned error is an observed outcome, not a blocked stage")
+    let lostResult = VisibleTool(id: "probe", name: "Bash", input: .object(["command": .string("python3")]),
+        status: .missingResult)
+    let lostNarrative = ActivityNarrativeProjection.make(
+        entries: probeEntries, tools: ["probe": lostResult], isRunning: true).current
+    precondition(lostNarrative?.phase == .blocked,
+                 "A result the record cannot account for still blocks the stage")
 
     let completeProgress = "Both foreign changes check out. " + String(repeating: "Keep the complete explanation visible. ", count: 12) + "END_OF_PROGRESS"
     let fullEntries = try timeline([user(), progress("long-progress", completeProgress), call("read0")])

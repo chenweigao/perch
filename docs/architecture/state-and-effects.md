@@ -9,7 +9,11 @@ a completed rewrite of every provider or a measured frame-rate improvement.
 
 ## Ownership
 
-- `WorkbenchApp` owns `WorkbenchModel` through `@State`. The model coordinates
+- `AppDelegate` strongly owns one `WorkbenchModel`; `WorkbenchApp` reads that same
+  instance for all scenes and commands. Launch starts it before scene appearance;
+  termination flushes drafts and shuts it down even if no appearance callback ran.
+  Do not read uninstalled `@State` from `App.init` or register a weak fallback owner.
+  The model coordinates
   navigation, persistence and provider connections. Views use `@Bindable` when
   they need bindings; a plain reference is sufficient for read-only Observation.
 - `WorkbenchNavigationState` owns destinations, tab/history state and workbench
@@ -160,6 +164,30 @@ history epoch, locale and summary policy. Same-ID edits remain authoritative. Ru
 epoch changes clear remembered live tools; language changes rebuild localized turn
 summaries without losing tool handoff evidence. External narrative-store updates are
 overlaid at read time, so a cache hit cannot freeze a newly arrived summary.
+
+A changed input reprojects only the latest turn while the turns before the latest
+user prompt are unchanged: their tool visibility output, timeline rows and (in
+`Snapshot.presented`) their summary-overlaid, folded rows are shared between
+snapshots. Reuse is refused whenever it could differ from a complete recomputation:
+a tool identity of the latest turn that also occurs earlier, a remembered live tool
+resolved in an earlier turn, a running ID or connection change affecting earlier
+tools, an entry identity shared across the split, or a locale/epoch change. The
+activity bar's whole-session edit tally is kept the same way by a view-owned
+`SessionEditStatsCache`.
+
+When the earlier turns themselves change — a page of older messages prepended
+while scrolling up, or a new prompt moving the latest turn into the history —
+each earlier turn is projected on its own (`ToolVisibilityProjection.Chunk`) and
+its rows, navigation and fold are reused while its messages, relevant running
+IDs, remembered live tools and connection state are unchanged. Only the turn a
+page boundary cut and the new turns are rebuilt. This per-turn form is used only
+while no tool identity occurs in two turns or in the latest turn, and every
+remembered live tool belongs to a loaded turn; otherwise the whole prefix is
+projected as before. The edit tally adds a prepended page or completed turn, and
+payload costs follow messages moved by a page. The find bar's `ConversationSearch`
+keeps the earlier turns' matches while they, the query and the options stay the
+same, so an open find bar searches only the latest turn per streamed token.
+Reading the whole history (search, naming) prepends pages at most once a second.
 
 `ConversationPresentationHandle` belongs to the transcript view. The workbench owns
 an LRU of at most eight presentation models, injected directly into `WorkbenchDetail`

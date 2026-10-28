@@ -11,7 +11,7 @@ struct NewTaskView: View {
     let native: NativeAgentConnection
     let kimi: KimiConnection
     @StateObject var projectFiles = ProjectFileSuggestions()
-    @StateObject var referenceBrowser = RemoteFileBrowser()
+    @State private var referenceBrowser = RemoteFileBrowser()
     @AppStorage("new.task.prompt") private var prompt = ""
     @State private var provider: SessionKind = .kimi
     @State private var cwd = ""
@@ -43,7 +43,7 @@ struct NewTaskView: View {
         availableModels.first { $0.id == agentModel }
     }
     private var supportsModelCatalog: Bool {
-        [.kimi, .omp, .dsh, .codex].contains(provider)
+        [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex].contains(provider)
     }
     private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
     private var modelCatalogID: String {
@@ -158,7 +158,7 @@ struct NewTaskView: View {
                         Text("模型与思考").font(.headline)
                         TextField(provider == .dsh ? L("模型（默认使用 dsh 目录的当前路由）") : L("模型（留空使用远端默认值）"), text: $agentModel)
                             .textFieldStyle(.roundedBorder)
-                        Text("思考不可调").font(.caption).foregroundStyle(.secondary)
+                        Text("思考不可调").font(.subheadline).foregroundStyle(.secondary)
                         Button("完成") { showCustomModel = false }.frame(maxWidth: .infinity, alignment: .trailing)
                     }.padding(18).frame(width: 340).disabled(creating)
                 }
@@ -219,21 +219,21 @@ struct NewTaskView: View {
                 contextBar
                 if let directoryWarning {
                     Label(directoryWarning, systemImage: "exclamationmark.triangle")
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(.subheadline).foregroundStyle(.orange)
                 }
                 if !supportsAttachments {
                     Text("当前 Agent 不支持附件；可在消息中提供运行环境中的文件路径。")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if (provider == .omp || provider == .dsh || provider == .codex), let modelsError = native.modelsError {
-                    Text(modelsError).font(.caption).foregroundStyle(.orange)
+                if provider != .kimi && supportsModelCatalog, let modelsError = native.modelsError {
+                    Text(modelsError).font(.subheadline).foregroundStyle(.orange)
                 }
                 connectionStatus
                 if availableProviders.contains(provider) && isConnected, let sendHint {
-                    Text(sendHint).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 6)
+                    Text(sendHint).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 6)
                 }
-                if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error { Text(error).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled) }
             }.padding(.horizontal, 32).frame(maxWidth: 784)
                 .frame(maxWidth: .infinity)
                 .padding(.top, max(48, geometry.size.height * 0.25))
@@ -292,9 +292,9 @@ struct NewTaskView: View {
                 if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) }
             }
             .task(id: catalogID) {
-                // A native catalog is now needed before any session exists. Qoder
-                // reports none and Kimi reads its own connection.
-                guard native.online && (provider == .omp || provider == .dsh || provider == .codex) else { return }
+                // Native catalogs are needed before a session exists; Kimi reads its
+                // own connection while the remaining catalog-backed agents use the bridge.
+                guard native.online && [.omp, .qoder, .qoderintl, .dsh, .codex].contains(provider) else { return }
                 await native.loadModels()
                 guard !Task.isCancelled else { return }
                 if provider == .codex { selectCodexModel() }
@@ -403,7 +403,7 @@ struct NewTaskView: View {
                     }
                 }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.plain)
                 if showConnectionDetails, let connectionError {
-                    Text(connectionError).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    Text(connectionError).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(.horizontal, 6).disabled(creating)

@@ -6,6 +6,7 @@ swift build --build-system native -c release --target SwiftMath
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
 app_dir="$PWD/build/Workflow Preview.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$')
@@ -13,10 +14,12 @@ done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ReplySelection.swift Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
+    Sources/AgentWorkbench/CodeHighlighting.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ReplySelection.swift Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift Sources/AgentWorkbench/ReplyAlertBlock.swift Sources/AgentWorkbench/WorkbenchTheme.swift Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/NativeAssistantBlocks.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift \
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/ReplyProcessStyle.swift Sources/AgentWorkbench/KimiAttachmentView.swift Sources/AgentWorkbench/AttachmentImageDecoder.swift Sources/AgentWorkbench/ModelPicker.swift Sources/AgentWorkbench/ThinkingPicker.swift Sources/AgentWorkbench/AutoCompactStore.swift Sources/AgentWorkbench/UILocalization.swift \
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
-    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/RemoteFileView.swift Tests/WorkflowPreview/App.swift \
+    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/FileWorkspaceState.swift \
+    Sources/AgentWorkbench/DocumentReader.swift Sources/AgentWorkbench/FileContentPreview.swift \
+    Sources/AgentWorkbench/WorkbenchHostedTask.swift Sources/AgentWorkbench/RemoteFileView.swift Tests/WorkflowPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkflowPreview"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'

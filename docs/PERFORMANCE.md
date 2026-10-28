@@ -58,10 +58,13 @@ That result is separate from the rendering table above.
 
 ## Native window design
 
-The toolbar uses `NSToolbar` with `unifiedCompact` and a tracking sidebar separator.
-The sidebar uses `NSSplitViewItem(sidebarWithViewController:)`, which supplies system
-Liquid Glass on macOS 26. Interactive floating controls use `glassEffect`; older
-systems use regular material and Reduce Transparency uses a solid background.
+The toolbar uses `NSToolbar` with the unified window style. The split view contains
+only the full conversation canvas. The sidebar and the task-context inspector are
+independently hosted overlays with 12-point outer margins and native Liquid Glass
+on macOS 26. Wide layouts move the hosted content behind a leading layout guide;
+narrow layouts keep the 600-point canvas and let the sidebar overlay it. Hiding the
+sidebar therefore never moves or shrinks the canvas. Interactive floating controls
+also use `glassEffect`, while Reduce Transparency uses a solid system background.
 Conversation text and informational titles/status stay on clear, readable surfaces.
 This follows [Apple's AppKit design guidance](https://developer.apple.com/videos/play/wwdc2025/310/).
 

@@ -41,8 +41,8 @@ struct MessageComposer: View {
     var onLongPaste: ((String) -> String?)? = nil
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
-    var minimumHeight: CGFloat = 40
-    @State private var height: CGFloat = 40
+    var minimumHeight: CGFloat = 52
+    @State private var height: CGFloat = 52
 
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
@@ -70,7 +70,7 @@ struct ComposerEditor: NSViewRepresentable {
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
 
-    var minimumHeight: CGFloat = 40
+    var minimumHeight: CGFloat = 52
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeNSView(context: Context) -> NSScrollView {
@@ -85,7 +85,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.isAutomaticQuoteSubstitutionEnabled = false
         editor.isAutomaticDashSubstitutionEnabled = false
         editor.isAutomaticTextReplacementEnabled = false
-        editor.font = .systemFont(ofSize: 14)
+        editor.font = .systemFont(ofSize: WorkbenchTheme.Reading.bodySize)
         editor.textColor = .labelColor
         editor.drawsBackground = false
         editor.textContainerInset = NSSize(width: 0, height: 4)
@@ -116,6 +116,12 @@ struct ComposerEditor: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.parent = self
         guard let editor = coordinator.editor else { return }
+        // The composer's text follows the reader's body size, like the transcript.
+        let bodySize = WorkbenchTheme.Reading.bodySize
+        if editor.font?.pointSize != bodySize {
+            editor.font = .systemFont(ofSize: bodySize)
+            editor.needsDisplay = true
+        }
         editor.minSize = NSSize(width: 0, height: minimumHeight)
         editor.isEditable = isEnabled
         editor.canSend = canSend && isEnabled
@@ -215,7 +221,7 @@ final class DraftTextView: NSTextView {
         super.draw(dirtyRect)
         if string.isEmpty {
             (placeholder as NSString).draw(at: NSPoint(x: 0, y: 4), withAttributes: [
-                .font: font ?? NSFont.systemFont(ofSize: 14), .foregroundColor: NSColor.placeholderTextColor
+                .font: font ?? NSFont.systemFont(ofSize: WorkbenchTheme.Reading.bodySize), .foregroundColor: NSColor.placeholderTextColor
             ])
         }
     }
@@ -366,13 +372,13 @@ struct ComposerAttachment: View {
         HStack(spacing: 8) {
             if let thumbnail {
                 Image(nsImage: thumbnail).resizable().scaledToFill().frame(width: 38, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
             } else { Image(systemName: "doc").frame(width: 30, height: 34).foregroundStyle(.secondary) }
-            Text(file.lastPathComponent).font(.system(size: 11)).lineLimit(1).frame(maxWidth: 130)
+            Text(file.lastPathComponent).font(.system(size: WorkbenchTheme.Typography.caption)).lineLimit(1).frame(maxWidth: 130)
             Button(action: onRemove) { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)).frame(width: 28, height: 28).contentShape(Rectangle()) }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove attachment")
                 .accessibilityLabel("Remove attachment")
-        }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+        }.padding(6).background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .task(id: ThumbnailRequest(file: file, scale: displayScale)) {
                 guard file.isImageFile else { return }
                 // Full screenshots decode in tens of milliseconds; keep that off

@@ -5,12 +5,12 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
 
 ## Sidebar behavior
 
-- Keep the existing AppKit sidebar split item: system floating glass, width
-  restoration, and a draggable 220–420 pt divider.
+- Host the sidebar independently above the full conversation canvas: native
+  floating glass, persisted visibility, and a draggable 220–480 pt width.
 - Fixed top: Perch, new session (⌘N), task search (⌘K), workbench, attention inbox.
-- The sidebar extends behind the native window controls using full-size content
-  and the unified toolbar. Its material has no horizontal titlebar separator;
-  the conversation stays constrained to its safe area.
+- The sidebar sits below the unified toolbar with 12-point left, top, and bottom
+  margins. Wide layouts reserve content space beside it; narrow layouts let it
+  overlay the safe-area-constrained conversation instead of shrinking the canvas.
 - The default toolbar has three navigation buttons: sidebar toggle, back and
   forward. They use 28 × 28 pt controls and 13 pt regular symbols. Each can be
   removed or restored through Customize Toolbar; the layout is saved. New task
@@ -53,16 +53,17 @@ Goal A performance acceptance remains partial and paused. See
 `scripts/build.sh` packages a local release app. `WorkbenchChecks` covers
 protocols, task controls, file operations, tool visibility, and sidebar scoping.
 `scripts/build-sidebar-preview.sh` builds a separate app using the production
-sidebar shell and native split view with fictional rows; it never loads the
-workspace model or connects to agents. This fixture checks presentation and
+sidebar shell and floating workspace container with fictional rows; it never loads
+the workspace model or connects to agents. This fixture checks presentation and
 shell interactions, not live-provider behavior.
 
 In the sidebar preview, compare all three titlebar buttons at normal and narrow
-window widths, with the sidebar expanded and collapsed. Check that the sidebar
-material includes the native window controls, and that button centers, spacing,
-tooltips and keyboard focus stay aligned. Verify sidebar toggling, back/forward
-history and disabled boundaries, plus removing and restoring toolbar items. The main app's title stays aligned to the content side of the tracking
-separator; conversation actions stay at the right.
+window widths, with the sidebar shown and hidden. Check the panel's outer margins,
+rounded adaptive glass, wide-layout content avoidance, narrow-layout overlay, and
+full-canvas centering after hiding it. Verify sidebar toggling and resizing,
+back/forward history and disabled boundaries, plus removing and restoring toolbar
+items. Button centers, spacing, tooltips and keyboard focus stay aligned;
+conversation actions stay at the right.
 
 For automatic read-state acceptance on macOS: open an unread completed conversation
 and confirm its dot clears after loading. Switch away, complete another turn and

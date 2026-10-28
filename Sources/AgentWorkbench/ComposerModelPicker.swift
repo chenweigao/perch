@@ -28,7 +28,7 @@ struct ComposerModelPicker: View {
     @State private var thinkingPresented = false
 
     private var model: AgentModel? { models.first { $0.id == modelID } }
-    private var title: String { model?.name ?? (modelID.isEmpty ? L("默认模型") : modelID) }
+    private var modelTitle: String { model?.name ?? (modelID.isEmpty ? L("默认模型") : modelID) }
     private var thinkingTitle: String {
         guard let model else { return modelID.isEmpty ? L("模型默认") : L("不可调") }
         guard model.supportsThinking else { return L("不可调") }
@@ -40,17 +40,17 @@ struct ComposerModelPicker: View {
             ModelControlWidth(maximum: 300) {
                 Button { presented.toggle() } label: {
                     HStack(spacing: 5) {
-                        Text(title).lineLimit(1).truncationMode(.middle).layoutPriority(1)
+                        Text(modelTitle).lineLimit(1).truncationMode(.middle).layoutPriority(1)
                         Text("· \(thinkingTitle)").foregroundStyle(.secondary).fixedSize()
                         chevron
                     }
-                    .font(.system(size: 12))
+                    .font(.system(size: WorkbenchTheme.Typography.body))
                     .padding(.vertical, 6).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(disabledReason ?? L("模型与思考"))
                 .accessibilityLabel(L("模型与思考"))
-                .accessibilityValue("\(title) · \(thinkingTitle)")
+                .accessibilityValue("\(modelTitle) · \(thinkingTitle)")
                 .accessibilityIdentifier("composer-model-thinking")
                 .popover(isPresented: $presented, arrowEdge: .top) {
                     panel.task { await onRefreshCatalog?() }
@@ -61,16 +61,16 @@ struct ComposerModelPicker: View {
                 ModelControlWidth {
                     Button { presented.toggle() } label: {
                         HStack(spacing: 5) {
-                            Text(title).lineLimit(1).truncationMode(.middle)
+                            Text(modelTitle).lineLimit(1).truncationMode(.middle)
                             chevron
                         }
-                        .font(.system(size: 12))
+                        .font(.system(size: WorkbenchTheme.Typography.body))
                         .padding(.vertical, 6).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help(L("选择模型"))
+                    .help(L("选择模型") + " · " + modelTitle)
                     .accessibilityLabel(L("选择模型"))
-                    .accessibilityValue(title)
+                    .accessibilityValue(modelTitle)
                     .accessibilityIdentifier("composer-model-thinking")
                     .popover(isPresented: $presented, arrowEdge: .top) {
                         panel.task { await onRefreshCatalog?() }
@@ -82,7 +82,7 @@ struct ComposerModelPicker: View {
                             Text(verbatim: thinkingTitle)
                             chevron
                         }
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
                         .padding(.vertical, 6).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain).fixedSize()
@@ -98,7 +98,7 @@ struct ComposerModelPicker: View {
                             }
                             Divider()
                             Text(disabledReason ?? scope)
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }.padding(12).frame(width: 240)
                             .onExitCommand { thinkingPresented = false }
@@ -158,7 +158,7 @@ private struct ComposerModelPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let unavailableReason {
-                Text(unavailableReason).font(.system(size: 12)).foregroundStyle(.secondary)
+                Text(unavailableReason).font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true).padding(14)
             }
             if unavailableReason == nil {
@@ -185,9 +185,9 @@ private struct ComposerModelPanel: View {
                             Spacer()
                         }
                     }
-                }.font(.system(size: 13)).padding(14)
+                }.font(.system(size: WorkbenchTheme.Typography.body)).padding(14)
                 if let catalogError {
-                    Text(catalogError).font(.caption).foregroundStyle(.orange)
+                    Text(catalogError).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 14).padding(.bottom, 8)
                 }
                 if let onUseDefaultModel {
@@ -225,7 +225,7 @@ private struct ComposerModelPanel: View {
                             Text(models.isEmpty
                                  ? L(onUseDefaultModel == nil ? "尚未读取到模型目录，可继续使用会话模型。" : "尚未读取到模型目录，可继续使用默认模型。")
                                  : L("没有匹配的模型"))
-                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                                .font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(12)
                         }
                     }.padding(6)
@@ -243,7 +243,7 @@ private struct ComposerModelPanel: View {
                     }
                 }
                 Text(scope)
-            }.font(.system(size: 11)).foregroundStyle(.secondary)
+            }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true).padding(12)
         }
         .frame(width: 320)

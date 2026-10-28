@@ -72,9 +72,7 @@ private struct ActivityBarCheckFixture: View {
          "input": ["command": "swift build --configuration release"]]]]
     let failure: [[String: Any]] = [
         ["id": "read", "role": "assistant", "created_at": "6", "content": [
-            ["type": "tool_use", "tool_call_id": "read", "tool_name": "Read", "input": ["path": "/fixture/Locked.swift"]]]],
-        ["id": "read-result", "role": "tool", "created_at": "7", "content": [
-            ["type": "tool_result", "tool_call_id": "read", "is_error": true, "output": "Permission denied (fixture)"]]]
+            ["type": "tool_use", "tool_call_id": "read", "tool_name": "Read", "input": ["path": "/fixture/Locked.swift"]]]]
     ]
     let runningMessages = try decode([prompt] + plan + edit + [command])
     let failedMessages = try decode([prompt] + plan + edit + failure)

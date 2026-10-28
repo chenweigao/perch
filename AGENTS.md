@@ -6,10 +6,19 @@ Settings offers light/dark overrides. Acceptance and preview fixtures stay pinne
 to light.
 
 - Do not copy code or assets from herdrm (PolyForm Noncommercial).
-- Preserve the existing native Liquid Glass appearance, including its adaptive
-  background tint, on the sidebar and composer. UI simplification should change
-  inner controls and layout only; do not replace the outer glass material with
-  fixed fills, custom borders, or another surface style.
+- The window is one system Liquid Glass backdrop (`WorkbenchWindowBackdropView`,
+  `.regular` glass over a non-opaque window, shaped like the window corner), shared
+  by navigation and the toolbar. Its tint comes from the desktop; do not add a
+  fixed colored fill or lower its opacity. The sidebar has no separate glass card,
+  outline, or shadow in the wide layout; its selection is a light row card.
+- The opaque workspace sheet floats below the toolbar. The full-height inspector
+  is an internal auxiliary lane separated by a hairline, without its own rounded
+  card or shadow; opening it resizes the reader and composer together. Keep the
+  outer sheet concentric with the window corner (`WorkbenchTheme.Radius.framePanel`)
+  and its elevation light. Sidebar width remains user-adjustable and persisted;
+  navigation uses compact, secondary controls. Preserve native Liquid Glass on the
+  composer and controls. This follows the user's integrated-inspector direction
+  of 2026-10-28.
 - Keep credentials in the user's existing SSH configuration and agent.
 - Disconnecting a client must not close a remote pane or stop an agent.
 - Do not attach with --takeover or enable agent permission bypass implicitly.

@@ -6,6 +6,7 @@ import WorkbenchCore
     var busy = false
     var holdHistory = false
     var holdDelta = false
+    var snapshotDelay: Duration = .zero
     var revision = 1
     var changes: [Int: String] = [:]
     var pendingDelta: (CheckedContinuation<Data, Error>, Data)?
@@ -19,6 +20,7 @@ import WorkbenchCore
              "archived": false, "updated": 1, "completed": 0, "pending": 0, "model": "m", "revision": revision]
         }
         if url.path == "/sessions" { return try JSONSerialization.data(withJSONObject: ["sessions": [summary("a"), summary("b")]]) }
+        if snapshotDelay > .zero { try await Task.sleep(for: snapshotDelay) }
         let id = String(url.path.split(separator: "/").last!)
         let end = Int(query["before"] ?? "240")!
         let start = Int(query["start"] ?? "") ?? max(0, end - 100)
@@ -57,15 +59,31 @@ import WorkbenchCore
         try await client.refresh()
         precondition(fixture.paths.filter { $0 == "/sessions" }.count == count + 1)
     }
+    let queuedFixture = LoadingTransport(); queuedFixture.busy = true
+    let queuedClient = NativeAgentConnection(host: host, transport: queuedFixture.request)
+    try await queuedClient.refresh()
+    queuedClient.drafts["a"] = "keep my draft"
+    precondition(queuedClient.enqueueFollowUp("next step", for: "a", messageID: "followup-one"))
+    precondition(queuedClient.enqueueFollowUp("next step", for: "a", messageID: "followup-one"))
+    precondition(queuedClient.queue.allItems.count == 1 && queuedClient.queue.allItems[0].mode == .nextTurn)
+    precondition(queuedClient.drafts["a"] == "keep my draft", "Companion sends must not alter a conversation draft")
+    queuedClient.disconnect()
+    precondition(!queuedClient.enqueueFollowUp("offline", for: "a", messageID: "followup-two"))
     let fixture = LoadingTransport()
+    // Reads can take real time on a loaded runner; yielding a fixed number of
+    // times must not be treated as a deadline for selection or pagination.
+    fixture.snapshotDelay = .milliseconds(150)
     let client = NativeAgentConnection(host: host, transport: fixture.request)
     try await client.refresh(); client.select("a")
     await ConnectionChecks.settle { client.snapshot?.id == "a" }
     precondition(client.snapshot?.messages.count == 100 && client.snapshot?.history?.start == 140)
+    let searched = try await client.searchHistory(for: "b")
+    precondition(searched.complete && searched.messages.count == 240)
+    precondition(client.selectedID == "a" && client.snapshot?.id == "a", "History search must not change the active session")
     client.loadOlder(); client.loadOlder()
     await ConnectionChecks.settle { !client.loadingOlder }
     precondition(client.snapshot?.messages.count == 200 && client.snapshot?.history?.start == 40)
-    precondition(fixture.paths.filter { $0.contains("before=") }.count == 1, "Overlapping pages were requested")
+    precondition(fixture.paths.filter { $0.hasPrefix("/sessions/a?") && $0.contains("before=") }.count == 1, "Overlapping pages were requested")
     client.select("b"); await ConnectionChecks.settle { client.snapshot?.id == "b" }
     client.select("a"); await ConnectionChecks.settle { client.snapshot?.id == "a" }
     precondition(client.snapshot?.history?.start == 40, "Returning to a session discarded its reading window")

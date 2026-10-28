@@ -28,6 +28,28 @@ func checkRemoteSetup() async throws {
                        autoConnectSSH: false, autoConnectHerdr: false)
     let restored = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(host))
     precondition(restored == host && !restored.hasNativeAgents)
+    // Hosts saved before managed mode keep connecting to the service the user runs.
+    precondition(!legacy.kimiManaged && legacy.kimiEnvironment.isEmpty)
+    var managedHost = host
+    managedHost.kimiManaged = true; managedHost.kimiEnvironment = ["KIMI_CODE_INFINITE_RETRY": "true"]
+    let restoredManaged = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(managedHost))
+    precondition(restoredManaged == managedHost && restoredManaged.kimiManaged)
+    try RemoteSetup.validate(managedHost)
+    var badEnvironment = managedHost; badEnvironment.kimiEnvironment = ["BAD NAME": "1"]
+    do { try RemoteSetup.validate(badEnvironment); preconditionFailure("invalid environment name accepted") } catch {}
+    let parsedEnvironment = try RemoteSetup.parseKimiEnvironment(" KIMI_CODE_INFINITE_RETRY=true\nB_2=x=y  EMPTY= ")
+    precondition(parsedEnvironment == ["KIMI_CODE_INFINITE_RETRY": "true", "B_2": "x=y", "EMPTY": ""])
+    precondition(RemoteSetup.formatKimiEnvironment(["B": "2", "A": "1"]) == "A=1 B=2")
+    for invalid in ["1A=2", "NOVALUE", "名=1"] {
+        do { _ = try RemoteSetup.parseKimiEnvironment(invalid); preconditionFailure("invalid environment accepted: \(invalid)") } catch {}
+    }
+    // Reports of `local-agent-service.py --agent kimi`: Perch's own instance and someone else's.
+    let waiting = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58628,"token":"t","owned":true,"runningVersion":"2.3.0","installedVersion":"2.4.0","restartReason":"update","restartPending":2}"#.utf8))
+    precondition(waiting == KimiServiceEndpoint(port: 58628, token: "t", owned: true, installedVersion: "2.4.0",
+                                                runningVersion: "2.3.0", restartReason: .update, restartPending: 2))
+    let foreign = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58627,"token":"t"}"#.utf8))
+    precondition(!foreign.owned && !foreign.replaced && foreign.restartPending == nil && foreign.restartReason == nil)
+    do { _ = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58627}"#.utf8)); preconditionFailure("endpoint without a token accepted") } catch {}
     let codexHost = SSHHost(id: id, name: "Codex", destination: "fixture", enabledAgents: [.codex])
     precondition(codexHost.hasNativeAgents)
     precondition(SSHHost.unconfigured.enabledAgents.isEmpty && SSHHost.unconfigured.destination.isEmpty)
@@ -113,19 +135,31 @@ func checkRemoteSetup() async throws {
     let nodeMissingRuntime = try await probeKimi(path: npmOnlyPath)
     precondition(nodeMissingRuntime == .nodeMissing)
 
-    let quotedBin = runtimeRoot.appendingPathComponent("quoted bin's")
-    try FileManager.default.createDirectory(at: quotedBin, withIntermediateDirectories: false)
-    let startedKimi = quotedBin.appendingPathComponent("kimi")
-    let argumentsFile = runtimeRoot.appendingPathComponent("started-arguments")
-    try writeExecutable(startedKimi, "#!/bin/sh\nprintf '%s\\n' \"$@\" > \(SSHCommand.quote(argumentsFile.path))")
-    let startCommand = "HOME=\(SSHCommand.quote(runtimeRoot.path)); export HOME; "
-        + RemoteSetup.kimiStartCommand(binaryPath: startedKimi.path, port: 60123)
-    _ = try await SetupCommandRunner.run("/bin/sh", ["-c", startCommand])
-    for _ in 0..<50 where !FileManager.default.fileExists(atPath: argumentsFile.path) {
-        try await Task.sleep(for: .milliseconds(20))
+    // The streamed service script receives every argument literally, whatever the login shell.
+    let echo = "import json,sys\nprint(json.dumps(sys.argv[1:]))\n"
+    let hostileToken = "~/token's $(printf injected) dir/server.token"
+    let ensure = RemoteSetup.kimiEnsureCommand(script: echo, port: 60123, tokenPath: hostileToken,
+                                               environment: ["QUOTE": "it's $HOME", "KIMI_CODE_INFINITE_RETRY": "true"])
+    for shell in ["/bin/sh", "/bin/zsh"] {
+        let echoed = try JSONDecoder().decode([String].self, from: try await SetupCommandRunner.run(shell, ["-c", ensure]))
+        precondition(echoed == ["--agent", "kimi", "--port", "60123", "--token-path", hostileToken,
+                                "--env", "KIMI_CODE_INFINITE_RETRY=true", "--env", "QUOTE=it's $HOME"])
     }
-    let startedArguments = try String(contentsOf: argumentsFile, encoding: .utf8).split(separator: "\n").map(String.init)
-    precondition(startedArguments == ["web", "--host", "127.0.0.1", "--port", "60123", "--no-open"])
+    // The default token path is left to the host, where it follows KIMI_CODE_HOME.
+    let moved = RemoteSetup.kimiEnsureCommand(script: echo, port: 60123, tokenPath: SSHHost.defaultKimiTokenPath,
+                                              environment: ["KIMI_CODE_HOME": "/srv/kimi home"])
+    let movedArguments = try JSONDecoder().decode([String].self, from: try await SetupCommandRunner.run("/bin/sh", ["-c", moved]))
+    precondition(movedArguments == ["--agent", "kimi", "--port", "60123", "--env", "KIMI_CODE_HOME=/srv/kimi home"])
+    // The real script runs from the stream without an installed copy; a host without Kimi says so.
+    let serviceScript = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().appendingPathComponent("remote/local-agent-service.py")
+    let serviceSource = try String(contentsOf: serviceScript, encoding: .utf8)
+    let missingKimi = "PATH=/usr/bin:/bin; HOME=\(SSHCommand.quote(runtimeRoot.path)); export PATH HOME; "
+        + RemoteSetup.kimiEnsureCommand(script: serviceSource, port: 60123, tokenPath: "~/.kimi-code/server.token", environment: [:])
+    do {
+        _ = try await SetupCommandRunner.run("/bin/sh", ["-c", missingKimi])
+        preconditionFailure("a host without Kimi returned an endpoint")
+    } catch { precondition(error.localizedDescription.contains("not found"), error.localizedDescription) }
 
     let bridgeHome = runtimeRoot.appendingPathComponent("bridge home")
     let bridgeDirectory = bridgeHome.appendingPathComponent(".local/share/agent-workbench/native")
@@ -157,5 +191,5 @@ func checkRemoteSetup() async throws {
     do { _ = try await check.value; preconditionFailure("cancelled check succeeded") }
     catch is CancellationError {} // Cancellation must not turn into a connection failure.
     precondition(Date().timeIntervalSince(cancelled) < 3)
-    print("PASS: remote setup migration, Kimi runtime discovery, bridge version probe, safe startup, aliases, path quoting, timeout and cancellation")
+    print("PASS: remote setup migration, managed Kimi Web settings and command, Kimi runtime discovery, bridge version probe, aliases, path quoting, timeout and cancellation")
 }

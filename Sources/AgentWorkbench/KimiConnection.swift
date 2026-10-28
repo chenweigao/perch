@@ -163,9 +163,13 @@ final class KimiConnection {
     /// What the service answering this connection reports about itself, read from
     /// `/api/v1/meta` on every connect.
     private(set) var runtime = RunningRuntime.unknown
-    /// Set when the remote package is newer than the running service. Perch reports
-    /// it and nothing more: the daemon belongs to the user, not to this client.
+    /// Set when the remote package is newer than the running service. For a service the
+    /// user runs, Perch only reports it. For the instance Perch manages, it says what
+    /// the automatic restart waits for, or why Perch will not restart it.
     private(set) var staleRuntimeNotice: String?
+    /// The last report about the Kimi Web Perch manages on this host.
+    @ObservationIgnored private(set) var managedService: KimiServiceEndpoint?
+    @ObservationIgnored private var managedCheckedAt: Date?
     @ObservationIgnored private(set) var api: KimiAPI?
     /// Folded long pastes live on disk per host; tokens ride inside drafts.
     let pastes: DraftPasteStore
@@ -182,6 +186,10 @@ final class KimiConnection {
     @ObservationIgnored private var autoCompactWasRunning: Set<String> = []
     @ObservationIgnored private var taskRefresh: Task<Void, Never>?
     @ObservationIgnored private var goalRefresh: Task<Void, Never>?
+    /// Coalescing state for event-driven snapshot reads; a catch-up burst would
+    /// otherwise fetch the whole snapshot once per event.
+    @ObservationIgnored private var snapshotRefreshGeneration = 0
+    @ObservationIgnored private var snapshotRefreshResubscribe = false
     @ObservationIgnored private var freshnessCheck: Task<Void, Never>?
     private let probesInstalledVersion: Bool
     @ObservationIgnored private var archivingBatch = false
@@ -246,7 +254,8 @@ final class KimiConnection {
     }
 
     func updateHost(_ value: SSHHost) {
-        if value.kimiPort != host.kimiPort || value.kimiTokenPath != host.kimiTokenPath || value.destination != host.destination { disconnect() }
+        if value.kimiPort != host.kimiPort || value.kimiTokenPath != host.kimiTokenPath || value.destination != host.destination
+            || value.kimiManaged != host.kimiManaged || value.kimiEnvironment != host.kimiEnvironment { disconnect() }
         host = value
     }
 
@@ -300,9 +309,9 @@ final class KimiConnection {
                             do { try await Task.sleep(for: .seconds(30)); try await self?.refreshSessions() }
                             catch { return }
                             ticks += 1
-                            // An upgrade happens by hand between sessions, so this
-                            // re-probe stays rare: it costs an SSH round trip.
-                            if ticks % 20 == 0 { self?.checkRuntimeFreshness() }
+                            // Each probe costs an SSH round trip, so it stays rare unless a
+                            // managed restart waits for busy sessions to finish.
+                            if ticks % (self?.freshnessTicks ?? 20) == 0 { self?.checkRuntimeFreshness() }
                         }
                     }
                     defer { heartbeat.cancel(); poll.cancel(); ws.cancel(with: .goingAway, reason: nil) }
@@ -327,8 +336,9 @@ final class KimiConnection {
     func disconnect() {
         generation = UUID(); detail.cancelLoads()
         freshnessCheck?.cancel(); freshnessCheck = nil
-        runtime = .unknown; staleRuntimeNotice = nil
+        runtime = .unknown; staleRuntimeNotice = nil; managedService = nil; managedCheckedAt = nil
         task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
+        snapshotRefreshGeneration += 1; snapshotRefreshResubscribe = false
         snapshotReady = false; goal = nil; goalIsStale = true
         subagentTranscript = nil; subagentTranscriptError = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
@@ -341,29 +351,38 @@ final class KimiConnection {
     }
     private func establish(token: UUID) async throws {
         if host.isLocal {
-            let data = try await LocalAgentRuntime.endpoint(for: .kimi, host: host)
+            let service = try await ensureManagedService()
             try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
-            let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
-            guard let port = endpoint["port"].int, let secret = endpoint["token"].string else {
-                throw WorkbenchError(L("本机服务未返回连接信息"))
-            }
-            api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
+            managedService = service; managedCheckedAt = Date()
+            let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(service.port)")!, token: service.token)
+            api = client
+            runtime = (try? await client.get(KimiServerMeta.self, "/api/v1/meta").runtime) ?? .unknown
+            staleRuntimeNotice = RuntimeVersion.managedNotice(service)
             return
         }
         try SSHCommand.validateDestination(host.destination)
-        // Read this server's existing credential through SSH; keep it only in process memory.
-        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
-            command: "cat " + RemoteSetup.remotePath(host.kimiTokenPath)))
-        try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
-        let secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !secret.isEmpty else { throw WorkbenchError(L("远端 Kimi Web 凭证为空")) }
+        var remotePort = port
+        let secret: String
+        if host.kimiManaged {
+            let service = try await ensureManagedService()
+            try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
+            managedService = service; managedCheckedAt = Date()
+            remotePort = service.port; secret = service.token
+        } else {
+            // Read this server's existing credential through SSH; keep it only in process memory.
+            let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+                command: "cat " + RemoteSetup.remotePath(host.kimiTokenPath)))
+            try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
+            secret = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !secret.isEmpty else { throw WorkbenchError(L("远端 Kimi Web 凭证为空")) }
+        }
         let localPort = try KimiAPI.availableLoopbackPort()
         let directory = URL(fileURLWithPath: "/tmp/awb-kimi-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         folder = directory
         let control = directory.appendingPathComponent("ssh").path
         let process = Process(); process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = ["-N", "-T", "-M", "-S", control, "-o", "ControlPersist=no", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=2", "-L", "127.0.0.1:\(localPort):127.0.0.1:\(port)", host.destination]
+        process.arguments = ["-N", "-T", "-M", "-S", control, "-o", "ControlPersist=no", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=2", "-L", "127.0.0.1:\(localPort):127.0.0.1:\(remotePort)", host.destination]
         process.standardInput = FileHandle.nullDevice; process.standardOutput = FileHandle.nullDevice
         let errors = Pipe(); process.standardError = errors; tunnel = process; try process.run()
         for _ in 0..<150 {
@@ -373,6 +392,7 @@ final class KimiConnection {
                 let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(localPort)")!, token: secret)
                 api = client
                 runtime = try await client.get(KimiServerMeta.self, "/api/v1/meta").runtime
+                if let managedService { staleRuntimeNotice = RuntimeVersion.managedNotice(managedService) }
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
@@ -384,15 +404,26 @@ final class KimiConnection {
     /// this connection. A failed or unreadable probe stays silent: a version check
     /// must not interrupt a session or surface as a connection error.
     func checkRuntimeFreshness() {
-        guard probesInstalledVersion, freshnessCheck == nil,
-              runtime.version != nil, !host.destination.isEmpty else { return }
+        guard probesInstalledVersion, freshnessCheck == nil, runtime.version != nil,
+              host.isLocal || !host.destination.isEmpty else { return }
+        // Connecting has just checked the instance Perch manages.
+        if managedService?.owned == true, let checked = managedCheckedAt, Date().timeIntervalSince(checked) < 60 { return }
         freshnessCheck = Task { [weak self] in
             await self?.probeRuntimeFreshness()
             self?.freshnessCheck = nil
         }
     }
+    /// Poll ticks (30 s each) between version checks. A managed restart that waits for
+    /// busy sessions is rechecked every minute, so it happens soon after they finish.
+    private var freshnessTicks: Int { (managedService?.restartPending ?? 0) > 0 ? 2 : 20 }
     private func probeRuntimeFreshness() async {
         guard let running = runtime.version else { return }
+        if host.isLocal || host.kimiManaged {
+            // Replacing the idle service ends this connection; reconnecting reads the new one.
+            guard let service = try? await ensureManagedService() else { return }
+            managedService = service; managedCheckedAt = Date()
+            if service.owned || host.isLocal { staleRuntimeNotice = RuntimeVersion.managedNotice(service); return }
+        }
         do {
             let output = try await SetupCommandRunner.run("/usr/bin/ssh",
                 RemoteSetup.sshArguments(host.destination, command: RemoteSetup.kimiRuntimeProbeCommand), timeout: 20)
@@ -401,8 +432,23 @@ final class KimiConnection {
                     RuntimeVersion.compare(installed: installed.version, running: running) else {
                 staleRuntimeNotice = nil; return
             }
-            staleRuntimeNotice = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+            var notice = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
+            if host.kimiManaged { notice += "\n" + RuntimeVersion.foreignServiceNote() }
+            staleRuntimeNotice = notice
         } catch {}
+    }
+    /// Runs the service script for this host. It starts Perch's Kimi Web when none
+    /// answers, reuses it, or replaces it once every session is idle. A service the user
+    /// started is reused and never stopped.
+    private func ensureManagedService() async throws -> KimiServiceEndpoint {
+        if host.isLocal {
+            return try RemoteSetup.parseKimiServiceEndpoint(try await LocalAgentRuntime.endpoint(for: .kimi, host: host))
+        }
+        let command = RemoteSetup.kimiEnsureCommand(script: try RemoteSetup.kimiServiceScript(), port: host.kimiPort,
+                                                    tokenPath: host.kimiTokenPath, environment: host.kimiEnvironment)
+        let output = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination, command: command),
+                                                      timeout: RemoteSetup.kimiEnsureTimeout)
+        return try RemoteSetup.parseKimiServiceEndpoint(output)
     }
 
     /// Read navigation evidence without selecting or subscribing to a conversation.
@@ -443,6 +489,23 @@ final class KimiConnection {
         conversation = cachedConversations.take(id)
         loadSelected(id)
     }
+    /// Read history for search without changing selection or subscribing to it.
+    func searchHistory(for id: String) async throws -> HistorySearchWindow {
+        guard online, let api else { throw WorkbenchError(L("需要连接 Agent 才能搜索历史。")) }
+        let token = generation
+        var messages: [KimiMessage] = [], before: String?, more = true
+        while more && messages.count < 5000 {
+            let suffix = before.map { "&before_id=\($0)" } ?? ""
+            let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100\(suffix)")
+            try Task.checkCancellation()
+            guard token == generation else { throw CancellationError() }
+            let next = page.items.first?.id
+            guard !page.items.isEmpty, next != before else { break }
+            messages = page.items + messages; before = next; more = page.hasMore
+        }
+        return HistorySearchWindow(messages: messages, complete: !more)
+    }
+
     /// Messages of a session opened this launch, for local name suggestions.
     func loadedMessages(for id: String) -> [KimiMessage]? {
         let loaded = conversation?.snapshot.session.id == id ? conversation : cachedConversations.value(id)
@@ -575,9 +638,29 @@ final class KimiConnection {
         if event.type == "goal.updated" { scheduleGoalRefresh() }
         let needsSnapshot = conversation!.apply(event)
         autoCompactTick()
-        if needsSnapshot {
-            try await refreshConversation(selectionToken: selectionGeneration)
-            if event.volatile == true, let id = selectedId { try await subscribe(id) }
+        if needsSnapshot { scheduleSnapshotRefresh(resubscribe: event.volatile == true) }
+    }
+    /// Snapshot-needing events arrive in bursts during catch-up; reading the
+    /// whole snapshot per event multiplies the relayout churn the reader sees.
+    /// One read after the burst quiets down carries the same state.
+    private func scheduleSnapshotRefresh(resubscribe: Bool) {
+        snapshotRefreshResubscribe = snapshotRefreshResubscribe || resubscribe
+        snapshotRefreshGeneration += 1
+        let generation = snapshotRefreshGeneration
+        Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            guard let self, generation == snapshotRefreshGeneration, online else { return }
+            do {
+                try await refreshConversation(selectionToken: selectionGeneration)
+                let resubscribe = snapshotRefreshResubscribe
+                snapshotRefreshResubscribe = false
+                if resubscribe, let id = selectedId { try await subscribe(id) }
+            } catch is CancellationError { return } catch {
+                snapshotRefreshResubscribe = false
+                // The immediate path surfaced a failed read by reconnecting;
+                // keep that recovery by dropping the socket.
+                socket?.cancel(with: .goingAway, reason: nil)
+            }
         }
     }
     /// The raw frame stays available: a transcript delivery is decoded into its
@@ -595,24 +678,91 @@ final class KimiConnection {
 
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
+    /// Every publication re-derives the transcript over the whole window, so
+    /// reading the entire history publishes its pages at most once a second.
     private func loadHistory(all: Bool) {
-        guard online, snapshotReady, !loadingOlder, let api, let id = selectedId, conversation?.hasOlder == true else { return }
+        guard online, snapshotReady, !loadingOlder, let api, let id = selectedId, let start = conversation, start.hasOlder else { return }
         let token = selectionGeneration
         detail.loadHistory { [self] in
-            while token == selectionGeneration, conversation?.hasOlder == true, let first = conversation?.messages.first {
-                let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
-                try Task.checkCancellation()
-                guard token == selectionGeneration else { return }
-                conversation?.prepend(page)
-                pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [],
-                                                        messages: conversation?.messages ?? [])
-                if !all || page.items.isEmpty { break }
+            var batch = KimiHistoryBatch(start)
+            var published = ContinuousClock.now
+            do {
+                while token == selectionGeneration, batch.hasMore, let first = batch.oldest {
+                    let page = try await api.get(KimiPage<KimiMessage>.self, "/api/v1/sessions/\(id)/messages?page_size=100&before_id=\(first.id)")
+                    try Task.checkCancellation()
+                    guard token == selectionGeneration else { return }
+                    batch.add(page)
+                    if !all || page.items.isEmpty { break }
+                    if ContinuousClock.now - published >= .seconds(1) {
+                        publishHistory(&batch, for: id, token: token)
+                        published = .now
+                    }
+                }
+            } catch {
+                publishHistory(&batch, for: id, token: token)
+                throw error
             }
+            publishHistory(&batch, for: id, token: token)
         }
     }
-    /// Reads the persisted task list of the selected session. Subagent lifecycle
-    /// events keep the roster current locally; this list is the only source for
-    /// background processes and detached children.
+    private func publishHistory(_ batch: inout KimiHistoryBatch, for id: String, token: UUID) {
+        guard !batch.isEmpty, token == selectionGeneration, let current = conversation else { return }
+        var next = current
+        next.prepend(batch)
+        conversation = next
+        pendingPrompts[id] = KimiPrompt.reconcile(local: pendingPrompts[id] ?? [], remote: [], messages: next.messages)
+        batch = KimiHistoryBatch(next)
+    }
+    /// Independent, read-only context; keep the selected stream and draft untouched.
+    func readTaskContext(_ id: String) async throws -> TaskContextSnapshot {
+        guard online, let api else { throw WorkbenchError(L("状态未同步")) }
+        let value: KimiSnapshot
+        let messages: [KimiMessage]
+        let live: [KimiLiveTool]
+        let roster: [KimiTask]
+        if snapshotReady, let current = conversation, current.snapshot.session.id == id {
+            value = current.snapshot; messages = current.displayMessages
+            live = current.live?.runningTools ?? []
+            roster = current.tasks.subagents
+        } else {
+            value = try await api.get(KimiSnapshot.self, "/api/v1/sessions/\(id)/snapshot")
+            messages = value.messages.items; live = value.inFlightTurn?.runningTools ?? []
+            roster = value.subagents ?? []
+        }
+        try Task.checkCancellation()
+        guard self.api === api, online, value.session.id == id else { throw CancellationError() }
+        var board = KimiTaskBoard(subagents: roster)
+        var taskError: String?
+        do {
+            let list = try await api.get(KimiTaskList.self, "/api/v1/sessions/\(id)/tasks")
+            board.reconcile(background: list.items)
+        } catch is CancellationError { throw CancellationError() }
+        catch { taskError = error.localizedDescription }
+        try Task.checkCancellation()
+        guard self.api === api, online else { throw CancellationError() }
+        var result = TaskContextSnapshot(title: value.session.title, directory: value.session.cwd,
+            busy: value.session.isTurnRunning,
+            requests: value.pendingApprovals.map { TaskContextRequest(id: "approval:" + $0.id, title: $0.action) } +
+                value.pendingQuestions.map { TaskContextRequest(id: "question:" + $0.id, title: $0.questions.map(\.question).joined(separator: "\n")) },
+            failure: value.session.lastTurnReason == "failed" ? L("任务执行失败，请查看会话。") : nil,
+            messages: Array(messages.suffix(160)), live: live, tasks: board.subagents + board.backgroundTasks)
+        result.taskError = taskError
+        return result
+    }
+    func taskContextOperation(_ task: KimiTask, session: String, stop: Bool) async throws -> String {
+        guard online, let api else { throw WorkbenchError(L("状态未同步")) }
+        let path = "/api/v1/sessions/\(session)/tasks/\(task.id)"
+        if stop {
+            let response = try await api.post(JSONValue.self, path + ":cancel")
+            guard response["cancelled"] == .bool(true) else { throw WorkbenchError(L("服务端未确认停止")) }
+            return ""
+        }
+        let value = try await api.get(KimiTask.self, path + "?with_output=true&output_bytes=16384")
+        return value.outputPreview ?? ""
+    }
+
+    /// Reads the selected session's persisted background processes and detached
+    /// children; subagent lifecycle events keep its roster current in between.
     func refreshTasks(selectionToken: UUID? = nil) async {
         let token = selectionToken ?? selectionGeneration
         guard token == selectionGeneration, online, let api, let id = selectedId, conversation != nil else { return }
@@ -863,6 +1013,18 @@ final class KimiConnection {
         guard online, api != nil else { return }
         let pending = Set(queue.allItems.filter { $0.state == .draftQueued }.map { $0.session.terminalID })
         for id in pending { deliverQueued(id) }
+    }
+    func enqueueFollowUp(_ text: String, for id: String, messageID: String) -> Bool {
+        guard online, sessions.contains(where: { $0.id == id }), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if queue.allItems.contains(where: { $0.id == messageID }) { return true }
+        guard queue.enqueue(text, for: reference(for: id), mode: .nextTurn, id: messageID) != nil else { return false }
+        do { try flushDrafts() }
+        catch {
+            _ = queue.remove(messageID)
+            draftSaveError = error.localizedDescription
+            return false
+        }
+        deliverQueued(id); return true
     }
     private func deliverQueued(_ id: String) {
         let reference = reference(for: id)

@@ -3,11 +3,15 @@ import SwiftUI
 extension View {
     /// Native glass is confined to navigation and floating controls, never transcript text.
     func workbenchFloatingSurface() -> some View {
-        modifier(WorkbenchGlassSurface(cornerRadius: 16))
+        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.panel))
     }
 
     func workbenchControlSurface() -> some View {
         modifier(WorkbenchGlassSurface(cornerRadius: 20))
+    }
+
+    func workbenchComposerSurface() -> some View {
+        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.composer))
     }
 }
 
@@ -16,7 +20,7 @@ private struct WorkbenchGlassSurface: ViewModifier {
     let cornerRadius: CGFloat
 
     @ViewBuilder func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if reduceTransparency {
             content.background(Color(nsColor: .controlBackgroundColor), in: shape)
         } else {
@@ -143,7 +147,7 @@ struct WorkbenchDisclosureButtonStyle: ButtonStyle {
         @State private var hovered = false
         var body: some View {
             configuration.label
-                .background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6))
+                .background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .onHover { hovered = $0 }
         }
         private var wash: Double {

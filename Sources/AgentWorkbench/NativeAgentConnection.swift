@@ -43,9 +43,9 @@ final class NativeAgentConnection {
     private(set) var history: [String: [String]] = [:] { didSet { persistDrafts() } }
     func historyEntries(for id: String) -> [String] { history[id] ?? [] }
     var stops = StopController()
-    /// The bridge's combined catalog: OMP answers `omp models`, Codex answers
-    /// `model/list`, and dsh contributes its ACP config options after each handshake.
-    /// Qoder keeps an empty list rather than being offered models it cannot switch to.
+    /// The bridge's combined catalog: OMP answers `omp models`, Qoder uses each
+    /// regional SDK daemon, Codex answers `model/list`, and dsh contributes its ACP
+    /// config options after each handshake.
     private(set) var models: [AgentModel] = []
     /// Reading the catalog is asked for by the conversation header and by the
     /// new-task sheet, so its failure belongs to whichever control is showing a
@@ -255,6 +255,32 @@ final class NativeAgentConnection {
         runtime = RunningRuntime(version: health["implementation"].string,
                                  startedAt: health["startedAt"].string)
     }
+    /// Read a pinned panel without selecting it or replacing the main transcript.
+    func readTaskContext(_ id: String) async throws -> TaskContextSnapshot {
+        guard online else { throw WorkbenchError(L("状态未同步")) }
+        let token = generation
+        let value: NativeAgentSnapshot
+        if let current = snapshot, current.id == id { value = current }
+        else { value = try await request("/sessions/\(id)?turns=20") }
+        try Task.checkCancellation()
+        guard token == generation, online, value.id == id else { throw CancellationError() }
+        return TaskContextSnapshot(title: value.title, directory: value.cwd, busy: value.busy,
+            requests: value.interactions.map { request in
+                TaskContextRequest(id: request["id"].string ?? request.display,
+                    title: request["title"].string ?? request["question"].string ?? request["message"].string ?? L("需要你处理"))
+            }, failure: value.error, messages: Array(value.messages.suffix(160)),
+            tasks: (value.subagents ?? []).map(KimiTask.init(native:)), native: true)
+    }
+    func stopTaskContextAgent(_ key: String, session: String) async throws {
+        guard online else { throw WorkbenchError(L("状态未同步")) }
+        let token = generation
+        let current: NativeAgentSnapshot = try await request("/sessions/\(session)?turns=1")
+        guard token == generation, online, current.id == session, current.subagents?.contains(where: {
+            $0.id == key && $0.canStop && $0.status.isLive
+        }) == true else { throw WorkbenchError(L("任务状态已变化，请刷新后重试。")) }
+        let _: JSONValue = try await request(NativeSubagentRoute.path(session: session, key: key) + "/stop", body: .object([:]))
+    }
+
     private func request<T: Decodable>(_ path: String, body: JSONValue? = nil) async throws -> T {
         let data: Data
         if let requestTransport { data = try await requestTransport(path, body) }
@@ -357,6 +383,22 @@ final class NativeAgentConnection {
         return page.messages
     }
 
+    func searchHistory(for id: String) async throws -> HistorySearchWindow {
+        guard online else { throw WorkbenchError(L("需要连接 Agent 才能搜索历史。")) }
+        let token = generation
+        var full: NativeAgentSnapshot = try await request("/sessions/\(id)?turns=50")
+        try Task.checkCancellation()
+        guard token == generation else { throw CancellationError() }
+        while full.hasOlder && full.messages.count < 5000 {
+            guard let window = full.history else { break }
+            let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+            try Task.checkCancellation()
+            guard token == generation else { throw CancellationError() }
+            full = try full.prepending(page)
+        }
+        return HistorySearchWindow(messages: Array(full.messages.suffix(5000)), complete: !full.hasOlder && full.messages.count <= 5000)
+    }
+
     func recapMessages(for id: String) async throws -> [KimiMessage] {
         guard id == selectedID, var full = snapshot, full.id == id,
               !full.busy, full.interactions.isEmpty, full.error == nil, full.completed > 0 else {
@@ -441,6 +483,11 @@ final class NativeAgentConnection {
     /// everything queued behind it.
     private func purgeRecordedReceipts() {
         guard let snapshot else { return }
+        // Each applied snapshot reaches here; index the transcript only when a receipt waits for it.
+        guard queue.allItems.contains(where: { item in
+            guard item.session.terminalID == snapshot.id else { return false }
+            switch item.state { case .failed, .unknown: return true; default: return false }
+        }) else { return }
         let visible = Set(snapshot.messages.map(\.id))
         var purged = false
         for item in queue.allItems where item.session.terminalID == snapshot.id && visible.contains(item.id) {
@@ -454,20 +501,40 @@ final class NativeAgentConnection {
     }
     func loadOlder() { loadHistory(all: false) }
     func loadAllHistoryForSearch() { loadHistory(all: true) }
+    /// Every publication re-derives the transcript over the whole window, so
+    /// reading the entire history joins adjacent pages and publishes them at
+    /// most once a second.
     private func loadHistory(all: Bool) {
         guard online, !loadingOlder, snapshot?.hasOlder == true, let id = selectedID else { return }
         let token = selectionGeneration, connectionToken = generation
         conversation.loadHistory { [self] in
-            repeat {
-                guard let current = snapshot, let window = current.history, current.hasOlder else { return }
-                let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
-                try Task.checkCancellation()
-                guard token == selectionGeneration, connectionToken == generation, id == selectedID,
-                      let latest = snapshot else { return }
-                snapshot = try latest.prepending(page)
-                if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
-            } while all
+            var pending: NativeAgentSnapshot?
+            var published = ContinuousClock.now
+            do {
+                repeat {
+                    guard let current = snapshot, let window = pending?.history ?? current.history, window.start > 0 else { break }
+                    let page: NativeAgentSnapshot = try await request("/sessions/\(id)?before=\(window.start)&epoch=\(window.epoch)&turns=50")
+                    try Task.checkCancellation()
+                    guard token == selectionGeneration, connectionToken == generation, id == selectedID else { return }
+                    pending = try pending.map { try $0.prepending(page) } ?? page
+                    if all, ContinuousClock.now - published >= .seconds(1) {
+                        try publishHistory(&pending, for: id, token: token, connectionToken: connectionToken)
+                        published = .now
+                    }
+                } while all
+            } catch {
+                try? publishHistory(&pending, for: id, token: token, connectionToken: connectionToken)
+                throw error
+            }
+            try publishHistory(&pending, for: id, token: token, connectionToken: connectionToken)
         }
+    }
+    private func publishHistory(_ pending: inout NativeAgentSnapshot?, for id: String, token: UUID, connectionToken: UUID) throws {
+        guard let joined = pending, token == selectionGeneration, connectionToken == generation, id == selectedID,
+              let latest = snapshot else { return }
+        pending = nil
+        snapshot = try latest.prepending(joined)
+        if let expanded = snapshot?.history { historyWindows[id] = (expanded.start, expanded.epoch) }
     }
 
     // MARK: Subagents (bridge protocol 7)
@@ -608,7 +675,6 @@ final class NativeAgentConnection {
         } catch { modelsError = error.localizedDescription }
     }
     /// The catalog is combined, so a runtime is only offered the models that claim it.
-    /// Qoder's SDK reports no catalog at all and stays with a typed model id.
     func models(for kind: SessionKind) -> [AgentModel] {
         ModelSelectionCatalog.forAgent(kind, in: models)
     }
@@ -630,6 +696,14 @@ final class NativeAgentConnection {
                     try await action(id, "thinking", ["level": .string(resolved.rawValue)])
                 }
             } catch { actionError = error.localizedDescription }
+        }
+    }
+    func useDefaultModel(for id: String) {
+        guard configuringSessions.insert(id).inserted else { return }
+        Task {
+            defer { configuringSessions.remove(id) }
+            do { try await action(id, "model", ["provider": .string(""), "model": .string("")]) }
+            catch { actionError = error.localizedDescription }
         }
     }
     func setThinking(_ level: ThinkingLevel, for id: String) {
@@ -724,6 +798,20 @@ final class NativeAgentConnection {
         // messages still wait for "Resume queued messages".
         if queue.isPaused(reference), !stops.isStopping(reference) { queue.unpause(reference) }
         deliver(id)
+    }
+    /// Explicit text from the companion or a saved follow-up. Keep the draft,
+    /// attachments, model and permission selections untouched.
+    func enqueueFollowUp(_ text: String, for id: String, messageID: String) -> Bool {
+        guard online, let reference = reference(id), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if queue.allItems.contains(where: { $0.id == messageID }) { return true }
+        guard queue.enqueue(text, for: reference, mode: .nextTurn, id: messageID) != nil else { return false }
+        do { try flushDrafts() }
+        catch {
+            _ = queue.remove(messageID)
+            draftSaveError = error.localizedDescription
+            return false
+        }
+        deliver(id); return true
     }
     private func deliver(_ id: String) {
         guard online, !sendingSessions.contains(id), let reference = reference(id) else { return }

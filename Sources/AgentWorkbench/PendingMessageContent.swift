@@ -6,7 +6,7 @@ extension UserMessageStyle {
     /// prompt's bubble, so the echo takes its place without moving the text.
     enum Pending {
         /// Its state and controls under the bubble, in secondary ink.
-        static let detailSize: CGFloat = 11
+        static var detailSize: CGFloat { ReplyStyle.captionSize }
         /// Between the bubble and that line, as the fold toggle under a long prompt.
         static let detailSpacing: CGFloat = 6
         /// Between the items of that line.
@@ -91,7 +91,7 @@ struct PendingMessageEditor: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("编辑待发消息").font(.headline)
             TextEditor(text: $text).frame(minHeight: 140)
-            if let messageError { Text(messageError).font(.caption).foregroundStyle(.orange) }
+            if let messageError { Text(messageError).font(.subheadline).foregroundStyle(.orange) }
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)

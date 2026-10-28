@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 app_dir="$PWD/build/Composer Preview.app"
 mkdir -p "$app_dir/Contents/MacOS"
-swiftc -target "$(uname -m)-apple-macosx26.0" -swift-version 5 -parse-as-library Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/AttachmentImageDecoder.swift Tests/ComposerPreview/App.swift -o "$app_dir/Contents/MacOS/ComposerPreview"
+swiftc -target "$(uname -m)-apple-macosx26.0" -swift-version 5 -parse-as-library Sources/AgentWorkbench/MessageComposer.swift Sources/AgentWorkbench/AttachmentImageDecoder.swift Sources/AgentWorkbench/WorkbenchTheme.swift Tests/ComposerPreview/App.swift -o "$app_dir/Contents/MacOS/ComposerPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

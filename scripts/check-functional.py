@@ -30,6 +30,7 @@ def main():
             ("model-metadata", [python, "-m", "unittest", "discover", "-s", "Tests/ModelMetadata"], 60),
             ("localization", [python, "scripts/check-localization.py"], 60),
             ("localization-tests", [python, "-m", "unittest", "discover", "-s", "Tests/Localization"], 60),
+            ("radius", [python, "scripts/check-radius-tokens.py"], 60),
             # Preview apps compile explicit source lists that CI never builds.
             ("preview-sources", [python, "scripts/check-preview-sources.py"], 60),
             ("acceptance-supervisor", [python, "-m", "unittest", "discover", "-s", "Tests/Performance"], 60),
@@ -37,18 +38,20 @@ def main():
     else:
         commands = [
             ("build", ["bash", "scripts/build.sh"], 1200),
+            ("app-launch", [python, "scripts/check-app-launch.py", "--output", str(out / "app-launch")], 90),
             ("signature", ["codesign", "--verify", "--deep", "--strict", "build/Perch.app"], 60),
             ("version", [python, "scripts/check-version.py", "--app", "build/Perch.app"], 60),
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),
-            # Compiles the whole app target before 15 phases (each capped at 30 s);
-            # passing CI runs took 118–171 s, so 180 s timed out on a slow runner.
-            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 300),
+            # Compiles the whole app before 23 isolated phases (each capped at 60 s).
+            # The expanded reader/panel suite reached the old 300 s aggregate cap
+            # on CI after all assertions passed; leave room for compilation/cleanup.
+            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 600),
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
             ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
         ]
-        for mode in ["all", "switching", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input"]:
+        for mode in ["all", "switching", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input"]:
             commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
                 "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
         commands.append(("native-sidebar-projects", [python, "scripts/run-native-acceptance.py",
@@ -70,6 +73,11 @@ def main():
     env.pop("WORKBENCH_LIVE_HOST", None)
     env.pop("WORKBENCH_GIT_WRITE_HOST", None)
     env.pop("PERCH_ACCEPTANCE_ALLOW_INVALIDATION", None)
+    if args.suite == "macos":
+        # Retain the native design phase's geometry and window captures with the logs.
+        captures = out / "native-design"
+        captures.mkdir()
+        env["PERCH_DESIGN_CAPTURES"] = str(captures)
     for name, command, timeout in commands:
         print("Running " + name, flush=True)
         started = time.monotonic()
@@ -93,6 +101,8 @@ def main():
         report["status"] = "running" if entry["passed"] else "failed"
         (out / "results.json").write_text(json.dumps(report, indent=2) + "\n")
         if not entry["passed"]:
+            reason = f"timed out after {timeout} s" if entry.get("timed_out") else f"exited with code {entry['exit_code']}"
+            print(f"Failed {name}: {reason}", flush=True)
             print((out / entry["log"]).read_text()[-12000:])
             return 1
     report["status"] = "passed"

@@ -28,7 +28,7 @@ final class KimiAcceptanceProtocol: URLProtocol {
             let messages: [[String: Any]] = (1...200).flatMap { turn in
                 ["user", "assistant"].map { role in
                     ["id": "\(id)-\(role)-\(turn)", "role": role, "created_at": "\(turn)",
-                     "content": [["type": "text", "text": "第 \(turn) 轮 · \(role)\n\n中文与 English **正文**和 `identifier`。\n\n" + String(repeating: "持续阅读，后台更新不打断输入。\n\n", count: refresh && turn == 199 && role == "assistant" ? (revision % 2 == 1 ? 100 : 1) : 3)]]] as [String: Any]
+                     "content": [["type": "text", "text": "第 \(turn) 轮 · \(role)\n\n中文与 English **正文**和 `identifier`。\n\n" + String(repeating: "持续阅读，后台更新不打断输入。\n\n", count: refresh && turn == 200 && role == "assistant" ? (revision % 2 == 1 ? 100 : 1) : 3)]]] as [String: Any]
                 }
             }
             result = ["as_of_seq": revision, "epoch": "fixture", "session": session,

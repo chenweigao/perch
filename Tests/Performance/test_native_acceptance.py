@@ -104,3 +104,28 @@ class InputControlTests(unittest.TestCase):
                      patch("builtins.print"), self.assertRaises(SystemExit) as exited:
                     runpy.run_path(str(ROOT / "scripts/run-native-acceptance.py"), run_name="__main__")
                 self.assertEqual(exited.exception.code, 0 if detected else 1)
+
+    def test_inspector_mode_is_forwarded_to_the_acceptance_app(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            app = folder / "Fixture.app"
+            (app / "Contents/MacOS").mkdir(parents=True)
+            (app / "Contents/Resources").mkdir()
+            (app / "Contents/MacOS/NativeAcceptance").write_bytes(b"fixture")
+            (app / "Contents/Resources/build.json").write_text("{}")
+            out = folder / "result"
+
+            def launch(*args, **kwargs):
+                self.assertEqual(kwargs["env"]["PERCH_ACCEPTANCE_MODE"], "inspector")
+                (out / "result.json").write_text(json.dumps({"status": "passed"}))
+                process = unittest.mock.Mock(pid=123)
+                process.wait.return_value = 0
+                return process
+
+            argv = ["run-native-acceptance.py", "--app", str(app), "--output", str(out),
+                    "--mode", "inspector"]
+            with patch.object(sys, "argv", argv), patch("subprocess.Popen", side_effect=launch), \
+                 patch("builtins.print"), self.assertRaises(SystemExit) as exited:
+                runpy.run_path(str(ROOT / "scripts/run-native-acceptance.py"), run_name="__main__")
+            self.assertEqual(exited.exception.code, 0)
+            self.assertEqual(json.loads((out / "manifest.json").read_text())["mode"], "inspector")

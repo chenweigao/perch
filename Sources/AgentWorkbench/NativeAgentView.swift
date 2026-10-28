@@ -10,6 +10,7 @@ struct NativeAgentView: View {
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     @State private var activityReview = 0
+    @State private var editStats = SessionEditStatsCache()
     private var displayedResultKey: String? {
         guard appActive, follow, connection.online,
               let snapshot = connection.snapshot, snapshot.id == connection.selectedID,
@@ -105,13 +106,14 @@ struct NativeAgentView: View {
                                     follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
                                 }.buttonStyle(.borderless).disabled(!connection.online)
                             }
-                        }.font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
+                        }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
                     ConversationTranscript(messages: s.messages, sessionId: s.id,
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
-                                           isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true)
+                                           isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true,
+                                           timing: connection.timings.turns[s.id])
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id,
                                                                opensSubagents: s.opensSubagents))
@@ -120,12 +122,14 @@ struct NativeAgentView: View {
                     ForEach(s.interactions.filter { NativePlanReview($0) == nil }, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
                     NativePlanReviewDock(connection: connection, sessionID: s.id).id("plan:" + s.id)
                     Color.clear.frame(height: 1).id("bottom")
+                } bar: {
+                    bottomBar(s, readingKey: readingKey)
                 }
                     .overlay(alignment: .topTrailing) {
                         if s.hasOlder {
                             Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
                                 follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
-                            }.font(.caption).buttonStyle(.bordered)
+                            }.font(.system(size: WorkbenchTheme.Typography.secondary)).buttonStyle(.bordered)
                                 .disabled(connection.loadingOlder || !connection.online).padding(8)
                         }
                     }
@@ -146,17 +150,27 @@ struct NativeAgentView: View {
             .task(id: displayedResultKey) {
                 if displayedResultKey != nil { onResultDisplayed(s) }
             }
+        }
+    }
+
+    /// Activity, notices and the composer float over the transcript's bottom
+    /// edge; the reply scrolls beneath the composer glass.
+    @ViewBuilder private func bottomBar(_ s: NativeAgentSnapshot, readingKey: String) -> some View {
+        VStack(spacing: 0) {
             let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
             // Bridge protocol 7 roster; an older bridge reports none and the section stays hidden.
             let subagentBoard = KimiTaskBoard(subagents: (s.subagents ?? []).map(KimiTask.init(native:)))
             let subagentStopErrors = connection.subagentStopErrors(in: s)
-            ConversationActivityBar(activity: ConversationActivity(
+            let activityProbe = PerfDiagnostics.begin()
+            let activity = ConversationActivity(
                 messages: s.messages, isRunning: s.busy,
                 running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                 online: connection.online,
                 isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
                 isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                pendingCount: s.interactions.count, isStopping: connection.isStopping),
+                pendingCount: s.interactions.count, isStopping: connection.isStopping, editStats: editStats)
+            let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(s.messages.count)")
+            ConversationActivityBar(activity: activity,
                 isRunning: s.busy,
                 timing: connection.timings.turns[s.id],
                 online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,
@@ -176,15 +190,15 @@ struct NativeAgentView: View {
                     if isCurrent(s) { connection.stopSubagent(task.id, in: s.id) }
                 },
                 taskStopErrors: subagentStopErrors)
-                .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36)
-                .frame(maxWidth: .infinity).padding(.vertical, 6)
+                .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding)
+                .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 6)
             // Long upstream errors scroll inside the notice instead of displacing the conversation.
             if let error = connection.actionError ?? s.error { ConversationNotice(text: error) }
             if let command = s.commandResult {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }
                     Text(command.status == "running" ? L("正在压缩上下文…") : command.error ?? L("上下文压缩完成"))
-                        .font(.caption).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
+                        .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                 }.padding(6)
             }
             NativeComposerView(connection: connection, s: s).id(s.id)
@@ -250,23 +264,29 @@ private struct NativeComposerView: View {
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: supportsAttachments, disabled: connection.sending) { chooseFiles = true }
                     NativeModelControls(connection: connection, snapshot: s)
-                    PermissionPicker(
-                        provider: s.provider,
-                        capability: connection.sessions.first { $0.id == s.id }?.permission
-                            ?? s.permission
-                            ?? PermissionCatalog.capability(for: s.provider),
-                        disabled: !connection.online,
-                        allowsSelection: [.qoder, .qoderintl, .claude].contains(s.provider)
-                    ) { mode in
-                        connection.setPermission(mode, for: s.id)
-                    }
-                    ComposerTemplatesMenu(draft: connection.drafts[s.id] ?? "") { template in
-                        let existing = connection.drafts[s.id] ?? ""
-                        connection.drafts[s.id] = existing.isEmpty ? template : existing + "\n\n" + template
-                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
-                    }
-                    ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
-                                 reportedAt: s.context?.reportedAt, isStale: !connection.online)
+                    HStack(spacing: 6) {
+                        ComposerEnvironmentMenu(host: connection.host, provider: s.provider.label, directory: s.cwd)
+                        PermissionPicker(
+                            provider: s.provider,
+                            capability: connection.sessions.first { $0.id == s.id }?.permission
+                                ?? s.permission
+                                ?? PermissionCatalog.capability(for: s.provider),
+                            disabled: !connection.online,
+                            allowsSelection: [.qoder, .qoderintl, .claude].contains(s.provider)
+                        ) { mode in
+                            connection.setPermission(mode, for: s.id)
+                        }
+                        ComposerTemplatesMenu(draft: connection.drafts[s.id] ?? "") { template in
+                            let existing = connection.drafts[s.id] ?? ""
+                            connection.drafts[s.id] = existing.isEmpty ? template : existing + "\n\n" + template
+                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                        }
+                        ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
+                                     reportedAt: s.context?.reportedAt, isStale: !connection.online)
+                    }.foregroundStyle(.secondary).padding(.leading, 10)
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                        }
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                          canSend: canSend(s), canStop: connection.canStop,
                                          queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
@@ -274,10 +294,10 @@ private struct NativeComposerView: View {
                                          onStop: { if isCurrent { connection.stop() } },
                                          onQueue: nextTurnSend)
                 }
-            }.padding(12).workbenchControlSurface()
+            }.padding(ReplyStyle.composerInset).workbenchComposerSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[s.id] ?? "").count)
-        }.frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16)
+        }.frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding).frame(maxWidth: .infinity, alignment: .center).padding(.bottom, 16)
         .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             do { addAttachments(try result.get()) } catch { connection.actionError = error.localizedDescription }
         }
@@ -367,7 +387,14 @@ struct NativeModelControls: View {
     let connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
-    private var editable: Bool { [.omp, .dsh, .codex].contains(snapshot.provider) }
+    private var editable: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
+    private var currentModel: String {
+        session?.qoderRequestedModel ?? snapshot.qoderRequestedModel ?? session?.model ?? snapshot.model
+    }
+    private var defaultModelAction: (() -> Void)? {
+        guard [.qoder, .qoderintl].contains(snapshot.provider) else { return nil }
+        return { connection.useDefaultModel(for: snapshot.id) }
+    }
     private var disabledReason: String? {
         if !connection.online { return L("连接恢复后可修改设置。") }
         if connection.configuringSessions.contains(snapshot.id) { return L("正在更新模型设置…") }
@@ -377,11 +404,15 @@ struct NativeModelControls: View {
 
     var body: some View {
         ComposerModelPicker(models: connection.models(for: snapshot.provider),
-                            modelID: session?.model ?? snapshot.model,
+                            modelID: currentModel,
                             thinking: ThinkingLevel.parse(session?.thinking ?? snapshot.thinking),
                             disabledReason: disabledReason,
                             unavailableReason: editable ? nil : L("此 Agent 暂不支持模型与思考设置。"),
                             catalogError: connection.modelsError,
+                            onRefreshCatalog: { await connection.loadModels() },
+                            layout: .split,
+                            usesDefaultModel: currentModel.isEmpty,
+                            onUseDefaultModel: defaultModelAction,
                             scope: L("下一轮生效"),
                             onSelectModel: { connection.setModel($0, for: snapshot.id) },
                             onSelectThinking: { connection.setThinking($0, for: snapshot.id) })
@@ -407,18 +438,18 @@ struct NativeRunControls: View {
                 if phase != .idle {
                     HStack(spacing: 10) {
                         if !phase.isSettled { ProgressView().controlSize(.small) }
-                        Text(phase.label).font(.caption)
+                        Text(phase.label).font(.system(size: WorkbenchTheme.Typography.secondary))
                             .foregroundStyle(phase.canRetry ? .orange : .secondary).textSelection(.enabled)
                         if phase.canRetry {
                             Button("Retry stop") {
                                 guard connection.selectedID == sessionID, connection.snapshot?.id == sessionID else { return }
                                 connection.stop()
-                            }.font(.caption)
+                            }.font(.system(size: WorkbenchTheme.Typography.secondary))
                         }
                     }
                 }
                 if connection.queue.isPaused(reference) || pending.contains(where: { $0.state == .stoppedBeforeDelivery }) {
-                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.caption)
+                    Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.system(size: WorkbenchTheme.Typography.secondary))
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
@@ -452,7 +483,7 @@ struct NativeRunControls: View {
                     }
                 }
                 if let warning = connection.queue.unsentWarning(for: reference) {
-                    Text(warning).font(.caption2).foregroundStyle(.secondary)
+                    Text(warning).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
                 .sheet(item: $editingMessage) { message in
@@ -495,12 +526,12 @@ struct NativeInteractionView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("等你处理", systemImage: "hand.raised").font(.headline)
+            Label("等你处理", systemImage: "hand.raised").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             if let subagentSource {
-                Text(subagentSource).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(subagentSource).font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).textSelection(.enabled)
             }
             Text(request["title"].string ?? request["name"].string ?? L("回答问题")).textSelection(.enabled)
-            if let message = request["message"].string { Text(message).font(.callout).textSelection(.enabled) }
+            if let message = request["message"].string { Text(message).font(.system(size: WorkbenchTheme.Typography.body)).textSelection(.enabled) }
             if request["name"].string == "AskUserQuestion" {
                 ForEach(request["input"]["questions"].array, id: \.display) { q in
                     let question = q["question"].string ?? ""
@@ -512,7 +543,7 @@ struct NativeInteractionView: View {
                         } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Image(systemName: answers[question] == label ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(answers[question] == label ? Color.accentColor : Color.secondary)
+                                    .foregroundStyle(answers[question] == label ? WorkbenchTheme.accent : Color.secondary)
                                 Text(label).foregroundStyle(.primary)
                             }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain)

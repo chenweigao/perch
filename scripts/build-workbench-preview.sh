@@ -13,13 +13,13 @@ done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/AgentMark.swift Sources/AgentWorkbench/AgentMarkArtwork.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/PerchMark.swift Sources/AgentWorkbench/AgentMark.swift Sources/AgentWorkbench/AgentMarkArtwork.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \
     Sources/AgentWorkbench/WorkbenchTheme.swift \
     Sources/AgentWorkbench/SessionStatusIndicator.swift Sources/AgentWorkbench/ConversationActivityBar.swift \
     Sources/AgentWorkbench/ActivitySummaryController.swift Sources/AgentWorkbench/ActivitySummarySettings.swift \
     Sources/AgentWorkbench/HostIdentityIcon.swift \
     Sources/AgentWorkbench/BatchArchiveControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
-    Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
+    Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
     Tests/WorkbenchPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkbenchPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'

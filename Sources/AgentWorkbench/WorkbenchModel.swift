@@ -144,7 +144,15 @@ final class WorkbenchModel {
     @ObservationIgnored private var taskEvents = TaskEventTracker()
     @ObservationIgnored private var pendingNotificationID: String?
     var showConversationFind = false
+    var workspaceSearchQuery = ""
+    var workspaceSearchEntryID: String?
     var showSessionSearch = false
+    var projectOverview: SidebarProjectLocation?
+    var pendingFileOutcome: GroupOutcome?
+    var showFollowUps = false
+    var companionShortcutError: String?
+    @ObservationIgnored var followUpLoop: Task<Void, Never>?
+    var followUpNotices: [String] = []
     private(set) var navigation: SessionNavigation {
         get { navigationState.navigation }
         set { navigationState.navigation = newValue }
@@ -152,6 +160,12 @@ final class WorkbenchModel {
     @ObservationIgnored private var navigatingHistory = false
     var showFileViewer = false
     let fileBrowser = RemoteFileBrowser()
+    /// The inspector's changes page reads independently of the file window.
+    let changesBrowser = RemoteFileBrowser(workingTreeOnly: true)
+    /// File navigation in the inspector must not replace a detached reader's tabs.
+    let inspectorFiles = RemoteFileBrowser()
+    @ObservationIgnored let fileWindow = FileWindowController()
+    let taskContextWindow = TaskContextWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac")
         .appendingPathComponent("workspace.json")
@@ -224,7 +238,8 @@ final class WorkbenchModel {
                 if let item = self.inspectingSession { self.inspectingSession = nil; self.open(item) }
                 guard !self.showDashboard, self.selectedHost != nil else { return }
                 self.showFileViewer = true; self.syncFileViewer()
-                self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true)
+                self.fileBrowser.open(reference.path, line: reference.line, fromConversation: true, source: self.selectedReference)
+                self.fileWindow.show(model: self)
             }
         })
         observers.append(NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { [weak self] notice in
@@ -583,7 +598,19 @@ final class WorkbenchModel {
         if scopeHostID == host.id { scopeHostID = nil }
         do { UserDefaults.standard.set(try JSONEncoder().encode(connections.map(\.host)), forKey: "hosts") }
         catch { managementError = L("机器已移除，但保存机器列表失败：\(error.localizedDescription)") }
-        rebuildCatalog(); syncFileViewer(); saveWorkspace()
+        if fileBrowser.host?.id == host.id {
+            fileBrowser.source = nil
+            fileBrowser.configure(host: nil, cwd: "")
+        }
+        if changesBrowser.host?.id == host.id {
+            changesBrowser.source = nil
+            changesBrowser.configure(host: nil, cwd: "")
+        }
+        if inspectorFiles.host?.id == host.id {
+            inspectorFiles.source = nil
+            inspectorFiles.configure(host: nil, cwd: "")
+        }
+        rebuildCatalog(); saveWorkspace()
     }
     func open(_ pane: Pane, on connection: HostConnection, pinned: Bool = false) {
         openReference(SessionReference(hostID: connection.id, terminalID: pane.id), title: pane.displayTitle, pinned: pinned)
@@ -607,6 +634,8 @@ final class WorkbenchModel {
         tabs.pin(identity); saveWorkspace()
     }
     func select(_ identity: String) {
+        let probe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("session_select", probe, detail: selectedReference.map { "kind=\($0.kind.rawValue)" }) }
         if !navigatingHistory { navigation.visit(identity) }
         tabs.select(identity); showDashboard = false; draftingNewTask = false
         if let reference = selectedReference {
@@ -617,7 +646,7 @@ final class WorkbenchModel {
             if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) { native.select(reference.terminalID) }
             if reference.kind == .kimi, kimi.online { kimi.select(reference.terminalID) }
         }
-        updateVisibility(focus: true); saveWorkspace(); syncFileViewer()
+        updateVisibility(focus: true); saveWorkspace()
     }
     private var navigableSessionIDs: Set<String> {
         Set(openedSessions.map { $0.session.id }).union(allSessions.filter { $0.online && !$0.archived }.map(\.id))
@@ -657,6 +686,7 @@ final class WorkbenchModel {
         guard !started else { return }
         if let reference = selectedReference, reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
         started = true
+        startFollowUpLoop()
         for connection in connections {
             if connection.host.autoConnectSSH { connectSSH(connection.id) }
             if connection.host.autoConnectHerdr, connection.host.enabledAgents.contains(.terminal) { connection.connect() }
@@ -1299,12 +1329,56 @@ final class WorkbenchModel {
         return connections.first { $0.id == reference.hostID }?.host
     }
     func toggleFileViewer() {
-        showFileViewer.toggle()
-        if showFileViewer { syncFileViewer() } else { fileBrowser.cancel() }
+        taskContextWindow.togglePage(.files, model: self)
+    }
+    func syncInspectorFiles() {
+        let directory = selectedItem?.directory ?? ""
+        let changed = inspectorFiles.source != selectedReference ||
+            inspectorFiles.host?.id != selectedHost?.id || inspectorFiles.cwd != directory
+        inspectorFiles.source = selectedReference
+        inspectorFiles.configure(host: selectedHost, cwd: directory,
+                                 directoryHints: selectedDirectoryHints(directory))
+        if selectedHost != nil, changed || inspectorFiles.path.isEmpty {
+            inspectorFiles.open(directory.isEmpty ? "." : directory)
+        } else if selectedHost != nil, inspectorFiles.error != nil || inspectorFiles.content == nil {
+            inspectorFiles.open(inspectorFiles.path)
+        }
+    }
+    /// Expanding is an explicit handoff to the full reader; the inspector keeps
+    /// its own location and can remain open beside the conversation.
+    func expandInspectorFile() {
+        guard let host = inspectorFiles.host, !inspectorFiles.path.isEmpty else { return }
+        pendingFileOutcome = nil
+        fileBrowser.source = inspectorFiles.source
+        fileBrowser.configure(host: host, cwd: inspectorFiles.cwd)
+        fileBrowser.open(inspectorFiles.path, line: inspectorFiles.targetLine, source: inspectorFiles.source)
+        showFileViewer = true
+        fileWindow.show(model: self)
+    }
+    /// The inspector's changes page hands the full review to the file window's
+    /// Git page; a window being created reads status itself.
+    func reviewChangesInFileWindow() {
+        showFileViewer = true
+        syncFileViewer()
+        fileBrowser.mode = .git
+        if fileWindow.window != nil, fileBrowser.gitStatus == nil, !fileBrowser.loading { fileBrowser.loadGitStatus() }
+        fileWindow.show(model: self)
     }
     private func syncFileViewer() {
         guard showFileViewer else { return }
         let directory = selectedItem?.directory ?? ""
+        pendingFileOutcome = nil
+        fileBrowser.source = selectedReference
+        fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: selectedDirectoryHints(directory))
+    }
+    /// Points the inspector's changes page at the selected session's host and
+    /// working directory, preferring the worktrees its agent recently touched.
+    func syncChangesBrowser() {
+        let directory = selectedItem?.directory ?? ""
+        changesBrowser.source = selectedReference
+        changesBrowser.configure(host: selectedHost, cwd: directory, directoryHints: selectedDirectoryHints(directory))
+    }
+    private func selectedDirectoryHints(_ directory: String) -> [String] {
         var messages: [KimiMessage] = []
         var liveTools: [KimiLiveTool] = []
         if let reference = selectedReference, reference.kind == .kimi,
@@ -1318,12 +1392,11 @@ final class WorkbenchModel {
                   snapshot.id == reference.terminalID {
             messages = snapshot.messages
         }
-        let hints = RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
-                                                       sessionDirectory: directory)
-        fileBrowser.configure(host: selectedHost, cwd: directory, directoryHints: hints)
+        return RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
+                                                  sessionDirectory: directory)
     }
     func forgetRestoration(_ saved: SavedTerminal) { close(saved.session.id) }
-    private func saveWorkspace() {
+    func saveWorkspace() {
         guard canSaveWorkspace else { return }
         var saved = workspace
         saved.pinned = tabs.ids.filter { $0 != tabs.previewID }.compactMap { id in openedSessions.first { $0.session.id == id } }
@@ -1339,7 +1412,20 @@ final class WorkbenchModel {
             }
         }
     }
+    /// Persist the dispatch intent before allowing any network side effect.
+    func persistFollowUpIntent() throws {
+        guard canSaveWorkspace else { throw WorkbenchError(L("工作台无法保存，托管消息尚未发送。")) }
+        saveWorkspace()
+        try workspaceWriter.flush(workspace)
+    }
+    func notifyInactiveTask(_ rule: FollowUpRule) {
+        if notificationsEnabled && !mutedTasks.contains(rule.session.id) {
+            notifications.postInactivity(id: rule.session.id, title: rule.title)
+        }
+    }
     private func catalogChanged() {
+        let probe = PerfDiagnostics.begin()
+        defer { PerfDiagnostics.end("catalog_refresh", probe, detail: "sessions=\(allSessions.count)") }
         rebuildCatalog()
         updateTaskEvents()
         resolveRestoreReports()
@@ -1501,6 +1587,10 @@ final class WorkbenchModel {
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
+        taskContextWindow.close()
+        inspectorFiles.cancel()
+        fileWindow.close()
+        followUpLoop?.cancel(); followUpLoop = nil
         conversationPresentations.removeAll()
         try? flushDrafts()
         saveWorkspace()

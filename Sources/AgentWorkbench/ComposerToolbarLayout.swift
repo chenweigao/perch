@@ -8,7 +8,7 @@ struct ComposerToolbarLayout: Layout {
     private func dimensions(_ proposal: ProposedViewSize, _ subviews: Subviews) -> (sizes: [CGSize], width: CGFloat, wraps: Bool, top: CGFloat, bottom: CGFloat) {
         var sizes = subviews.map { $0.sizeThatFits(.unspecified) }
         let last = subviews.count - 1
-        let ideal = sizes.reduce(CGFloat(40)) { $0 + $1.width }
+        let ideal = sizes.reduce(CGFloat(10 * max(0, subviews.count - 1))) { $0 + $1.width }
         let width = proposal.width ?? ideal
         let wraps = ideal > width
         if wraps, subviews.count > 2 {

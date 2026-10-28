@@ -108,7 +108,7 @@ struct ReturnToLatestButton: View {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.down")
                     if hasNewReply { Text("有新内容") }
-                }.font(.system(size: 12, weight: .medium))
+                }.font(.system(size: ReplyStyle.labelSize, weight: .medium))
                     .padding(.horizontal, hasNewReply ? 12 : 0)
                     .frame(width: hasNewReply ? nil : 32, height: 32)
                     .workbenchFloatingSurface()
@@ -127,7 +127,11 @@ struct ReturnToLatestButton: View {
 
 /// Keep transcript placement eager: native text caches bound repeated measurement,
 /// without SwiftUI lazy phase resolution or system-table accessibility traversal.
-struct ConversationScrollView<Content: View>: View {
+///
+/// `bar` (activity bar, notices and the composer) floats over the transcript's
+/// bottom edge as a safe-area bar: the reply scrolls beneath the composer glass
+/// with the system's soft scroll-edge effect, and the tail stops above the bar.
+struct ConversationScrollView<Content: View, Bar: View>: View {
     var showsScrollIndicator = false
     var hasOlderHistory = false
     var onScroll: (Bool) -> Void = { _ in }
@@ -136,17 +140,39 @@ struct ConversationScrollView<Content: View>: View {
     var showsReturnToLatest = false
     var hasNewReply = false
     var onReturnToLatest: (() -> Void)? = nil
-    @ViewBuilder let content: Content
+    let content: Content
+    let bar: Bar
     @State private var contentSize = CGSize.zero
     @State private var conversationViewport = ConversationViewport()
-    private var scroll: some View {
+
+    init(showsScrollIndicator: Bool = false, hasOlderHistory: Bool = false,
+         onScroll: @escaping (Bool) -> Void = { _ in }, onContentSizeChange: @escaping () -> Void = {},
+         onNearTop: @escaping () -> Void = {}, showsReturnToLatest: Bool = false, hasNewReply: Bool = false,
+         onReturnToLatest: (() -> Void)? = nil,
+         @ViewBuilder content: () -> Content, @ViewBuilder bar: () -> Bar) {
+        self.showsScrollIndicator = showsScrollIndicator
+        self.hasOlderHistory = hasOlderHistory
+        self.onScroll = onScroll
+        self.onContentSizeChange = onContentSizeChange
+        self.onNearTop = onNearTop
+        self.showsReturnToLatest = showsReturnToLatest
+        self.hasNewReply = hasNewReply
+        self.onReturnToLatest = onReturnToLatest
+        self.content = content()
+        self.bar = bar()
+    }
+
+    private var transcript: some View {
         GeometryReader { viewport in
             ScrollView {
                 VStack(alignment: .leading, spacing: ReplyStyle.entrySpacing) { content }
                     .environment(\.conversationViewport, conversationViewport)
                     .padding(.vertical, 12)
-                    .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 72)), alignment: .leading)
-                    .padding(.horizontal, 36).frame(maxWidth: .infinity)
+                    .frame(width: min(ReplyStyle.readingWidth, max(1, viewport.size.width - 2 * ReplyStyle.horizontalPadding)), alignment: .leading)
+                    // Center the reading column in the card's current viewport.
+                    // Opening the inspector changes this viewport, not host identity.
+                    .padding(.horizontal, ReplyStyle.horizontalPadding)
+                    .frame(width: viewport.size.width, alignment: .center)
                     .coordinateSpace(name: "conversation-content")
                     .background {
                         ConversationScrollObserver(onScroll: { following in
@@ -159,25 +185,85 @@ struct ConversationScrollView<Content: View>: View {
                 .overlay(alignment: .leading) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
                 }
-                .overlay(alignment: .bottomLeading) {
-                    ConversationBookmarksMenu(navigator: conversationViewport.navigator)
-                        .padding(.leading, 40).padding(.bottom, 6)
-                }
+                .modifier(ConversationBottomBar(bar: bar, controls: floatingControls))
         }
     }
+
+    /// Bookmarks and return-to-latest float just above the bar (or the bottom
+    /// edge without one). Only the controls themselves take clicks; there is no
+    /// reserved footer or full-width surface intercepting the reading area.
+    private var floatingControls: some View {
+        ZStack(alignment: .bottom) {
+            HStack(spacing: 0) {
+                ConversationBookmarksMenu(navigator: conversationViewport.navigator)
+                    .padding(.leading, 40)
+                Spacer(minLength: 0)
+            }.padding(.bottom, 6)
+            if let onReturnToLatest {
+                ReturnToLatestButton(isVisible: showsReturnToLatest, hasNewReply: hasNewReply, action: onReturnToLatest)
+                    .padding(.bottom, 8)
+            }
+        }.frame(maxWidth: .infinity)
+    }
+
     var body: some View {
-        scroll.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
+        transcript.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
             contentSize = size
         }.task(id: contentSize) {
             await Task.yield()
             if !Task.isCancelled { onContentSizeChange() }
-        }.overlay(alignment: .bottom) {
-            if let onReturnToLatest {
-                // Only the button floats over the transcript; there is no reserved
-                // footer or full-width surface intercepting the reading area.
-                ReturnToLatestButton(isVisible: showsReturnToLatest, hasNewReply: hasNewReply, action: onReturnToLatest)
-                    .padding(.bottom, 8)
-            }
+        }
+    }
+}
+
+extension ConversationScrollView where Bar == EmptyView {
+    init(showsScrollIndicator: Bool = false, hasOlderHistory: Bool = false,
+         onScroll: @escaping (Bool) -> Void = { _ in }, onContentSizeChange: @escaping () -> Void = {},
+         onNearTop: @escaping () -> Void = {}, showsReturnToLatest: Bool = false, hasNewReply: Bool = false,
+         onReturnToLatest: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
+        self.init(showsScrollIndicator: showsScrollIndicator, hasOlderHistory: hasOlderHistory,
+                  onScroll: onScroll, onContentSizeChange: onContentSizeChange, onNearTop: onNearTop,
+                  showsReturnToLatest: showsReturnToLatest, hasNewReply: hasNewReply,
+                  onReturnToLatest: onReturnToLatest, content: content, bar: { EmptyView() })
+    }
+}
+
+/// Without a bar the floating controls sit on the transcript's bottom edge. With
+/// one, the bar becomes the scroll view's bottom safe-area bar, so content insets
+/// and scroll-to-bottom follow its height, and the controls ride on its top edge.
+///
+/// The system scroll-edge effect is off: inside the workspace's split view macOS
+/// draws it as a hard pocket with a divider across the card, whatever style is
+/// asked for. A plain gradient in the card's own color fades the reply into the
+/// bar instead — no divider, no offscreen mask over the transcript.
+private struct ConversationBottomBar<Bar: View, Controls: View>: ViewModifier {
+    let bar: Bar
+    let controls: Controls
+    static var fadeHeight: CGFloat { 28 }
+    @ViewBuilder func body(content: Content) -> some View {
+        if Bar.self == EmptyView.self {
+            content.overlay(alignment: .bottom) { controls }
+        } else {
+            content
+                .scrollEdgeEffectHidden(true, for: .bottom)
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    bar.frame(maxWidth: .infinity)
+                        .background(alignment: .bottom) {
+                            VStack(spacing: 0) {
+                                LinearGradient(colors: [WorkbenchTheme.contentBackground.opacity(0),
+                                                        WorkbenchTheme.contentBackground],
+                                               startPoint: .top, endPoint: .bottom)
+                                    .frame(height: Self.fadeHeight)
+                                WorkbenchTheme.contentBackground
+                            }
+                            .padding(.top, -Self.fadeHeight)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                        }
+                        .overlay(alignment: .top) {
+                            controls.alignmentGuide(.top) { $0[.bottom] }
+                        }
+                }
         }
     }
 }
@@ -372,13 +458,13 @@ private struct ConversationTurnRail: View {
                 if let index = hover.index, let previewY = hover.previewY, turns.indices.contains(index) {
                     let turn = turns[index]
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(index + 1) / \(count)").font(.system(size: 10)).monospacedDigit().foregroundStyle(.tertiary)
+                        Text("\(index + 1) / \(count)").font(.system(size: ReplyStyle.captionSize)).monospacedDigit().foregroundStyle(.tertiary)
                         Group {
                             if turn.prompt.isEmpty { Text("Attachment") }
                             else { Text(turn.prompt) }
-                        }.font(.system(size: 12, weight: .medium)).lineLimit(2)
+                        }.font(.system(size: ReplyStyle.labelSize, weight: .medium)).lineLimit(2)
                         if !turn.reply.isEmpty {
-                            Text(turn.reply).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(3)
+                            Text(turn.reply).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary).lineLimit(3)
                         }
                     }
                     .transaction { $0.animation = nil } // Neighbor text changes without crossfading.

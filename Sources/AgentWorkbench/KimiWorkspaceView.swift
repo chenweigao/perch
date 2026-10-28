@@ -14,6 +14,7 @@ struct KimiWorkspaceView: View {
     let onResultDisplayed: (KimiSession) -> Void
     @State private var activityReview = 0
     @State private var transcriptSubject: KimiTask?
+    @State private var editStats = SessionEditStatsCache()
     var body: some View {
         #if PERCH_ACCEPTANCE
         let _ = { NativeAcceptanceProbe.shared.kimiBodyEvaluations += 1 }()
@@ -22,39 +23,9 @@ struct KimiWorkspaceView: View {
             if let conversation = connection.conversation {
                 KimiGoalHeader(connection: connection, sessionID: conversation.snapshot.session.id)
                     .id(conversation.snapshot.session.id)
-                KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed)
-                if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error {
-                    ConversationNotice(text: problem, action: connection.snapshotReady ? nil : reloadAction)
+                KimiTimeline(connection: connection, activityReview: activityReview, onResultDisplayed: onResultDisplayed) {
+                    bottomBar(conversation)
                 }
-                let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
-                let recapKey = conversation.taskRecapRevision.map {
-                    "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
-                }
-                ConversationActivityBar(activity: ConversationActivity(
-                    messages: conversation.displayMessages, isRunning: conversation.snapshot.session.isTurnRunning,
-                    liveTools: conversation.live?.runningTools ?? [], online: connection.online,
-                    isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
-                    isResponding: conversation.live?.assistantText.isEmpty == false,
-                    pendingCount: pending, isStopping: connection.isStopping),
-                    isRunning: conversation.snapshot.session.isTurnRunning,
-                    timing: connection.timings.turns[conversation.snapshot.session.id],
-                    online: connection.online, offlineDetail: connection.error, pendingCount: pending,
-                    narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
-                    recapKey: recapKey,
-                    recapMessages: { try await connection.recapMessages(for: conversation.snapshot.session.id) },
-                    onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
-                    board: conversation.tasks,
-                    loadingTaskOutput: connection.loadingTaskOutput,
-                    stoppingTasks: connection.stoppingTasks,
-                    taskListError: connection.taskListError,
-                    onTaskOutput: { connection.loadTaskOutput($0) },
-                    onTaskStop: { connection.cancelTask($0) },
-                    onTasksRefresh: { Task { await connection.refreshTasks() } },
-                    onOpenTranscript: { transcriptSubject = $0 })
-                    .id(conversation.snapshot.session.id)
-                    .frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.top, 4)
-                KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
-                    .id(conversation.snapshot.session.id)
             } else if let id = connection.selectedId {
                 VStack(spacing: 14) {
                     if connection.loading { ProgressView("正在读取会话…") }
@@ -77,8 +48,8 @@ struct KimiWorkspaceView: View {
             if let problem = connection.error, connection.online || connection.conversation == nil {
                 ConversationNotice(text: L("连接中断，显示的是最近同步的内容。") + "\n" + problem, symbol: "wifi.exclamationmark")
             }
-            // An upgraded package with an older service still running. Informational:
-            // the session keeps working, and restarting that service stays the user's call.
+            // An upgraded package with an older service still running. Informational: the
+            // session keeps working. Perch restarts only the Kimi Web it started, once idle.
             if let notice = connection.staleRuntimeNotice {
                 ConversationNotice(text: notice, symbol: "info.circle", tint: .secondary)
             }
@@ -92,6 +63,49 @@ struct KimiWorkspaceView: View {
                                             connection: connection)
             }
 
+    }
+
+    /// Activity, notices and the composer float over the transcript's bottom
+    /// edge as its safe-area bar.
+    @ViewBuilder private func bottomBar(_ conversation: KimiConversation) -> some View {
+        VStack(spacing: 0) {
+            if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error {
+                ConversationNotice(text: problem, action: connection.snapshotReady ? nil : reloadAction)
+            }
+            let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
+            let recapKey = conversation.taskRecapRevision.map {
+                "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
+            }
+            let activityProbe = PerfDiagnostics.begin()
+            let messages = conversation.displayMessages
+            let activity = ConversationActivity(
+                messages: messages, isRunning: conversation.snapshot.session.isTurnRunning,
+                liveTools: conversation.live?.runningTools ?? [], online: connection.online,
+                isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
+                isResponding: conversation.live?.assistantText.isEmpty == false,
+                pendingCount: pending, isStopping: connection.isStopping, editStats: editStats)
+            let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(messages.count)")
+            ConversationActivityBar(activity: activity,
+                isRunning: conversation.snapshot.session.isTurnRunning,
+                timing: connection.timings.turns[conversation.snapshot.session.id],
+                online: connection.online, offlineDetail: connection.error, pendingCount: pending,
+                narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
+                recapKey: recapKey,
+                recapMessages: { try await connection.recapMessages(for: conversation.snapshot.session.id) },
+                onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
+                board: conversation.tasks,
+                loadingTaskOutput: connection.loadingTaskOutput,
+                stoppingTasks: connection.stoppingTasks,
+                taskListError: connection.taskListError,
+                onTaskOutput: { connection.loadTaskOutput($0) },
+                onTaskStop: { connection.cancelTask($0) },
+                onTasksRefresh: { Task { await connection.refreshTasks() } },
+                onOpenTranscript: { transcriptSubject = $0 })
+                .id(conversation.snapshot.session.id)
+                .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity, alignment: .center).padding(.top, 4)
+            KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
+                .id(conversation.snapshot.session.id)
+        }
     }
 
     /// Offered with an error while the selected session's snapshot is not ready.
@@ -113,7 +127,7 @@ private struct KimiComposerView: View {
     var body: some View {
         VStack(spacing: 10) {
             if let feedback = connection.commandFeedback[sessionID] {
-                Text(feedback).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(feedback).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary).textSelection(.enabled)
                     .lineLimit(4).help(feedback)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -145,44 +159,53 @@ private struct KimiComposerView: View {
                                 pastes: connection.pastes).id(sessionID)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true, disabled: connection.sending) { chooseFiles = true }
-                    let sessionModel = connection.conversation?.snapshot.session.model ?? ""
-                    let choice = connection.modelChoices[sessionID] ?? ""
-                    ComposerModelPicker(models: connection.catalog,
-                                        modelID: choice.isEmpty ? sessionModel : choice,
-                                        thinking: connection.thinkingChoices[sessionID],
-                                        disabledReason: !connection.online ? L("连接恢复后可修改设置。")
-                                            : !connection.snapshotReady ? L("正在同步会话，请稍候。")
-                                            : connection.sending ? L("消息发送中，请稍候。") : nil,
-                                        catalogError: connection.modelsError,
-                                        onRefreshCatalog: { await connection.refreshModels() },
-                                        sessionModel: sessionModel, usesSessionModel: choice.isEmpty,
-                                        onUseSessionModel: {
-                                            connection.modelChoices[sessionID] = ""
-                                            connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
-                                        }, scope: L("下一条消息生效"), onSelectModel: { model in
-                                            connection.modelChoices[sessionID] = model.id
-                                            connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
-                                        }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
-                    PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
-                                     disabled: connection.sending) { mode in
-                        connection.setPermission(mode, for: sessionID)
+                    Group {
+                        let sessionModel = connection.conversation?.snapshot.session.model ?? ""
+                        let choice = connection.modelChoices[sessionID] ?? ""
+                        ComposerModelPicker(models: connection.catalog,
+                                            modelID: choice.isEmpty ? sessionModel : choice,
+                                            thinking: connection.thinkingChoices[sessionID],
+                                            disabledReason: !connection.online ? L("连接恢复后可修改设置。")
+                                                : !connection.snapshotReady ? L("正在同步会话，请稍候。")
+                                                : connection.sending ? L("消息发送中，请稍候。") : nil,
+                                            catalogError: connection.modelsError,
+                                            onRefreshCatalog: { await connection.refreshModels() },
+                                            sessionModel: sessionModel, usesSessionModel: choice.isEmpty,
+                                            onUseSessionModel: {
+                                                connection.modelChoices[sessionID] = ""
+                                                connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
+                                            }, scope: L("下一条消息生效"), onSelectModel: { model in
+                                                connection.modelChoices[sessionID] = model.id
+                                                connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
+                                            }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
                     }
-                    ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
-                        onInput()
-                        let existing = connection.drafts[sessionID] ?? ""
-                        connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
-                        NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
-                    }
-                    ContextMeter(budget: connection.conversation?.snapshot.session.budget,
-                                 isStale: !connection.online || !connection.snapshotReady,
-                                 autoCompactHost: connection.host.id, autoCompactSession: sessionID)
+                    HStack(spacing: 6) {
+                        ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
+                                                directory: connection.conversation?.snapshot.session.cwd ?? "")
+                        PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
+                                         disabled: connection.sending) { mode in
+                            connection.setPermission(mode, for: sessionID)
+                        }
+                        ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
+                            onInput()
+                            let existing = connection.drafts[sessionID] ?? ""
+                            connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
+                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
+                        }
+                        ContextMeter(budget: connection.conversation?.snapshot.session.budget,
+                                     isStale: !connection.online || !connection.snapshotReady,
+                                     autoCompactHost: connection.host.id, autoCompactSession: sessionID)
+                    }.foregroundStyle(.secondary).padding(.leading, 10)
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                        }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: nextTurnSend)
                 }
-            }.padding(12).workbenchControlSurface()
+            }.padding(ReplyStyle.composerInset).workbenchComposerSurface()
             ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
                                  draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in
@@ -206,7 +229,7 @@ private struct KimiComposerView: View {
                 } catch { connection.actionError = error.localizedDescription }
             }
             return accepted
-        }.frame(maxWidth: kimiReadingWidth).padding(.horizontal, 36).frame(maxWidth: .infinity).padding(.bottom, 16).padding(.top, 8)
+        }.frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding).frame(maxWidth: .infinity, alignment: .center).padding(.bottom, 16).padding(.top, 8)
             .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 do {
                     let urls = try result.get()
@@ -299,7 +322,7 @@ private struct KimiQueuedMessages: View {
         let items = connection.queue.items(for: reference)
         // A queue paused at restart also holds messages queued while offline.
         if connection.queue.isPaused(reference), !items.isEmpty {
-            Button("继续发送排队消息") { connection.resumeQueue(for: sessionID) }.font(.caption)
+            Button("继续发送排队消息") { connection.resumeQueue(for: sessionID) }.font(.system(size: WorkbenchTheme.Typography.secondary))
                 .disabled(!connection.online)
         }
         ForEach(items) { message in
@@ -337,10 +360,13 @@ private struct KimiQueuedMessages: View {
     }
 }
 
-private struct KimiTimeline: View {
+/// `bar` (activity, notices and the composer) floats over the transcript's
+/// bottom edge; the reply scrolls beneath the composer glass.
+private struct KimiTimeline<Bar: View>: View {
     let connection: KimiConnection
     var activityReview: Int
     let onResultDisplayed: (KimiSession) -> Void
+    @ViewBuilder let bar: Bar
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     private var readingKey: String { "\(connection.host.id):kimi:\(connection.conversation?.snapshot.session.id ?? "")" }
@@ -378,14 +404,15 @@ private struct KimiTimeline: View {
                                 Button("加载更早消息") { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
                                     .buttonStyle(.borderless).disabled(!connection.online || !connection.snapshotReady)
                             }
-                        }.font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
+                        }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.isTurnRunning,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
                                            allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
-                                           foldsProcess: true, waitsForInitialPosition: true)
+                                           foldsProcess: true, waitsForInitialPosition: true,
+                                           timing: connection.timings.turns[c.snapshot.session.id])
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: c.snapshot.session.id))
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
@@ -398,12 +425,12 @@ private struct KimiTimeline: View {
                         }
                     }
                     KimiQueuedMessages(connection: connection, sessionID: c.snapshot.session.id)
-                    if let notice = c.notice { Text(notice).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
+                    if let notice = c.notice { Text(notice).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.orange).textSelection(.enabled) }
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(c.snapshot.pendingApprovals) { approval in
                         VStack(alignment: .leading, spacing: 12) {
-                            Label("需要你的确认", systemImage: "hand.raised").font(.headline).foregroundStyle(.orange)
-                            Text(approval.action).font(.system(size: 13))
+                            Label("需要你的确认", systemImage: "hand.raised").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(.orange)
+                            Text(approval.action).font(.system(size: ReplyStyle.labelSize))
                             KimiToolCard(tool: VisibleTool(id: approval.id, name: approval.toolName, input: approval.toolInputDisplay, status: .awaitingApproval))
                             HStack {
                                 Button("仅允许本次") { connection.resolve(approval, decision: "approved") }.buttonStyle(.borderedProminent)
@@ -414,6 +441,8 @@ private struct KimiTimeline: View {
                     ForEach(c.snapshot.pendingQuestions) { question in KimiQuestionView(question: question, connection: connection) }.id(c.snapshot.session.id)
                 }
                 Color.clear.frame(height: 1).id("bottom")
+            } bar: {
+                bar
             }
             .task(id: displayedResult.map { "\($0.id):\($0.updatedAt)" }) {
                 // Reviewing changes the shared catalog and sidebar. Publish
@@ -489,28 +518,28 @@ struct KimiQuestionView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("等你回答", systemImage: "bubble.left.and.exclamationmark.bubble.right").font(.headline)
+            Label("等你回答", systemImage: "bubble.left.and.exclamationmark.bubble.right").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             ForEach(Array(question.questions.enumerated()), id: \.element.id) { index, q in
                 let isCurrent = q.id == currentID
                 let isDone = done(q)
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
-                        Text(q.question).font(.system(size: 14, weight: .medium))
+                        Text(q.question).font(.system(size: ReplyStyle.secondarySize, weight: .medium))
                             .foregroundStyle(isDone ? .secondary : .primary)
                         if isDone {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.system(size: 11))
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.system(size: ReplyStyle.captionSize))
                             Spacer()
                             Button("修改回答") {
                                 confirmed.remove(q.id)
                                 // Keep the answer while returning to its editable form.
                                 editing = q.id
-                            }.font(.caption).buttonStyle(.plain)
+                            }.font(.system(size: WorkbenchTheme.Typography.secondary)).buttonStyle(.plain)
                         }
                     }
                     if let body = q.body, !isDone { KimiMarkdown(text: body) }
                     if isDone {
                         // Answered questions fold to a summary so the current one owns the space.
-                        Text(summary(of: q)).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                        Text(summary(of: q)).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).lineLimit(2)
                     } else {
                         ForEach(q.options) { option in
                             Button {
@@ -519,11 +548,11 @@ struct KimiQuestionView: View {
                                 HStack(alignment: .top, spacing: 9) {
                                     // Radio for single, checkbox for multi (ccgui marker parity).
                                     Image(systemName: markerImage(for: q, option: option.id))
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(selected(option.id, in: q) ? Color.accentColor : Color.secondary)
+                                        .font(.system(size: ReplyStyle.secondarySize))
+                                        .foregroundStyle(selected(option.id, in: q) ? WorkbenchTheme.accent : Color.secondary)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(option.label)
-                                        if let description = option.description { Text(description).font(.system(size: 11)).foregroundStyle(.secondary) }
+                                        if let description = option.description { Text(description).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary) }
                                     }
                                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                             }.buttonStyle(.plain)
@@ -538,7 +567,7 @@ struct KimiQuestionView: View {
                     }
                 }
                 .padding(10)
-                .background(isCurrent ? Color.accentColor.opacity(0.06) : .clear,
+                .background(isCurrent ? WorkbenchTheme.accent.opacity(0.06) : .clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
             }
             Button("提交回答") {

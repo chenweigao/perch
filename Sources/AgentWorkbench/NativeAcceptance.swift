@@ -12,6 +12,7 @@ import os
     var kimiBodyEvaluations = 0
     var renderedQuery: String?
     var selection: String?
+    var searchResults: [String]?
     var dashboardProjection: DashboardProjection?
     var dashboardAttentionOnly = false
     var dashboardGroupID: UUID?
@@ -40,6 +41,10 @@ import os
     weak var detailView: NSView?
     var detailCurrent = false
     let checkDetailLifecycle = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "detail-lifecycle"
+    weak var taskContextView: NSView?
+    var taskContextReference: SessionReference?
+    var taskContextLoading = false
+    var taskContextReady = false
     /// The activity popover's subagent rows as last rendered: "id|status|stoppable|stopping".
     var subagentRoster: [String] = []
     /// The open subagent sheet's row ids as last rendered.
@@ -53,6 +58,28 @@ struct NativeDetailProbe: NSViewRepresentable {
     func updateNSView(_ view: NSView, context: Context) {
         NativeAcceptanceProbe.shared.detailView = view
         NativeAcceptanceProbe.shared.detailCurrent = current
+    }
+}
+
+struct NativeTaskContextProbe: NSViewRepresentable {
+    let reference: SessionReference?
+    let loading: Bool
+    let ready: Bool
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        let probe = NativeAcceptanceProbe.shared
+        probe.taskContextView = view
+        probe.taskContextReference = reference
+        probe.taskContextLoading = loading
+        probe.taskContextReady = ready
+    }
+    static func dismantleNSView(_ view: NSView, coordinator: ()) {
+        let probe = NativeAcceptanceProbe.shared
+        guard probe.taskContextView === view else { return }
+        probe.taskContextView = nil
+        probe.taskContextReference = nil
+        probe.taskContextLoading = false
+        probe.taskContextReady = false
     }
 }
 
@@ -138,10 +165,12 @@ struct NativeDashboardProbe: NSViewRepresentable {
 struct NativeDirectoryProbe: NSViewRepresentable {
     let query: String
     let selection: String?
+    var results: [String]? = nil
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ view: NSView, context: Context) {
         NativeAcceptanceProbe.shared.renderedQuery = query
         NativeAcceptanceProbe.shared.selection = selection
+        NativeAcceptanceProbe.shared.searchResults = results
     }
 }
 
@@ -380,7 +409,15 @@ struct NativeDirectoryProbe: NSViewRepresentable {
             }
         }
         guard body == nil else { throw WorkbenchError("隔离验收不执行写请求：\(path)") }
-        if path == "/models" { return Data(#"{"models":[]}"#.utf8) }
+        if path == "/models" {
+            let models: [[String: Any]] = [
+                ["agent": "qoder", "provider": "qoder-cn", "id": "qoder-cn-pro", "name": "Qoder CN Pro",
+                 "thinking": ["low", "medium", "high"], "defaultThinking": "medium", "reasoning": true],
+                ["agent": "qoderintl", "provider": "qoder-global", "id": "qoder-global-pro", "name": "Qoder Global Pro",
+                 "thinking": ["off", "high"], "defaultThinking": "high", "reasoning": true]
+            ]
+            return try JSONSerialization.data(withJSONObject: ["models": models])
+        }
         let id = path.split(separator: "?")[0].replacingOccurrences(of: "/sessions/", with: "")
         guard path.hasPrefix("/sessions/"), let data = snapshots[id] else {
             throw WorkbenchError("隔离验收仅预置会话 0000–0007：\(path)")
@@ -422,18 +459,39 @@ struct NativeDirectoryProbe: NSViewRepresentable {
                                                          sessions: fixture.sessions, native: connection,
                                                          kimi: ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"]?.hasPrefix("kimi-") == true
                                                             ? KimiAcceptanceProtocol.connection(host: NativeAcceptanceFixture.host) : nil))
+        let model = _model.wrappedValue
+        NotificationCenter.default.addObserver(forName: NSApplication.didFinishLaunchingNotification,
+                                               object: nil, queue: .main) { _ in
+            Task { @MainActor in NativeAcceptanceApp.drive(model: model, fixture: fixture) }
+        }
     }
     var body: some Scene {
-        WindowGroup("Perch · 隔离性能验收") {
+        // The fixture window is created directly: once the workspace grew a
+        // toolbar and floating hosts, scene appearance callbacks stopped firing
+        // reliably in CI, and an acceptance run must not depend on scene timing.
+        WindowGroup("Perch · 隔离性能验收") { EmptyView() }
+            .defaultLaunchBehavior(.suppressed).restorationBehavior(.disabled)
+    }
+
+    private static var window: NSWindow?
+
+    @MainActor private static func drive(model: WorkbenchModel, fixture: NativeAcceptanceFixture) {
+        let window = NSWindow(contentRect: NSRect(x: 60, y: 80, width: 1280, height: 820),
+                              styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                              backing: .buffered, defer: false)
+        window.title = "Perch · 隔离性能验收"
+        window.isReleasedWhenClosed = false
+        window.contentViewController = NSHostingController(rootView:
             WorkbenchView(model: model).preferredColorScheme(.light)
-                .environment(\.locale, Locale(identifier: "zh-Hans"))
-                .frame(width: 1280, height: 820)
-                .task {
-                    model.open(fixture.sessions[0])
-                    guard let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] else { return }
-                    await NativeAcceptanceRunner(model: model, fixture: fixture).run(mode)
-                }
-        }.defaultSize(width: 1280, height: 820).windowStyle(.hiddenTitleBar)
+                .environment(\.locale, Locale(identifier: "zh-Hans")))
+        window.setContentSize(NSSize(width: 1280, height: 820))
+        window.makeKeyAndOrderFront(nil)
+        self.window = window
+        Task {
+            model.open(fixture.sessions[0])
+            guard let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] else { return }
+            await NativeAcceptanceRunner(model: model, fixture: fixture).run(mode)
+        }
     }
 }
 
@@ -499,6 +557,7 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "sidebar-structure" { report.merge(try await sidebarStructure(window)) { _, new in new } }
             if mode == "sidebar-invalidation" { report.merge(try await sidebarInvalidation(window)) { _, new in new } }
             if mode == "detail-lifecycle" { report.merge(try await detailLifecycle(window)) { _, new in new } }
+            if mode == "inspector" { report.merge(try await inspector(window)) { _, new in new } }
             if mode == "joint" {
                 report.merge(try await joint(window)) { _, new in new }
             }
@@ -512,6 +571,17 @@ private struct ReferenceComposerFixtureView: View {
                 report.merge(try await dashboard(window)) { _, new in new }
             }
             if mode == "all" {
+                // The final turn's reply fills the viewport at the 16 pt reading
+                // size, so a bottom-anchored session may mount no user prompt row.
+                // Reveal the previous turn first: the reconciliation fixture needs
+                // a visible and an offscreen user row.
+                if let scroll = transcript(in: window),
+                   let navigator = ConversationTranscript.navigator(in: scroll),
+                   navigator.snapshot.turns.count > 1 {
+                    navigator.select(navigator.snapshot.turns.count - 2)
+                    try await Task.sleep(for: .milliseconds(500))
+                    flush(window)
+                }
                 guard let root = window.contentView, let checks = try ConversationTranscript.checkReconciliation(in: root) else {
                     throw WorkbenchError("Missing mounted row reconciliation fixture")
                 }
@@ -532,7 +602,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             let responsivenessReport = responsiveness.finish()
             report["main_actor_lateness"] = responsivenessReport
             let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
@@ -624,6 +694,9 @@ private struct ReferenceComposerFixtureView: View {
                 let oldDocument = oldScroll.flatMap { ConversationTranscript.document(in: $0) }
                 let start = CACurrentMediaTime()
                 model.open(items[index])
+                // Height publication is deferred one pass by design; sample only
+                // after the reveal's bottom pin has landed.
+                await Task.yield(); flush(window)
                 var samples: [[String: Any]] = []
                 for _ in 0..<60 {
                     await Task.yield(); flush(window)
@@ -759,6 +832,90 @@ private struct ReferenceComposerFixtureView: View {
         catch { fputs("Kimi acceptance result write failed: \(error)\n", stderr); exit(1) }
         if report["status"] as? String != "passed" { exit(1) }
         NSApp.terminate(nil)
+    }
+    private func inspector(_ window: NSWindow) async throws -> [String: Any] {
+        // The inspector host installs on first use, not at launch.
+        model.taskContextWindow.embeddedVisible = true
+        try await settle(window, "inspector install") {
+            self.workspaceSplit(in: window)?.floatingInspectorView?.window === window
+        }
+        model.taskContextWindow.embeddedVisible = false
+        try await settle(window, "inspector hidden") {
+            self.workspaceSplit(in: window)?.floatingInspectorView?.isHidden == true
+        }
+        guard let split = workspaceSplit(in: window), split.splitViewItems.count == 1,
+              split.floatingSidebarView?.window === window,
+              split.floatingInspectorView?.window === window,
+              split.detailCanvasView?.window === window else {
+            throw WorkbenchError("Missing floating-sidebar workspace and floating inspector")
+        }
+        let inspectorPanel = split.floatingInspectorView!
+        let source = fixture.sessions[1].reference
+        let route = "/sessions/\(source.terminalID)?turns=20"
+        let draft = "Inspector 性能验收草稿"
+        model.native.drafts["session-0"] = draft
+        model.taskContextWindow.locked = source
+        model.taskContextWindow.embeddedVisible = false
+        try await settle(window, "inspector baseline") {
+            inspectorPanel.isHidden && self.probe.taskContextReference == nil &&
+                self.containsText(draft, in: window.contentView)
+        }
+        guard let reader = transcript(in: window),
+              let document = ConversationTranscript.document(in: reader),
+              let composer = draftEditor(in: window.contentView) else {
+            throw WorkbenchError("Missing transcript identity fixtures")
+        }
+        let selected = model.tabs.selectedID
+        func identityStable() -> Bool {
+            transcript(in: window) === reader && ConversationTranscript.document(in: reader) === document &&
+                draftEditor(in: window.contentView) === composer && model.tabs.selectedID == selected &&
+                model.native.drafts["session-0"] == draft
+        }
+
+        var opens: [Double] = [], closes: [Double] = []
+        let cpuStart = processCPU()
+        let span = probe.signposter.beginInterval("TaskContextInspectorToggle")
+        for step in 0..<12 {
+            let requestCount = fixture.requests.count
+            var start = CACurrentMediaTime()
+            model.taskContextWindow.embeddedVisible = true
+            try await settle(window, "inspector open \(step)") {
+                !inspectorPanel.isHidden && inspectorPanel.frame.width >= 279 &&
+                    inspectorPanel.frame.width <= 421 &&
+                    self.probe.taskContextView?.window === window &&
+                    self.probe.taskContextReference == source && !self.probe.taskContextLoading &&
+                    self.probe.taskContextReady && self.fixture.requests.dropFirst(requestCount).contains(route)
+            }
+            opens.append((CACurrentMediaTime() - start) * 1000)
+            guard identityStable() else { throw WorkbenchError("Opening the inspector replaced conversation state") }
+
+            start = CACurrentMediaTime()
+            model.taskContextWindow.embeddedVisible = false
+            try await settle(window, "inspector close \(step)") {
+                inspectorPanel.isHidden && self.probe.taskContextReference == nil &&
+                    !self.probe.taskContextLoading && !self.probe.taskContextReady
+            }
+            closes.append((CACurrentMediaTime() - start) * 1000)
+            guard identityStable() else { throw WorkbenchError("Closing the inspector replaced conversation state") }
+        }
+        probe.signposter.endInterval("TaskContextInspectorToggle", span)
+        let cpuSeconds = processCPU() - cpuStart
+        let openStats = stats(opens), closeStats = stats(closes)
+        guard openStats["p95"]! < 750, closeStats["p95"]! < 750,
+              max(openStats["max"]!, closeStats["max"]!) < 1500 else {
+            throw WorkbenchError("Inspector toggles exceeded the latency budget: open=\(openStats), close=\(closeStats)")
+        }
+        let idleStart = processCPU()
+        try await Task.sleep(for: .seconds(2))
+        let idleCPU = processCPU() - idleStart
+        guard idleCPU < 1 else { throw WorkbenchError("Hidden inspector kept consuming CPU: \(idleCPU)s / 2s") }
+        model.taskContextWindow.locked = nil
+        return ["inspector_toggles": opens.count, "inspector_open_ms": openStats,
+                "inspector_close_ms": closeStats, "inspector_process_cpu_seconds": cpuSeconds,
+                "inspector_idle_cpu_seconds_over_2s": idleCPU,
+                "inspector_context_reads": fixture.requests.filter { $0 == route }.count,
+                "workspace_topology": "full canvas in a behind-window frame, conversation card, independently hosted floating glass sidebar and floating inspector card",
+                "inspector_contract": "200-turn locked context decoded and projected in the floating inspector; single-item split state, transcript/document/composer identity, selection and draft verified after every toggle"]
     }
     private func invalidation(_ window: NSWindow) async throws -> [String: Any] {
         // Allow initial tasks/layout to settle before measuring unrelated writes.
@@ -1118,7 +1275,7 @@ private struct ReferenceComposerFixtureView: View {
                 "switch_contract": "selected transcript and visible draft after every switch; synthetic catalog updates, no remote transport"]
     }
     private func search(_ window: NSWindow, sheet: Bool) async throws -> [String: Any] {
-        probe.query = nil; probe.renderedQuery = nil
+        probe.query = nil; probe.renderedQuery = nil; probe.searchResults = nil
         if sheet { model.showSessionSearch = true } else { model.showAllSessions() }
         try await settle(window) { self.probe.renderedQuery != nil }
         var samples: [Double] = []
@@ -1132,9 +1289,15 @@ private struct ReferenceComposerFixtureView: View {
             probe.signposter.endInterval("DirectoryQuery", span)
             // Correctness checks happen after timing, never by re-running the
             // search inside a readiness token on every rendering pass.
-            let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
-            guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
-            states.append(["query": term, "selection": probe.selection ?? "none"])
+            if sheet {
+                let expected = fixture.sessions.filter { $0.matchesSearch(term) }.map(\.id)
+                guard probe.searchResults == expected else { throw WorkbenchError("Unified search results mismatch for \(term)") }
+                states.append(["query": term, "result_count": String(expected.count)])
+            } else {
+                let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
+                guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
+                states.append(["query": term, "selection": probe.selection ?? "none"])
+            }
         }
         if sheet {
             model.showSessionSearch = false
@@ -1429,18 +1592,13 @@ private struct ReferenceComposerFixtureView: View {
                     && rows().contains { $0.item.id == outside.id && $0.selected }
             }
         }
-        func findSplit(_ view: NSView?) -> NSSplitView? {
-            guard let view else { return nil }
-            if let split = view as? NSSplitView { return split }
-            return view.subviews.lazy.compactMap { findSplit($0) }.first
+        guard let workspace = workspaceSplit(in: window) else {
+            throw WorkbenchError("Missing floating-sidebar workspace")
         }
-        guard let split = findSplit(window.contentView) else {
-            throw WorkbenchError("Missing native split view")
-        }
-        split.setPosition(220, ofDividerAt: 0)
+        workspace.setFloatingSidebarWidth(WorkspaceLayoutMetrics.sidebarMinimumWidth)
         flush(window)
         guard rows().contains(where: { $0.item.id == outside.id }) else { throw WorkbenchError("Narrow sidebar lost selection") }
-        split.setPosition(300, ofDividerAt: 0)
+        workspace.setFloatingSidebarWidth(300)
         model.navigationState.tabs.close(outside.id)
         model.navigationState.tabs.select(fixture.sessions[0].id)
         try await settle(window, "restore selected row") { rows().contains { $0.item.id == self.fixture.sessions[0].id && $0.selected } }
@@ -1767,6 +1925,7 @@ private struct ReferenceComposerFixtureView: View {
         }
         // Reaching the top edge loads the next page without a click; the row at
         // the edge stays put while older turns are prepended above it.
+        ConversationTranscript.markUserScroll(in: scroll)
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 200))
         scroll.reflectScrolledClipView(scroll.contentView)
         guard let top = ConversationTranscript.readingAnchor(in: scroll) else { throw WorkbenchError("Missing top anchor") }
@@ -2008,16 +2167,17 @@ private struct ReferenceComposerFixtureView: View {
             _ = try await ProcessRunner.run("/usr/bin/git", ["-C", directory.path, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Fixture"])
             try "let title = \"After 中文\"\nprint(title)\n".write(to: file, atomically: true, encoding: .utf8)
             try await Task.sleep(for: .seconds(2))
-            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
+            guard let mainWindow = NSApp.windows.first(where: { $0.isVisible && $0.title.contains("隔离性能") }) else { throw WorkbenchError("No window") }
             let item = fixture.sessions[0]
             model.open(item)
-            try await settle(window) { self.model.native.snapshot?.id == item.reference.terminalID }
+            try await settle(mainWindow) { self.model.native.snapshot?.id == item.reference.terminalID }
             model.native.drafts[item.reference.terminalID] = "Existing draft"
             let browser = model.fileBrowser
             model.showFileViewer = true
             browser.configure(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "Local fixture", destination: ""), cwd: directory.path)
             browser.open(file.path, line: 1)
-            try await settle(window, "file read") { !browser.loading && browser.content != nil }
+            try await settle(mainWindow, "file read") { !browser.loading && browser.content != nil }
+            guard let window = model.fileWindow.window else { throw WorkbenchError("Missing file reader window") }
             guard case .text(let text, _, _) = browser.content else { throw WorkbenchError("Missing file text") }
             let reference = ReviewContext(path: file.path, text: text, selection: (text as NSString).range(of: "After"))
             model.appendReviewContext(reference.prompt(feedback: "Review this change"), to: item.reference)
@@ -2073,7 +2233,7 @@ private struct ReferenceComposerFixtureView: View {
                 browser.loadGitDiff(changed)
                 try await settle(window, "restore committed diff") { !browser.loading && browser.gitDiff != nil }
                 try await settle(window, "visible diff after empty comparison") {
-                    guard let source = self.reviewSource(in: window.contentView) else { return false }
+                    guard let source = self.reviewSource(in: self.model.fileWindow.window?.contentView) else { return false }
                     return source.visibleRect.width > 20 && source.visibleRect.height > 20
                 }
                 report["diff_visible_after_empty_comparison"] = true
@@ -2086,14 +2246,14 @@ private struct ReferenceComposerFixtureView: View {
                 browser.loadGitDiff(next)
                 try await settle(window, "next file") { !browser.loading && browser.gitDiff != nil }
                 browser.toggleReviewed()
-                guard let source = self.reviewSource(in: window.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
+                guard let source = self.reviewSource(in: self.model.fileWindow.window?.contentView), let scroll = source.enclosingScrollView else { throw WorkbenchError("Review scroll view missing") }
                 scroll.contentView.scroll(to: NSPoint(x: 0, y: 240)); scroll.reflectScrolledClipView(scroll.contentView)
                 guard let previous = browser.adjacentReview(-1), previous.path == changed.path else { throw WorkbenchError("Previous file unavailable") }
                 browser.loadGitDiff(previous)
                 try await settle(window, "previous file") { !browser.loading && browser.gitDiff != nil }
                 browser.loadGitDiff(next)
                 try await settle(window, "restored scroll offset") {
-                    !browser.loading && (self.reviewSource(in: window.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
+                    !browser.loading && (self.reviewSource(in: self.model.fileWindow.window?.contentView)?.enclosingScrollView?.contentView.bounds.origin.y ?? 0) > 200
                 }
                 browser.loadGitDiff(changed)
                 try await settle(window, "return to reviewed file") { !browser.loading && browser.gitDiff != nil }
@@ -2122,7 +2282,19 @@ private struct ReferenceComposerFixtureView: View {
                 report["new_task_file_completion_without_session"] = true
             }
             report["status"] = "passed"
-        } catch { report["status"] = "failed"; report["error"] = error.localizedDescription }
+        } catch {
+            report["status"] = "failed"; report["error"] = error.localizedDescription
+            if let reader = model.fileWindow.window {
+                report["reader_frame"] = NSStringFromRect(reader.frame)
+                var view: NSView? = reviewSource(in: reader.contentView)
+                var hierarchy: [String] = []
+                while let current = view {
+                    hierarchy.append("\(type(of: current)): frame=\(current.frame), visible=\(current.visibleRect), hidden=\(current.isHidden)")
+                    view = current.superview
+                }
+                report["reader_geometry"] = hierarchy
+            }
+        }
         try? writeReport(report, name: "result.json")
         if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_KEEP_OPEN"] != "1" {
             try? FileManager.default.removeItem(at: directory)
@@ -2216,6 +2388,27 @@ private struct ReferenceComposerFixtureView: View {
             if let scroll = view as? NSScrollView, let document = scroll.documentView,
                ConversationTranscript.retainedHosts(in: document) != nil { return scroll }
             queue.append(contentsOf: view.subviews)
+        }
+        return nil
+    }
+    private func workspaceSplit(in window: NSWindow) -> WorkbenchSplitController? {
+        var views = window.contentView.map { [$0] } ?? []
+        while let view = views.popLast() {
+            if let splitView = view as? NSSplitView {
+                var responder: NSResponder? = splitView
+                while let current = responder {
+                    if let split = current as? WorkbenchSplitController { return split }
+                    if let controller = current as? NSViewController {
+                        var parent = controller.parent
+                        while let candidate = parent {
+                            if let split = candidate as? WorkbenchSplitController { return split }
+                            parent = candidate.parent
+                        }
+                    }
+                    responder = current.nextResponder
+                }
+            }
+            views.append(contentsOf: view.subviews)
         }
         return nil
     }

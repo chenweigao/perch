@@ -15,12 +15,17 @@ struct ProtocolTests {
         case "activity":
             try benchConversationActivity()
             return
+        case "streaming":
+            try benchStreamingDelta()
+            return
         default:
             break
         }
         try checkConversationPresentation()
         try checkConversationProcessFold()
         try checkConversationPresentationModel()
+        try checkConversationPresentationHistory()
+        try checkConversationPresentationPaging()
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
         try checkTaskRecaps()
@@ -31,15 +36,18 @@ struct ProtocolTests {
         try checkToolVisibility()
         try checkConversationTodos()
         try checkConversationActivity()
+        try checkTaskContextFiles()
         checkConversationTiming()
         checkStreamReveal()
         try checkFrameHitchRecorder()
         checkAutoCompact()
         checkSafeLink()
         try checkSessionEditStats()
+        try checkSessionEditStatsCache()
         try checkProjectCommands()
         checkAppVersionCheck()
         try checkWorkflow()
+        try checkDocumentReading()
         checkConversationRowGeometry()
         checkReplyDocument()
         checkReplyMath()
@@ -70,6 +78,7 @@ struct ProtocolTests {
         checkSidebar()
         try checkModelSelection()
         try checkSlashCommands()
+        try await checkWorkspaceUpgrade()
         try await checkRemoteFileViewer()
         try await checkRemoteGitDiff()
         try await checkRemoteGitComparison()

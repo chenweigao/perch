@@ -74,17 +74,17 @@ public enum RemoteFileCommand {
     /// The remote script is fixed text; the path arrives as a positional parameter so
     /// it is never parsed as shell syntax. `--` keeps leading-hyphen names as operands.
     /// Reading stops at the limit instead of downloading the whole file first.
-    static func script(limit: Int) -> String {
+    static func script(limit: Int, fromEnd: Bool = false) -> String {
         """
         p=$1
-        \(readScript(limit: limit))
+        \(readScript(limit: limit, fromEnd: fromEnd))
         """
     }
 
     /// Shared read body; the caller's script sets `p` to the path being inspected.
     /// The header echoes the path actually read so a multi-root lookup can display
     /// the real location instead of the requested guess.
-    static func readScript(limit: Int) -> String {
+    static func readScript(limit: Int, fromEnd: Bool = false) -> String {
         """
         if [ -d "$p" ]; then
           if [ ! -x "$p" ] || [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
@@ -92,17 +92,17 @@ public enum RemoteFileCommand {
           ls -A -p -1 -- "$p"
         elif [ -e "$p" ]; then
           if [ ! -r "$p" ]; then printf 'kind=denied\\n'; exit 0; fi
-          printf 'kind=file\\npath_base64=%s\\nsize=%s\\n--\\n' "$(printf '%s' "$p" | base64 | tr -d '\\n')" "$(wc -c < "$p")"
-          head -c \(limit) -- "$p"
+          printf 'kind=file\\npath_base64=%s\\nsize=%s\\nmtime=%s\\n--\\n' "$(printf '%s' "$p" | base64 | tr -d '\\n')" "$(wc -c < "$p")" "$(stat -c %Y -- "$p" 2>/dev/null || stat -f %m "$p" 2>/dev/null || true)"
+          \(fromEnd ? "tail" : "head") -c \(limit) -- "$p"
         else
           printf 'kind=missing\\n'
         fi
         """
     }
 
-    public static func remoteCommand(path: String, limit: Int = readLimit) -> String {
+    public static func remoteCommand(path: String, limit: Int = readLimit, fromEnd: Bool = false) -> String {
         // Quote every operand separately; the path stays one argv element on the remote.
-        ["/bin/sh", "-c", script(limit: limit), "perch-file-view", path]
+        ["/bin/sh", "-c", script(limit: limit, fromEnd: fromEnd), "perch-file-view", path]
             .map(SSHCommand.quote).joined(separator: " ")
     }
 
@@ -112,13 +112,13 @@ public enum RemoteFileCommand {
     /// fallback, so a file the agent just touched wins over a same-path copy in
     /// another checkout. Only a bare filename falls back to a name search, which
     /// then spans every root. Absolute and ~ paths stay authoritative as before.
-    public static func referenceCommand(path: String, cwd: String, roots: [String]) throws -> String {
+    public static func referenceCommand(path: String, cwd: String, roots: [String], limit: Int = readLimit) throws -> String {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains("\0") else {
-            return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd))
+            return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd), limit: limit)
         }
         guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~") else {
-            return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd))
+            return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd), limit: limit)
         }
         let reference = (trimmed as NSString).standardizingPath
         // Normalize before matching absolute tool paths, so ./Sources/Foo.swift
@@ -136,7 +136,7 @@ public enum RemoteFileCommand {
         }
         // Without any usable root the session directory is required, which is
         // exactly what resolve validates; its error reaches the panel unchanged.
-        guard !ordered.isEmpty else { return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd)) }
+        guard !ordered.isEmpty else { return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd), limit: limit) }
         // find's -name operand is a glob, even when passed as a quoted argument.
         let name = reference.reduce("") { $0 + ("\\*?[".contains($1) ? "\\" : "") + String($1) }
         let lookup = """
@@ -156,7 +156,7 @@ public enum RemoteFileCommand {
           done
           exit 0
         fi
-        \(readScript(limit: readLimit))
+        \(readScript(limit: limit))
         """
         return (["/bin/sh", "-c", lookup, "perch-file-reference", reference, name] + ordered)
             .map(SSHCommand.quote).joined(separator: " ")
@@ -184,7 +184,18 @@ public enum RemoteFileCommand {
         return nil
     }
 
-    public static func parse(_ data: Data, limit: Int = readLimit) throws -> RemoteFileContent {
+    public static func modifiedAt(in data: Data) -> Double? {
+        guard let end = data.range(of: Data("\n--\n".utf8)) else { return nil }
+        let header = String(decoding: data[..<end.lowerBound], as: UTF8.self)
+        return header.split(separator: "\n").first { $0.hasPrefix("mtime=") }.flatMap { Double($0.dropFirst(6)) }
+    }
+
+    public static func body(in data: Data) -> Data? {
+        guard let separator = data.range(of: Data("\n--\n".utf8)) else { return nil }
+        return Data(data[separator.upperBound...])
+    }
+
+    public static func parse(_ data: Data, limit: Int = readLimit, fromEnd: Bool = false) throws -> RemoteFileContent {
         guard let separator = data.range(of: Data("\n--\n".utf8)) else {
             let header = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
             if header == "kind=denied" { return .denied }
@@ -223,7 +234,8 @@ public enum RemoteFileCommand {
             // rather than showing replacement characters.
             var bytes = Data(body)
             let truncated = size > limit
-            if truncated { while let last = bytes.last, last & 0xC0 == 0x80 { bytes.removeLast() }
+            if fromEnd && truncated { while let first = bytes.first, first & 0xC0 == 0x80 { bytes.removeFirst() } }
+            if !fromEnd && truncated { while let last = bytes.last, last & 0xC0 == 0x80 { bytes.removeLast() }
                            if let last = bytes.last, last & 0x80 != 0 { bytes.removeLast() } }
             guard let text = String(data: bytes, encoding: .utf8) else { return .binary(size: size) }
             return .text(text, truncated: truncated, size: size)

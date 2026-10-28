@@ -5,10 +5,11 @@ parses CommonMark/GFM into `ReplyDocument`; SwiftUI renders the document without
 HTML execution or a WebView. Remote image references inside Markdown show their
 alt text; dedicated conversation attachments keep their existing renderer.
 
-The reading column and composer share a 700 pt maximum width. Short replies stay
-left-aligned within that column. Body text uses the
-macOS system font at 14 pt with a 1.625 minimum line-height ratio. H1 uses 16 pt;
-H2–H6 stay at the body size. Headings, strong text and table headers use medium
+The reading column (680 pt) and composer share one centered rail. Short replies stay
+left-aligned within that column. Body text uses the macOS system font at the
+reader's size (14–18 pt, default 16) with a 1.625 minimum line-height ratio; H1 and
+H2 step up 4 and 2 pt and H3–H6 stay at the body size (see
+[ui-spec 正文刻度](design/ui-spec.md#正文刻度)). Headings, strong text and table headers use medium
 weight, including strong text nested inside a heading or inline code. Headings
 have 22 pt of leading space (14 pt in compact lists/quotes) and 7 pt before their
 following content; the first block has no leading space. Section spacing carries
@@ -83,10 +84,9 @@ and lands on the fold row.
 Assistant progress stays visible in chronological order, interleaved with each
 reasoning phase. New reasoning and new overviews append below prior output rather
 than replacing a turn-wide slot. Completed reasoning phases have independent
-disclosures; the currently streaming phase uses a naturally wrapped viewport that
-fits short thoughts and caps its height at 76 pt. The header offers a full-text
-popover only when the preview overflows. The viewport follows
-new text unless the user scrolls upward, with no flashing scrollbar. Kimi volatile deltas and native
+disclosures, titled 已思考 N秒 when this app watched the phase stream. The phase
+that is still streaming has no transcript row: the activity bar owns it, so the
+reader sees one live indicator instead of two. Kimi volatile deltas and native
 agent snapshots use the same policy. A volatile Kimi message is deduplicated only
 against messages in the current turn.
 
@@ -157,11 +157,9 @@ Kimi conversation (and use Edit → Paste): confirm one thumbnail appears and th
 existing draft remains. Send it to verify upload separately. OMP/Qoder text-only
 inputs do not advertise image paste support.
 
-Streaming thinking uses complete light italic text in a fixed 76 pt vertical scroll area.
-It wraps to the reading width instead of truncating a 240-character suffix; text
-updates do not move the outer transcript. Its inner viewport follows new text by
-default, pauses when the user scrolls upward, and resumes after they return to the
-bottom. The activity
+Streaming thinking has no transcript row (2026-10-28): the activity bar shows the
+live phase, and the settled thought appears as 已思考 N秒 with its full text in
+upright secondary-size type. The activity
 bar stays above the composer, showing a quiet three-dot opacity pulse while busy,
 paused under Reduce Motion. Approval/question waits do not animate as active work.
 The Kimi TodoList schema was checked against installed Kimi 2.0.2 source: successful
@@ -180,8 +178,9 @@ appears only while away from the bottom; clicking it resumes following. AppKit's
 [didLiveScrollNotification](https://developer.apple.com/documentation/appkit/nsscrollview/didlivescrollnotification)
 distinguishes user scrolling from programmatic stream updates.
 
-The sidebar uses native NSSplitViewController with a saved width between 220 and 420 pt.
-Floating controls use the public macOS 26
+The sidebar is independently hosted above the full detail canvas with persisted
+visibility and a saved width between 220 and 480 pt. It and the floating controls
+use the public macOS 26
 [Liquid Glass modifier](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views),
 available on every supported macOS version (26+). Reduce Transparency keeps its
 accessible opaque surface; transcript text does not use glass.
@@ -190,9 +189,10 @@ accessible opaque surface; transcript text does not use glass.
 draft synchronization checks. `scripts/build-composer-preview.sh` builds an
 isolated input window with a 100 ms refresh, two drafts and local-only submissions.
 
-The native workspace split extends under the unified titlebar. AppKit owns the
-glass sidebar's toolbar avoidance; the outer SwiftUI view does not duplicate that
-top inset. No fixed negative offsets or manual titlebar padding are added.
+The detail canvas extends under the unified titlebar. Its hosted content remains
+inside the safe area and uses one dynamic leading inset to avoid the glass sidebar
+when space permits. The panel itself begins 12 points inside the safe area; no fixed
+negative offsets or manual titlebar padding are added.
 
 ## Independent transcript channels
 

@@ -7,7 +7,7 @@ struct ConversationBusyIndicator: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
-            if reduceMotion { Image(systemName: "hourglass").font(.system(size: 12)).foregroundStyle(.secondary) }
+            if reduceMotion { Image(systemName: "hourglass").font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.secondary) }
             else { BusySpinner() }
         }.frame(width: 16, height: 16).accessibilityHidden(true)
     }
@@ -108,7 +108,7 @@ struct ConversationActivityBar: View {
                 HStack(spacing: 8) {
                     summaryButton
                     actions
-                }.font(.system(size: 12))
+                }.font(.system(size: WorkbenchTheme.Reading.labelSize))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 2).frame(height: Self.height)
                     .transition(reduceMotion ? .identity : .opacity)
@@ -145,9 +145,9 @@ struct ConversationActivityBar: View {
                     metrics(upTo: 2)
                     metrics(upTo: 1)
                     Color.clear.frame(width: 0, height: 0)
-                }.font(.system(size: 11)).foregroundStyle(.tertiary).layoutPriority(-1)
+                }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary).layoutPriority(-1)
                 if let timing {
-                    ActivityTurnClock(timing: timing).font(.system(size: 11)).foregroundStyle(.secondary)
+                    ActivityTurnClock(timing: timing).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
                 }
                 Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.secondary).accessibilityHidden(true)
@@ -170,7 +170,7 @@ struct ConversationActivityBar: View {
     @ViewBuilder private var indicator: some View {
         if activity.animates { ConversationBusyIndicator() }
         else {
-            Image(systemName: symbol).font(.system(size: 12)).frame(width: 16, height: 16)
+            Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
                 .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : Color.secondary)
                 .accessibilityHidden(true)
         }
@@ -184,7 +184,7 @@ struct ConversationActivityBar: View {
     private var titleRow: some View {
         HStack(spacing: 6) {
             Text(verbatim: title).fontWeight(blocking ? .medium : .regular)
-                .foregroundStyle(blocking ? Color.orange : isRunning ? Color.primary : Color.secondary)
+                .foregroundStyle(blocking ? Color.orange : Color.secondary)
                 .lineLimit(1).truncationMode(.tail).layoutPriority(1)
             if let target = actionTarget {
                 Text(verbatim: target).foregroundStyle(.secondary)
@@ -200,7 +200,9 @@ struct ConversationActivityBar: View {
         if pendingCount > 0 { return L("等待你确认 · \(pendingCount) 项") }
         if stopping { return L(key: activity.title) }
         if turnEnded { return L("本轮结束") }
-        if isRunning, let narrative { return narrative.headline }
+        // Long assistant progress can contain a whole Markdown reply. Keep it
+        // in the details instead of duplicating the transcript in this one line.
+        if isRunning, let narrative, narrative.headline.count <= 48 { return narrative.headline }
         if let description = activity.operationDescription { return description }
         return L(key: activity.title)
     }
@@ -271,7 +273,7 @@ struct ConversationActivityBar: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: 13, weight: .semibold))
+                Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: WorkbenchTheme.Reading.secondarySize, weight: .semibold))
                 Spacer()
                 Button { expanded = false } label: { Image(systemName: "xmark").frame(width: 28, height: 28).contentShape(Rectangle()) }
                     .buttonStyle(.plain).help("关闭活动详情").accessibilityLabel(Text("关闭活动详情"))
@@ -280,7 +282,7 @@ struct ConversationActivityBar: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(.secondary)
                     if let offlineDetail, !offlineDetail.isEmpty {
-                        Text(verbatim: offlineDetail).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(verbatim: offlineDetail).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
                             .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -294,18 +296,18 @@ struct ConversationActivityBar: View {
                 LazyVStack(alignment: .leading, spacing: 14) {
                     if let narrative {
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(narrative.headline).font(.system(size: 13, weight: .semibold)).textSelection(.enabled)
+                            Text(narrative.headline).font(.system(size: WorkbenchTheme.Reading.secondarySize, weight: .semibold)).textSelection(.enabled)
                             if let detail = narrative.detail, !detail.isEmpty {
                                 Text(detail).foregroundStyle(.secondary).textSelection(.enabled)
                             }
                             Text("\(narrative.phase.label) · \(narrative.source.label) · \(narrative.lifecycle == .streaming ? L("正在更新") : L("阶段已完成"))")
-                                .font(.system(size: 11)).foregroundStyle(.tertiary)
+                                .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
                             let evidence = narrative.evidenceIDs.compactMap { id in activity.tools.first { $0.id == id } }
                             if !evidence.isEmpty {
-                                Text("依据").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                                Text("依据").font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .semibold)).foregroundStyle(.secondary)
                                 ForEach(evidence) { tool in
                                     Text("• \(ToolPresentation.action(tool.name)) \(ToolPresentation.compactTarget(tool))")
-                                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                                        .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary).lineLimit(1)
                                 }
                             }
                         }
@@ -329,7 +331,7 @@ struct ConversationActivityBar: View {
                         ForEach(activity.todos) { item in
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
-                                    .foregroundStyle(item.status == .inProgress ? Color.accentColor : Color.secondary)
+                                    .foregroundStyle(item.status == .inProgress ? WorkbenchTheme.accent : Color.secondary)
                                 Text(item.title).fontWeight(item.status == .inProgress ? .medium : .regular)
                                     .foregroundStyle(item.status == .done ? .secondary : .primary)
                             }.accessibilityElement(children: .combine)
@@ -370,7 +372,7 @@ struct ConversationActivityBar: View {
                 Divider()
                 ActivityTurnClock(timing: timing, showsDetails: true)
             }
-        }.font(.system(size: 12)).padding(16).frame(width: 390)
+        }.font(.system(size: WorkbenchTheme.Reading.labelSize)).padding(16).frame(width: 390)
     }
     private func todoState(_ status: ConversationTodo.Status) -> String {
         switch status {
@@ -413,7 +415,7 @@ struct TaskRecapPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("Task Recap", systemImage: "sparkles").font(.system(size: 13, weight: .semibold))
+                Label("Task Recap", systemImage: "sparkles").font(.system(size: WorkbenchTheme.Reading.secondarySize, weight: .semibold))
                 Spacer()
                 if configured {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
@@ -422,9 +424,9 @@ struct TaskRecapPopover: View {
             }
             content
             if let warning {
-                Text(warning).font(.system(size: 11)).foregroundStyle(.orange).textSelection(.enabled)
+                Text(warning).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.orange).textSelection(.enabled)
             }
-        }.font(.system(size: 12)).padding(16).frame(width: 420)
+        }.font(.system(size: WorkbenchTheme.Reading.labelSize)).padding(16).frame(width: 420)
             .task(id: key) {
                 if configured, case .idle = state { generate(force: false) }
             }
@@ -469,7 +471,7 @@ struct TaskRecapPopover: View {
         VStack(spacing: 8) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 13) {
-                    Text(result.outcome).font(.system(size: 13, weight: .medium)).textSelection(.enabled)
+                    Text(result.outcome).font(.system(size: WorkbenchTheme.Reading.labelSize, weight: .medium)).textSelection(.enabled)
                     recapSection("主要改动", items: result.changes)
                     recapSection("验证", items: result.validation)
                     recapSection("遗留", items: result.remaining)
@@ -549,7 +551,7 @@ private struct ActivityTurnClock: View {
                 Text("处理与工具调用：\(duration(total - timing.waiting(at: now)))")
                 Text("等待确认：\(duration(timing.waiting(at: now)))")
                 Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
             }
         } else { label(duration(total)).fixedSize() }
     }
@@ -572,7 +574,7 @@ private struct ActivityToolDetails: View {
                     if let input = tool.input { Text("Input").fontWeight(.medium); Text(input.display).textSelection(.enabled) }
                     if let progress = tool.progress { Text("Latest update").fontWeight(.medium); Text(progress.display).textSelection(.enabled) }
                     if let output = tool.output { Text("Result").fontWeight(.medium); Text(output.display).textSelection(.enabled) }
-                }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                }.font(.system(size: WorkbenchTheme.Reading.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
             }
         } label: {
             VStack(alignment: .leading, spacing: 3) {
@@ -719,10 +721,10 @@ private struct KimiTaskRow: View {
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(tint).accessibilityHidden(true)
+                    Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(tint).accessibilityHidden(true)
                     Text(task.description).lineLimit(1).truncationMode(.middle)
                     if let chip, chip != task.description {
-                        Text(LocalizedStringKey(chip)).font(.system(size: 11)).foregroundStyle(.tertiary).fixedSize()
+                        Text(LocalizedStringKey(chip)).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary).fixedSize()
                     }
                     Spacer(minLength: 4)
                     KimiTaskClock(task: task)
@@ -730,10 +732,10 @@ private struct KimiTaskRow: View {
                 }
                 if let usageLine {
                     // Under the description, past the status symbol's column.
-                    Text(verbatim: usageLine).font(.system(size: 11)).foregroundStyle(.tertiary)
+                    Text(verbatim: usageLine).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
                         .lineLimit(1).truncationMode(.tail).padding(.leading, 19)
                 }
-            }.font(.system(size: 12)).foregroundStyle(.secondary)
+            }.font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: ["\(task.kindLabel) \(task.description) \(task.phaseLabel)", usageLine]
                     .compactMap { $0 }.joined(separator: ", ")))
@@ -756,7 +758,7 @@ private struct KimiTaskRow: View {
                 if let index = task.swarmIndex { meta("并行序号", String(index)) }
                 if let reason = task.suspendedReason { meta("暂停原因", reason) }
                 meta("任务 ID", task.id)
-            }.font(.system(size: 11))
+            }.font(.system(size: WorkbenchTheme.Reading.captionSize))
             let stopsAlone = onSubagentStop != nil && task.isRunning
             if task.transcriptAgentId != nil || stopsAlone {
                 HStack(spacing: 14) {
@@ -783,7 +785,7 @@ private struct KimiTaskRow: View {
                     ProgressView().controlSize(.small)
                 } else if let output, !output.isEmpty {
                     ScrollView {
-                        Text(output).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                        Text(output).font(.system(size: WorkbenchTheme.Reading.captionSize, design: .monospaced)).textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .topLeading)
                     }.frame(maxHeight: 220)
                 } else {
@@ -827,7 +829,7 @@ private struct KimiTaskClock: View {
                     }
                 }
             }
-        }.font(.system(size: 11)).monospacedDigit().foregroundStyle(.tertiary).fixedSize()
+        }.font(.system(size: WorkbenchTheme.Reading.captionSize)).monospacedDigit().foregroundStyle(.tertiary).fixedSize()
     }
     private func duration(_ interval: TimeInterval) -> String {
         ConversationTiming.duration(max(0, interval), chinese: locale.language.languageCode?.identifier == "zh")

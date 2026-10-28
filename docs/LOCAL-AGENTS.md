@@ -12,7 +12,10 @@ The selected executable paths are saved with the stable local environment.
 - Kimi uses its authenticated loopback Web API and existing token. If no service
   is listening, Perch starts `kimi web` detached on port 58627. An authentication
   failure or unrelated service occupying that port is an error, not permission
-  to replace it. `KIMI_CODE_HOME` is respected when inherited by Perch.
+  to replace it. `KIMI_CODE_HOME` is respected when inherited by Perch. Perch
+  records the instance it starts; after a Kimi upgrade it replaces only that
+  instance, once every session is idle, as on managed remote hosts
+  (`docs/KIMI.md`). A service started outside Perch is reused and never stopped.
 - Codex uses the same app-server adapter as remote sessions, with bridge state in
   `~/.local/share/perch/local-native`. The selected executable's real path is used
   so an app-bundled CLI can find its sibling tool helpers through a symlink.

@@ -13,7 +13,42 @@ import WorkbenchCore
             .appendingPathComponent(domain)
         let workspaceURL = directory.appendingPathComponent("workspace.json")
 
+        let designPreview = Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true
+        let nativeDesign = designPreview || CommandLine.arguments.contains("native-design")
+        let readingControls = CommandLine.arguments.contains("reading-controls")
+        if CommandLine.arguments.contains("preview") || nativeDesign || readingControls {
+            // Interactive fixtures need AppKit's event loop for native window events
+            // and accessibility, unlike the command-line layout checks below.
+            NSApp.setActivationPolicy(designPreview ? .regular : .accessory)
+            Task { @MainActor in
+                do {
+                    if nativeDesign { try await checkNativeDesign() }
+                    else if readingControls { try await checkReadingControls() }
+                    else if CommandLine.arguments.contains("document-reading") { try await checkDocumentReadingUI() }
+                    else { try await checkFileReaderWindow() }
+                    NSApp.terminate(nil)
+                }
+                catch { fatalError("Native fixture failed: \(error)") }
+            }
+            NSApp.run()
+            return
+        }
+
         switch CommandLine.arguments[1] {
+        case "startup":
+            try checkAppStartup()
+        case "document-reading":
+            try await checkDocumentReadingUI()
+        case "task-context":
+            try await checkTaskContextPanel()
+        case "workflow-polish":
+            try await checkWorkflowPolish()
+        case "code-reader":
+            try await checkCodeReader()
+        case "file-reader":
+            try await checkFileReaderWindow()
+        case "workspace-upgrade":
+            try await checkWorkspaceUpgradeUI()
         case "interactions":
             try await checkDisclosureAndQuestionInteractions()
         case "stream-reveal":
@@ -22,8 +57,6 @@ import WorkbenchCore
             try await checkGitWriteLifecycle()
         case "goal-header":
             try await checkGoalHeader()
-        case "reading-controls":
-            try await checkReadingControls()
         case "sidebar-scroll":
             try await checkSidebarScroll()
         case "reading-canvas":

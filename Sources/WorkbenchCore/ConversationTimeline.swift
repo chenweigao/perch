@@ -133,9 +133,11 @@ public enum ConversationProcessFold {
         }
     }
 
-    /// Failed, pending or uncertain tools in a row the agent never read to completion.
+    /// Tools the record cannot account for in a row: still waiting on the user or
+    /// missing their result. A returned error is an observed outcome the agent
+    /// read and continued from, not an unresolved call.
     public static func unresolvedCount(_ row: ConversationPresentationModel.Row) -> Int {
-        row.tools.values.filter { $0.status != .succeeded && $0.status != .returned }.count
+        row.tools.values.filter { $0.staysVisible && $0.status != .running }.count
     }
 
     public static func unresolvedCount(_ rows: [ConversationPresentationModel.Row]) -> Int {

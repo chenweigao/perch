@@ -3,7 +3,7 @@ import WorkbenchCore
 
 enum SidebarPage { case home, inbox, archive, sessions, groups, other }
 
-/// Only the middle scrolls. The system split-view item owns the floating glass.
+/// Only the middle scrolls. The workspace overlay owns the floating glass.
 struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let page: SidebarPage
     let attentionCount: Int
@@ -29,21 +29,29 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 2) {
-                HStack(spacing: 4) {
-                    // A field-like target: tinted, never bordered, same height as rows.
-                    navigation("搜索项目与会话", symbol: "magnifyingglass", shortcut: "⌘K", action: onSearch)
-                        .background(.primary.opacity(WorkbenchTheme.Fill.surface), in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
-                        .accessibilityIdentifier("sidebar.search")
+                HStack(spacing: 8) {
+                    // Content-hosted controls stay below the native toolbar,
+                    // where both mouse clicks and accessibility can reach them.
                     Button(action: onNew) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
-                            .frame(width: SidebarMetrics.rowHeight, height: SidebarMetrics.rowHeight)
-                    }.buttonStyle(SidebarNavigationStyle()).help("新建会话")
+                        Label("新建会话", systemImage: "plus")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, SidebarMetrics.rowInset)
+                            .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
+                    }.buttonStyle(SidebarNavigationStyle()).help("新建会话 · ⌘N")
                         .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
-                }.padding(.bottom, 8)
+                    Button(action: onSearch) {
+                        Label("搜索", systemImage: "magnifyingglass")
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.horizontal, SidebarMetrics.rowInset)
+                            .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
+                    }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话")
+                        .accessibilityLabel("搜索项目与会话")
+                        .accessibilityIdentifier("sidebar.search")
+                }.padding(.bottom, 2)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
-            }.padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 6)
+            }.font(.system(size: SidebarMetrics.navigationSize))
+                .padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 2)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
@@ -88,7 +96,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                 }
                             }
                         Text("设置与环境"); Spacer(); shortcutHint("⌘,")
-                    }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+                    }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
                     .accessibilityIdentifier("sidebar.settings")
                     .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
@@ -100,7 +108,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                 navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
                                     .help(environmentSummary)
                                 if environmentNeedsAttention {
-                                    Text("环境需要处理").font(.caption).foregroundStyle(.orange)
+                                    Text("环境需要处理").font(.subheadline).foregroundStyle(.orange)
                                         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10)
                                 }
                                 navigation("已归档会话", symbol: "archivebox", selected: page == .archive) {
@@ -112,11 +120,12 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                     showSettings = false
                                     openSettings()
                                 }
-                            }.font(.system(size: 13)).padding(10).frame(width: 220)
+                            }.font(.system(size: WorkbenchTheme.Typography.body)).padding(10).frame(width: 220)
                         }
                     }
-            }.padding(.horizontal, 10).padding(.bottom, 10)
-        }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(.secondary)
+                .padding(.horizontal, 10).padding(.bottom, 10)
+        }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,
@@ -131,7 +140,9 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         .foregroundStyle(.secondary)
                 }
                 if let shortcut { shortcutHint(shortcut) }
-            }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
+            }.font(.system(size: SidebarMetrics.navigationSize))
+                .foregroundStyle(selected ? WorkbenchTheme.ink : Color.secondary)
+                .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
         }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
     }
 

@@ -7,7 +7,7 @@ struct ActivityNarrativeHistoryView: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: narrative.phase == .blocked ? "exclamationmark.circle" : "checkmark.circle")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: ReplyStyle.captionSize, weight: .medium))
                 .foregroundStyle(narrative.phase == .blocked ? Color.orange : Color.secondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
@@ -15,7 +15,7 @@ struct ActivityNarrativeHistoryView: View {
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = narrative.detail, !detail.isEmpty {
-                    Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(detail).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -27,8 +27,8 @@ struct ActivityNarrativeHistoryView: View {
     }
 }
 
-/// Process records keep source order inside one compact disclosure. Active,
-/// failed and uncertain tools remain visible even when the stage is collapsed.
+/// Process records keep source order inside one compact disclosure. Active and
+/// uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
     /// Core lookups (recent targets) read the app language; depending on the
@@ -74,7 +74,7 @@ struct KimiActivityView: View {
             // and tools originating in the same provider message without collisions.
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
-                    if expanded || tool.staysVisible || tool.status == .failed {
+                    if expanded || tool.staysVisible {
                         KimiToolCard(tool: tool)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
                             .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
@@ -121,8 +121,8 @@ struct KimiToolCard: View {
         case .awaitingApproval: return "hand.raised"
         }
     }
-    private func attention(exitReport: Int?) -> Bool {
-        ([.failed, .missingResult, .disconnected, .awaitingApproval].contains(tool.status) && exitReport == nil) || !tool.hasCall
+    private func attention() -> Bool {
+        [.missingResult, .disconnected, .awaitingApproval].contains(tool.status) || !tool.hasCall
     }
     private func resolvedExitReport() -> Int? {
         #if TRANSCRIPT_CHECKS
@@ -142,7 +142,7 @@ struct KimiToolCard: View {
         let exitReport = resolvedExitReport()
         let summary = ToolPresentation.compactTarget(tool)
         // Named apart from the method so the local never shadows its own initializer.
-        let showsAttention = attention(exitReport: exitReport)
+        let showsAttention = attention()
         // The activity details name the same states with the same words.
         let statusLabel = ConversationActivity.status(of: tool, exitCode: exitReport)
         #if TRANSCRIPT_CHECKS
@@ -166,9 +166,11 @@ struct KimiToolCard: View {
                 Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
                 if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
                 Spacer(minLength: 0)
-                if showsAttention || tool.status == .running || exitReport != nil {
-                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: 11)).accessibilityHidden(true)
-                    Text(statusLabel).font(.system(size: 11)).fixedSize()
+                // A returned error keeps its quiet status label; only uncertainty
+                // or a user decision earns the orange attention treatment.
+                if showsAttention || tool.status == .running || tool.status == .failed {
+                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
+                    Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
                 }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : Color.secondary)
                 .accessibilityElement(children: .combine)
@@ -184,7 +186,7 @@ struct KimiToolCard: View {
             if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
             if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
             if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(.secondary) }
-        }.font(.system(size: 11, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
+        }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
