@@ -308,6 +308,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             }
         }
         func updateToolbarLanguage() {
+            // Reading items while AppKit is materializing toolbar placeholders
+            // can reenter the delegate through hosted SwiftUI updates.
+            guard controller?.workspaceToolbarInstalled == true else { return }
             let L = LocalizedUIStrings(locale: locale)
             for item in controller?.workspaceToolbar?.items ?? [] {
                 switch item.itemIdentifier {
@@ -546,6 +549,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
+    private(set) var workspaceToolbarInstalled = false
     private var appAppearance: AppAppearance = .system
     private var appearanceObserver: NSObjectProtocol?
     var alignToolbar: ((CGFloat) -> Void)?
@@ -726,13 +730,20 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.titlebarSeparatorStyle = .none
         window.styleMask.insert(.fullSizeContentView)
         window.toolbarStyle = .unified
-        window.toolbar = workspaceToolbar
         if appAppearance != .system { applyAppearance() }
         // The toolbar style sets the window's corner; the glass follows it.
         windowBackdropView?.updateCornerRadius()
         DispatchQueue.main.async { [weak self] in
-            self?.windowBackdropView?.updateCornerRadius()
-            self?.updateWorkspaceLayout()
+            guard let self, let window = self.view.window else { return }
+            // Let the WindowGroup finish its appearance transaction before
+            // AppKit materializes hosted toolbar items on that same window.
+            if window.toolbar !== self.workspaceToolbar {
+                self.workspaceToolbarInstalled = false
+                window.toolbar = self.workspaceToolbar
+                self.workspaceToolbarInstalled = true
+            }
+            self.windowBackdropView?.updateCornerRadius()
+            self.updateWorkspaceLayout()
         }
     }
 

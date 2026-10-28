@@ -6,16 +6,11 @@ import WorkbenchCore
 @main
 struct WorkbenchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var model = WorkbenchModel()
+    private var model: WorkbenchModel { delegate.model }
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: appLanguage.resolvedLocale) }
 
-    init() {
-        // Startup must not depend on scene appearance callbacks: the delegate
-        // starts the model even if the first window's onAppear is never delivered.
-        AppDelegate.activeModel = model
-    }
     var body: some Scene {
         WindowGroup("Perch", id: "main") {
             WorkbenchView(model: model).preferredColorScheme(appAppearance.colorScheme)
@@ -24,7 +19,7 @@ struct WorkbenchApp: App {
                 .containerBackground(Color.clear, for: .window)
                 .background(CompanionRegistration(model: model))
                 .environment(\.locale, appLanguage.resolvedLocale)
-                .onAppear { delegate.model = model; model.start(); AppLanguage.applyToSystem(appLanguage) }
+                .onAppear { AppLanguage.applyToSystem(appLanguage) }
                 .task { await AppUpdateChecker.shared.checkThrottled() }
                 .onChange(of: appLanguage) { _, value in
                     AppLanguage.applyToSystem(value)
@@ -106,33 +101,3 @@ struct WorkbenchApp: App {
 }
 
 #endif
-
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// The scene's model before any window appears; the scene also sets `model`.
-    static weak var activeModel: WorkbenchModel?
-    weak var model: WorkbenchModel?
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        // Idle unless Settings → 诊断 → 性能诊断 is on.
-        FrameHitchMonitor.shared.install()
-        (model ?? AppDelegate.activeModel)?.start()
-    }
-    func applicationWillTerminate(_ notification: Notification) { CompanionWindowController.shared.shutdown(); model?.shutdown() }
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        do { try model?.flushDrafts() }
-        catch {
-            let alert = NSAlert()
-            alert.messageText = L("Drafts could not be saved")
-            alert.informativeText = error.localizedDescription
-            alert.addButton(withTitle: L("Keep Perch open"))
-            alert.addButton(withTitle: L("Quit anyway"))
-            if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
-        }
-        return .terminateNow
-    }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { !UserDefaults.standard.bool(forKey: "companion.background") }
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag { CompanionWindowController.shared.showMain() }; return true
-    }
-}

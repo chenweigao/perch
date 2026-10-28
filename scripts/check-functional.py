@@ -38,6 +38,7 @@ def main():
     else:
         commands = [
             ("build", ["bash", "scripts/build.sh"], 1200),
+            ("app-launch", [python, "scripts/check-app-launch.py", "--output", str(out / "app-launch")], 90),
             ("signature", ["codesign", "--verify", "--deep", "--strict", "build/Perch.app"], 60),
             ("version", [python, "scripts/check-version.py", "--app", "build/Perch.app"], 60),
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),

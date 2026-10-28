@@ -9,7 +9,11 @@ a completed rewrite of every provider or a measured frame-rate improvement.
 
 ## Ownership
 
-- `WorkbenchApp` owns `WorkbenchModel` through `@State`. The model coordinates
+- `AppDelegate` strongly owns one `WorkbenchModel`; `WorkbenchApp` reads that same
+  instance for all scenes and commands. Launch starts it before scene appearance;
+  termination flushes drafts and shuts it down even if no appearance callback ran.
+  Do not read uninstalled `@State` from `App.init` or register a weak fallback owner.
+  The model coordinates
   navigation, persistence and provider connections. Views use `@Bindable` when
   they need bindings; a plain reference is sufficient for read-only Observation.
 - `WorkbenchNavigationState` owns destinations, tab/history state and workbench
