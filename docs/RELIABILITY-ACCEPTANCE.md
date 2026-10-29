@@ -31,8 +31,10 @@ The optional `WORKBENCH_LIVE_HOST` variable is removed from the suite environmen
 The `Functional checks` workflow runs these suites on PRs and main, alongside the
 existing publication checks, and retains logs/results for seven days. One native
 job builds and packages the app and Swift build tree once. Core, host lifecycle,
-native acceptance and navigation then run in parallel on separate macOS runners,
-restoring that artifact before executing the same checks as the full local suite.
+and navigation restore that artifact in parallel on separate macOS runners.
+Native acceptance starts immediately because its fixture uses different compile
+flags; it restores the shared dependency cache instead of the app artifact.
+All groups execute the same checks as the full local suite.
 A summary job named `Native build and interaction regression` fails if any group
 fails and publishes the combined `macos-results` evidence. Group reports retain
 individual and total durations. No test is skipped by this split.

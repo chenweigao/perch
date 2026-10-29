@@ -144,7 +144,6 @@ jobs:
 
   native-acceptance:
     name: Native session regression
-    needs: native-build
     runs-on: xcode-27
     timeout-minutes: 25
     steps:
@@ -152,13 +151,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Download the shared native build
-        uses: actions/download-artifact@v4
+      - name: Restore Swift package dependencies
+        uses: actions/cache@v4
         with:
-          name: native-build-${{ github.sha }}
-          path: .local/native-build
-      - name: Restore the shared native build
-        run: tar -xzf .local/native-build/build.tar.gz
+          path: |
+            .build/checkouts
+            .build/artifacts
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-spm-${{ hashFiles('Package.resolved') }}
       - run: python3 scripts/check-functional.py macos --group native --output .local/functional-native
       - name: Retain native session results
         if: always() && hashFiles('.local/functional-native/results.json') != ''
