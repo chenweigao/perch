@@ -7,7 +7,7 @@ struct ConversationBusyIndicator: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
-            if reduceMotion { Image(systemName: "hourglass").font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.secondary) }
+            if reduceMotion { Image(systemName: "hourglass").font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(WorkbenchTheme.quiet) }
             else { BusySpinner() }
         }.frame(width: 16, height: 16).accessibilityHidden(true)
     }
@@ -109,7 +109,7 @@ struct ConversationActivityBar: View {
                     summaryButton
                     actions
                 }.font(.system(size: WorkbenchTheme.Reading.labelSize))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(WorkbenchTheme.quiet)
                     .padding(.horizontal, 2).frame(height: Self.height)
                     .transition(reduceMotion ? .identity : .opacity)
             }
@@ -145,12 +145,12 @@ struct ConversationActivityBar: View {
                     metrics(upTo: 2)
                     metrics(upTo: 1)
                     Color.clear.frame(width: 0, height: 0)
-                }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary).layoutPriority(-1)
+                }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).layoutPriority(-1)
                 if let timing {
-                    ActivityTurnClock(timing: timing).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
+                    ActivityTurnClock(timing: timing).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }
                 Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary).accessibilityHidden(true)
+                    .foregroundStyle(WorkbenchTheme.quiet).accessibilityHidden(true)
             }.padding(.horizontal, 6).frame(height: 28).contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle())
             .accessibilityLabel(Text("本轮活动"))
@@ -171,7 +171,7 @@ struct ConversationActivityBar: View {
         if activity.animates { ConversationBusyIndicator() }
         else {
             Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
-                .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : Color.secondary)
+                .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
                 .accessibilityHidden(true)
         }
     }
@@ -184,10 +184,10 @@ struct ConversationActivityBar: View {
     private var titleRow: some View {
         HStack(spacing: 6) {
             Text(verbatim: title).fontWeight(blocking ? .medium : .regular)
-                .foregroundStyle(blocking ? Color.orange : Color.secondary)
+                .foregroundStyle(blocking ? Color.orange : WorkbenchTheme.quiet)
                 .lineLimit(1).truncationMode(.tail).layoutPriority(1)
             if let target = actionTarget {
-                Text(verbatim: target).foregroundStyle(.secondary)
+                Text(verbatim: target).foregroundStyle(WorkbenchTheme.quiet)
                     .lineLimit(1).truncationMode(.middle)
             }
         }.contentTransition(.opacity)
@@ -280,9 +280,9 @@ struct ConversationActivityBar: View {
             }
             if !online {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(.secondary)
+                    Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(WorkbenchTheme.quiet)
                     if let offlineDetail, !offlineDetail.isEmpty {
-                        Text(verbatim: offlineDetail).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
+                        Text(verbatim: offlineDetail).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                             .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -298,16 +298,16 @@ struct ConversationActivityBar: View {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(narrative.headline).font(.system(size: WorkbenchTheme.Reading.secondarySize, weight: .semibold)).textSelection(.enabled)
                             if let detail = narrative.detail, !detail.isEmpty {
-                                Text(detail).foregroundStyle(.secondary).textSelection(.enabled)
+                                Text(detail).foregroundStyle(WorkbenchTheme.quiet).textSelection(.enabled)
                             }
                             Text("\(narrative.phase.label) · \(narrative.source.label) · \(narrative.lifecycle == .streaming ? L("正在更新") : L("阶段已完成"))")
-                                .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
+                                .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                             let evidence = narrative.evidenceIDs.compactMap { id in activity.tools.first { $0.id == id } }
                             if !evidence.isEmpty {
-                                Text("依据").font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .semibold)).foregroundStyle(.secondary)
+                                Text("依据").font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .semibold)).foregroundStyle(WorkbenchTheme.quiet)
                                 ForEach(evidence) { tool in
                                     Text("• \(ToolPresentation.action(tool.name)) \(ToolPresentation.compactTarget(tool))")
-                                        .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary).lineLimit(1)
+                                        .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).lineLimit(1)
                                 }
                             }
                         }
@@ -320,18 +320,18 @@ struct ConversationActivityBar: View {
                         Text("当前操作").fontWeight(.semibold)
                         ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
                     } else if narrative == nil && online && pendingCount == 0 && activity.attentionTools.isEmpty {
-                        Text(verbatim: title).foregroundStyle(.secondary)
+                        Text(verbatim: title).foregroundStyle(WorkbenchTheme.quiet)
                     }
                     if !activity.todos.isEmpty {
                         HStack {
                             Text("任务计划").fontWeight(.semibold)
                             Spacer()
-                            Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(.secondary)
+                            Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
                         }
                         ForEach(activity.todos) { item in
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
-                                    .foregroundStyle(item.status == .inProgress ? WorkbenchTheme.accent : Color.secondary)
+                                    .foregroundStyle(item.status == .inProgress ? WorkbenchTheme.accent : WorkbenchTheme.quiet)
                                 Text(item.title).fontWeight(item.status == .inProgress ? .medium : .regular)
                                     .foregroundStyle(item.status == .done ? .secondary : .primary)
                             }.accessibilityElement(children: .combine)
@@ -443,7 +443,7 @@ struct TaskRecapPopover: View {
         case .loading:
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
-                Text("正在读取任务记录并生成 Recap…").foregroundStyle(.secondary)
+                Text("正在读取任务记录并生成 Recap…").foregroundStyle(WorkbenchTheme.quiet)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
         case .failed(let error):
             if configured {
@@ -462,7 +462,7 @@ struct TaskRecapPopover: View {
     private var configurationPrompt: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Recap 使用可选的外部摘要服务。配置前不会联网，也不会向原 Agent 发送消息。")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(WorkbenchTheme.quiet)
             Button("配置活动叙事与 Recap…") { showSettings = true }.buttonStyle(.borderedProminent)
         }
     }
@@ -497,7 +497,7 @@ struct TaskRecapPopover: View {
                 Text(title).fontWeight(.semibold)
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .top, spacing: 7) {
-                        Text("•").foregroundStyle(.secondary)
+                        Text("•").foregroundStyle(WorkbenchTheme.quiet)
                         Text(item).textSelection(.enabled)
                     }
                 }
@@ -551,7 +551,7 @@ private struct ActivityTurnClock: View {
                 Text("处理与工具调用：\(duration(total - timing.waiting(at: now)))")
                 Text("等待确认：\(duration(timing.waiting(at: now)))")
                 Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
-                    .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
             }
         } else { label(duration(total)).fixedSize() }
     }
@@ -582,11 +582,11 @@ private struct ActivityToolDetails: View {
                     Text(tool.name).fontWeight(.medium)
                     Spacer()
                     Text(verbatim: ConversationActivity.status(of: tool))
-                        .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : Color.secondary)
+                        .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : WorkbenchTheme.quiet)
                 }
                 let summary = ConversationActivity.summary(of: tool)
-                if summary != tool.name { Text(summary).lineLimit(2).foregroundStyle(.secondary) }
-                if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(.secondary) }
+                if summary != tool.name { Text(summary).lineLimit(2).foregroundStyle(WorkbenchTheme.quiet) }
+                if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(WorkbenchTheme.quiet) }
             }
         }.disclosureGroupStyle(WorkbenchDisclosureStyle())
     }
@@ -637,7 +637,7 @@ struct KimiTaskSections: View {
                 Text(title).fontWeight(.semibold)
                 Spacer()
                 let running = tasks.filter(\.isRunning).count
-                if running > 0 { Text("\(running) 运行中").monospacedDigit().foregroundStyle(.secondary) }
+                if running > 0 { Text("\(running) 运行中").monospacedDigit().foregroundStyle(WorkbenchTheme.quiet) }
                 if readsOutput {
                     Button { onRefresh() } label: { Image(systemName: "arrow.clockwise") }
                         .buttonStyle(.plain).accessibilityLabel(Text("刷新后台任务"))
@@ -724,7 +724,7 @@ private struct KimiTaskRow: View {
                     Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(tint).accessibilityHidden(true)
                     Text(task.description).lineLimit(1).truncationMode(.middle)
                     if let chip, chip != task.description {
-                        Text(LocalizedStringKey(chip)).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary).fixedSize()
+                        Text(LocalizedStringKey(chip)).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                     }
                     Spacer(minLength: 4)
                     KimiTaskClock(task: task).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
@@ -732,10 +732,10 @@ private struct KimiTaskRow: View {
                 }
                 if let usageLine {
                     // Under the description, past the status symbol's column.
-                    Text(verbatim: usageLine).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
+                    Text(verbatim: usageLine).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                         .lineLimit(1).truncationMode(.tail).padding(.leading, 19)
                 }
-            }.font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.secondary)
+            }.font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: ["\(task.kindLabel) \(task.description) \(task.phaseLabel)", usageLine]
                     .compactMap { $0 }.joined(separator: ", ")))
@@ -780,7 +780,7 @@ private struct KimiTaskRow: View {
                     .foregroundStyle(.orange).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             }
             if readsOutput || output != nil {
-                Text("输出").fontWeight(.medium).foregroundStyle(.secondary)
+                Text("输出").fontWeight(.medium).foregroundStyle(WorkbenchTheme.quiet)
                 if isLoadingOutput {
                     ProgressView().controlSize(.small)
                 } else if let output, !output.isEmpty {
@@ -789,7 +789,7 @@ private struct KimiTaskRow: View {
                             .frame(maxWidth: .infinity, alignment: .topLeading)
                     }.frame(maxHeight: 220)
                 } else {
-                    Text("暂无输出").foregroundStyle(.tertiary)
+                    Text("暂无输出").foregroundStyle(WorkbenchTheme.quiet)
                 }
                 if readsOutput && task.isRunning {
                     HStack(spacing: 14) {
@@ -808,7 +808,7 @@ private struct KimiTaskRow: View {
 
     private func meta(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Text(label).foregroundStyle(.tertiary).frame(width: 84, alignment: .leading)
+            Text(label).foregroundStyle(WorkbenchTheme.quiet).frame(width: 84, alignment: .leading)
             Text(value).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
         }
     }
