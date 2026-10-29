@@ -720,6 +720,12 @@ final class NavigationRunner {
         let railHeight = max(1, scroll.contentView.bounds.height - 32)
         let plain = ConversationTurnRailGeometry(count: 200, height: railHeight)
         navigator.hover.reset()
+        try await settle()
+        NavigationRenderMetrics.stages = [:]
+        NavigationRenderMetrics.counters = [:]
+        var animationSamples: [(CGFloat, CGFloat)] = []
+        ConversationTurnRailProbe.sample = { animationSamples.append(($0, $1)) }
+        defer { ConversationTurnRailProbe.sample = nil }
         navigator.hover.move(y: plain.y(for: 100), count: 200, height: railHeight)
         guard navigator.hover.previewY == nil else { throw NavigationError("preview opened without dwell") }
         try await Task.sleep(for: .milliseconds(160))
@@ -737,6 +743,20 @@ final class NavigationRunner {
                 guard navigator.hover.index == index, navigator.hover.previewY == cardY else {
                     throw NavigationError("neighbor selection moved the preview card")
                 }
+            }
+        }
+        // Let the real Canvas finish an interrupted scan animation; state
+        // endpoints alone cannot demonstrate that any intermediate was drawn.
+        try await settle()
+        let intermediatePositions = Set(animationSamples.map { $0.1 }.filter { $0.rounded() != $0 }).count
+        guard intermediatePositions >= 2 else {
+            throw NavigationError("turn rail never drew intermediate animation values")
+        }
+        let hoverStages = NavigationRenderMetrics.report
+        let hoverCounters = NavigationRenderMetrics.counterReport
+        for stage in ["document_configure", "document_reconcile", "markdown_parse", "row_parse", "text_create", "host_create"] {
+            guard (NavigationRenderMetrics.stages[stage]?.count ?? 0) == 0 else {
+                throw NavigationError("hover triggered transcript work: \(stage)")
             }
         }
         let hoverHosts = ConversationTranscript.retainedHosts(in: scroll)
@@ -757,6 +777,47 @@ final class NavigationRunner {
         try await Task.sleep(for: .milliseconds(120))
         guard navigator.hover.previewY == nil, navigator.hover.focus == nil else { throw NavigationError("hover did not close") }
 
+        // Leaving during dwell must not reopen a card. Session replacement
+        // must also cancel both delayed open and pending selection.
+        navigator.hover.move(y: plain.y(for: 30), count: 200, height: railHeight)
+        navigator.hover.leave()
+        try await Task.sleep(for: .milliseconds(170))
+        guard navigator.hover.index == nil, navigator.hover.previewY == nil else {
+            throw NavigationError("cancelled dwell reopened preview")
+        }
+        // Verify Reduce Motion in a native host, without touching the user's
+        // system preference, and exercise short/long/attachment-only excerpts.
+        let reducedHover = ConversationTurnHover()
+        let reducedRoot = ConversationTurnRail(turns: navigator.snapshot.turns, current: 0,
+            hasOlderHistory: false, selected: nil, hover: reducedHover, select: { _ in })
+            .environment(\.conversationReduceMotion, true)
+        let reducedWindow = NSWindow(contentRect: NSRect(x: 80, y: 80, width: 420, height: 500),
+                                     styleMask: [.titled], backing: .buffered, defer: false)
+        reducedWindow.isReleasedWhenClosed = false
+        reducedWindow.contentView = NSHostingView(rootView: reducedRoot)
+        reducedWindow.orderFront(nil)
+        try await settle()
+        animationSamples = []
+        reducedHover.move(y: 250, count: 200, height: 468)
+        try await settle()
+        reducedHover.leave()
+        try await settle()
+        reducedWindow.orderOut(nil)
+        guard !animationSamples.isEmpty, animationSamples.allSatisfy({ $0.0 == 0 || $0.0 == 1 }) else {
+            throw NavigationError("Reduce Motion interpolated rail highlights")
+        }
+        ConversationTurnRailProbe.sample = nil
+        func cardHeight(_ turn: ConversationTurnSummary) -> CGFloat {
+            let card = NSHostingView(rootView: ConversationTurnPreview(turn: turn)
+                .frame(width: 340).fixedSize(horizontal: false, vertical: true))
+            return card.fittingSize.height
+        }
+        let shortCard = cardHeight(navigator.snapshot.turns[2])
+        let longCard = cardHeight(navigator.snapshot.turns[0])
+        guard shortCard > 24, longCard > shortCard, longCard < 136 else {
+            throw NavigationError("preview card does not follow its bounded content height")
+        }
+
         let selection = ConversationTurnNavigation()
         selection.update(session: "coalescing", turns: navigator.snapshot.turns, current: 0)
         var revealed: [String] = []
@@ -768,9 +829,12 @@ final class NavigationRunner {
         try await Task.sleep(for: .milliseconds(10))
         guard revealed == [navigator.snapshot.turns[198].id] else { throw NavigationError("rapid selections rendered intermediate rows") }
         selection.select(50)
+        selection.hover.move(y: plain.y(for: 50), count: 200, height: railHeight)
         selection.update(session: "replacement", turns: [], current: 0)
-        try await Task.sleep(for: .milliseconds(10))
-        guard revealed.count == 1, selection.selectedID == nil else { throw NavigationError("pending jump crossed sessions") }
+        try await Task.sleep(for: .milliseconds(160))
+        guard revealed.count == 1, selection.selectedID == nil, selection.hover.previewY == nil else {
+            throw NavigationError("pending jump or hover crossed sessions")
+        }
 
         var jumps: [[String: Any]] = []
         for index in [199, 0, 100, 6, 198, 50] {
@@ -839,7 +903,10 @@ final class NavigationRunner {
         guard navigator.snapshot.turns.isEmpty else { throw NavigationError("empty conversation retained navigation") }
         return ["jumps": jumps, "streaming_anchor_preserved": true, "history_prepend": true,
                 "session_switch": true, "empty_conversation": true, "hover_frames_ms": statistics(hoverFrames),
-                "hover_preserves_hosts": true, "hover_dwell_and_exit": true, "rapid_selection_coalescing": true]
+                "hover_preserves_hosts": true, "hover_dwell_and_exit": true, "rapid_selection_coalescing": true,
+                "hover_render_stages": hoverStages, "hover_render_counters": hoverCounters,
+                "canvas_intermediate_hover_positions": intermediatePositions, "reduce_motion": true,
+                "preview_heights": [shortCard, longCard]]
     }
 
     /// Does an arriving older page preserve the exact row and intra-row offset?
