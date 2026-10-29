@@ -65,6 +65,7 @@ export const qodercliAuth = () => ({fixture:true});
 export async function startDaemon(options) {
   record({call:'startDaemon', options});
   return {
+    async accountInfo() { record({call:'accountInfo'}); return {userId:'fixture-user'}; },
     async getModels(options) { record({call:'getModels', options}); return [{value:'qoder-pro'}]; },
     async stop() { record({call:'stop'}); }
   };
@@ -72,11 +73,12 @@ export async function startDaemon(options) {
 export function query() { record({call:'query'}); throw new Error('catalog must not create a query'); }
 """)
             env = dict(os.environ, QODER_FAKE_LOG=str(log))
-            lines = self.run_worker(sdk, {'operation':'catalog', 'cwd':str(directory), 'binary':'/fixture/qoder'}, env=env)
+            config = {'operation':'catalog', 'cwd':str(directory), 'binary':'/fixture/qoder', 'accountScoped':True}
+            lines = self.run_worker(sdk, config, env=env)
             self.assertEqual(lines, [{'type':'models', 'models':[{'value':'qoder-pro'}]}])
             calls = [json.loads(line) for line in log.read_text().splitlines()]
-            self.assertEqual([item['call'] for item in calls], ['startDaemon','getModels','stop'])
-            self.assertEqual(calls[1]['options'], {'fetchStrategy':'live'})
+            self.assertEqual([item['call'] for item in calls], ['startDaemon','accountInfo','getModels','stop'])
+            self.assertEqual(calls[2]['options'], {'fetchStrategy':'live', 'uid':'fixture-user'})
             self.assertEqual(calls[0]['options']['pathToQoderCLIExecutable'], '/fixture/qoder')
 
     def test_selected_model_only_overrides_main_and_plan_purposes(self):
@@ -163,7 +165,7 @@ class QoderCatalogTests(unittest.TestCase):
             self.assertEqual([cfg['binary'] for _,cfg,_ in calls], ['/fixture/qoderclicn','/fixture/qodercli'])
             self.assertEqual([cfg['sdk'] for _,cfg,_ in calls],
                              ['@qodercn-ai/qodercn-agent-sdk','@qoder-ai/qoder-agent-sdk'])
-            self.assertTrue(all(cfg['operation'] == 'catalog' for _,cfg,_ in calls))
+            self.assertTrue(all(cfg['operation'] == 'catalog' and cfg['accountScoped'] is True for _,cfg,_ in calls))
             self.assertTrue(all(kwargs['timeout'] == 60 for _,_,kwargs in calls))
 
     def test_selection_accepts_runtime_default_and_validates_effort(self):

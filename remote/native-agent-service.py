@@ -117,7 +117,7 @@ def qoder_catalog(provider, live=False, timeout=60):
         if not binary: raise ValueError('未找到 ' + QODER_CLI[provider])
         if not (ROOT / 'node_modules' / QODER_SDK[provider] / 'package.json').is_file():
             raise ValueError('未安装 ' + QODER_SDK[provider])
-        cfg = {'operation':'catalog', 'sdk':QODER_SDK[provider], 'binary':binary, 'cwd':str(ROOT)}
+        cfg = {'operation':'catalog', 'sdk':QODER_SDK[provider], 'binary':binary, 'cwd':str(ROOT), 'accountScoped':True}
         out = subprocess.run([node, str(ROOT/'qoder-worker.mjs'), json.dumps(cfg)], cwd=str(ROOT),
                              env=proxy_aware_spawn_env(), capture_output=True, text=True, timeout=timeout)
         if out.returncode != 0:
