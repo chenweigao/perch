@@ -130,7 +130,8 @@ struct ReturnToLatestButton: View {
 ///
 /// `bar` (activity bar, notices and the composer) floats over the transcript's
 /// bottom edge as a safe-area bar: the reply scrolls beneath the composer glass
-/// with the system's soft scroll-edge effect, and the tail stops above the bar.
+/// with a soft fade, and the tail stops above the bar. A fixed top gutter and
+/// short fade keep scrolled text away from the sheet's rounded top edge.
 struct ConversationScrollView<Content: View, Bar: View>: View {
     var showsScrollIndicator = false
     var hasOlderHistory = false
@@ -181,12 +182,19 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
                         }, onNearTop: onNearTop)
                     }
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
+                .scrollEdgeEffectHidden(true, for: .top)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }, onNearTop: onNearTop))
                 .overlay(alignment: .leading) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
                 }
+                .overlay(alignment: .top) {
+                    LinearGradient(colors: [WorkbenchTheme.contentBackground, WorkbenchTheme.contentBackground.opacity(0)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: WorkbenchTheme.Reading.topFade)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
                 .modifier(ConversationBottomBar(bar: bar, controls: floatingControls))
-        }
+        }.padding(.top, WorkbenchTheme.Reading.topGutter)
     }
 
     /// Bookmarks and return-to-latest float just above the bar (or the bottom
