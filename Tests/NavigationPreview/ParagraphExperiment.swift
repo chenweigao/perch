@@ -174,6 +174,7 @@ extension NavigationRunner {
         }
         var observations: [[String: Any]] = []
         var foldToggles = 0
+        var bubbleCentering: CGFloat?
         for width in [CGFloat(700), 340] {
             for dark in [false, true] {
                 for (source, markers) in cases {
@@ -235,13 +236,24 @@ extension NavigationRunner {
                             if source == cases[0].0 {
                                 let expectedHeight = UserMessageStyle.lineHeight + UserMessageStyle.verticalPadding * 2
                                 guard let style = attributed?.first?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle,
-                                      let text = texts(native).first,
+                                      let font = attributed?.first?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont,
+                                      let text = texts(native).first, let manager = text.layoutManager,
                                       abs(style.minimumLineHeight - UserMessageStyle.lineHeight) <= 0.01,
                                       abs(background.frame.height - expectedHeight) <= 1,
-                                      abs(text.convert(text.bounds, to: native).minY - background.frame.minY - UserMessageStyle.verticalPadding) <= 1,
-                                      abs(background.frame.maxY - text.convert(text.bounds, to: native).maxY - UserMessageStyle.verticalPadding) <= 1 else {
-                                    throw NavigationError("Native user bubble lost its compact line height or symmetric 8pt insets")
+                                      abs(text.convert(text.bounds, to: native).minY - background.frame.minY - UserMessageStyle.topPadding) <= 1,
+                                      abs(background.frame.maxY - text.convert(text.bounds, to: native).maxY - UserMessageStyle.bottomPadding) <= 1 else {
+                                    throw NavigationError("Native user bubble lost its reading line height or its raised text paddings")
                                 }
+                                // TextKit leaves the line's extra leading above the glyphs; the
+                                // raised text puts the middle of its capitals on the bubble's middle.
+                                let fragment = manager.lineFragmentRect(forGlyphAt: 0, effectiveRange: nil)
+                                let baseline = text.convert(NSPoint(x: 0, y: text.textContainerOrigin.y + fragment.minY
+                                                                    + manager.location(forGlyphAt: 0).y), to: native).y
+                                let offset = baseline - font.capHeight / 2 - background.frame.midY
+                                guard abs(offset) <= 0.6 else {
+                                    throw NavigationError("Single-line user bubble text is \(offset) pt off the bubble's vertical middle")
+                                }
+                                bubbleCentering = offset
                             }
                             // The fold toggle reads like LongUserPrompt's plain button: borderless,
                             // left-aligned at the text inset, toggleSpacing below the prompt. The
@@ -299,6 +311,9 @@ extension NavigationRunner {
         if !assistant {
             report["user_line_height"] = UserMessageStyle.lineHeight
             report["single_line_bubble_height"] = UserMessageStyle.lineHeight + UserMessageStyle.verticalPadding * 2
+            guard let bubbleCentering else { throw NavigationError("No single-line user bubble exercised the centering check") }
+            report["single_line_text_lift"] = UserMessageStyle.textLift
+            report["single_line_cap_center_offset"] = bubbleCentering
             report["fold_toggle"] = ["checked": foldToggles, "borderless": true, "left_aligned": true,
                                      "spacing": UserMessageStyle.toggleSpacing] as [String: Any]
         }
