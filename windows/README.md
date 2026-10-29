@@ -102,7 +102,7 @@ shapes are the ones in `windows/tests/.../fixtures/`, generated from that file.
 
 | Client action | HTTP | Notes |
 |---|---|---|
-| Verify connection | `GET /health` | `version` must equal `SERVICE_VERSION` (10). Older → “update the bridge”; newer → “update Perch”. Also reads `implementation`/`startedAt`. |
+| Verify connection | `GET /health` | `version` must equal `SERVICE_VERSION` (11). Older → “update the bridge”; newer → “update Perch”. Also reads `implementation`/`startedAt`. |
 | List sessions | `GET /sessions` | `SessionSummary[]`; sorted newest-`updated` first for the sidebar. |
 | Open a session | `GET /sessions/{id}?turns=25` | First paged read establishes `history.epoch/start/total`. |
 | Poll for updates | `GET /sessions/{id}?revision={r}&start={s}&epoch={e}` | Streaming is **revision polling with deltas**, not SSE/WebSocket. Returns `{"unchanged":true}` when `revision` matches, else a snapshot whose `history.indices` name the changed message positions. |
