@@ -748,8 +748,8 @@ final class NavigationRunner {
         // Let the real Canvas finish an interrupted scan animation; state
         // endpoints alone cannot demonstrate that any intermediate was drawn.
         try await settle()
-        let intermediateEmphasis = Set(animationSamples.map { $0.0 }.filter { $0 > 0 && $0 < 1 }).count
-        guard intermediateEmphasis >= 2 else {
+        let intermediatePositions = Set(animationSamples.map { $0.1 }.filter { $0.rounded() != $0 }).count
+        guard intermediatePositions >= 2 else {
             throw NavigationError("turn rail never drew intermediate animation values")
         }
         let hoverStages = NavigationRenderMetrics.report
@@ -905,7 +905,7 @@ final class NavigationRunner {
                 "session_switch": true, "empty_conversation": true, "hover_frames_ms": statistics(hoverFrames),
                 "hover_preserves_hosts": true, "hover_dwell_and_exit": true, "rapid_selection_coalescing": true,
                 "hover_render_stages": hoverStages, "hover_render_counters": hoverCounters,
-                "canvas_intermediate_emphasis_values": intermediateEmphasis, "reduce_motion": true,
+                "canvas_intermediate_hover_positions": intermediatePositions, "reduce_motion": true,
                 "preview_heights": [shortCard, longCard]]
     }
 
