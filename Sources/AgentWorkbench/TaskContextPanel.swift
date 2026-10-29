@@ -279,7 +279,6 @@ struct TaskContextView: View {
                     DisclosureGroup("已结束的任务 · \(tasks.finished.count)", isExpanded: $completedTasks) {
                         ForEach(tasks.finished) { task in taskRow(task, item: item) }
                     }.font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(WorkbenchTheme.quiet)
-                        .accessibilityIdentifier("task-context-finished")
                 }
             }
         }
