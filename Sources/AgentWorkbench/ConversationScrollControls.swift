@@ -365,7 +365,8 @@ private struct ConversationTurnNavigator: View {
     var body: some View {
         if model.snapshot.turns.count > 1 {
             ConversationTurnRail(turns: model.snapshot.turns, current: model.current, hasOlderHistory: hasOlderHistory,
-                                 selectedID: model.selectedID, hover: model.hover, select: model.select)
+                                 selected: model.selectedID.flatMap { id in model.snapshot.turns.firstIndex { $0.id == id } },
+                                 hover: model.hover, select: model.select)
                 .id(model.snapshot.session)
         }
     }
@@ -402,35 +403,38 @@ private struct ConversationBookmarksMenu: View {
     }
 }
 
-private struct ConversationTurnRail: View {
+struct ConversationTurnRail: View {
     let turns: [ConversationTurnSummary]
     let current: Int
     let hasOlderHistory: Bool
-    let selectedID: String?
+    let selected: Int?
     @ObservedObject var hover: ConversationTurnHover
     let select: (Int) -> Void
+    let reduceMotionOverride: Bool?
     @FocusState private var focused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// A lens transition glides painted ticks from the previous mapping to the
-    /// committed one; nil means settled. Selection always uses the committed
-    /// mapping, so motion never moves hit targets.
-    @State private var glideFrom: ConversationTurnRailGeometry?
-    @State private var glideProgress: Double = 1
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.conversationReduceMotion) private var conversationReduceMotion
+    private var reduceMotion: Bool { reduceMotionOverride ?? (systemReduceMotion || conversationReduceMotion) }
     private let railWidth: CGFloat = 32
     private var count: Int { turns.count }
+
+    init(turns: [ConversationTurnSummary], current: Int, hasOlderHistory: Bool, selected: Int?,
+         hover: ConversationTurnHover, select: @escaping (Int) -> Void, reduceMotionOverride: Bool? = nil) {
+        self.turns = turns; self.current = current; self.hasOlderHistory = hasOlderHistory
+        self.selected = selected; self.hover = hover; self.select = select
+        self.reduceMotionOverride = reduceMotionOverride
+    }
 
     var body: some View {
         GeometryReader { geometry in
             let height = max(1, geometry.size.height - 32)
-            let plain = ConversationTurnRailGeometry(count: count, height: height)
             let layout = ConversationTurnRailGeometry(count: count, height: height, focus: hover.focus)
-            let selected = selectedID.flatMap { id in turns.firstIndex { $0.id == id } }
             let availableWidth = max(1, geometry.size.width - railWidth - 12)
             ZStack(alignment: .topLeading) {
-                ConversationTurnMarks(layout: layout, from: glideFrom, progress: glideProgress,
-                                      current: current, selected: selected,
-                                      hovered: hover.index, focus: hover.focus?.index, keyboardFocused: focused,
-                                      reduceMotion: reduceMotion)
+                ConversationTurnMarks(layout: layout, current: current, selected: selected,
+                                      hovered: hover.index, keyboardFocused: focused)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hover.focus)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.10), value: hover.index)
                 .frame(width: railWidth, height: layout.height)
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
@@ -440,7 +444,7 @@ private struct ConversationTurnRail: View {
                     }
                 }
                 .onTapGesture { point in
-                    focused = true
+                    if !focused { focused = true }
                     select(layout.index(at: point.y))
                 }
                 .focusable().focused($focused).focusEffectDisabled()
@@ -458,104 +462,150 @@ private struct ConversationTurnRail: View {
                     }
                 }
                 if let index = hover.index, let previewY = hover.previewY, turns.indices.contains(index) {
-                    let turn = turns[index]
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(index + 1) / \(count)").font(.system(size: ReplyStyle.captionSize)).monospacedDigit().foregroundStyle(.tertiary)
-                        Group {
-                            if turn.prompt.isEmpty { Text("Attachment") }
-                            else { Text(turn.prompt) }
-                        }.font(.system(size: ReplyStyle.labelSize, weight: .medium)).lineLimit(2)
-                        if !turn.reply.isEmpty {
-                            Text(turn.reply).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary).lineLimit(3)
-                        }
+                    ConversationTurnPreviewPlacement(anchorY: previewY, railWidth: railWidth) {
+                        ConversationTurnPreview(turn: turns[index])
+                            .frame(width: min(340, availableWidth))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .transaction { $0.animation = nil } // Neighbor text changes without crossfading.
-                    .padding(12).frame(width: min(340, availableWidth), height: 136, alignment: .topLeading)
-                    .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
-                    .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
-                        .strokeBorder(WorkbenchTheme.Stroke.hairline))
-                    .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
-                    .offset(x: railWidth, y: min(max(0, previewY - 28), max(0, height - 136)))
                     .allowsHitTesting(false).accessibilityHidden(true)
                     .transition(.opacity)
                 }
             }.padding(.vertical, 16)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hover.previewY != nil)
-                .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: glideProgress)
-                .onChange(of: hover.focus) { old, focus in
-                    guard !reduceMotion else { glideFrom = nil; glideProgress = 1; return }
-                    // Glide from the mapping the pointer just left: the resting
-                    // rail, the previous lens, or the lens mid-scan.
-                    glideFrom = old.map { ConversationTurnRailGeometry(count: count, height: height, focus: $0) } ?? plain
-                    withTransaction(Transaction(animation: nil)) { glideProgress = 0 }
-                    withAnimation(.smooth(duration: 0.22)) { glideProgress = 1 }
-                }
                 .onChange(of: height) { _, _ in hover.reset() }
                 .onDisappear { hover.reset() }
         }
     }
 }
 
-/// Bounded drawing for dense histories. Painted ticks interpolate from the
-/// previous mapping to the committed one while a transition runs; selection
-/// and committed marks always use the committed mapping, so motion never
-/// moves targets.
-private struct ConversationTurnMarks: View {
+/// Intrinsic-height text, without a counter or actions competing with the excerpt.
+struct ConversationTurnPreview: View {
+    let turn: ConversationTurnSummary
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Group {
+                if turn.prompt.isEmpty { Text("Attachment") }
+                else { Text(turn.prompt) }
+            }.font(.system(size: ReplyStyle.labelSize, weight: .medium)).lineLimit(1)
+            if !turn.reply.isEmpty {
+                Text(turn.reply).font(.system(size: ReplyStyle.labelSize))
+                    .foregroundStyle(.secondary).lineLimit(3)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+        .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
+            .strokeBorder(WorkbenchTheme.Stroke.hairline))
+        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
+    }
+}
+
+/// Measure and clamp in the same layout pass, including the first hover at the
+/// bottom edge. No geometry-to-state feedback or fixed empty card height.
+private struct ConversationTurnPreviewPlacement: Layout {
+    let anchorY: CGFloat
+    let railWidth: CGFloat
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let card = subviews.first else { return }
+        let size = card.sizeThatFits(.unspecified)
+        let y = min(max(0, anchorY - 24), max(0, bounds.height - size.height))
+        card.place(at: CGPoint(x: bounds.minX + railWidth + 8, y: bounds.minY + y),
+                   proposal: ProposedViewSize(size))
+    }
+}
+
+/// Only the bounded Canvas interpolates. Fractional band boundaries preserve
+/// continuity when a lens opens, moves, reverses or closes mid-animation.
+/// Hit testing continues to use the committed geometry, never animated targets.
+private struct ConversationTurnMarks: View, Animatable {
     let layout: ConversationTurnRailGeometry
-    let from: ConversationTurnRailGeometry?
-    let progress: Double
     let current: Int
     let selected: Int?
     let hovered: Int?
-    let focus: Int?
     let keyboardFocused: Bool
-    let reduceMotion: Bool
-    /// Where a tick is drawn this frame: settled on the committed mapping, or
-    /// gliding from the previous one.
-    private func paintedY(for index: Int) -> CGFloat {
-        let target = layout.y(for: index)
-        guard let from, progress < 1 else { return target }
-        return from.y(for: index) + (target - from.y(for: index)) * progress
+    var top: CGFloat
+    var bottom: CGFloat
+    var lower: CGFloat
+    var upper: CGFloat
+    var emphasis: CGFloat
+    var hoverPosition: CGFloat
+
+    init(layout: ConversationTurnRailGeometry, current: Int, selected: Int?, hovered: Int?, keyboardFocused: Bool) {
+        self.layout = layout; self.current = current; self.selected = selected
+        self.hovered = hovered; self.keyboardFocused = keyboardFocused
+        top = layout.top; bottom = layout.bottom
+        lower = CGFloat(layout.expanded.lowerBound); upper = CGFloat(layout.expanded.upperBound)
+        emphasis = hovered == nil ? 0 : 1
+        hoverPosition = CGFloat(hovered ?? current)
     }
+
+    typealias AnimatableData = AnimatablePair<AnimatablePair<CGFloat, CGFloat>,
+        AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>>>
+    var animatableData: AnimatableData {
+        get { .init(.init(top, bottom), .init(.init(lower, upper), .init(emphasis, hoverPosition))) }
+        set {
+            top = newValue.first.first; bottom = newValue.first.second
+            lower = newValue.second.first.first; upper = newValue.second.first.second
+            emphasis = newValue.second.second.first; hoverPosition = newValue.second.second.second
+        }
+    }
+
+    private func paintedY(for index: Int) -> CGFloat {
+        let center = CGFloat(index) + 0.5
+        if center < lower { return center * top / lower }
+        if center >= upper {
+            return bottom + (center - upper) * (layout.height - bottom) / (CGFloat(layout.count) - upper)
+        }
+        return top + (center - lower) * (bottom - top) / (upper - lower)
+    }
+
     var body: some View {
-        ZStack {
-            Canvas { context, _ in
-                for y in layout.ticks {
-                    let index = layout.index(at: y)
-                    let strength = focus.map { layout.expanded.contains(index) ? max(0, 1 - CGFloat(abs(index - $0)) / 5) : 0 } ?? 0
-                    let width = 7 + 6 * strength
-                    context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: paintedY(for: index), width: width, height: 2), cornerRadius: 1),
-                                 with: .color(.primary.opacity(0.24 + 0.12 * Double(strength))))
-                }
+        Canvas { context, _ in
+            #if TRANSCRIPT_CHECKS
+            ConversationTurnRailProbe.sample?(emphasis, hoverPosition)
+            #endif
+            func tick(y: CGFloat, width: CGFloat, opacity: Double, height: CGFloat = 2) {
+                context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: y, width: width, height: height), cornerRadius: height / 2),
+                             with: .color(.primary.opacity(opacity)))
             }
-            // Opacity is composited without rebuilding paths every animation
-            // frame. Hit targets and the current/selected marker never animate.
-            .opacity(focus == nil ? 0.75 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: focus != nil)
-            Canvas { context, _ in
-                func tick(y: CGFloat, width: CGFloat, opacity: Double, height: CGFloat = 2) {
-                    context.fill(Path(roundedRect: CGRect(x: 16 - width / 2, y: y, width: width, height: height), cornerRadius: height / 2),
-                                 with: .color(.primary.opacity(opacity)))
-                }
-                if let hovered, hovered != selected {
-                    let y = paintedY(for: hovered)
-                    context.fill(Path(roundedRect: CGRect(x: 4, y: y - 6, width: 24, height: 14), cornerRadius: WorkbenchTheme.Radius.chip),
-                                 with: .color(WorkbenchTheme.Fill.hover))
-                    tick(y: y, width: 14, opacity: 0.55)
-                }
-                tick(y: layout.y(for: current), width: 20, opacity: 0.85)
-                if keyboardFocused {
-                    let y = layout.y(for: selected ?? current)
-                    context.stroke(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: WorkbenchTheme.Radius.chip),
-                                   with: .color(.primary.opacity(0.18)), lineWidth: 1)
-                }
-                if let selected {
-                    let y = layout.y(for: selected)
-                    context.fill(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: WorkbenchTheme.Radius.chip),
-                                 with: .color(WorkbenchTheme.Fill.selected))
-                    tick(y: y, width: 20, opacity: 1, height: 2.5)
-                }
+            for y in layout.ticks {
+                let index = layout.index(at: y)
+                let strength = max(0, 1 - abs(CGFloat(index) - hoverPosition) / 5) * emphasis
+                tick(y: paintedY(for: index), width: 7 + 9 * strength,
+                     opacity: 0.20 + 0.22 * Double(strength))
+            }
+            // Separate hover/current/selection layers can coexist. Centering
+            // every width around x=16 keeps the rail from shifting sideways.
+            if let hovered, hovered != selected {
+                let y = paintedY(for: hovered)
+                context.fill(Path(roundedRect: CGRect(x: 4, y: y - 6, width: 24, height: 14), cornerRadius: WorkbenchTheme.Radius.chip),
+                             with: .color(WorkbenchTheme.Fill.hover.opacity(Double(emphasis))))
+                tick(y: y, width: 16, opacity: 0.55 * Double(emphasis))
+            }
+            tick(y: paintedY(for: current), width: 20, opacity: 0.85)
+            if keyboardFocused {
+                let y = paintedY(for: selected ?? current)
+                context.stroke(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: WorkbenchTheme.Radius.chip),
+                               with: .color(.primary.opacity(0.18)), lineWidth: 1)
+            }
+            if let selected {
+                let y = paintedY(for: selected)
+                context.fill(Path(roundedRect: CGRect(x: 3, y: y - 7, width: 26, height: 16), cornerRadius: WorkbenchTheme.Radius.chip),
+                             with: .color(WorkbenchTheme.Fill.selected))
+                tick(y: y, width: 20, opacity: 1, height: 2.5)
             }
         }
     }
 }
+
+#if TRANSCRIPT_CHECKS
+/// Fixture-only render samples; absent from the shipping app. This verifies
+/// interpolation reaches Canvas, not merely that state toggled its endpoints.
+enum ConversationTurnRailProbe {
+    static var sample: ((CGFloat, CGFloat) -> Void)?
+}
+#endif
