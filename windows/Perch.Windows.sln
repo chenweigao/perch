@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D54C5433-E690-4CF3-AD9E-FCA12353DF77}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perch.Core", "src\Perch.Core\Perch.Core.csproj", "{6AFF4986-8C5D-4873-96C3-B755D3A81718}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perch.App", "src\Perch.App\Perch.App.csproj", "{775CA1FB-BB6F-4191-87BC-A4892C8074C1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A9BBA4BF-7AF5-4E31-92A1-2D94A0F5EA0A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perch.Core.Tests", "tests\Perch.Core.Tests\Perch.Core.Tests.csproj", "{B4FDF2DF-00FE-49CD-BEA4-63E147D69775}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perch.App.Tests", "tests\Perch.App.Tests\Perch.App.Tests.csproj", "{5B81732A-92E2-46F5-9D79-533AA0A96F1A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6AFF4986-8C5D-4873-96C3-B755D3A81718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AFF4986-8C5D-4873-96C3-B755D3A81718}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AFF4986-8C5D-4873-96C3-B755D3A81718}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AFF4986-8C5D-4873-96C3-B755D3A81718}.Release|Any CPU.Build.0 = Release|Any CPU
+		{775CA1FB-BB6F-4191-87BC-A4892C8074C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{775CA1FB-BB6F-4191-87BC-A4892C8074C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{775CA1FB-BB6F-4191-87BC-A4892C8074C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{775CA1FB-BB6F-4191-87BC-A4892C8074C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4FDF2DF-00FE-49CD-BEA4-63E147D69775}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4FDF2DF-00FE-49CD-BEA4-63E147D69775}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4FDF2DF-00FE-49CD-BEA4-63E147D69775}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4FDF2DF-00FE-49CD-BEA4-63E147D69775}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B81732A-92E2-46F5-9D79-533AA0A96F1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B81732A-92E2-46F5-9D79-533AA0A96F1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B81732A-92E2-46F5-9D79-533AA0A96F1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B81732A-92E2-46F5-9D79-533AA0A96F1A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6AFF4986-8C5D-4873-96C3-B755D3A81718} = {D54C5433-E690-4CF3-AD9E-FCA12353DF77}
+		{775CA1FB-BB6F-4191-87BC-A4892C8074C1} = {D54C5433-E690-4CF3-AD9E-FCA12353DF77}
+		{B4FDF2DF-00FE-49CD-BEA4-63E147D69775} = {A9BBA4BF-7AF5-4E31-92A1-2D94A0F5EA0A}
+		{5B81732A-92E2-46F5-9D79-533AA0A96F1A} = {A9BBA4BF-7AF5-4E31-92A1-2D94A0F5EA0A}
+	EndGlobalSection
+EndGlobal

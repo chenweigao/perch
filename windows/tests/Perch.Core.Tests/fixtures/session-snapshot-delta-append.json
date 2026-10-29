@@ -1,0 +1,79 @@
+{
+  "id": "ses-busy",
+  "provider": "codex",
+  "title": "重构登录页 \"引号\" & emoji 🚀",
+  "cwd": "/home/developer/项目 目录",
+  "model": "gpt-5-codex",
+  "thinking": "medium",
+  "permissionMode": "workspace-ask",
+  "busy": true,
+  "archived": false,
+  "updated": 1760000300.0,
+  "revision": 5,
+  "completed": 0,
+  "interactions": [],
+  "error": null,
+  "codexHome": "/home/developer/.codex",
+  "context": null,
+  "resume": "native-thread-1",
+  "turnId": "turn-1",
+  "turnState": "running",
+  "permission": {
+    "selected": "workspace-ask",
+    "options": [
+      "read-only",
+      "workspace-ask",
+      "workspace-auto",
+      "full-access"
+    ],
+    "scope": "new-session"
+  },
+  "messages": [
+    {
+      "id": "codex-tool:item-2",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "tool_call_id": "item-2",
+          "tool_name": "shell",
+          "input": {
+            "command": "ls \"/home/developer/项目 目录\"",
+            "cwd": ""
+          }
+        }
+      ],
+      "created_at": "1760000099.0"
+    },
+    {
+      "id": "codex-result:item-2",
+      "role": "tool",
+      "created_at": "1760000099.0",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_call_id": "item-2",
+          "output": [
+            {
+              "type": "text",
+              "text": "文件 1\n文件 2\n"
+            }
+          ],
+          "is_error": false
+        }
+      ]
+    }
+  ],
+  "history": {
+    "epoch": "00000000000000000000000000001000",
+    "start": 0,
+    "total": 4,
+    "end": 4,
+    "indices": [
+      2,
+      3
+    ],
+    "baseRevision": 4
+  },
+  "subagents": []
+}
