@@ -9,6 +9,9 @@ a completed rewrite of every provider or a measured frame-rate improvement.
 
 ## Ownership
 
+See [responsibility boundaries](responsibility-boundaries.md) for the workspace
+feature owners, remote session collaborators and shared file/Git read channel.
+
 - `AppDelegate` strongly owns one `WorkbenchModel`; `WorkbenchApp` reads that same
   instance for all scenes and commands. Launch starts it before scene appearance;
   termination flushes drafts and shuts it down even if no appearance callback ran.

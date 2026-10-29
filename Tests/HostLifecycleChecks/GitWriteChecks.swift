@@ -52,6 +52,19 @@ import WorkbenchCore
     precondition(browser.gitWriting, "Returning to the same repository must retain its pending write")
     try await waitUntil { !browser.gitWriting && browser.gitLog?.first?.subject == "survives navigation" }
     precondition(browser.gitWriteError == nil)
+    browser.open(a.appendingPathComponent("file.txt").path)
+    let superseded = browser.fileRequest!
+    browser.loadGitStatus()
+    precondition(browser.fileRequest == nil, "Git navigation must cancel the previous file request")
+    await browser.loadFile(superseded)
+    precondition(browser.content == nil && browser.completedFileReadID != superseded.id,
+                 "A file read returning after Git navigation must not publish content or clear Git loading")
+    try await waitUntil { browser.gitLog?.first?.subject == "survives navigation" }
+    browser.open(a.appendingPathComponent("file.txt").path)
+    let current = browser.fileRequest!
+    await browser.loadFile(current)
+    guard case .text(let text, _, _) = browser.content else { preconditionFailure("Current file read was lost") }
+    precondition(text == "new content" && browser.completedFileReadID == current.id)
     browser.cancel()
-    print("PASS: Git repository metadata refresh, write completion after page cancellation/navigation, repository-scoped busy state")
+    print("PASS: Git metadata, writes surviving cancellation/navigation, repository busy state, shared file/Git read cancellation and stale publication")
 }
