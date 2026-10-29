@@ -9,11 +9,16 @@ import WorkbenchCore
     private(set) var snapshot: TaskContextSnapshot?
     private(set) var error: String?
     private(set) var loading = false
-    private(set) var outputs: [String: String] = [:]
+    /// Output tails the task detail page read, by task id.
+    private(set) var outputs: [String: TaskContextOutput] = [:]
+    /// Why the latest output read of a task failed, by task id.
+    private(set) var outputErrors: [String: String] = [:]
     private(set) var working: Set<String> = []
     private(set) var actionErrors: [String: String] = [:]
     private(set) var stopRequested: Set<String> = []
     var refresh = 0
+    /// Seconds between output reads of a running task.
+    @ObservationIgnored var outputInterval: Double = 2
     @ObservationIgnored private var generation = UUID()
     @ObservationIgnored private var sourceGeneration = UUID()
     @ObservationIgnored private var stopTimes: [String: Date] = [:]
@@ -23,7 +28,7 @@ import WorkbenchCore
         let token = UUID(); generation = token
         if self.reference != reference {
             sourceGeneration = UUID(); stopTimes = [:]
-            self.reference = reference; snapshot = nil; outputs = [:]
+            self.reference = reference; snapshot = nil; outputs = [:]; outputErrors = [:]
             actionErrors = [:]; stopRequested = []; working = []
         }
         error = nil; loading = reference != nil && online && snapshot == nil
@@ -51,21 +56,44 @@ import WorkbenchCore
         }
     }
 
-    func perform(_ task: KimiTask, source: SessionReference, stopping: Bool,
-                 operation: () async throws -> String) async {
+    /// Asks the runtime to stop one task. The acknowledgement only marks the
+    /// request; a later read that no longer lists the task as running ends it.
+    func stop(_ task: KimiTask, source: SessionReference, operation: () async throws -> Void) async {
         guard reference == source, !working.contains(task.id) else { return }
         let token = sourceGeneration
         working.insert(task.id); actionErrors[task.id] = nil
         do {
-            let result = try await operation()
+            try await operation()
             guard sourceGeneration == token, reference == source else { return }
-            if stopping { stopRequested.insert(task.id); stopTimes[task.id] = Date() }
-            else { outputs[task.id] = result }
+            stopRequested.insert(task.id); stopTimes[task.id] = Date()
         } catch {
             guard sourceGeneration == token, reference == source else { return }
             actionErrors[task.id] = error.localizedDescription
         }
         if sourceGeneration == token { working.remove(task.id) }
+    }
+
+    /// Follows one task's output tail while its detail page shows it: a read
+    /// now, then one every `outputInterval` seconds while the task runs. A
+    /// finished task is read once, for its final tail. Runs in the page's
+    /// `.task(id:)`; a reply for another source or a cancelled page is dropped.
+    func followOutput(_ taskID: String, source: SessionReference, running: Bool,
+                      read: () async throws -> KimiTask) async {
+        let token = sourceGeneration
+        while !Task.isCancelled, sourceGeneration == token, reference == source {
+            do {
+                let value = try await read()
+                try Task.checkCancellation()
+                guard sourceGeneration == token, reference == source else { return }
+                outputs[taskID] = TaskContextOutput(value); outputErrors[taskID] = nil
+            } catch is CancellationError { return }
+            catch {
+                guard !Task.isCancelled, sourceGeneration == token, reference == source else { return }
+                outputErrors[taskID] = error.localizedDescription
+            }
+            guard running else { return }
+            do { try await Task.sleep(for: .seconds(outputInterval)) } catch { return }
+        }
     }
 }
 
@@ -81,5 +109,23 @@ extension WorkbenchModel {
         guard stop, task.stoppable == true else { throw WorkbenchError(L("请在完整会话中查看")) }
         try await agents.native.stopTaskContextAgent(task.id, session: source.terminalID)
         return ""
+    }
+    /// One Kimi task with its output tail, read without selecting its session.
+    func readTaskOutput(_ taskID: String, source: SessionReference) async throws -> KimiTask {
+        guard source.kind == .kimi, let agents = agentConnections(for: source.hostID) else {
+            throw WorkbenchError(L("状态未同步"))
+        }
+        return try await agents.kimi.taskContextOutput(taskID, session: source.terminalID)
+    }
+    /// The main window shows this conversation, so its sheets can present.
+    func showsConversation(_ source: SessionReference) -> Bool {
+        !showDashboard && !draftingNewTask && selectedReference == source
+    }
+    /// Opens a subagent's own transcript in the conversation the main window
+    /// shows; any other source opens nothing.
+    func openTaskTranscript(_ task: KimiTask, source: SessionReference) {
+        guard showsConversation(source), let agents = agentConnections(for: source.hostID) else { return }
+        if source.kind == .kimi { agents.kimi.presentTranscript(task, in: source.terminalID) }
+        else { agents.native.openSubagent(task.id, in: source.terminalID) }
     }
 }
