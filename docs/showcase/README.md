@@ -1,40 +1,32 @@
 # Public showcase assets
 
-The showcase uses production macOS views with synthetic content. It is a product
-illustration, not evidence of live Agent execution, performance, or App Store
-availability. No Apple or App Store endorsement is implied.
+The current PNGs are **rendered UI illustrations**, not native screenshots.
+They follow the current Perch workspace layout: compact title bar, adjustable
+sidebar, shared reading/composer width and integrated task inspector. All project
+names, conversations and outputs are synthetic. Icons, glass and spacing are
+illustrative rather than pixel-exact AppKit rendering.
 
-## Sources
-
-| File in `docs/images` | Source |
+| File in `docs/images` | Render scene |
 | --- | --- |
-| `perch-overview.jpg` | Unaltered conversation capture from `Tests/PublicDemo` |
-| `perch-tool-details.jpg` | Unaltered expanded tool capture from `Tests/PublicDemo` |
-| `perch-new-session.jpg` | Unaltered active-window capture from `Tests/NewTaskPreview`, with simulated connectivity and a synthetic model |
-| `perch-showcase-overview.jpg` | Browser capture of `index.html?scene=overview` |
-| `perch-showcase-start.jpg` | Browser capture of `index.html?scene=start` |
-| `perch-showcase-details.jpg` | Browser capture of `index.html?scene=details` |
+| `perch-overview.png` | `overview`, light workspace |
+| `perch-overview-dark.png` | `dark`, dark workspace |
+| `perch-progress.png` | `progress`, ongoing task |
+| `perch-tool-details.png` | `details`, integrated task output |
+| `perch-new-session.png` | `start`, new task |
 
-The promotional cards add a heading, background and brand mark around complete
-screenshots. They do not redraw controls, replace UI text, mask private content,
-or fabricate a live run. All visible task text, project labels and outputs are
-demo data. The new-session capture shows the macOS 26 native glass in an active
-window; inactive windows can look flatter.
+Each PNG is an unaltered browser capture of `index.html?scene=<scene>` in a
+1280 × 720 viewport. The footer identifies it as a rendered UI illustration with
+demo content. No agent was run, and no private session or command output was used.
+No external fonts or services are loaded.
 
-## Updating the cards
+## Reproducing
 
-1. Build the app and the relevant isolated fixture. See
-   [PublicDemo](../../Tests/PublicDemo/README.md) and
-   `scripts/build-new-task-preview.sh`.
-2. Use only synthetic tasks and project names. Do not load personal workspace
-   state into screenshots. Activate the window before capturing native glass.
-3. Review the whole image, including menus, paths, hostnames and metadata.
-4. Serve the repository locally, then open `docs/showcase/index.html` with
-   `?scene=overview`, `?scene=start`, or `?scene=details`. The checked-in cards
-   were captured in a 1280 × 720 browser viewport. No external fonts or services
-   are loaded. Keep native screenshots intact and retain the demo disclosure.
-5. Capture each complete card, visually inspect the exports, and check the
-   English and Chinese README links before publishing.
+Serve the repository locally and open `docs/showcase/index.html?scene=overview`.
+Select the other scenes via the query parameter, capture the complete page and
+inspect the export, including the disclosure footer. Check both README variants
+before publishing.
 
-Use the source screenshots for close inspection of UI text; the cards are for
-repository introductions and project sharing.
+The older JPEG captures and promotional compositions remain for historical links.
+The separate [PublicDemo](../../Tests/PublicDemo/README.md) fixture is retained;
+it is not the source of these PNG renders. These illustrations do not substitute
+for running-app visual or functional acceptance.

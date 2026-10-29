@@ -8,15 +8,18 @@
 使用 SwiftUI、AppKit 和 Ghostty 构建，保留原生文本编辑、键盘操作，以及 macOS 26
 的系统 Liquid Glass 效果。
 
-![Perch：为 coding agent 打造的原生工作台](docs/images/perch-showcase-overview.jpg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/perch-overview-dark.png">
+  <img alt="Perch 工作台渲染示意：正文与一体任务右栏，使用演示数据" src="docs/images/perch-overview.png">
+</picture>
 
 | 带着上下文开始 | 需要时查看细节 |
 | --- | --- |
-| [![新建任务时选择项目、模型与思考强度](docs/images/perch-showcase-start.jpg)](docs/images/perch-new-session.jpg) | [![在对话中展开工具参数和输出](docs/images/perch-showcase-details.jpg)](docs/images/perch-tool-details.jpg) |
+| [![新建任务时选择项目、模型与思考强度](docs/images/perch-new-session.png)](docs/images/perch-new-session.png) | [![在一体右栏中查看任务详情和输出](docs/images/perch-tool-details.png)](docs/images/perch-tool-details.png) |
 | 选好项目、模型与思考强度，权限设置也就在手边。 | 先读结果，再按需展开工具调用和输出。 |
 
-*截图使用真实原生组件与虚构演示数据；背景与标题仅用于宣传排版，不包含私人会话或真实命令执行结果。
-[查看完整对话截图](docs/images/perch-overview.jpg) · [素材来源](docs/showcase/README.md)*
+*图片为界面渲染示意，使用虚构演示数据，不是原生截图或真实命令执行结果。
+[浅色外观](docs/images/perch-overview.png) · [深色外观](docs/images/perch-overview-dark.png) · [进行中的任务](docs/images/perch-progress.png) · [素材来源](docs/showcase/README.md)*
 
 项目工作台、任务浮窗、文件阅读、统一搜索、交付验收和长任务托管已加入源码预览。使用范围和后台运行条件见[工作台说明](docs/WORKSPACE.md)。
 

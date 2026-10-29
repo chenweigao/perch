@@ -9,16 +9,18 @@ can read the result, inspect the work and decide what happens next.
 Built with SwiftUI, AppKit and Ghostty, with native text editing, keyboard shortcuts
 and system Liquid Glass on macOS 26.
 
-![Perch: a native home for coding agents](docs/images/perch-showcase-overview.jpg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/perch-overview-dark.png">
+  <img alt="Perch workspace illustration: conversation and integrated task inspector with demo content" src="docs/images/perch-overview.png">
+</picture>
 
-| Start with context | Inspect the details |
+| Start with context | Keep the work in view |
 | --- | --- |
-| [![Choose a project, model and reasoning effort before starting](docs/images/perch-showcase-start.jpg)](docs/images/perch-new-session.jpg) | [![Expand tool parameters and output alongside the conversation](docs/images/perch-showcase-details.jpg)](docs/images/perch-tool-details.jpg) |
-| Pick a project, model and reasoning effort. Keep permissions close at hand. | Read the answer first; expand tool calls and output when you need them. |
+| [![Choose a project, model and reasoning effort before starting](docs/images/perch-new-session.png)](docs/images/perch-new-session.png) | [![Read task details and output alongside the conversation](docs/images/perch-tool-details.png)](docs/images/perch-tool-details.png) |
+| Pick a project, model and reasoning effort. Keep permissions close at hand. | Read the answer first; inspect task details in the integrated right panel. |
 
-*Real native UI with synthetic demo data. Showcase backgrounds and captions are
-presentation only; no private conversations or live command results are shown.
-[Full-size conversation screenshot](docs/images/perch-overview.jpg) · [Asset sources](docs/showcase/README.md)*
+*Rendered UI illustrations with synthetic demo data; these are not native screenshots or live command results.
+[Light appearance](docs/images/perch-overview.png) · [Dark appearance](docs/images/perch-overview-dark.png) · [Work in progress](docs/images/perch-progress.png) · [Asset sources](docs/showcase/README.md)*
 
 ## Why Perch
 
