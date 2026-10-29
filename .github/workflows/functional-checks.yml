@@ -33,6 +33,7 @@ jobs:
           path: .local/functional-portable/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: error
 
   native-build:
@@ -66,6 +67,7 @@ jobs:
           name: native-build-${{ github.sha }}
           path: .local/native-build/build.tar.gz
           retention-days: 1
+          overwrite: true
           if-no-files-found: error
       - name: Retain build results
         if: always() && hashFiles('.local/functional-build/results.json') != ''
@@ -75,6 +77,7 @@ jobs:
           path: .local/functional-build/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: error
 
   native-core:
@@ -103,6 +106,7 @@ jobs:
           path: .local/functional-core/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: error
 
   native-host:
@@ -131,6 +135,7 @@ jobs:
           path: .local/functional-host/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: error
 
   native-acceptance:
@@ -159,6 +164,7 @@ jobs:
           path: .local/functional-native/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: error
 
   native-navigation:
@@ -187,6 +193,7 @@ jobs:
           path: .local/functional-navigation/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: error
 
   native-summary:
@@ -235,4 +242,5 @@ jobs:
           path: .local/functional-groups/
           include-hidden-files: true
           retention-days: 7
+          overwrite: true
           if-no-files-found: ignore
