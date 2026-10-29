@@ -56,7 +56,7 @@ public enum RemoteSetup {
 
     /// The bridge protocol this build speaks. It must match SERVICE_VERSION in
     /// remote/native-agent-service.py; scripts/check-version.py enforces that.
-    public static let bridgeServiceVersion = 10
+    public static let bridgeServiceVersion = 11
 
     public static func sshAliases(_ config: String) -> [String] {
         var aliases = Set<String>()

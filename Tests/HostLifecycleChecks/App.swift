@@ -205,6 +205,17 @@ import WorkbenchCore
             let setup = RemoteSetupController(host: model.connections[0].host)
             precondition(!setup.host.autoConnectSSH && !setup.host.autoConnectHerdr,
                          "editing the host must retain connection preferences")
+            var nativeHost = setup.host
+            nativeHost.enabledAgents = [.omp, .claude]
+            let claudeSetup = RemoteSetupController(host: nativeHost, initialProvider: .claude)
+            precondition(claudeSetup.provider == .claude,
+                         "an Agent settings deep link must not fall back to the first provider")
+            precondition(claudeSetup.host.enabledAgents == [.omp, .claude],
+                         "Agent-specific setup must retain the shared host and its other Agents")
+            model.configureHost(nativeHost, provider: .claude)
+            precondition(model.setupProvider == .claude && model.showAddHost)
+            model.setupDismissed()
+            precondition(model.setupProvider == nil && model.setupHost == nil)
             try model.finishSetup(setup.host, launch: nil, startTask: false)
             precondition(!aa.kimi.connecting && !aa.native.wantsConnection && !model.connections[0].wantsConnection)
             model.shutdown()

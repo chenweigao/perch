@@ -106,6 +106,7 @@ final class WorkbenchModel {
     }
     var showAddHost = false
     var setupHost: SSHHost?
+    var setupProvider: SessionKind?
     var launchAfterSetup: TaskLaunchDefaults?
     var pendingSetupLaunch = false
     var showNewTerminal = false
@@ -369,9 +370,9 @@ final class WorkbenchModel {
         workspace.sidebarProjectLocations[item.id] = project
         saveWorkspace()
     }
-    func configureHost(_ host: SSHHost? = nil) {
+    func configureHost(_ host: SSHHost? = nil, provider: SessionKind? = nil) {
         if host?.isLocal == true { showLocalSetup = true; return }
-        setupHost = host; showAddHost = true
+        setupHost = host; setupProvider = provider; showAddHost = true
     }
     func finishSetup(_ host: SSHHost, launch: TaskLaunchDefaults?, startTask: Bool) throws {
         try RemoteSetup.validate(host)
@@ -408,7 +409,7 @@ final class WorkbenchModel {
         pendingSetupLaunch = startTask
     }
     func setupDismissed() {
-        setupHost = nil
+        setupHost = nil; setupProvider = nil
         guard pendingSetupLaunch else { return }
         pendingSetupLaunch = false
         if launchAfterSetup?.provider == .terminal { showNewTerminal = true }

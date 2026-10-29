@@ -106,6 +106,7 @@ private func checkLayout(_ label: String) throws {
 @MainActor
 func runToolbarChecks() async {
     let agent = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_AGENT"] ?? "kimi"
+    let newTask = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_NEW_TASK"] == "1"
     var result: [String: Any] = ["agent": agent, "status": "failed"]
     do {
         for _ in 0..<100 {
@@ -116,8 +117,8 @@ func runToolbarChecks() async {
         try await pause()
         try checkLayout("wide Chinese")
         let panel = try await openPanel(main)
-        if agent == "claude" {
-            try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Agents without model capabilities must remain read-only")
+        if agent == "claude" && !newTask {
+            try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Existing Claude sessions must keep model controls read-only")
             try await closePanel(panel)
         } else {
             try await closePanel(panel)
@@ -149,7 +150,7 @@ func runToolbarChecks() async {
         let englishPanel = try await openPanel(main)
         try await closePanel(englishPanel)
         try await press("english")
-        if agent != "claude" {
+        if agent != "claude" || newTask {
             let reset = try await openPanel(main)
             try await chooseModel("Reasoner", in: reset)
             try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Switching models must preserve a supported effort")

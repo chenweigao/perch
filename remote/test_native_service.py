@@ -111,6 +111,126 @@ export function query({prompt, options}) {
             self.assertIsNone(default_capture['topModel'])
             self.assertTrue(all(value is None for value in default_capture['resolved'].values()))
 
+class ClaudeWorkerTests(unittest.TestCase):
+    def run_worker(self, sdk, config, prompt=None):
+        node = shutil.which('node')
+        if not node: self.skipTest('node is not installed')
+        worker = pathlib.Path(__file__).with_name('claude-worker.mjs')
+        result = subprocess.run([node, str(worker), json.dumps({'sdk':str(sdk), **config})],
+                                input=(json.dumps(prompt) + '\n') if prompt else None,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+
+    def test_catalog_uses_supported_models_without_a_user_prompt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = pathlib.Path(directory); sdk = directory/'fake-sdk.mjs'; log = directory/'calls.jsonl'
+            sdk.write_text("""import {appendFileSync} from 'node:fs';
+const record = value => appendFileSync(process.env.CLAUDE_FAKE_LOG, JSON.stringify(value) + '\\n');
+export function query({prompt, options}) {
+  record({call:'query', options});
+  (async () => { for await (const message of prompt) record({call:'prompt', message}); })();
+  return {
+    async supportedModels() { record({call:'supportedModels'}); return [{value:'opus', supportedEffortLevels:['high']}]; },
+    close() { record({call:'close'}); },
+    async *[Symbol.asyncIterator]() {}
+  };
+}
+""")
+            with patch.dict(os.environ, {'CLAUDE_FAKE_LOG':str(log)}):
+                lines = self.run_worker(sdk, {'operation':'catalog','cwd':str(directory),'binary':'/fixture/claude'})
+            self.assertEqual(lines, [{'type':'models','models':[{'value':'opus','supportedEffortLevels':['high']}]}])
+            calls = [json.loads(line) for line in log.read_text().splitlines()]
+            self.assertEqual([item['call'] for item in calls], ['query','supportedModels','close'])
+            self.assertEqual(calls[0]['options']['pathToClaudeCodeExecutable'], '/fixture/claude')
+
+    def test_prompt_passes_selected_model_and_effort(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = pathlib.Path(directory); sdk = directory/'fake-sdk.mjs'
+            sdk.write_text("""export function query({options}) {
+  return {async interrupt() {}, async *[Symbol.asyncIterator]() {yield {type:'capture', options};}};
+}
+""")
+            lines = self.run_worker(sdk, {'cwd':str(directory),'binary':'/fixture/claude','model':'opus','thinking':'max'},
+                                    {'type':'prompt','id':'turn-1','message':'work'})
+            capture = next(item for item in lines if item.get('type') == 'capture')
+            self.assertEqual(capture['options']['model'], 'opus')
+            self.assertEqual(capture['options']['effort'], 'max')
+            default_lines = self.run_worker(sdk, {'cwd':str(directory),'binary':'/fixture/claude'},
+                                            {'type':'prompt','id':'turn-2','message':'default'})
+            default_capture = next(item for item in default_lines if item.get('type') == 'capture')
+            self.assertNotIn('model', default_capture['options'])
+            self.assertNotIn('effort', default_capture['options'])
+
+class ClaudeCatalogTests(unittest.TestCase):
+    def fixture_root(self, directory):
+        root = pathlib.Path(directory)
+        package = root/'node_modules/@anthropic-ai/claude-agent-sdk/package.json'
+        package.parent.mkdir(parents=True); package.write_text('{}')
+        return root
+
+    def test_catalog_normalizes_official_models_and_caches(self):
+        raw = [{'value':'default','resolvedModel':'claude-opus-5-5','displayName':'Default (recommended)',
+                'supportsEffort':True,'supportedEffortLevels':['low','high','low',None],
+                'description':'private runtime details'},
+               {'value':'legacy','supportsEffort':False,'supportedEffortLevels':['high']},
+               {'displayName':'missing id'}]
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture_root(directory)
+            process = type('Process', (), {'returncode':0,
+                'communicate':lambda self,timeout=None:(json.dumps({'type':'models','models':raw}), '')})()
+            with patch.object(broker,'ROOT',root), patch.object(broker,'CLAUDE_MODELS',None), \
+                 patch.object(broker.shutil,'which',side_effect=lambda name:'/fixture/'+name), \
+                 patch.object(broker.subprocess,'Popen',return_value=process) as launch:
+                models = broker.claude_catalog()
+                self.assertIs(models, broker.claude_catalog())
+            self.assertEqual(launch.call_count, 1)
+            self.assertTrue(launch.call_args.kwargs['start_new_session'])
+        self.assertEqual(models, [
+            {'id':'default','provider':'claude','name':'Default (recommended)','thinking':['low','high'],
+             'isDefault':True,'resolvedModel':'claude-opus-5-5'},
+            {'id':'legacy','provider':'claude','name':'legacy','thinking':[],'isDefault':False}])
+        self.assertNotIn('description', json.dumps(models))
+
+    def test_catalog_timeout_kills_only_its_worker_group(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture_root(directory)
+            process = type('Process', (), {'pid':4242,'returncode':-9})()
+            calls = []
+            def communicate(timeout=None):
+                calls.append(timeout)
+                if len(calls) == 1: raise subprocess.TimeoutExpired('claude', timeout)
+                return '', ''
+            process.communicate = communicate
+            with patch.object(broker,'ROOT',root), patch.object(broker,'CLAUDE_MODELS',None), \
+                 patch.object(broker.shutil,'which',side_effect=lambda name:'/fixture/'+name), \
+                 patch.object(broker.subprocess,'Popen',return_value=process), \
+                 patch.object(broker.os,'killpg') as kill:
+                with self.assertRaisesRegex(ValueError, '超时'): broker.claude_catalog(timeout=2)
+            kill.assert_called_once_with(4242, broker.signal.SIGKILL)
+            self.assertEqual(calls, [2, None])
+
+    def test_selection_uses_only_the_declared_levels(self):
+        catalog = [{'id':'opus','provider':'claude','thinking':['low','high']}]
+        self.assertEqual(broker.claude_selection('',catalog=catalog),(None,None))
+        self.assertEqual(broker.claude_selection('opus','high',catalog)[1], 'high')
+        with self.assertRaisesRegex(ValueError, '默认模型'): broker.claude_selection('',thinking='high',catalog=catalog)
+        with self.assertRaisesRegex(ValueError, '不认识'): broker.claude_selection('unknown',catalog=catalog)
+        with self.assertRaisesRegex(ValueError, '不支持'): broker.claude_selection('opus','max',catalog)
+
+    def test_setup_returns_the_public_live_catalog(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture_root(directory)
+            version = type('Result', (), {'returncode':0,'stdout':'2.1.302'})()
+            models = [{'id':'opus','provider':'claude','name':'Opus','thinking':['high'],'isDefault':False}]
+            with patch.object(broker,'ROOT',root), patch.object(broker.shutil,'which',return_value='/fixture/claude'), \
+                 patch.object(broker.subprocess,'run',return_value=version), \
+                 patch.object(broker,'claude_catalog',return_value=models) as discover:
+                status = broker.setup_status('claude')
+            discover.assert_called_once_with(live=True)
+            self.assertEqual(status['modelCheck'], 'configured')
+            self.assertEqual(status['models'], models)
+
 class QoderCatalogTests(unittest.TestCase):
     def result(self, payload, code=0, stderr=''):
         return type('Result', (), {'returncode':code, 'stdout':json.dumps(payload), 'stderr':stderr})()
@@ -387,7 +507,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual([m['content'][0].get('text') for m in s.state['messages'][1:]], ['first','second'])
 
     def test_claude_launch_uses_claude_worker_and_binary(self):
-        s=self.session('claude'); s.state['permissionMode']='default'
+        s=self.session('claude'); s.state['permissionMode']='default'; s.state['thinking']='max'
         process=type('Process',(),{})()
         with patch.object(broker.subprocess,'Popen',return_value=process) as popen, \
              patch.object(broker.threading,'Thread'), \
@@ -401,6 +521,7 @@ class ProtocolTests(unittest.TestCase):
         cfg=json.loads(args[2])
         self.assertEqual(cfg['binary'],'/usr/local/bin/claude')
         self.assertEqual(cfg['cwd'],'/tmp')
+        self.assertEqual(cfg['thinking'],'max')
         # Subagent text is forwarded by default (probe 2026-10-18).
         self.assertIs(cfg['forwardSubagentText'],True)
         # The worker needs the proxy env, otherwise the CLI's phone-home calls stall silently.
@@ -911,6 +1032,19 @@ class CodexHandlerContractTests(unittest.TestCase):
         self.assertEqual(self.request('/sessions/claude-permission/permission',{'mode':'dontAsk'})[0],400)
         self.assertEqual(claude.state['permissionMode'],'plan')
 
+    def test_create_claude_validates_the_official_model_and_effort(self):
+        catalog = [{'id':'opus','provider':'claude','name':'Opus','thinking':['low','high']}]
+        with patch.object(broker,'claude_catalog',side_effect=AssertionError('default must not discover a catalog')):
+            code,created = self.request('/sessions',{'provider':'claude','cwd':folder.name})
+            self.assertEqual(code,200)
+            self.assertEqual((created['model'],created['thinking']),('',None))
+        with patch.object(broker,'claude_catalog',return_value=catalog):
+            code,created = self.request('/sessions',{'provider':'claude','cwd':folder.name,'model':'opus','thinking':'high'})
+            self.assertEqual(code,200)
+            self.assertEqual((created['model'],created['thinking']),('opus','high'))
+            self.assertEqual(self.request('/sessions',{'provider':'claude','cwd':folder.name,'model':'unknown'})[0],400)
+            self.assertEqual(self.request('/sessions',{'provider':'claude','cwd':folder.name,'model':'opus','thinking':'max'})[0],400)
+
     def test_create_rejects_model_and_effort_outside_catalog(self):
         catalog=[{'id':'gpt-codex','provider':'codex','name':'GPT Codex','thinking':['medium'],'defaultThinking':'medium'}]
         with patch.object(broker,'codex_catalog',return_value=catalog):
@@ -1206,6 +1340,8 @@ class DshHandlerContractTests(unittest.TestCase):
     def setUp(self):
         process_guard=patch.object(broker.subprocess,'Popen',side_effect=AssertionError('contract tests must not launch a real process'))
         process_guard.start(); self.addCleanup(process_guard.stop)
+        catalog_guard=patch.object(broker,'claude_catalog',return_value=[])
+        catalog_guard.start(); self.addCleanup(catalog_guard.stop)
         broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None; broker.DSH_MODELS=None
         self.s=broker.Session(dict(id='dsh-contract',provider='dsh',cwd=folder.name,title='Test',model='',
             busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
@@ -1284,7 +1420,8 @@ class DshHandlerContractTests(unittest.TestCase):
             return [{'id':'intl-pro','provider':'intl-vendor','name':'Intl Pro'}]
         with patch.object(broker,'model_catalog',return_value=[]), \
              patch.object(broker,'qoder_catalog',side_effect=discover), \
-             patch.object(broker,'codex_catalog',return_value=[]):
+             patch.object(broker,'codex_catalog',return_value=[]), \
+             patch.object(broker,'claude_catalog',side_effect=OSError('Claude unavailable')):
             code,payload=self.request('/models')
         self.assertEqual(code,200)
         self.assertEqual(calls,[('qoder',10),('qoderintl',10)])
@@ -1292,12 +1429,14 @@ class DshHandlerContractTests(unittest.TestCase):
     def test_combined_catalog_tags_each_runtime(self):
         broker.MODELS=[{'provider':'openai-codex','id':'gpt-5.4-mini','name':'GPT-5.4 mini','selector':'openai-codex/gpt-5.4-mini'}]
         codex=[{'provider':'codex','id':'gpt-codex','thinking':['medium'],'defaultThinking':'medium'}]
-        with patch.object(broker,'codex_catalog',return_value=codex):
+        claude=[{'provider':'claude','id':'opus','thinking':['low','high'],'resolvedModel':'claude-opus-5-5'}]
+        with patch.object(broker,'codex_catalog',return_value=codex), patch.object(broker,'claude_catalog',return_value=claude):
             code,payload=self.request('/models')
         self.assertEqual(code,200)
         self.assertCountEqual([(e['agent'],e['id']) for e in payload['models']],
-                              [('omp','gpt-5.4-mini'),('dsh','deepseek-v4-flash'),('dsh','deepseek-v4-pro'),('codex','gpt-codex')])
+                              [('omp','gpt-5.4-mini'),('dsh','deepseek-v4-flash'),('dsh','deepseek-v4-pro'),('codex','gpt-codex'),('claude','opus')])
         self.assertNotIn('agent',codex[0])
+        self.assertNotIn('agent',claude[0])
         # Tagging builds new dicts; the cached CLI output stays as omp emitted it.
         self.assertNotIn('agent',broker.MODELS[0])
 
@@ -1305,6 +1444,8 @@ class HandlerContractTests(unittest.TestCase):
     def setUp(self):
         process_guard=patch.object(broker.subprocess,'Popen',side_effect=AssertionError('contract tests must not launch a real process'))
         process_guard.start(); self.addCleanup(process_guard.stop)
+        catalog_guard=patch.object(broker,'claude_catalog',return_value=[])
+        catalog_guard.start(); self.addCleanup(catalog_guard.stop)
         broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None
         self.s=broker.Session(dict(id='contract',provider='omp',cwd=folder.name,title='Test',model='',
             busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
@@ -2673,7 +2814,7 @@ class SetupTests(unittest.TestCase):
             status = broker.setup_status('omp')
         self.assertEqual(status['modelCheck'], 'configured')
         self.assertEqual(len(status['models']), 1)
-        with patch.object(broker, 'MODELS', None), patch.object(broker, 'dsh_catalog', return_value=[]), patch.object(broker, 'codex_catalog', return_value=[]), patch.object(broker.subprocess, 'run', return_value=self.result(json.dumps(catalog))):
+        with patch.object(broker, 'MODELS', None), patch.object(broker, 'dsh_catalog', return_value=[]), patch.object(broker, 'codex_catalog', return_value=[]), patch.object(broker, 'claude_catalog', return_value=[]), patch.object(broker.subprocess, 'run', return_value=self.result(json.dumps(catalog))):
             models = broker.combined_catalog()
         self.assertEqual(models[0]['id'], 'fixture')
         self.assertEqual(models[0]['thinking'], ['high'])

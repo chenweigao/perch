@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 10
+SERVICE_VERSION = 11
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -60,6 +60,7 @@ SESSIONS = {}
 MODELS = None
 CODEX_MODELS = None
 QODER_MODELS = {}
+CLAUDE_MODELS = None
 MODEL_LOCK = threading.Lock()
 DSH_MODELS = None
 PERMISSION_MODES = {
@@ -150,6 +151,60 @@ def qoder_catalog(provider, live=False, timeout=60):
             models.append(entry)
         QODER_MODELS[provider] = models
         return models
+
+def claude_catalog(live=False, timeout=40):
+    global CLAUDE_MODELS
+    with MODEL_LOCK:
+        if not live and CLAUDE_MODELS is not None: return CLAUDE_MODELS
+        node = shutil.which('node'); binary = shutil.which('claude')
+        if not node: raise ValueError('未找到 node')
+        if not binary: raise ValueError('未找到 claude')
+        if not (ROOT / 'node_modules/@anthropic-ai/claude-agent-sdk/package.json').is_file():
+            raise ValueError('未安装 @anthropic-ai/claude-agent-sdk')
+        cfg = {'operation':'catalog', 'binary':binary, 'cwd':str(ROOT)}
+        process = subprocess.Popen([node, str(ROOT/'claude-worker.mjs'), json.dumps(cfg)], cwd=str(ROOT),
+                                   env=proxy_aware_spawn_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   text=True, start_new_session=True)
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.communicate()
+            raise ValueError('读取 Claude 模型列表超时')
+        if process.returncode != 0:
+            raise ValueError('读取 Claude 模型列表失败：' + (stderr or stdout or 'unknown error').strip()[:200])
+        lines = [line for line in stdout.splitlines() if line.strip()]
+        if len(lines) != 1: raise ValueError('Claude 模型列表返回格式无效')
+        payload = json.loads(lines[0])
+        items = payload.get('models') if isinstance(payload, dict) and payload.get('type') == 'models' else None
+        if not isinstance(items, list): raise ValueError('Claude 模型列表返回格式无效')
+        models = []
+        for item in items:
+            if not isinstance(item, dict): continue
+            model = item.get('value')
+            if not isinstance(model, str) or not model: continue
+            efforts = []
+            if item.get('supportsEffort') is True:
+                for effort in item.get('supportedEffortLevels') or []:
+                    if isinstance(effort, str) and effort and effort not in efforts: efforts.append(effort)
+            entry = {'id':model, 'provider':'claude',
+                     'name':item.get('displayName') if isinstance(item.get('displayName'), str) and item.get('displayName') else model,
+                     'thinking':efforts, 'isDefault':model == 'default'}
+            if isinstance(item.get('resolvedModel'), str) and item['resolvedModel']:
+                entry['resolvedModel'] = item['resolvedModel']
+            models.append(entry)
+        CLAUDE_MODELS = models
+        return models
+
+def claude_selection(model, thinking=None, catalog=None):
+    if not model:
+        if thinking: raise ValueError('使用 Claude 默认模型时不能指定思考强度')
+        return None, None
+    source = claude_catalog() if catalog is None else catalog
+    entry = next((item for item in source if item.get('id') == model), None)
+    if entry is None: raise ValueError('Claude 不认识该模型，请刷新模型列表后重试')
+    if thinking and thinking not in entry.get('thinking', []): raise ValueError('当前 Claude 模型不支持该思考强度')
+    return entry, thinking
 
 def qoder_selection(provider, model, thinking=None, catalog=None):
     if not model:
@@ -283,8 +338,16 @@ def setup_status(provider):
     elif provider == 'claude':
         result['sdkInstalled'] = (ROOT / 'node_modules/@anthropic-ai/claude-agent-sdk/package.json').is_file()
         result['nodeInstalled'] = bool(shutil.which('node'))
-        # The SDK resolves the model and login at the first query; no model-list API.
-        result['modelCheck'] = 'runtime-default'
+        if not result['sdkInstalled'] or not result['nodeInstalled']:
+            result['modelCheck'] = 'missing'
+            return result
+        try:
+            result['models'] = claude_catalog(live=True)
+        except Exception:
+            result['modelCheck'] = 'missing'
+            result['error'] = 'Could not read the Claude model catalog. Check Claude Code login and settings in an SSH terminal.'
+            return result
+        result['modelCheck'] = 'configured' if result['models'] else 'missing'
     elif provider == 'dsh':
         result['credentialCheck'] = 'present' if os.environ.get('DEEPSEEK_API_KEY') else 'missing'
         result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
@@ -469,7 +532,8 @@ def catalog_entries(value, agent):
 def combined_catalog():
     entries = catalog_entries(dsh_catalog(), 'dsh'); errors = []
     sources = (('omp', model_catalog), ('qoder', lambda:qoder_catalog('qoder', timeout=10)),
-               ('qoderintl', lambda:qoder_catalog('qoderintl', timeout=10)), ('codex', codex_catalog))
+               ('qoderintl', lambda:qoder_catalog('qoderintl', timeout=10)), ('codex', codex_catalog),
+               ('claude', lambda:claude_catalog(timeout=10)))
     for agent, discover in sources:
         try:
             values = discover()
@@ -823,7 +887,9 @@ class Session:
             model = qoder_requested_model(s) if s['provider'] in QODER_SDK else s['model']
             cfg = {'cwd':s['cwd'],'model':model,'resume':s.get('resume'),'binary':shutil.which(cli)}
             if s['provider'] in QODER_SDK: cfg['sdk'] = QODER_SDK[s['provider']]
-            else: cfg['forwardSubagentText'] = CLAUDE_FORWARD_SUBAGENT_TEXT
+            else:
+                cfg['forwardSubagentText'] = CLAUDE_FORWARD_SUBAGENT_TEXT
+                if s.get('thinking'): cfg['thinking'] = s['thinking']
             if not cfg['binary']: raise ValueError('未找到 ' + cli)
             args = ['node',str(ROOT/worker),json.dumps(cfg)]
             # The Claude CLI also phones home (feature flags, telemetry) outside the
@@ -2358,12 +2424,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, setup_status(provider))
             if self.path=='/models' and not post:
                 return self.respond(200,{'models':combined_catalog()})
-            codex_models=None; selected_home=None; qoder_models=None; qoder_agent=None; qoder_has_model=False
+            codex_models=None; selected_home=None; qoder_models=None; qoder_agent=None; qoder_has_model=False; claude_models=None
             if post and self.path=='/sessions' and body.get('provider')=='codex':
                 selected_home=codex_home()
                 codex_models=codex_catalog(selected_home)
             elif post and self.path=='/sessions' and body.get('provider') in QODER_SDK and body.get('model'):
                 qoder_agent=body['provider']; qoder_models=qoder_catalog(qoder_agent)
+            elif post and self.path=='/sessions' and body.get('provider')=='claude' and (body.get('model') or body.get('thinking')):
+                claude_models=claude_catalog()
             elif post and len(path)>=4 and path[1]=='sessions' and path[3] in ('model','thinking'):
                 with LOCK:
                     target=SESSIONS.get(path[2])
@@ -2397,6 +2465,8 @@ class Handler(BaseHTTPRequestHandler):
                         _,thinking=codex_selection(model,thinking,codex_models)
                     elif provider in QODER_SDK:
                         qoder_entry,thinking=qoder_selection(provider,model,thinking,qoder_models)
+                    elif provider=='claude':
+                        claude_selection(model,thinking,claude_models)
                     sid=str(uuid.uuid4()); s=Session({'id':sid,'provider':provider,'title':body.get('title') or '新对话','cwd':body['cwd'],'model':model,'thinking':thinking,'permissionMode':mode,'busy':False,'archived':False,'updated':time.time(),'revision':0,'completed':0,'messages':[],'interactions':[],'error':None})
                     if provider in QODER_SDK: apply_qoder_selection(s.state,qoder_entry,thinking)
                     SESSIONS[sid]=s

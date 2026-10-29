@@ -49,10 +49,10 @@ final class RemoteSetupController: ObservableObject {
     private var kimiBinaryPath = ""
     private var kimiInstalledVersion = ""
 
-    init(host: SSHHost? = nil) {
+    init(host: SSHHost? = nil, initialProvider: SessionKind? = nil) {
         original = host; hostID = host?.id ?? UUID()
         destination = host?.destination ?? ""; name = host?.name ?? ""
-        provider = host?.enabledAgents.first ?? .kimi
+        provider = initialProvider ?? host?.enabledAgents.first ?? .kimi
         enabledAgents = Set(host?.enabledAgents ?? [])
         port = String(host?.kimiPort ?? 58627); tokenPath = host?.kimiTokenPath ?? SSHHost.defaultKimiTokenPath
         kimiManaged = host?.kimiManaged ?? false
@@ -361,7 +361,15 @@ final class RemoteSetupController: ObservableObject {
                 mark("service", .needsAction); failedCheck = "service"
                 throw WorkbenchError(L("缺少 Claude Code SDK 或 Node.js。请安装桥接组件和 Node.js 后重试。"))
             }
-            mark("models", .information, L("Claude Code 使用远端 CLI 登录与默认模型；SDK 在首条消息时验证登录。"))
+            let entries = ModelSelectionCatalog.parseOMP(status["models"])
+            models = entries.map { ModelOption(id: $0.id, provider: $0.provider, name: $0.name) }
+            guard !models.isEmpty else { throw WorkbenchError(L("Claude Code 未返回模型。请检查远端 Claude Code 安装与登录。")) }
+            if !models.contains(where: { $0.id == modelID }) {
+                let defaultID = status["models"].array.first { $0["isDefault"] == .bool(true) }?["id"].string
+                modelID = defaultID.flatMap { value in models.first(where: { $0.id == value })?.id }
+                    ?? models.first?.id ?? ""
+            }
+            mark("models", .passed, L("已读取 Claude Code 官方模型目录；实际模型鉴权将在首条消息时验证。"))
         case .dsh:
             guard status["credentialCheck"].string == "present" else {
                 throw WorkbenchError(L("桥接进程未读取到 DEEPSEEK_API_KEY。请在远端配置服务环境；若桥已运行，等任务结束后重启再检查。"))
