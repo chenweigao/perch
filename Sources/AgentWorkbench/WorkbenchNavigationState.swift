@@ -8,6 +8,7 @@ final class WorkbenchNavigationState {
     var tabs: TerminalTabs = TerminalTabs()
     var showDashboard: Bool = true
     var showAllTaskGroups: Bool = false
+    var homeSection: WorkbenchHomeSection = .overview
     var selectedGroupID: UUID?
     var scopeHostID: UUID?
     var showArchived: Bool = false

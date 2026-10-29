@@ -5,6 +5,7 @@ struct ProjectWorkbenchOverview: View {
     @Bindable var model: WorkbenchModel
     var body: some View {
         if model.selectedGroup == nil {
+            let projects = model.workbenchProjects.filter { model.scopeHost == nil || $0.location?.hostID == model.scopeHost?.id }
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("项目工作台").font(.system(size: 13, weight: .medium))
@@ -15,7 +16,10 @@ struct ProjectWorkbenchOverview: View {
                     Label("有 \(model.followUpNotices.count) 个任务长时间没有更新", systemImage: "clock.badge.exclamationmark")
                         .foregroundStyle(.orange)
                 }
-                ForEach(model.workbenchProjects) { project in
+                if projects.isEmpty {
+                    Text("项目会随会话自动出现。").foregroundStyle(.secondary)
+                }
+                ForEach(projects) { project in
                     if let location = project.location {
                         Button { model.projectOverview = location } label: {
                             VStack(alignment: .leading, spacing: 6) {

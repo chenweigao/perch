@@ -1,7 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-enum SidebarPage { case home, inbox, archive, sessions, groups, other }
+enum SidebarPage { case home, inbox, archive, sessions, other }
 
 /// Only the middle scrolls. The workspace overlay owns the floating glass.
 struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
@@ -15,7 +15,6 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let onInbox: () -> Void
     let onArchive: () -> Void
     var onAllSessions: (() -> Void)? = nil
-    var onGroups: (() -> Void)? = nil
     /// Set while no machine is configured: the footer then offers the add-machine sheet.
     var onAddMachine: (() -> Void)? = nil
     var scrollRows = true
@@ -72,10 +71,6 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 if let onAllSessions {
                     navigation("全部会话", symbol: "bubble.left.and.bubble.right", selected: page == .sessions, action: onAllSessions)
                         .accessibilityIdentifier("sidebar.allSessions")
-                }
-                if let onGroups {
-                    navigation("任务组", symbol: "square.stack.3d.up", selected: page == .groups, action: onGroups)
-                        .accessibilityIdentifier("sidebar.groups")
                 }
                 Divider().padding(.vertical, 6)
                 if let onAddMachine {

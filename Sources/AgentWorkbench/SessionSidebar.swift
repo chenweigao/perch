@@ -23,8 +23,7 @@ struct WorkbenchSidebar: View {
         if model.showArchived { return .archive }
         if model.onlyAttention { return .inbox }
         if model.showSessionDirectory { return .sessions }
-        if model.showAllTaskGroups || model.selectedGroupID != nil { return .groups }
-        return model.selectedGroupID == nil && !model.showSessionDirectory ? .home : .other
+        return .home
     }
     var body: some View {
         #if PERCH_ACCEPTANCE
@@ -45,7 +44,6 @@ struct WorkbenchSidebar: View {
                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
                               onArchive: { model.showArchive() },
                               onAllSessions: { model.showAllSessions() },
-                              onGroups: { model.clearScope(); model.showHome(); model.showAllTaskGroups = true },
                               onAddMachine: addMachine,
                               scrollRows: !usesTable, scrollTargetID: scrollTarget(in: projection)) {
             #if PERCH_ACCEPTANCE
@@ -374,6 +372,7 @@ struct WorkbenchSidebar: View {
             }
             moreButton("全部任务组") {
                 model.clearScope(); model.showHome(); model.showAllTaskGroups = true
+                model.navigationState.homeSection = .groups
             }
         } actions: {
             Button { model.editGroup() } label: {
@@ -516,6 +515,7 @@ struct SessionDirectoryView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L(key: isSearchSheet ? "搜索项目与会话" : "全部会话")).font(.title2.weight(.semibold))
+                Text("\(sessions.count) 个会话").font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
                 if isSearchSheet { Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
             }
@@ -523,19 +523,11 @@ struct SessionDirectoryView: View {
                 .onSubmit { if let item = sessions.first(where: { $0.id == selection }) { open(item) } }
                 .onKeyPress(.downArrow, phases: [.down, .repeat]) { move(1, key: $0) }
                 .onKeyPress(.upArrow, phases: [.down, .repeat]) { move(-1, key: $0) }
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 4) {
-                        ForEach(sessions) { item in
-                            SessionSidebarRow(model: model, item: item, groups: index[item.id],
-                                              selected: item.id == selection,
-                                              onOpen: { open(item) }).id(item.id)
-                        }
-                        if sessions.isEmpty { Text("没有找到会话").foregroundStyle(.secondary).padding(24) }
-                    }
-                }
-                .onChange(of: selection) { _, value in if let value { proxy.scrollTo(value) } }
-            }
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                SessionDirectoryTable(sessions: sessions, selection: selection, query: query,
+                                      groups: index, now: timeline.date, onOpen: open,
+                                      menu: { NSHostingMenu(rootView: SessionActionsMenu(model: model, item: $0).environment(\.locale, L.locale)) })
+            }.overlay { if sessions.isEmpty { Text("没有找到会话").foregroundStyle(.secondary) } }
         }.padding(isSearchSheet ? WorkbenchTheme.Dialog.padding : 24).frame(maxWidth: 950, maxHeight: .infinity, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onAppear { if isSearchSheet { focused = true }; selection = result.online.first?.id }

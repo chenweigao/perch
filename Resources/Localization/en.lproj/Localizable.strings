@@ -1974,3 +1974,8 @@
 "收起原生 Agent 配置" = "Collapse native Agent settings";
 "配置 %@" = "Configure %@";
 "配置与检查 %@" = "Configure and check %@";
+"概览" = "Overview";
+"项目会随会话自动出现。" = "Projects appear as you start sessions.";
+"工作台视图" = "Workbench view";
+"掌握进展，继续工作。" = "Catch up and keep moving.";
+"%lld 个会话" = "%lld sessions";

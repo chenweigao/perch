@@ -7,7 +7,7 @@ struct WorkbenchHeader: View {
     @Bindable var model: WorkbenchModel
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var title: String {
-        if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? (model.showAllTaskGroups ? L("任务组") : L("工作台")) }
+        if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? L("工作台") }
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {

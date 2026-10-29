@@ -42,6 +42,10 @@ final class WorkbenchModel {
         get { navigationState.showAllTaskGroups }
         set { navigationState.showAllTaskGroups = newValue }
     }
+    var homeSection: WorkbenchHomeSection {
+        get { navigationState.homeSection }
+        set { navigationState.homeSection = newValue }
+    }
     var selectedGroupID: UUID? {
         get { navigationState.selectedGroupID }
         set { navigationState.selectedGroupID = newValue }
@@ -698,7 +702,7 @@ final class WorkbenchModel {
         showArchived = false; draftingNewTask = false
         // Leaving for the workbench, inbox or session list closes the full group
         // list; opening a group from that list keeps it for the way back.
-        if groupID == nil { showAllTaskGroups = false }
+        if groupID == nil { showAllTaskGroups = false; navigationState.homeSection = .overview }
         selectedGroupID = groupID
         if let index = workspace.groups.firstIndex(where: { $0.id == groupID }) {
             workspace.groups[index].lastOpenedAt = Date().timeIntervalSince1970

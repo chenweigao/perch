@@ -37,6 +37,7 @@ private struct DashboardPreview: View {
         return CommandLine.arguments[index + 1]
     }
     @State private var inbox = CommandLine.arguments.contains("-inbox")
+    @State private var homeSection = WorkbenchHomeSection.overview
     @State private var scenario = argument("-scenario") ?? "日常"
     @State private var reviewed: Set<String> = []
     @State private var notice: String?
@@ -112,7 +113,7 @@ private struct DashboardPreview: View {
                 }.frame(width: 120)
             }
         } content: {
-            WorkbenchDashboard(attentionOnly: inbox, changes: changes,
+            WorkbenchDashboard(homeSection: $homeSection, attentionOnly: inbox, changes: changes,
                 onAcknowledgeChanges: { notice = "已确认新进展" },
                 projection: projection,
                 context: DashboardContext(storageError: scenario == "保存错误" ? "工作台保存失败（示例）：修改尚未保存。" : nil,

@@ -570,6 +570,11 @@ private struct ReferenceComposerFixtureView: View {
             if mode == "dashboard" {
                 report.merge(try await dashboard(window)) { _, new in new }
             }
+            if mode == "directory" {
+                report["session_directory"] = try await search(window, sheet: false)
+                model.open(fixture.sessions[0])
+                try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
+            }
             if mode == "all" {
                 // The final turn's reply fills the viewport at the 16 pt reading
                 // size, so a bottom-anchored session may mount no user prompt row.
@@ -602,7 +607,7 @@ private struct ReferenceComposerFixtureView: View {
                 report["session_directory"] = try await search(window, sheet: false)
                 model.open(fixture.sessions[0])
                 try await settle(window) { !self.model.showDashboard && self.hasMountedMessage(window, session: "session-0") }
-            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
+            } else if !mode.hasPrefix("sidebar-layout-") && !["frames", "joint", "switching", "render-switching", "render-catalog", "render-combined", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-projects", "paging", "dashboard", "directory", "invalidation", "input", "subagents"].contains(mode) { throw WorkbenchError("Unknown acceptance mode: \(mode)") }
             let responsivenessReport = responsiveness.finish()
             report["main_actor_lateness"] = responsivenessReport
             let control = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_RESPONSIVENESS_CONTROL"] == "1"
@@ -1295,8 +1300,50 @@ private struct ReferenceComposerFixtureView: View {
     }
     private func search(_ window: NSWindow, sheet: Bool) async throws -> [String: Any] {
         probe.query = nil; probe.renderedQuery = nil; probe.searchResults = nil
+        let opened = CACurrentMediaTime()
         if sheet { model.showSessionSearch = true } else { model.showAllSessions() }
         try await settle(window) { self.probe.renderedQuery != nil }
+        let openMS = (CACurrentMediaTime() - opened) * 1000
+        var scrollSamples: [Double] = []
+        var directoryTable: NSTableView?
+        var maxMounted = 0
+        func checkRows(_ expected: [WorkspaceSession]) throws {
+            guard let table = directoryTable else { return }
+            guard table.numberOfRows == expected.count else { throw WorkbenchError("Directory row count mismatch") }
+            var mounted = 0
+            table.enumerateAvailableRowViews { _, index in
+                guard let cell = table.view(atColumn: 0, row: index, makeIfNecessary: false) as? SessionDirectoryTable.Cell else { return }
+                mounted += 1
+                precondition(cell.titleLabel.stringValue == expected[index].title &&
+                             cell.openButton.isEnabled == expected[index].online,
+                             "Reused directory cell has stale title or availability")
+            }
+            maxMounted = max(maxMounted, mounted)
+            guard expected.count < 80 || mounted < 80 else { throw WorkbenchError("Directory mounted offscreen catalog") }
+        }
+        if !sheet {
+            var views = window.contentView.map { [$0] } ?? []
+            var directoryScroll: NSScrollView?
+            while let view = views.popLast() {
+                if let scroll = view as? NSScrollView,
+                   scroll.convert(scroll.bounds, to: nil).midX > window.frame.width / 2,
+                   scroll.bounds.height > 200 { directoryScroll = scroll; break }
+                views.append(contentsOf: view.subviews)
+            }
+            guard let scroll = directoryScroll else { throw WorkbenchError("Missing directory scroll view") }
+            directoryTable = scroll.documentView as? NSTableView
+            for step in 0..<80 {
+                let extent = max(0, (scroll.documentView?.bounds.height ?? 0) - scroll.contentView.bounds.height)
+                let start = CACurrentMediaTime()
+                let fraction = Double(step < 40 ? step : 79 - step) / 39
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: extent * fraction))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                flush(window)
+                scrollSamples.append((CACurrentMediaTime() - start) * 1000)
+                try checkRows(fixture.sessions.filter { !$0.archived })
+                try await Task.sleep(for: .milliseconds(8))
+            }
+        }
         var samples: [Double] = []
         var states: [[String: String]] = []
         for term in ["验收", "0002", "不存在的验收会话", "English", "project-3", ""] {
@@ -1315,6 +1362,7 @@ private struct ReferenceComposerFixtureView: View {
             } else {
                 let expected = fixture.sessions.first { !$0.archived && $0.online && $0.matchesSearch(term) }?.id
                 guard probe.selection == expected else { throw WorkbenchError("Directory selection mismatch for \(term)") }
+                try checkRows(fixture.sessions.filter { !$0.archived && $0.matchesSearch(term) })
                 states.append(["query": term, "selection": probe.selection ?? "none"])
             }
         }
@@ -1322,7 +1370,9 @@ private struct ReferenceComposerFixtureView: View {
             model.showSessionSearch = false
             try await settle(window) { window.sheets.isEmpty }
         }
-        return ["query_to_layout_ms": stats(samples), "states": states,
+        return ["open_to_layout_ms": openMS, "scroll_step_ms": scrollSamples.isEmpty ? [:] : stats(scrollSamples),
+                "native_cells_verified": directoryTable != nil, "max_mounted_directory_cells": maxMounted,
+                "query_to_layout_ms": stats(samples), "states": states,
                 "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery"]
     }
     /// Independent directory mutations with mounted data, order and row-height

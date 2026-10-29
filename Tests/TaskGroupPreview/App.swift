@@ -134,6 +134,7 @@ struct SessionActionsMenu: View {
 }
 private struct GroupPreview: View {
     @State private var model = WorkbenchModel()
+    @State private var homeSection = WorkbenchHomeSection.groups
     @State private var scenario: String = {
         guard let index = CommandLine.arguments.firstIndex(of: "-scenario"), index + 1 < CommandLine.arguments.count else { return "归属检查" }
         return CommandLine.arguments[index + 1]
@@ -147,7 +148,7 @@ private struct GroupPreview: View {
                     ForEach(["归属检查", "多组与离线", "尚未填写", "已填写", "空任务组", "未同步"], id: \.self) { Text($0) }
                 }.frame(width: 190)
             }.padding(16)
-            WorkbenchDashboard(attentionOnly: model.onlyAttention, projection: model.projection,
+            WorkbenchDashboard(homeSection: $homeSection, attentionOnly: model.onlyAttention, projection: model.projection,
                 context: DashboardContext(scope: model.activeScope), group: model.selectedGroup, hasSessionSearch: !model.search.isEmpty,
                 onClearSessionFilters: { model.search = "" },
                 groupHeader: AnyView(GroupWorkbenchHeader(model: model)),

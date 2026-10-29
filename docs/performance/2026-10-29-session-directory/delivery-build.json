@@ -1,0 +1,11 @@
+{
+  "source_sha256": "a3d2dc203758530ef890c9bc9ec29dfafc62d0017e5b0d17acc1363f89811108",
+  "binary_sha256": "37f3911d89894969f47329062d20ab3894bccc11fb7c4115c4b306f9ff004211",
+  "version": "0.4.0",
+  "build": "854",
+  "revision_at_build": "v0.4.0-dirty",
+  "build_command": "scripts/build.sh",
+  "core_checks_passed": 76,
+  "real_window_validation": "Dark workbench, tabs, native directory with 151 real catalog sessions; final system-bordered New Session button visually verified.",
+  "installed_bundle_overwritten": false
+}

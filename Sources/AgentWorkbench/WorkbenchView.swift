@@ -129,6 +129,7 @@ private struct WorkbenchDetail: View {
                     else if model.showSessionDirectory { SessionDirectoryView(model: model) }
                     else {
                         WorkbenchDashboard(
+                            homeSection: $model.homeSection,
                             attentionOnly: model.onlyAttention, changes: model.dashboardChanges,
                             onAcknowledgeChanges: { model.acknowledgeDashboardChanges() },
                             onSuggestGroups: { model.showGroupSuggestions = true },
@@ -136,7 +137,8 @@ private struct WorkbenchDetail: View {
                             context: model.dashboardContext, group: model.selectedGroup, hasSessionSearch: !model.search.isEmpty,
                             onClearSessionFilters: { model.clearSessionFilters() },
                             groupHeader: AnyView(GroupWorkbenchHeader(model: model)),
-                            groupOverview: AnyView(VStack(alignment: .leading, spacing: 24) { ProjectWorkbenchOverview(model: model); TaskGroupOverview(model: model) }),
+                            projectOverview: AnyView(ProjectWorkbenchOverview(model: model)),
+                            groupOverview: AnyView(TaskGroupOverview(model: model)),
                             groupProgress: AnyView(GroupWorkbenchProgress(model: model)),
                             groupHistory: AnyView(GroupWorkbenchHistory(model: model)),
                             isArchiving: model.isArchiving,
