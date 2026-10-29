@@ -16,6 +16,10 @@ with `python3 -m unittest discover -s remote -p 'test_*.py'`.
 For the repeatable CI suites, run `python3 scripts/check-functional.py portable
 --output .local/functional-portable` and, on a Mac with an active GUI session,
 `python3 scripts/check-functional.py macos --output .local/functional-macos`.
+For a focused native run, add `--group build`, `--group core`, `--group host`,
+`--group native`, or `--group navigation` with a fresh output directory. The
+CI workflow builds once and runs these groups on separate macOS runners; the
+summary job keeps the original required-check name without rerunning them.
 See [reliability acceptance](docs/RELIABILITY-ACCEPTANCE.md) for coverage, retained
 failure logs, and the separate two-Mac and calibrated-frame acceptance gates.
 

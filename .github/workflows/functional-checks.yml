@@ -35,28 +35,204 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  macos:
-    name: Native build and interaction regression
-    # Match the Xcode 27 / Swift 6.4 toolchain used for local acceptance.
+  native-build:
+    name: Native build and package
     runs-on: xcode-27
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-          # Version checks and build stamps need tags and full history.
           fetch-depth: 0
       - name: Record toolchain
         run: |
           xcodebuild -version
           swift --version
-      - run: python3 scripts/check-functional.py macos --output .local/functional-macos
-      - name: Retain check results and failure logs
+      - name: Restore Swift package dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build/checkouts
+            .build/artifacts
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-spm-${{ hashFiles('Package.resolved') }}
+      - run: python3 scripts/check-functional.py macos --group build --output .local/functional-build
+      - name: Package the shared native build
+        run: |
+          mkdir -p .local/native-build
+          tar -czf .local/native-build/build.tar.gz .build build/Perch.app
+      - name: Publish the shared native build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: .local/native-build/build.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Retain build results
+        if: always() && hashFiles('.local/functional-build/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-build
+          path: .local/functional-build/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  native-core:
+    name: Native core interaction regression
+    needs: native-build
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the shared native build
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: .local/native-build
+      - name: Restore the shared native build
+        run: tar -xzf .local/native-build/build.tar.gz
+      - run: python3 scripts/check-functional.py macos --group core --output .local/functional-core
+      - name: Retain core results
+        if: always() && hashFiles('.local/functional-core/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-core
+          path: .local/functional-core/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  native-host:
+    name: Native host lifecycle regression
+    needs: native-build
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the shared native build
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: .local/native-build
+      - name: Restore the shared native build
+        run: tar -xzf .local/native-build/build.tar.gz
+      - run: python3 scripts/check-functional.py macos --group host --output .local/functional-host
+      - name: Retain host lifecycle results
+        if: always() && hashFiles('.local/functional-host/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-host
+          path: .local/functional-host/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  native-acceptance:
+    name: Native session regression
+    needs: native-build
+    runs-on: xcode-27
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the shared native build
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: .local/native-build
+      - name: Restore the shared native build
+        run: tar -xzf .local/native-build/build.tar.gz
+      - run: python3 scripts/check-functional.py macos --group native --output .local/functional-native
+      - name: Retain native session results
+        if: always() && hashFiles('.local/functional-native/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-acceptance
+          path: .local/functional-native/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  native-navigation:
+    name: Native navigation regression
+    needs: native-build
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the shared native build
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: .local/native-build
+      - name: Restore the shared native build
+        run: tar -xzf .local/native-build/build.tar.gz
+      - run: python3 scripts/check-functional.py macos --group navigation --output .local/functional-navigation
+      - name: Retain navigation results
+        if: always() && hashFiles('.local/functional-navigation/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-navigation
+          path: .local/functional-navigation/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  native-summary:
+    name: Native build and interaction regression
+    if: always()
+    needs: [native-build, native-core, native-host, native-acceptance, native-navigation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Collect native regression evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          pattern: macos-results-*
+          path: .local/functional-groups
+      - name: Verify every native group
+        if: always()
+        env:
+          BUILD_RESULT: ${{ needs.native-build.result }}
+          CORE_RESULT: ${{ needs.native-core.result }}
+          HOST_RESULT: ${{ needs.native-host.result }}
+          ACCEPTANCE_RESULT: ${{ needs.native-acceptance.result }}
+          NAVIGATION_RESULT: ${{ needs.native-navigation.result }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          results = {
+              "build": os.environ["BUILD_RESULT"],
+              "core": os.environ["CORE_RESULT"],
+              "host": os.environ["HOST_RESULT"],
+              "acceptance": os.environ["ACCEPTANCE_RESULT"],
+              "navigation": os.environ["NAVIGATION_RESULT"],
+          }
+          print(json.dumps(results, indent=2))
+          failed = {name: result for name, result in results.items() if result != "success"}
+          if failed:
+              raise SystemExit("Native regression groups did not all succeed: " + json.dumps(failed))
+          PY
+      - name: Publish combined native regression evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: macos-results
-          path: .local/functional-macos/
+          path: .local/functional-groups/
           include-hidden-files: true
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: ignore
