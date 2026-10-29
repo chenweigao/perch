@@ -408,12 +408,20 @@ struct ConversationTurnRail: View {
     let selected: Int?
     @ObservedObject var hover: ConversationTurnHover
     let select: (Int) -> Void
+    let reduceMotionOverride: Bool?
     @FocusState private var focused: Bool
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.conversationReduceMotion) private var conversationReduceMotion
-    private var reduceMotion: Bool { systemReduceMotion || conversationReduceMotion }
+    private var reduceMotion: Bool { reduceMotionOverride ?? (systemReduceMotion || conversationReduceMotion) }
     private let railWidth: CGFloat = 32
     private var count: Int { turns.count }
+
+    init(turns: [ConversationTurnSummary], current: Int, hasOlderHistory: Bool, selected: Int?,
+         hover: ConversationTurnHover, select: @escaping (Int) -> Void, reduceMotionOverride: Bool? = nil) {
+        self.turns = turns; self.current = current; self.hasOlderHistory = hasOlderHistory
+        self.selected = selected; self.hover = hover; self.select = select
+        self.reduceMotionOverride = reduceMotionOverride
+    }
 
     var body: some View {
         GeometryReader { geometry in
