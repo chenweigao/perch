@@ -95,7 +95,7 @@ struct TaskContextDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     ReplyCopyButton(text: command, label: "复制命令")
                 }.padding(.leading, 10).padding(.vertical, 6).padding(.trailing, 4)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                    .background(WorkbenchTheme.Fill.surface,
                                 in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             }
             VStack(alignment: .leading, spacing: 3) {
@@ -204,7 +204,7 @@ struct TaskContextDetailView: View {
                 }
                     // A running process prints toward its latest line.
                     .defaultScrollAnchor(.bottom)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                    .background(WorkbenchTheme.Fill.surface,
                                 in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                     .accessibilityIdentifier("task-context-output")
             } else if value != nil {
