@@ -1,0 +1,7 @@
+{
+  "id": "req-send-1",
+  "digest": "e9eec0a45b869503fc1b4bbfdc4684106a99cb64cd8fed726a12366e6a66eef8",
+  "text": "shell 元字符 $VAR `whoami` && rm -rf / \"引号\" 'single' 中文 🚀 C:\\路径 空格",
+  "status": "accepted",
+  "runtimeTurnId": "turn-1"
+}

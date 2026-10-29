@@ -34,13 +34,19 @@ struct GoalHeaderBar: View {
                 VStack(alignment: .trailing, spacing: 8) {
                     status
                     HStack(spacing: 8) {
-                        if let control = goal.continuationControl {
-                            Button(action: { onControl(control) }) {
-                                Label(control == "pause" ? L("暂停续跑") : L("继续目标"),
-                                      systemImage: control == "pause" ? "pause" : "play")
-                            }.buttonStyle(.borderless).foregroundStyle(WorkbenchTheme.accent)
-                                .help(control == "pause" ? L("暂停后不再自动续跑；当前这一轮仍可完成。") : L("继续按目标执行，保持当前权限设置。"))
-                                .accessibilityIdentifier("goal-continuation")
+                        ZStack(alignment: .trailing) {
+                            // Keep the objective's available width stable when a
+                            // goal completes or changes continuation actions.
+                            Label(L("暂停续跑"), systemImage: "pause").hidden()
+                            Label(L("继续目标"), systemImage: "play").hidden()
+                            if let control = goal.continuationControl {
+                                Button(action: { onControl(control) }) {
+                                    Label(control == "pause" ? L("暂停续跑") : L("继续目标"),
+                                          systemImage: control == "pause" ? "pause" : "play")
+                                }.buttonStyle(.borderless).foregroundStyle(WorkbenchTheme.accent)
+                                    .help(control == "pause" ? L("暂停后不再自动续跑；当前这一轮仍可完成。") : L("继续按目标执行，保持当前权限设置。"))
+                                    .accessibilityIdentifier("goal-continuation")
+                            }
                         }
                         Menu {
                             Button("取消目标", role: .destructive) { onControl("cancel") }

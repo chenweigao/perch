@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Deliberately portable: no WPF, no Windows-only API, so the protocol and
+         argument tests run under `dotnet test` on Linux as well as Windows. -->
+    <RootNamespace>Perch.Core</RootNamespace>
+    <AssemblyName>Perch.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The core tests exercise internal seams (SSH error classification, transcript
+         merge, token extraction) without widening the public API surface. -->
+    <InternalsVisibleTo Include="Perch.Core.Tests" />
+  </ItemGroup>
+
+</Project>

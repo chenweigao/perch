@@ -1,0 +1,100 @@
+{
+  "sessions": [
+    {
+      "id": "ses-busy",
+      "provider": "codex",
+      "title": "重构登录页 \"引号\" & emoji 🚀",
+      "cwd": "/home/developer/项目 目录",
+      "busy": true,
+      "archived": false,
+      "updated": 1760000300.0,
+      "revision": 3,
+      "completed": 0,
+      "model": "gpt-5-codex",
+      "error": null,
+      "pending": 0,
+      "cancelled": false,
+      "thinking": "medium",
+      "context": null,
+      "permission": {
+        "selected": "workspace-ask",
+        "options": [
+          "read-only",
+          "workspace-ask",
+          "workspace-auto",
+          "full-access"
+        ],
+        "scope": "new-session"
+      },
+      "turnId": "turn-1",
+      "turnState": "running",
+      "steer": true,
+      "runningSubagents": 0,
+      "qoderRequestedModel": null
+    },
+    {
+      "id": "ses-approval",
+      "provider": "codex",
+      "title": "等待审批的会话",
+      "cwd": "/home/developer/repo",
+      "busy": true,
+      "archived": false,
+      "updated": 1760000000.0,
+      "revision": 0,
+      "completed": 0,
+      "model": "gpt-5-codex",
+      "error": null,
+      "pending": 1,
+      "cancelled": false,
+      "thinking": "medium",
+      "context": null,
+      "permission": {
+        "selected": "workspace-ask",
+        "options": [
+          "read-only",
+          "workspace-ask",
+          "workspace-auto",
+          "full-access"
+        ],
+        "scope": "new-session"
+      },
+      "turnId": "turn-9",
+      "turnState": "running",
+      "steer": true,
+      "runningSubagents": 0,
+      "qoderRequestedModel": null
+    },
+    {
+      "id": "ses-idle",
+      "provider": "codex",
+      "title": "空闲会话",
+      "cwd": "/home/developer/other repo",
+      "busy": false,
+      "archived": false,
+      "updated": 1760000000.0,
+      "revision": 1,
+      "completed": 3,
+      "model": "gpt-5-codex",
+      "error": null,
+      "pending": 0,
+      "cancelled": false,
+      "thinking": "medium",
+      "context": null,
+      "permission": {
+        "selected": "workspace-ask",
+        "options": [
+          "read-only",
+          "workspace-ask",
+          "workspace-auto",
+          "full-access"
+        ],
+        "scope": "new-session"
+      },
+      "turnId": null,
+      "turnState": null,
+      "steer": true,
+      "runningSubagents": 0,
+      "qoderRequestedModel": null
+    }
+  ]
+}

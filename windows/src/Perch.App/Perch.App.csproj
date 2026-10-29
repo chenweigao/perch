@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <!-- Lets this WPF project be cross-built and published from Linux/macOS CI with
+         `dotnet build`/`dotnet publish -r win-x64`; it still targets Windows only. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Perch.App</RootNamespace>
+    <AssemblyName>Perch</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Perch.Core\Perch.Core.csproj" />
+  </ItemGroup>
+
+</Project>

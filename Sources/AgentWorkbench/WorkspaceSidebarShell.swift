@@ -120,12 +120,12 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                     showSettings = false
                                     openSettings()
                                 }
-                            }.font(.system(size: 13)).padding(10).frame(width: 220)
+                            }.font(.system(size: WorkbenchTheme.Typography.body)).padding(10).frame(width: 220)
                         }
                     }
             }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(.secondary)
                 .padding(.horizontal, 10).padding(.bottom, 10)
-        }.font(.system(size: 14)).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,

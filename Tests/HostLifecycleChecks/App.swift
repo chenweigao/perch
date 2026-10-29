@@ -15,13 +15,15 @@ import WorkbenchCore
 
         let designPreview = Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true
         let nativeDesign = designPreview || CommandLine.arguments.contains("native-design")
-        if CommandLine.arguments.contains("preview") || nativeDesign {
+        let readingControls = CommandLine.arguments.contains("reading-controls")
+        if CommandLine.arguments.contains("preview") || nativeDesign || readingControls {
             // Interactive fixtures need AppKit's event loop for native window events
             // and accessibility, unlike the command-line layout checks below.
             NSApp.setActivationPolicy(designPreview ? .regular : .accessory)
             Task { @MainActor in
                 do {
                     if nativeDesign { try await checkNativeDesign() }
+                    else if readingControls { try await checkReadingControls() }
                     else if CommandLine.arguments.contains("document-reading") { try await checkDocumentReadingUI() }
                     else { try await checkFileReaderWindow() }
                     NSApp.terminate(nil)
@@ -55,8 +57,6 @@ import WorkbenchCore
             try await checkGitWriteLifecycle()
         case "goal-header":
             try await checkGoalHeader()
-        case "reading-controls":
-            try await checkReadingControls()
         case "sidebar-scroll":
             try await checkSidebarScroll()
         case "reading-canvas":

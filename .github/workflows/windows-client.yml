@@ -1,0 +1,132 @@
+name: Windows client
+
+# Linux regenerates protocol fixtures and cross-builds. Windows additionally runs
+# the real WPF dispatcher/ViewModel regression tests and builds/publishes natively.
+# Neither job performs rendered UI or live SSH/bridge acceptance.
+
+on:
+  pull_request:
+    paths:
+      - 'windows/**'
+      - 'remote/native-agent-service.py'
+      - '.github/workflows/windows-client.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'windows/**'
+      - 'remote/native-agent-service.py'
+      - '.github/workflows/windows-client.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-and-crossbuild:
+    name: Core tests and win-x64 cross-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Record toolchain
+        run: |
+          dotnet --version
+          pwsh --version
+
+      # Regenerates the fixtures from remote/native-agent-service.py, then runs the core
+      # tests. If the bridge changed and the committed fixtures are stale, the diff shows
+      # up here; the version test asserts SERVICE_VERSION matches the bridge source.
+      - name: Regenerate fixtures and test
+        run: pwsh -NoProfile -File scripts/Test.ps1 -RegenerateFixtures
+
+      - name: Fixtures are up to date
+        run: |
+          if ! git diff --exit-code -- tests/Perch.Core.Tests/fixtures; then
+            echo "Committed fixtures differ from the current bridge output." >&2
+            echo "Re-run: python3 tools/generate-fixtures.py and commit." >&2
+            exit 1
+          fi
+
+      - name: Build solution
+        run: pwsh -NoProfile -File scripts/Build.ps1 -Configuration Release
+
+      - name: Publish win-x64
+        run: pwsh -NoProfile -File scripts/Publish.ps1 -Configuration Release -Runtime win-x64
+
+      - name: Retain published client
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perch-windows-x64
+          path: windows/dist/win-x64/
+          retention-days: 7
+          if-no-files-found: error
+
+  windows-native:
+    name: Windows core and WPF lifecycle tests
+    runs-on: windows-2022
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Record toolchain
+        run: |
+          dotnet --version
+          pwsh --version
+
+      # Fixture generation imports the Unix bridge (fcntl); Linux verifies that the
+      # committed fixtures are current. Windows runs the same core tests on them.
+      - name: Test portable core on Windows
+        run: ./scripts/Test.ps1 -Configuration Release
+
+      - name: Test WPF draft and connection lifetimes
+        run: |
+          dotnet test tests/Perch.App.Tests/Perch.App.Tests.csproj --configuration Release --logger "trx;LogFileName=wpf-lifecycle.trx" --results-directory test-results
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build solution on Windows
+        run: ./scripts/Build.ps1 -Configuration Release
+
+      - name: Publish self-contained win-x64 on Windows
+        run: ./scripts/Publish.ps1 -Configuration Release -Runtime win-x64 -SelfContained
+
+      - name: Retain Windows publish
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perch-windows-native-x64
+          path: windows/dist/win-x64/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Retain WPF test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perch-wpf-test-results
+          path: windows/test-results/
+          if-no-files-found: ignore

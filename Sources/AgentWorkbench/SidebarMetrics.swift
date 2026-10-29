@@ -23,10 +23,10 @@ enum SidebarMetrics {
     static let iconWidth: CGFloat = 18
     static let iconSize: CGFloat = 14
     static let labelSpacing: CGFloat = 10
-    static let titleSize: CGFloat = 14
-    static let detailSize: CGFloat = 11
+    static let titleSize: CGFloat = WorkbenchTheme.Typography.body
+    static let detailSize: CGFloat = WorkbenchTheme.Typography.caption
     /// Keyboard shortcut hints after a row title (⌘K, ⌘,): one size everywhere.
-    static let shortcutSize: CGFloat = 11
+    static let shortcutSize: CGFloat = WorkbenchTheme.Typography.caption
     static let cornerRadius: CGFloat = WorkbenchTheme.Radius.row
     /// Project disclosure chevron column and the gap after it.
     static let disclosureWidth: CGFloat = 12
@@ -38,7 +38,7 @@ enum SidebarMetrics {
 
     /// Section headers: small semibold labels starting at the icon column. Darker
     /// than secondary text, so headers such as 置顶 never read as disabled.
-    static let sectionTitleSize: CGFloat = 12
+    static let sectionTitleSize: CGFloat = WorkbenchTheme.Typography.title
     static let sectionTitleOpacity: Double = 0.62
     static let sectionHeaderHeight: CGFloat = 24
     static let sectionTopSpacing: CGFloat = 12

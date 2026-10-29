@@ -52,7 +52,7 @@ struct FilesInspectorView: View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 HStack(spacing: 4) {
-                    Text("文件").font(.system(size: 16, weight: .semibold))
+                    Text("文件").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                     Spacer(minLength: 4)
                     Menu {
                         Button("刷新") { browser.open(browser.path) }.disabled(browser.path.isEmpty || browser.loading)
@@ -80,14 +80,14 @@ struct FilesInspectorView: View {
                             .lineLimit(1).truncationMode(.middle).help(browser.path)
                         Spacer(minLength: 0)
                         if !directory { FileDisplayMode(browser: browser) }
-                    }.font(.system(size: 12)).buttonStyle(.borderless)
+                    }.font(.system(size: WorkbenchTheme.Typography.body)).buttonStyle(.borderless)
                         .padding(.horizontal, 16).padding(.bottom, 12)
                 }
             }.fixedSize(horizontal: false, vertical: true)
             Group {
                 if !active { Color.clear }
                 else if item == nil {
-                    Text("选择一个会话，浏览它的工作目录。").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text("选择一个会话，浏览它的工作目录。").font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if !matchesLocation {
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -111,7 +111,7 @@ struct ChangesButton: View {
         Button { model.taskContextWindow.togglePage(.changes, model: model) } label: {
             WorkbenchToolbarSymbol(name: "plus.forwardslash.minus")
                 .foregroundStyle(open ? WorkbenchTheme.accent : .secondary)
-        }.buttonStyle(.plain).help("查看改动").accessibilityLabel("改动")
+        }.buttonStyle(WorkbenchToolbarButtonStyle(selected: open)).help("查看改动").accessibilityLabel("改动")
             .accessibilityValue(open ? "已展开" : "已收起")
     }
 }
@@ -150,7 +150,7 @@ struct ChangesInspectorView: View {
             ScrollView {
                 content.fixedSize(horizontal: false, vertical: true)
             }
-        }.font(.system(size: 13)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .workbenchHostedTask(id: key) {
                 guard key.reference != nil else { browser.cancel(); return }
                 model.syncChangesBrowser()
@@ -169,8 +169,8 @@ struct ChangesInspectorView: View {
     private var header: some View {
         HStack(spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("改动").font(.system(size: 16, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
-                Text(summary).font(.system(size: 12)).foregroundStyle(WorkbenchTheme.quiet)
+                Text("改动").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
+                Text(summary).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
             }
             Spacer(minLength: 4)
             Menu {
@@ -184,7 +184,7 @@ struct ChangesInspectorView: View {
                     .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Circle())
             }
                 .help("收起面板").accessibilityLabel("收起面板")
-        }.font(.system(size: 12)).buttonStyle(.borderless)
+        }.font(.system(size: WorkbenchTheme.Typography.body)).buttonStyle(.borderless)
             .padding(.horizontal, 20).padding(.vertical, 16)
     }
 
@@ -233,11 +233,11 @@ struct ChangesInspectorView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: symbol(for: entry)).foregroundStyle(.secondary).frame(width: 16)
-                Text((entry.path as NSString).lastPathComponent).font(.system(size: 14))
+                Text((entry.path as NSString).lastPathComponent).font(.system(size: WorkbenchTheme.Typography.body))
                     .lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 0)
                 Text(entry.untracked ? "?" : String(entry.worktreeStatus == " " ? entry.indexStatus : entry.worktreeStatus))
-                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.tertiary)
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium)).foregroundStyle(.tertiary)
             }.padding(.horizontal, 12).frame(maxWidth: .infinity, minHeight: Self.fileRowHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle(selected: entry.path == browser.gitPath))
@@ -263,12 +263,12 @@ struct ChangesInspectorView: View {
                 let body = diff.range(of: "\n@@").map { String(diff[diff.index(after: $0.lowerBound)...]) } ?? diff
                 VStack(alignment: .leading, spacing: 0) {
                     Text(browser.gitPath.map { ($0 as NSString).lastPathComponent } ?? "")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: WorkbenchTheme.Typography.body, weight: .semibold))
                         .lineLimit(1).truncationMode(.middle)
                         .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
                     if truncated {
                         Label("差异过大，已截断", systemImage: "scissors")
-                            .font(.system(size: 11)).foregroundStyle(.orange)
+                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
                             .padding(.horizontal, 20).padding(.bottom, 8)
                     }
                     // File metadata is already in the list and title. Keep the
@@ -291,14 +291,14 @@ struct ChangesInspectorView: View {
     private var loadingNotice: some View {
         VStack(spacing: 10) {
             ProgressView().controlSize(.small)
-            Text("正在读取…").font(.system(size: 12)).foregroundStyle(.secondary)
+            Text("正在读取…").font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary)
         }.frame(maxWidth: .infinity)
     }
 
     private func notice(_ text: String, symbol: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: symbol).font(.system(size: 20, weight: .light)).foregroundStyle(.tertiary)
-            Text(text).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Text(text).font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }.padding(24).frame(maxWidth: .infinity)
     }
 

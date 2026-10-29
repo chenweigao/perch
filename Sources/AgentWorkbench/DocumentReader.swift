@@ -19,7 +19,7 @@ final class DocumentReadingState {
 
 struct DocumentReaderControls: View {
     let state: DocumentReadingState
-    @AppStorage("perch.document.fontSize") private var fontSize = 16.0
+    @AppStorage("perch.document.fontSize") private var fontSize = Double(WorkbenchTheme.Typography.body)
     @AppStorage("perch.document.width") private var width = 760.0
     var body: some View {
         Button { state.showOutline.toggle() } label: { Image(systemName: "sidebar.left") }
@@ -48,7 +48,7 @@ private struct DocumentOutline: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
-                Text("文档目录").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                Text("文档目录").font(.system(size: WorkbenchTheme.Typography.body, weight: .medium)).foregroundStyle(.secondary)
                     .padding(.horizontal, 8).padding(.bottom, 8)
                 if state.document?.outline.isEmpty != false {
                     Text("本文没有章节标题").foregroundStyle(.secondary).padding(8)
@@ -64,7 +64,7 @@ private struct DocumentOutline: View {
                         .foregroundStyle(state.selectedSection == section.id ? Color.accentColor : .secondary)
                         .accessibilityAddTraits(state.selectedSection == section.id ? .isSelected : [])
                 }
-            }.font(.system(size: 12)).padding(12)
+            }.font(.system(size: WorkbenchTheme.Typography.body)).padding(12)
         }
     }
 }
@@ -77,7 +77,7 @@ struct DocumentReader: View {
     let destination: String?
     let onShowDraft: (() -> Void)?
     let onSaveOffset: (Double) -> Void
-    @AppStorage("perch.document.fontSize") private var fontSize = 16.0
+    @AppStorage("perch.document.fontSize") private var fontSize = Double(WorkbenchTheme.Typography.body)
     @AppStorage("perch.document.width") private var width = 760.0
     @State private var position = ScrollPosition(y: 0)
     @State private var lastOffset: Double?
@@ -102,16 +102,16 @@ struct DocumentReader: View {
         VStack(spacing: 0) {
             if !browser.findQuery.isEmpty {
                 Text(matches.isEmpty ? L("未找到匹配段落") : L("\(matches.count) 个匹配段落"))
-                    .font(.caption).foregroundStyle(.secondary).padding(.vertical, 4)
+                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).padding(.vertical, 4)
             }
-            if let notice = state.notice { Text(notice).font(.caption).foregroundStyle(.orange) }
-            if missingAnchor { Text("未找到链接中的章节").font(.caption).foregroundStyle(.orange) }
+            if let notice = state.notice { Text(notice).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange) }
+            if missingAnchor { Text("未找到链接中的章节").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange) }
             if added {
                 HStack {
                     Text("反馈已加入原会话草稿")
                     Button("查看草稿") { showAddedDraft?() }
                     Button { added = false } label: { Image(systemName: "xmark") }.accessibilityLabel("关闭反馈提示")
-                }.font(.caption).padding(6)
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).padding(6)
             }
             HStack(spacing: 0) {
                 if state.showOutline && state.outlineBeside {
@@ -190,8 +190,8 @@ struct DocumentReader: View {
     private func feedbackSheet(_ captured: DocumentFeedback) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("文档反馈").font(.headline)
-            Text(captured.destination ?? "").font(.caption).foregroundStyle(.secondary)
-            Text(captured.path).font(.caption).lineLimit(2).truncationMode(.middle)
+            Text(captured.destination ?? "").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
+            Text(captured.path).font(.system(size: WorkbenchTheme.Typography.caption)).lineLimit(2).truncationMode(.middle)
             ScrollView { Text(captured.quote).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                 .frame(maxHeight: 150)
             TextField("希望如何修改？", text: $feedbackText, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder).focused($feedbackFocused)
@@ -238,7 +238,7 @@ private struct DocumentInlineImage: View {
                 }.buttonStyle(.plain).accessibilityLabel(image.alt.isEmpty ? L("打开图片") : image.alt)
             } else if failed {
                 Button { open(image.target) } label: { Label(image.alt.isEmpty ? L("打开引用图片") : image.alt, systemImage: "photo") }
-                    .font(.caption)
+                    .font(.system(size: WorkbenchTheme.Typography.caption))
             } else { ProgressView().controlSize(.small) }
         }.task(id: image.target) {
             guard let host, case .file(let path, _) = DocumentLink.resolve(image.target, relativeTo: documentPath) else {

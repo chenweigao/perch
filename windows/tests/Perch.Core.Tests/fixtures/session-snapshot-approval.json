@@ -1,0 +1,45 @@
+{
+  "id": "ses-approval",
+  "provider": "codex",
+  "title": "等待审批的会话",
+  "cwd": "/home/developer/repo",
+  "model": "gpt-5-codex",
+  "thinking": "medium",
+  "permissionMode": "workspace-ask",
+  "busy": true,
+  "archived": false,
+  "updated": 1760000000.0,
+  "revision": 0,
+  "completed": 0,
+  "messages": [],
+  "interactions": [
+    {
+      "id": "codex-request-7",
+      "type": "interaction",
+      "name": "shell",
+      "title": "Codex 请求确认",
+      "input": {
+        "command": "rm -rf /tmp/项目 x",
+        "cwd": "/home/developer/repo",
+        "reason": "需要执行命令"
+      }
+    }
+  ],
+  "error": null,
+  "codexHome": "/home/developer/.codex",
+  "context": null,
+  "resume": "native-thread-1",
+  "turnId": "turn-9",
+  "turnState": "running",
+  "permission": {
+    "selected": "workspace-ask",
+    "options": [
+      "read-only",
+      "workspace-ask",
+      "workspace-auto",
+      "full-access"
+    ],
+    "scope": "new-session"
+  },
+  "subagents": []
+}

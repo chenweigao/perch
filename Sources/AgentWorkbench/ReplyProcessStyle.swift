@@ -16,12 +16,12 @@ extension ReplyStyle {
         /// Nested content (rows, tool details, thoughts, notes) starts under its
         /// header's label: the disclosure's 12 pt chevron column and its 8 pt gap.
         static let nestedIndent: CGFloat = 20
-        /// Header labels: the reading scale's label size (13 pt at a 16 pt body).
+        /// Header labels: the same size as prose; color and grouping convey their role.
         static var labelSize: CGFloat { ReplyStyle.labelSize }
         /// Between the rows of an expanded fold, and above its first row.
         static let rowSpacing: CGFloat = 12
-        /// Thought text: the scale's secondary size (14 on 22 at a 16 pt body),
-        /// upright, in secondary ink. Size and ink already set it apart; italic
+        /// Thought text: the same reading size and line height as the reply,
+        /// upright, in secondary ink. Secondary ink and disclosure grouping set it apart; italic
         /// would slant only the Latin glyphs, because PingFang has no italic.
         static var thoughtSize: CGFloat { ReplyStyle.secondarySize }
         static var thoughtLineHeight: CGFloat { ReplyStyle.scale.secondaryLine }

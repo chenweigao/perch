@@ -3,36 +3,52 @@ import Observation
 import SwiftUI
 
 /// Perch keeps one monochrome palette in both appearances: the same hues, with
-/// lightness inverted for dark. Every value resolves through a dynamic NSColor so
-/// AppKit text (cached attributed strings) redraws correctly on appearance changes.
+/// lightness inverted for dark. The dark appearance is a designed night scale,
+/// not a simple inversion: the canvas is blue-graphite at hue ~226°, and ink,
+/// quiet text, and semantic colors are tuned against it for measured contrast
+/// (body ink ≈ 12.7:1, quiet ≈ 5.3:1) so long night reads avoid halation. The
+/// terminal shares the same canvas. Every value resolves through a dynamic
+/// NSColor so AppKit text (cached attributed strings) redraws correctly on
+/// appearance changes.
 enum WorkbenchTheme {
-    /// Primary reading ink: dark slate in light, warm off-white in dark.
-    static let inkNS = nsColor(light: (0.16, 0.18, 0.23), dark: (0.88, 0.885, 0.90))
+    /// Primary reading ink: dark slate in light; dark is a soft blue-white held
+    /// just below full brightness, which keeps CJK glyphs from blooming on the
+    /// graphite canvas.
+    static let inkNS = nsColor(light: (0.16, 0.18, 0.23), dark: (0.847, 0.855, 0.882))
     static let ink = Color(nsColor: inkNS)
-    /// Monochrome accent: near-black in light, near-white in dark.
-    static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.90, 0.90, 0.92))
-    /// De-emphasised ink for status lines and timestamps.
-    static let quiet = color(light: (0.42, 0.45, 0.51), dark: (0.66, 0.68, 0.73))
-    /// Content surfaces: white in light; dark is a blue-tinted near-black instead
-    /// of the system's neutral gray — a designed dark reads intentional, not default.
-    /// Sidebar and composer glass keep their system materials and are unaffected.
+    /// Monochrome accent: near-black in light, near-white in dark. The dark value
+    /// sits one step above `ink`, so primary actions read as the brightest text
+    /// tone in the room.
+    static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.910, 0.918, 0.941))
+    /// De-emphasised ink for status lines and timestamps; dark holds ≈ 5.3:1 on
+    /// the canvas — legible, but clearly below body text.
+    static let quiet = color(light: (0.42, 0.45, 0.51), dark: (0.520, 0.550, 0.610))
+    /// Content surfaces: white in light; dark is the palette's blue-graphite
+    /// canvas (#16181E) instead of the system's neutral gray — a designed dark
+    /// reads intentional, not default. Sidebar and composer glass keep their
+    /// system materials and are unaffected.
     static let contentBackgroundNS = nsColor(
-        light: (1, 1, 1), dark: (0.104, 0.108, 0.125))
+        light: (1, 1, 1), dark: (0.086, 0.094, 0.118))
     static let contentBackground = Color(nsColor: contentBackgroundNS)
     /// Selected sidebar rows: a small light card on the window glass. Translucent,
     /// so the desktop tint still reads through it.
     static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),
                                                 dark: NSColor(white: 1, alpha: 0.11)))
 
-    /// Glyph color atop the accent-colored primary action circle.
-    static let actionGlyph = color(light: (1, 1, 1), dark: (0.13, 0.13, 0.14))
+    /// Glyph color atop the accent-colored primary action circle; dark echoes the
+    /// canvas hue so the circle reads as a single molded piece.
+    static let actionGlyph = color(light: (1, 1, 1), dark: (0.106, 0.114, 0.141))
 
-    /// Links in reply text; NSTextView resolves dynamic colors while drawing.
-    static let link = nsColor(light: (0.18, 0.36, 0.55), dark: (0.44, 0.63, 0.88))
+    /// Links in reply text; NSTextView resolves dynamic colors while drawing. The
+    /// dark value trades a little saturation for luminance so underlined links do
+    /// not vibrate against the canvas.
+    static let link = nsColor(light: (0.18, 0.36, 0.55), dark: (0.500, 0.651, 0.910))
 
-    static let diffHunk = nsColor(light: (0.42, 0.32, 0.62), dark: (0.70, 0.60, 0.87))
-    static let diffAdded = nsColor(light: (0.12, 0.45, 0.29), dark: (0.32, 0.72, 0.50))
-    static let diffRemoved = nsColor(light: (0.64, 0.22, 0.24), dark: (0.87, 0.47, 0.49))
+    /// Diff and hunk ink: in dark, each hue is lifted in lightness and slightly
+    /// desaturated, keeping the three roles distinct without neon edges.
+    static let diffHunk = nsColor(light: (0.42, 0.32, 0.62), dark: (0.720, 0.631, 0.890))
+    static let diffAdded = nsColor(light: (0.12, 0.45, 0.29), dark: (0.357, 0.749, 0.529))
+    static let diffRemoved = nsColor(light: (0.64, 0.22, 0.24), dark: (0.898, 0.518, 0.541))
 
     private static func isDark(_ appearance: NSAppearance) -> Bool {
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
@@ -55,6 +71,17 @@ enum WorkbenchTheme {
         NSColor(name: nil) { appearance in
             isDark(appearance) ? dark : light
         }
+    }
+}
+
+extension WorkbenchTheme {
+    /// Stable interface roles. Reading zoom changes prose, not navigation or controls.
+    /// Titles and secondary labels share the body size; weight and color give hierarchy.
+    enum Typography {
+        static let body: CGFloat = 14
+        static let title: CGFloat = body
+        static let secondary: CGFloat = body
+        static let caption: CGFloat = 12
     }
 }
 
@@ -156,9 +183,8 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 @Observable final class ReadingBodySize {
     static let shared = ReadingBodySize()
     static let defaultsKey = "perch.reading.bodySize"
-    /// Mixed CJK and Latin prose reads best one step above the 13 pt macOS UI
-    /// body; 16 pt keeps about 42 CJK characters on the 680 pt reading column.
-    static let standard: CGFloat = 16
+    /// Match the interface by default; retain any explicit reader preference.
+    static let standard: CGFloat = WorkbenchTheme.Typography.body
     static let sizes: [CGFloat] = [14, 15, 16, 17, 18]
 
     private(set) var value: CGFloat
@@ -186,28 +212,19 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     }
 }
 
-/// One type ramp for everything inside the conversation, derived from the body
-/// size so the hierarchy keeps its proportions at every setting:
-///
-/// | Role | Size at 16 pt | Used by |
-/// | --- | --- | --- |
-/// | heading 1 / 2 | 20 / 18 semibold | Markdown H1 / H2 (H3+ use the body size) |
-/// | body | 16 on 26 | replies, user prompts, composer text |
-/// | secondary | 14 on 22 | thoughts, quiet notes, code, tables, questions |
-/// | label | 13 | process and tool rows, fold headers, activity bar, notices |
-/// | caption | 12 | counts, chips, code labels, row actions, small hints |
-///
-/// No text drops below the 11 pt floor of the visual refresh.
+/// Reading roles share one primary size (14 pt / 22 pt by default). Thoughts,
+/// code, labels and prose use color, weight and spacing to establish hierarchy.
+/// Captions alone step down to 12 pt; document headings may step up.
 struct ReadingScale: Equatable {
     let body: CGFloat
     var unit: CGFloat { body / ReadingBodySize.standard }
-    var bodyLine: CGFloat { (body * 1.625).rounded() }
+    var bodyLine: CGFloat { (body * (22.0 / 14.0)).rounded() }
     var heading1: CGFloat { body + 4 }
     var heading2: CGFloat { body + 2 }
-    var secondary: CGFloat { max(11, body - 2) }
-    var secondaryLine: CGFloat { (secondary * 1.57).rounded() }
-    var label: CGFloat { max(11, body - 3) }
-    var caption: CGFloat { max(11, body - 4) }
-    /// Vertical rhythm designed at 16 pt, scaled with the body.
+    var secondary: CGFloat { body }
+    var secondaryLine: CGFloat { bodyLine }
+    var label: CGFloat { body }
+    var caption: CGFloat { max(WorkbenchTheme.Typography.caption, body - 2) }
+    /// Preserve the default vertical rhythm; enlarge it with reading zoom.
     func spacing(_ points: CGFloat) -> CGFloat { (points * unit).rounded() }
 }
