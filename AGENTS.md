@@ -8,9 +8,13 @@ to light.
 - Do not copy code or assets from herdrm (PolyForm Noncommercial).
 - The window is one system Liquid Glass backdrop (`WorkbenchWindowBackdropView`,
   `.regular` glass over a non-opaque window, shaped like the window corner), shared
-  by navigation and the toolbar. Its tint comes from the desktop; do not add a
-  fixed colored fill or lower its opacity. The sidebar has no separate glass card,
-  outline, or shadow in the wide layout; its selection is a light row card.
+  by navigation and the toolbar. In light its tint comes from the desktop alone;
+  in dark it floats on `WorkbenchTheme.glassUnderlay`, a mostly opaque
+  blue-graphite base (user direction of 2026-10-29), so night chrome shares the
+  canvas's luminance instead of the wallpaper's. Fills, strokes and elevation are
+  independent light/dark tokens (`WorkbenchTheme.Fill` / `Stroke` / `Elevation`),
+  never one alpha shared by both appearances. The sidebar has no separate glass
+  card, outline, or shadow in the wide layout; its selection is a light row card.
 - The opaque workspace sheet floats below the toolbar. The full-height inspector
   is an internal auxiliary lane separated by a hairline, without its own rounded
   card or shadow; opening it resizes the reader and composer together. Keep the

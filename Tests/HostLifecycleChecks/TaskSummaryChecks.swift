@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import WorkbenchCore
 
@@ -26,6 +27,9 @@ private final class TaskSummaryProtocol: URLProtocol {
                 ["id": "done", "kind": "bash", "description": "整理构建报告", "command": "cat /tmp/build.log", "status": "completed"],
                 ["id": "cancelled", "kind": "bash", "description": "旧版本校验", "status": "cancelled"]
             ]]
+        } else if path.hasSuffix("/tasks/build") {
+            value = ["id": "build", "kind": "bash", "description": "Bash: " + Self.command,
+                     "command": Self.command, "status": "running", "output_preview": "Building fixture project…", "output_bytes": 28]
         } else { client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL)); return }
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: try! JSONSerialization.data(withJSONObject: ["code": 0, "data": value]))
@@ -36,6 +40,7 @@ private final class TaskSummaryProtocol: URLProtocol {
 @MainActor func checkTaskSummary() async throws {
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     AppLanguage.applyToSystem(.zhHans)
+    AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [TaskSummaryProtocol.self]
     let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "摘要预览", destination: "")
@@ -53,6 +58,32 @@ private final class TaskSummaryProtocol: URLProtocol {
     model.taskContextWindow.show(model: model)
     let window = model.taskContextWindow.window!
     window.setContentSize(NSSize(width: 360, height: 720))
+    func control(_ identifier: String) async throws -> NSRect {
+        for _ in 0..<200 {
+            if let frame = taskPanelControl(window, identifier) { return frame }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        preconditionFailure("Missing task summary control: \(identifier)")
+    }
+    func press(_ identifier: String) async throws {
+        let frame = try await control(identifier)
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 1)!)
+        }
+        try await Task.sleep(for: .milliseconds(150))
+    }
+    _ = try await control("task-context-row-build")
+    _ = try await control("task-context-row-failure")
+    _ = try await control("task-context-row-unknown")
+    precondition(taskPanelControl(window, "task-context-row-done") == nil &&
+                 taskPanelControl(window, "task-context-row-cancelled") == nil,
+                 "Completed/cancelled tasks start folded; failed/unknown remain visible")
+    try await press("task-context-row-build")
+    precondition(model.taskContextWindow.detail == TaskContextRoute(source: reference, taskID: "build"),
+                 "A compact summary keeps the new in-place detail navigation")
+    _ = try await control("task-context-output")
     for name in [NSAppearance.Name.aqua, .darkAqua] {
         UserDefaults.standard.set(name == .aqua ? AppAppearance.light.rawValue : AppAppearance.dark.rawValue,
                                   forKey: AppAppearance.defaultsKey)
@@ -61,7 +92,10 @@ private final class TaskSummaryProtocol: URLProtocol {
         window.contentView!.layoutSubtreeIfNeeded()
         precondition(window.isVisible && abs(window.contentView!.bounds.width - 360) < 1)
     }
-    print("PASS: production Kimi task panel, compact Bash summary, preserved command, failed/unknown tasks and folded history fixture")
+    try await press("task-context-back")
+    precondition(model.taskContextWindow.detail == nil)
+    _ = try await control("task-context-row-build")
+    print("PASS: compact Kimi summary, in-place detail/output/back in both appearances, failed/unknown visible and history folded")
     if CommandLine.arguments.contains("preview") {
         UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
         window.appearance = NSAppearance(named: .aqua)

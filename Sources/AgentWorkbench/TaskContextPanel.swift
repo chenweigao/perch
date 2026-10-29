@@ -10,6 +10,10 @@ enum WorkspaceInspectorPage: String, Hashable { case task, changes, files }
     var embeddedVisible = false
     /// The inspector's page. Not persisted: a launch starts on the task panel.
     var page: WorkspaceInspectorPage = .task
+    /// The task the task page shows in place of its list. It survives docking,
+    /// detaching and page switches, and closes when the panel follows another
+    /// session. Not persisted.
+    var detail: TaskContextRoute?
     private(set) var visible = false
     func isShowing(_ page: WorkspaceInspectorPage) -> Bool { embeddedVisible && self.page == page }
     /// Only one task-panel presentation reads at a time, so showing the task page
@@ -85,9 +89,7 @@ struct TaskContextView: View {
     @State private var state = TaskContextState()
     @State private var allFiles = false
     @State private var completedTasks = false
-    @State private var expandedTasks: Set<String> = []
     @State private var completedTools = false
-    @State private var outputTask: String?
     @State private var draftSource: WorkspaceSession?
     @AppStorage(AppLanguage.defaultsKey) private var language: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appearance: AppAppearance = .system
@@ -100,6 +102,11 @@ struct TaskContextView: View {
         return model.taskContextWindow.isShowing(.task) && !model.showDashboard && !model.draftingNewTask
     }
     private var current: TaskContextSnapshot? { state.reference == reference ? state.snapshot : nil }
+    /// The task shown in place of the list, while it belongs to this panel's session.
+    private var detail: TaskContextRoute? {
+        guard let route = model.taskContextWindow.detail, route.source == reference else { return nil }
+        return route
+    }
     private struct LoadKey: Equatable {
         let reference: SessionReference?
         let online: Bool
@@ -113,29 +120,34 @@ struct TaskContextView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header.fixedSize(horizontal: false, vertical: true)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    if let error = state.error {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("状态未同步", systemImage: "wifi.exclamationmark")
-                            Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).textSelection(.enabled)
-                            Button("重试") { state.refresh += 1 }.disabled(item?.online != true)
-                        }.foregroundStyle(WorkbenchTheme.quiet)
-                    }
-                    if let current, let item {
-                        sections(current, item: item)
-                    } else if state.loading {
-                        ProgressView("正在读取任务…").frame(maxWidth: .infinity)
-                    } else if reference == nil {
-                        Text("选择一个会话，查看它的文件、活动和待处理事项。").foregroundStyle(WorkbenchTheme.quiet)
-                    } else if item == nil {
-                        Text("此任务已不在工作台中，请取消锁定后选择其他会话。").foregroundStyle(WorkbenchTheme.quiet)
-                    } else if reference?.kind == .terminal {
-                        Text("终端任务请在完整会话中查看。").foregroundStyle(WorkbenchTheme.quiet)
-                    } else if state.error == nil {
-                        Text("暂无任务活动").foregroundStyle(WorkbenchTheme.quiet)
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+            if let detail, let item {
+                if let error = state.error {
+                    syncError(error).padding(.horizontal, 16).padding(.top, 12)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                TaskContextDetailView(model: model, item: item, route: detail, snapshot: current, state: state,
+                                      online: item.online && state.error == nil, active: active,
+                                      back: { model.taskContextWindow.detail = nil })
+                    .id(detail)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        if let error = state.error { syncError(error) }
+                        if let current, let item {
+                            sections(current, item: item)
+                        } else if state.loading {
+                            ProgressView("正在读取任务…").frame(maxWidth: .infinity)
+                        } else if reference == nil {
+                            Text("选择一个会话，查看它的文件、活动和待处理事项。").foregroundStyle(WorkbenchTheme.quiet)
+                        } else if item == nil {
+                            Text("此任务已不在工作台中，请取消锁定后选择其他会话。").foregroundStyle(WorkbenchTheme.quiet)
+                        } else if reference?.kind == .terminal {
+                            Text("终端任务请在完整会话中查看。").foregroundStyle(WorkbenchTheme.quiet)
+                        } else if state.error == nil {
+                            Text("暂无任务活动").foregroundStyle(WorkbenchTheme.quiet)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                }
             }
             if detached, let item {
                 VStack(spacing: 0) {
@@ -159,11 +171,17 @@ struct TaskContextView: View {
                                                ready: current != nil))
             #endif
             .environment(\.locale, language.resolvedLocale).preferredColorScheme(appearance.colorScheme)
+            // A panel that follows the selection leaves a task of the previous
+            // session; a locked one keeps it.
+            .onChange(of: reference, initial: true) { _, next in
+                if let next, let route = model.taskContextWindow.detail, route.source != next {
+                    model.taskContextWindow.detail = nil
+                }
+            }
             .workbenchHostedTask(id: key) {
                 let input = key
                 if state.reference != input.reference {
-                    allFiles = false; completedTasks = false
-                    expandedTasks = []; completedTools = false; outputTask = nil
+                    allFiles = false; completedTasks = false; completedTools = false
                 }
                 await state.follow(input.reference, online: input.online) {
                     guard let source = input.reference else { throw CancellationError() }
@@ -255,11 +273,11 @@ struct TaskContextView: View {
                 if let error = value.taskError { Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet) }
                 let tasks = TaskContextTasks(value.tasks)
                 ForEach(tasks.current) { task in
-                    taskRow(task, item: item, online: online)
+                    taskRow(task, item: item)
                 }
                 if !tasks.finished.isEmpty {
                     DisclosureGroup("已结束的任务 · \(tasks.finished.count)", isExpanded: $completedTasks) {
-                        ForEach(tasks.finished) { task in taskRow(task, item: item, online: online) }
+                        ForEach(tasks.finished) { task in taskRow(task, item: item) }
                     }.font(.system(size: WorkbenchTheme.Typography.body)).foregroundStyle(WorkbenchTheme.quiet)
                 }
             }
@@ -307,65 +325,41 @@ struct TaskContextView: View {
             }.padding(.vertical, 4)
         }.font(.system(size: WorkbenchTheme.Typography.body))
     }
-    private func taskRow(_ task: KimiTask, item: WorkspaceSession, online: Bool) -> some View {
-        DisclosureGroup(isExpanded: Binding(get: { expandedTasks.contains(task.id) }, set: { expanded in
-            if expanded { expandedTasks.insert(task.id) } else { expandedTasks.remove(task.id) }
-        })) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let command = task.command, !command.isEmpty {
-                    Text("命令").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
-                    ScrollView([.horizontal, .vertical]) {
-                        Text(verbatim: command).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
-                            .textSelection(.enabled).fixedSize(horizontal: true, vertical: true)
-                    }.frame(maxHeight: 160)
-                }
-                if let latest = task.latestActivity { Text(latest).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet).lineLimit(3) }
-                HStack {
-                    if item.reference.kind == .kimi && task.kind != "subagent" {
-                        Button(outputTask == task.id ? "收起输出" : "查看输出") {
-                            if outputTask == task.id { outputTask = nil }
-                            else {
-                                outputTask = task.id
-                                Task { await state.perform(task, source: item.reference, stopping: false) {
-                                    try await model.taskContextOperation(task, source: item.reference, stop: false)
-                                } }
-                            }
-                        }
-                    } else {
-                        Button("查看会话") { model.open(item); openMain() }
-                    }
-                    Spacer()
-                    if task.isRunning && (task.stoppable == true || (item.reference.kind == .kimi && task.kind != "subagent")) {
-                        Button(state.stopRequested.contains(task.id) ? "已请求停止" : "停止") {
-                            Task { await state.perform(task, source: item.reference, stopping: true) {
-                                try await model.taskContextOperation(task, source: item.reference, stop: true)
-                            } }
-                        }.disabled(state.stopRequested.contains(task.id))
-                    }
-                }.font(.system(size: WorkbenchTheme.Typography.caption)).disabled(!online || state.working.contains(task.id))
-                if outputTask == task.id {
-                    ScrollView {
-                        Text(state.outputs[task.id] ?? task.outputPreview ?? L("正在读取输出…"))
-                            .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced)).textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }.frame(maxHeight: 160)
-                }
-                if let error = state.actionErrors[task.id] { Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.red) }
-            }.padding(.vertical, 6)
+    /// The whole row opens the task in place of the list.
+    private func taskRow(_ task: KimiTask, item: WorkspaceSession) -> some View {
+        let title = task.displayTitle
+        // Full commands belong to the in-place detail; the list stays a summary.
+        let line = task.command == nil ? task.contextDetailLine : nil
+        return Button {
+            model.taskContextWindow.detail = TaskContextRoute(source: item.reference, taskID: task.id)
         } label: {
             HStack(alignment: .top, spacing: 10) {
-                Image(systemName: task.isRunning ? "circle.dashed" : task.isFailed ? "exclamationmark.circle" :
-                        task.status == "completed" ? "checkmark.circle" : task.status == "cancelled" ? "stop.circle" : "questionmark.circle")
-                    .foregroundStyle(task.isFailed ? Color.red : .secondary).frame(width: 16)
+                TaskStatusSymbol(task: task).padding(.top, 2)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(task.displayTitle).lineLimit(2).foregroundStyle(.primary)
+                    Text(title).lineLimit(2).foregroundStyle(.primary)
                     HStack(spacing: 6) {
                         Text(task.phaseLabel)
-                        if let elapsed = task.elapsed(at: Date()) { Text("\(Int(elapsed)) 秒").monospacedDigit() }
+                        KimiTaskClock(task: task)
                     }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+                    if let line {
+                        Text(verbatim: line).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+                            .lineLimit(1).truncationMode(.middle)
+                    }
                 }.frame(maxWidth: .infinity, alignment: .leading)
-            }.padding(.vertical, 4)
-        }.font(.system(size: WorkbenchTheme.Typography.body))
+                Image(systemName: "chevron.right").font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                    .foregroundStyle(WorkbenchTheme.quiet).padding(.top, 3).accessibilityHidden(true)
+            }.padding(.vertical, 6).frame(minHeight: 36).contentShape(Rectangle())
+        }.buttonStyle(TaskContextRowStyle()).help("查看详情")
+            .accessibilityLabel(Text(verbatim: [title, task.phaseLabel, line].compactMap { $0 }.joined(separator: ", ")))
+            .accessibilityHint(Text("查看详情"))
+            .accessibilityIdentifier("task-context-row-" + task.id)
+    }
+    private func syncError(_ error: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("状态未同步", systemImage: "wifi.exclamationmark")
+            Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).textSelection(.enabled)
+            Button("重试") { state.refresh += 1 }.disabled(item?.online != true)
+        }.foregroundStyle(WorkbenchTheme.quiet)
     }
     private func openMain() {
         close?()

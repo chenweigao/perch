@@ -1,9 +1,25 @@
-import {query} from '@anthropic-ai/claude-agent-sdk';
 import {readFileSync} from 'node:fs';
 import {isAbsolute, normalize, sep} from 'node:path';
 import readline from 'node:readline';
 const cfg = JSON.parse(process.argv[2]);
+const {query} = await import(cfg.sdk ?? '@anthropic-ai/claude-agent-sdk');
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
+
+if (cfg.operation === 'catalog') {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  async function* input() { await new Promise(() => {}); }
+  const active = query({prompt: input(), options: {
+    pathToClaudeCodeExecutable: cfg.binary, cwd: cfg.cwd,
+    permissionMode: 'default', abortController: controller
+  }});
+  try {
+    emit({type:'models', models:await active.supportedModels()});
+  } finally {
+    clearTimeout(timeout);
+    active.close();
+  }
+} else {
 let active, activeTurn, resume = cfg.resume, pending = new Map();
 readline.createInterface({input: process.stdin}).on('line', async line => {
   let cmd;
@@ -70,6 +86,7 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
       forwardSubagentText: cfg.forwardSubagentText === true,
       ...(permissionMode === 'bypassPermissions' ? {allowDangerouslySkipPermissions: true} : {}),
       ...(cfg.model ? {model: cfg.model} : {}),
+      ...(cfg.thinking ? {effort: cfg.thinking} : {}),
       hooks: {PostToolUse:[{matcher:'Write|Edit', hooks:[async event => {
         const path = planPath(event.tool_input?.file_path);
         if (path) writtenPlanPaths.set(event.agent_id ?? "", path);
@@ -135,3 +152,4 @@ readline.createInterface({input: process.stdin}).on('line', async line => {
   }
 });
 emit({type:'ready'});
+}

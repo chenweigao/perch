@@ -413,7 +413,9 @@ struct ConnectionChecks {
              "thinking": ["low", "medium", "high"], "defaultThinking": "medium", "reasoning": true],
             ["agent": "qoderintl", "provider": "qoder-global", "id": "qoder-global-pro", "name": "Qoder Global Pro",
              "thinking": ["off", "high"], "defaultThinking": "high", "reasoning": true],
-            ["agent": "dsh", "provider": "deepseek-official", "id": "deepseek-v4-flash", "name": "DeepSeek-V4-Flash"]]
+            ["agent": "dsh", "provider": "deepseek-official", "id": "deepseek-v4-flash", "name": "DeepSeek-V4-Flash"],
+            ["agent": "claude", "provider": "claude", "id": "opus", "name": "Claude Opus",
+             "thinking": ["low", "high"], "resolvedModel": "claude-opus-5-5"]]
         let client = NativeAgentConnection(host: SSHHost(name: "Catalog", destination: "fixture"), transport: fixture.request)
         await client.loadModels()
         precondition(fixture.modelRequests == 1)
@@ -424,7 +426,9 @@ struct ConnectionChecks {
         precondition(qoderCN[0].thinking == [.low, .medium, .high] && qoderCN[0].resolve(.off) == .medium)
         precondition(client.models(for: .qoderintl).map(\.id) == ["qoder-global-pro"])
         precondition(client.models(for: .codex).isEmpty, "Qoder models must not leak into Codex")
-        precondition(client.models(for: .claude).isEmpty, "Claude reports no catalog and must not borrow another runtime's")
+        let claude = client.models(for: .claude)
+        precondition(claude.map(\.id) == ["opus"] && claude[0].thinking == [.low, .high],
+                     "Claude's own official catalog and effort levels must survive routing")
         precondition(client.modelsError == nil && client.actionError == nil)
         // A failed read keeps the last good list and reports to the model control,
         // not as a conversation banner nobody asked for.
@@ -605,9 +609,11 @@ struct ConnectionChecks {
     static func checkClaudePermission() async throws {
         let fixture = TransportFixture()
         let client = NativeAgentConnection(host: SSHHost(name: "Claude", destination: "fixture"), transport: fixture.request)
-        let session = try await client.create(provider: .claude, cwd: "/fixture", model: "", permissionMode: "acceptEdits")
+        let session = try await client.create(provider: .claude, cwd: "/fixture", model: "opus", thinking: .high, permissionMode: "acceptEdits")
         precondition(session.permission?.selected == "acceptEdits" && session.permission?.scope == .nextTurn)
         precondition(fixture.creates.first?.2 == "acceptEdits")
+        precondition(fixture.creates.first?.1 == "opus" && fixture.creates.first?.3 == "high",
+                     "Claude model and effort must reach the bridge at session creation")
         fixture.sessions[session.id]?["busy"] = true
         try await client.refresh()
         client.setPermission("plan", for: session.id)

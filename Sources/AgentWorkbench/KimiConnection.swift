@@ -145,6 +145,9 @@ final class KimiConnection {
     private(set) var subagentTranscriptError: String?
     private(set) var loadingSubagentTranscript = false
     private(set) var loadingOlderSubagentTurns = false
+    /// The subagent whose transcript sheet the selected conversation shows; nil
+    /// when none. Selecting another session or disconnecting closes it.
+    var transcriptSubject: KimiTask?
     private var sendingSessions: Set<String> = []
     var sending: Bool { selectedId.map { sendingSessions.contains($0) } ?? false }
     var loading: Bool {
@@ -340,7 +343,7 @@ final class KimiConnection {
         task?.cancel(); task = nil; listRefresh?.cancel(); taskRefresh?.cancel(); goalRefresh?.cancel()
         snapshotRefreshGeneration += 1; snapshotRefreshResubscribe = false
         snapshotReady = false; goal = nil; goalIsStale = true
-        subagentTranscript = nil; subagentTranscriptError = nil
+        subagentTranscript = nil; subagentTranscriptError = nil; transcriptSubject = nil
         closeTransport(); online = false; connecting = false; error = nil; stateMessage = "未连接"
     }
     private func closeTransport() {
@@ -484,7 +487,7 @@ final class KimiConnection {
         guard id != selectedId || (!snapshotReady && !loading) else { return }
         if let conversation { cachedConversations.store(conversation) }
         // Unsubscribe while the previous session is still the selected one.
-        closeSubagentTranscript()
+        closeSubagentTranscript(); transcriptSubject = nil
         selectedId = id; UserDefaults.standard.set(id, forKey: savedSelectionKey)
         conversation = cachedConversations.take(id)
         loadSelected(id)
@@ -747,18 +750,21 @@ final class KimiConnection {
             failure: value.session.lastTurnReason == "failed" ? L("任务执行失败，请查看会话。") : nil,
             messages: Array(messages.suffix(160)), live: live, tasks: board.subagents + board.backgroundTasks)
         result.taskError = taskError
+        result.listedTaskIDs = Set(board.backgroundTasks.map(\.id))
         return result
     }
     func taskContextOperation(_ task: KimiTask, session: String, stop: Bool) async throws -> String {
+        guard stop else { return try await taskContextOutput(task.id, session: session).outputPreview ?? "" }
         guard online, let api else { throw WorkbenchError(L("状态未同步")) }
-        let path = "/api/v1/sessions/\(session)/tasks/\(task.id)"
-        if stop {
-            let response = try await api.post(JSONValue.self, path + ":cancel")
-            guard response["cancelled"] == .bool(true) else { throw WorkbenchError(L("服务端未确认停止")) }
-            return ""
-        }
-        let value = try await api.get(KimiTask.self, path + "?with_output=true&output_bytes=16384")
-        return value.outputPreview ?? ""
+        let response = try await api.post(JSONValue.self, "/api/v1/sessions/\(session)/tasks/\(task.id):cancel")
+        guard response["cancelled"] == .bool(true) else { throw WorkbenchError(L("服务端未确认停止")) }
+        return ""
+    }
+    /// One task of any session with its output tail; the selection stays as it is.
+    func taskContextOutput(_ taskID: String, session: String) async throws -> KimiTask {
+        guard online, let api else { throw WorkbenchError(L("状态未同步")) }
+        return try await api.get(KimiTask.self,
+            "/api/v1/sessions/\(session)/tasks/\(taskID)?with_output=true&output_bytes=\(KimiTask.outputTailBytes)")
     }
 
     /// Reads the selected session's persisted background processes and detached
@@ -822,7 +828,7 @@ final class KimiConnection {
             guard let self else { return }
             defer { loadingTaskOutput.remove(task.id) }
             do {
-                let value = try await api.get(KimiTask.self, "/api/v1/sessions/\(id)/tasks/\(task.id)?with_output=true&output_bytes=16384")
+                let value = try await api.get(KimiTask.self, "/api/v1/sessions/\(id)/tasks/\(task.id)?with_output=true&output_bytes=\(KimiTask.outputTailBytes)")
                 guard id == selectedId else { return }
                 conversation?.tasks.store(output: value.outputPreview ?? "", for: task.id)
             } catch {
@@ -852,6 +858,13 @@ final class KimiConnection {
     /// The block grade streams whole frames. The delta grade would add
     /// per-character appends, which this client does not fold.
     private static let transcriptGrade = "block"
+
+    /// Opens the transcript sheet of a subagent of the selected session; a task
+    /// of another session, or one without an agent to read, opens nothing.
+    func presentTranscript(_ task: KimiTask, in sessionID: String) {
+        guard sessionID == selectedId, task.transcriptAgentId != nil else { return }
+        transcriptSubject = task
+    }
 
     /// Reads one subagent's transcript, then subscribes to its operations from
     /// that page's watermark. Reading again refreshes both. Without an event

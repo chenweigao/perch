@@ -56,8 +56,8 @@ struct WorkbenchToolbarButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label.background {
                 RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous)
-                    .fill(Color.primary.opacity(configuration.isPressed ? WorkbenchTheme.Fill.pressed
-                        : selected ? WorkbenchTheme.Fill.selected : hovered ? WorkbenchTheme.Fill.hover : 0))
+                    .fill(configuration.isPressed ? WorkbenchTheme.Fill.pressed
+                        : selected ? WorkbenchTheme.Fill.selected : hovered ? WorkbenchTheme.Fill.hover : .clear)
                     .padding(2)
             }.onHover { hovered = $0 }
         }
@@ -551,7 +551,7 @@ private final class WorkbenchContentCardView: NSView {
         layer?.borderWidth = 1 / max(1, window?.backingScaleFactor ?? 2)
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
-            layer?.borderColor = NSColor.labelColor.withAlphaComponent(WorkbenchTheme.Stroke.hairline).cgColor
+            layer?.borderColor = WorkbenchTheme.Stroke.hairlineNS.cgColor
         }
     }
 
@@ -655,8 +655,7 @@ private final class WorkbenchOuterShadowView: NSView {
     override func updateLayer() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             let elevation = NSShadow()
-            elevation.shadowColor = NSColor.black.withAlphaComponent(
-                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.20)
+            elevation.shadowColor = WorkbenchTheme.Elevation.panelShadow
             elevation.shadowBlurRadius = 18
             elevation.shadowOffset = NSSize(width: 0, height: -5)
             shadow = elevation

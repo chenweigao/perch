@@ -34,6 +34,8 @@ private struct ToolbarPreview: View {
     private var locale: Locale { Locale(identifier: english ? "en" : "zh-Hans") }
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: locale) }
     private var canSend: Bool { !offline && !stopping && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var newTask: Bool { ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_NEW_TASK"] == "1" }
+    private var usesRuntimeDefault: Bool { [.qoder, .qoderintl].contains(selectedProvider) || (newTask && selectedProvider == .claude) }
     private var disabledReason: String? {
         if offline { return L("连接恢复后可修改设置。") }
         if running && selectedProvider != .kimi { return L("任务运行中，完成或停止后可修改。") }
@@ -91,13 +93,13 @@ private struct ToolbarPreview: View {
                     ComposerAddButton(supportsFiles: true) {}
                     ComposerModelPicker(models: emptyModels ? [] : models, modelID: model, thinking: effort,
                                         disabledReason: disabledReason,
-                                        unavailableReason: selectedProvider == .claude ? L("此 Agent 暂不支持模型与思考设置。") : nil,
+                                        unavailableReason: selectedProvider == .claude && !newTask ? L("此 Agent 暂不支持模型与思考设置。") : nil,
                                         sessionModel: "fixture/reasoner", usesSessionModel: usesSessionModel, onUseSessionModel: {
                                             usesSessionModel = true; model = "fixture/reasoner"; effort = models[0].resolve(effort)
-                                        }, usesDefaultModel: [.qoder, .qoderintl].contains(selectedProvider) && model.isEmpty,
-                                        onUseDefaultModel: [.qoder, .qoderintl].contains(selectedProvider) ? {
+                                        }, usesDefaultModel: usesRuntimeDefault && model.isEmpty,
+                                        onUseDefaultModel: usesRuntimeDefault ? {
                                             usesSessionModel = false; model = ""; effort = nil
-                                        } : nil, scope: L(selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
+                                        } : nil, scope: L(newTask ? "首条消息生效" : selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
                                         onSelectModel: { usesSessionModel = false; model = $0.id; effort = $0.resolve(effort) },
                                         onSelectThinking: { effort = $0 })
                         .background(ToolbarButtonProbe())

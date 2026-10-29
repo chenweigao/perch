@@ -13,7 +13,6 @@ struct KimiWorkspaceView: View {
     let onInput: () -> Void
     let onResultDisplayed: (KimiSession) -> Void
     @State private var activityReview = 0
-    @State private var transcriptSubject: KimiTask?
     @State private var editStats = SessionEditStatsCache()
     var body: some View {
         #if PERCH_ACCEPTANCE
@@ -55,14 +54,18 @@ struct KimiWorkspaceView: View {
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
             .tint(kimiAccent)
-            .onChange(of: connection.selectedId) { _, _ in
-                transcriptSubject = nil
-            }
-            .sheet(item: $transcriptSubject) { task in
+            // The connection closes the sheet when the selection changes; the
+            // task panel can open it too.
+            .sheet(item: transcriptSheet) { task in
                 KimiSubagentTranscriptSheet(agentId: task.transcriptAgentId ?? task.id, subject: task,
                                             connection: connection)
             }
 
+    }
+    /// Read here, so only opening and closing the sheet touches this body.
+    private var transcriptSheet: Binding<KimiTask?> {
+        let subject = connection.transcriptSubject
+        return Binding(get: { subject }, set: { connection.transcriptSubject = $0 })
     }
 
     /// Activity, notices and the composer float over the transcript's bottom
@@ -100,7 +103,7 @@ struct KimiWorkspaceView: View {
                 onTaskOutput: { connection.loadTaskOutput($0) },
                 onTaskStop: { connection.cancelTask($0) },
                 onTasksRefresh: { Task { await connection.refreshTasks() } },
-                onOpenTranscript: { transcriptSubject = $0 })
+                onOpenTranscript: { connection.presentTranscript($0, in: conversation.snapshot.session.id) })
                 .id(conversation.snapshot.session.id)
                 .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity, alignment: .center).padding(.top, 4)
             KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
@@ -197,7 +200,7 @@ private struct KimiComposerView: View {
                                      autoCompactHost: connection.host.id, autoCompactSession: sessionID)
                     }.foregroundStyle(.secondary).padding(.leading, 10)
                         .overlay(alignment: .leading) {
-                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                            Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(width: 1, height: 16)
                         }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,

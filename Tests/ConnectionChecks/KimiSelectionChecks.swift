@@ -502,8 +502,15 @@ func checkKimiSelectionIsolation() async throws {
     precondition(context.title == "a" && context.tasks.count == 2)
     precondition(client.selectedId == "b" && client.conversation?.snapshot.session.id == "b")
     let task = context.tasks.first { $0.id == "task_1" }!
-    let output = try await client.taskContextOperation(task, session: "a", stop: false)
-    precondition(output == "PASS: fixture")
+    let child = context.tasks.first { $0.id == "task_2" }!
+    precondition(context.listedTaskIDs == ["task_1", "task_2"] && context.readsOutput(child),
+                 "Every entry of the persisted list, a detached child too, reads an output tail")
+    precondition(context.stops(task) && !context.stops(child))
+    let output = try await client.taskContextOutput("task_1", session: "a")
+    precondition(output.outputPreview == "PASS: fixture" && output.outputBytes == 13 &&
+                 !TaskContextOutput(output).truncated && client.selectedId == "b")
+    let tail = try await client.taskContextOperation(task, session: "a", stop: false)
+    precondition(tail == "PASS: fixture" && SelectionProtocol.count("/api/v1/sessions/a/tasks/task_1") == 2)
     _ = try await client.taskContextOperation(task, session: "a", stop: true)
     precondition(SelectionProtocol.count("/api/v1/sessions/a/tasks/task_1:cancel") == 1)
     precondition(SelectionProtocol.count("/api/v1/sessions/b/tasks/task_1:cancel") == 0)
@@ -518,7 +525,18 @@ func checkKimiSelectionIsolation() async throws {
     pending.cancel()
     SelectionProtocol.release("/api/v1/sessions/a/snapshot")
     do { _ = try await pending.value; fatalError("Cancelled panel read must not publish") } catch {}
-    print("PASS: Kimi task panel independent reads, task output/stop routes, partial failure and cancellation")
+
+    // The panel opens a subagent sheet only in the conversation the main window shows.
+    client.presentTranscript(child, in: "a")
+    precondition(client.transcriptSubject == nil, "Another session's subagent opens nothing")
+    client.presentTranscript(task, in: "b")
+    precondition(client.transcriptSubject == nil, "A background process has no transcript")
+    client.presentTranscript(child, in: "b")
+    precondition(client.transcriptSubject?.id == "task_2")
+    client.select("a")
+    precondition(client.transcriptSubject == nil, "Selecting another session closes the sheet")
+    await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+    print("PASS: Kimi task panel independent reads, listed tasks, output tails with sizes, stop routes, transcript sheet routing, partial failure and cancellation")
 }
 
 @MainActor

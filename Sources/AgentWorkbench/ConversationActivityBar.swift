@@ -727,7 +727,7 @@ private struct KimiTaskRow: View {
                         Text(LocalizedStringKey(chip)).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                     }
                     Spacer(minLength: 4)
-                    KimiTaskClock(task: task)
+                    KimiTaskClock(task: task).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
                     Text(task.phaseLabel).foregroundStyle(tint).fixedSize()
                 }
                 if let usageLine {
@@ -801,7 +801,7 @@ private struct KimiTaskRow: View {
                 }
             }
         }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
-            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+            .background(WorkbenchTheme.Fill.surface,
                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .padding(.leading, 10).padding(.top, 5)
     }
@@ -815,7 +815,8 @@ private struct KimiTaskRow: View {
 }
 
 /// Only a running task needs a clock that redraws; a finished one is fixed.
-private struct KimiTaskClock: View {
+/// Callers set its font and color.
+struct KimiTaskClock: View {
     let task: KimiTask
     @Environment(\.locale) private var locale
     var body: some View {
@@ -829,7 +830,7 @@ private struct KimiTaskClock: View {
                     }
                 }
             }
-        }.font(.system(size: WorkbenchTheme.Reading.captionSize)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+        }.monospacedDigit().fixedSize()
     }
     private func duration(_ interval: TimeInterval) -> String {
         ConversationTiming.duration(max(0, interval), chinese: locale.language.languageCode?.identifier == "zh")

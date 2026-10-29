@@ -332,7 +332,7 @@ struct WorkbenchSidebar: View {
             Button { showPinPicker = true } label: {
                 Image(systemName: "plus").font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.primary).frame(width: 22, height: 22)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.selected),
+                    .background(WorkbenchTheme.Fill.selected,
                                 in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
             }
                 .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
@@ -736,10 +736,36 @@ private struct ConnectionControls: View {
                         }
                         if connection.host.hasNativeAgents {
                             let providers = connection.host.enabledAgents.filter { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) }
-                            agentStatus("原生 Agent · \(providers.count)",
-                                        online: native.online, error: bridgeUpdateError ?? native.error,
-                                        needsBridgeUpdate: native.needsBridgeUpdate, updating: bridgeUpdating,
-                                        update: { updateBridge(destination: connection.host.destination) }) { native.connect() }
+                            let expanded = expandedNativeAgents.contains(connection.id)
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 0) {
+                                    Button {
+                                        if expanded { expandedNativeAgents.remove(connection.id) }
+                                        else { expandedNativeAgents.insert(connection.id) }
+                                    } label: {
+                                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+                                            .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 18, height: 24)
+                                    }.buttonStyle(.plain).accessibilityLabel(expanded ? "收起原生 Agent 配置" : "展开原生 Agent 配置")
+                                    agentStatus("原生 Agent · \(providers.count)",
+                                                online: native.online, error: bridgeUpdateError ?? native.error,
+                                                needsBridgeUpdate: native.needsBridgeUpdate, updating: bridgeUpdating,
+                                                update: { updateBridge(destination: connection.host.destination) }) { native.connect() }
+                                }
+                                if expanded {
+                                    ForEach(providers, id: \.self) { provider in
+                                        Button { dismiss(); model.configureHost(connection.host, provider: provider) } label: {
+                                            HStack(spacing: 7) {
+                                                AgentMark(kind: provider, size: 12)
+                                                Text(provider.label)
+                                                Spacer()
+                                                Image(systemName: "gearshape").foregroundStyle(.secondary)
+                                            }.padding(.leading, 30).padding(.vertical, 4).contentShape(Rectangle())
+                                        }.buttonStyle(.plain)
+                                            .help("配置与检查 \(provider.label)")
+                                            .accessibilityLabel("配置 \(provider.label)")
+                                    }
+                                }
+                            }
                         }
                         if connection.host.enabledAgents.contains(.terminal) {
                             agentStatus("Herdr", online: connection.online, error: connection.error) { connection.connect() }
@@ -748,9 +774,10 @@ private struct ConnectionControls: View {
                 }.padding(.vertical, 6)
             }
         }.font(.system(size: 11)).padding(15)
-            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+            .background(WorkbenchTheme.Fill.surface, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .padding(10)
     }
+    @State private var expandedNativeAgents: Set<UUID> = []
     @State private var bridgeUpdating = false
     @State private var bridgeUpdateError: String?
     /// One click from the row: update every bridge component, then reconnect so

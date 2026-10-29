@@ -29,7 +29,9 @@ struct WorkbenchView: View {
             .sheet(isPresented: $model.showFollowUps) { FollowUpManager(model: model) }
             .sheet(isPresented: $model.showGroupSuggestions) { GroupSuggestionsSheet(model: model) }
             .sheet(isPresented: $model.showGroupEditor) { WorkItemGroupEditor(model: model, sessionsOnly: model.editingGroupSessionsOnly) }
-            .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) { AddHostSheet(model: model, host: model.setupHost) }
+            .sheet(isPresented: $model.showAddHost, onDismiss: model.setupDismissed) {
+                AddHostSheet(model: model, host: model.setupHost, initialProvider: model.setupProvider)
+            }
             .sheet(isPresented: $model.showSessionSearch) {
                 UnifiedSearchView(model: model)
             }
