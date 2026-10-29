@@ -117,7 +117,6 @@ extension WorkbenchTheme {
         static let inset: CGFloat = 24
         /// A fixed breathing space above the scrolling reader, inside the sheet.
         static let topGutter: CGFloat = 12
-        static let topFade: CGFloat = 8
         /// The reader's chosen body size; see `ReadingBodySize`.
         static var bodySize: CGFloat { ReadingBodySize.shared.value }
         /// The conversation's one type ramp at the current body size.
