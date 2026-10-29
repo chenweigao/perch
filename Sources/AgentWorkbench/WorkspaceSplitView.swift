@@ -314,7 +314,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private func prepareHostedView(in item: NSToolbarItem) {
             // A run-loop delay alone is insufficient: AppKit can drain it while
             // expanding placeholders. Mount only after setToolbar has returned.
-            item.view = NSView(frame: .zero)
+            // Give AppKit a fully configured view with an intrinsic size while
+            // the SwiftUI host remains detached.
+            item.view = NSTextField(labelWithString: item.label)
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.controller?.workspaceToolbarInstalled == true else { return }
                 self.mountToolbarViews()
@@ -887,10 +889,6 @@ final class WorkbenchSplitController: NSSplitViewController {
             if window.toolbar !== self.workspaceToolbar {
                 self.workspaceToolbarInstalled = false
                 self.installingToolbar = true
-                // Expand delegate placeholders before attaching to WindowGroup.
-                // Loading them inside setToolbar lets window/SwiftUI updates
-                // invalidate AppKit's current-item indices during cold launch.
-                _ = self.workspaceToolbar?.items
                 window.toolbar = self.workspaceToolbar
                 self.installingToolbar = false
                 self.workspaceToolbarInstalled = true
@@ -983,7 +981,10 @@ final class WorkbenchSplitController: NSSplitViewController {
     }
 
     private func updateWorkspaceLayout() {
-        guard !applyingLayout, view.bounds.width > 0 else { return }
+        // setToolbar synchronously changes window geometry. Keep hosted panes
+        // quiescent until its placeholder transaction returns; installation
+        // finishes with a complete layout pass.
+        guard !installingToolbar, !applyingLayout, view.bounds.width > 0 else { return }
         applyingLayout = true
         defer { applyingLayout = false }
         updatePanelCornerRadius()
