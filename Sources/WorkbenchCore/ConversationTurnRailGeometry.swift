@@ -11,8 +11,9 @@ public struct ConversationTurnRailGeometry {
     public let count: Int
     public let height: CGFloat
     public let expanded: Range<Int>
-    private let top: CGFloat
-    private let bottom: CGFloat
+    /// Band boundaries are also the renderer's animatable coordinates.
+    public let top: CGFloat
+    public let bottom: CGFloat
 
     public init(count: Int, height: CGFloat, focus: Focus? = nil) {
         precondition(count > 0 && height > 0)
