@@ -6,7 +6,7 @@ import SwiftUI
 /// lightness inverted for dark. The dark appearance is a designed night scale,
 /// not a simple inversion: the canvas is blue-graphite at hue ~226°, and ink,
 /// quiet text, and semantic colors are tuned against it for measured contrast
-/// (body ink ≈ 12.7:1, quiet ≈ 5.3:1) so long night reads avoid halation. The
+/// (body ink ≈ 11.4:1, quiet ≈ 4.7:1) so long night reads avoid halation. The
 /// terminal shares the same canvas. Fills, strokes and elevation are independent
 /// light/dark tokens, not one alpha shared by both appearances. Every value
 /// resolves through a dynamic NSColor so AppKit text (cached attributed strings)
@@ -21,16 +21,18 @@ enum WorkbenchTheme {
     /// sits one step above `ink`, so primary actions read as the brightest text
     /// tone in the room.
     static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.910, 0.918, 0.941))
-    /// De-emphasised ink for status lines and timestamps; dark holds ≈ 5.3:1 on
+    /// De-emphasised ink for status lines and timestamps; dark holds ≈ 4.7:1 on
     /// the canvas — legible, but clearly below body text.
     static let quietNS = nsColor(light: (0.42, 0.45, 0.51), dark: (0.520, 0.550, 0.610))
     static let quiet = Color(nsColor: quietNS)
     /// Content surfaces: white in light; dark is the palette's blue-graphite
-    /// canvas (#16181E) instead of the system's neutral gray — a designed dark
-    /// reads intentional, not default. Sidebar and composer glass keep their
-    /// system materials and are unaffected.
+    /// canvas (#1F2229) instead of the system's neutral gray — a designed dark
+    /// reads intentional, not default. The canvas sits in the #1E–#26 range of
+    /// reading-first dark themes (GitHub Dark Dimmed, ChatGPT): near-black is
+    /// for media apps, long-form reading wants a softer ground. Sidebar and
+    /// composer glass keep their system materials and are unaffected.
     static let contentBackgroundNS = nsColor(
-        light: (1, 1, 1), dark: (0.086, 0.094, 0.118))
+        light: (1, 1, 1), dark: (0.122, 0.133, 0.161))
     static let contentBackground = Color(nsColor: contentBackgroundNS)
     /// Selected sidebar rows: a small light card on the window glass. Translucent,
     /// so the desktop tint still reads through it.
@@ -42,7 +44,7 @@ enum WorkbenchTheme {
     /// glowing with the wallpaper; the remaining 15% keeps the glass alive.
     static let glassUnderlay = Color(nsColor: nsColor(
         light: NSColor.clear,
-        dark: NSColor(srgbRed: 0.086, green: 0.094, blue: 0.118, alpha: 0.85)))
+        dark: NSColor(srgbRed: 0.122, green: 0.133, blue: 0.161, alpha: 0.85)))
 
     /// Glyph color atop the accent-colored primary action circle; dark echoes the
     /// canvas hue so the circle reads as a single molded piece.
