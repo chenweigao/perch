@@ -710,6 +710,1103 @@ def codex_permission_params(mode, turn=False):
     else: params['sandbox'] = sandbox
     return params
 
+# Keep these collaborators in the deployment module: the installer and live
+# service fingerprint intentionally distribute one Python source file. Session
+# owns durable main-conversation state; each collaborator owns its transient
+# protocol or child state and calls the session explicitly at publication points.
+class CodexSessionAdapter:
+    """Owns the Codex connection, frame translation and child-thread backfills."""
+    def __init__(self, session):
+        self.session = session
+        self.client = None
+        self.attached = False
+        self.parts = {}; self.outputs = {}; self.interactions = {}
+        self.child_parts = {}; self.pending = []; self.backfills = {}
+
+    def open_params(self):
+        params={'cwd':self.session.state['cwd']} | codex_permission_params(self.session.state['permissionMode'])
+        if self.session.state.get('model'): params['model']=self.session.state['model']
+        provider = self.session.state.get('provider_id')
+        if provider and provider != 'codex': params['modelProvider'] = provider
+        return params
+    def ensure(self, attach=True):
+        if self.client and self.client.process.poll() is None:
+            if not attach or self.attached: return self.client
+        else:
+            client=CodexAppServer(self.session.state['cwd'],stderr_path=ROOT/(self.session.state['id']+'.stderr'),home=self.session.state['codexHome'])
+            client.on_frame=lambda frame: self.frame(client,frame)
+            client.on_exit=self.exit
+            self.client=client; self.attached=False
+            self.pending=[]; self.child_parts={}
+            try: client.initialize()
+            except Exception:
+                client.close(); self.client=None
+                raise
+        if attach and not self.attached:
+            if not self.session.state.get('resume'):
+                self.start_thread()
+            else:
+                params=self.open_params() | {'threadId':self.session.state['resume'],'excludeTurns':True}
+                result=self.client.request('thread/resume',params)
+                self.apply_thread(result)
+                self.attached=True
+                self.hydrate()
+                self.session.touch(True)
+        return self.client
+    def start_thread(self):
+        self.ensure(False)
+        result=self.client.request('thread/start',self.open_params())
+        thread=result.get('thread') or {}
+        native_id=thread.get('id')
+        if not native_id: raise ValueError('Codex thread/start 未返回 thread id')
+        old_id=self.session.state['id']; old_path=self.session.path
+        if native_id in SESSIONS and SESSIONS[native_id] is not self.session: raise ValueError('Codex 返回了已存在的 thread id')
+        self.session.state['id']=native_id; self.session.state['resume']=native_id
+        self.session.path=ROOT/'sessions'/(native_id+'.json')
+        if SESSIONS.get(old_id) is self.session:
+            del SESSIONS[old_id]; SESSIONS[native_id]=self.session
+        self.apply_thread(result); self.attached=True; self.session.persist()
+        if old_path != self.session.path and old_path.exists(): old_path.unlink()
+        return native_id
+    def apply_thread(self, result):
+        s=self.session.state; thread=result.get('thread') or {}
+        if thread.get('id') and s.get('resume') and thread['id']!=s['resume']:
+            raise ValueError('Codex 返回了不匹配的 thread id')
+        s['model']=result.get('model') or thread.get('model') or s.get('model','')
+        s['provider_id']=result.get('modelProvider') or thread.get('modelProvider') or s.get('provider_id')
+        if not s.get('thinking'):
+            if 'reasoningEffort' in result: s['thinking']=result.get('reasoningEffort')
+            elif 'reasoningEffort' in thread: s['thinking']=thread.get('reasoningEffort')
+        if thread.get('updatedAt'): s['updated']=thread['updatedAt']
+    def hydrate(self):
+        self.session.state['messages']=[]; self.session.reset_history_index(); self.parts={}; self.outputs={}
+        cursor=None
+        while True:
+            params={'threadId':self.session.state['resume'],'sortDirection':'asc','limit':100}
+            if cursor: params['cursor']=cursor
+            page=self.client.request('thread/items/list',params)
+            for entry in page.get('data') or []:
+                # History registers the children its subAgentActivity items name.
+                self.item(entry.get('item') or {},True,turn_id=entry.get('turnId'),history=True,
+                                at=entry.get('startedAtMs') or entry.get('completedAtMs'))
+            cursor=page.get('nextCursor')
+            if not cursor: break
+    def text(self, value):
+        if value is None: return ''
+        if isinstance(value,str): return value
+        if isinstance(value,list):
+            texts=[]
+            for item in value:
+                if isinstance(item,str): texts.append(item)
+                elif isinstance(item,dict):
+                    text=item.get('text') or item.get('output_text')
+                    texts.append(text if isinstance(text,str) else json.dumps(item,ensure_ascii=False))
+                else: texts.append(str(item))
+            return '\n'.join(texts)
+        return json.dumps(value,ensure_ascii=False,indent=2)
+    def reasoning_text(self, item_id, target=None):
+        parts=self.target_parts(target).get(item_id) or {}
+        values=[]
+        for kind in ('summary','content'):
+            values.extend(text for _,text in sorted((parts.get(kind) or {}).items()) if text)
+        return '\n'.join(values)
+    def reasoning_source(self, item_id, completed=False, target=None):
+        parts=self.target_parts(target).get(item_id) or {}
+        source={'kind':'activity_summary','provider':'codex','itemId':str(item_id),
+                'summaryParts':[text for _,text in sorted((parts.get('summary') or {}).items()) if text],
+                'state':'final' if completed else 'streaming'}
+        turn=self.session.state.get('turnId') if target is None else target.get('turnId')
+        if turn: source['turnId']=turn
+        return source
+    def upsert_reasoning(self, item_id, completed=False, timestamp=None, native_summary=True, target=None):
+        part={'type':'thinking','thinking':self.reasoning_text(item_id,target)}
+        if native_summary: part['source']=self.reasoning_source(item_id,completed,target)
+        self.write(target,{'role':'assistant','content':[part],'timestamp':timestamp or time.time()},'codex:'+str(item_id))
+    def target_parts(self, target=None):
+        # Streaming state of the main thread, or of one child's transcript.
+        return self.parts if target is None else self.child_parts.setdefault(target['id'],{})
+    def write(self, target, message, identity):
+        if target is None: self.session.upsert(message,identity)
+        else: self.session.subagents.append(target,clip_subagent_message(copy.deepcopy(normalize(message,identity))))
+    def item(self, item, completed=False, timestamp=None, target=None, turn_id=None, history=False, at=None):
+        """One Codex item into the main transcript, or into the transcript of the child
+        `target`. `turn_id`, `history` and `at` (the record's time) only describe the
+        children an item names; history leaves a child that looks live unknown."""
+        kind=item.get('type'); item_id=item.get('id')
+        if not kind or not item_id: return
+        stamp=(timestamp/1000 if isinstance(timestamp,(int,float)) and timestamp>100000000000 else timestamp) or time.time()
+        store=self.target_parts(target)
+        if target is not None and not completed and kind in ('agentMessage','reasoning','plan') and not any(
+                item.get(key) for key in ('text','content','summary')):
+            return  # A child's reply is shown complete; its deltas are not followed.
+        if kind=='subAgentActivity':
+            # A child report of an unexpected shape must never stop the main stream.
+            self.session.subagents.guard(self.activity,item,stamp,target,turn_id,history,epoch_seconds(at) or stamp); return
+        if kind=='userMessage' and target is not None:
+            text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
+            self.write(target,{'role':'user','content':text,'timestamp':stamp},'codex:'+item_id); return
+        if kind=='userMessage':
+            text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
+            identity=item.get('clientId') or 'codex:'+item_id
+            receipt=self.session.state.get('requests',{}).get(identity)
+            if receipt:
+                receipt['runtimeId']=item_id
+                if receipt.get('mode')=='steer': receipt.update(status='consumed',error=None)
+                elif receipt.get('status') in ('submitting','submitted','accepted'): receipt['status']='running'
+            # A prompt recorded at send time already carries its attachment marks;
+            # Codex echoes the same user message without them, so only foreign or
+            # hydrated messages are imported here.
+            if identity not in self.session.message_indices:
+                self.session.upsert({'role':'user','content':text,'timestamp':stamp},identity)
+            return
+        if kind=='agentMessage':
+            if completed or item.get('text'):
+                text=item.get('text',''); store[item_id]={'text':text}
+            else: text=(store.get(item_id) or {}).get('text','')
+            self.write(target,{'role':'assistant','content':[{'type':'text','text':text}],'timestamp':stamp},'codex:'+item_id)
+            return
+        if kind in ('reasoning','plan'):
+            if completed or kind=='plan' or item.get('content') or item.get('summary'):
+                if kind=='plan': parts={'summary':{},'content':{0:item.get('text','')}}
+                else:
+                    parts={'summary':{i:text for i,text in enumerate(item.get('summary') or [])},
+                           'content':{i:text for i,text in enumerate(item.get('content') or [])}}
+                store[item_id]=parts
+            self.upsert_reasoning(item_id,completed,stamp,kind=='reasoning',target)
+            return
+        tool_name=None; tool_input={}; output=None; failed=False
+        if kind=='commandExecution':
+            tool_name='shell'; tool_input={'command':item.get('command',''),'cwd':item.get('cwd','')}
+            output=item.get('aggregatedOutput')
+            if output is None and target is None: output=self.outputs.get(item_id)
+            failed=item.get('status') in ('failed','declined')
+        elif kind=='fileChange':
+            tool_name='apply_patch'; tool_input={'changes':item.get('changes') or []}
+            if completed: output='文件修改'+('已完成' if item.get('status')=='completed' else '失败：'+str(item.get('status')))
+            failed=item.get('status') in ('failed','declined')
+        elif kind=='mcpToolCall':
+            tool_name=(item.get('server','mcp')+'/'+item.get('tool','tool')).strip('/')
+            tool_input=item.get('arguments') if item.get('arguments') is not None else {}
+            output=item.get('result') if item.get('result') is not None else item.get('error')
+            failed=item.get('status')=='failed' or item.get('error') is not None
+        elif kind=='dynamicToolCall':
+            tool_name='/'.join(x for x in (item.get('namespace'),item.get('tool')) if x) or 'tool'
+            tool_input=item.get('arguments') if item.get('arguments') is not None else {}
+            output=item.get('contentItems'); failed=item.get('status')=='failed' or item.get('success') is False
+        elif kind=='webSearch':
+            tool_name='web_search'; tool_input={'query':item.get('query',''),'action':item.get('action')}
+            output=item.get('results')
+        elif kind=='functionCallOutput':
+            tool_name='/'.join(x for x in (item.get('namespace'),item.get('name')) if x) or 'function'
+            output=item.get('output')
+        elif kind=='collabAgentToolCall':
+            tool_name='agent/'+str(item.get('tool','tool')); tool_input={'prompt':item.get('prompt'),'receivers':item.get('receiverThreadIds') or []}
+            output=item.get('agentsStates'); failed=item.get('status') in ('failed','interrupted')
+        elif kind=='imageView':
+            tool_name='view_image'; tool_input={'path':item.get('path')}; output=item.get('path')
+        elif kind=='imageGeneration':
+            tool_name='image_generation'; output=item.get('result') or item.get('failure'); failed=item.get('failure') is not None
+        else: return
+        if target is not None and not history: self.child_tool(target,item_id,tool_name)
+        self.write(target,{'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':tool_name,'arguments':tool_input}],'timestamp':stamp},'codex-tool:'+item_id)
+        if completed or output is not None:
+            self.write(target,{'role':'toolResult','toolCallId':item_id,'content':self.text(output),'isError':failed,'timestamp':stamp},'codex-result:'+item_id)
+        if kind=='collabAgentToolCall':
+            self.session.subagents.guard(self.collab,item,target,turn_id,history,epoch_seconds(at) or stamp)
+    def question_interaction(self, interaction_id, method, params):
+        questions=[]; mapping={}
+        def unique_label(value):
+            base=value or '问题'; shown=base; suffix=2
+            while shown in mapping:
+                shown='%s (%d)' % (base,suffix); suffix+=1
+            return shown
+        if method=='item/tool/requestUserInput':
+            for question in params.get('questions') or []:
+                shown=unique_label(question.get('question') or question.get('id'))
+                questions.append({'id':question.get('id'),'header':question.get('header',''),'question':shown,
+                                  'options':question.get('options') or []})
+                mapping[shown]={'id':question.get('id'),'type':'string'}
+        else:
+            schema=params.get('requestedSchema') or {}
+            for name,field in (schema.get('properties') or {}).items():
+                shown=unique_label(field.get('title') or field.get('description') or name)
+                raw_options=field.get('enum') or ((field.get('items') or {}).get('enum'))
+                titled=field.get('oneOf') or ((field.get('items') or {}).get('anyOf')) or []
+                options=[{'label':str(value),'description':''} for value in (raw_options or [])]
+                options += [{'label':str(value.get('title') or value.get('const')),'description':''} for value in titled]
+                questions.append({'id':name,'header':params.get('serverName','MCP'),'question':shown,'options':options})
+                mapping[shown]={'id':name,'type':field.get('type','string')}
+        self.interactions[interaction_id]['questions']=mapping
+        return {'id':interaction_id,'name':'AskUserQuestion','title':params.get('message') or 'Codex 请求输入',
+                'input':{'questions':questions}}
+    def frame(self, client, frame):
+        with LOCK:
+            if client is not self.client or self.session.deleted:
+                if 'id' in frame:
+                    try: client.respond(frame['id'],error={'code':-32000,'message':'session is no longer attached'})
+                    except Exception: pass
+                return
+            method=frame.get('method'); params=frame.get('params') or {}
+            thread_id=params.get('threadId') or params.get('conversationId')
+            if thread_id and self.session.state.get('resume') and thread_id!=self.session.state['resume']:
+                # A registered child's requests become labelled interactions; any
+                # other thread's are refused as before. Its notifications go to its
+                # own transcript, or wait for the thread to register.
+                if 'id' in frame:
+                    entry=self.child(thread_id)
+                    if entry is None: client.respond(frame['id'],error={'code':-32602,'message':'thread id does not match this session'})
+                    else: self.request(client,frame,method,params,entry)
+                    return
+                self.session.subagents.guard(self.child_frame,frame,thread_id)
+                return
+            if 'id' in frame:
+                self.request(client,frame,method,params); return
+            if method=='thread/started':
+                self.session.subagents.guard(self.thread_started,params.get('thread') or {}); return
+            if method=='turn/started':
+                turn=params.get('turn') or {}; turn_id=turn.get('id')
+                if turn_id: self.session.state['turnId']=turn_id
+                self.session.state['busy']=True; self.session.state['error']=None; self.session.state['updated']=time.time(); self.session.finish('running'); self.session.touch(True); return
+            if method=='turn/completed':
+                turn=params.get('turn') or {}; status=turn.get('status'); error=turn.get('error') or {}
+                # Children run their own turns, so their pending requests stay.
+                self.session.state['busy']=False; self.session.state['updated']=time.time()
+                self.session.state['interactions']=[x for x in self.session.state['interactions'] if isinstance(x.get('subagent'),dict)]
+                self.interactions={k:v for k,v in self.interactions.items() if v.get('thread')}
+                self.session.subagents.guard(self.session.subagents.flush)
+                if status=='interrupted': self.session.state['cancelled']=True; self.session.state['stopAcknowledged']=True
+                elif status=='failed': self.session.state['error']=error.get('message') if isinstance(error,dict) else str(error)
+                elif not self.session.state.get('cancelled') and not self.session.state.get('error'): self.session.state['completed']+=1
+                self.session.finish('stopped' if status=='interrupted' else 'failed' if status=='failed' else 'completed')
+                for receipt in self.session.state.get('requests',{}).values():
+                    if receipt.get('mode')=='steer' and receipt.get('turnId')==turn.get('id') and receipt['status'] in ('submitted','accepted'):
+                        receipt.update(status='unknown',error='本轮已结束，尚未观察到引导消息进入上下文')
+                self.session.touch(True); return
+            if method in ('item/started','item/completed'):
+                if method == 'item/started' and (params.get('item') or {}).get('type') == 'contextCompaction':
+                    self.session.state['context'] = None
+                key='completedAtMs' if method=='item/completed' else 'startedAtMs'
+                # The turn only places the children an item names in the roster.
+                self.item(params.get('item') or {},method=='item/completed',params.get(key),
+                                turn_id=params.get('turnId') or self.session.state.get('turnId')); self.session.touch(method=='item/completed'); return
+            if method=='item/agentMessage/delta':
+                item_id=params.get('itemId'); part=self.parts.setdefault(item_id,{'text':''})
+                part['text']=part.get('text','')+params.get('delta','')
+                self.session.upsert({'role':'assistant','content':[{'type':'text','text':part['text']}],'timestamp':time.time()},'codex:'+str(item_id)); self.session.touch(); return
+            if method=='item/plan/delta':
+                item_id=params.get('itemId'); part=self.parts.setdefault(item_id,{'summary':{},'content':{}})
+                part.setdefault('content',{})[0]=part.setdefault('content',{}).get(0,'')+params.get('delta','')
+                self.upsert_reasoning(item_id,native_summary=False); self.session.touch(); return
+            if method=='item/reasoning/summaryPartAdded':
+                item_id=params.get('itemId'); part=self.parts.setdefault(item_id,{'summary':{},'content':{}})
+                part.setdefault('summary',{}).setdefault(params.get('summaryIndex',0),'')
+                self.upsert_reasoning(item_id); self.session.touch(); return
+            if method in ('item/reasoning/textDelta','item/reasoning/summaryTextDelta'):
+                item_id=params.get('itemId'); part=self.parts.setdefault(item_id,{'summary':{},'content':{}})
+                key='summary' if method.endswith('summaryTextDelta') else 'content'
+                index=params.get('summaryIndex',0) if key=='summary' else params.get('contentIndex',0)
+                part.setdefault(key,{})[index]=part.setdefault(key,{}).get(index,'')+params.get('delta','')
+                self.upsert_reasoning(item_id); self.session.touch(); return
+            if method=='item/commandExecution/outputDelta':
+                item_id=params.get('itemId'); self.outputs[item_id]=self.outputs.get(item_id,'')+params.get('delta','')
+                self.session.upsert({'role':'toolResult','toolCallId':item_id,'content':self.outputs[item_id],'isError':False,'timestamp':time.time()},'codex-result:'+str(item_id)); self.session.touch(); return
+            if method=='thread/tokenUsage/updated':
+                usage=params.get('tokenUsage') or {}; last=usage.get('last') or {}
+                # total is cumulative across requests, not the active context window.
+                self.session.state['context']={'tokens':last.get('totalTokens'),'limit':usage.get('modelContextWindow'),
+                                       'reportedAt':time.time()}; self.session.touch(); return
+            if method=='serverRequest/resolved': self.resolved(params)
+    def request(self, client, frame, method, params, entry=None):
+        """A server request: an approval or question for the user, raised by the main
+        thread or, labelled with it, by the registered child `entry`."""
+        approvals=('item/commandExecution/requestApproval','item/fileChange/requestApproval',
+                   'item/permissions/requestApproval','execCommandApproval','applyPatchApproval')
+        questions=('item/tool/requestUserInput','mcpServer/elicitation/request')
+        if method not in approvals+questions:
+            client.respond(frame['id'],error={'code':-32601,'message':'unsupported by the Perch bridge'})
+            return
+        interaction_id='codex-request-'+str(frame['id'])
+        pending={'wireId':frame['id'],'method':method,'params':params}
+        if entry is not None: pending['thread']=entry['id']
+        self.interactions[interaction_id]=pending
+        if method in questions and not (method=='mcpServer/elicitation/request' and params.get('mode')=='url'):
+            interaction=self.question_interaction(interaction_id,method,params)
+        else:
+            if method in ('item/commandExecution/requestApproval','execCommandApproval'):
+                command=params.get('command') or []
+                if isinstance(command,list): command=' '.join(command)
+                name='shell'; value={'command':command,'cwd':params.get('cwd'),'reason':params.get('reason')}
+            elif method in ('item/fileChange/requestApproval','applyPatchApproval'):
+                name='apply_patch'; value={'itemId':params.get('itemId') or params.get('callId'),'reason':params.get('reason'),
+                                          'grantRoot':params.get('grantRoot'),'changes':params.get('fileChanges')}
+            elif method=='item/permissions/requestApproval':
+                name='request_permissions'; value={'cwd':params.get('cwd'),'reason':params.get('reason'),'permissions':params.get('permissions')}
+            else:
+                name='mcp_elicitation'; value={'server':params.get('serverName'),'message':params.get('message'),'url':params.get('url')}
+            interaction={'id':interaction_id,'type':'interaction','name':name,'title':'Codex 请求确认','input':value}
+        if entry is not None: interaction['subagent']=subagent_label(entry['id'],entry)
+        self.session.state['interactions'].append(interaction); self.session.touch(True)
+    def resolved(self, params):
+        wire_id=params.get('requestId')
+        ids=[key for key,value in self.interactions.items() if value.get('wireId')==wire_id]
+        for key in ids: self.interactions.pop(key,None)
+        if ids:
+            self.session.state['interactions']=[x for x in self.session.state['interactions'] if x.get('id') not in ids]; self.session.touch(True)
+    def answer(self, interaction_id, body):
+        pending=self.interactions.get(interaction_id)
+        if not pending: raise ValueError('该 Codex 请求已失效，请同步会话后重试')
+        method=pending['method']; params=pending['params']; allow=bool(body.get('allow')) and not body.get('cancelled')
+        if method=='item/tool/requestUserInput':
+            values=body.get('answers') or {}; answers={}
+            for shown,question in pending.get('questions',{}).items():
+                if shown not in values: raise ValueError('请回答所有问题')
+                answers[question['id']]={'answers':[str(values[shown])]}
+            result={'answers':answers}
+        elif method=='mcpServer/elicitation/request':
+            if not allow: result={'action':'decline'}
+            elif params.get('mode')=='url': result={'action':'accept'}
+            else:
+                values=body.get('answers') or {}; content={}
+                for shown,question in pending.get('questions',{}).items():
+                    if shown not in values: raise ValueError('请回答所有问题')
+                    value=values[shown]; kind=question['type']
+                    if kind=='boolean': value=str(value).lower() in ('true','yes','1','是')
+                    elif kind=='integer': value=int(value)
+                    elif kind=='number': value=float(value)
+                    elif kind=='array': value=[x.strip() for x in str(value).split(',') if x.strip()]
+                    content[question['id']]=value
+                result={'action':'accept','content':content}
+        elif method in ('item/commandExecution/requestApproval','item/fileChange/requestApproval'):
+            result={'decision':'accept' if allow else 'decline'}
+        elif method=='item/permissions/requestApproval':
+            result={'permissions':params.get('permissions') if allow else {},'scope':'turn'}
+        else:
+            result={'decision':'approved' if allow else {'denied':{'rejection':'用户在 Perch 中拒绝了该操作'}}}
+        self.client.respond(pending['wireId'],result=result)
+        self.interactions.pop(interaction_id,None)
+        self.session.state['interactions']=[x for x in self.session.state['interactions'] if x.get('id')!=interaction_id]
+        self.session.touch(True)
+    def exit(self, client, failure):
+        with LOCK:
+            if client is not self.client: return
+            self.client=None; self.attached=False
+            if self.session.deleted or not failure: return
+            self.session.state['error']=failure
+            if self.session.state['busy']:
+                self.session.finish('unknown'); self.session.state['busy']=False
+            # Children ran inside that app-server and ended with it, unobserved.
+            self.pending=[]; self.session.subagents.guard(self.session.subagents.settle,'unknown')
+            self.session.state['interactions']=[]; self.interactions={}; self.session.touch(True)
+    def child(self, thread_id):
+        entry=self.session.subagents.entries.get(thread_id) if isinstance(thread_id,str) else None
+        return entry if entry is not None and entry.get('kind')=='codex' else None
+    def register(self, thread_id, status=None, history=False, at=None, turn=None, alias=None,
+                       card=None, parent=None, values=None, fill=None):
+        """Registers the child `thread_id` on first sight and applies one report on it.
+        A live `status` only describes a child the report creates (the child's own
+        turn/started marks it running again later); a terminal one ends a live or
+        unknown entry. History describes children no process runs any more, so one
+        it shows live is unknown. `values` replace fields, `fill` sets unknown ones.
+        Frames that waited for the thread are replayed once it registers."""
+        if not isinstance(thread_id,str) or not thread_id or thread_id==self.session.state.get('resume'): return None
+        entry=self.session.subagents.entries.get(thread_id)
+        if entry is not None and entry.get('kind')!='codex': return None
+        created=entry is None; ended=False
+        if created:
+            entry=self.session.subagents.create(thread_id,thread_id,kind='codex')
+            opened=iso_time(at) if at else entry['startedAt']
+            live=status is None or status in SUBAGENT_LIVE
+            state=('unknown' if history else status or 'running') if live else status
+            entry.update(turnId=None,parentTurnId=turn,startedAt=opened,updatedAt=opened,status=state,
+                         endedAt=None if state in SUBAGENT_LIVE else opened)
+        elif (status is not None and status not in SUBAGENT_LIVE and status!=entry['status']
+              and (entry['status'] in SUBAGENT_LIVE or entry['status']=='unknown')):
+            entry.update(status=status,endedAt=iso_time(at) if at else iso_time()); ended=True
+        changed=created or ended
+        if alias: changed=self.session.subagents.adopt(entry,tool_use_id=alias) or changed
+        if card and not entry.get('cardId'): entry.update(cardId=card,cardParent=parent); changed=True
+        changed=self.session.subagents.set(entry,**(values or {})) or changed
+        changed=self.session.subagents.set(entry,**{k:v for k,v in (fill or {}).items() if entry.get(k) is None}) or changed
+        if changed:
+            self.session.subagents.bump(entry)
+            if entry['status'] not in SUBAGENT_LIVE and (created or ended): self.session.subagents.write(entry['id']); self.session.subagents.keep(entry)
+            self.session.subagents.relabel()
+            # A history pass is published by its caller, once.
+            if not history: self.session.touch(ended)
+        if created: self.replay(thread_id)
+        return entry
+    def activity(self, item, stamp, target, turn, history, when):
+        """subAgentActivity: the parent's record of a child it started, sent input to,
+        interrupted or saw complete. A start shows in the parent's transcript as an
+        agent/spawnAgent call, which that child's completion or interruption answers."""
+        kind=item.get('kind'); item_id=item['id']
+        path=item.get('agentPath') if isinstance(item.get('agentPath'),str) and item['agentPath'].strip() else None
+        model=codex_text_value(item.get('model'))
+        if kind=='started':
+            self.write(target,{'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':'agent/spawnAgent',
+                                     'arguments':{'agentPath':path,'model':model}}],'timestamp':stamp},'codex-tool:'+item_id)
+        if kind not in ('started','interacted','interrupted','completed'): return
+        started=kind=='started'
+        entry=self.register(item.get('agentThreadId'),CODEX_ACTIVITY_STATUS.get(kind,'running'),history,when,
+                                  target['parentTurnId'] if target is not None else turn,
+                                  alias=item_id if started else None,card=item_id if started else None,
+                                  parent=target['id'] if target is not None else None,
+                                  values={'description':codex_agent_name(path),'subagentType':clip_chars(path,200)},
+                                  fill={'model':model})
+        if entry is None: return
+        if kind=='interacted' and history and entry['status'] not in SUBAGENT_LIVE and entry['status']!='unknown':
+            # Input sent later ran the child again; history does not say how that ended.
+            entry.update(status='unknown',endedAt=None); self.session.subagents.bump(entry)
+        if kind in CODEX_ACTIVITY_STATUS: self.card_result(entry)
+    def collab(self, item, target, turn, history, when):
+        """collabAgentToolCall: its receivers and agentsStates name children; a
+        spawnAgent call is an alias of the child it started."""
+        states=item.get('agentsStates') if isinstance(item.get('agentsStates'),dict) else {}
+        receivers=[x for x in item.get('receiverThreadIds') or [] if isinstance(x,str)]
+        spawn=item.get('tool')=='spawnAgent'
+        for thread_id in dict.fromkeys(receivers+[x for x in states if isinstance(x,str)]):
+            if thread_id==item.get('senderThreadId'): continue
+            state=states.get(thread_id) if isinstance(states.get(thread_id),dict) else {}
+            status=CODEX_AGENT_STATUS.get(state.get('status')); message=clip_chars(state.get('message'),600)
+            fill={'model':codex_text_value(item.get('model'))}
+            if spawn: fill['description']=subagent_call({'prompt':item.get('prompt')})['description']
+            entry=self.register(thread_id,status,history,when,target['parentTurnId'] if target is not None else turn,
+                                      alias=item.get('id') if spawn else None,fill=fill,
+                                      values={'summary':message} if status=='completed' else {'error':message} if status=='failed' else None)
+            if entry is not None and status in ('completed','stopped','failed'): self.card_result(entry)
+    def thread_started(self, thread):
+        """A thread whose parent is this session's thread, or one of its children."""
+        parent=thread.get('parentThreadId'); owner=self.child(parent)
+        if not parent or (parent!=self.session.state.get('resume') and owner is None): return
+        self.register(thread.get('id'),'running',turn=owner['parentTurnId'] if owner else self.session.state.get('turnId'),
+                            fill={'description':clip_chars(thread.get('agentNickname'),200),
+                                  'subagentType':codex_text_value(thread.get('agentRole')),'model':codex_text_value(thread.get('model'))})
+    def card_result(self, entry):
+        """Answers the agent/spawnAgent call that started a child, once it ended."""
+        card=entry.get('cardId'); status=entry.get('status'); parent=entry.get('cardParent')
+        if not card or status not in ('completed','stopped','failed'): return
+        target=self.child(parent) if parent else None
+        if parent and target is None: return
+        text=entry.get('summary') if status=='completed' else entry.get('error') if status=='failed' else None
+        text=text or {'completed':'子 Agent 已完成','stopped':'子 Agent 已停止','failed':'子 Agent 失败'}[status]
+        self.write(target,{'role':'toolResult','toolCallId':card,'content':text,'isError':status!='completed',
+                                 'timestamp':iso_seconds(entry.get('endedAt'))},'codex-result:'+card)
+    def usage(self, entry):
+        usage=entry.get('usage')
+        return dict(usage) if isinstance(usage,dict) else {'totalTokens':0,'toolUses':0,'durationMs':0}
+    def child_tool(self, entry, item_id, name):
+        usage=self.usage(entry)
+        if item_id not in self.session.subagents.transcript(entry)['tools']: usage['toolUses']+=1
+        if self.session.subagents.set(entry,usage=usage,lastToolName=name): self.session.subagents.bump(entry); self.session.touch()
+    def child_frame(self, frame, thread_id):
+        """A notification of a child thread. Complete items are enough for its
+        transcript, so streaming deltas, hooks and status pings are not followed."""
+        method=frame.get('method'); params=frame.get('params') or {}
+        if method not in CODEX_CHILD_METHODS: return
+        entry=self.child(thread_id)
+        if entry is None:
+            now=time.monotonic()
+            pending=[x for x in self.pending if now-x[0]<=CODEX_PENDING_SECONDS]
+            self.pending=pending[-(CODEX_PENDING_LIMIT-1):]+[(now,thread_id,frame)]
+            return
+        if method in ('item/started','item/completed'):
+            key='completedAtMs' if method=='item/completed' else 'startedAtMs'
+            self.item(params.get('item') or {},method=='item/completed',params.get(key),target=entry,turn_id=params.get('turnId'))
+        elif method=='turn/started': self.child_turn(entry,params.get('turn') or {})
+        elif method=='turn/completed': self.child_done(entry,params.get('turn') or {})
+        elif method=='thread/tokenUsage/updated':
+            # total is what the child used so far; last, the main thread's window
+            # reading, covers one request only.
+            total=((params.get('tokenUsage') or {}).get('total') or {}).get('totalTokens')
+            if isinstance(total,int) and not isinstance(total,bool):
+                usage=self.usage(entry); usage['totalTokens']=total
+                if self.session.subagents.set(entry,usage=usage): self.session.subagents.bump(entry); self.session.touch()
+        else: self.resolved(params)
+    def replay(self, thread_id):
+        now=time.monotonic(); keep=[]; replay=[]
+        for x in self.pending:
+            if now-x[0]<=CODEX_PENDING_SECONDS: (replay if x[1]==thread_id else keep).append(x)
+        self.pending=keep
+        for _,_,frame in replay: self.session.subagents.guard(self.child_frame,frame,thread_id)
+    def child_turn(self, entry, turn):
+        turn_id=turn.get('id')
+        if not isinstance(turn_id,str) or not turn_id: return
+        live=entry['status'] in SUBAGENT_LIVE
+        # A late copy of a turn that already ended never revives its entry; a new
+        # turn (the parent sent it input) does.
+        if turn_id==entry['turnId'] and not live: return
+        changed=self.session.subagents.set(entry,turnId=turn_id,status='running')
+        # A new run starts clean; its summary is replaced once it ends.
+        if not live: entry.update(endedAt=None,error=None,stopRequested=False,stopError=None)
+        root=turn.get('rootTurnId')
+        if isinstance(root,str) and root: changed=self.session.subagents.set(entry,parentTurnId=root) or changed
+        if changed: self.session.subagents.bump(entry); self.session.touch()
+    def child_done(self, entry, turn):
+        """The child's turn ended: its status, summary and usage, never the main turn's.
+        Applied once per turn, also when the parent's report ended the entry first."""
+        status=CODEX_TURN_STATUS.get(turn.get('status')); turn_id=turn.get('id')
+        turn_id=turn_id if isinstance(turn_id,str) and turn_id else None
+        if status is None or (entry['turnId'] and turn_id and turn_id!=entry['turnId']): return
+        if turn_id and entry.get('doneTurn')==turn_id: return
+        # The child's own pending requests end with its turn; the main thread's stay.
+        ids=[k for k,v in self.interactions.items() if v.get('thread')==entry['id']]
+        for k in ids: self.interactions.pop(k,None)
+        if ids: self.session.state['interactions']=[x for x in self.session.state['interactions'] if x.get('id') not in ids]
+        self.child_parts.pop(entry['id'],None)
+        usage=self.usage(entry); duration=turn.get('durationMs')
+        if isinstance(duration,(int,float)) and not isinstance(duration,bool) and duration>0:
+            usage['durationMs']+=int(duration)
+        error=turn.get('error'); error=error.get('message') if isinstance(error,dict) else error
+        ended=epoch_seconds(turn.get('completedAt'))
+        self.session.subagents.set(entry,turnId=turn_id,usage=usage,summary=self.child_text(entry,turn),
+                          error=clip_chars(error,600) if status=='failed' else None)
+        entry.update(status=status,endedAt=iso_time(ended) if ended else iso_time(),doneTurn=turn_id)
+        self.session.subagents.bump(entry); self.session.subagents.write(entry['id']); self.session.subagents.keep(entry)
+        self.card_result(entry); self.session.subagents.relabel(); self.session.touch(True)
+    def child_text(self, entry, turn):
+        """The child's last reply: the one its turn reports, else its transcript's last text."""
+        for item in reversed(turn.get('items') or []):
+            if isinstance(item,dict) and item.get('type')=='agentMessage' and clip_chars(item.get('text'),600):
+                return clip_chars(item['text'],600)
+        transcript=self.session.subagents.transcripts.get(entry['id'])
+        for message in reversed(transcript['messages'] if transcript else []):
+            if message['role']!='assistant': continue
+            for part in reversed(message['content']):
+                if part.get('type')=='text' and clip_chars(part.get('text'),600): return clip_chars(part['text'],600)
+        return None
+    def backfill_plan(self, key):
+        """A child whose transcript is missing or empty (after a restart, or known only
+        from history) is read once from the runtime's own record of its thread."""
+        entry=self.session.subagents.find(key)
+        if entry is None or entry.get('kind')!='codex' or self.session.deleted: return None
+        key=entry['id']; mark=self.backfills.get(key)
+        if mark is True or mark=='reading' or (isinstance(mark,float) and time.monotonic()<mark): return None
+        if self.session.subagents.transcript(entry)['messages']: self.backfills[key]=True; return None
+        self.backfills[key]='reading'
+        live=self.client if self.client and self.client.process.poll() is None else None
+        return {'key':key,'client':live,'cwd':self.session.state['cwd'],'home':self.session.state.get('codexHome')}
+    def backfill(self, plan):
+        """Runs outside the lock: pages the child's items oldest first, as the probe
+        read them, keeping the newest up to the transcript's message cap. Without a
+        live app-server a short-lived one reads them, as model discovery does."""
+        items=[]; dropped=0; client=plan['client']; own=None
+        try:
+            if client is None:
+                own=client=CodexAppServer(plan['cwd'],home=plan['home']); client.initialize()
+            cursor=None
+            for _ in range(CODEX_BACKFILL_PAGES):
+                params={'threadId':plan['key'],'sortDirection':'asc','limit':100}
+                if cursor: params['cursor']=cursor
+                page=client.request('thread/items/list',params)
+                items.extend(x for x in page.get('data') or [] if isinstance(x,dict))
+                if len(items)>SUBAGENT_MESSAGE_LIMIT:
+                    dropped+=len(items)-SUBAGENT_MESSAGE_LIMIT; items=items[-SUBAGENT_MESSAGE_LIMIT:]
+                cursor=page.get('nextCursor')
+                if not cursor: break
+        except Exception: items=None
+        finally:
+            if own is not None: own.close()
+        with LOCK: self.session.subagents.guard(self.backfill_install,plan['key'],items,dropped)
+    def backfill_install(self, key, items, dropped):
+        if items is None: self.backfills[key]=time.monotonic()+CODEX_BACKFILL_RETRY; return
+        self.backfills[key]=True
+        entry=self.child(key)
+        # Live frames that filled the transcript meanwhile are newer than this read.
+        if entry is None or self.session.deleted or self.session.subagents.transcript(entry)['messages']: return
+        for record in items:
+            self.item(record.get('item') or {},True,record.get('completedAtMs') or record.get('startedAtMs'),
+                            target=entry,turn_id=record.get('turnId'),history=True)
+        if dropped: self.session.subagents.transcript(entry)['truncated']+=dropped
+        self.session.subagents.write(key); self.session.touch()
+
+
+class ACPSessionAdapter:
+    """Owns ACP request correlation, prompt handoff and configuration updates."""
+    def __init__(self, session):
+        self.session = session
+        self.pending = {}; self.next_id = 0; self.pending_prompt = None
+        self.blocks = {}; self.permission_options = {}
+
+    def request(self, method, params, kind):
+        self.next_id += 1
+        request_id = self.next_id
+        self.pending[request_id] = kind
+        self.session.send({'jsonrpc':'2.0','id':request_id,'method':method,'params':params})
+        return request_id
+    def notify(self, method, params):
+        self.session.send({'jsonrpc':'2.0','method':method,'params':params})
+    def flush_prompt(self):
+        # session/prompt settles only when the whole turn does, so its response — not
+        # a separate event — is the turn's terminal signal.
+        if not self.pending_prompt: return
+        request_id, text = self.pending_prompt
+        self.pending_prompt = None
+        self.request('session/prompt', {'sessionId':self.session.state['resume'],'prompt':[{'type':'text','text':text}]}, 'prompt:'+request_id)
+        receipt = self.session.state.get('requests',{}).get(request_id)
+        if receipt and receipt['status'] == 'submitting':
+            receipt['status'] = 'submitted'
+            if self.session.state.get('turnState') == 'submitting': self.session.state['turnState'] = 'submitted'
+    def apply_options(self, options):
+        s = self.session.state
+        s['acpOptions'] = options
+        dsh_catalog_update(options)
+        model_option = next((o for o in options if o.get('id') == 'model'), None)
+        if model_option and model_option.get('currentValue'):
+            try:
+                provider, model = json.loads(model_option['currentValue'])
+                s['model'] = model; s['provider_id'] = provider
+            except Exception: pass
+        effort = next((o for o in options if o.get('id') == 'reasoning_effort'), None)
+        if effort is not None:
+            # The empty value is "provider default", which is a real choice, not an
+            # unknown level; keep it distinct from a named effort.
+            s['thinking'] = effort.get('currentValue') or None
+    def event(self, frame):
+        # Fold the ACP wire shape into the per-provider event vocabulary event()
+        # already switches on. Unknown frames are dropped rather than failing the
+        # stream, because dsh is a preview runtime that may add message kinds.
+        if 'method' in frame and 'id' in frame:
+            return {'type':'acp_request','wireId':frame['id'],'method':frame['method'],'params':frame.get('params') or {}}
+        if 'method' in frame:
+            return {'type':'acp_notification','method':frame['method'],'params':frame.get('params') or {}}
+        if 'id' in frame:
+            kind = self.pending.pop(frame['id'], 'unknown')
+            return {'type':'acp_response','kind':kind,'result':frame.get('result'),'error':frame.get('error')}
+        return None
+    def fail_prompt(self, message):
+        self.pending_prompt = None
+        self.session.state['busy'] = False; self.session.state['error'] = message
+        self.session.finish('failed'); self.session.touch(True)
+    def sync_config(self):
+        # Apply the workbench-side model/thinking wishes after (re)opening, then let
+        # the parked prompt go. Each step waits for the runtime's answer so a prompt
+        # never gets pinned to a route the user already replaced.
+        s = self.session.state
+        options = s.get('acpOptions') or []
+        model_option = next((o for o in options if o.get('id') == 'model'), None)
+        if s.get('model') and model_option and model_option.get('currentValue'):
+            try: current = json.loads(model_option['currentValue'])[1]
+            except Exception: current = None
+            if current and s['model'] != current:
+                target = None
+                for group in model_option.get('options', []):
+                    for item in group.get('options', []):
+                        try:
+                            if json.loads(item['value'])[1] == s['model']: target = target or item['value']
+                        except Exception: pass
+                if target:
+                    self.request('session/set_config_option', {'sessionId':s['resume'],'configId':'model','value':target}, 'set_config')
+                    return
+                s['error'] = 'dsh 不认识模型 %s，沿用当前模型' % s['model']
+        effort = next((o for o in options if o.get('id') == 'reasoning_effort'), None)
+        if s.get('thinking') and effort is not None:
+            values = [o.get('value') for o in effort.get('options', [])]
+            if s['thinking'] != effort.get('currentValue') and s['thinking'] in values:
+                self.request('session/set_config_option', {'sessionId':s['resume'],'configId':'reasoning_effort','value':s['thinking']}, 'set_config')
+                return
+        self.flush_prompt()
+    def update(self, update):
+        s = self.session.state
+        kind = update.get('sessionUpdate')
+        if s['busy'] and s.get('turnState') in ('submitting','submitted','accepted'):
+            self.session.finish('running')
+        if kind in ('agent_message_chunk', 'agent_thought_chunk'):
+            message_id = update.get('messageId') or 'live'
+            blocks = self.blocks.setdefault(message_id, [])
+            content = update.get('content') or {}
+            if kind == 'agent_thought_chunk':
+                blocks.append({'type':'thinking','thinking':content.get('text','')})
+            elif content.get('type') == 'text':
+                blocks.append({'type':'text','text':content.get('text','')})
+            elif content.get('type') == 'resource_link':
+                blocks.append({'type':'text','text':'[%s](%s)' % (content.get('name') or content.get('uri') or '资源', content.get('uri') or '')})
+            else:
+                blocks.append({'type':'text','text':'[dsh 发出了暂不支持的内容类型 %s]' % content.get('type')})
+            self.session.upsert({'role':'assistant','content':list(blocks),'timestamp':time.time()}, 'dsh:'+message_id)
+            return True
+        if kind == 'tool_call':
+            self.session.upsert({'role':'assistant','content':[{'type':'toolCall','id':update.get('toolCallId'),'name':update.get('title') or 'tool','arguments':update.get('rawInput') if update.get('rawInput') is not None else {}}],'timestamp':time.time()}, 'dsh-tool:'+str(update.get('toolCallId')))
+            return True
+        if kind == 'tool_call_update':
+            texts = []
+            for part in update.get('content') or []:
+                body = part.get('content') or {}
+                if body.get('type') == 'text' and body.get('text'): texts.append(body['text'])
+            self.session.upsert({'role':'toolResult','toolCallId':update.get('toolCallId'),'content':'\n'.join(texts),'isError':update.get('status') == 'failed','timestamp':time.time()}, 'dsh-result:'+str(update.get('toolCallId')))
+            return True
+        if kind == 'usage_update':
+            s['context'] = {'tokens':update.get('used'),'limit':update.get('size')}
+            return True
+        if kind == 'config_option_update' and update.get('configOptions'):
+            self.apply_options(update['configOptions'])
+            return True
+        return False
+
+
+class SessionSubagents:
+    """Owns child roster indexes, transcript caches, paging and persistence timers."""
+    def __init__(self, session):
+        self.session = session
+        self.transcripts = {}; self.dirty = set(); self.timer = None
+        self.calls = {}; self.ignored = set()
+        self.recent = {}; self.written = {}
+        self.index()
+
+    def index(self):
+        self.entries = {}; self.aliases = {}
+        for entry in self.session.state.get('subagentRoster') or []:
+            self.entries[entry['id']] = entry
+            for alias in [entry['id'], entry.get('taskId')] + list(entry.get('toolUseIds') or []):
+                if alias: self.aliases.setdefault(alias, entry['id'])
+    def guard(self, action, *args):
+        # A child event of an unexpected shape must never stop the main stream.
+        try: return action(*args)
+        except Exception:
+            traceback.print_exc()
+            return None
+    def find(self, alias):
+        return self.entries.get(self.aliases.get(alias)) if alias else None
+    def resolve(self, agent_id, tool_use_id=None):
+        """The entry an approval came from: its agent id once that is an alias, or
+        the transcript that already holds the tool call being approved."""
+        entry = self.find(agent_id)
+        if entry is None and tool_use_id:
+            key = next((k for k, t in self.transcripts.items() if tool_use_id in t['tools']), None)
+            entry = self.entries.get(key)
+            if entry is not None and agent_id: self.aliases.setdefault(agent_id, entry['id'])
+        return entry
+    def relabel(self):
+        changed = False
+        for interaction in self.session.state['interactions']:
+            label = interaction.get('subagent')
+            if not isinstance(label, dict): continue
+            entry = (self.entries.get(label['id']) if label.get('id')
+                     else self.resolve(label.get('agentId'), interaction.get('id')))
+            fresh = subagent_label(label.get('agentId'), entry)
+            if fresh != label: interaction['subagent'] = fresh; changed = True
+        return changed
+    def named(self):
+        return {x['subagent']['id'] for x in self.session.state['interactions'] if isinstance(x.get('subagent'), dict) and x['subagent'].get('id')}
+    def adopt(self, entry, task_id=None, tool_use_id=None):
+        changed = False
+        if task_id and not entry['taskId']: entry['taskId'] = task_id; changed = True
+        if tool_use_id and tool_use_id not in entry['toolUseIds']: entry['toolUseIds'].append(tool_use_id); changed = True
+        for alias in (task_id, tool_use_id):
+            if alias: self.aliases.setdefault(alias, entry['id'])
+        return changed
+    def set(self, entry, **values):
+        # None means "not reported", which never erases what is already known.
+        changed = False
+        for key, value in values.items():
+            if value is not None and entry.get(key) != value: entry[key] = value; changed = True
+        return changed
+    def bump(self, entry):
+        # Entry changes also reach a client that follows the transcript.
+        entry['revision'] += 1; entry['updatedAt'] = iso_time()
+    def create(self, key, task_id=None, tool_use_id=None, kind='claude'):
+        now = iso_time()
+        entry = {'id':key, 'kind':kind, 'taskId':None, 'toolUseIds':[], 'turnId':self.session.state.get('turnId'),
+                 'description':None, 'subagentType':None, 'status':'running', 'background':None,
+                 'startedAt':now, 'updatedAt':now, 'endedAt':None, 'usage':None, 'lastToolName':None,
+                 'summary':None, 'error':None, 'canStop':False, 'stopRequested':False, 'stopError':None,
+                 'messageCount':0, 'revision':0}
+        self.session.state.setdefault('subagentRoster', []).append(entry)
+        self.entries[key] = entry; self.aliases[key] = key
+        self.adopt(entry, task_id, tool_use_id)
+        self.set(entry, **(self.calls.get(tool_use_id) or {}))
+        self.transcripts[key] = subagent_transcript_state()
+        self.prune()
+        return entry
+    def finish(self, entry, status, ended=None):
+        entry['status'] = status; entry['endedAt'] = ended or iso_time()
+        self.bump(entry); self.write(entry['id']); self.keep(entry)
+    def prune(self):
+        roster = self.session.state.get('subagentRoster') or []
+        excess = len(roster) - SUBAGENT_ROSTER_LIMIT
+        if excess <= 0: return
+        # Only finished entries go, oldest first, never one a pending approval names.
+        named = self.named()
+        finished = sorted((x for x in roster if x['status'] not in SUBAGENT_LIVE and x['id'] not in named), key=lambda x: x['startedAt'])
+        gone = {x['id'] for x in finished[:excess]}
+        if not gone: return
+        self.session.state['subagentRoster'] = [x for x in roster if x['id'] not in gone]
+        self.aliases = {alias:key for alias, key in self.aliases.items() if key not in gone}
+        for key in gone:
+            self.entries.pop(key, None); self.transcripts.pop(key, None); self.dirty.discard(key)
+            self.recent.pop(key, None); self.written.pop(key, None)
+            try: self.path(key).unlink(missing_ok=True)
+            except OSError: pass
+    def view(self, entry):
+        view = {key:entry.get(key) for key in SUBAGENT_KEYS}
+        view['toolUseIds'] = list(entry.get('toolUseIds') or [])
+        view['usage'] = dict(entry['usage']) if isinstance(entry.get('usage'), dict) else None
+        view['stopRequested'] = bool(entry.get('stopRequested'))
+        if entry.get('kind') == 'codex':
+            # A Codex child's turnId is its own running turn, which turn/interrupt
+            # names; the child may outlive the main turn.
+            view['canStop'] = entry.get('status') == 'running' and bool(entry.get('turnId'))
+        else:
+            view['canStop'] = (entry.get('kind') == 'claude' and entry.get('status') in SUBAGENT_LIVE and bool(entry.get('taskId'))
+                               and bool(self.session.state.get('busy')) and bool(self.session.state.get('turnId')))
+        return view
+    def live(self):
+        roster = self.session.state.get('subagentRoster') or []
+        if not roster: return []
+        named = self.named(); turn = self.session.state.get('turnId'); ranked = []
+        for position, entry in enumerate(roster):
+            # A Codex child's turnId is its own; parentTurnId is the main turn it belongs to.
+            owner = entry.get('parentTurnId') if entry.get('kind') == 'codex' else entry.get('turnId')
+            rank = (0 if entry.get('id') in named else 1 if entry.get('status') in SUBAGENT_LIVE
+                    else 2 if turn and owner == turn else None)
+            if rank is not None: ranked.append((rank, entry.get('startedAt') or '', position, entry))
+        # Over the cap, approvals and running children win over finished ones and
+        # newer over older; the list itself reads in start order.
+        ranked.sort(key=lambda x: (x[1], x[2]), reverse=True)
+        ranked.sort(key=lambda x: x[0])
+        return [self.view(x[3]) for x in sorted(ranked[:SUBAGENT_SNAPSHOT_LIMIT], key=lambda x: (x[1], x[2]))]
+    def path(self, key):
+        return ROOT / 'subagents' / self.session.state['id'] / subagent_filename(key)
+    def transcript(self, entry):
+        key = entry['id']; transcript = self.transcripts.get(key)
+        if transcript is None:
+            revision = 0; flushed = self.written.pop(key, None)
+            try:
+                data = json.loads(self.path(key).read_text())
+                versions = {int(k):int(v) for k, v in (data.get('versions') or {}).items()}
+                transcript = subagent_transcript_state(data['messages'], int(data.get('truncated') or 0), versions)
+                revision = int(data.get('revision') or 0)
+                # This service wrote the whole transcript before evicting it, so its
+                # positions still hold. A file from an earlier service can lag what a
+                # client already read; it restarts under a new epoch, as main history does.
+                if flushed is not None and data.get('epoch') == flushed: transcript['epoch'] = flushed
+            except Exception: transcript = subagent_transcript_state()
+            entry['revision'] = max(entry['revision'], revision); entry['messageCount'] = len(transcript['messages'])
+            self.transcripts[key] = transcript
+        self.keep(entry)
+        return transcript
+    def keep(self, entry):
+        """Live transcripts stay in memory; finished ones share a small LRU."""
+        key = entry['id']; self.recent.pop(key, None)
+        if entry['status'] in SUBAGENT_LIVE or key not in self.transcripts: return
+        self.recent[key] = None
+        for old in list(self.recent)[:-SUBAGENT_RECENT_LIMIT]: self.evict(old)
+    def evict(self, key):
+        # A transcript leaves memory only once its file holds all of it; while a
+        # write fails it stays loaded.
+        if (key in self.dirty or not self.path(key).exists()) and not self.write(key): return
+        transcript = self.transcripts.pop(key, None); self.recent.pop(key, None)
+        if transcript is not None: self.written[key] = transcript['epoch']
+    def append(self, entry, value):
+        transcript = self.transcript(entry)
+        index = transcript['index'].get(value['id']); size = json_size(value)
+        if index is None:
+            index = len(transcript['messages']); transcript['index'][value['id']] = index
+            transcript['messages'].append(value); transcript['sizes'].append(size); transcript['bytes'] += size
+        elif transcript['messages'][index] == value: return False
+        else:
+            transcript['bytes'] += size - transcript['sizes'][index]
+            transcript['messages'][index] = value; transcript['sizes'][index] = size
+        entry['revision'] += 1; transcript['versions'][index] = entry['revision']
+        transcript['tools'].update(p['tool_call_id'] for p in value['content'] if p.get('type') == 'tool_use')
+        self.trim(transcript)
+        entry['messageCount'] = len(transcript['messages']); entry['updatedAt'] = iso_time()
+        self.mark(entry['id'])
+        return True
+    def trim(self, transcript):
+        messages = transcript['messages']; sizes = transcript['sizes']
+        if len(messages) <= SUBAGENT_MESSAGE_LIMIT and transcript['bytes'] <= SUBAGENT_BYTE_LIMIT: return
+        drop = max(0, len(messages) - SUBAGENT_MESSAGE_LIMIT * 3 // 4); kept = transcript['bytes'] - sum(sizes[:drop])
+        while drop < len(messages) - 1 and kept > SUBAGENT_BYTE_LIMIT * 3 // 4:
+            kept -= sizes[drop]; drop += 1
+        if not drop: return
+        # Every position moves, so the transcript starts a new epoch.
+        messages = messages[drop:]
+        transcript.update(epoch=uuid.uuid4().hex, truncated=transcript['truncated'] + drop, messages=messages,
+                          sizes=sizes[drop:], bytes=kept, versions={}, index={m['id']:i for i, m in enumerate(messages)},
+                          tools={p.get('tool_call_id') for m in messages for p in m['content'] if p.get('type') == 'tool_use'})
+    def mark(self, key):
+        # A busy transcript is written about every two seconds; a finished entry
+        # and the end of the turn write at once.
+        self.dirty.add(key)
+        if self.timer is None and not self.session.deleted:
+            self.timer = threading.Timer(SUBAGENT_SAVE_DELAY, self.timer_fired)
+            self.timer.daemon = True; self.timer.start()
+    def timer_fired(self):
+        with LOCK:
+            self.timer = None; self.flush()
+    def flush(self):
+        for key in list(self.dirty): self.write(key)
+    def write(self, key):
+        entry = self.entries.get(key); transcript = self.transcripts.get(key)
+        if self.session.deleted or entry is None or transcript is None: self.dirty.discard(key); return False
+        try:
+            folder = ROOT / 'subagents' / self.session.state['id']
+            folder.parent.mkdir(exist_ok=True); folder.mkdir(exist_ok=True)
+            save(folder / subagent_filename(key), {'epoch':transcript['epoch'], 'revision':entry['revision'],
+                 'truncated':transcript['truncated'], 'messages':transcript['messages'], 'versions':transcript['versions']})
+        except (OSError, ValueError): return False  # stays dirty; the next change or turn end retries
+        self.dirty.discard(key)
+        return True
+    def discard(self):
+        if self.timer is not None: self.timer.cancel(); self.timer = None
+        self.dirty.clear(); self.transcripts.clear(); self.recent.clear(); self.written.clear()
+        shutil.rmtree(ROOT / 'subagents' / self.session.state['id'], ignore_errors=True)
+    def recover(self):
+        """At service start the worker of a queued or running child is gone with the
+        previous service, and a transcript no roster entry names is an orphan."""
+        roster = self.session.state.get('subagentRoster') or []
+        for entry in roster:
+            if entry.get('status') in SUBAGENT_LIVE:
+                entry.update(status='unknown', endedAt=entry.get('endedAt') or entry.get('updatedAt'), revision=entry.get('revision', 0) + 1)
+        folder = ROOT / 'subagents' / self.session.state['id']
+        if not folder.is_dir(): return
+        keep = {subagent_filename(x['id']) for x in roster}
+        for child in folder.iterdir():
+            if child.name in keep: continue
+            try: shutil.rmtree(child) if child.is_dir() and not child.is_symlink() else child.unlink()
+            except OSError: pass
+    def message(self, e):
+        message = e.get('message'); parent = e.get('parent_tool_use_id')
+        if not isinstance(message, dict) or not isinstance(parent, str): return
+        entry = self.find(parent); created = entry is None
+        if created: entry = self.create(parent, tool_use_id=parent)
+        if e.get('type') == 'user' and e.get('isSynthetic'):
+            message = copy.deepcopy(message)
+            message['content'] = text_parts(message.get('content'))
+            for part in message['content']:
+                if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
+        for part in text_parts(message.get('content')):
+            # A nested spawn describes the grandchild its own messages create.
+            if isinstance(part, dict) and part.get('type') == 'tool_use' and part.get('name') in SUBAGENT_TOOLS and part.get('id'):
+                self.calls[part['id']] = subagent_call(part.get('input'))
+        value = clip_subagent_message(copy.deepcopy(normalize(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))))
+        appended = self.append(entry, value)
+        labelled = appended and any(isinstance(x.get('subagent'), dict) for x in self.session.state['interactions']) and self.relabel()
+        if created or labelled: self.session.touch()
+    def main(self, message):
+        """Main-thread Agent/Task calls describe the entries their child messages
+        create; a call's tool_result ends its entry only when no task event ever
+        reported on it, because a background child's result arrives while it runs."""
+        changed = False
+        for part in text_parts(message.get('content')):
+            if not isinstance(part, dict): continue
+            if part.get('type') == 'tool_use' and part.get('name') in SUBAGENT_TOOLS and part.get('id'):
+                call = self.calls[part['id']] = subagent_call(part.get('input'))
+                entry = self.find(part['id'])
+                if entry and self.set(entry, **{k:v for k, v in call.items() if entry.get(k) is None}):
+                    self.bump(entry); changed = True
+            elif part.get('type') == 'tool_result':
+                entry = self.find(part.get('tool_use_id'))
+                if entry and not entry['taskId'] and entry['status'] in SUBAGENT_LIVE:
+                    text = clip_chars(tool_result_text(part.get('content')), 600); failed = part.get('is_error') is True
+                    self.set(entry, error=text if failed else None, summary=None if failed else text)
+                    self.finish(entry, 'failed' if failed else 'completed'); changed = True
+        if changed: self.relabel()
+    def task(self, e):
+        """Apply one task_* event. None when nothing changed, else whether the entry
+        has just finished."""
+        kind = e.get('subtype'); task_id = e.get('task_id'); task_type = e.get('task_type')
+        tool = e.get('tool_use_id') if isinstance(e.get('tool_use_id'), str) and e.get('tool_use_id') else None
+        if not isinstance(task_id, str) or not task_id or task_id in self.ignored: return None
+        # Subagents only: other task kinds, housekeeping and hidden tasks stay out.
+        if e.get('ambient') or e.get('skip_transcript') or (task_type and task_type != 'local_agent'):
+            self.ignored.add(task_id); return None
+        entry = self.find(task_id) or self.find(tool)
+        if entry is None:
+            if not task_type and tool not in self.calls:
+                if kind == 'task_started': self.ignored.add(task_id)
+                return None
+            entry = self.create(task_id, task_id, tool); changed = True
+        else: changed = self.adopt(entry, task_id, tool)
+        live = entry['status'] in SUBAGENT_LIVE; finished = False
+        if kind == 'task_notification':
+            status = e.get('status') if e.get('status') in ('completed', 'failed', 'stopped') else None
+            changed |= self.set(entry, status=status, summary=clip_chars(e.get('summary'), 600), usage=subagent_usage(e.get('usage')),
+                                         endedAt=(entry['endedAt'] or iso_time()) if status else None)
+            finished = live and status is not None
+        elif not live: pass  # A finished entry never revives from a late event.
+        elif kind == 'task_started':
+            kind_name = e.get('subagent_type'); background = e.get('is_backgrounded')
+            changed |= self.set(entry, status='running',
+                                         description=subagent_call({'description':e.get('description'), 'prompt':e.get('prompt')})['description'],
+                                         subagentType=kind_name if isinstance(kind_name, str) and kind_name else None,
+                                         background=background if isinstance(background, bool) else None)
+        elif kind == 'task_progress':
+            kind_name = e.get('subagent_type'); tool_name = e.get('last_tool_name')
+            changed |= self.set(entry, description=clip_chars(e.get('description'), 200),
+                                         subagentType=kind_name if isinstance(kind_name, str) and kind_name else None,
+                                         usage=subagent_usage(e.get('usage')), summary=clip_chars(e.get('summary'), 600),
+                                         lastToolName=tool_name if isinstance(tool_name, str) and tool_name else None)
+        else:
+            patch = e.get('patch') if isinstance(e.get('patch'), dict) else {}
+            status = SUBAGENT_PATCH_STATUS.get(patch.get('status')); ended = patch.get('end_time'); background = patch.get('is_backgrounded')
+            finished = status is not None and status not in SUBAGENT_LIVE
+            if finished: ended = iso_time(ended / 1000 if ended > 1e11 else ended) if isinstance(ended, (int, float)) and not isinstance(ended, bool) and 0 < ended < 1e14 else iso_time()
+            changed |= self.set(entry, status=status, description=clip_chars(patch.get('description'), 200),
+                                         error=clip_chars(patch.get('error'), 600), endedAt=ended if finished else None,
+                                         background=background if isinstance(background, bool) else None)
+        if not changed: return None
+        self.bump(entry)
+        if finished: self.write(entry['id']); self.keep(entry)
+        self.relabel()
+        return finished
+    def stop_result(self, e):
+        entry = self.find(e.get('taskId'))
+        if entry is None or entry['status'] not in SUBAGENT_LIVE: return False
+        if e.get('ok') is True:
+            if entry['stopError'] is None: return False
+            entry['stopError'] = None
+        else:
+            entry['stopRequested'] = False
+            entry['stopError'] = clip_chars(str(e.get('error') or ''), 600) or '停止子 Agent 失败'
+        self.bump(entry)
+        return True
+    def settle(self, status=None):
+        # The turn is over, so a child its worker never reported on did not end on
+        # its own terms: stopped when the turn was cancelled, otherwise unknown.
+        status = status or ('stopped' if self.session.state.get('cancelled') or self.session.state.get('stopAcknowledged') else 'unknown')
+        settled = [x for x in self.session.state.get('subagentRoster') or [] if x['status'] in SUBAGENT_LIVE]
+        for entry in settled: entry['status'] = status; entry['endedAt'] = iso_time(); self.bump(entry)
+        self.flush()
+        for entry in settled: self.keep(entry)
+    def stop(self, key):
+        entry = self.find(key)
+        if entry is None: raise SubagentNotFound('未找到该子 Agent')
+        if not self.view(entry)['canStop']: raise ValueError('该子 Agent 当前无法单独停止')
+        if entry['stopRequested']: return
+        if entry.get('kind') == 'codex':
+            # A v2 child accepts turn/interrupt (unlike turn/start and turn/steer); the
+            # child's turn/completed then reports it stopped.
+            if not self.session.codex_adapter.client or self.session.codex_adapter.client.process.poll() is not None: raise ValueError('Codex app-server 已退出，无法停止子 Agent')
+            self.session.codex_adapter.client.request('turn/interrupt', {'threadId':entry['id'], 'turnId':entry['turnId']})
+        else:
+            self.session.send({'type':'stop_task', 'taskId':entry['taskId'], 'turnId':self.session.state['turnId']})
+        entry['stopRequested'] = True; entry['stopError'] = None
+        self.bump(entry); self.session.touch(True)
+    def page(self, key, epoch=None, revision=None, before=None, limit=None):
+        entry = self.find(key)
+        if entry is None: raise SubagentNotFound('未找到该子 Agent')
+        transcript = self.transcript(entry); messages = transcript['messages']; count = len(messages)
+        current = epoch == transcript['epoch']
+        if before is None and revision is not None and current and int(revision) == entry['revision']: return {'unchanged':True}
+        page = {'entry':self.view(entry), 'epoch':transcript['epoch'], 'revision':entry['revision'],
+                'total':count, 'truncated':transcript['truncated']}
+        if before is not None:
+            if not current: raise ValueError('History changed; reopen the conversation')
+            size = int(limit) if limit is not None else 100
+            if not 1 <= size <= SUBAGENT_WINDOW: raise ValueError('Invalid history page size')
+            end = int(before)
+            if not 0 <= end <= count: raise ValueError('Invalid history cursor')
+            first = max(0, end - size)
+            return page | {'start':first, 'messages':copy.deepcopy(messages[first:end])}
+        if revision is not None and current and 0 <= int(revision) < entry['revision']:
+            since = int(revision)
+            indices = sorted(i for i, version in transcript['versions'].items() if version > since and i < count)
+            return page | {'changes':[{'index':i, 'message':copy.deepcopy(messages[i])} for i in indices]}
+        first = max(0, count - SUBAGENT_WINDOW)
+        return page | {'start':first, 'messages':copy.deepcopy(messages[first:])}
+
+
 class Session:
     def __init__(self, state):
         provider = state.get('provider')
@@ -722,20 +1819,9 @@ class Session:
         self.path = ROOT / 'sessions' / (state['id'] + '.json')
         self.ready = threading.Event(); self.chunks = None; self.command_id = None
         self.sdk_block_index = None
-        self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
-        self.acp_blocks = {}; self.permission_options = {}
-        self.codex = None; self.codex_attached = False; self.codex_parts = {}; self.codex_outputs = {}
-        self.codex_interactions = {}
-        # Codex children: item parts by child, frames waiting for their thread to
-        # register (arrival time, thread id, frame), and history reads by entry key.
-        self.codex_child_parts = {}; self.codex_pending = []; self.codex_backfills = {}
-        # Transcripts load on first use; the roster in state is their only index.
-        self.subagent_transcripts = {}; self.subagent_dirty = set(); self.subagent_timer = None
-        self.subagent_calls = {}; self.subagent_ignored = set()
-        # Finished transcripts in memory, least recently used first, and the epoch
-        # each evicted one was flushed under.
-        self.subagent_recent = {}; self.subagent_written = {}
-        self.index_subagents()
+        self.codex_adapter = CodexSessionAdapter(self)
+        self.acp_adapter = ACPSessionAdapter(self)
+        self.subagents = SessionSubagents(self)
         self.reset_history_index()
         # Version 1 stored command results as plain strings in existing histories.
         previous=state.get('commandResult')
@@ -811,7 +1897,7 @@ class Session:
             return copy.deepcopy(receipt)
         if s['busy'] or s['archived']: raise ValueError('会话正在运行或已归档')
         if not text.strip() and not attachments: raise ValueError('消息不能为空')
-        if s['provider']=='codex': self.codex_ensure(True)
+        if s['provider']=='codex': self.codex_adapter.ensure(True)
         elif not self.process or self.process.poll() is not None: self.launch()
         stored=self.store_attachments(request_id,attachments) if attachments else []
         receipt={'id':request_id,'digest':digest,'text':text,'status':'submitting'}
@@ -825,9 +1911,9 @@ class Session:
         if not s['messages']: s['title']=content[:60]
         if s['provider'] in ('qoder','qoderintl','dsh','codex','claude'): self.upsert({'role':'user','content':content},request_id)
         if s['provider']=='dsh':
-            self.pending_prompt=(request_id,text)
+            self.acp_adapter.pending_prompt=(request_id,text)
             try:
-                if self.ready.is_set(): self.acp_flush_prompt()
+                if self.ready.is_set(): self.acp_adapter.flush_prompt()
             except Exception as e:
                 s['busy']=False; s['error']=str(e); self.finish('unknown')
             self.touch(True)
@@ -848,7 +1934,7 @@ class Session:
                         'clientUserMessageId':request_id} | codex_permission_params(s['permissionMode'], turn=True)
                 if s.get('model'): params['model']=s['model']
                 if s.get('thinking'): params['effort']=s['thinking']
-                turn=(self.codex.request('turn/start',params).get('turn') or {})
+                turn=(self.codex_adapter.client.request('turn/start',params).get('turn') or {})
                 if not turn.get('id'): raise ValueError('Codex turn/start 未返回 turn id')
                 s['turnId']=turn['id']; receipt['runtimeTurnId']=turn['id']
                 receipt['status']='accepted'; s['turnState']='running' if turn.get('status')=='inProgress' else 'accepted'
@@ -871,7 +1957,7 @@ class Session:
         return copy.deepcopy(receipt)
     def launch(self):
         s = self.state
-        if s['provider']=='codex': self.codex_ensure(True); return
+        if s['provider']=='codex': self.codex_adapter.ensure(True); return
         env = None
         if s['provider'] == 'omp':
             args = ['omp','--mode','rpc-ui','--cwd',s['cwd'],'--approval-mode',s['permissionMode'],'--no-title','--session-dir',str(ROOT/'omp-sessions')]
@@ -896,734 +1982,25 @@ class Session:
             # model gateway; without the proxy env those calls stall the turn silently.
             if s['provider'] == 'claude': env = proxy_aware_spawn_env()
         self.ready.clear()
-        self.acp_pending = {}; self.acp_next_id = 0; self.pending_prompt = None
-        self.acp_blocks = {}; self.permission_options = {}
+        self.acp_adapter.pending = {}; self.acp_adapter.next_id = 0; self.acp_adapter.pending_prompt = None
+        self.acp_adapter.blocks = {}; self.acp_adapter.permission_options = {}
         self.process = subprocess.Popen(args,cwd=s['cwd'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=open(ROOT/(s['id']+'.stderr'),'a'),text=True,start_new_session=True,env=env)
         threading.Thread(target=self.read,daemon=True).start()
         if s['provider'] == 'dsh':
-            self.acp_request('initialize', {'protocolVersion':1,'clientCapabilities':{'fs':{'readTextFile':False,'writeTextFile':False}}}, 'initialize')
+            self.acp_adapter.request('initialize', {'protocolVersion':1,'clientCapabilities':{'fs':{'readTextFile':False,'writeTextFile':False}}}, 'initialize')
     def send(self, value):
         if not self.process or self.process.poll() is not None: raise ValueError('远端进程已退出，请重新发送以恢复会话')
         with self.write_lock:
             self.process.stdin.write(json.dumps(value,ensure_ascii=False)+'\n'); self.process.stdin.flush()
-    def codex_open_params(self):
-        params={'cwd':self.state['cwd']} | codex_permission_params(self.state['permissionMode'])
-        if self.state.get('model'): params['model']=self.state['model']
-        provider = self.state.get('provider_id')
-        if provider and provider != 'codex': params['modelProvider'] = provider
-        return params
-    def codex_ensure(self, attach=True):
-        if self.codex and self.codex.process.poll() is None:
-            if not attach or self.codex_attached: return self.codex
-        else:
-            client=CodexAppServer(self.state['cwd'],stderr_path=ROOT/(self.state['id']+'.stderr'),home=self.state['codexHome'])
-            client.on_frame=lambda frame: self.codex_frame(client,frame)
-            client.on_exit=self.codex_exit
-            self.codex=client; self.codex_attached=False
-            self.codex_pending=[]; self.codex_child_parts={}
-            try: client.initialize()
-            except Exception:
-                client.close(); self.codex=None
-                raise
-        if attach and not self.codex_attached:
-            if not self.state.get('resume'):
-                self.codex_start_thread()
-            else:
-                params=self.codex_open_params() | {'threadId':self.state['resume'],'excludeTurns':True}
-                result=self.codex.request('thread/resume',params)
-                self.codex_apply_thread(result)
-                self.codex_attached=True
-                self.codex_hydrate()
-                self.touch(True)
-        return self.codex
-    def codex_start_thread(self):
-        self.codex_ensure(False)
-        result=self.codex.request('thread/start',self.codex_open_params())
-        thread=result.get('thread') or {}
-        native_id=thread.get('id')
-        if not native_id: raise ValueError('Codex thread/start 未返回 thread id')
-        old_id=self.state['id']; old_path=self.path
-        if native_id in SESSIONS and SESSIONS[native_id] is not self: raise ValueError('Codex 返回了已存在的 thread id')
-        self.state['id']=native_id; self.state['resume']=native_id
-        self.path=ROOT/'sessions'/(native_id+'.json')
-        if SESSIONS.get(old_id) is self:
-            del SESSIONS[old_id]; SESSIONS[native_id]=self
-        self.codex_apply_thread(result); self.codex_attached=True; self.persist()
-        if old_path != self.path and old_path.exists(): old_path.unlink()
-        return native_id
-    def codex_apply_thread(self, result):
-        s=self.state; thread=result.get('thread') or {}
-        if thread.get('id') and s.get('resume') and thread['id']!=s['resume']:
-            raise ValueError('Codex 返回了不匹配的 thread id')
-        s['model']=result.get('model') or thread.get('model') or s.get('model','')
-        s['provider_id']=result.get('modelProvider') or thread.get('modelProvider') or s.get('provider_id')
-        if not s.get('thinking'):
-            if 'reasoningEffort' in result: s['thinking']=result.get('reasoningEffort')
-            elif 'reasoningEffort' in thread: s['thinking']=thread.get('reasoningEffort')
-        if thread.get('updatedAt'): s['updated']=thread['updatedAt']
-    def codex_hydrate(self):
-        self.state['messages']=[]; self.reset_history_index(); self.codex_parts={}; self.codex_outputs={}
-        cursor=None
-        while True:
-            params={'threadId':self.state['resume'],'sortDirection':'asc','limit':100}
-            if cursor: params['cursor']=cursor
-            page=self.codex.request('thread/items/list',params)
-            for entry in page.get('data') or []:
-                # History registers the children its subAgentActivity items name.
-                self.codex_item(entry.get('item') or {},True,turn_id=entry.get('turnId'),history=True,
-                                at=entry.get('startedAtMs') or entry.get('completedAtMs'))
-            cursor=page.get('nextCursor')
-            if not cursor: break
-    def codex_text(self, value):
-        if value is None: return ''
-        if isinstance(value,str): return value
-        if isinstance(value,list):
-            texts=[]
-            for item in value:
-                if isinstance(item,str): texts.append(item)
-                elif isinstance(item,dict):
-                    text=item.get('text') or item.get('output_text')
-                    texts.append(text if isinstance(text,str) else json.dumps(item,ensure_ascii=False))
-                else: texts.append(str(item))
-            return '\n'.join(texts)
-        return json.dumps(value,ensure_ascii=False,indent=2)
-    def codex_reasoning_text(self, item_id, target=None):
-        parts=self.codex_target_parts(target).get(item_id) or {}
-        values=[]
-        for kind in ('summary','content'):
-            values.extend(text for _,text in sorted((parts.get(kind) or {}).items()) if text)
-        return '\n'.join(values)
-    def codex_reasoning_source(self, item_id, completed=False, target=None):
-        parts=self.codex_target_parts(target).get(item_id) or {}
-        source={'kind':'activity_summary','provider':'codex','itemId':str(item_id),
-                'summaryParts':[text for _,text in sorted((parts.get('summary') or {}).items()) if text],
-                'state':'final' if completed else 'streaming'}
-        turn=self.state.get('turnId') if target is None else target.get('turnId')
-        if turn: source['turnId']=turn
-        return source
-    def codex_upsert_reasoning(self, item_id, completed=False, timestamp=None, native_summary=True, target=None):
-        part={'type':'thinking','thinking':self.codex_reasoning_text(item_id,target)}
-        if native_summary: part['source']=self.codex_reasoning_source(item_id,completed,target)
-        self.codex_write(target,{'role':'assistant','content':[part],'timestamp':timestamp or time.time()},'codex:'+str(item_id))
-    def codex_target_parts(self, target=None):
-        # Streaming state of the main thread, or of one child's transcript.
-        return self.codex_parts if target is None else self.codex_child_parts.setdefault(target['id'],{})
-    def codex_write(self, target, message, identity):
-        if target is None: self.upsert(message,identity)
-        else: self.subagent_append(target,clip_subagent_message(copy.deepcopy(normalize(message,identity))))
-    def codex_item(self, item, completed=False, timestamp=None, target=None, turn_id=None, history=False, at=None):
-        """One Codex item into the main transcript, or into the transcript of the child
-        `target`. `turn_id`, `history` and `at` (the record's time) only describe the
-        children an item names; history leaves a child that looks live unknown."""
-        kind=item.get('type'); item_id=item.get('id')
-        if not kind or not item_id: return
-        stamp=(timestamp/1000 if isinstance(timestamp,(int,float)) and timestamp>100000000000 else timestamp) or time.time()
-        store=self.codex_target_parts(target)
-        if target is not None and not completed and kind in ('agentMessage','reasoning','plan') and not any(
-                item.get(key) for key in ('text','content','summary')):
-            return  # A child's reply is shown complete; its deltas are not followed.
-        if kind=='subAgentActivity':
-            # A child report of an unexpected shape must never stop the main stream.
-            self.subagent_guard(self.codex_activity,item,stamp,target,turn_id,history,epoch_seconds(at) or stamp); return
-        if kind=='userMessage' and target is not None:
-            text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
-            self.codex_write(target,{'role':'user','content':text,'timestamp':stamp},'codex:'+item_id); return
-        if kind=='userMessage':
-            text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
-            identity=item.get('clientId') or 'codex:'+item_id
-            receipt=self.state.get('requests',{}).get(identity)
-            if receipt:
-                receipt['runtimeId']=item_id
-                if receipt.get('mode')=='steer': receipt.update(status='consumed',error=None)
-                elif receipt.get('status') in ('submitting','submitted','accepted'): receipt['status']='running'
-            # A prompt recorded at send time already carries its attachment marks;
-            # Codex echoes the same user message without them, so only foreign or
-            # hydrated messages are imported here.
-            if identity not in self.message_indices:
-                self.upsert({'role':'user','content':text,'timestamp':stamp},identity)
-            return
-        if kind=='agentMessage':
-            if completed or item.get('text'):
-                text=item.get('text',''); store[item_id]={'text':text}
-            else: text=(store.get(item_id) or {}).get('text','')
-            self.codex_write(target,{'role':'assistant','content':[{'type':'text','text':text}],'timestamp':stamp},'codex:'+item_id)
-            return
-        if kind in ('reasoning','plan'):
-            if completed or kind=='plan' or item.get('content') or item.get('summary'):
-                if kind=='plan': parts={'summary':{},'content':{0:item.get('text','')}}
-                else:
-                    parts={'summary':{i:text for i,text in enumerate(item.get('summary') or [])},
-                           'content':{i:text for i,text in enumerate(item.get('content') or [])}}
-                store[item_id]=parts
-            self.codex_upsert_reasoning(item_id,completed,stamp,kind=='reasoning',target)
-            return
-        tool_name=None; tool_input={}; output=None; failed=False
-        if kind=='commandExecution':
-            tool_name='shell'; tool_input={'command':item.get('command',''),'cwd':item.get('cwd','')}
-            output=item.get('aggregatedOutput')
-            if output is None and target is None: output=self.codex_outputs.get(item_id)
-            failed=item.get('status') in ('failed','declined')
-        elif kind=='fileChange':
-            tool_name='apply_patch'; tool_input={'changes':item.get('changes') or []}
-            if completed: output='文件修改'+('已完成' if item.get('status')=='completed' else '失败：'+str(item.get('status')))
-            failed=item.get('status') in ('failed','declined')
-        elif kind=='mcpToolCall':
-            tool_name=(item.get('server','mcp')+'/'+item.get('tool','tool')).strip('/')
-            tool_input=item.get('arguments') if item.get('arguments') is not None else {}
-            output=item.get('result') if item.get('result') is not None else item.get('error')
-            failed=item.get('status')=='failed' or item.get('error') is not None
-        elif kind=='dynamicToolCall':
-            tool_name='/'.join(x for x in (item.get('namespace'),item.get('tool')) if x) or 'tool'
-            tool_input=item.get('arguments') if item.get('arguments') is not None else {}
-            output=item.get('contentItems'); failed=item.get('status')=='failed' or item.get('success') is False
-        elif kind=='webSearch':
-            tool_name='web_search'; tool_input={'query':item.get('query',''),'action':item.get('action')}
-            output=item.get('results')
-        elif kind=='functionCallOutput':
-            tool_name='/'.join(x for x in (item.get('namespace'),item.get('name')) if x) or 'function'
-            output=item.get('output')
-        elif kind=='collabAgentToolCall':
-            tool_name='agent/'+str(item.get('tool','tool')); tool_input={'prompt':item.get('prompt'),'receivers':item.get('receiverThreadIds') or []}
-            output=item.get('agentsStates'); failed=item.get('status') in ('failed','interrupted')
-        elif kind=='imageView':
-            tool_name='view_image'; tool_input={'path':item.get('path')}; output=item.get('path')
-        elif kind=='imageGeneration':
-            tool_name='image_generation'; output=item.get('result') or item.get('failure'); failed=item.get('failure') is not None
-        else: return
-        if target is not None and not history: self.codex_child_tool(target,item_id,tool_name)
-        self.codex_write(target,{'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':tool_name,'arguments':tool_input}],'timestamp':stamp},'codex-tool:'+item_id)
-        if completed or output is not None:
-            self.codex_write(target,{'role':'toolResult','toolCallId':item_id,'content':self.codex_text(output),'isError':failed,'timestamp':stamp},'codex-result:'+item_id)
-        if kind=='collabAgentToolCall':
-            self.subagent_guard(self.codex_collab,item,target,turn_id,history,epoch_seconds(at) or stamp)
-    def codex_question_interaction(self, interaction_id, method, params):
-        questions=[]; mapping={}
-        def unique_label(value):
-            base=value or '问题'; shown=base; suffix=2
-            while shown in mapping:
-                shown='%s (%d)' % (base,suffix); suffix+=1
-            return shown
-        if method=='item/tool/requestUserInput':
-            for question in params.get('questions') or []:
-                shown=unique_label(question.get('question') or question.get('id'))
-                questions.append({'id':question.get('id'),'header':question.get('header',''),'question':shown,
-                                  'options':question.get('options') or []})
-                mapping[shown]={'id':question.get('id'),'type':'string'}
-        else:
-            schema=params.get('requestedSchema') or {}
-            for name,field in (schema.get('properties') or {}).items():
-                shown=unique_label(field.get('title') or field.get('description') or name)
-                raw_options=field.get('enum') or ((field.get('items') or {}).get('enum'))
-                titled=field.get('oneOf') or ((field.get('items') or {}).get('anyOf')) or []
-                options=[{'label':str(value),'description':''} for value in (raw_options or [])]
-                options += [{'label':str(value.get('title') or value.get('const')),'description':''} for value in titled]
-                questions.append({'id':name,'header':params.get('serverName','MCP'),'question':shown,'options':options})
-                mapping[shown]={'id':name,'type':field.get('type','string')}
-        self.codex_interactions[interaction_id]['questions']=mapping
-        return {'id':interaction_id,'name':'AskUserQuestion','title':params.get('message') or 'Codex 请求输入',
-                'input':{'questions':questions}}
-    def codex_frame(self, client, frame):
-        with LOCK:
-            if client is not self.codex or self.deleted:
-                if 'id' in frame:
-                    try: client.respond(frame['id'],error={'code':-32000,'message':'session is no longer attached'})
-                    except Exception: pass
-                return
-            method=frame.get('method'); params=frame.get('params') or {}
-            thread_id=params.get('threadId') or params.get('conversationId')
-            if thread_id and self.state.get('resume') and thread_id!=self.state['resume']:
-                # A registered child's requests become labelled interactions; any
-                # other thread's are refused as before. Its notifications go to its
-                # own transcript, or wait for the thread to register.
-                if 'id' in frame:
-                    entry=self.codex_child(thread_id)
-                    if entry is None: client.respond(frame['id'],error={'code':-32602,'message':'thread id does not match this session'})
-                    else: self.codex_request(client,frame,method,params,entry)
-                    return
-                self.subagent_guard(self.codex_child_frame,frame,thread_id)
-                return
-            if 'id' in frame:
-                self.codex_request(client,frame,method,params); return
-            if method=='thread/started':
-                self.subagent_guard(self.codex_thread_started,params.get('thread') or {}); return
-            if method=='turn/started':
-                turn=params.get('turn') or {}; turn_id=turn.get('id')
-                if turn_id: self.state['turnId']=turn_id
-                self.state['busy']=True; self.state['error']=None; self.state['updated']=time.time(); self.finish('running'); self.touch(True); return
-            if method=='turn/completed':
-                turn=params.get('turn') or {}; status=turn.get('status'); error=turn.get('error') or {}
-                # Children run their own turns, so their pending requests stay.
-                self.state['busy']=False; self.state['updated']=time.time()
-                self.state['interactions']=[x for x in self.state['interactions'] if isinstance(x.get('subagent'),dict)]
-                self.codex_interactions={k:v for k,v in self.codex_interactions.items() if v.get('thread')}
-                self.subagent_guard(self.subagent_flush)
-                if status=='interrupted': self.state['cancelled']=True; self.state['stopAcknowledged']=True
-                elif status=='failed': self.state['error']=error.get('message') if isinstance(error,dict) else str(error)
-                elif not self.state.get('cancelled') and not self.state.get('error'): self.state['completed']+=1
-                self.finish('stopped' if status=='interrupted' else 'failed' if status=='failed' else 'completed')
-                for receipt in self.state.get('requests',{}).values():
-                    if receipt.get('mode')=='steer' and receipt.get('turnId')==turn.get('id') and receipt['status'] in ('submitted','accepted'):
-                        receipt.update(status='unknown',error='本轮已结束，尚未观察到引导消息进入上下文')
-                self.touch(True); return
-            if method in ('item/started','item/completed'):
-                if method == 'item/started' and (params.get('item') or {}).get('type') == 'contextCompaction':
-                    self.state['context'] = None
-                key='completedAtMs' if method=='item/completed' else 'startedAtMs'
-                # The turn only places the children an item names in the roster.
-                self.codex_item(params.get('item') or {},method=='item/completed',params.get(key),
-                                turn_id=params.get('turnId') or self.state.get('turnId')); self.touch(method=='item/completed'); return
-            if method=='item/agentMessage/delta':
-                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'text':''})
-                part['text']=part.get('text','')+params.get('delta','')
-                self.upsert({'role':'assistant','content':[{'type':'text','text':part['text']}],'timestamp':time.time()},'codex:'+str(item_id)); self.touch(); return
-            if method=='item/plan/delta':
-                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
-                part.setdefault('content',{})[0]=part.setdefault('content',{}).get(0,'')+params.get('delta','')
-                self.codex_upsert_reasoning(item_id,native_summary=False); self.touch(); return
-            if method=='item/reasoning/summaryPartAdded':
-                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
-                part.setdefault('summary',{}).setdefault(params.get('summaryIndex',0),'')
-                self.codex_upsert_reasoning(item_id); self.touch(); return
-            if method in ('item/reasoning/textDelta','item/reasoning/summaryTextDelta'):
-                item_id=params.get('itemId'); part=self.codex_parts.setdefault(item_id,{'summary':{},'content':{}})
-                key='summary' if method.endswith('summaryTextDelta') else 'content'
-                index=params.get('summaryIndex',0) if key=='summary' else params.get('contentIndex',0)
-                part.setdefault(key,{})[index]=part.setdefault(key,{}).get(index,'')+params.get('delta','')
-                self.codex_upsert_reasoning(item_id); self.touch(); return
-            if method=='item/commandExecution/outputDelta':
-                item_id=params.get('itemId'); self.codex_outputs[item_id]=self.codex_outputs.get(item_id,'')+params.get('delta','')
-                self.upsert({'role':'toolResult','toolCallId':item_id,'content':self.codex_outputs[item_id],'isError':False,'timestamp':time.time()},'codex-result:'+str(item_id)); self.touch(); return
-            if method=='thread/tokenUsage/updated':
-                usage=params.get('tokenUsage') or {}; last=usage.get('last') or {}
-                # total is cumulative across requests, not the active context window.
-                self.state['context']={'tokens':last.get('totalTokens'),'limit':usage.get('modelContextWindow'),
-                                       'reportedAt':time.time()}; self.touch(); return
-            if method=='serverRequest/resolved': self.codex_resolved(params)
-    def codex_request(self, client, frame, method, params, entry=None):
-        """A server request: an approval or question for the user, raised by the main
-        thread or, labelled with it, by the registered child `entry`."""
-        approvals=('item/commandExecution/requestApproval','item/fileChange/requestApproval',
-                   'item/permissions/requestApproval','execCommandApproval','applyPatchApproval')
-        questions=('item/tool/requestUserInput','mcpServer/elicitation/request')
-        if method not in approvals+questions:
-            client.respond(frame['id'],error={'code':-32601,'message':'unsupported by the Perch bridge'})
-            return
-        interaction_id='codex-request-'+str(frame['id'])
-        pending={'wireId':frame['id'],'method':method,'params':params}
-        if entry is not None: pending['thread']=entry['id']
-        self.codex_interactions[interaction_id]=pending
-        if method in questions and not (method=='mcpServer/elicitation/request' and params.get('mode')=='url'):
-            interaction=self.codex_question_interaction(interaction_id,method,params)
-        else:
-            if method in ('item/commandExecution/requestApproval','execCommandApproval'):
-                command=params.get('command') or []
-                if isinstance(command,list): command=' '.join(command)
-                name='shell'; value={'command':command,'cwd':params.get('cwd'),'reason':params.get('reason')}
-            elif method in ('item/fileChange/requestApproval','applyPatchApproval'):
-                name='apply_patch'; value={'itemId':params.get('itemId') or params.get('callId'),'reason':params.get('reason'),
-                                          'grantRoot':params.get('grantRoot'),'changes':params.get('fileChanges')}
-            elif method=='item/permissions/requestApproval':
-                name='request_permissions'; value={'cwd':params.get('cwd'),'reason':params.get('reason'),'permissions':params.get('permissions')}
-            else:
-                name='mcp_elicitation'; value={'server':params.get('serverName'),'message':params.get('message'),'url':params.get('url')}
-            interaction={'id':interaction_id,'type':'interaction','name':name,'title':'Codex 请求确认','input':value}
-        if entry is not None: interaction['subagent']=subagent_label(entry['id'],entry)
-        self.state['interactions'].append(interaction); self.touch(True)
-    def codex_resolved(self, params):
-        wire_id=params.get('requestId')
-        ids=[key for key,value in self.codex_interactions.items() if value.get('wireId')==wire_id]
-        for key in ids: self.codex_interactions.pop(key,None)
-        if ids:
-            self.state['interactions']=[x for x in self.state['interactions'] if x.get('id') not in ids]; self.touch(True)
-    def codex_answer(self, interaction_id, body):
-        pending=self.codex_interactions.get(interaction_id)
-        if not pending: raise ValueError('该 Codex 请求已失效，请同步会话后重试')
-        method=pending['method']; params=pending['params']; allow=bool(body.get('allow')) and not body.get('cancelled')
-        if method=='item/tool/requestUserInput':
-            values=body.get('answers') or {}; answers={}
-            for shown,question in pending.get('questions',{}).items():
-                if shown not in values: raise ValueError('请回答所有问题')
-                answers[question['id']]={'answers':[str(values[shown])]}
-            result={'answers':answers}
-        elif method=='mcpServer/elicitation/request':
-            if not allow: result={'action':'decline'}
-            elif params.get('mode')=='url': result={'action':'accept'}
-            else:
-                values=body.get('answers') or {}; content={}
-                for shown,question in pending.get('questions',{}).items():
-                    if shown not in values: raise ValueError('请回答所有问题')
-                    value=values[shown]; kind=question['type']
-                    if kind=='boolean': value=str(value).lower() in ('true','yes','1','是')
-                    elif kind=='integer': value=int(value)
-                    elif kind=='number': value=float(value)
-                    elif kind=='array': value=[x.strip() for x in str(value).split(',') if x.strip()]
-                    content[question['id']]=value
-                result={'action':'accept','content':content}
-        elif method in ('item/commandExecution/requestApproval','item/fileChange/requestApproval'):
-            result={'decision':'accept' if allow else 'decline'}
-        elif method=='item/permissions/requestApproval':
-            result={'permissions':params.get('permissions') if allow else {},'scope':'turn'}
-        else:
-            result={'decision':'approved' if allow else {'denied':{'rejection':'用户在 Perch 中拒绝了该操作'}}}
-        self.codex.respond(pending['wireId'],result=result)
-        self.codex_interactions.pop(interaction_id,None)
-        self.state['interactions']=[x for x in self.state['interactions'] if x.get('id')!=interaction_id]
-        self.touch(True)
-    def codex_exit(self, client, failure):
-        with LOCK:
-            if client is not self.codex: return
-            self.codex=None; self.codex_attached=False
-            if self.deleted or not failure: return
-            self.state['error']=failure
-            if self.state['busy']:
-                self.finish('unknown'); self.state['busy']=False
-            # Children ran inside that app-server and ended with it, unobserved.
-            self.codex_pending=[]; self.subagent_guard(self.subagent_settle,'unknown')
-            self.state['interactions']=[]; self.codex_interactions={}; self.touch(True)
 
     # Codex child threads. A spawned agent runs in a thread of its own on this
     # connection; its roster entry is keyed by that thread id (kind "codex") and its
     # frames build its own transcript. The main thread's state is never touched by them.
-    def codex_child(self, thread_id):
-        entry=self.subagent_entries.get(thread_id) if isinstance(thread_id,str) else None
-        return entry if entry is not None and entry.get('kind')=='codex' else None
-    def codex_register(self, thread_id, status=None, history=False, at=None, turn=None, alias=None,
-                       card=None, parent=None, values=None, fill=None):
-        """Registers the child `thread_id` on first sight and applies one report on it.
-        A live `status` only describes a child the report creates (the child's own
-        turn/started marks it running again later); a terminal one ends a live or
-        unknown entry. History describes children no process runs any more, so one
-        it shows live is unknown. `values` replace fields, `fill` sets unknown ones.
-        Frames that waited for the thread are replayed once it registers."""
-        if not isinstance(thread_id,str) or not thread_id or thread_id==self.state.get('resume'): return None
-        entry=self.subagent_entries.get(thread_id)
-        if entry is not None and entry.get('kind')!='codex': return None
-        created=entry is None; ended=False
-        if created:
-            entry=self.subagent_create(thread_id,thread_id,kind='codex')
-            opened=iso_time(at) if at else entry['startedAt']
-            live=status is None or status in SUBAGENT_LIVE
-            state=('unknown' if history else status or 'running') if live else status
-            entry.update(turnId=None,parentTurnId=turn,startedAt=opened,updatedAt=opened,status=state,
-                         endedAt=None if state in SUBAGENT_LIVE else opened)
-        elif (status is not None and status not in SUBAGENT_LIVE and status!=entry['status']
-              and (entry['status'] in SUBAGENT_LIVE or entry['status']=='unknown')):
-            entry.update(status=status,endedAt=iso_time(at) if at else iso_time()); ended=True
-        changed=created or ended
-        if alias: changed=self.subagent_adopt(entry,tool_use_id=alias) or changed
-        if card and not entry.get('cardId'): entry.update(cardId=card,cardParent=parent); changed=True
-        changed=self.subagent_set(entry,**(values or {})) or changed
-        changed=self.subagent_set(entry,**{k:v for k,v in (fill or {}).items() if entry.get(k) is None}) or changed
-        if changed:
-            self.subagent_bump(entry)
-            if entry['status'] not in SUBAGENT_LIVE and (created or ended): self.subagent_write(entry['id']); self.subagent_keep(entry)
-            self.subagent_relabel()
-            # A history pass is published by its caller, once.
-            if not history: self.touch(ended)
-        if created: self.codex_replay(thread_id)
-        return entry
-    def codex_activity(self, item, stamp, target, turn, history, when):
-        """subAgentActivity: the parent's record of a child it started, sent input to,
-        interrupted or saw complete. A start shows in the parent's transcript as an
-        agent/spawnAgent call, which that child's completion or interruption answers."""
-        kind=item.get('kind'); item_id=item['id']
-        path=item.get('agentPath') if isinstance(item.get('agentPath'),str) and item['agentPath'].strip() else None
-        model=codex_text_value(item.get('model'))
-        if kind=='started':
-            self.codex_write(target,{'role':'assistant','content':[{'type':'toolCall','id':item_id,'name':'agent/spawnAgent',
-                                     'arguments':{'agentPath':path,'model':model}}],'timestamp':stamp},'codex-tool:'+item_id)
-        if kind not in ('started','interacted','interrupted','completed'): return
-        started=kind=='started'
-        entry=self.codex_register(item.get('agentThreadId'),CODEX_ACTIVITY_STATUS.get(kind,'running'),history,when,
-                                  target['parentTurnId'] if target is not None else turn,
-                                  alias=item_id if started else None,card=item_id if started else None,
-                                  parent=target['id'] if target is not None else None,
-                                  values={'description':codex_agent_name(path),'subagentType':clip_chars(path,200)},
-                                  fill={'model':model})
-        if entry is None: return
-        if kind=='interacted' and history and entry['status'] not in SUBAGENT_LIVE and entry['status']!='unknown':
-            # Input sent later ran the child again; history does not say how that ended.
-            entry.update(status='unknown',endedAt=None); self.subagent_bump(entry)
-        if kind in CODEX_ACTIVITY_STATUS: self.codex_card_result(entry)
-    def codex_collab(self, item, target, turn, history, when):
-        """collabAgentToolCall: its receivers and agentsStates name children; a
-        spawnAgent call is an alias of the child it started."""
-        states=item.get('agentsStates') if isinstance(item.get('agentsStates'),dict) else {}
-        receivers=[x for x in item.get('receiverThreadIds') or [] if isinstance(x,str)]
-        spawn=item.get('tool')=='spawnAgent'
-        for thread_id in dict.fromkeys(receivers+[x for x in states if isinstance(x,str)]):
-            if thread_id==item.get('senderThreadId'): continue
-            state=states.get(thread_id) if isinstance(states.get(thread_id),dict) else {}
-            status=CODEX_AGENT_STATUS.get(state.get('status')); message=clip_chars(state.get('message'),600)
-            fill={'model':codex_text_value(item.get('model'))}
-            if spawn: fill['description']=subagent_call({'prompt':item.get('prompt')})['description']
-            entry=self.codex_register(thread_id,status,history,when,target['parentTurnId'] if target is not None else turn,
-                                      alias=item.get('id') if spawn else None,fill=fill,
-                                      values={'summary':message} if status=='completed' else {'error':message} if status=='failed' else None)
-            if entry is not None and status in ('completed','stopped','failed'): self.codex_card_result(entry)
-    def codex_thread_started(self, thread):
-        """A thread whose parent is this session's thread, or one of its children."""
-        parent=thread.get('parentThreadId'); owner=self.codex_child(parent)
-        if not parent or (parent!=self.state.get('resume') and owner is None): return
-        self.codex_register(thread.get('id'),'running',turn=owner['parentTurnId'] if owner else self.state.get('turnId'),
-                            fill={'description':clip_chars(thread.get('agentNickname'),200),
-                                  'subagentType':codex_text_value(thread.get('agentRole')),'model':codex_text_value(thread.get('model'))})
-    def codex_card_result(self, entry):
-        """Answers the agent/spawnAgent call that started a child, once it ended."""
-        card=entry.get('cardId'); status=entry.get('status'); parent=entry.get('cardParent')
-        if not card or status not in ('completed','stopped','failed'): return
-        target=self.codex_child(parent) if parent else None
-        if parent and target is None: return
-        text=entry.get('summary') if status=='completed' else entry.get('error') if status=='failed' else None
-        text=text or {'completed':'子 Agent 已完成','stopped':'子 Agent 已停止','failed':'子 Agent 失败'}[status]
-        self.codex_write(target,{'role':'toolResult','toolCallId':card,'content':text,'isError':status!='completed',
-                                 'timestamp':iso_seconds(entry.get('endedAt'))},'codex-result:'+card)
-    def codex_usage(self, entry):
-        usage=entry.get('usage')
-        return dict(usage) if isinstance(usage,dict) else {'totalTokens':0,'toolUses':0,'durationMs':0}
-    def codex_child_tool(self, entry, item_id, name):
-        usage=self.codex_usage(entry)
-        if item_id not in self.subagent_transcript(entry)['tools']: usage['toolUses']+=1
-        if self.subagent_set(entry,usage=usage,lastToolName=name): self.subagent_bump(entry); self.touch()
-    def codex_child_frame(self, frame, thread_id):
-        """A notification of a child thread. Complete items are enough for its
-        transcript, so streaming deltas, hooks and status pings are not followed."""
-        method=frame.get('method'); params=frame.get('params') or {}
-        if method not in CODEX_CHILD_METHODS: return
-        entry=self.codex_child(thread_id)
-        if entry is None:
-            now=time.monotonic()
-            pending=[x for x in self.codex_pending if now-x[0]<=CODEX_PENDING_SECONDS]
-            self.codex_pending=pending[-(CODEX_PENDING_LIMIT-1):]+[(now,thread_id,frame)]
-            return
-        if method in ('item/started','item/completed'):
-            key='completedAtMs' if method=='item/completed' else 'startedAtMs'
-            self.codex_item(params.get('item') or {},method=='item/completed',params.get(key),target=entry,turn_id=params.get('turnId'))
-        elif method=='turn/started': self.codex_child_turn(entry,params.get('turn') or {})
-        elif method=='turn/completed': self.codex_child_done(entry,params.get('turn') or {})
-        elif method=='thread/tokenUsage/updated':
-            # total is what the child used so far; last, the main thread's window
-            # reading, covers one request only.
-            total=((params.get('tokenUsage') or {}).get('total') or {}).get('totalTokens')
-            if isinstance(total,int) and not isinstance(total,bool):
-                usage=self.codex_usage(entry); usage['totalTokens']=total
-                if self.subagent_set(entry,usage=usage): self.subagent_bump(entry); self.touch()
-        else: self.codex_resolved(params)
-    def codex_replay(self, thread_id):
-        now=time.monotonic(); keep=[]; replay=[]
-        for x in self.codex_pending:
-            if now-x[0]<=CODEX_PENDING_SECONDS: (replay if x[1]==thread_id else keep).append(x)
-        self.codex_pending=keep
-        for _,_,frame in replay: self.subagent_guard(self.codex_child_frame,frame,thread_id)
-    def codex_child_turn(self, entry, turn):
-        turn_id=turn.get('id')
-        if not isinstance(turn_id,str) or not turn_id: return
-        live=entry['status'] in SUBAGENT_LIVE
-        # A late copy of a turn that already ended never revives its entry; a new
-        # turn (the parent sent it input) does.
-        if turn_id==entry['turnId'] and not live: return
-        changed=self.subagent_set(entry,turnId=turn_id,status='running')
-        # A new run starts clean; its summary is replaced once it ends.
-        if not live: entry.update(endedAt=None,error=None,stopRequested=False,stopError=None)
-        root=turn.get('rootTurnId')
-        if isinstance(root,str) and root: changed=self.subagent_set(entry,parentTurnId=root) or changed
-        if changed: self.subagent_bump(entry); self.touch()
-    def codex_child_done(self, entry, turn):
-        """The child's turn ended: its status, summary and usage, never the main turn's.
-        Applied once per turn, also when the parent's report ended the entry first."""
-        status=CODEX_TURN_STATUS.get(turn.get('status')); turn_id=turn.get('id')
-        turn_id=turn_id if isinstance(turn_id,str) and turn_id else None
-        if status is None or (entry['turnId'] and turn_id and turn_id!=entry['turnId']): return
-        if turn_id and entry.get('doneTurn')==turn_id: return
-        # The child's own pending requests end with its turn; the main thread's stay.
-        ids=[k for k,v in self.codex_interactions.items() if v.get('thread')==entry['id']]
-        for k in ids: self.codex_interactions.pop(k,None)
-        if ids: self.state['interactions']=[x for x in self.state['interactions'] if x.get('id') not in ids]
-        self.codex_child_parts.pop(entry['id'],None)
-        usage=self.codex_usage(entry); duration=turn.get('durationMs')
-        if isinstance(duration,(int,float)) and not isinstance(duration,bool) and duration>0:
-            usage['durationMs']+=int(duration)
-        error=turn.get('error'); error=error.get('message') if isinstance(error,dict) else error
-        ended=epoch_seconds(turn.get('completedAt'))
-        self.subagent_set(entry,turnId=turn_id,usage=usage,summary=self.codex_child_text(entry,turn),
-                          error=clip_chars(error,600) if status=='failed' else None)
-        entry.update(status=status,endedAt=iso_time(ended) if ended else iso_time(),doneTurn=turn_id)
-        self.subagent_bump(entry); self.subagent_write(entry['id']); self.subagent_keep(entry)
-        self.codex_card_result(entry); self.subagent_relabel(); self.touch(True)
-    def codex_child_text(self, entry, turn):
-        """The child's last reply: the one its turn reports, else its transcript's last text."""
-        for item in reversed(turn.get('items') or []):
-            if isinstance(item,dict) and item.get('type')=='agentMessage' and clip_chars(item.get('text'),600):
-                return clip_chars(item['text'],600)
-        transcript=self.subagent_transcripts.get(entry['id'])
-        for message in reversed(transcript['messages'] if transcript else []):
-            if message['role']!='assistant': continue
-            for part in reversed(message['content']):
-                if part.get('type')=='text' and clip_chars(part.get('text'),600): return clip_chars(part['text'],600)
-        return None
-    def codex_backfill_plan(self, key):
-        """A child whose transcript is missing or empty (after a restart, or known only
-        from history) is read once from the runtime's own record of its thread."""
-        entry=self.subagent_find(key)
-        if entry is None or entry.get('kind')!='codex' or self.deleted: return None
-        key=entry['id']; mark=self.codex_backfills.get(key)
-        if mark is True or mark=='reading' or (isinstance(mark,float) and time.monotonic()<mark): return None
-        if self.subagent_transcript(entry)['messages']: self.codex_backfills[key]=True; return None
-        self.codex_backfills[key]='reading'
-        live=self.codex if self.codex and self.codex.process.poll() is None else None
-        return {'key':key,'client':live,'cwd':self.state['cwd'],'home':self.state.get('codexHome')}
-    def codex_backfill(self, plan):
-        """Runs outside the lock: pages the child's items oldest first, as the probe
-        read them, keeping the newest up to the transcript's message cap. Without a
-        live app-server a short-lived one reads them, as model discovery does."""
-        items=[]; dropped=0; client=plan['client']; own=None
-        try:
-            if client is None:
-                own=client=CodexAppServer(plan['cwd'],home=plan['home']); client.initialize()
-            cursor=None
-            for _ in range(CODEX_BACKFILL_PAGES):
-                params={'threadId':plan['key'],'sortDirection':'asc','limit':100}
-                if cursor: params['cursor']=cursor
-                page=client.request('thread/items/list',params)
-                items.extend(x for x in page.get('data') or [] if isinstance(x,dict))
-                if len(items)>SUBAGENT_MESSAGE_LIMIT:
-                    dropped+=len(items)-SUBAGENT_MESSAGE_LIMIT; items=items[-SUBAGENT_MESSAGE_LIMIT:]
-                cursor=page.get('nextCursor')
-                if not cursor: break
-        except Exception: items=None
-        finally:
-            if own is not None: own.close()
-        with LOCK: self.subagent_guard(self.codex_backfill_install,plan['key'],items,dropped)
-    def codex_backfill_install(self, key, items, dropped):
-        if items is None: self.codex_backfills[key]=time.monotonic()+CODEX_BACKFILL_RETRY; return
-        self.codex_backfills[key]=True
-        entry=self.codex_child(key)
-        # Live frames that filled the transcript meanwhile are newer than this read.
-        if entry is None or self.deleted or self.subagent_transcript(entry)['messages']: return
-        for record in items:
-            self.codex_item(record.get('item') or {},True,record.get('completedAtMs') or record.get('startedAtMs'),
-                            target=entry,turn_id=record.get('turnId'),history=True)
-        if dropped: self.subagent_transcript(entry)['truncated']+=dropped
-        self.subagent_write(key); self.touch()
-    def acp_request(self, method, params, kind):
-        self.acp_next_id += 1
-        request_id = self.acp_next_id
-        self.acp_pending[request_id] = kind
-        self.send({'jsonrpc':'2.0','id':request_id,'method':method,'params':params})
-        return request_id
-    def acp_notify(self, method, params):
-        self.send({'jsonrpc':'2.0','method':method,'params':params})
-    def acp_flush_prompt(self):
-        # session/prompt settles only when the whole turn does, so its response — not
-        # a separate event — is the turn's terminal signal.
-        if not self.pending_prompt: return
-        request_id, text = self.pending_prompt
-        self.pending_prompt = None
-        self.acp_request('session/prompt', {'sessionId':self.state['resume'],'prompt':[{'type':'text','text':text}]}, 'prompt:'+request_id)
-        receipt = self.state.get('requests',{}).get(request_id)
-        if receipt and receipt['status'] == 'submitting':
-            receipt['status'] = 'submitted'
-            if self.state.get('turnState') == 'submitting': self.state['turnState'] = 'submitted'
-    def acp_apply_options(self, options):
-        s = self.state
-        s['acpOptions'] = options
-        dsh_catalog_update(options)
-        model_option = next((o for o in options if o.get('id') == 'model'), None)
-        if model_option and model_option.get('currentValue'):
-            try:
-                provider, model = json.loads(model_option['currentValue'])
-                s['model'] = model; s['provider_id'] = provider
-            except Exception: pass
-        effort = next((o for o in options if o.get('id') == 'reasoning_effort'), None)
-        if effort is not None:
-            # The empty value is "provider default", which is a real choice, not an
-            # unknown level; keep it distinct from a named effort.
-            s['thinking'] = effort.get('currentValue') or None
-    def acp_event(self, frame):
-        # Fold the ACP wire shape into the per-provider event vocabulary event()
-        # already switches on. Unknown frames are dropped rather than failing the
-        # stream, because dsh is a preview runtime that may add message kinds.
-        if 'method' in frame and 'id' in frame:
-            return {'type':'acp_request','wireId':frame['id'],'method':frame['method'],'params':frame.get('params') or {}}
-        if 'method' in frame:
-            return {'type':'acp_notification','method':frame['method'],'params':frame.get('params') or {}}
-        if 'id' in frame:
-            kind = self.acp_pending.pop(frame['id'], 'unknown')
-            return {'type':'acp_response','kind':kind,'result':frame.get('result'),'error':frame.get('error')}
-        return None
-    def acp_fail_prompt(self, message):
-        self.pending_prompt = None
-        self.state['busy'] = False; self.state['error'] = message
-        self.finish('failed'); self.touch(True)
-    def acp_sync_config(self):
-        # Apply the workbench-side model/thinking wishes after (re)opening, then let
-        # the parked prompt go. Each step waits for the runtime's answer so a prompt
-        # never gets pinned to a route the user already replaced.
-        s = self.state
-        options = s.get('acpOptions') or []
-        model_option = next((o for o in options if o.get('id') == 'model'), None)
-        if s.get('model') and model_option and model_option.get('currentValue'):
-            try: current = json.loads(model_option['currentValue'])[1]
-            except Exception: current = None
-            if current and s['model'] != current:
-                target = None
-                for group in model_option.get('options', []):
-                    for item in group.get('options', []):
-                        try:
-                            if json.loads(item['value'])[1] == s['model']: target = target or item['value']
-                        except Exception: pass
-                if target:
-                    self.acp_request('session/set_config_option', {'sessionId':s['resume'],'configId':'model','value':target}, 'set_config')
-                    return
-                s['error'] = 'dsh 不认识模型 %s，沿用当前模型' % s['model']
-        effort = next((o for o in options if o.get('id') == 'reasoning_effort'), None)
-        if s.get('thinking') and effort is not None:
-            values = [o.get('value') for o in effort.get('options', [])]
-            if s['thinking'] != effort.get('currentValue') and s['thinking'] in values:
-                self.acp_request('session/set_config_option', {'sessionId':s['resume'],'configId':'reasoning_effort','value':s['thinking']}, 'set_config')
-                return
-        self.acp_flush_prompt()
-    def acp_update(self, update):
-        s = self.state
-        kind = update.get('sessionUpdate')
-        if s['busy'] and s.get('turnState') in ('submitting','submitted','accepted'):
-            self.finish('running')
-        if kind in ('agent_message_chunk', 'agent_thought_chunk'):
-            message_id = update.get('messageId') or 'live'
-            blocks = self.acp_blocks.setdefault(message_id, [])
-            content = update.get('content') or {}
-            if kind == 'agent_thought_chunk':
-                blocks.append({'type':'thinking','thinking':content.get('text','')})
-            elif content.get('type') == 'text':
-                blocks.append({'type':'text','text':content.get('text','')})
-            elif content.get('type') == 'resource_link':
-                blocks.append({'type':'text','text':'[%s](%s)' % (content.get('name') or content.get('uri') or '资源', content.get('uri') or '')})
-            else:
-                blocks.append({'type':'text','text':'[dsh 发出了暂不支持的内容类型 %s]' % content.get('type')})
-            self.upsert({'role':'assistant','content':list(blocks),'timestamp':time.time()}, 'dsh:'+message_id)
-            return True
-        if kind == 'tool_call':
-            self.upsert({'role':'assistant','content':[{'type':'toolCall','id':update.get('toolCallId'),'name':update.get('title') or 'tool','arguments':update.get('rawInput') if update.get('rawInput') is not None else {}}],'timestamp':time.time()}, 'dsh-tool:'+str(update.get('toolCallId')))
-            return True
-        if kind == 'tool_call_update':
-            texts = []
-            for part in update.get('content') or []:
-                body = part.get('content') or {}
-                if body.get('type') == 'text' and body.get('text'): texts.append(body['text'])
-            self.upsert({'role':'toolResult','toolCallId':update.get('toolCallId'),'content':'\n'.join(texts),'isError':update.get('status') == 'failed','timestamp':time.time()}, 'dsh-result:'+str(update.get('toolCallId')))
-            return True
-        if kind == 'usage_update':
-            s['context'] = {'tokens':update.get('used'),'limit':update.get('size')}
-            return True
-        if kind == 'config_option_update' and update.get('configOptions'):
-            self.acp_apply_options(update['configOptions'])
-            return True
-        return False
     def read(self):
         try:
             for line in self.process.stdout:
                 event = json.loads(line)
-                if self.state['provider'] == 'dsh': event = self.acp_event(event)
+                if self.state['provider'] == 'dsh': event = self.acp_adapter.event(event)
                 if event is None: continue
                 if event.get('type') == 'rpc_chunk':
                     if event['index'] == 0: self.chunks = {'id':event['chunkId'],'count':event['count'],'size':event['byteLength'],'parts':[]}
@@ -1643,7 +2020,7 @@ class Session:
                 if self.deleted: return
                 if self.state['busy']: self.state['error'] = self.state['error'] or '远端进程退出，任务未完成；可重新发送继续历史'
                 if self.state['busy']: self.finish('unknown')
-                self.state['busy'] = False; self.state['interactions'] = []; self.subagent_guard(self.subagent_settle); self.touch(True)
+                self.state['busy'] = False; self.state['interactions'] = []; self.subagents.guard(self.subagents.settle); self.touch(True)
     def upsert(self, message, identity):
         value = copy.deepcopy(normalize(message,identity))
         index = self.message_indices.get(identity)
@@ -1679,8 +2056,8 @@ class Session:
         self.touch(True)
         try:
             if s['provider']=='codex':
-                self.codex_ensure(True)
-                self.codex.request('turn/steer',{'threadId':s['resume'],'expectedTurnId':s['turnId'],
+                self.codex_adapter.ensure(True)
+                self.codex_adapter.client.request('turn/steer',{'threadId':s['resume'],'expectedTurnId':s['turnId'],
                                                  'input':[{'type':'text','text':text}],
                                                  'clientUserMessageId':request_id})
                 receipt['status']='accepted'
@@ -1696,7 +2073,7 @@ class Session:
         # They must not create main-session turns or replace its streaming tail, so
         # they go to that subagent's own transcript; child stream events are dropped.
         if provider == 'claude' and t in ('assistant', 'user', 'stream_event') and e.get('parent_tool_use_id'):
-            if t != 'stream_event': self.subagent_guard(self.subagent_message, e)
+            if t != 'stream_event': self.subagents.guard(self.subagents.message, e)
             return
         if t == 'ready':
             self.ready.set()
@@ -1747,7 +2124,7 @@ class Session:
             if e.get('isTerminal') is False: return
             if provider in ('qoder','qoderintl','claude') and s.get('stopAcknowledged'): s['cancelled']=True
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
-            if provider == 'claude': self.subagent_guard(self.subagent_settle)
+            if provider == 'claude': self.subagents.guard(self.subagents.settle)
             if not s.get('cancelled') and not s['error']: s['completed']+=1
             self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
             for receipt in s.get('requests',{}).values():
@@ -1799,7 +2176,7 @@ class Session:
                 # Approvals raised inside a subagent name it; one the roster cannot
                 # resolve yet keeps its agent id and is labelled once an event does.
                 agent=e.pop('agentId',None)
-                if agent: e['subagent']=subagent_label(agent,self.subagent_guard(self.subagent_resolve,agent,e.get('id')))
+                if agent: e['subagent']=subagent_label(agent,self.subagents.guard(self.subagents.resolve,agent,e.get('id')))
             if provider=='claude' and e.get('name')=='ExitPlanMode':
                 content=e.get('planContent', (e.get('input') or {}).get('plan'))
                 content=content if isinstance(content,str) else ''
@@ -1817,7 +2194,7 @@ class Session:
                 for part in message['content']:
                     if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
             self.upsert(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))
-            if provider == 'claude': self.subagent_guard(self.subagent_main, message)
+            if provider == 'claude': self.subagents.guard(self.subagents.main, message)
             if provider == 'claude' and t == 'assistant':
                 # Per-request usage of the latest main-loop reply: the live window
                 # fill. result.usage is the turn total summed across API requests and
@@ -1875,40 +2252,40 @@ class Session:
         elif provider == 'claude' and t == 'system' and e.get('subtype') in SUBAGENT_TASK_EVENTS:
             # background_tasks_changed is a level signal whose order against these
             # edges is unspecified, so it never decides a subagent's status.
-            finished=self.subagent_guard(self.subagent_task, e)
+            finished=self.subagents.guard(self.subagents.task, e)
             if finished is None: return
             durable=finished
         elif provider == 'claude' and t == 'task_stop_result':
-            if not self.subagent_guard(self.subagent_stop_result, e): return
+            if not self.subagents.guard(self.subagents.stop_result, e): return
             durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'initialize':
             if e.get('error'):
                 s['error']='dsh 握手失败：'+str(e['error'].get('message','initialize 被拒绝'))
-                if self.pending_prompt: self.acp_fail_prompt(str(e['error'].get('message','握手失败')))
+                if self.acp_adapter.pending_prompt: self.acp_adapter.fail_prompt(str(e['error'].get('message','握手失败')))
                 durable=True
             else:
                 if s.get('resume'):
-                    self.acp_request('session/resume', {'sessionId':s['resume'],'cwd':s['cwd']}, 'session_open')
+                    self.acp_adapter.request('session/resume', {'sessionId':s['resume'],'cwd':s['cwd']}, 'session_open')
                 else:
-                    self.acp_request('session/new', {'cwd':s['cwd'],'mcpServers':[]}, 'session_open')
+                    self.acp_adapter.request('session/new', {'cwd':s['cwd'],'mcpServers':[]}, 'session_open')
             return
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'session_open':
             if e.get('error'):
                 s['error']='dsh 会话打开失败：'+str(e['error'].get('message','未知错误'))
-                if self.pending_prompt: self.acp_fail_prompt(s['error'])
+                if self.acp_adapter.pending_prompt: self.acp_adapter.fail_prompt(s['error'])
             else:
                 result = e.get('result') or {}
                 if result.get('sessionId'): s['resume'] = result['sessionId']
-                self.acp_apply_options(result.get('configOptions') or [])
+                self.acp_adapter.apply_options(result.get('configOptions') or [])
                 self.ready.set()
-                self.acp_sync_config()
+                self.acp_adapter.sync_config()
             durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'] == 'set_config':
             if e.get('error'):
                 s['error']='dsh 设置被拒绝：'+str(e['error'].get('message','未知错误'))
             else:
-                self.acp_apply_options((e.get('result') or {}).get('configOptions') or [])
-                self.acp_sync_config()
+                self.acp_adapter.apply_options((e.get('result') or {}).get('configOptions') or [])
+                self.acp_adapter.sync_config()
             durable=True
         elif provider == 'dsh' and t == 'acp_response' and e['kind'].startswith('prompt:'):
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
@@ -1926,7 +2303,7 @@ class Session:
             self.finish('stopped' if s.get('cancelled') else 'failed' if s['error'] else 'completed')
         elif provider == 'dsh' and t == 'acp_notification' and e['method'] == 'session/update':
             if (e['params'].get('sessionId')) != s.get('resume'): return
-            durable = self.acp_update(e['params'].get('update') or {})
+            durable = self.acp_adapter.update(e['params'].get('update') or {})
             if not durable: return
         elif provider == 'dsh' and t == 'acp_request' and e['method'] == 'session/request_permission':
             if (e['params'].get('sessionId')) != s.get('resume'):
@@ -1939,7 +2316,7 @@ class Session:
                 if label in mapping: label = '%s (%d)' % (label, i+1)
                 mapping[label] = option.get('optionId'); labels.append(label)
             interaction_id = 'acp-permission-' + str(e['wireId'])
-            self.permission_options[interaction_id] = {'wireId':e['wireId'],'map':mapping}
+            self.acp_adapter.permission_options[interaction_id] = {'wireId':e['wireId'],'map':mapping}
             tool = e['params'].get('toolCall') or {}
             preview = None
             if tool.get('rawInput') is not None:
@@ -1991,7 +2368,7 @@ class Session:
             s=copy.deepcopy({k:v for k,v in self.state.items() if k not in ('requests','subagentRoster')})
             s['permission']=permission_capability(self.state)
             if s.get('partial'): s['messages'].append(normalize(s.pop('partial'),'live'))
-            s['subagents']=self.subagent_live()
+            s['subagents']=self.subagents.live()
             return s
         count = len(self.state['messages'])
         partial = normalize(self.state['partial'], 'live') if self.state.get('partial') else None
@@ -2022,366 +2399,9 @@ class Session:
         else: indices = range(first, end)
         s['messages'] = [copy.deepcopy(self.state['messages'][i]) if i < count else partial for i in indices]
         s['history'] = history
-        s['subagents'] = self.subagent_live()
+        s['subagents'] = self.subagents.live()
         return s
 
-    # Subagents: Claude tasks and Codex child threads. Roster entries live in
-    # state['subagentRoster'] and their changes touch() the session. Each transcript
-    # keeps its own epoch, revision and per-index versions, so a busy child leaves
-    # the main snapshot poll quiet.
-    def index_subagents(self):
-        self.subagent_entries = {}; self.subagent_aliases = {}
-        for entry in self.state.get('subagentRoster') or []:
-            self.subagent_entries[entry['id']] = entry
-            for alias in [entry['id'], entry.get('taskId')] + list(entry.get('toolUseIds') or []):
-                if alias: self.subagent_aliases.setdefault(alias, entry['id'])
-    def subagent_guard(self, action, *args):
-        # A child event of an unexpected shape must never stop the main stream.
-        try: return action(*args)
-        except Exception:
-            traceback.print_exc()
-            return None
-    def subagent_find(self, alias):
-        return self.subagent_entries.get(self.subagent_aliases.get(alias)) if alias else None
-    def subagent_resolve(self, agent_id, tool_use_id=None):
-        """The entry an approval came from: its agent id once that is an alias, or
-        the transcript that already holds the tool call being approved."""
-        entry = self.subagent_find(agent_id)
-        if entry is None and tool_use_id:
-            key = next((k for k, t in self.subagent_transcripts.items() if tool_use_id in t['tools']), None)
-            entry = self.subagent_entries.get(key)
-            if entry is not None and agent_id: self.subagent_aliases.setdefault(agent_id, entry['id'])
-        return entry
-    def subagent_relabel(self):
-        changed = False
-        for interaction in self.state['interactions']:
-            label = interaction.get('subagent')
-            if not isinstance(label, dict): continue
-            entry = (self.subagent_entries.get(label['id']) if label.get('id')
-                     else self.subagent_resolve(label.get('agentId'), interaction.get('id')))
-            fresh = subagent_label(label.get('agentId'), entry)
-            if fresh != label: interaction['subagent'] = fresh; changed = True
-        return changed
-    def subagent_named(self):
-        return {x['subagent']['id'] for x in self.state['interactions'] if isinstance(x.get('subagent'), dict) and x['subagent'].get('id')}
-    def subagent_adopt(self, entry, task_id=None, tool_use_id=None):
-        changed = False
-        if task_id and not entry['taskId']: entry['taskId'] = task_id; changed = True
-        if tool_use_id and tool_use_id not in entry['toolUseIds']: entry['toolUseIds'].append(tool_use_id); changed = True
-        for alias in (task_id, tool_use_id):
-            if alias: self.subagent_aliases.setdefault(alias, entry['id'])
-        return changed
-    def subagent_set(self, entry, **values):
-        # None means "not reported", which never erases what is already known.
-        changed = False
-        for key, value in values.items():
-            if value is not None and entry.get(key) != value: entry[key] = value; changed = True
-        return changed
-    def subagent_bump(self, entry):
-        # Entry changes also reach a client that follows the transcript.
-        entry['revision'] += 1; entry['updatedAt'] = iso_time()
-    def subagent_create(self, key, task_id=None, tool_use_id=None, kind='claude'):
-        now = iso_time()
-        entry = {'id':key, 'kind':kind, 'taskId':None, 'toolUseIds':[], 'turnId':self.state.get('turnId'),
-                 'description':None, 'subagentType':None, 'status':'running', 'background':None,
-                 'startedAt':now, 'updatedAt':now, 'endedAt':None, 'usage':None, 'lastToolName':None,
-                 'summary':None, 'error':None, 'canStop':False, 'stopRequested':False, 'stopError':None,
-                 'messageCount':0, 'revision':0}
-        self.state.setdefault('subagentRoster', []).append(entry)
-        self.subagent_entries[key] = entry; self.subagent_aliases[key] = key
-        self.subagent_adopt(entry, task_id, tool_use_id)
-        self.subagent_set(entry, **(self.subagent_calls.get(tool_use_id) or {}))
-        self.subagent_transcripts[key] = subagent_transcript_state()
-        self.subagent_prune()
-        return entry
-    def subagent_finish(self, entry, status, ended=None):
-        entry['status'] = status; entry['endedAt'] = ended or iso_time()
-        self.subagent_bump(entry); self.subagent_write(entry['id']); self.subagent_keep(entry)
-    def subagent_prune(self):
-        roster = self.state.get('subagentRoster') or []
-        excess = len(roster) - SUBAGENT_ROSTER_LIMIT
-        if excess <= 0: return
-        # Only finished entries go, oldest first, never one a pending approval names.
-        named = self.subagent_named()
-        finished = sorted((x for x in roster if x['status'] not in SUBAGENT_LIVE and x['id'] not in named), key=lambda x: x['startedAt'])
-        gone = {x['id'] for x in finished[:excess]}
-        if not gone: return
-        self.state['subagentRoster'] = [x for x in roster if x['id'] not in gone]
-        self.subagent_aliases = {alias:key for alias, key in self.subagent_aliases.items() if key not in gone}
-        for key in gone:
-            self.subagent_entries.pop(key, None); self.subagent_transcripts.pop(key, None); self.subagent_dirty.discard(key)
-            self.subagent_recent.pop(key, None); self.subagent_written.pop(key, None)
-            try: self.subagent_path(key).unlink(missing_ok=True)
-            except OSError: pass
-    def subagent_view(self, entry):
-        view = {key:entry.get(key) for key in SUBAGENT_KEYS}
-        view['toolUseIds'] = list(entry.get('toolUseIds') or [])
-        view['usage'] = dict(entry['usage']) if isinstance(entry.get('usage'), dict) else None
-        view['stopRequested'] = bool(entry.get('stopRequested'))
-        if entry.get('kind') == 'codex':
-            # A Codex child's turnId is its own running turn, which turn/interrupt
-            # names; the child may outlive the main turn.
-            view['canStop'] = entry.get('status') == 'running' and bool(entry.get('turnId'))
-        else:
-            view['canStop'] = (entry.get('kind') == 'claude' and entry.get('status') in SUBAGENT_LIVE and bool(entry.get('taskId'))
-                               and bool(self.state.get('busy')) and bool(self.state.get('turnId')))
-        return view
-    def subagent_live(self):
-        roster = self.state.get('subagentRoster') or []
-        if not roster: return []
-        named = self.subagent_named(); turn = self.state.get('turnId'); ranked = []
-        for position, entry in enumerate(roster):
-            # A Codex child's turnId is its own; parentTurnId is the main turn it belongs to.
-            owner = entry.get('parentTurnId') if entry.get('kind') == 'codex' else entry.get('turnId')
-            rank = (0 if entry.get('id') in named else 1 if entry.get('status') in SUBAGENT_LIVE
-                    else 2 if turn and owner == turn else None)
-            if rank is not None: ranked.append((rank, entry.get('startedAt') or '', position, entry))
-        # Over the cap, approvals and running children win over finished ones and
-        # newer over older; the list itself reads in start order.
-        ranked.sort(key=lambda x: (x[1], x[2]), reverse=True)
-        ranked.sort(key=lambda x: x[0])
-        return [self.subagent_view(x[3]) for x in sorted(ranked[:SUBAGENT_SNAPSHOT_LIMIT], key=lambda x: (x[1], x[2]))]
-    def subagent_path(self, key):
-        return ROOT / 'subagents' / self.state['id'] / subagent_filename(key)
-    def subagent_transcript(self, entry):
-        key = entry['id']; transcript = self.subagent_transcripts.get(key)
-        if transcript is None:
-            revision = 0; flushed = self.subagent_written.pop(key, None)
-            try:
-                data = json.loads(self.subagent_path(key).read_text())
-                versions = {int(k):int(v) for k, v in (data.get('versions') or {}).items()}
-                transcript = subagent_transcript_state(data['messages'], int(data.get('truncated') or 0), versions)
-                revision = int(data.get('revision') or 0)
-                # This service wrote the whole transcript before evicting it, so its
-                # positions still hold. A file from an earlier service can lag what a
-                # client already read; it restarts under a new epoch, as main history does.
-                if flushed is not None and data.get('epoch') == flushed: transcript['epoch'] = flushed
-            except Exception: transcript = subagent_transcript_state()
-            entry['revision'] = max(entry['revision'], revision); entry['messageCount'] = len(transcript['messages'])
-            self.subagent_transcripts[key] = transcript
-        self.subagent_keep(entry)
-        return transcript
-    def subagent_keep(self, entry):
-        """Live transcripts stay in memory; finished ones share a small LRU."""
-        key = entry['id']; self.subagent_recent.pop(key, None)
-        if entry['status'] in SUBAGENT_LIVE or key not in self.subagent_transcripts: return
-        self.subagent_recent[key] = None
-        for old in list(self.subagent_recent)[:-SUBAGENT_RECENT_LIMIT]: self.subagent_evict(old)
-    def subagent_evict(self, key):
-        # A transcript leaves memory only once its file holds all of it; while a
-        # write fails it stays loaded.
-        if (key in self.subagent_dirty or not self.subagent_path(key).exists()) and not self.subagent_write(key): return
-        transcript = self.subagent_transcripts.pop(key, None); self.subagent_recent.pop(key, None)
-        if transcript is not None: self.subagent_written[key] = transcript['epoch']
-    def subagent_append(self, entry, value):
-        transcript = self.subagent_transcript(entry)
-        index = transcript['index'].get(value['id']); size = json_size(value)
-        if index is None:
-            index = len(transcript['messages']); transcript['index'][value['id']] = index
-            transcript['messages'].append(value); transcript['sizes'].append(size); transcript['bytes'] += size
-        elif transcript['messages'][index] == value: return False
-        else:
-            transcript['bytes'] += size - transcript['sizes'][index]
-            transcript['messages'][index] = value; transcript['sizes'][index] = size
-        entry['revision'] += 1; transcript['versions'][index] = entry['revision']
-        transcript['tools'].update(p['tool_call_id'] for p in value['content'] if p.get('type') == 'tool_use')
-        self.subagent_trim(transcript)
-        entry['messageCount'] = len(transcript['messages']); entry['updatedAt'] = iso_time()
-        self.subagent_mark(entry['id'])
-        return True
-    def subagent_trim(self, transcript):
-        messages = transcript['messages']; sizes = transcript['sizes']
-        if len(messages) <= SUBAGENT_MESSAGE_LIMIT and transcript['bytes'] <= SUBAGENT_BYTE_LIMIT: return
-        drop = max(0, len(messages) - SUBAGENT_MESSAGE_LIMIT * 3 // 4); kept = transcript['bytes'] - sum(sizes[:drop])
-        while drop < len(messages) - 1 and kept > SUBAGENT_BYTE_LIMIT * 3 // 4:
-            kept -= sizes[drop]; drop += 1
-        if not drop: return
-        # Every position moves, so the transcript starts a new epoch.
-        messages = messages[drop:]
-        transcript.update(epoch=uuid.uuid4().hex, truncated=transcript['truncated'] + drop, messages=messages,
-                          sizes=sizes[drop:], bytes=kept, versions={}, index={m['id']:i for i, m in enumerate(messages)},
-                          tools={p.get('tool_call_id') for m in messages for p in m['content'] if p.get('type') == 'tool_use'})
-    def subagent_mark(self, key):
-        # A busy transcript is written about every two seconds; a finished entry
-        # and the end of the turn write at once.
-        self.subagent_dirty.add(key)
-        if self.subagent_timer is None and not self.deleted:
-            self.subagent_timer = threading.Timer(SUBAGENT_SAVE_DELAY, self.subagent_timer_fired)
-            self.subagent_timer.daemon = True; self.subagent_timer.start()
-    def subagent_timer_fired(self):
-        with LOCK:
-            self.subagent_timer = None; self.subagent_flush()
-    def subagent_flush(self):
-        for key in list(self.subagent_dirty): self.subagent_write(key)
-    def subagent_write(self, key):
-        entry = self.subagent_entries.get(key); transcript = self.subagent_transcripts.get(key)
-        if self.deleted or entry is None or transcript is None: self.subagent_dirty.discard(key); return False
-        try:
-            folder = ROOT / 'subagents' / self.state['id']
-            folder.parent.mkdir(exist_ok=True); folder.mkdir(exist_ok=True)
-            save(folder / subagent_filename(key), {'epoch':transcript['epoch'], 'revision':entry['revision'],
-                 'truncated':transcript['truncated'], 'messages':transcript['messages'], 'versions':transcript['versions']})
-        except (OSError, ValueError): return False  # stays dirty; the next change or turn end retries
-        self.subagent_dirty.discard(key)
-        return True
-    def subagent_discard(self):
-        if self.subagent_timer is not None: self.subagent_timer.cancel(); self.subagent_timer = None
-        self.subagent_dirty.clear(); self.subagent_transcripts.clear(); self.subagent_recent.clear(); self.subagent_written.clear()
-        shutil.rmtree(ROOT / 'subagents' / self.state['id'], ignore_errors=True)
-    def subagent_recover(self):
-        """At service start the worker of a queued or running child is gone with the
-        previous service, and a transcript no roster entry names is an orphan."""
-        roster = self.state.get('subagentRoster') or []
-        for entry in roster:
-            if entry.get('status') in SUBAGENT_LIVE:
-                entry.update(status='unknown', endedAt=entry.get('endedAt') or entry.get('updatedAt'), revision=entry.get('revision', 0) + 1)
-        folder = ROOT / 'subagents' / self.state['id']
-        if not folder.is_dir(): return
-        keep = {subagent_filename(x['id']) for x in roster}
-        for child in folder.iterdir():
-            if child.name in keep: continue
-            try: shutil.rmtree(child) if child.is_dir() and not child.is_symlink() else child.unlink()
-            except OSError: pass
-    def subagent_message(self, e):
-        message = e.get('message'); parent = e.get('parent_tool_use_id')
-        if not isinstance(message, dict) or not isinstance(parent, str): return
-        entry = self.subagent_find(parent); created = entry is None
-        if created: entry = self.subagent_create(parent, tool_use_id=parent)
-        if e.get('type') == 'user' and e.get('isSynthetic'):
-            message = copy.deepcopy(message)
-            message['content'] = text_parts(message.get('content'))
-            for part in message['content']:
-                if part.get('type') == 'text': part['source'] = {'kind':'runtime_context','provider':'claude'}
-        for part in text_parts(message.get('content')):
-            # A nested spawn describes the grandchild its own messages create.
-            if isinstance(part, dict) and part.get('type') == 'tool_use' and part.get('name') in SUBAGENT_TOOLS and part.get('id'):
-                self.subagent_calls[part['id']] = subagent_call(part.get('input'))
-        value = clip_subagent_message(copy.deepcopy(normalize(message, e.get('uuid') or message.get('id') or str(uuid.uuid4()))))
-        appended = self.subagent_append(entry, value)
-        labelled = appended and any(isinstance(x.get('subagent'), dict) for x in self.state['interactions']) and self.subagent_relabel()
-        if created or labelled: self.touch()
-    def subagent_main(self, message):
-        """Main-thread Agent/Task calls describe the entries their child messages
-        create; a call's tool_result ends its entry only when no task event ever
-        reported on it, because a background child's result arrives while it runs."""
-        changed = False
-        for part in text_parts(message.get('content')):
-            if not isinstance(part, dict): continue
-            if part.get('type') == 'tool_use' and part.get('name') in SUBAGENT_TOOLS and part.get('id'):
-                call = self.subagent_calls[part['id']] = subagent_call(part.get('input'))
-                entry = self.subagent_find(part['id'])
-                if entry and self.subagent_set(entry, **{k:v for k, v in call.items() if entry.get(k) is None}):
-                    self.subagent_bump(entry); changed = True
-            elif part.get('type') == 'tool_result':
-                entry = self.subagent_find(part.get('tool_use_id'))
-                if entry and not entry['taskId'] and entry['status'] in SUBAGENT_LIVE:
-                    text = clip_chars(tool_result_text(part.get('content')), 600); failed = part.get('is_error') is True
-                    self.subagent_set(entry, error=text if failed else None, summary=None if failed else text)
-                    self.subagent_finish(entry, 'failed' if failed else 'completed'); changed = True
-        if changed: self.subagent_relabel()
-    def subagent_task(self, e):
-        """Apply one task_* event. None when nothing changed, else whether the entry
-        has just finished."""
-        kind = e.get('subtype'); task_id = e.get('task_id'); task_type = e.get('task_type')
-        tool = e.get('tool_use_id') if isinstance(e.get('tool_use_id'), str) and e.get('tool_use_id') else None
-        if not isinstance(task_id, str) or not task_id or task_id in self.subagent_ignored: return None
-        # Subagents only: other task kinds, housekeeping and hidden tasks stay out.
-        if e.get('ambient') or e.get('skip_transcript') or (task_type and task_type != 'local_agent'):
-            self.subagent_ignored.add(task_id); return None
-        entry = self.subagent_find(task_id) or self.subagent_find(tool)
-        if entry is None:
-            if not task_type and tool not in self.subagent_calls:
-                if kind == 'task_started': self.subagent_ignored.add(task_id)
-                return None
-            entry = self.subagent_create(task_id, task_id, tool); changed = True
-        else: changed = self.subagent_adopt(entry, task_id, tool)
-        live = entry['status'] in SUBAGENT_LIVE; finished = False
-        if kind == 'task_notification':
-            status = e.get('status') if e.get('status') in ('completed', 'failed', 'stopped') else None
-            changed |= self.subagent_set(entry, status=status, summary=clip_chars(e.get('summary'), 600), usage=subagent_usage(e.get('usage')),
-                                         endedAt=(entry['endedAt'] or iso_time()) if status else None)
-            finished = live and status is not None
-        elif not live: pass  # A finished entry never revives from a late event.
-        elif kind == 'task_started':
-            kind_name = e.get('subagent_type'); background = e.get('is_backgrounded')
-            changed |= self.subagent_set(entry, status='running',
-                                         description=subagent_call({'description':e.get('description'), 'prompt':e.get('prompt')})['description'],
-                                         subagentType=kind_name if isinstance(kind_name, str) and kind_name else None,
-                                         background=background if isinstance(background, bool) else None)
-        elif kind == 'task_progress':
-            kind_name = e.get('subagent_type'); tool_name = e.get('last_tool_name')
-            changed |= self.subagent_set(entry, description=clip_chars(e.get('description'), 200),
-                                         subagentType=kind_name if isinstance(kind_name, str) and kind_name else None,
-                                         usage=subagent_usage(e.get('usage')), summary=clip_chars(e.get('summary'), 600),
-                                         lastToolName=tool_name if isinstance(tool_name, str) and tool_name else None)
-        else:
-            patch = e.get('patch') if isinstance(e.get('patch'), dict) else {}
-            status = SUBAGENT_PATCH_STATUS.get(patch.get('status')); ended = patch.get('end_time'); background = patch.get('is_backgrounded')
-            finished = status is not None and status not in SUBAGENT_LIVE
-            if finished: ended = iso_time(ended / 1000 if ended > 1e11 else ended) if isinstance(ended, (int, float)) and not isinstance(ended, bool) and 0 < ended < 1e14 else iso_time()
-            changed |= self.subagent_set(entry, status=status, description=clip_chars(patch.get('description'), 200),
-                                         error=clip_chars(patch.get('error'), 600), endedAt=ended if finished else None,
-                                         background=background if isinstance(background, bool) else None)
-        if not changed: return None
-        self.subagent_bump(entry)
-        if finished: self.subagent_write(entry['id']); self.subagent_keep(entry)
-        self.subagent_relabel()
-        return finished
-    def subagent_stop_result(self, e):
-        entry = self.subagent_find(e.get('taskId'))
-        if entry is None or entry['status'] not in SUBAGENT_LIVE: return False
-        if e.get('ok') is True:
-            if entry['stopError'] is None: return False
-            entry['stopError'] = None
-        else:
-            entry['stopRequested'] = False
-            entry['stopError'] = clip_chars(str(e.get('error') or ''), 600) or '停止子 Agent 失败'
-        self.subagent_bump(entry)
-        return True
-    def subagent_settle(self, status=None):
-        # The turn is over, so a child its worker never reported on did not end on
-        # its own terms: stopped when the turn was cancelled, otherwise unknown.
-        status = status or ('stopped' if self.state.get('cancelled') or self.state.get('stopAcknowledged') else 'unknown')
-        settled = [x for x in self.state.get('subagentRoster') or [] if x['status'] in SUBAGENT_LIVE]
-        for entry in settled: entry['status'] = status; entry['endedAt'] = iso_time(); self.subagent_bump(entry)
-        self.subagent_flush()
-        for entry in settled: self.subagent_keep(entry)
-    def subagent_stop(self, key):
-        entry = self.subagent_find(key)
-        if entry is None: raise SubagentNotFound('未找到该子 Agent')
-        if not self.subagent_view(entry)['canStop']: raise ValueError('该子 Agent 当前无法单独停止')
-        if entry['stopRequested']: return
-        if entry.get('kind') == 'codex':
-            # A v2 child accepts turn/interrupt (unlike turn/start and turn/steer); the
-            # child's turn/completed then reports it stopped.
-            if not self.codex or self.codex.process.poll() is not None: raise ValueError('Codex app-server 已退出，无法停止子 Agent')
-            self.codex.request('turn/interrupt', {'threadId':entry['id'], 'turnId':entry['turnId']})
-        else:
-            self.send({'type':'stop_task', 'taskId':entry['taskId'], 'turnId':self.state['turnId']})
-        entry['stopRequested'] = True; entry['stopError'] = None
-        self.subagent_bump(entry); self.touch(True)
-    def subagent_page(self, key, epoch=None, revision=None, before=None, limit=None):
-        entry = self.subagent_find(key)
-        if entry is None: raise SubagentNotFound('未找到该子 Agent')
-        transcript = self.subagent_transcript(entry); messages = transcript['messages']; count = len(messages)
-        current = epoch == transcript['epoch']
-        if before is None and revision is not None and current and int(revision) == entry['revision']: return {'unchanged':True}
-        page = {'entry':self.subagent_view(entry), 'epoch':transcript['epoch'], 'revision':entry['revision'],
-                'total':count, 'truncated':transcript['truncated']}
-        if before is not None:
-            if not current: raise ValueError('History changed; reopen the conversation')
-            size = int(limit) if limit is not None else 100
-            if not 1 <= size <= SUBAGENT_WINDOW: raise ValueError('Invalid history page size')
-            end = int(before)
-            if not 0 <= end <= count: raise ValueError('Invalid history cursor')
-            first = max(0, end - size)
-            return page | {'start':first, 'messages':copy.deepcopy(messages[first:end])}
-        if revision is not None and current and 0 <= int(revision) < entry['revision']:
-            since = int(revision)
-            indices = sorted(i for i, version in transcript['versions'].items() if version > since and i < count)
-            return page | {'changes':[{'index':i, 'message':copy.deepcopy(messages[i])} for i in indices]}
-        first = max(0, count - SUBAGENT_WINDOW)
-        return page | {'start':first, 'messages':copy.deepcopy(messages[first:])}
 
 def load():
     for path in (ROOT/'sessions').glob('*.json'):
@@ -2394,7 +2414,7 @@ def load():
         if s.get('turnState') in ('submitting','submitted','accepted','running'): restored.finish('unknown')
         if isinstance(s.get('commandResult'),dict) and s['commandResult'].get('status')=='running':
             s['commandResult'].update(status='unknown',error='服务曾中断，命令结果未知')
-        restored.subagent_recover()
+        restored.subagents.recover()
         restored.persist()
     # Transcript folders of sessions that no longer exist are orphans.
     folder=ROOT/'subagents'
@@ -2447,8 +2467,8 @@ class Handler(BaseHTTPRequestHandler):
                 # A Codex child's own history is read from the runtime outside the lock.
                 with LOCK:
                     target=SESSIONS.get(path[2])
-                    backfill=target.subagent_guard(target.codex_backfill_plan,unquote(path[4])) if target is not None else None
-                if backfill: target.codex_backfill(backfill)
+                    backfill=target.subagents.guard(target.codex_adapter.backfill_plan,unquote(path[4])) if target is not None else None
+                if backfill: target.codex_adapter.backfill(backfill)
             with LOCK:
                 if self.path=='/health':
                     result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid()}
@@ -2472,13 +2492,13 @@ class Handler(BaseHTTPRequestHandler):
                     SESSIONS[sid]=s
                     if body['provider']=='codex':
                         s.state['codexHome']=selected_home
-                        try: s.codex_start_thread()
+                        try: s.codex_adapter.start_thread()
                         except Exception:
                             s.deleted=True
-                            if s.codex and s.state.get('resume'):
-                                try: s.codex.request('thread/delete',{'threadId':s.state['resume']})
+                            if s.codex_adapter.client and s.state.get('resume'):
+                                try: s.codex_adapter.client.request('thread/delete',{'threadId':s.state['resume']})
                                 except Exception: pass
-                            if s.codex: s.codex.close()
+                            if s.codex_adapter.client: s.codex_adapter.client.close()
                             for key,value in list(SESSIONS.items()):
                                 if value is s: del SESSIONS[key]
                             if s.path.exists(): s.path.unlink()
@@ -2497,14 +2517,14 @@ class Handler(BaseHTTPRequestHandler):
                         result=copy.deepcopy(s.state.get('requests',{}).get(path[4],{'id':path[4],'status':'notFound'}))
                     elif not post and len(path)==5 and path[3]=='subagents':
                         query=parse_qs(urlparse(self.path).query)
-                        result=s.subagent_page(unquote(path[4]),**{k:query[k][0] for k in ('epoch','revision','before','limit') if k in query})
+                        result=s.subagents.page(unquote(path[4]),**{k:query[k][0] for k in ('epoch','revision','before','limit') if k in query})
                     elif not post:
                         query=parse_qs(urlparse(self.path).query)
                         result=s.snapshot(**{k:query[k][0] for k in ('revision','turns','start','epoch','before') if k in query})
                     else:
                         action=path[3]
                         if action=='subagents' and len(path)==6 and path[5]=='stop':
-                            s.subagent_stop(unquote(path[4]))
+                            s.subagents.stop(unquote(path[4]))
                         elif action=='prompt':
                             result=s.prompt(body)
                         elif action=='steer':
@@ -2533,7 +2553,7 @@ class Handler(BaseHTTPRequestHandler):
                                 target = next((item['value'] for group in model_option.get('options',[]) for item in group.get('options',[]) if item.get('value')==json.dumps([provider,model],separators=(',',':')) or item.get('value')==json.dumps([provider,model])), None)
                                 if target is None: raise ValueError('dsh 不认识该模型，请同步后重试')
                                 if s.process and s.process.poll() is None and s.ready.is_set():
-                                    s.acp_request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'model','value':target}, 'set_config')
+                                    s.acp_adapter.request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'model','value':target}, 'set_config')
                                 else:
                                     # Applied by acp_sync_config on the next handshake.
                                     s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
@@ -2569,7 +2589,7 @@ class Handler(BaseHTTPRequestHandler):
                                 values = [o.get('value') for o in effort.get('options',[])]
                                 if values and level not in values: raise ValueError('当前模型不支持该思考强度')
                                 if s.process and s.process.poll() is None and s.ready.is_set():
-                                    s.acp_request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'reasoning_effort','value':level}, 'set_config')
+                                    s.acp_adapter.request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'reasoning_effort','value':level}, 'set_config')
                                 else:
                                     s.state['thinking']=level; s.touch(True)
                                 result={'ok':True}
@@ -2601,15 +2621,15 @@ class Handler(BaseHTTPRequestHandler):
                             if not body.get('turnId') or body['turnId']!=s.state.get('turnId'): raise ValueError('轮次已变化，请重新同步')
                             if s.state['busy'] and not s.state.get('stopRequested'):
                                 if s.state['provider']=='codex':
-                                    s.codex_ensure(True).request('turn/interrupt',{'threadId':s.state['resume'],'turnId':body['turnId']})
+                                    s.codex_adapter.ensure(True).request('turn/interrupt',{'threadId':s.state['resume'],'turnId':body['turnId']})
                                 elif s.state['provider']=='dsh':
-                                    if s.pending_prompt is not None:
+                                    if s.acp_adapter.pending_prompt is not None:
                                         # The prompt never reached the runtime, so the
                                         # stop settles locally instead of on the wire.
-                                        s.pending_prompt=None; s.state['cancelled']=True; s.state['busy']=False
+                                        s.acp_adapter.pending_prompt=None; s.state['cancelled']=True; s.state['busy']=False
                                         s.finish('stopped')
                                     elif s.state.get('resume'):
-                                        s.acp_notify('session/cancel', {'sessionId':s.state['resume']})
+                                        s.acp_adapter.notify('session/cancel', {'sessionId':s.state['resume']})
                                     else: raise ValueError('会话尚未完成握手，请稍候')
                                 else:
                                     s.send({'type':'abort','turnId':body['turnId']})
@@ -2621,7 +2641,7 @@ class Handler(BaseHTTPRequestHandler):
                                 item=next(x for x in s.snapshot()['interactions'] if x['id']==body['id'])
                                 if item.get('planReview'): raise PlanReviewConflict('请更新客户端并查看计划后审批')
                                 if s.state['provider']=='codex':
-                                    s.codex_answer(body['id'],body)
+                                    s.codex_adapter.answer(body['id'],body)
                                 elif s.state['provider']=='omp':
                                     answer={'type':'extension_ui_response','id':body['id']}
                                     if body.get('cancelled'): answer['cancelled']=True
@@ -2629,7 +2649,7 @@ class Handler(BaseHTTPRequestHandler):
                                     else: answer['value']=body['value']
                                     s.send(answer)
                                 elif s.state['provider']=='dsh':
-                                    pending = s.permission_options.get(body['id'])
+                                    pending = s.acp_adapter.permission_options.get(body['id'])
                                     if not pending: raise ValueError('该审批已失效，请同步会话后重试')
                                     if body.get('cancelled'):
                                         outcome = {'outcome':'cancelled'}
@@ -2640,7 +2660,7 @@ class Handler(BaseHTTPRequestHandler):
                                     # Pop only after the answer is accepted on the wire; a
                                     # rejected choice must not destroy the mapping.
                                     s.send({'jsonrpc':'2.0','id':pending['wireId'],'result':{'outcome':outcome}})
-                                    s.permission_options.pop(body['id'], None)
+                                    s.acp_adapter.permission_options.pop(body['id'], None)
                                 else:
                                     s.send({'type':'answer',**body})
                                 if s.state['provider']!='codex':
@@ -2649,18 +2669,18 @@ class Handler(BaseHTTPRequestHandler):
                             if s.state['busy']: raise ValueError('请先停止或完成任务')
                             if s.state['provider']=='codex':
                                 method='thread/archive' if body['archived'] else 'thread/unarchive'
-                                s.codex_ensure(False).request(method,{'threadId':s.state['resume']})
+                                s.codex_adapter.ensure(False).request(method,{'threadId':s.state['resume']})
                             s.state['archived']=body['archived']; s.touch(True)
                         elif action=='delete':
                             if s.state['busy']: raise ValueError('请先停止或完成任务')
                             if s.state['provider']=='codex':
-                                s.codex_ensure(False).request('thread/delete',{'threadId':s.state['resume']})
+                                s.codex_adapter.ensure(False).request('thread/delete',{'threadId':s.state['resume']})
                             s.deleted = True
-                            if s.codex: s.codex.close()
+                            if s.codex_adapter.client: s.codex_adapter.client.close()
                             if s.process and s.process.poll() is None: s.process.stdin.close()
                             s.path.unlink(missing_ok=True); del SESSIONS[s.state['id']]
                             shutil.rmtree(ROOT/'attachments'/s.state['id'], ignore_errors=True)
-                            s.subagent_discard()
+                            s.subagents.discard()
                         else: raise ValueError('未知操作')
                         if action not in ('prompt','steer','permission'): result={'ok':True}
                 else: raise ValueError('未知路径')
