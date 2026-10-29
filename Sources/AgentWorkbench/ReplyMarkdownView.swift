@@ -173,6 +173,18 @@ enum UserMessageStyle {
     static var foldThreshold: CGFloat { lineHeight * 11 }
     static let horizontalPadding: CGFloat = 16
     static let verticalPadding: CGFloat = 10
+    /// TextKit puts a line's extra leading above its glyphs, so text at the
+    /// reading line height sits low in its line box. A bubble raises its text
+    /// until capitals and ideographs sit midway between its edges, in whole
+    /// points; the bubble's height stays two `verticalPadding`s plus the text.
+    static var textLift: CGFloat {
+        let font = NSFont.systemFont(ofSize: ReplyStyle.bodySize)
+        let natural = ceil(font.ascender - font.descender + font.leading)
+        let baseline = ceil(font.ascender) + max(0, lineHeight - natural)
+        return min(verticalPadding, max(0, baseline - font.capHeight / 2 - lineHeight / 2).rounded())
+    }
+    static var topPadding: CGFloat { verticalPadding - textLift }
+    static var bottomPadding: CGFloat { verticalPadding + textLift }
     static let cornerRadius: CGFloat = 18
     static let maxWidthRatio: CGFloat = 0.85
     static let topSpacing: CGFloat = 8
@@ -1104,7 +1116,7 @@ final class NativeUserMessageView: NSView {
         let natural = layout.sizes.reduce(CGFloat.zero) { $0 + $1.height } + CGFloat(max(0, layout.sizes.count - 1)) * UserMessageStyle.paragraphSpacing
         let folds = natural > UserMessageStyle.foldThreshold
         let visible = folds && !expanded ? UserMessageStyle.collapsedHeight : natural
-        promptClip.frame = CGRect(x: x, y: UserMessageStyle.topSpacing + UserMessageStyle.verticalPadding,
+        promptClip.frame = CGRect(x: x, y: UserMessageStyle.topSpacing + UserMessageStyle.topPadding,
                                   width: layout.bubbleWidth, height: visible)
         expandButton.isHidden = !folds
         if folds {

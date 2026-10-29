@@ -29,9 +29,22 @@ The optional `WORKBENCH_LIVE_HOST` variable is removed from the suite environmen
   work, not hardware input latency or FPS.
 
 The `Functional checks` workflow runs these suites on PRs and main, alongside the
-existing publication checks, and retains logs/results for seven days. The Mac job
-uses GitHub's [Xcode 27 preview image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)
-to match the local Swift 6.4 build. Its hosted GUI execution must be confirmed by
+existing publication checks, and retains logs/results for seven days. One native
+job builds and packages the app and Swift build tree once. Core, host lifecycle,
+and navigation restore that artifact in parallel on separate macOS runners.
+Native acceptance starts immediately because its fixture uses different compile
+flags; it restores the shared dependency cache instead of the app artifact.
+All groups execute the same checks as the full local suite.
+A summary job named `Native build and interaction regression` fails if any group
+fails and publishes the combined `macos-results` evidence. Group reports retain
+individual and total durations. No test is skipped by this split.
+
+For a targeted local run, add `--group build`, `--group core`, `--group host`,
+`--group native`, or `--group navigation` to the macOS command. Use separate GUI
+sessions when running these groups concurrently. Do not open multiple interactive
+fixture suites in one desktop session. The runners use GitHub's
+[Xcode 27 preview image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)
+to match the local Swift 6.4 build. Hosted GUI execution must be confirmed by
 an actual workflow run; local equivalence alone does not establish hosted success.
 `.github/actionlint.yaml` recognizes that official label until actionlint's built-in
 runner list catches up. The label does not imply a self-hosted machine.
