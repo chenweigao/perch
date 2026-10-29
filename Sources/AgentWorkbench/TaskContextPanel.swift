@@ -253,16 +253,22 @@ struct TaskContextView: View {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", count: value.files.count)
                 ForEach(allFiles ? value.files : Array(value.files.prefix(4))) { file in
+                    let missing = model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.path)
                     Button {
                         model.openWorkspaceFile(GroupOutcome(title: file.name, link: file.path, source: item.reference))
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "doc.text").foregroundStyle(WorkbenchTheme.quiet)
                             Text(file.name).lineLimit(1).truncationMode(.middle)
+                                .foregroundStyle(missing ? WorkbenchTheme.quiet : .primary)
                             Spacer(minLength: 4)
-                            if file.written { Text("本轮更新").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet) }
+                            if missing {
+                                Text("已删除").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+                            } else if file.written { Text("本轮更新").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet) }
                         }.frame(minHeight: 36).contentShape(Rectangle())
-                    }.buttonStyle(TaskContextRowStyle()).help(file.path).disabled(!item.online)
+                    }.buttonStyle(TaskContextRowStyle())
+                        .help(missing ? "\(file.path)（文件已不在会话主机上）" : file.path)
+                        .disabled(!item.online || missing)
                 }
                 if value.files.count > 4 { Button(allFiles ? "收起" : "查看全部文件") { allFiles.toggle() }.font(.system(size: WorkbenchTheme.Typography.body)) }
             }

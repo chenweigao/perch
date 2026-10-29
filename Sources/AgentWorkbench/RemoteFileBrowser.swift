@@ -73,6 +73,9 @@ final class RemoteFileBrowser {
     let documents = FileWorkspaceState()
     let reading = DocumentReadingState()
     private(set) var fileRequest: FileReadRequest? { get { reads.fileRequest } set { reads.fileRequest = newValue } }
+    /// Reports what a completed read proved about the path (missing vs present).
+    /// Only reads the user already triggered publish here; nothing is statted eagerly.
+    var onFileAvailability: ((String, Bool) -> Void)?
     private(set) var completedFileReadID: UUID?
     private(set) var previewData: Data?
     private(set) var readLimit = RemoteFileCommand.readLimit
@@ -168,6 +171,11 @@ final class RemoteFileBrowser {
                 documents.resolveVisit(actual, to: paths[0]); open(paths[0], line: targetLine, source: request.source); return
             }
             content = value
+            switch value {
+            case .missing: onFileAvailability?(actual, false)
+            case .text, .binary, .directory, .denied: onFileAvailability?(actual, true)
+            default: break
+            }
             modifiedAt = RemoteFileCommand.modifiedAt(in: data)
             switch value {
             case .text, .binary:

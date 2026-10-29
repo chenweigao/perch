@@ -147,6 +147,27 @@ final class WorkbenchModel {
     let changesBrowser = RemoteFileBrowser(workingTreeOnly: true)
     /// File navigation in the inspector must not replace a detached reader's tabs.
     let inspectorFiles = RemoteFileBrowser()
+    /// Artifact availability learned only from reads the user already triggered;
+    /// the task panel never stats files eagerly. A missing artifact keeps its
+    /// name in the record but no longer offers a dead-end open.
+    private(set) var missingWorkspaceFiles: Set<String> = []
+    func isWorkspaceFileMissing(hostID: UUID, path: String) -> Bool {
+        missingWorkspaceFiles.contains("\(hostID.uuidString):\(path)")
+    }
+    func wireFileAvailability() {
+        for browser in [fileBrowser, changesBrowser, inspectorFiles] {
+            browser.onFileAvailability = { [weak self] path, available in
+                guard let self, let hostID = browser.host?.id else { return }
+                let key = "\(hostID.uuidString):\(path)"
+                // Skip no-op mutations so settled reads do not invalidate the panel.
+                if available {
+                    if missingWorkspaceFiles.contains(key) { missingWorkspaceFiles.remove(key) }
+                } else if !missingWorkspaceFiles.contains(key) {
+                    missingWorkspaceFiles.insert(key)
+                }
+            }
+        }
+    }
     @ObservationIgnored let fileWindow = FileWindowController()
     let taskContextWindow = TaskContextWindowController()
     private static let workspaceFileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -199,6 +220,7 @@ final class WorkbenchModel {
         taskNotifications.start(onOpen: { [weak self] id in self?.openNotifiedTask(id) },
                                 onOpenDashboard: { [weak self] in self?.showHome() })
         for connection in connections { observe(connection) }
+        wireFileAvailability()
         if !hosts.isEmpty { registerEnvironment(kimi: kimi, native: native) }
         for host in hosts where host.id != kimi.host.id {
             registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
@@ -251,6 +273,7 @@ final class WorkbenchModel {
         workspace.starred = Array(sessions.prefix(4).map(\.reference))
         workspace.groups = [WorkItemGroup(name: "性能验收", goal: "固定离线数据", nextStep: "", // l10n-ignore
                                           sessions: Array(sessions.prefix(12).map(\.reference)))]
+        wireFileAvailability()
     }
     func acceptanceUpdateCatalog(_ sessions: [WorkspaceSession]) { allSessions = sessions }
     #endif
