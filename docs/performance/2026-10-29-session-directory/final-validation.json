@@ -1,0 +1,50 @@
+{
+  "source_sha256": "6bb1454bc315d2cdfb9eb4c462540956da7c47cdf5c9fb365917775376db09d5",
+  "binary_sha256": "14c6e1ccea05213c2a7fff13547c6a227642964fa9e1a6079cad2ab33f2d8871",
+  "status": "passed",
+  "session_directory": {
+    "input": "fixture publisher into production local @State; excludes keyboard/IME event delivery",
+    "max_mounted_directory_cells": 12,
+    "native_cells_verified": true,
+    "open_to_layout_ms": 91.44687501247972,
+    "query_to_layout_ms": {
+      "count": 6,
+      "max": 40.9489999874495,
+      "median": 36.54841665411368,
+      "p95": 40.50558333983645
+    },
+    "scroll_step_ms": {
+      "count": 80,
+      "max": 11.79854164365679,
+      "median": 7.444958318956196,
+      "p95": 8.487500017508864
+    },
+    "states": [
+      {
+        "query": "验收",
+        "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+      },
+      {
+        "query": "0002",
+        "selection": "00000000-0000-0000-0000-000000000023:omp:session-2"
+      },
+      {
+        "query": "不存在的验收会话",
+        "selection": "none"
+      },
+      {
+        "query": "English",
+        "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+      },
+      {
+        "query": "project-3",
+        "selection": "00000000-0000-0000-0000-000000000023:omp:session-3"
+      },
+      {
+        "query": "",
+        "selection": "00000000-0000-0000-0000-000000000023:omp:session-0"
+      }
+    ]
+  },
+  "note": "After title/metadata layout and picker label polish; before the workbench new-session button style change."
+}

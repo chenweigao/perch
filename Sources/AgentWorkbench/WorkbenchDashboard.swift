@@ -1,9 +1,14 @@
 import SwiftUI
 import WorkbenchCore
 
+enum WorkbenchHomeSection: String, CaseIterable {
+    case overview = "概览", projects = "项目", groups = "任务组"
+}
+
 /// Home offers a bounded overview; the inbox shows every actionable session.
 /// Both use the same projection and rows, without maintaining a second inbox state.
 struct WorkbenchDashboard<RowActions: View>: View {
+    @Binding var homeSection: WorkbenchHomeSection
     var attentionOnly = false
     var changes: [WorkspaceSession] = []
     var onAcknowledgeChanges: (() -> Void)? = nil
@@ -15,6 +20,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
     var hasSessionSearch = false
     var onClearSessionFilters: (() -> Void)? = nil
     var groupHeader: AnyView = AnyView(EmptyView())
+    var projectOverview: AnyView = AnyView(EmptyView())
     var groupOverview: AnyView = AnyView(EmptyView())
     var groupProgress: AnyView = AnyView(EmptyView())
     var groupHistory: AnyView = AnyView(EmptyView())
@@ -41,15 +47,28 @@ struct WorkbenchDashboard<RowActions: View>: View {
     let onClearScope: (ActiveScope.Facet) -> Void
     let onClearAllScopes: () -> Void
 
+    private var showsActivity: Bool { attentionOnly || group != nil || homeSection == .overview }
+
     var body: some View {
+        VStack(spacing: 0) {
+            if !attentionOnly && group == nil { homeHeader }
+        ScrollViewReader { proxy in
         ScrollView {
             // Sections already lay out their rows eagerly. Lazy placement of
             // these variable-height groups can loop when catalog updates move
             // rows between sections while scrolled (also in the full inbox).
             VStack(alignment: .leading, spacing: 28) {
                 if let error = context.storageError { storageBanner(error) }
-                introduction
-                if attentionOnly {
+                if attentionOnly || group != nil { introduction }
+                if !showsActivity {
+                    if homeSection == .projects { projectOverview }
+                    else {
+                        groupOverview
+                        if let onSuggestGroups {
+                            Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(QuietLinkStyle())
+                        }
+                    }
+                } else if attentionOnly {
                     if projection.attention.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "checkmark.circle").font(.system(size: 34, weight: .light))
@@ -66,15 +85,15 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     }
                 } else {
                     groupHeader
+                    if group == nil && projection.emptyState != .noEnvironment && projection.emptyState != .noSessions {
+                        overviewSummary(proxy)
+                    }
                     if let empty = projection.emptyState, empty != .nothingPending,
                        group == nil || hasSessionSearch || context.scope.facets.contains(where: { $0.kind == .host }) { emptyState(empty) }
                     if !projection.attention.isEmpty { section(projection.attention, limit: 3) }
-                    groupOverview
-                    if group == nil, let onSuggestGroups { Button("Agent 帮我归组", action: onSuggestGroups).buttonStyle(QuietLinkStyle()) }
-                    if !changes.isEmpty { changeSummary }
                     groupProgress
+                    if !projection.running.isEmpty { section(projection.running, limit: 4) }
                     if !projection.review.isEmpty { section(projection.review, limit: 5) }
-                    if !projection.running.isEmpty { section(projection.running, limit: 5) }
                     if !projection.recent.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
                             HStack(spacing: 7) {
@@ -93,6 +112,11 @@ struct WorkbenchDashboard<RowActions: View>: View {
                             }
                         }
                     }
+                    if !changes.isEmpty {
+                        DisclosureGroup("新进展 · \(changes.count)") { changeSummary.padding(.top, 8) }
+                            .disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
+                            .font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
                     if isArchiving {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
@@ -107,7 +131,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 }
                 // Connectivity is not an actionable request. Keep stale records separate,
                 // including on the inbox, without counting them as live work.
-                if !projection.offline.isEmpty {
+                if showsActivity && !projection.offline.isEmpty {
                     DisclosureGroup {
                         VStack(alignment: .leading, spacing: 0) {
                             Text("连接后才能确认这些会话的当前状态。")
@@ -119,17 +143,88 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
-                if !attentionOnly { groupHistory }
-                if !attentionOnly && !context.restoreReport.isEmpty { restoreReportSection }
-                if !attentionOnly && !context.pendingRestoration.isEmpty { restoration }
+                if !attentionOnly && showsActivity { groupHistory }
+                if !attentionOnly && showsActivity && !context.restoreReport.isEmpty { restoreReportSection }
+                if !attentionOnly && showsActivity && !context.pendingRestoration.isEmpty { restoration }
             }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
                 .frame(maxWidth: 944).frame(maxWidth: .infinity)
+                .id("dashboard.top")
                 #if PERCH_ACCEPTANCE
                 .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly, groupID: group?.id))
                 #endif
         }
+        .onChange(of: homeSection) { _, _ in proxy.scrollTo("dashboard.top", anchor: .top) }
+        }
+        }
         .onAppear { queueOrder.update(projection.attention.items.map(\.id)) }
         .onChange(of: projection.attention.items.map(\.id)) { _, ids in queueOrder.update(ids) }
+    }
+
+    private var homeHeader: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("工作台").font(.system(size: 26, weight: .semibold))
+                    Text("掌握进展，继续工作。").font(.system(size: 13)).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 16)
+                Button(action: onNewTask) { Label("新建会话", systemImage: "plus") }
+                    .buttonStyle(.bordered).controlSize(.large)
+            }
+            HStack {
+                Picker("工作台视图", selection: $homeSection) {
+                    ForEach(WorkbenchHomeSection.allCases, id: \.self) { value in
+                        Text(LocalizedStringKey(value.rawValue)).tag(value)
+                    }
+                }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 300)
+                    .accessibilityIdentifier("workbench.sections")
+                Spacer()
+                Button("全部会话", action: onShowAll).buttonStyle(QuietLinkStyle())
+            }
+            if !visibleFacets.isEmpty { scopeChips }
+        }.padding(.horizontal, 32).padding(.top, 28).padding(.bottom, 20)
+            .frame(maxWidth: 944).frame(maxWidth: .infinity)
+            .overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func overviewSummary(_ proxy: ScrollViewProxy) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { overviewStats(proxy) }
+            VStack(spacing: 10) { overviewStats(proxy) }
+        }
+    }
+
+    @ViewBuilder private func overviewStats(_ proxy: ScrollViewProxy) -> some View {
+        overviewStat("需要你处理", count: projection.attention.items.count,
+                     symbol: "tray", tint: .orange, action: onShowInbox)
+        overviewStat("运行中", count: projection.running.items.count,
+                     symbol: "circle.dotted", tint: WorkbenchTheme.accent) {
+            proxy.scrollTo(WorkQueueSection.running, anchor: .top)
+        }.disabled(projection.running.isEmpty)
+        overviewStat("结果待查看", count: projection.review.items.count,
+                     symbol: "checkmark.circle", tint: .blue) {
+            proxy.scrollTo(WorkQueueSection.review, anchor: .top)
+        }.disabled(projection.review.isEmpty)
+    }
+
+    private func overviewStat(_ title: LocalizedStringKey, count: Int, symbol: String,
+                              tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 14) {
+                Label(title, systemImage: symbol).font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(count > 0 ? tint : .secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(count)").font(.system(size: 28, weight: .medium)).monospacedDigit()
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "arrow.up.right").font(.system(size: 11)).foregroundStyle(.tertiary)
+                }
+            }.padding(16).frame(minWidth: 150, maxWidth: .infinity, alignment: .leading)
+                .background(WorkbenchTheme.Fill.surface,
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+                .contentShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+        }.buttonStyle(SummaryStatStyle())
+            .accessibilityLabel(title).accessibilityValue(Text("\(count)"))
     }
 
     private var changeSummary: some View {
@@ -269,7 +364,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
                     .font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 12)
             }
-        }
+        }.id(value.section)
     }
 
     private func emptyState(_ state: DashboardEmptyState) -> some View {
