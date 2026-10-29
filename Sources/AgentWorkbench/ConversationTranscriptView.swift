@@ -2374,7 +2374,7 @@ struct ProcessFoldRow: View {
 private enum ThoughtTextStyle {
     /// Built at the current reading size; cheap enough to rebuild per view update.
     static var attributes: [NSAttributedString.Key: Any] {
-        make(size: ReplyStyle.Process.thoughtSize, lineHeight: ReplyStyle.Process.thoughtLineHeight, ink: .secondaryLabelColor)
+        make(size: ReplyStyle.Process.thoughtSize, lineHeight: ReplyStyle.Process.thoughtLineHeight, ink: WorkbenchTheme.quietNS)
     }
     static var fullTextAttributes: [NSAttributedString.Key: Any] {
         make(size: ReplyStyle.bodySize, lineHeight: ReplyStyle.lineHeight, ink: ReplyStyle.nativeInk)

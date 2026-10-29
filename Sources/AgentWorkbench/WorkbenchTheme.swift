@@ -22,7 +22,8 @@ enum WorkbenchTheme {
     static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.910, 0.918, 0.941))
     /// De-emphasised ink for status lines and timestamps; dark holds ≈ 5.3:1 on
     /// the canvas — legible, but clearly below body text.
-    static let quiet = color(light: (0.42, 0.45, 0.51), dark: (0.520, 0.550, 0.610))
+    static let quietNS = nsColor(light: (0.42, 0.45, 0.51), dark: (0.520, 0.550, 0.610))
+    static let quiet = Color(nsColor: quietNS)
     /// Content surfaces: white in light; dark is the palette's blue-graphite
     /// canvas (#16181E) instead of the system's neutral gray — a designed dark
     /// reads intentional, not default. Sidebar and composer glass keep their
