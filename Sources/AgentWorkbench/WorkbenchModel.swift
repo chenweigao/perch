@@ -1656,13 +1656,13 @@ final class AttachedTerminal: ObservableObject, Identifiable {
             .palette(12, color: "4b78cf").palette(13, color: "9267b1")
             .palette(14, color: "2d8a96").palette(15, color: "e1e4ed")
         // Dark shares the window's blue-graphite canvas (WorkbenchTheme's
-        // contentBackground, #16181E) so the terminal reads as part of the
+        // contentBackground, #1F2229) so the terminal reads as part of the
         // content surface instead of a neutral-gray insert; ANSI hues are the
         // light palette's, lifted for the darker ground.
         let darkPalette = TerminalConfiguration()
-            .background("16181e").foreground("d8dae1")
+            .background("1f2229").foreground("d8dae1")
             .selectionBackground("323c52").selectionForeground("e8eaf0")
-            .cursorColor("7a7ce0").cursorText("16181e")
+            .cursorColor("7a7ce0").cursorText("1f2229")
             .palette(0, color: "454c59").palette(1, color: "d96372")
             .palette(2, color: "4cae8c").palette(3, color: "cfa04a")
             .palette(4, color: "6f97dd").palette(5, color: "a884c4")
