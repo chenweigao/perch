@@ -314,9 +314,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private func prepareHostedView(in item: NSToolbarItem) {
             // A run-loop delay alone is insufficient: AppKit can drain it while
             // expanding placeholders. Mount only after setToolbar has returned.
-            // Give AppKit a fully configured view with an intrinsic size while
-            // the SwiftUI host remains detached.
-            item.view = NSTextField(labelWithString: item.label)
+            item.view = NSView(frame: .zero)
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.controller?.workspaceToolbarInstalled == true else { return }
                 self.mountToolbarViews()
@@ -375,7 +373,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         private func navigationButton(for item: NSToolbarItem) -> NSButton {
-            let button = NSButton(title: "", target: item.target, action: item.action)
+            // The title convenience initializer calls sizeToFit, which can
+            // flush SwiftUI and reenter NSToolbar's placeholder loader here.
+            // These controls already have a fixed 32 pt layout contract.
+            let button = NSButton(frame: NSRect(x: 0, y: 0,
+                width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize))
+            button.title = ""
+            button.target = item.target
+            button.action = item.action
             button.image = item.image?.withSymbolConfiguration(
                 NSImage.SymbolConfiguration(pointSize: WorkbenchChrome.symbolSize, weight: .regular, scale: .medium))
             button.imagePosition = .imageOnly
@@ -981,10 +986,7 @@ final class WorkbenchSplitController: NSSplitViewController {
     }
 
     private func updateWorkspaceLayout() {
-        // setToolbar synchronously changes window geometry. Keep hosted panes
-        // quiescent until its placeholder transaction returns; installation
-        // finishes with a complete layout pass.
-        guard !installingToolbar, !applyingLayout, view.bounds.width > 0 else { return }
+        guard !applyingLayout, view.bounds.width > 0 else { return }
         applyingLayout = true
         defer { applyingLayout = false }
         updatePanelCornerRadius()
