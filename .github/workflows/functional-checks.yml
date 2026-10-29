@@ -60,7 +60,11 @@ jobs:
       - name: Package the shared native build
         run: |
           mkdir -p .local/native-build
-          tar -czf .local/native-build/build.tar.gz .build build/Perch.app
+          resources=()
+          for path in Resources/Highlight/highlight.min.js Resources/Mermaid/mermaid.min.js; do
+            if [ -f "$path" ]; then resources+=("$path"); fi
+          done
+          tar -czf .local/native-build/build.tar.gz .build build/Perch.app "${resources[@]}"
       - name: Publish the shared native build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
