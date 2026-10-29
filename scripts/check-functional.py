@@ -12,11 +12,54 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def macos_commands(group, out):
+    python = sys.executable
+    commands = []
+    if group in ("all", "build"):
+        commands.append(("build", ["bash", "scripts/build.sh"], 1200))
+    if group in ("all", "core"):
+        commands += [
+            ("app-launch", [python, "scripts/check-app-launch.py", "--output", str(out / "app-launch")], 90),
+            ("signature", ["codesign", "--verify", "--deep", "--strict", "build/Perch.app"], 60),
+            ("version", [python, "scripts/check-version.py", "--app", "build/Perch.app"], 60),
+            ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
+            ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
+            ("composer", ["bash", "scripts/check-composer.sh"], 120),
+        ]
+    if group in ("all", "host"):
+        commands += [
+            # Compiles the whole app before the isolated UI phases.
+            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 600),
+            ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
+        ]
+    if group in ("all", "native"):
+        commands.append(("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600))
+        for mode in ["all", "switching", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input"]:
+            commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
+                "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
+        commands.append(("native-sidebar-projects", [python, "scripts/run-native-acceptance.py",
+            "--mode", "sidebar-projects", "--sidebar-variant", "projects", "--output", str(out / "native-sidebar-projects")], 150))
+        commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
+            "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
+    if group in ("all", "navigation"):
+        commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
+        for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "tool-card", "fast-scroll", "turns", "roundtrip"]:
+            commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
+                mode, "--output", str(out / ("navigation-" + mode))], 150))
+        for label, extra in [("disclosure", []), ("disclosure-full", ["--full-content"])]:
+            commands.append(("navigation-" + label, [python, "scripts/run-navigation-check.py", "disclosure",
+                "--disclosure-context", "--assert-atomic-disclosure", "--output", str(out / ("navigation-" + label))] + extra, 150))
+    return commands
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("suite", choices=["portable", "macos"])
     parser.add_argument("--output", type=Path, required=True, help="New directory for this run")
+    parser.add_argument("--group", choices=["all", "build", "core", "host", "native", "navigation"], default="all")
     args = parser.parse_args()
+    if args.suite == "portable" and args.group != "all":
+        parser.error("--group is only supported by the macos suite")
     if args.suite == "macos" and sys.platform != "darwin":
         parser.error("macos checks require a Mac with Xcode and an active GUI session")
     out = args.output.resolve()
@@ -36,36 +79,9 @@ def main():
             ("acceptance-supervisor", [python, "-m", "unittest", "discover", "-s", "Tests/Performance"], 60),
         ]
     else:
-        commands = [
-            ("build", ["bash", "scripts/build.sh"], 1200),
-            ("app-launch", [python, "scripts/check-app-launch.py", "--output", str(out / "app-launch")], 90),
-            ("signature", ["codesign", "--verify", "--deep", "--strict", "build/Perch.app"], 60),
-            ("version", [python, "scripts/check-version.py", "--app", "build/Perch.app"], 60),
-            ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
-            ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
-            ("composer", ["bash", "scripts/check-composer.sh"], 120),
-            # Compiles the whole app before 23 isolated phases (each capped at 60 s).
-            # The expanded reader/panel suite reached the old 300 s aggregate cap
-            # on CI after all assertions passed; leave room for compilation/cleanup.
-            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 600),
-            ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
-            ("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600),
-        ]
-        for mode in ["all", "switching", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "kimi-invalidation", "kimi-switching", "kimi-refresh", "input", "kimi-input"]:
-            commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
-                "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
-        commands.append(("native-sidebar-projects", [python, "scripts/run-native-acceptance.py",
-            "--mode", "sidebar-projects", "--sidebar-variant", "projects", "--output", str(out / "native-sidebar-projects")], 150))
-        commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
-            "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
-        commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
-        for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "tool-card", "fast-scroll", "turns", "roundtrip"]:
-            commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
-                mode, "--output", str(out / ("navigation-" + mode))], 150))
-        for label, extra in [("disclosure", []), ("disclosure-full", ["--full-content"])]:
-            commands.append(("navigation-" + label, [python, "scripts/run-navigation-check.py", "disclosure",
-                "--disclosure-context", "--assert-atomic-disclosure", "--output", str(out / ("navigation-" + label))] + extra, 150))
-    report = {"suite": args.suite, "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+        commands = macos_commands(args.group, out)
+    report = {"suite": args.suite, "group": args.group,
+              "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
               "dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT)), "checks": []}
     env = dict(os.environ)
@@ -73,11 +89,12 @@ def main():
     env.pop("WORKBENCH_LIVE_HOST", None)
     env.pop("WORKBENCH_GIT_WRITE_HOST", None)
     env.pop("PERCH_ACCEPTANCE_ALLOW_INVALIDATION", None)
-    if args.suite == "macos":
+    if args.suite == "macos" and args.group in ("all", "host"):
         # Retain the native design phase's geometry and window captures with the logs.
         captures = out / "native-design"
         captures.mkdir()
         env["PERCH_DESIGN_CAPTURES"] = str(captures)
+    suite_started = time.monotonic()
     for name, command, timeout in commands:
         print("Running " + name, flush=True)
         started = time.monotonic()
@@ -104,8 +121,11 @@ def main():
             reason = f"timed out after {timeout} s" if entry.get("timed_out") else f"exited with code {entry['exit_code']}"
             print(f"Failed {name}: {reason}", flush=True)
             print((out / entry["log"]).read_text()[-12000:])
+            report["seconds"] = round(time.monotonic() - suite_started, 2)
+            (out / "results.json").write_text(json.dumps(report, indent=2) + "\n")
             return 1
     report["status"] = "passed"
+    report["seconds"] = round(time.monotonic() - suite_started, 2)
     (out / "results.json").write_text(json.dumps(report, indent=2) + "\n")
     print("Passed: " + str(out / "results.json"))
     return 0
