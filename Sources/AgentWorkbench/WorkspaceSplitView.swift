@@ -373,7 +373,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         private func navigationButton(for item: NSToolbarItem) -> NSButton {
-            let button = NSButton(title: "", target: item.target, action: item.action)
+            // The title convenience initializer calls sizeToFit, which can
+            // flush SwiftUI and reenter NSToolbar's placeholder loader here.
+            // These controls already have a fixed 32 pt layout contract.
+            let button = NSButton(frame: NSRect(x: 0, y: 0,
+                width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize))
+            button.title = ""
+            button.target = item.target
+            button.action = item.action
             button.image = item.image?.withSymbolConfiguration(
                 NSImage.SymbolConfiguration(pointSize: WorkbenchChrome.symbolSize, weight: .regular, scale: .medium))
             button.imagePosition = .imageOnly
