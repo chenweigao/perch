@@ -37,7 +37,7 @@ Mac 保持 400ms 调度周期；目录在有运行任务时每 2 秒、全空闲
 
 ## 模型选择
 
-桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），Qoder CN 与 Qoder 分别来自各自 SDK daemon 的 `getModels({ fetchStrategy: "live" })`，dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤；两套 Qoder 目录分别标记 `qoder` 与 `qoderintl`，不会跨区域串用。
+桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），Qoder CN 与 Qoder 分别来自各自 SDK daemon 的 `accountInfo()` 取得 userId 后调用 `getModels({ fetchStrategy: "live", uid })`，dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤；两套 Qoder 目录分别标记 `qoder` 与 `qoderintl`，不会跨区域串用。
 
 新建任务面板里 Kimi、OMP、Qoder CN、Qoder、dsh 与 Codex 都可从对应的可搜索目录选择模型；只有运行时允许的入口继续接受目录外 id。模型留空表示沿用运行时默认，不注入模型或思考强度。Claude Code 的 SDK 不提供模型清单，继续留空使用远端 CLI 默认模型。会话内模型和思考强度使用两个轻量入口。模型弹层提供搜索和按 Agent 过滤的列表；思考弹层只展示当前模型由服务端声明的档位，名称保留英文，不从模型名称猜测能力。Qoder 选中模型时会校验 id 与档位；旧档位不适用时回退到该模型声明的默认档位，目录未声明则不发送。Qoder 会话可为后续轮次切换模型与思考强度，也可恢复 SDK 默认；运行中、离线或正在更新设置时仍可打开查看，修改控件禁用并说明原因。Claude Code 仍只读展示。未读取到模型能力与模型未提供档位分别提示。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。窄窗口下工具栏自动分为两行：主行保留附件、模型/思考与发送，次行放置权限和上下文余量。
 
@@ -98,7 +98,7 @@ OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选
 向导通过经鉴权的 `GET /setup?provider=omp|qoder|qoderintl|dsh|codex|claude` 检查所选运行时；
 不会因为缺少未选 Agent 而报错。检查在会话锁之外执行，不向模型发送消息。
 OMP 每次重新读取模型配置，只返回名称、provider 和 id，不返回 headers 或密钥。
-Qoder CN 与 Qoder 的检查分别启动对应 SDK daemon 并实时调用 `getModels({ fetchStrategy: "live" })`；成功返回脱敏目录即确认该区 CLI 登录，不发送 prompt，也不读取另一地区目录。Claude 的 SDK 没有独立登录检查接口，仍由首条消息验证鉴权；dsh 只检查桥接进程是否具有
+Qoder CN 与 Qoder 的检查分别启动对应 SDK daemon 并实时调用 `accountInfo()` 取得 userId 后调用 `getModels({ fetchStrategy: "live", uid })`；成功返回脱敏目录即确认该区 CLI 登录，不发送 prompt，也不读取另一地区目录。Claude 的 SDK 没有独立登录检查接口，仍由首条消息验证鉴权；dsh 只检查桥接进程是否具有
 `DEEPSEEK_API_KEY`，不读取或返回值，模型在首次 ACP 会话握手时读取。Codex 使用所选
 HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已有账号；不要求 OpenAI
 登录的供应商返回 `provider-managed`，界面明确提示实际鉴权在首条消息时验证。随后通过

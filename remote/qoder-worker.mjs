@@ -9,7 +9,9 @@ if (cfg.operation === 'catalog') {
     pathToQoderCLIExecutable: cfg.binary, initializeTimeoutMs: 45000
   });
   try {
-    emit({type:'models', models:await daemon.getModels({fetchStrategy:'live'})});
+    const account = cfg.accountScoped ? await daemon.accountInfo() : {};
+    const uid = typeof account.userId === 'string' && account.userId ? account.userId : undefined;
+    emit({type:'models', models:await daemon.getModels({fetchStrategy:'live', ...(uid ? {uid} : {})})});
   } finally {
     await daemon.stop();
   }
