@@ -2,6 +2,12 @@ import Foundation
 import WorkbenchCore
 
 func checkTaskContextFiles() throws {
+    let tasks = ["completed", "unknown", "running", "cancelled", "failed", "running"].enumerated().map { index, status in
+        KimiTask(id: String(index), kind: "bash", description: "任务 \(index)", status: status)
+    }
+    let panel = TaskContextTasks(tasks)
+    precondition(panel.current.map(\.id) == ["2", "5", "1", "4"] && panel.finished.map(\.id) == ["0", "3"],
+                 "History folds only completed/cancelled tasks; running tasks lead, failed and unknown stay visible")
     let text = """
     [Report](docs/报告%20终版.md#结论) [Duplicate](docs/报告%20终版.md)
     ![Diagram](figures/chart.png) \u{0060}notes.txt\u{0060}

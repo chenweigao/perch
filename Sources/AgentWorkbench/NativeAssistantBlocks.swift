@@ -248,7 +248,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         copy = NSHostingView(rootView: ReplyCopyButton(text: "", label: "复制代码"))
         super.init(links: links)
         label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
-        label.textColor = .secondaryLabelColor
+        label.textColor = WorkbenchTheme.quietNS
         label.lineBreakMode = .byTruncatingTail
         copy.sizingOptions = []
         copy.safeAreaRegions = []

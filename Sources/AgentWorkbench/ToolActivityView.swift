@@ -8,14 +8,14 @@ struct ActivityNarrativeHistoryView: View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: narrative.phase == .blocked ? "exclamationmark.circle" : "checkmark.circle")
                 .font(.system(size: ReplyStyle.captionSize, weight: .medium))
-                .foregroundStyle(narrative.phase == .blocked ? Color.orange : Color.secondary)
+                .foregroundStyle(narrative.phase == .blocked ? Color.orange : WorkbenchTheme.quiet)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(narrative.headline).font(.system(size: ReplyStyle.Process.labelSize, weight: .medium))
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = narrative.detail, !detail.isEmpty {
-                    Text(detail).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary)
+                    Text(detail).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -60,12 +60,12 @@ struct KimiActivityView: View {
                         else { Text("运行上下文").fixedSize() }
                         if !expanded {
                             Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(WorkbenchTheme.quiet)
                         }
                         Spacer(minLength: 0)
                         let attention = items.filter { $0.staysVisible && $0.status != .running }.count
                         if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
-                    }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+                    }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
             if expanded, let narrative {
                 ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, ReplyStyle.Process.nestedIndent)
@@ -172,7 +172,7 @@ struct KimiToolCard: View {
                     Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
                 }
-            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : Color.secondary)
+            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
                 .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
@@ -181,11 +181,11 @@ struct KimiToolCard: View {
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(tool.name).foregroundStyle(.secondary)
-            if let input = tool.input { Text("Input").foregroundStyle(.secondary); DisclosureReplyText(text: input.display) }
-            if let progress = tool.progress { Text("Progress").foregroundStyle(.secondary); DisclosureReplyText(text: progress.display) }
-            if let output = tool.output { Text("Output").foregroundStyle(.secondary); DisclosureReplyText(text: output.display) }
-            if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(.secondary) }
+            Text(tool.name).foregroundStyle(WorkbenchTheme.quiet)
+            if let input = tool.input { Text("Input").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: input.display) }
+            if let progress = tool.progress { Text("Progress").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: progress.display) }
+            if let output = tool.output { Text("Output").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: output.display) }
+            if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(WorkbenchTheme.quiet) }
         }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))

@@ -23,6 +23,23 @@ private struct ReadingDesignFixture: View {
     (view as? NSTextView).map { [$0] } ?? view.subviews.flatMap(readingTextViews)
 }
 @MainActor func checkReadingDesign() async throws {
+    func luminance(_ color: NSColor, in appearance: NSAppearance) -> Double {
+        var rgb = NSColor.black
+        appearance.performAsCurrentDrawingAppearance { rgb = color.usingColorSpace(.sRGB)! }
+        func linear(_ value: CGFloat) -> Double {
+            let c = Double(value)
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(rgb.redComponent) + 0.7152 * linear(rgb.greenComponent) + 0.0722 * linear(rgb.blueComponent)
+    }
+    for name in [NSAppearance.Name.aqua, .darkAqua] {
+        let appearance = NSAppearance(named: name)!
+        let ink = luminance(WorkbenchTheme.quietNS, in: appearance)
+        let paper = luminance(WorkbenchTheme.contentBackgroundNS, in: appearance)
+        let contrast = (max(ink, paper) + 0.05) / (min(ink, paper) + 0.05)
+        precondition(contrast >= 4.5, "Readable metadata on the opaque reading sheet: \(contrast)")
+        precondition(ReplyStyle.quietInk === WorkbenchTheme.quietNS, "Cached and live secondary prose share the same dynamic ink")
+    }
     ReadingBodySize.shared.set(ReadingBodySize.standard)
     let text = """
     # 让回复成为阅读的主角

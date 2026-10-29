@@ -83,6 +83,17 @@ public struct KimiTask: Decodable, Identifiable, Equatable, Sendable {
     }
     public var isRunning: Bool { status == "running" }
     public var isFailed: Bool { status == "failed" }
+    /// Keep a provider's descriptive title; generic Bash labels summarize the
+    /// actual operation instead of repeating shell setup and arguments.
+    public var displayTitle: String {
+        let title = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard kind == "bash", let command, !command.isEmpty,
+              title.isEmpty || title == command || title.hasPrefix("Bash: ") else {
+            return title.isEmpty ? kindLabel : title
+        }
+        guard let activity = ShellActivity.parse(command) else { return kindLabel }
+        return "\(activity.headline) · \(activity.compactTarget)"
+    }
     /// The agent whose transcript this row can open. A roster entry is keyed by
     /// its agent id; a detached child reports that id next to its own task id.
     public var transcriptAgentId: String? {
