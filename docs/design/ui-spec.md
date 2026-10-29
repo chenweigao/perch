@@ -37,6 +37,10 @@
 - **字号变化立即生效**：`ReadingBodySize` 是 `@Observable`，读取字阶的 SwiftUI 视图自动重绘；
   `ConversationEntryAppearance` 带上正文字号，变化时所有已挂载行重新排版、重新测量；原生行的预处理缓存以字号为键，
   复用的代码卡和列表标记按当前字号刷新。`reading-design` 阶段在 18/16/14pt 间切换并检查已挂载原生行的字号、行高和 H1。
+- **气泡里的文字按光学居中**：TextKit 把行高多出的行距放在字形上方，正文行高下单行文字会在行框里偏下（14pt 约 3pt）。
+  用户气泡（原生行、SwiftUI 回退、待发消息）共用 `UserMessageStyle.textLift`：按首行基线和大写字母高度算出上移量（取整点），
+  上内边距为 `verticalPadding − textLift`、下内边距为 `verticalPadding + textLift`，气泡总高度不变。
+  导航检查 `user-rows` 要求单行气泡里大写字母的中线与气泡中线相差不超过 0.6pt。
 - **两种渲染共用节奏**：块间距统一走 `ReplyStyle.blockSpacing`，代码卡片、引用、列表分别用
   `ReplyStyle.Code` / `Quote` / `ListLayout`；SwiftUI 行与原生缓存行必须从同一组常量取值，
   流式结束切换渲染时不得跳动。

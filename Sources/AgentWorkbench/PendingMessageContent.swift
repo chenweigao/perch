@@ -39,7 +39,8 @@ struct PendingMessageContent<Controls: View>: View {
                     KimiMarkdown(text: text)
                         .environment(\.replyLineHeight, UserMessageStyle.lineHeight)
                         .padding(.horizontal, UserMessageStyle.horizontalPadding)
-                        .padding(.vertical, UserMessageStyle.verticalPadding)
+                        .padding(.top, UserMessageStyle.topPadding)
+                        .padding(.bottom, UserMessageStyle.bottomPadding)
                         // The sent bubble's fill, without a stroke.
                         .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
                 }

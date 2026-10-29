@@ -115,7 +115,8 @@ struct KimiMessageView: View {
                     content.environment(\.replyLineHeight, UserMessageStyle.lineHeight)
                 }
                     .padding(.horizontal, UserMessageStyle.horizontalPadding)
-                    .padding(.vertical, UserMessageStyle.verticalPadding)
+                    .padding(.top, UserMessageStyle.topPadding)
+                    .padding(.bottom, UserMessageStyle.bottomPadding)
                     .background(kimiPaper, in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
             }.padding(.top, UserMessageStyle.topSpacing)
                 .contextMenu {
