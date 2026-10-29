@@ -76,10 +76,11 @@ import WorkbenchCore
         } while Date() < deadline
         preconditionFailure("\(identifier) must \(present ? "appear" : "disappear") in the task panel; identifiers: \(taskPanelIdentifiers(window))")
     }
-    func press(_ identifier: String) async throws {
+    func press(_ identifier: String, disclosure: Bool = false) async throws {
         let frame = try await control(identifier)!
+        let x = disclosure ? frame.minX + 6 : frame.midX
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [],
+            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: x, y: frame.midY), modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
                 context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
         }
@@ -112,7 +113,7 @@ import WorkbenchCore
     try await press("task-context-back")
     precondition(model.taskContextWindow.detail == nil, "Back returns to the list")
     try await control("task-context-row-research", present: false)
-    try await press("task-context-finished")
+    try await press("task-context-finished", disclosure: true)
     try await press("task-context-row-research")
     precondition(model.taskContextWindow.detail == research)
     stopped = false
