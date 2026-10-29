@@ -1165,7 +1165,7 @@ struct RemoteFilePanel: View {
                             }
                         }
                         .padding(.horizontal, 14).padding(.vertical, 6)
-                        .background(entry.path == browser.gitPath ? Color.primary.opacity(WorkbenchTheme.Fill.selected) : .clear)
+                        .background(entry.path == browser.gitPath ? WorkbenchTheme.Fill.selected : .clear)
                     }
                 }.padding(.vertical, 8)
             }.frame(minHeight: 80, idealHeight: max(80, min(220, Double(entries.count) * 42 + 16)), maxHeight: max(80, min(220, Double(entries.count) * 42 + 16)))

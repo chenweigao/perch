@@ -285,7 +285,7 @@ private struct NativeComposerView: View {
                                      reportedAt: s.context?.reportedAt, isStale: !connection.online)
                     }.foregroundStyle(.secondary).padding(.leading, 10)
                         .overlay(alignment: .leading) {
-                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                            Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(width: 1, height: 16)
                         }
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                          canSend: canSend(s), canStop: connection.canStop,

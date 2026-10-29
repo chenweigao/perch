@@ -154,7 +154,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
             if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.subheadline).foregroundStyle(.secondary) }
         }.font(.system(size: 12))
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+            .background(WorkbenchTheme.Fill.surface,
                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
     }
 
@@ -203,7 +203,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         Text(facet.name).font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
                         Image(systemName: "xmark.circle.fill").font(.system(size: 10)).foregroundStyle(.tertiary)
                     }.padding(.horizontal, 9).frame(minHeight: 28)
-                        .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule()).contentShape(Capsule())
+                        .background(WorkbenchTheme.Fill.surface, in: Capsule()).contentShape(Capsule())
                 }.buttonStyle(.plain)
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
@@ -430,7 +430,7 @@ struct QueueRow<Actions: View>: View {
                 Button("已查看", action: onMarkReviewed)
                     .font(.system(size: 11))
                     .padding(.horizontal, 8).padding(.vertical, 2)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Capsule())
+                    .background(WorkbenchTheme.Fill.surface, in: Capsule())
                     .padding(.top, 1).fixedSize()
                     .focused($focus, equals: .reviewed)
                     .opacity(showActions ? 1 : 0)
@@ -458,10 +458,10 @@ struct QueueRow<Actions: View>: View {
     private func openIfOnline() { if item.online { onOpen() } }
 
     /// Keyboard focus reads as selection, never as a hover.
-    private var highlight: Double {
-        guard item.online else { return 0 }
+    private var highlight: Color {
+        guard item.online else { return .clear }
         if focus == .open { return WorkbenchTheme.Fill.selected }
-        return hovered ? WorkbenchTheme.Fill.hover : 0
+        return hovered ? WorkbenchTheme.Fill.hover : .clear
     }
 
     private var accessibilityDetail: String {
@@ -474,7 +474,7 @@ struct QueueRow<Actions: View>: View {
     /// and VoiceOver reads it as a button. The pointer opens the row through the tap above.
     private var openTarget: some View {
         RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row)
-            .fill(Color.primary.opacity(highlight))
+            .fill(highlight)
             .focusable(item.online)
             .focused($focus, equals: .open)
             .focusEffectDisabled()
@@ -581,8 +581,8 @@ private struct ChangeRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding(.horizontal, 6).padding(.vertical, 1)
-            .background(Color.primary.opacity(configuration.isPressed ? WorkbenchTheme.Fill.pressed
-                                              : hovered ? WorkbenchTheme.Fill.hover : 0),
+            .background(configuration.isPressed ? WorkbenchTheme.Fill.pressed
+                                              : hovered ? WorkbenchTheme.Fill.hover : .clear),
                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
             .onHover { hovered = $0 }
     }
