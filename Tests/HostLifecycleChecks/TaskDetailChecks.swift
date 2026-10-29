@@ -219,7 +219,7 @@ import WorkbenchCore
 
 /// The window frame of the visible task panel control with this accessibility
 /// identifier, or nil while there is none.
-@MainActor private func taskPanelControl(_ window: NSWindow, _ identifier: String) -> NSRect? {
+@MainActor func taskPanelControl(_ window: NSWindow, _ identifier: String) -> NSRect? {
     guard let element = taskPanelElements(window).first(where: { $0.identifier == identifier })?.node,
           element.responds(to: NSSelectorFromString("accessibilityFrame")),
           let frame = (element.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue,
