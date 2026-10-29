@@ -108,15 +108,14 @@ import WorkbenchCore
     try await control("task-context-result")
     precondition(model.taskContextWindow.detail == research, "A finished task updates in place, with its result")
     captureTaskPanel(window.contentView, "task-detail-subagent-stopped")
-    stopped = false
 
     try await press("task-context-back")
     precondition(model.taskContextWindow.detail == nil, "Back returns to the list")
-    // A confirmed cancellation is folded until the next read observes this
-    // fixture's resumed task. Wait for that state instead of the old stale row.
-    try await control("task-context-row-research", seconds: 5)
+    try await control("task-context-row-research", present: false)
+    try await press("task-context-finished")
     try await press("task-context-row-research")
     precondition(model.taskContextWindow.detail == research)
+    stopped = false
 
     // Opening the session keeps the panel on its task; the conversation can
     // then show the subagent's own transcript.
