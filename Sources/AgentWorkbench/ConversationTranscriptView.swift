@@ -202,6 +202,9 @@ struct ConversationTranscript: View {
     var memoryKey: String?
     // Preview/benchmark transcripts never invoke a user's configured service.
     var allowsActivitySummaries = false
+    /// A cached reader can stay online while its authoritative snapshot loads.
+    /// Pause remote summary requests without changing the displayed projection.
+    var allowsActivitySummaryRequests = true
     var followsLatest = true
     var historyEpoch: String?
     var isSuspended = false
@@ -229,7 +232,7 @@ struct ConversationTranscript: View {
             summariesEnabled: summarySettings.configuration.enabled && allowsActivitySummaries && online,
             includeToolOutput: summarySettings.configuration.includeToolOutput), cache: presentations)
         let observation = SummaryObservation(session: key, batch: snapshot.batch, narrativeKey: snapshot.narrativeKey,
-            running: isRunning, online: online && allowsActivitySummaries, following: followsLatest,
+            running: isRunning, online: online && allowsActivitySummaries && allowsActivitySummaryRequests, following: followsLatest,
             settingsRevision: summarySettings.revision)
         let narratives = narrativeStore.rows(session: key)
         let identity = ConversationContentIdentity(snapshot: snapshot, narratives: narratives,
@@ -382,6 +385,11 @@ private final class ConversationDocumentView: NSView {
     /// The find bar's current highlight-all request, if it targets this session.
     private var highlight: ConversationHighlightUpdate?
     #if TRANSCRIPT_CHECKS
+    fileprivate var disconnectedTools: [String] {
+        Array(Set(contentIdentity?.snapshot.rows.flatMap { row in
+            row.tools.values.filter { $0.status == .disconnected }.map(\.id)
+        } ?? [])).sorted()
+    }
     fileprivate var missingVisibleRows: [String] {
         let visible = viewportRect
         return contents.indices.compactMap { index in
@@ -1278,6 +1286,10 @@ private final class ConversationDocumentView: NSView {
 
 #if TRANSCRIPT_CHECKS
 extension ConversationTranscript {
+    static func disconnectedTools(in root: NSView) -> [String] {
+        if let document = root as? ConversationDocumentView { return document.disconnectedTools }
+        return root.subviews.flatMap { disconnectedTools(in: $0) }
+    }
     static func document(in root: NSView) -> NSView? {
         if root is ConversationDocumentView { return root }
         return root.subviews.lazy.compactMap { document(in: $0) }.first

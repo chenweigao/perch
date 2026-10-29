@@ -155,6 +155,16 @@ checks exercise initial catch-up and later conversation events on the production
 The measured gain remains removal of unrelated body evaluations, not certified input
 latency, frame rate or real-transport recovery.
 
+Kimi's cached transcript uses transport connectivity for its display projection.
+A pending authoritative snapshot only pauses activity-summary requests; it must
+not turn running tools into disconnected tools and back while the same content
+remains visible. Send/stop and other actions retain their snapshot-readiness gates.
+The `kimi-tool-switching` native scenario delays an unchanged snapshot by 180 ms,
+samples cached and refreshed tool presentation through six switches, checks reader
+identity and saved anchors, then verifies that a real disconnect remains visible.
+These are mounted projection/layout samples, not compositor frames or proof that
+every intermittent flash in a live conversation has been eliminated.
+
 ## Conversation presentation ownership
 
 `ConversationPresentationModel` owns pure tool visibility, turn projection, narrative,

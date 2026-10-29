@@ -412,8 +412,9 @@ private struct KimiTimeline<Bar: View>: View {
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
                                            running: running, isRunning: c.snapshot.session.isTurnRunning,
-                                           liveTools: c.live?.runningTools ?? [], online: connection.online && connection.snapshotReady, memoryKey: readingKey,
-                                           allowsActivitySummaries: true, followsLatest: follow, historyEpoch: c.snapshot.epoch,
+                                           liveTools: c.live?.runningTools ?? [], online: connection.online, memoryKey: readingKey,
+                                           allowsActivitySummaries: true, allowsActivitySummaryRequests: connection.snapshotReady,
+                                           followsLatest: follow, historyEpoch: c.snapshot.epoch,
                                            foldsProcess: true, waitsForInitialPosition: true,
                                            timing: connection.timings.turns[c.snapshot.session.id])
                         .environment(\.conversationActionContext,
