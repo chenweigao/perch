@@ -518,7 +518,7 @@ private struct ReferenceComposerFixtureView: View {
     let probe = NativeAcceptanceProbe.shared
     init(model: WorkbenchModel, fixture: NativeAcceptanceFixture) { self.model = model; self.fixture = fixture }
     func run(_ mode: String) async {
-        if ["kimi-switching", "kimi-refresh"].contains(mode) { await kimiSwitching(); return }
+        if ["kimi-switching", "kimi-refresh", "kimi-tool-switching"].contains(mode) { await kimiSwitching(); return }
         if mode.hasPrefix("kimi-") { await kimiInvalidation(input: mode == "kimi-input"); return }
         if mode == "workspace" { await workspaceActions(); return }
         if mode == "review" { await reviewWorkflow(); return }
@@ -670,6 +670,7 @@ private struct ReferenceComposerFixtureView: View {
     }
     private func kimiSwitching() async {
         let refresh = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-refresh"
+        let toolSwitch = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-tool-switching"
         var report: [String: Any] = ["mode": ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] ?? "kimi-switching", "boundary": "native layout samples, not display frames"]
         do {
             let items = ["a", "b"].map { id in
@@ -713,6 +714,7 @@ private struct ReferenceComposerFixtureView: View {
                         sample["document_height"] = document.bounds.height
                         sample["revision"] = model.kimi.conversation?.snapshot.asOfSeq
                         sample["document_hidden"] = document.isHidden
+                        sample["disconnected_tools"] = ConversationTranscript.disconnectedTools(in: document)
                         sample["scroll_reused"] = scroll === oldScroll
                         sample["document_reused"] = document === oldDocument
                         if let anchor = ConversationTranscript.readingAnchor(in: scroll) {
@@ -725,6 +727,15 @@ private struct ReferenceComposerFixtureView: View {
                 let target = items[index].reference.terminalID
                 switches.append(["target": target, "samples": samples])
                 report["switches"] = switches
+                if toolSwitch, step > 0 {
+                    guard samples.contains(where: { $0["ready"] as? Bool == false }),
+                          samples.contains(where: { $0["ready"] as? Bool == true }) else {
+                        throw WorkbenchError("Tool-switch fixture must sample both cached and refreshed content")
+                    }
+                    guard samples.allSatisfy({ ($0["disconnected_tools"] as? [String] ?? []).isEmpty }) else {
+                        throw WorkbenchError("Cached switch rendered a connected tool as disconnected while refreshing")
+                    }
+                }
                 if refresh, (1...4).contains(step) {
                     guard Set(samples.compactMap { $0["revision"] as? Int }).count == 2,
                           Set(samples.compactMap { $0["document_height"] as? CGFloat }).count >= 2 else {
@@ -759,6 +770,14 @@ private struct ReferenceComposerFixtureView: View {
                         throw WorkbenchError("Visible layout samples jumped before arriving at the latest reply")
                     }
                 }
+            }
+            if toolSwitch {
+                model.kimi.disconnect()
+                try await settle(window, "Disconnected tool presentation") {
+                    guard let scroll = self.transcript(in: window) else { return false }
+                    return ConversationTranscript.disconnectedTools(in: scroll).contains("a-tool")
+                }
+                report["real_disconnect_remains_visible"] = true
             }
             report["saved_anchor_restored_before_display"] = true
             report["switches"] = switches

@@ -16,6 +16,7 @@ final class KimiAcceptanceProtocol: URLProtocol {
         let session: [String: Any] = ["id": id, "title": "Kimi 输入隔离 \(id)", "updated_at": "fixture",
             "busy": true, "metadata": ["cwd": "/fixture"], "agent_config": ["model": "fixture/model"]]
         let refresh = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-refresh"
+        let toolSwitch = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "kimi-tool-switching"
         var revision = 10
         if refresh, path.hasSuffix("/snapshot") {
             Self.lock.lock()
@@ -25,15 +26,20 @@ final class KimiAcceptanceProtocol: URLProtocol {
         }
         let result: Any
         if path.hasSuffix("/snapshot") {
-            let messages: [[String: Any]] = (1...200).flatMap { turn in
+            var messages: [[String: Any]] = (1...200).flatMap { turn in
                 ["user", "assistant"].map { role in
                     ["id": "\(id)-\(role)-\(turn)", "role": role, "created_at": "\(turn)",
                      "content": [["type": "text", "text": "第 \(turn) 轮 · \(role)\n\n中文与 English **正文**和 `identifier`。\n\n" + String(repeating: "持续阅读，后台更新不打断输入。\n\n", count: refresh && turn == 200 && role == "assistant" ? (revision % 2 == 1 ? 100 : 1) : 3)]]] as [String: Any]
                 }
             }
+            if toolSwitch {
+                messages.append(["id": "\(id)-active-tool", "role": "assistant", "created_at": "201",
+                    "content": [["type": "tool_use", "tool_call_id": "\(id)-tool", "tool_name": "Bash", "input": ["command": "swift build"]]]])
+            }
             result = ["as_of_seq": revision, "epoch": "fixture", "session": session,
                 "messages": ["items": messages, "has_more": false],
-                "in_flight_turn": ["turn_id": 201, "assistant_text": "", "thinking_text": "", "running_tools": []],
+                "in_flight_turn": ["turn_id": 201, "assistant_text": "", "thinking_text": "",
+                    "running_tools": toolSwitch ? [["tool_call_id": "\(id)-tool", "name": "Bash", "args": ["command": "swift build"]]] : []],
                 "pending_approvals": [], "pending_questions": []]
         } else if path.hasSuffix("/prompts") { result = ["active": NSNull(), "queued": []] }
         else if path.hasSuffix("/tasks") || path.hasSuffix("/models") { result = ["items": []] }
@@ -47,7 +53,7 @@ final class KimiAcceptanceProtocol: URLProtocol {
             self.client?.urlProtocolDidFinishLoading(self)
         }
         reply = deliver
-        if refresh, path.hasSuffix("/snapshot") {
+        if (refresh || toolSwitch), path.hasSuffix("/snapshot") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: deliver)
         } else { deliver.perform() }
     }
