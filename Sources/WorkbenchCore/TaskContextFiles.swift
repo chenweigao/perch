@@ -69,6 +69,18 @@ public enum TaskContextFiles {
     ]
 }
 
+/// Only confirmed completion/cancellation moves out of the panel's active list.
+/// Failed and unknown tasks remain available without opening history.
+public struct TaskContextTasks {
+    public let current: [KimiTask]
+    public let finished: [KimiTask]
+    public init(_ tasks: [KimiTask]) {
+        finished = tasks.filter { $0.status == "completed" || $0.status == "cancelled" }
+        current = tasks.filter { $0.status != "completed" && $0.status != "cancelled" }
+            .sorted { $0.isRunning && !$1.isRunning }
+    }
+}
+
 public struct TaskContextRequest: Identifiable {
     public let id: String
     public let title: String

@@ -112,6 +112,9 @@ import WorkbenchCore
 
     try await press("task-context-back")
     precondition(model.taskContextWindow.detail == nil, "Back returns to the list")
+    // The stopped row is now folded. Wait for the normal idle polling interval
+    // to observe this fixture's resumed task before opening it again.
+    try await control("task-context-row-research", seconds: 10)
     try await press("task-context-row-research")
     precondition(model.taskContextWindow.detail == research)
 
@@ -216,7 +219,7 @@ import WorkbenchCore
 
 /// The window frame of the visible task panel control with this accessibility
 /// identifier, or nil while there is none.
-@MainActor private func taskPanelControl(_ window: NSWindow, _ identifier: String) -> NSRect? {
+@MainActor func taskPanelControl(_ window: NSWindow, _ identifier: String) -> NSRect? {
     guard let element = taskPanelElements(window).first(where: { $0.identifier == identifier })?.node,
           element.responds(to: NSSelectorFromString("accessibilityFrame")),
           let frame = (element.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue,

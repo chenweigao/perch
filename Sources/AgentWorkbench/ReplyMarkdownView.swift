@@ -60,7 +60,7 @@ enum ReplyStyle {
     /// in secondary ink. Weight still marks headings and strong text.
     static var quietSize: CGFloat { scale.secondary }
     static var quietLineHeight: CGFloat { scale.secondaryLine }
-    static let quietInk = NSColor.secondaryLabelColor
+    static let quietInk = WorkbenchTheme.quietNS
     /// Code and tables wider than the column fade out over this trailing width.
     /// No wider than their 12 pt trailing inset (`Code.inset`, table cell padding),
     /// so scrolled to the end no glyph fades.

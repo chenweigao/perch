@@ -28,7 +28,7 @@ struct TaskContextDetailView: View {
                     Image(systemName: "chevron.left")
                     Text("后台任务与子 Agent").lineLimit(1)
                 }.contentShape(Rectangle())
-            }.buttonStyle(.borderless).foregroundStyle(.secondary)
+            }.buttonStyle(.borderless).foregroundStyle(WorkbenchTheme.quiet)
                 .help("返回任务列表").accessibilityLabel("返回任务列表")
                 .accessibilityIdentifier("task-context-back")
                 .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 10)
@@ -37,7 +37,7 @@ struct TaskContextDetailView: View {
             } else if snapshot == nil {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Text("此任务已不在最新列表中。").foregroundStyle(.secondary)
+                Text("此任务已不在最新列表中。").foregroundStyle(WorkbenchTheme.quiet)
                     .padding(.horizontal, 16).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -67,7 +67,7 @@ struct TaskContextDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 TaskStatusSymbol(task: task)
-                Text(task.description.isEmpty ? task.kindLabel : task.description)
+                Text(task.displayTitle)
                     .font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                     .lineLimit(4).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -78,24 +78,25 @@ struct TaskContextDetailView: View {
                     Text(verbatim: " · ")
                     KimiTaskClock(task: task)
                 }
-            }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
+            }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
                 .padding(.leading, 26)
             if let usage = Self.usage(task) {
-                Text(verbatim: usage).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.tertiary)
+                Text(verbatim: usage).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
                     .lineLimit(2).padding(.leading, 26)
             }
             if !current {
                 Label("此任务已不在最新列表中，显示最后读取的内容。", systemImage: "clock.arrow.circlepath")
-                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
             }
             if let command = task.command, !command.isEmpty {
                 HStack(alignment: .top, spacing: 4) {
-                    Text(command).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
-                        .lineLimit(4).truncationMode(.middle).textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ScrollView([.horizontal, .vertical]) {
+                        Text(verbatim: command).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
+                            .textSelection(.enabled).fixedSize(horizontal: true, vertical: true)
+                    }.frame(maxHeight: 120)
                     ReplyCopyButton(text: command, label: "复制命令")
                 }.padding(.leading, 10).padding(.vertical, 6).padding(.trailing, 4)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                    .background(WorkbenchTheme.Fill.surface,
                                 in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             }
             VStack(alignment: .leading, spacing: 3) {
@@ -123,8 +124,8 @@ struct TaskContextDetailView: View {
 
     private func meta(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Text(label).foregroundStyle(.tertiary).frame(width: 72, alignment: .leading)
-            Text(value).foregroundStyle(.secondary).textSelection(.enabled)
+            Text(label).foregroundStyle(WorkbenchTheme.quiet).frame(width: 72, alignment: .leading)
+            Text(value).foregroundStyle(WorkbenchTheme.quiet).textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -183,11 +184,11 @@ struct TaskContextDetailView: View {
             HStack(spacing: 6) {
                 Text("输出").fontWeight(.semibold)
                 if value?.truncated == true {
-                    Text("显示最后 \(KimiTask.outputTailBytes / 1024) KiB").foregroundStyle(.tertiary)
+                    Text("显示最后 \(KimiTask.outputTailBytes / 1024) KiB").foregroundStyle(WorkbenchTheme.quiet)
                 }
                 Spacer(minLength: 4)
                 if following && task.isRunning {
-                    Label("跟随最新", systemImage: "arrow.down.to.line").foregroundStyle(.tertiary)
+                    Label("跟随最新", systemImage: "arrow.down.to.line").foregroundStyle(WorkbenchTheme.quiet)
                 }
                 if following {
                     Button { outputRefresh += 1 } label: {
@@ -195,7 +196,7 @@ struct TaskContextDetailView: View {
                     }.buttonStyle(.borderless).disabled(!online)
                         .help("重新读取输出").accessibilityLabel("重新读取输出")
                 }
-            }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
+            }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
             if let value, !value.text.isEmpty {
                 ScrollView {
                     Text(value.text).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
@@ -204,14 +205,14 @@ struct TaskContextDetailView: View {
                 }
                     // A running process prints toward its latest line.
                     .defaultScrollAnchor(.bottom)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface),
+                    .background(WorkbenchTheme.Fill.surface,
                                 in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                     .accessibilityIdentifier("task-context-output")
             } else if value != nil {
-                Text("暂无输出").foregroundStyle(.tertiary)
+                Text("暂无输出").foregroundStyle(WorkbenchTheme.quiet)
             } else if failure == nil {
                 if following { ProgressView("正在读取输出…").controlSize(.small) }
-                else { Text("暂无输出").foregroundStyle(.tertiary) }
+                else { Text("暂无输出").foregroundStyle(WorkbenchTheme.quiet) }
             }
             if let failure {
                 Text(failure).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
@@ -232,9 +233,9 @@ struct TaskContextDetailView: View {
         let text = task.outputPreview?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return VStack(alignment: .leading, spacing: 8) {
             Text(task.isFailed ? "错误" : "结果").fontWeight(.semibold)
-                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
+                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
             if text.isEmpty {
-                Text(task.isRunning ? "运行结束后在这里显示结果。" : "没有返回结果。").foregroundStyle(.tertiary)
+                Text(task.isRunning ? "运行结束后在这里显示结果。" : "没有返回结果。").foregroundStyle(WorkbenchTheme.quiet)
             } else {
                 ScrollView {
                     Text(text).foregroundStyle(task.isFailed ? Color.red : .primary).textSelection(.enabled)

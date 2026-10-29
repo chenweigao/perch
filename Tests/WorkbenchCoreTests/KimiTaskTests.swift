@@ -87,6 +87,17 @@ func checkKimiTasks() throws {
     let list = try KimiWire.decode(KimiTaskList.self, from: Data(listJSON.utf8))
     require(list.items.count == 2 && list.items[0].command == "npm test" && list.items[0].kind == "bash")
     require(list.items[1].agentId == "agent_01" && list.items[1].runInBackground == false)
+    require(list.items[0].displayTitle == "运行测试" && list.items[1].displayTitle == "定位中文输入问题",
+            "Provider-written task names remain intact")
+    let setup = "cd /project && swift build -c release > /tmp/build.log 2>&1"
+    let shell = KimiTask(id: "shell", kind: "bash", description: "Bash: \(setup)", status: "running", command: setup)
+    require(shell.displayTitle == L("构建项目") + " · swift build" && shell.command == setup,
+            "A raw Bash task names the operation after shell setup, retaining the exact command")
+    let quoted = "printf 'swift build is a note'"
+    require(KimiTask(id: "quoted", kind: "bash", description: quoted, status: "completed", command: quoted).displayTitle == L("执行命令") + " · printf",
+            "A quoted build name is not evidence of running a build")
+    require(KimiTask(id: "custom", kind: "bash", description: "核对构建产物", status: "running", command: setup).displayTitle == "核对构建产物")
+    require(KimiTask(id: "no-title", kind: "bash", description: "", status: "running", command: "cd /project && pytest -q").displayTitle == L("运行测试") + " · pytest")
     var listed = KimiTaskBoard(subagents: roster)
     listed.reconcile(background: list.items)
     require(listed.background.count == 2 && listed.backgroundTasks.map(\.id) == ["task_1"],
