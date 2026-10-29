@@ -745,9 +745,32 @@ final class NavigationRunner {
                 }
             }
         }
-        // Let the real Canvas finish an interrupted scan animation; state
-        // endpoints alone cannot demonstrate that any intermediate was drawn.
+        // Exercise motion in a native host whose preference does not depend on
+        // the runner's system settings. Keep the production host for the
+        // behavior and render-isolation assertions below.
+        animationSamples = []
+        let animatedHover = ConversationTurnHover()
+        let animatedRoot = ConversationTurnRail(turns: navigator.snapshot.turns, current: 0,
+            hasOlderHistory: false, selected: nil, hover: animatedHover, select: { _ in }, reduceMotionOverride: false)
+            .environment(\.conversationReduceMotion, false)
+        let animatedWindow = NSWindow(contentRect: NSRect(x: 80, y: 80, width: 420, height: 500),
+                                      styleMask: [.titled], backing: .buffered, defer: false)
+        animatedWindow.isReleasedWhenClosed = false
+        animatedWindow.contentView = NSHostingView(rootView: animatedRoot)
+        animatedWindow.orderFront(nil)
+        animatedWindow.contentView?.layoutSubtreeIfNeeded(); animatedWindow.displayIfNeeded(); CATransaction.flush()
+        let animatedHeight = max(1, animatedWindow.contentView!.bounds.height - 32)
+        let animatedPlain = ConversationTurnRailGeometry(count: 200, height: animatedHeight)
+        animatedHover.move(y: animatedPlain.y(for: 100), count: 200, height: animatedHeight)
+        try await Task.sleep(for: .milliseconds(160))
+        let animatedLens = ConversationTurnRailGeometry(count: 200, height: animatedHeight, focus: animatedHover.focus)
+        for index in animatedLens.expanded {
+            animatedHover.move(y: animatedLens.y(for: index), count: 200, height: animatedHeight)
+            animatedWindow.contentView?.layoutSubtreeIfNeeded(); animatedWindow.displayIfNeeded(); CATransaction.flush()
+            try await Task.sleep(for: .milliseconds(16))
+        }
         try await settle()
+        animatedWindow.orderOut(nil)
         let intermediatePositions = Set(animationSamples.map { $0.1 }.filter { $0.rounded() != $0 }).count
         guard intermediatePositions >= 2 else {
             throw NavigationError("turn rail never drew intermediate animation values")
