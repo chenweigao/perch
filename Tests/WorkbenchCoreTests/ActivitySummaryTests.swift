@@ -100,6 +100,15 @@ func checkActivitySummaries() throws {
     let multiPartEntries = try timeline([user(), thought("multi", source: multiPartSource), call("read0")])
     let multiPart = ActivityNarrativeProjection.make(entries: multiPartEntries, tools: [read0.id: read0], isRunning: true).current!
     precondition(multiPart.headline == "First summary part. " + completeProgress)
+    let multiPartAnchor = multiPartEntries.first { $0.isNarrativeSource(for: multiPart) }!
+    precondition(multiPartAnchor.narrativeSourceText(for: multiPart) == "First summary part.\n\n" + completeProgress,
+                 "Provider transcript prose keeps summary-part boundaries and excludes private reasoning")
+    let formattedProgress = "### 已排除网络耗时\n\n同一 `workspace`：TTFB 为 **69–84ms**。\n\n继续检查缓存。"
+    let formattedEntries = try timeline([user(), progress("formatted", formattedProgress), call("read0")])
+    let formattedNarrative = ActivityNarrativeProjection.make(entries: formattedEntries, tools: [read0.id: read0], isRunning: true).current!
+    let formattedAnchor = formattedEntries.first { $0.isNarrativeSource(for: formattedNarrative) }!
+    precondition(formattedAnchor.narrativeSourceText(for: formattedNarrative) == formattedProgress,
+                 "Colons and summary normalization cannot rewrite transcript Markdown or paragraph breaks")
 
     let read1 = tool("read1")
     let secondToolEntries = try timeline([user(), call("read0"), call("read1")])
@@ -227,6 +236,8 @@ func checkActivitySummaries() throws {
     let privateThinkingEntry = thinkingEntries.first { $0.isProcess }!
     precondition(!privateThinkingEntry.isNarrativeSource(for: thinkingNarrative!),
                  "Private thinking must remain visible and cannot become a narrative source row")
+    precondition(privateThinkingEntry.narrativeSourceText(for: thinkingNarrative!) == nil,
+                 "Only provider-declared public summary parts can be promoted into progress prose")
     precondition(ActivitySummaryBatch.latest(in: providerEntries,
         tools: [read0.id: read0, read1.id: read1], isRunning: true, enabled: true) == nil,
         "Provider-native summaries must suppress external summarization")

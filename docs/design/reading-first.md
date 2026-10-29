@@ -8,6 +8,20 @@ The reply is the primary reading surface. Process is available without dominatin
 - A thought that is still streaming has no transcript row; the activity bar communicates the live phase. Settled thoughts read 已思考 N秒 when this app watched them. Successful single-tool stages now use the same disclosure as larger stages. Running, failed, pending and uncertain tools stay visible.
 - Existing copy/quote/regenerate, file links, search-to-fold navigation, bookmarks, turn navigation and manual scroll-follow intent remain connected to their current handlers. Sidebar and composer glass remain unchanged.
 
+## Progress while a turn is running
+
+Settled commentary and public provider summaries read as ordinary Markdown prose,
+using the same body font, line height and ink as replies. Their original paragraph
+breaks, inline code and explicit headings survive; the activity bar's colon-based
+headline/detail extraction does not set transcript typography. Public provider
+summary parts are the only promoted reasoning content; private thinking remains
+in its existing disclosure.
+
+Ordinary progress has no completion checkmark. A blocked stage keeps its orange
+status indicator. Tool disclosure headers use the caption scale with readable
+secondary ink. A progress note sits 8 pt above its tool records; the next stage
+starts after 24 pt. Existing completed-turn folding and action gates still apply.
+
 ## Verification
 
 Signed native checks cover wide/narrow and light/dark windows, full code text, selectable reply content, matching native/fallback heading metrics, actual mouse clicks to expand/read/collapse process, plus exported window images. Core checks protect attention visibility and preserve folded source content/order. Navigation reading and interaction fixtures exercise the existing rendering/selection paths. These are local synthetic interaction checks, not a live model session or an FPS measurement.

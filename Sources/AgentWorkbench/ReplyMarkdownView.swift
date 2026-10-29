@@ -39,6 +39,8 @@ enum ReplyStyle {
     /// Between transcript entries; consecutive process rows sit closer.
     static let entrySpacing: CGFloat = 16
     static let processEntrySpacing: CGFloat = 6
+    static let progressToolSpacing: CGFloat = 8
+    static let progressStageSpacing: CGFloat = 24
     static let ink = Color.primary.opacity(0.9)
     /// H1 and H2 step up; H3 and below keep the body size, set apart by weight
     /// and spacing.

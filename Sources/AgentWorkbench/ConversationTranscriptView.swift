@@ -787,6 +787,7 @@ private final class ConversationDocumentView: NSView {
         }
         let structureChanged = changedSession || contents.count != next.count || !zip(contents, next).allSatisfy {
             $0.entry.id == $1.entry.id && $0.entry.isProcess == $1.entry.isProcess
+                && $0.isProgressNote == $1.isProgressNote
         }
         if changedSession || changedAppearance { measuredSizes.removeAll(keepingCapacity: true) }
         if structureChanged {
@@ -893,8 +894,11 @@ private final class ConversationDocumentView: NSView {
         geometry = ConversationRowGeometry(heights: heights, spacingAfter: contents.indices.map(spacing(after:)))
     }
     private func spacing(after index: Int) -> CGFloat {
-        index + 1 < contents.count && contents[index].entry.isProcess && contents[index + 1].entry.isProcess
-            ? ReplyStyle.processEntrySpacing : ReplyStyle.entrySpacing
+        guard index + 1 < contents.count else { return ReplyStyle.entrySpacing }
+        let current = contents[index], next = contents[index + 1]
+        if next.isProgressNote { return ReplyStyle.progressStageSpacing }
+        if current.isProgressNote && next.entry.isProcess { return ReplyStyle.progressToolSpacing }
+        return current.entry.isProcess && next.entry.isProcess ? ReplyStyle.processEntrySpacing : ReplyStyle.entrySpacing
     }
     private var viewportRect: CGRect {
         if let clip = observedClip {
@@ -2131,12 +2135,17 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.foldedRows == rhs.foldedRows
             && lhs.processSeconds == rhs.processSeconds
     }
+    var isProgressNote: Bool {
+        guard let activityNarrative else { return false }
+        return activityNarrative.isAnchor && activityNarrative.stageClosed
+            && entry.isNarrativeSource(for: activityNarrative.narrative)
+    }
     var body: some View {
         // The native assistant row places its actions with the same gap.
         VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
-            if let activityNarrative, activityNarrative.isAnchor, activityNarrative.stageClosed,
-               entry.isNarrativeSource(for: activityNarrative.narrative) {
-                ActivityNarrativeHistoryView(narrative: activityNarrative.narrative)
+            if isProgressNote, let activityNarrative {
+                ActivityNarrativeHistoryView(narrative: activityNarrative.narrative,
+                                             sourceText: entry.narrativeSourceText(for: activityNarrative.narrative))
             } else {
                 switch entry.presentation {
                 case .activity:
