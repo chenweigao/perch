@@ -887,6 +887,10 @@ final class WorkbenchSplitController: NSSplitViewController {
             if window.toolbar !== self.workspaceToolbar {
                 self.workspaceToolbarInstalled = false
                 self.installingToolbar = true
+                // Expand delegate placeholders before attaching to WindowGroup.
+                // Loading them inside setToolbar lets window/SwiftUI updates
+                // invalidate AppKit's current-item indices during cold launch.
+                _ = self.workspaceToolbar?.items
                 window.toolbar = self.workspaceToolbar
                 self.installingToolbar = false
                 self.workspaceToolbarInstalled = true

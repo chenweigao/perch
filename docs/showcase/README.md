@@ -15,7 +15,9 @@ illustrative rather than pixel-exact AppKit rendering.
 | `perch-new-session.png` | `start`, new task |
 
 Each PNG is an unaltered browser capture of `index.html?scene=<scene>` in a
-1280 × 720 viewport. The footer identifies it as a rendered UI illustration with
+1440 × 960 (3:2) canvas, captured as a complete page. The application window
+keeps roughly the proportions of the 1440 × 900 native workspace instead of
+stretching to fill a wide banner. The footer identifies it as an illustration with
 demo content. No agent was run, and no private session or command output was used.
 No external fonts or services are loaded.
 
