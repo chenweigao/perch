@@ -332,7 +332,7 @@ struct WorkbenchSidebar: View {
             Button { showPinPicker = true } label: {
                 Image(systemName: "plus").font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.primary).frame(width: 22, height: 22)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.selected),
+                    .background(WorkbenchTheme.Fill.selected,
                                 in: RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius))
             }
                 .buttonStyle(SidebarNavigationStyle()).help("置顶会话")
@@ -774,7 +774,7 @@ private struct ConnectionControls: View {
                 }.padding(.vertical, 6)
             }
         }.font(.system(size: 11)).padding(15)
-            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+            .background(WorkbenchTheme.Fill.surface, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
             .padding(10)
     }
     @State private var expandedNativeAgents: Set<UUID> = []

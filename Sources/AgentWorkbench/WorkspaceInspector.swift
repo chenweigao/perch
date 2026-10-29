@@ -67,7 +67,7 @@ struct FilesInspectorView: View {
                         .disabled(browser.path.isEmpty || browser.loading || item == nil || !matchesLocation)
                     Button(action: close) {
                         Image(systemName: "xmark").frame(width: 32, height: 32)
-                            .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Circle())
+                            .background(WorkbenchTheme.Fill.surface, in: Circle())
                     }.help("收起面板").accessibilityLabel("收起面板")
                 }.buttonStyle(.borderless).padding(.horizontal, 20).padding(.vertical, 16)
                 if item != nil && matchesLocation {
@@ -181,7 +181,7 @@ struct ChangesInspectorView: View {
                 .help("改动操作").accessibilityLabel("改动操作")
             Button(action: close) {
                 Image(systemName: "xmark").foregroundStyle(.secondary).frame(width: 32, height: 32)
-                    .background(Color.primary.opacity(WorkbenchTheme.Fill.surface), in: Circle())
+                    .background(WorkbenchTheme.Fill.surface, in: Circle())
             }
                 .help("收起面板").accessibilityLabel("收起面板")
         }.font(.system(size: WorkbenchTheme.Typography.body)).buttonStyle(.borderless)

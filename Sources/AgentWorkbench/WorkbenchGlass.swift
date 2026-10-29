@@ -147,13 +147,13 @@ struct WorkbenchDisclosureButtonStyle: ButtonStyle {
         @State private var hovered = false
         var body: some View {
             configuration.label
-                .background(Color.primary.opacity(wash), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .background(wash, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .onHover { hovered = $0 }
         }
-        private var wash: Double {
+        private var wash: Color {
             configuration.isPressed ? WorkbenchTheme.Fill.pressed
                 : selected ? WorkbenchTheme.Fill.selected
-                : hovered ? WorkbenchTheme.Fill.hover : 0
+                : hovered ? WorkbenchTheme.Fill.hover : .clear
         }
     }
 }

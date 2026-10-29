@@ -155,7 +155,7 @@ private struct FindOptionToggle: View {
         Button { on.toggle(); onChange() } label: {
             Text(label).font(.system(size: 11, weight: .medium, design: .monospaced))
                 .frame(width: 22, height: 20)
-                .background(on ? Color.primary.opacity(WorkbenchTheme.Fill.selected) : Color.clear,
+                .background(on ? WorkbenchTheme.Fill.selected : Color.clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(on ? .primary : .secondary).help(help)

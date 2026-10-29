@@ -387,7 +387,7 @@ private struct SettingsRow<Content: View, Trailing: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(Color.primary.opacity(hovered ? WorkbenchTheme.Fill.hover : 0),
+        .background(hovered ? WorkbenchTheme.Fill.hover : .clear,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
         .onHover { hovered = $0 }
         .accessibilityElement(children: .combine)

@@ -121,7 +121,7 @@ struct PlanReviewPanel: View {
                     }
                 }
             }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                .background(.primary.opacity(WorkbenchTheme.Fill.surface),
+                .background(WorkbenchTheme.Fill.surface,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                 // Enter and Escape have no approval binding; dismissal sends nothing.
                 .sheet(isPresented: $showPlan) {

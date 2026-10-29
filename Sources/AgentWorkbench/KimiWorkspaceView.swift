@@ -197,7 +197,7 @@ private struct KimiComposerView: View {
                                      autoCompactHost: connection.host.id, autoCompactSession: sessionID)
                     }.foregroundStyle(.secondary).padding(.leading, 10)
                         .overlay(alignment: .leading) {
-                            Rectangle().fill(.primary.opacity(WorkbenchTheme.Stroke.hairline)).frame(width: 1, height: 16)
+                            Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(width: 1, height: 16)
                         }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,

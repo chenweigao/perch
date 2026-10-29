@@ -7,9 +7,10 @@ import SwiftUI
 /// not a simple inversion: the canvas is blue-graphite at hue ~226°, and ink,
 /// quiet text, and semantic colors are tuned against it for measured contrast
 /// (body ink ≈ 12.7:1, quiet ≈ 5.3:1) so long night reads avoid halation. The
-/// terminal shares the same canvas. Every value resolves through a dynamic
-/// NSColor so AppKit text (cached attributed strings) redraws correctly on
-/// appearance changes.
+/// terminal shares the same canvas. Fills, strokes and elevation are independent
+/// light/dark tokens, not one alpha shared by both appearances. Every value
+/// resolves through a dynamic NSColor so AppKit text (cached attributed strings)
+/// redraws correctly on appearance changes.
 enum WorkbenchTheme {
     /// Primary reading ink: dark slate in light; dark is a soft blue-white held
     /// just below full brightness, which keeps CJK glyphs from blooming on the
@@ -34,6 +35,13 @@ enum WorkbenchTheme {
     /// so the desktop tint still reads through it.
     static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),
                                                 dark: NSColor(white: 1, alpha: 0.11)))
+    /// The base beneath the window glass. Light glass keeps its pure desktop
+    /// tint (clear underlay). Dark glass floats over a mostly opaque blue-graphite
+    /// base, so navigation and the toolbar share the canvas's luminance instead of
+    /// glowing with the wallpaper; the remaining 15% keeps the glass alive.
+    static let glassUnderlay = Color(nsColor: nsColor(
+        light: NSColor.clear,
+        dark: NSColor(srgbRed: 0.086, green: 0.094, blue: 0.118, alpha: 0.85)))
 
     /// Glyph color atop the accent-colored primary action circle; dark echoes the
     /// canvas hue so the circle reads as a single molded piece.
@@ -71,6 +79,23 @@ enum WorkbenchTheme {
         NSColor(name: nil) { appearance in
             isDark(appearance) ? dark : light
         }
+    }
+
+    /// A primary-ink wash with independent light/dark alphas. labelColor resolves
+    /// inside the requested appearance; applying alpha outside it can freeze the
+    /// system appearance in cached AppKit text and layers.
+    static func washNS(light: Double, dark: Double) -> NSColor {
+        NSColor(name: nil) { appearance in
+            var wash = NSColor.labelColor
+            appearance.performAsCurrentDrawingAppearance {
+                wash = NSColor.labelColor.withAlphaComponent(isDark(appearance) ? dark : light)
+            }
+            return wash
+        }
+    }
+
+    static func wash(light: Double, dark: Double) -> Color {
+        Color(nsColor: washNS(light: light, dark: dark))
     }
 }
 
@@ -113,18 +138,31 @@ extension WorkbenchTheme {
 
 extension WorkbenchTheme {
     /// Row and control highlights on opaque surfaces: pressed > selected > hovered.
-    /// Keyboard selection is `selected`, so it never reads as a hover. Sidebar rows
-    /// on the window glass use `rowCard` instead.
+    /// Each token is a primary-ink wash with its own light/dark alpha: at night,
+    /// separation comes from lighter surfaces, so the dark washes are a step
+    /// stronger than the light ones. Keyboard selection is `selected`, so it never
+    /// reads as a hover. Sidebar rows on the window glass use `rowCard` instead.
     enum Fill {
-        static let hover: Double = 0.045
-        static let selected: Double = 0.08
-        static let pressed: Double = 0.11
+        static let hover = wash(light: 0.045, dark: 0.055)
+        static let selected = wash(light: 0.08, dark: 0.10)
+        static let pressed = wash(light: 0.11, dark: 0.14)
         /// A grouped, static surface behind content (cards, chips).
-        static let surface: Double = 0.035
+        static let surface = wash(light: 0.035, dark: 0.05)
     }
     enum Stroke {
-        /// Hairline borders of panels and cards.
-        static let hairline: Double = 0.08
+        /// Hairline borders of panels and cards. At night the hairline carries
+        /// more of the region separation than the shadow does, so it is stronger.
+        static let hairline = wash(light: 0.08, dark: 0.14)
+        /// AppKit layers (CALayer borders) resolve the same token as an NSColor.
+        static let hairlineNS = washNS(light: 0.08, dark: 0.14)
+    }
+    enum Elevation {
+        /// Floating-panel shadow color. Light separates with shadow; dark keeps
+        /// only a soft contact shadow while hairlines mark the edges.
+        static let panelShadow = NSColor(name: nil) { appearance in
+            NSColor.black.withAlphaComponent(
+                appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.20)
+        }
     }
     /// Corner radii of highlights and containers. Glass surfaces and reply blocks keep their own.
     enum Radius {
