@@ -163,12 +163,25 @@ write/edit results receive **Updated this turn**; other paths are **Related file
 whose existence is checked when the normal file reader opens them on the original
 host. Reading a file never selects another conversation.
 
-Pending requests open the existing review UI. Kimi background tasks can show an
-on-demand output tail (up to 16 KiB) and request cancellation. Native subagents
-offer Stop only when the runtime marks them individually stoppable; a fresh roster
-is checked before issuing it. Stop acknowledgement does not mark a task finished;
-the subsequent task state does. Unconfirmed stops become retryable after 15 seconds.
-Subagent details continue to use the full conversation.
+Pending requests open the existing review UI. Each background task or subagent
+row shows its status, a live elapsed time and the first line of its command or
+its latest tool; the whole row opens the task's detail in place of the list, and
+the back control returns to it. The detail names the task's type, status,
+usage, command (copyable), model and ID. Entries of Kimi's persisted task list
+show their output tail (up to 16 KiB) below, read again every 2 seconds while
+the task runs and once more when it finishes; subagents show their result or
+error. A subagent's **Show activity** opens its own transcript sheet in the
+conversation when the main window shows that session; otherwise **Open session**
+selects it first, keeping the panel and its lock. The detail updates in place
+when the task finishes. A task the latest read no longer lists keeps its last
+known state and says so. Following another session returns the panel to its
+list; a locked panel keeps the detail, and so do docking, detaching and page
+switches. A hidden panel reads no output.
+
+Kimi background tasks can request cancellation. Native subagents offer Stop only
+when the runtime marks them individually stoppable; a fresh roster is checked
+before issuing it. Stop acknowledgement does not mark a task finished; the
+subsequent task state does. Unconfirmed stops become retryable after 15 seconds.
 
 The independent window’s **Add instructions** captures the source task when opened and appends to that task's
 existing draft. It does not send a message. The task panel and the older followed-task

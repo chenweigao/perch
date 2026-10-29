@@ -100,6 +100,7 @@ import WorkbenchCore
     newer.cancel(); await newer.value
     await state.follow(nil, online: false) { fatalError("Hidden panels do not read") }
     precondition(state.snapshot == nil)
+    try await checkTaskDetailState(a: a, b: b, directory: root.path)
 
     model.taskContextWindow.locked = a
     model.taskContextWindow.show(model: model)
@@ -157,6 +158,7 @@ import WorkbenchCore
     try await Task.sleep(for: .milliseconds(200))
     precondition(connection.drafts["a"] == "原有草稿\n\n补充验证依据" && connection.drafts["b"] == "其他任务草稿")
     precondition(!reads.contains { $0.contains("/prompt") }, "Adding a draft must never send")
+
     model.open(second)
     try await Task.sleep(for: .milliseconds(150))
     model.openWorkspaceFile(GroupOutcome(title: "方案", link: read.files[0].path, source: a))
@@ -484,6 +486,64 @@ import WorkbenchCore
                  "Inspector changes must preserve transcript identity, selection, and draft")
     model.taskContextWindow.locked = nil
     print("PASS: behind-window frame, rounded conversation card, floating sidebar margins, wide avoidance, narrow overlay, leading reading rail, persisted resize and visibility, floating inspector margins, overlay and persistence, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
+}
+
+/// The detail page's output reads and stop requests, without a window.
+@MainActor private func checkTaskDetailState(a: SessionReference, b: SessionReference, directory: String) async throws {
+    func snapshot(_ title: String) -> TaskContextSnapshot {
+        TaskContextSnapshot(title: title, directory: directory, busy: false, messages: [])
+    }
+    func task(_ id: String, _ status: String, output: String? = nil, bytes: Int? = nil) -> KimiTask {
+        KimiTask(id: id, kind: "bash", description: id, status: status, outputPreview: output, outputBytes: bytes, stoppable: true)
+    }
+    let state = TaskContextState()
+    state.outputInterval = 0.02
+    let panel = Task { await state.follow(a, online: true) { snapshot("A") } }
+    for _ in 0..<50 where state.snapshot?.title != "A" { try await Task.sleep(for: .milliseconds(10)) }
+
+    var reads = 0
+    await state.followOutput("done", source: a, running: false) {
+        reads += 1
+        return task("done", "completed", output: "PASS", bytes: 40_000)
+    }
+    precondition(reads == 1 && state.outputs["done"] == TaskContextOutput(text: "PASS", bytes: 40_000),
+                 "A finished task is read once, for its final tail")
+    reads = 0
+    let running = Task { await state.followOutput("live", source: a, running: true) {
+        reads += 1
+        if reads == 2 { throw WorkbenchError("暂时不可用") }
+        return task("live", "running", output: "line \(reads)")
+    } }
+    for _ in 0..<200 where reads < 4 { try await Task.sleep(for: .milliseconds(10)) }
+    running.cancel(); await running.value
+    precondition(reads >= 4 && state.outputs["live"]?.text.hasPrefix("line ") == true && state.outputErrors["live"] == nil,
+                 "A running task is read again; a failed read clears on the next success")
+    let settled = reads
+    try await Task.sleep(for: .milliseconds(80))
+    precondition(reads == settled, "A closed page stops reading")
+
+    var held: CheckedContinuation<KimiTask, Never>?
+    let late = Task { await state.followOutput("late", source: a, running: true) {
+        await withCheckedContinuation { held = $0 }
+    } }
+    for _ in 0..<50 where held == nil { try await Task.sleep(for: .milliseconds(10)) }
+    panel.cancel(); await panel.value
+    let other = Task { await state.follow(b, online: true) { snapshot("B") } }
+    for _ in 0..<50 where state.snapshot?.title != "B" { try await Task.sleep(for: .milliseconds(10)) }
+    held!.resume(returning: task("late", "running", output: "LATE"))
+    await late.value
+    precondition(state.outputs.isEmpty && state.outputErrors.isEmpty,
+                 "Following another session drops the previous session's output reads")
+
+    var sent: [String] = []
+    await state.stop(task("x", "running"), source: a) { sent.append("a") }
+    precondition(sent.isEmpty, "A stop for a session the panel no longer reads is never sent")
+    await state.stop(task("x", "running"), source: b) { sent.append("x") }
+    precondition(sent == ["x"] && state.stopRequested == ["x"] && state.working.isEmpty)
+    await state.stop(task("y", "running"), source: b) { throw WorkbenchError("拒绝停止") }
+    precondition(state.actionErrors["y"] == "拒绝停止" && !state.stopRequested.contains("y") && state.working.isEmpty)
+    other.cancel(); await other.value
+    print("PASS: task detail output follow, final read, transient failure, cancellation, source isolation and stop requests")
 }
 
 /// Layout fixtures must exercise viewports larger than the CI runner's display.

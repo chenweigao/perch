@@ -85,6 +85,8 @@ public struct TaskContextSnapshot {
     public let tasks: [KimiTask]
     public let files: [TaskContextFile]
     public var taskError: String? = nil
+    /// Ids of `tasks` that come from Kimi's persisted task list.
+    public var listedTaskIDs: Set<String> = []
 
     public init(title: String, directory: String, busy: Bool, requests: [TaskContextRequest] = [], failure: String? = nil,
          messages: [KimiMessage], live: [KimiLiveTool] = [], tasks: [KimiTask] = [], native: Bool = false) {

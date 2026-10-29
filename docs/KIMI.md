@@ -46,7 +46,7 @@ Kimi 与 Herdr 共用任务组、侧栏、打开标签和待处理队列；两�
 - 所选会话订阅 main agent；子 Agent 的流式增量不进入主对话，其最终输出仍随主会话的工具结果显示。
 - 子 Agent 状态来自 snapshot 的 `subagents` 名册与 `subagent.*` 事件，按事件本地更新，不为每个子 Agent 重读快照；名册与服务端一致，在主 Agent 新一轮开始时清空。
 - 子 Agent 过程读取 `GET /sessions/{id}/transcript?agent_id=…&page_size=20`，更早轮次用 `before_turn` 翻页；订阅用 `subscribe_v2` 的 `block` 级（整帧下发，不含逐字 `append`），从该页 `seq` 续订，关闭表单时用 `unsubscribe_v2` 释放，同一时间只订阅一个子 Agent。服务端 reset 窗口不含轮次，只当水位，不覆盖已读页面；`turn.upsert` 与 `step.upsert` 是头部，不覆盖已折叠的步骤与帧。marker、taskref、task、interaction、attachment、todo、prompt 与 meta 操作不渲染。
-- 后台任务读取 `GET /sessions/{id}/tasks`，输出按需读取 `GET /sessions/{id}/tasks/{task_id}?with_output=true&output_bytes=16384`，停止使用 `POST /sessions/{id}/tasks/{task_id}:cancel` 并检查 `cancelled`。`task.started` 与 `task.terminated` 触发一次 300 毫秒防抖重读，其旧别名 `background.task.*` 不重复触发。前台子 Agent 同时出现在名册与任务列表时只显示一次。任务列表读取失败只在弹层内提示，不占用会话错误横幅。
+- 后台任务读取 `GET /sessions/{id}/tasks`，输出按需读取 `GET /sessions/{id}/tasks/{task_id}?with_output=true&output_bytes=16384`，停止使用 `POST /sessions/{id}/tasks/{task_id}:cancel` 并检查 `cancelled`。`task.started` 与 `task.terminated` 触发一次 300 毫秒防抖重读，其旧别名 `background.task.*` 不重复触发。前台子 Agent 同时出现在名册与任务列表时只显示一次。任务列表读取失败只在弹层内提示，不占用会话错误横幅。任务面板的任务详情对任务列表中的条目读取同一接口：显示时读取，任务运行中每 2 秒再读一次，结束后读最后一次；读取不改变选中的会话，面板隐藏即停止。REST 任务记录不含退出码，失败原因以输出尾部为准。
 - 消息请求带客户端 prompt_id；结果未确认时保留草稿并提示核对，不自动重发。
 - 连接丢失会标示旧内容并禁用发送；自动重连重新读取快照。退出客户端不终止远端任务。
 
