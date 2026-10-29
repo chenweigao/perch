@@ -67,6 +67,7 @@ import WorkbenchCore
             try await checkReadingCanvas()
         case "reading-design":
             try await checkReadingDesign()
+            try await checkProgressReading()
         case "activity-bar":
             try await checkActivityBar()
         case "reply-selection":

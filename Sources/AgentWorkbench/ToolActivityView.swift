@@ -3,27 +3,22 @@ import WorkbenchCore
 
 struct ActivityNarrativeHistoryView: View {
     let narrative: ActivityNarrative
+    var sourceText: String? = nil
+    private var text: String {
+        sourceText ?? [narrative.headline, narrative.detail].compactMap { $0 }.joined(separator: "\n\n")
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: narrative.phase == .blocked ? "exclamationmark.circle" : "checkmark.circle")
-                .font(.system(size: ReplyStyle.captionSize, weight: .medium))
-                .foregroundStyle(narrative.phase == .blocked ? Color.orange : WorkbenchTheme.quiet)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(narrative.headline).font(.system(size: ReplyStyle.Process.labelSize, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let detail = narrative.detail, !detail.isEmpty {
-                    Text(detail).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            if narrative.phase == .blocked {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: ReplyStyle.captionSize, weight: .medium))
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel(Text(narrative.phase.label))
             }
+            KimiMarkdown(text: text).environment(\.isConversationBodyText, true)
         }
         .textSelection(.enabled)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: [narrative.headline, narrative.detail]
-            .compactMap { $0 }.joined(separator: ". ")))
     }
 }
 
@@ -65,7 +60,7 @@ struct KimiActivityView: View {
                         Spacer(minLength: 0)
                         let attention = items.filter { $0.staysVisible && $0.status != .running }.count
                         if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
-                    }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
+                    }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
             if expanded, let narrative {
                 ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, ReplyStyle.Process.nestedIndent)

@@ -316,6 +316,22 @@ public enum ActivityNarrativeProjection {
 }
 
 public extension ConversationTimelineEntry {
+    /// Transcript prose keeps its original Markdown and paragraph boundaries.
+    /// Provider summaries expose only their public summary parts, never thinking.
+    func narrativeSourceText(for narrative: ActivityNarrative) -> String? {
+        guard isNarrativeSource(for: narrative) else { return nil }
+        let parts = messages.flatMap(\.content)
+        switch narrative.source {
+        case .commentary:
+            return parts.filter { $0.type == "text" }.compactMap(\.visibleText).joined(separator: "\n\n")
+        case .provider:
+            return parts.filter { $0.type == "thinking" && $0.source?["kind"].string == "activity_summary" }
+                .flatMap { $0.source?["summaryParts"].array.compactMap(\.string) ?? [] }.joined(separator: "\n\n")
+        case .external, .local:
+            return nil
+        }
+    }
+
     func isNarrativeSource(for narrative: ActivityNarrative) -> Bool {
         switch narrative.source {
         case .commentary:
