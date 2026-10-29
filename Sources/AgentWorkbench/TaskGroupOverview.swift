@@ -105,8 +105,7 @@ private struct GroupRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding(.horizontal, 8)
-            .background(configuration.isPressed ? WorkbenchTheme.Fill.pressed
-                                              : hovered ? WorkbenchTheme.Fill.hover : .clear),
+            .background(configuration.isPressed ? WorkbenchTheme.Fill.pressed : hovered ? WorkbenchTheme.Fill.hover : .clear,
                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
             .padding(.horizontal, -8)
             .onHover { hovered = $0 }

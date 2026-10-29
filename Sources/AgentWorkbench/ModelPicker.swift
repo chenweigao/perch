@@ -155,8 +155,7 @@ struct ModelPickerRow: View {
                     .opacity(selected ? 1 : 0).accessibilityHidden(true)
             }.padding(.horizontal, 10).padding(.vertical, 8).contentShape(Rectangle())
                 // The chosen row outranks the pointer's, so hover never reads as a second choice.
-                .background(selected ? WorkbenchTheme.Fill.selected
-                                                  : hovered ? WorkbenchTheme.Fill.hover : .clear),
+                .background(selected ? WorkbenchTheme.Fill.selected : hovered ? WorkbenchTheme.Fill.hover : .clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .accessibilityAddTraits(selected ? .isSelected : [])

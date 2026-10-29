@@ -60,8 +60,7 @@ private struct CommandPaletteRow: View {
                 }
             }.padding(.horizontal, 10).padding(.vertical, 7).contentShape(Rectangle())
                 // The keyboard row outranks the pointer's, so hover never reads as a second selection.
-                .background(selected ? WorkbenchTheme.Fill.selected
-                                                  : hovered ? WorkbenchTheme.Fill.hover : .clear),
+                .background(selected ? WorkbenchTheme.Fill.selected : hovered ? WorkbenchTheme.Fill.hover : .clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .accessibilityAddTraits(selected ? .isSelected : [])
