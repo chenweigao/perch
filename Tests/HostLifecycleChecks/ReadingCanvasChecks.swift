@@ -79,18 +79,30 @@ private struct CanvasNavigationFixture: View {
     let window = NSWindow(contentRect: NSRect(x: 60, y: 60, width: 900, height: 600),
                           styleMask: [.titled], backing: .buffered, defer: false)
     defer { window.orderOut(nil) }
-    for (width, barHeight) in [(900.0, nil), (480.0, nil), (900.0, 120.0)] as [(CGFloat, CGFloat?)] {
+    for (width, barHeight, appearance) in [(900.0, nil, .aqua), (480.0, nil, .aqua),
+                                           (900.0, 120.0, .aqua), (900.0, 120.0, .darkAqua)] as [(CGFloat, CGFloat?, NSAppearance.Name)] {
         let state = CanvasNavigationState()
-        let host = NSHostingView(rootView: CanvasNavigationFixture(state: state, barHeight: barHeight))
+        let host = NSHostingView(rootView: CanvasNavigationFixture(state: state, barHeight: barHeight)
+            .background(WorkbenchTheme.contentBackground))
         window.contentView = host
+        window.appearance = NSAppearance(named: appearance)
         window.setContentSize(NSSize(width: width, height: 600))
         window.makeKeyAndOrderFront(nil)
         try await Task.sleep(for: .milliseconds(250))
         guard let scroll = scrollViews(host).first else { preconditionFailure("Missing conversation scroll view") }
-        precondition(abs(scroll.frame.height - host.bounds.height) < 1,
-                     "Floating navigation and the composer bar must not reserve a footer or reduce the transcript height: scroll=\(scroll.frame), host=\(host.bounds)")
+        let scrollFrame = scroll.convert(scroll.bounds, to: host)
+        let top = host.isFlipped ? scrollFrame.minY : host.bounds.maxY - scrollFrame.maxY
+        precondition(abs(top - WorkbenchTheme.Reading.topGutter) < 1 &&
+                     abs(scrollFrame.height - host.bounds.height + WorkbenchTheme.Reading.topGutter) < 1,
+                     "Only the fixed top gutter reduces the reader; the composer still overlays its bottom: scroll=\(scrollFrame), host=\(host.bounds)")
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 220))
         scroll.reflectScrolledClipView(scroll.contentView)
+        if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
+           let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            let name = "reading-gutter-\(Int(width))-\(appearance == .aqua ? "light" : "dark").png"
+            try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: folder).appendingPathComponent(name))
+        }
         let before = scroll.contentView.bounds
         for newContent in [false, true] {
             state.visible = true
@@ -119,6 +131,8 @@ private struct CanvasNavigationFixture: View {
                          "Return reaches the latest anchor, with only the outer padding beyond it")
         }
         precondition(scroll.contentView.bounds.size == before.size, "Hiding the button preserves the viewport")
+        precondition(scroll.convert(scroll.bounds, to: host) == scrollFrame,
+                     "The top gutter stays fixed after scrolling and returning to latest")
     }
-    print("PASS: floating centered return-to-latest, full-height transcript under the composer bar, wide/narrow clicks and actual tail navigation")
+    print("PASS: fixed reader top gutter in light/dark, floating return-to-latest, wide/narrow clicks and tail navigation above the composer")
 }
