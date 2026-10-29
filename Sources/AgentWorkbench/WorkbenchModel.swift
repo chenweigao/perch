@@ -2,14 +2,8 @@ import AppKit
 import Combine
 import Observation
 import GhosttyTerminal
-import os
 import SwiftUI
 import WorkbenchCore
-
-/// Naming failures were invisible, which made "it did not fire" undiagnosable.
-/// Log attempt/success/failure only; the skip guards run per snapshot and are
-/// too hot to log. No excerpts or credentials go into the log.
-let namingLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "dev.agentworkbench.mac", category: "session-naming")
 
 @MainActor
 @Observable
@@ -124,29 +118,13 @@ final class WorkbenchModel {
     var showGroupEditor = false
     var editingGroup: WorkItemGroup?
     var editingGroupSessionsOnly = false
-    var taskNotice: TaskNotice?
-    var notificationError: String?
-    var notificationsEnabled = UserDefaults.standard.bool(forKey: "task.notifications") {
-        didSet {
-            UserDefaults.standard.set(notificationsEnabled, forKey: "task.notifications")
-            notifications.cancelPendingCompletions()
-            if notificationsEnabled { notifications.requestPermission { [weak self] error in self?.notificationError = error } }
-        }
-    }
-    var notifyAttentionOnly = UserDefaults.standard.bool(forKey: "task.notifications.attentionOnly") {
-        didSet {
-            UserDefaults.standard.set(notifyAttentionOnly, forKey: "task.notifications.attentionOnly")
-            notifications.cancelPendingCompletions()
-        }
-    }
-    private(set) var mutedTasks = Set(UserDefaults.standard.stringArray(forKey: "task.notifications.muted") ?? [])
-    func toggleTaskNotifications(_ id: String) {
-        if mutedTasks.contains(id) { mutedTasks.remove(id) } else { mutedTasks.insert(id) }
-        UserDefaults.standard.set(Array(mutedTasks), forKey: "task.notifications.muted")
-        notifications.cancelPendingCompletions(for: id)
-    }
-    private let notifications = TaskNotifications()
-    @ObservationIgnored private var taskEvents = TaskEventTracker()
+    let taskNotifications = WorkbenchNotificationState()
+    var taskNotice: TaskNotice? { get { taskNotifications.taskNotice } set { taskNotifications.taskNotice = newValue } }
+    var notificationError: String? { get { taskNotifications.notificationError } set { taskNotifications.notificationError = newValue } }
+    var notificationsEnabled: Bool { get { taskNotifications.notificationsEnabled } set { taskNotifications.notificationsEnabled = newValue } }
+    var notifyAttentionOnly: Bool { get { taskNotifications.notifyAttentionOnly } set { taskNotifications.notifyAttentionOnly = newValue } }
+    var mutedTasks: Set<String> { taskNotifications.mutedTasks }
+    func toggleTaskNotifications(_ id: String) { taskNotifications.toggleTaskNotifications(id) }
     @ObservationIgnored private var pendingNotificationID: String?
     var showConversationFind = false
     var workspaceSearchQuery = ""
@@ -201,19 +179,12 @@ final class WorkbenchModel {
     @ObservationIgnored private var started = false
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var subscriptions = Set<AnyCancellable>()
-    /// Session id → settings revision of the one naming attempt. A saved
-    /// configuration change allows exactly one retry per session.
-    @ObservationIgnored private var namingAttempts: [String: Int] = [:]
-    private(set) var namingInProgress: Set<String> = []
-    private(set) var namingErrors: [String: String] = [:]
-    /// The request boundary is replaceable by isolated lifecycle checks.
-    @ObservationIgnored var sessionNamer: (ActivitySummaryConfiguration, String, String) async throws -> String = { configuration, excerpt, language in
-        let settings = ActivitySummarySettings.shared
-        let key = try await settings.apiKey()
-        try Task.checkCancellation()
-        guard settings.configuration == configuration else { throw CancellationError() }
-        return try await SessionNamingClient().name(configuration: configuration, apiKey: key,
-                                                     excerpt: excerpt, language: language)
+    let naming = WorkbenchNamingState()
+    var namingInProgress: Set<String> { naming.namingInProgress }
+    var namingErrors: [String: String] { naming.namingErrors }
+    var sessionNamer: (ActivitySummaryConfiguration, String, String) async throws -> String {
+        get { naming.sessionNamer }
+        set { naming.sessionNamer = newValue }
     }
 
     init() {
@@ -246,9 +217,8 @@ final class WorkbenchModel {
             workspaceError = L("本地工作台读取失败，原文件已保留：\(error.localizedDescription)")
         }
         if let reference = selectedReference { navigation.visit(reference.id) }
-        notifications.start()
-        notifications.onOpen = { [weak self] id in self?.openNotifiedTask(id) }
-        notifications.onOpenDashboard = { [weak self] in self?.showHome() }
+        taskNotifications.start(onOpen: { [weak self] id in self?.openNotifiedTask(id) },
+                                onOpenDashboard: { [weak self] in self?.showHome() })
         for connection in connections { observe(connection) }
         wireFileAvailability()
         if !hosts.isEmpty { registerEnvironment(kimi: kimi, native: native) }
@@ -1225,41 +1195,14 @@ final class WorkbenchModel {
                            turnCompleted: false, hasOlder: snapshot.hasOlder)
         }
     }
-    /// One automatic naming attempt per session, only while its remote title
-    /// is still a placeholder. Kimi waits for the first completed turn so a
-    /// server-side title wins the race; native bridge titles never improve.
     private func considerNaming(reference: SessionReference, remoteTitle: String, messages: [KimiMessage],
                                 busy: Bool, turnCompleted: Bool, hasOlder: Bool) {
-        let settings = ActivitySummarySettings.shared
-        let configuration = settings.configuration
-        guard configuration.enabled, configuration.nameSessions, configuration.isValid else { return }
-        guard workspace.sessionTitles[reference.id] == nil, !workspace.autoNamedSessions.contains(reference.id),
-              namingAttempts[reference.id] != settings.revision else { return }
-        if reference.kind == .kimi { guard !busy, turnCompleted else { return } }
-        if hasOlder { loadHistoryForNaming(reference, remoteTitle: remoteTitle); return }
-        guard let excerpt = SessionNaming.excerpt(from: messages, hasOlder: hasOlder),
-              SessionNaming.isPlaceholder(remoteTitle, kind: reference.kind, firstUserText: excerpt) else { return }
-        let revision = settings.revision
-        namingAttempts[reference.id] = revision
-        namingInProgress.insert(reference.id)
-        namingErrors.removeValue(forKey: reference.id)
-        namingLog.info("attempt \(reference.id, privacy: .public)")
-        Task {
-            defer { if namingAttempts[reference.id] == revision { namingInProgress.remove(reference.id) } }
-            do {
-                guard settings.revision == revision else { return }
-                let name = try await sessionNamer(configuration, excerpt, AppLanguage.current.localization)
-                guard settings.revision == revision, workspace.sessionTitles[reference.id] == nil,
-                      !workspace.autoNamedSessions.contains(reference.id),
-                      let latestTitle = namingRemoteTitle(for: reference),
-                      SessionNaming.isPlaceholder(latestTitle, kind: reference.kind, firstUserText: excerpt) else { return }
-                applyGeneratedName(name, for: reference)
-                namingLog.info("named \(reference.id, privacy: .public)")
-            } catch {
-                if settings.revision == revision { namingErrors[reference.id] = error.localizedDescription }
-                namingLog.error("failed \(reference.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            }
-        }
+        naming.consider(reference: reference, remoteTitle: remoteTitle, messages: messages,
+                        busy: busy, turnCompleted: turnCompleted, hasOlder: hasOlder,
+                        mayName: { self.workspace.sessionTitles[reference.id] == nil && !self.workspace.autoNamedSessions.contains(reference.id) },
+                        remoteTitleNow: { self.namingRemoteTitle(for: reference) },
+                        loadHistory: { self.loadHistoryForNaming(reference, remoteTitle: remoteTitle) },
+                        apply: { self.applyGeneratedName($0, for: reference) })
     }
     /// Naming needs the first user message, which a partially loaded history
     /// does not contain. Pull the remaining pages in the background instead of
@@ -1446,11 +1389,7 @@ final class WorkbenchModel {
         saveWorkspace()
         try workspaceWriter.flush(workspace)
     }
-    func notifyInactiveTask(_ rule: FollowUpRule) {
-        if notificationsEnabled && !mutedTasks.contains(rule.session.id) {
-            notifications.postInactivity(id: rule.session.id, title: rule.title)
-        }
-    }
+    func notifyInactiveTask(_ rule: FollowUpRule) { taskNotifications.notifyInactiveTask(rule) }
     private func catalogChanged() {
         let probe = PerfDiagnostics.begin()
         defer { PerfDiagnostics.end("catalog_refresh", probe, detail: "sessions=\(allSessions.count)") }
@@ -1469,84 +1408,22 @@ final class WorkbenchModel {
         for item in allSessions where item.archived && tabs.ids.contains(item.id) { close(item.id) }
         restoreAvailableSessions()
     }
-    /// The resolved outcomes of sessions that were mid-turn the last time each
-    /// source was seen. Reported once per reconnect, dismissed explicitly.
-    private(set) var restoreReport: [RestoredSession] = []
-    /// Sources currently offline (or never connected this launch), keyed
-    /// "kind:hostID". An armed source resolves its report on its first fresh
-    /// catalog after reconnecting.
-    @ObservationIgnored private var restoreArmed: Set<String> = []
-    func dismissRestoreReport() { restoreReport = [] }
+    let restoration = WorkbenchRestorationState()
+    var restoreReport: [RestoredSession] { restoration.restoreReport }
+    func dismissRestoreReport() { restoration.dismissRestoreReport() }
     func openRestoreEntry(_ entry: RestoredSession) {
         guard let item = allSessions.first(where: { $0.id == entry.id && $0.online && !$0.archived }) else { return }
         open(item)
     }
-    /// Runs before the dashboardSeen baseline is updated below, so the comparison
-    /// still sees the state the session had when the connection was lost.
     private func resolveRestoreReports() {
-        for (hostID, connection) in kimiEnvironments {
-            let key = "kimi:\(hostID)"
-            guard connection.online else { restoreArmed.insert(key); continue }
-            guard restoreArmed.remove(key) != nil else { continue }
-            collectKimiRestoreEntries(connection)
+        for connection in kimiEnvironments.values {
+            restoration.resolveKimi(host: connection.host, online: connection.online, sessions: connection.sessions,
+                                    workspace: workspace, allSessions: allSessions)
         }
-        for (hostID, connection) in nativeEnvironments {
-            let key = "native:\(hostID)"
-            guard connection.online else { restoreArmed.insert(key); continue }
-            guard connection.catalogSynced, restoreArmed.remove(key) != nil else { continue }
-            collectNativeRestoreEntries(connection)
+        for connection in nativeEnvironments.values {
+            restoration.resolveNative(host: connection.host, online: connection.online, catalogSynced: connection.catalogSynced,
+                                      sessions: connection.sessions, workspace: workspace, allSessions: allSessions)
         }
-    }
-    private func collectKimiRestoreEntries(_ connection: KimiConnection) {
-        let hostID = connection.host.id
-        var entries: [RestoredSession] = []
-        for (id, observation) in workspace.dashboardSeen {
-            guard observation.state == "running", let reference = SessionReference(restoreID: id),
-                  reference.hostID == hostID, reference.kind == .kimi else { continue }
-            let session = connection.sessions.first { $0.id == reference.terminalID }
-            let probe = SessionRestoreProbe(exists: session != nil, archived: session?.archived == true,
-                                            busy: session?.busy ?? false,
-                                            pendingInteraction: ["approval", "question"].contains(session?.pendingInteraction ?? ""),
-                                            failed: session?.lastTurnReason == "failed",
-                                            completed: session?.lastTurnReason == "completed")
-            guard let outcome = RestoreResolution.outcome(probe) else { continue }
-            entries.append(RestoredSession(reference: reference, title: restoreTitle(reference, fallback: session?.title ?? ""),
-                                           hostName: connection.host.name, outcome: outcome))
-        }
-        mergeRestoreEntries(entries)
-    }
-    private func collectNativeRestoreEntries(_ connection: NativeAgentConnection) {
-        let hostID = connection.host.id
-        var entries: [RestoredSession] = []
-        for (id, observation) in workspace.dashboardSeen {
-            guard observation.state == "running", let reference = SessionReference(restoreID: id),
-                  reference.hostID == hostID, reference.kind != .kimi else { continue }
-            let session = connection.sessions.first { $0.id == reference.terminalID && $0.provider == reference.kind }
-            // Running baselines record "completed:pending:error" (see dashboardObservation),
-            // so a completion is only claimed when the count provably advanced.
-            let baselineCompleted = observation.revision.split(separator: ":").first.flatMap { Int($0) }
-            let probe = SessionRestoreProbe(exists: session != nil, archived: session?.archived ?? false,
-                                            busy: session?.busy ?? false,
-                                            pendingInteraction: (session?.pending ?? 0) > 0,
-                                            failed: session?.error != nil,
-                                            completed: baselineCompleted.map { (session?.completed ?? 0) > $0 } ?? false)
-            guard let outcome = RestoreResolution.outcome(probe) else { continue }
-            entries.append(RestoredSession(reference: reference, title: restoreTitle(reference, fallback: session?.title ?? ""),
-                                           hostName: connection.host.name, outcome: outcome))
-        }
-        mergeRestoreEntries(entries)
-    }
-    private func restoreTitle(_ reference: SessionReference, fallback: String) -> String {
-        let named = workspace.displayTitle(fallback, for: reference)
-        return named.isEmpty ? (allSessions.first { $0.id == reference.id }?.title ?? reference.terminalID) : named
-    }
-    /// A session re-reported by a later reconnect replaces its earlier entry; the
-    /// report describes the latest known outcome, not a history.
-    private func mergeRestoreEntries(_ entries: [RestoredSession]) {
-        guard !entries.isEmpty else { return }
-        let ids = Set(entries.map(\.id))
-        restoreReport.removeAll { ids.contains($0.id) }
-        restoreReport.append(contentsOf: entries)
     }
     private func updateTaskEvents() {
         for item in allSessions where !item.archived {
@@ -1564,16 +1441,8 @@ final class WorkbenchModel {
                 completion = count > 0 ? String(count) : nil
             }
             let state = TaskEventState(running: subject.busy, pending: subject.pendingInteraction, failed: subject.failed, completion: completion)
-            guard let event = taskEvents.observe(state, id: item.id, online: item.online) else { continue }
-            guard !mutedTasks.contains(item.id), !notifyAttentionOnly || event != .completed else { continue }
-            if NSApp.isActive && !showDashboard && selectedReference?.id == item.id { continue }
-            let notice = TaskNotice(sessionID: item.id, title: item.title, kind: event)
-            taskNotice = notice
-            if notificationsEnabled && !NSApp.isActive { notifications.post(id: item.id, title: item.title, event: event) }
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(8))
-                if self?.taskNotice?.id == notice.id { self?.taskNotice = nil }
-            }
+            taskNotifications.observe(state, id: item.id, title: item.title, online: item.online,
+                                      visibleSessionID: showDashboard ? nil : selectedReference?.id)
         }
     }
     func openNotifiedTask(_ id: String) {
@@ -1652,97 +1521,4 @@ final class WorkbenchModel {
         showRenderReport = true
     }
 
-}
-
-@MainActor
-final class AttachedTerminal: ObservableObject, Identifiable {
-    let id: String
-    let incarnation = UUID()
-    let hostID: UUID
-    let hostName: String
-    let pane: Pane
-    let context: TerminalViewState
-    @Published var ended = false
-    var onInput: (() -> Void)?
-
-    init(id: String, pane: Pane, connection: HostConnection) {
-        self.id = id
-        self.pane = pane
-        hostID = connection.id
-        hostName = connection.host.name
-        let palette = TerminalConfiguration()
-            .background("ffffff").foreground("272b36")
-            .selectionBackground("dce5fa").selectionForeground("202535")
-            .cursorColor("6062c9").cursorText("ffffff")
-            .palette(0, color: "343943").palette(1, color: "bc4050")
-            .palette(2, color: "26785d").palette(3, color: "967018")
-            .palette(4, color: "3767bc").palette(5, color: "8155a1")
-            .palette(6, color: "207d8a").palette(7, color: "b6bbc7")
-            .palette(8, color: "747b8c").palette(9, color: "ca4f5e")
-            .palette(10, color: "308767").palette(11, color: "a97e23")
-            .palette(12, color: "4b78cf").palette(13, color: "9267b1")
-            .palette(14, color: "2d8a96").palette(15, color: "e1e4ed")
-        // Dark shares the window's blue-graphite canvas (WorkbenchTheme's
-        // contentBackground, #1F2229) so the terminal reads as part of the
-        // content surface instead of a neutral-gray insert; ANSI hues are the
-        // light palette's, lifted for the darker ground.
-        let darkPalette = TerminalConfiguration()
-            .background("1f2229").foreground("d8dae1")
-            .selectionBackground("323c52").selectionForeground("e8eaf0")
-            .cursorColor("7a7ce0").cursorText("1f2229")
-            .palette(0, color: "454c59").palette(1, color: "d96372")
-            .palette(2, color: "4cae8c").palette(3, color: "cfa04a")
-            .palette(4, color: "6f97dd").palette(5, color: "a884c4")
-            .palette(6, color: "4aa8b5").palette(7, color: "c9cdd8")
-            .palette(8, color: "7d8493").palette(9, color: "e07a88")
-            .palette(10, color: "5cbd9c").palette(11, color: "dcb05e")
-            .palette(12, color: "82a5e4").palette(13, color: "b794d1")
-            .palette(14, color: "5cb5c1").palette(15, color: "eef0f5")
-        context = TerminalViewState(theme: TerminalTheme(light: palette, dark: darkPalette),
-            terminalConfiguration: TerminalConfiguration().fontFamily("Menlo").fontSize(14)
-                .windowPaddingX(14).windowPaddingY(12)
-                .custom("clipboard-read", "deny").custom("clipboard-write", "allow")
-                .custom("shell-integration", "none"))
-        context.configuration = TerminalSurfaceOptions(
-            command: SSHCommand.attach(host: connection.host, binary: connection.binary,
-                                       terminalID: pane.terminalID, controlPath: connection.controlPath),
-            waitAfterCommand: true)
-        context.makePlatformView = { [weak self] in
-            let view = WorkbenchTerminalView(frame: .zero)
-            view.onInput = { [weak self] in self?.onInput?() }
-            return view
-        }
-        context.onClose = { [weak self] _ in self?.ended = true }
-    }
-}
-
-/// User-initiated clipboard actions belong to the native responder chain.
-/// Reading remote OSC 52 requests remains denied by the terminal configuration.
-private final class WorkbenchTerminalView: AppTerminalView {
-    var onInput: (() -> Void)?
-
-    override func keyDown(with event: NSEvent) {
-        onInput?()
-        super.keyDown(with: event)
-    }
-
-    override func insertText(_ string: Any, replacementRange: NSRange) {
-        onInput?()
-        super.insertText(string, replacementRange: replacementRange)
-    }
-
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if window?.firstResponder === self,
-           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command {
-            switch event.charactersIgnoringModifiers?.lowercased() {
-            case "v":
-                if let text = NSPasteboard.general.string(forType: .string) { onInput?(); _ = paste(text: text) }
-                return true
-            case "c": return copySelectedTextToPasteboard()
-            case "k", "t", "n", "w", "r": return false
-            default: break
-            }
-        }
-        return super.performKeyEquivalent(with: event)
-    }
 }

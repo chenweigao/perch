@@ -19,7 +19,10 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     Sources/AgentWorkbench/ConversationScrollControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift \
     Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/FileWorkspaceState.swift \
     Sources/AgentWorkbench/DocumentReader.swift Sources/AgentWorkbench/FileContentPreview.swift \
-    Sources/AgentWorkbench/WorkbenchHostedTask.swift Sources/AgentWorkbench/RemoteFileView.swift Tests/WorkflowPreview/App.swift \
+    Sources/AgentWorkbench/WorkbenchHostedTask.swift Sources/AgentWorkbench/RemoteFileView.swift \
+    Sources/AgentWorkbench/RemoteFileBrowser.swift Sources/AgentWorkbench/RemoteGitBrowser.swift \
+    Sources/AgentWorkbench/RemotePanelReadState.swift Sources/AgentWorkbench/RemoteReader.swift \
+    Sources/AgentWorkbench/RemoteSourceText.swift Sources/AgentWorkbench/RemoteGitPanel.swift Tests/WorkflowPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkflowPreview"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'

@@ -29,6 +29,7 @@ private final class Invalidation: @unchecked Sendable {
 }
 
 @MainActor func checkStateArchitecture() async throws {
+    try checkRestorationOwnership()
     let model = WorkbenchModel()
     let catalogChange = Invalidation()
     let routeChange = Invalidation()
@@ -82,6 +83,27 @@ private final class Invalidation: @unchecked Sendable {
     precondition(favorites.occurred && model.sidebarProjection(filter: .all).favorites.map(\.id) == [item.id],
                  "warm sidebar cache must observe favorite changes")
     print("PASS: warm projection caches preserve catalog, group and favorite observation")
+    let notificationChange = Invalidation()
+    let unrelatedCatalog = Invalidation()
+    withObservationTracking { _ = model.taskNotice } onChange: { notificationChange.mark() }
+    withObservationTracking { _ = model.allSessions } onChange: { unrelatedCatalog.mark() }
+    model.notificationsEnabled = false
+    model.notifyAttentionOnly = false
+    let running = TaskEventState(running: true, pending: false, failed: false, completion: nil)
+    let completed = TaskEventState(running: false, pending: false, failed: false, completion: "1")
+    model.taskNotifications.observe(running, id: "notice", title: "Fixture", online: true, visibleSessionID: nil)
+    model.taskNotifications.observe(completed, id: "notice", title: "Fixture", online: true, visibleSessionID: nil)
+    precondition(notificationChange.occurred && !unrelatedCatalog.occurred && model.taskNotice?.sessionID == "notice",
+                 "Feature-owned notification state must remain observable through the coordinator")
+    $bindable.taskNotice.wrappedValue = nil
+    model.taskNotifications.observe(completed, id: "notice", title: "Fixture", online: true, visibleSessionID: nil)
+    precondition(model.taskNotice == nil, "Dismissing a toast must not replay the same completion")
+    model.toggleTaskNotifications("muted")
+    model.taskNotifications.observe(running, id: "muted", title: "Muted", online: true, visibleSessionID: nil)
+    model.taskNotifications.observe(completed, id: "muted", title: "Muted", online: true, visibleSessionID: nil)
+    precondition(model.mutedTasks.contains("muted") && model.taskNotice == nil)
+    model.toggleTaskNotifications("muted")
+    print("PASS: extracted notification observation, bindings, deduplication and mute state")
     _ = ConversationPresentationHandle().update(key: "shutdown:native:fixture",
         input: .init(messages: [], language: "en"), cache: model.conversationPresentations)
     precondition(model.conversationPresentations.count == 1)

@@ -98,15 +98,15 @@ def session_state(session_id, title, cwd='/home/developer/项目 目录', update
 def codex_session(broker, session_id, title, cwd='/home/developer/项目 目录', updated=1760000000.0):
     """A real bridge Session with a fake Codex already attached.
 
-    codex_ensure() normally wires on_frame; this reproduces that one line so replayed
+    codex_adapter.ensure() normally wires on_frame; this reproduces that one line so replayed
     frames travel through the bridge's real handler.
     """
     session = broker.Session(session_state(session_id, title, cwd, updated))
     fake = FakeCodex()
-    session.codex = fake
-    session.codex_attached = True
+    session.codex_adapter.client = fake
+    session.codex_adapter.attached = True
     session.state['resume'] = THREAD
-    fake.on_frame = lambda frame: session.codex_frame(fake, frame)
+    fake.on_frame = lambda frame: session.codex_adapter.frame(fake, frame)
     return session, fake
 
 
@@ -148,7 +148,7 @@ def main():
 
         # A turn waiting on a command approval.
         approval, _ = codex_session(broker, 'ses-approval', '等待审批的会话', '/home/developer/repo')
-        approval.codex_interactions['codex-request-7'] = {
+        approval.codex_adapter.interactions['codex-request-7'] = {
             'wireId': 7, 'method': 'item/commandExecution/requestApproval',
             'params': {'command': ['rm', '-rf', '/tmp/项目 x'], 'cwd': '/home/developer/repo', 'reason': '需要执行命令'},
         }
