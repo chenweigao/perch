@@ -58,7 +58,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 indicator.frame(width: SidebarMetrics.iconWidth, height: 18).padding(.top, 1)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: selected ? .medium : .regular))
+                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: .regular))
                         .lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if let subtitle {
