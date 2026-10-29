@@ -52,12 +52,22 @@ private func press(_ id: String) async throws {
 private func openPanel(_ main: NSWindow, thinking: Bool = false) async throws -> NSWindow {
     let view = ToolbarProbe.controls["model"]!
     let point = NSPoint(x: thinking ? view.bounds.maxX - 25 : 25, y: view.bounds.midY)
-    click(view.convert(point, to: nil), in: main)
-    try await pause()
-    guard let panel = NSApp.windows.first(where: { $0.isVisible && $0 !== main }) else {
-        throw NSError(domain: "Model panel did not open", code: 1)
+    for _ in 0..<2 {
+        click(view.convert(point, to: nil), in: main)
+        for _ in 0..<40 {
+            if let panel = NSApp.windows.first(where: { $0.isVisible && $0 !== main }) { return panel }
+            try await Task.sleep(for: .milliseconds(50))
+        }
     }
-    return panel
+    throw NSError(domain: "Model panel did not open", code: 1)
+}
+
+@MainActor
+private func expectDismissed(_ panel: NSWindow, _ message: String) async throws {
+    for _ in 0..<40 where panel.isVisible {
+        try await Task.sleep(for: .milliseconds(50))
+    }
+    try expect(!panel.isVisible, message)
 }
 
 @MainActor
@@ -69,8 +79,7 @@ private func closePanel(_ panel: NSWindow) async throws {
                                 characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}",
                                 isARepeat: false, keyCode: 53)!
     panel.sendEvent(event)
-    try await pause()
-    try expect(!panel.isVisible, "Escape must dismiss the panel")
+    try await expectDismissed(panel, "Escape must dismiss the panel")
 }
 
 @MainActor
@@ -82,8 +91,7 @@ private func chooseModel(_ query: String, in panel: NSWindow) async throws {
     let list = views(panel.contentView!).compactMap { $0 as? NSScrollView }.first!
     let frame = list.convert(list.bounds, to: nil)
     click(NSPoint(x: frame.midX, y: frame.maxY - 30), in: panel)
-    try await pause()
-    try expect(!panel.isVisible, "Choosing a model must dismiss its panel")
+    try await expectDismissed(panel, "Choosing a model must dismiss its panel")
 }
 
 @MainActor
@@ -106,6 +114,7 @@ private func checkLayout(_ label: String) throws {
 @MainActor
 func runToolbarChecks() async {
     let agent = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_AGENT"] ?? "kimi"
+    let newTask = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_NEW_TASK"] == "1"
     var result: [String: Any] = ["agent": agent, "status": "failed"]
     do {
         for _ in 0..<100 {
@@ -116,8 +125,8 @@ func runToolbarChecks() async {
         try await pause()
         try checkLayout("wide Chinese")
         let panel = try await openPanel(main)
-        if agent == "claude" {
-            try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Agents without model capabilities must remain read-only")
+        if agent == "claude" && !newTask {
+            try expect(!views(panel.contentView!).contains { $0 is NSTextField }, "Existing Claude sessions must keep model controls read-only")
             try await closePanel(panel)
         } else {
             try await closePanel(panel)
@@ -149,7 +158,7 @@ func runToolbarChecks() async {
         let englishPanel = try await openPanel(main)
         try await closePanel(englishPanel)
         try await press("english")
-        if agent != "claude" {
+        if agent != "claude" || newTask {
             let reset = try await openPanel(main)
             try await chooseModel("Reasoner", in: reset)
             try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Switching models must preserve a supported effort")

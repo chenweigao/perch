@@ -43,7 +43,7 @@ struct NewTaskView: View {
         availableModels.first { $0.id == agentModel }
     }
     private var supportsModelCatalog: Bool {
-        [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex].contains(provider)
+        [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider)
     }
     private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
     private var modelCatalogID: String {

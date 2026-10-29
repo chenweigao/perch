@@ -67,7 +67,7 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
 }
 
 public enum ModelSelectionCatalog {
-    /// Parses the native service's combined catalog. OMP and Codex entries share
+    /// Parses the native service's combined catalog. Native adapters share
     /// provider, id, name, contextWindow and thinking fields; a runtime may also
     /// report its default effort.
     public static func parseOMP(_ value: JSONValue) -> [AgentModel] {

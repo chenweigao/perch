@@ -1913,3 +1913,11 @@
 "已思考 %@" = "已思考 %@";
 "已思考 %@ · 未返回回复" = "已思考 %@ · 未返回回复";
 "· 用时 %@" = "· 用时 %@";
+
+/* Claude model discovery and per-Agent setup */
+"Claude Code 未返回模型。请检查远端 Claude Code 安装与登录。" = "Claude Code 未返回模型。请检查远端 Claude Code 安装与登录。";
+"已读取 Claude Code 官方模型目录；实际模型鉴权将在首条消息时验证。" = "已读取 Claude Code 官方模型目录；实际模型鉴权将在首条消息时验证。";
+"展开原生 Agent 配置" = "展开原生 Agent 配置";
+"收起原生 Agent 配置" = "收起原生 Agent 配置";
+"配置 %@" = "配置 %@";
+"配置与检查 %@" = "配置与检查 %@";
