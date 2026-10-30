@@ -147,7 +147,12 @@
 "Agent 与执行环境" = "Agent & Environments";
 "远程连接沿用本机 SSH 配置。连接、重连与移除机器都在侧边栏的环境入口。" = "Remote connections reuse this Mac's SSH configuration. Connect, reconnect and remove machines from the environment menu in the sidebar.";
 "界面" = "Appearance";
+"窗口玻璃" = "Window glass";
+"通透" = "Clear";
+"轻透" = "Light";
+"克制" = "Muted";
 "正文字号影响对话、思考与工具记录和输入框，也可用 ⌘= 放大、⌘− 缩小、⌘0 恢复默认。侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Reading text size applies to the conversation, thoughts and tool records, and the composer; ⌘= enlarges, ⌘− reduces and ⌘0 restores the default. Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
+"正文字号影响对话、思考与工具记录和输入框，也可用 ⌘= 放大、⌘− 缩小、⌘0 恢复默认。窗口玻璃调节侧边栏与工具栏透出的桌面色彩，日夜共用一档。侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。" = "Reading text size applies to the conversation, thoughts and tool records, and the composer; ⌘= enlarges, ⌘− reduces and ⌘0 restores the default. Window glass adjusts how much desktop color shows through the sidebar and toolbar, with one shared level for light and dark appearances. Drag the sidebar edge to resize it; the position is remembered. Transparency and motion follow macOS accessibility settings.";
 
 /* App menu (WorkbenchApp) */
 "新建任务…" = "New Task…";
@@ -1896,6 +1901,7 @@
 "文档与产物" = "Documents and outputs";
 "显示最近 20 次调用，完整记录请打开会话。" = "Showing the latest 20 calls. Open the conversation for the full history.";
 "本轮更新" = "Updated this turn";
+"%@（文件已不在会话主机上）" = "%@ (the file is no longer available on the session host)";
 "查看全部任务" = "Show all tasks";
 "查看全部文件" = "Show all files";
 "查看并处理" = "Review and respond";

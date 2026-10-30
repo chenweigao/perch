@@ -464,7 +464,8 @@ extension NavigationRunner {
                 .environment(\.colorScheme, dark ? .dark : .light)
         }
         let source = "Alpha **bold** 中文 👩🏽‍💻\n\nBeta https://example.com /tmp/fixture.swift:42"
-        let host = NSHostingView(rootView: root([try message(source)]))
+        let streamingSource = (0..<9).map { "Paragraph \($0) 中文 👩🏽‍💻" }.joined(separator: "\n\n")
+        let host = NSHostingView(rootView: root([try message(streamingSource)], running: true))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 600), styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false; window.contentView = host; window.orderFront(nil)
         defer { window.close() }
@@ -479,29 +480,48 @@ extension NavigationRunner {
         func textViews() -> [ReplyTextView] { descendants(host).compactMap { $0 as? ReplyTextView } }
         try await settle()
         guard let initial = nativeRows().first, nativeRows().count == 1,
-              let row = initial.superview, let text = textViews().first else { throw NavigationError("Completed assistant did not enter native row path") }
-        let selection = (text.string as NSString).range(of: "中文 👩🏽‍💻")
-        text.setSelectedRange(selection)
-        host.rootView = root([try message(source + " appended")])
+              let row = initial.superview, textViews().count == 2,
+              let liveActions = initial.subviews.first(where: { !($0 is NativeAssistantStackView) }),
+              liveActions.isHidden, liveActions.frame == .zero else {
+            throw NavigationError("Live assistant did not enter the native row without actions")
+        }
+        let prefix = textViews()[0]
+        let tail = textViews()[1]
+        let selection = (prefix.string as NSString).range(of: "Paragraph 2")
+        prefix.setSelectedRange(selection)
+        let stableBefore = counter("native_assistant_block_stable")
+        let updateBefore = counter("native_assistant_block_update")
+        let appended = streamingSource + " appended"
+        host.rootView = root([try message(appended)], running: true)
         try await settle()
-        guard nativeRows().first === initial, initial.superview === row, text.selectedRange() == selection else { throw NavigationError("Assistant append lost row identity or selection") }
-        host.rootView = root([try message("Replacement")])
-        try await settle()
-        guard nativeRows().first === initial, textViews().map(\.string) == ["Replacement"], textViews().allSatisfy({ $0.selectedRange().length == 0 }) else { throw NavigationError("Assistant replacement retained outgoing text or selection") }
-        host.rootView = root([try message(source)], running: true)
-        try await settle()
-        let live = ConversationPresentationModel(key: session).update(.init(messages: [try message(source)], isRunning: true, language: "en"))
+        guard nativeRows().first === initial, initial.superview === row,
+              textViews().count == 2, textViews()[0] === prefix, textViews()[1] === tail,
+              prefix.selectedRange() == selection, liveActions.isHidden,
+              counter("native_assistant_block_stable") > stableBefore,
+              counter("native_assistant_block_update") > updateBefore else {
+            throw NavigationError("Live append replaced stable blocks, row identity, selection or hidden actions")
+        }
+        let live = ConversationPresentationModel(key: session).update(.init(messages: [try message(appended)], isRunning: true, language: "en"))
         let displayedLive = live.displayedRows(activity: { _ in nil })
-        let liveText = textViews().map(\.string).joined(separator: "\n")
         guard live.rows.first?.entry.presentation == .progress, displayedLive.count == 1,
-              displayedLive.first?.activity == nil, live.narrative.current?.source == .commentary,
-              nativeRows().isEmpty, liveText.contains("Alpha bold 中文"), liveText.contains("Beta") else {
-            throw NavigationError("Live reply must stay visible while the activity bar retains its projection")
+              displayedLive.first?.activity == nil, live.narrative.current?.source == .commentary else {
+            throw NavigationError("Live native reply must retain the activity projection")
+        }
+        host.rootView = root([try message(appended)])
+        try await settle()
+        guard nativeRows().first === initial, initial.superview === row,
+              textViews().count == 2, textViews()[0] === prefix,
+              !liveActions.isHidden, liveActions.frame.height == 24,
+              prefix.selectedRange() == selection else {
+            throw NavigationError("Settled assistant replaced its live row, stable text, selection, or actions")
         }
         host.rootView = root([try message(source)])
         try await settle()
-        guard nativeRows().count == 1, let completedRow = nativeRows()[0].superview,
-              completedRow.identifier == row.identifier else { throw NavigationError("Completed stream failed to restore its row identity") }
+        guard nativeRows().first === initial, textViews().map(\.string) == ["Alpha bold 中文 👩🏽‍💻\nBeta https://example.com /tmp/fixture.swift:42"],
+              textViews().allSatisfy({ $0.selectedRange().length == 0 }) else {
+            throw NavigationError("Assistant replacement retained outgoing text or selection")
+        }
+        let completedRow = row
         // Rich and partial-but-admitted blocks join the native path; unsupported shapes keep SwiftUI.
         for admitted in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "```swift\nlet partial = \"中文 👩🏽‍💻\"", "**未闭合 中文 👩🏽‍💻", "- List item", "> Quote"] {
             host.rootView = root([try message(admitted)])
@@ -664,10 +684,80 @@ extension NavigationRunner {
         held.removeAll()
         let pool = NativeAssistantMessageView.poolState
         guard pool["rows"] as? Int == 16, pool["cleared"] as? Bool == true else { throw NavigationError("Assistant row pool exceeded its budget or kept private state") }
-        return ["production_lifecycle": true, "streaming_retains_swiftui": true, "same_id_shape_changes": true,
+        return ["production_lifecycle": true, "streaming_retains_native_identity": true,
+                "streaming_stable_prefix": true, "same_id_shape_changes": true,
                 "copy_button_source_and_feedback": true, "code_card_copy_and_scroll": true,
                 "fallback_parse_reuse": fallbackParsing, "fallback_parse_reuse_enabled": reuseEnabled,
                 "direct_swiftui_parse": directParsing,
                 "fallback_session_and_appearance_isolation": true, "pool": pool]
+    }
+
+    func streamingRenderingPerformance() throws -> [String: Any] {
+        func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+        func textViews(_ view: NSView) -> [ReplyTextView] {
+            descendants(view).compactMap { $0 as? ReplyTextView }
+        }
+        let width: CGFloat = 680
+        let prefix = (0..<9).map { "Paragraph \($0) 中文 👩🏽‍💻 é" }.joined(separator: "\n\n")
+        guard let initialBlocks = NativeAssistantContent.make(prefix) else {
+            throw NavigationError("Streaming benchmark fixture was not admitted")
+        }
+        let row = NativeAssistantMessageView(frame: .zero)
+        row.update(initialBlocks, source: prefix, dark: false, showsActions: false)
+        row.frame.size = row.measure(width: width)
+        row.place(width: width)
+        let initialTexts = textViews(row)
+        guard initialTexts.count == 2,
+              let actions = row.subviews.first(where: { !($0 is NativeAssistantStackView) }) else {
+            throw NavigationError("Streaming benchmark did not create stable and tail blocks")
+        }
+        let selection = (initialTexts[0].string as NSString).range(of: "Paragraph 2")
+        initialTexts[0].setSelectedRange(selection)
+
+        var source = prefix
+        var samples: [Double] = []
+        for index in 0..<40 {
+            source += " chunk-\(index)-中文"
+            let started = CACurrentMediaTime()
+            guard let blocks = NativeAssistantContent.make(source) else {
+                throw NavigationError("Streaming benchmark update was not admitted")
+            }
+            row.update(blocks, source: source, dark: false, showsActions: false)
+            row.frame.size = row.measure(width: width)
+            row.place(width: width)
+            row.layoutSubtreeIfNeeded()
+            samples.append((CACurrentMediaTime() - started) * 1_000)
+            let currentTexts = textViews(row)
+            guard currentTexts.count == 2,
+                  currentTexts[0] === initialTexts[0], currentTexts[1] === initialTexts[1],
+                  currentTexts[0].selectedRange() == selection,
+                  actions.isHidden, actions.frame == .zero else {
+                throw NavigationError("Streaming benchmark replaced native state during an append")
+            }
+        }
+
+        guard let settledBlocks = NativeAssistantContent.make(source) else {
+            throw NavigationError("Settled benchmark fixture was not admitted")
+        }
+        row.update(settledBlocks, source: source, dark: false, showsActions: true)
+        row.frame.size = row.measure(width: width)
+        row.place(width: width)
+        let settledTexts = textViews(row)
+        guard settledTexts.count == 2,
+              settledTexts[0] === initialTexts[0], settledTexts[1] === initialTexts[1],
+              settledTexts[0].selectedRange() == selection,
+              !actions.isHidden, actions.frame.height == 24 else {
+            throw NavigationError("Settling replaced native state or failed to expose actions")
+        }
+
+        let sorted = samples.sorted()
+        let mean = samples.reduce(0, +) / Double(samples.count)
+        let p95 = sorted[Int(ceil(Double(sorted.count) * 0.95)) - 1]
+        return [
+            "streaming_update_ms": ["mean": mean, "p95": p95, "max": sorted.last!, "count": samples.count],
+            "row_identity": true, "block_identity": true, "selection_preserved": true,
+            "actions_hidden_while_streaming": true, "actions_shown_on_completion": true,
+            "incremental_snapshots": true
+        ]
     }
 }

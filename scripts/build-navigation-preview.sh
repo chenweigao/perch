@@ -14,7 +14,7 @@ scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 app_files=(
     Sources/AgentWorkbench/WorkbenchTheme.swift
     Sources/AgentWorkbench/ToolActivityView.swift Sources/AgentWorkbench/ReplyProcessStyle.swift
-     Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/RevealFrameDriver.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
+     Sources/AgentWorkbench/ConversationPresentationEnvironment.swift Sources/AgentWorkbench/ConversationTranscriptView.swift Sources/AgentWorkbench/ConversationReadingMemory.swift Sources/AgentWorkbench/ConversationActions.swift Sources/AgentWorkbench/ConversationBookmarksStore.swift Sources/AgentWorkbench/ImagePreviewPanel.swift Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/CodeHighlighting.swift Sources/AgentWorkbench/ReplyMarkdownView.swift Sources/AgentWorkbench/ReplySelection.swift
     Sources/AgentWorkbench/ReplyMathView.swift Sources/AgentWorkbench/ReplyMermaid.swift Sources/AgentWorkbench/PerfDiagnostics.swift

@@ -108,7 +108,6 @@ overlap the window).
 | `activity_derive` | `KimiWorkspaceView` / `NativeAgentView` body: the activity bar's `ConversationActivity` | `messages` |
 | `session_select` | `WorkbenchModel.select`, including the connection's synchronous selection | `kind` |
 | `catalog_refresh` | `WorkbenchModel.catalogChanged`: sidebar catalog rebuild and its follow-ups | `sessions` |
-| `reveal_tick` | `RevealFrameDriver.fire` (streaming reveal) | `callbacks` |
 | `math_typeset` | `ReplyMathImage.entry`, cache miss | `mode`, `bytes` of TeX |
 | `attributed_text` | `ReplyTextAttributes.paragraphs`, cache miss | `paragraphs` |
 | `text_measure` | `ReplyTextView.measure`, cache miss | `length`, `wrapped` |
