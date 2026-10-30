@@ -110,8 +110,11 @@ public enum RemoteFileCommand {
     /// work, which is often a worktree rather than the session directory. Roots are
     /// tried in the given order with the session directory appended as the final
     /// fallback, so a file the agent just touched wins over a same-path copy in
-    /// another checkout. Only a bare filename falls back to a name search, which
-    /// then spans every root. Absolute and ~ paths stay authoritative as before.
+    /// another checkout. When no root joins the reference directly, a bare filename
+    /// falls back to a name search and a directory-carrying reference to a suffix
+    /// search, both spanning every root. The suffix search is bounded to six
+    /// levels: artifact citations are shallow, and an unbounded scan of a large
+    /// home directory takes seconds. Absolute and ~ paths stay authoritative.
     public static func referenceCommand(path: String, cwd: String, roots: [String], limit: Int = readLimit) throws -> String {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains("\0") else {
@@ -137,7 +140,8 @@ public enum RemoteFileCommand {
         // Without any usable root the session directory is required, which is
         // exactly what resolve validates; its error reaches the panel unchanged.
         guard !ordered.isEmpty else { return remoteCommand(path: try RemoteFilePath.resolve(reference, cwd: cwd), limit: limit) }
-        // find's -name operand is a glob, even when passed as a quoted argument.
+        // find's -name and -path operands are globs, even when passed as quoted
+        // arguments; `name` is the glob-escaped reference used for both.
         let name = reference.reduce("") { $0 + ("\\*?[".contains($1) ? "\\" : "") + String($1) }
         let lookup = """
         ref=$1; name=$2; shift 2
@@ -146,13 +150,13 @@ public enum RemoteFileCommand {
           if [ -e "$root/$ref" ]; then p=$root/$ref; break; fi
         done
         if [ -z "$p" ]; then
-          case "$ref" in
-            */*) printf 'kind=missing\\n'; exit 0 ;;
-          esac
           printf 'kind=matches\\n--\\n'
           for root do
             [ -d "$root" ] || continue
-            find "$root" -type d \\( -name .git -o -name .build -o -name node_modules \\) -prune -o -type f -name "$name" -print0
+            case "$ref" in
+              */*) find "$root" -maxdepth 6 -type d \\( -name .git -o -name .build -o -name node_modules \\) -prune -o -type f -path "*/$name" -print0 ;;
+              *) find "$root" -type d \\( -name .git -o -name .build -o -name node_modules \\) -prune -o -type f -name "$name" -print0 ;;
+            esac
           done
           exit 0
         fi

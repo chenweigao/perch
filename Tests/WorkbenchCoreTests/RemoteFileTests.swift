@@ -102,6 +102,10 @@ func checkRemoteFileViewer() async throws {
     let duplicateFile = duplicate.appendingPathComponent(filename)
     try Data("another worktree".utf8).write(to: duplicateFile)
     expectEqual(try await reference(filename), .matches([sourceFile.path, duplicateFile.path].sorted()))
+    // A directory-carrying reference no root joins directly falls back to a
+    // suffix search beneath the same roots instead of reporting missing.
+    expectEqual(try await reference("AgentWorkbench/" + filename),
+                .matches([sourceFile.path, duplicateFile.path].sorted()))
     // A file at the exact cwd-relative path wins even when there are nested matches.
     let direct = root.appendingPathComponent(filename)
     try Data("direct".utf8).write(to: direct)
