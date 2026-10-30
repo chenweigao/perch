@@ -1452,6 +1452,10 @@ struct NavigationPreviewApp: App {
                 report.merge(try await runner.nativeUserRows(assistant: true)) { a, _ in a }
                 report.merge(try await runner.nativeAssistantContracts()) { a, _ in a }
             }
+            else if mode == "streaming-rendering" {
+                report.merge(try await runner.nativeAssistantContracts()) { a, _ in a }
+                report.merge(try runner.streamingRenderingPerformance()) { a, _ in a }
+            }
             else if mode == "paragraphs" { report.merge(try await runner.paragraphExperiment()) { a, _ in a } }
             else if mode == "disclosure" { report.merge(try await runner.disclosures()) { a, _ in a } }
             else if mode == "disclosure-animation" { report.merge(try await runner.disclosureAnimation()) { a, _ in a } }

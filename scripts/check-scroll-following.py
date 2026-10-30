@@ -11,7 +11,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BIN = pathlib.Path(subprocess.check_output(
     ["swift", "build", "--build-system", "native", "-c", "release", "--show-bin-path"],
     cwd=ROOT, text=True).strip())
-files = ["RevealFrameDriver", "ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory", "ConversationPresentationEnvironment",
+files = ["ToolActivityView", "ConversationTranscriptView", "ConversationReadingMemory", "ConversationPresentationEnvironment",
          "ConversationActions", "ConversationBookmarksStore", "ImagePreviewPanel", "ReplyMermaid", "PerfDiagnostics",
          "ActivitySummarySettings", "ActivitySummaryController",
          "ConversationScrollControls", "ReplyMarkdownView", "CodeHighlighting", "NativeAssistantBlocks", "KimiAttachmentView", "AttachmentImageDecoder",

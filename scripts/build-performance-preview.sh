@@ -68,10 +68,6 @@ fi
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/ActivitySummaryController.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift)
 fi
-# Revisions before the stream-reveal change do not carry the driver.
-if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/RevealFrameDriver.swift" 2>/dev/null; then
-    app_files+=(Sources/AgentWorkbench/RevealFrameDriver.swift)
-fi
 # Refresh only this fixture's copied source directory, never any checkout.
 rm -rf "$snapshot_root/Sources"
 if [[ "$variant" == baseline ]]; then

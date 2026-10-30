@@ -1375,13 +1375,11 @@ private struct ConversationEntryAppearance: Equatable {
 private struct HostedConversationEntry: View {
     let content: ConversationEntryView
     let appearance: ConversationEntryAppearance
-    var cursor: RevealCursor? = nil
     var disclosureChanged: () -> Void = {}
     var sizeChanged: (CGSize) -> Void = { _ in }
     var body: some View {
         content.equatable()
             .environment(\.conversationMemoryKey, content.memoryKey)
-            .environment(\.streamRevealCursor, cursor)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGSize.self) { $0.size } action: { sizeChanged($0) }
@@ -1477,11 +1475,6 @@ private final class ConversationEntryController: NSViewController {
     private var nativeAssistant: NativeAssistantMessageView?
     /// The assistant reply's Markdown for "copy as plain text"; nil for other rows.
     private var replySource: String?
-    /// Live-tail reveal: the cursor object is always injected; `reveal` exists
-    /// only while a .progress assistant text row is pacing its tail.
-    private let revealCursor = RevealCursor()
-    private var reveal: StreamReveal?
-    private var revealMessageID: String?
     private var content: ConversationEntryView
     private var appearance: ConversationEntryAppearance
     private var generation = 0
@@ -1622,7 +1615,6 @@ private final class ConversationEntryController: NSViewController {
         }
     }
     deinit {
-        reveal?.cancel()
         if let settleFlipObserver { NotificationCenter.default.removeObserver(settleFlipObserver) }
         if let nativeUser { NativeUserMessageView.recycle(nativeUser) }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant) }
@@ -1692,8 +1684,9 @@ private final class ConversationEntryController: NSViewController {
         #else
         let allowsRichBlocks = true
         #endif
-        guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
-              content.entry.presentation == .message, content.entry.messages.count == 1,
+        guard appearance.layoutDirection == .leftToRight, !content.isProgressNote,
+              content.entry.presentation == .message || content.entry.presentation == .progress,
+              content.entry.messages.count == 1,
               let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
@@ -1711,55 +1704,6 @@ private final class ConversationEntryController: NSViewController {
         }
         #endif
         return .reuse(sessionID: content.sessionId, messageID: messageID, source: source, blocks: blocks)
-    }
-    /// Live assistant tail (.progress): same admission shape as the settled
-    /// native probe, minus the presentation requirement. The cached preparation
-    /// doubles as the hosted Markdown's parse, so streaming parses once.
-    private func liveAssistantPreparation() -> (messageID: String, source: String, value: NativeAssistantContent.Preparation)? {
-        guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
-              content.entry.messages.count == 1,
-              let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
-              message.content.count == 1, let part = message.content.first,
-              part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
-              let source = part.text else { return nil }
-        let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
-                                                          source: source, allowsRichBlocks: true) {
-            NativeAssistantContent.prepare(source, allowsRichBlocks: true)
-        }
-        return (message.id, source, preparation)
-    }
-    /// Cursor-space text: rendered paragraph/heading text plus one separator per
-    /// text block, matching ReplyBlocks.Group.renderedLength exactly.
-    private static func revealCursorText(blocks: [ReplyBlock]) -> String {
-        var text = ""
-        for block in blocks {
-            switch block {
-            case .paragraph(let runs), .heading(_, let runs):
-                for run in runs { text += run.text }
-                text += "\n"
-            default:
-                break
-            }
-        }
-        return text
-    }
-    private func updateReveal(messageID: String, blocks: [ReplyBlock], animate: Bool) {
-        if reveal == nil || revealMessageID != messageID {
-            reveal?.cancel()
-            let reveal = StreamReveal(clock: RevealFrameDriver.shared.clock)
-            reveal.onVisibleChange = { [weak self] visible in self?.revealCursor.visible = visible }
-            self.reveal = reveal
-            revealMessageID = messageID
-        }
-        reveal?.update(Self.revealCursorText(blocks: blocks), animate: animate)
-    }
-    private func finishReveal() {
-        reveal?.cancel()
-        reveal = nil
-        revealMessageID = nil
-        // Completion may contain a final chunk or switch renderer. Never cap
-        // the settled Markdown with a cursor from the preceding live snapshot.
-        revealCursor.visible = Int.max
     }
 
     /// Any descendant text view holding a non-empty selection blocks the
@@ -1845,52 +1789,39 @@ private final class ConversationEntryController: NSViewController {
         if let assistant = nativeAssistantPreparation() {
             replySource = assistant.source
             if let blocks = assistant.value.content {
-                // Settling .progress→.message swaps the hosted row for a native
-                // one. With a live text selection that swap loses it, so stay
-                // hosted until the selection clears (ccgui retains the reveal
-                // DOM shape on settle for the same reason).
+                // A hosted fallback may become native after its incomplete Markdown
+                // changes shape. Keep an active selection until the user clears it.
                 if let host, Self.hasLiveTextSelection(in: host.view) {
                     deferSettleFlip()
-                    finishReveal()
                     markdownPreparation = fallbackPreparation(messageID: assistant.messageID, source: assistant.source,
                                                               blocks: assistant.value.blocks)
                 } else {
-                if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
-                // A settled row shows everything: the reveal ends at the flip
-                // from .progress to .message, not when the drain happens to finish.
-                finishReveal()
-                if nativeAssistant == nil {
-                    nativeAssistant = NativeAssistantMessageView.acquire()
-                    if isViewLoaded { view.addSubview(nativeAssistant!) }
-                }
-                nativeAssistant!.update(blocks, source: assistant.source,
-                                        dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled,
-                                        actionContext: appearance.actionContext, messageID: assistant.messageID)
-                #if TRANSCRIPT_CHECKS
-                NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
-                #endif
-                return
+                    if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
+                    if nativeAssistant == nil {
+                        nativeAssistant = NativeAssistantMessageView.acquire()
+                        if isViewLoaded { view.addSubview(nativeAssistant!) }
+                    }
+                    nativeAssistant!.update(blocks, source: assistant.source,
+                                            dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled,
+                                            actionContext: appearance.actionContext, messageID: assistant.messageID,
+                                            showsActions: content.entry.presentation == .message)
+                    #if TRANSCRIPT_CHECKS
+                    NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
+                    #endif
+                    return
                 }
             }
             markdownPreparation = fallbackPreparation(messageID: assistant.messageID, source: assistant.source,
                                                        blocks: assistant.value.blocks)
         }
-        if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
-        if content.entry.presentation == .progress, let live = liveAssistantPreparation() {
-            replySource = live.source
-            // Parse once here (cached) so the reveal cursor and the hosted
-            // Markdown share the same blocks.
-            markdownPreparation = .reuse(sessionID: content.sessionId, messageID: live.messageID,
-                                         source: live.source, blocks: live.value.blocks)
-            updateReveal(messageID: live.messageID, blocks: live.value.blocks,
-                         animate: !appearance.reduceMotion)
-        } else {
-            finishReveal()
+        if let nativeAssistant {
+            NativeAssistantMessageView.recycle(nativeAssistant)
+            self.nativeAssistant = nil
         }
         var hostedContent = content
         hostedContent.markdownPreparation = markdownPreparation
         let version = generation
-        let root = HostedConversationEntry(content: hostedContent, appearance: appearance, cursor: revealCursor, disclosureChanged: { [weak self] in
+        let root = HostedConversationEntry(content: hostedContent, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
             self?.disclosureChanged()
         }) { [weak self] size in
