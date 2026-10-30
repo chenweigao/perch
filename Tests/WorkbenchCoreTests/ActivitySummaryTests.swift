@@ -64,6 +64,9 @@ func checkActivitySummaries() throws {
     precondition(inspection.phase == .exploring && !inspection.headline.contains("cd"))
     let described = try shellNarrative("cd /project && swift test", description: "检查会话恢复是否保留草稿")
     precondition(described.headline == "检查会话恢复是否保留草稿", "Descriptions must not gain a mechanical phase prefix")
+    let loop = try shellNarrative("for f in a.txt b.txt; do grep -n foo \"$f\"; done")
+    precondition(loop.phase == .exploring && loop.headline == L("查看文件与代码"),
+                 "A shell loop is described by the command it runs, not by `for`")
     let setupOnly = try shellNarrative("cd /project")
     precondition(setupOnly.headline == L("准备命令环境"))
 

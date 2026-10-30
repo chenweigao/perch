@@ -149,7 +149,8 @@ struct TaskContextView: View {
                             emptyState("tray", "暂无任务活动")
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                }.onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, next in
+                }.scrollEdgeEffectStyle(.soft, for: .bottom)
+                .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, next in
                     scrolled = next
                 }
             }

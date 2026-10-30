@@ -59,6 +59,8 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 VStack(alignment: .leading, spacing: 2) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
             }.scrollIndicators(.hidden)
+                // Rows fade out at the edges instead of being cut off mid-line.
+                .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
                 .onChange(of: scrollTargetID, initial: true) { _, target in
                     // Visible selections stay under the pointer. Offscreen selections
                     // (for example from search) move only enough to become visible.
