@@ -169,7 +169,7 @@ extension WorkbenchTheme {
         /// only a soft contact shadow while hairlines mark the edges.
         static let panelShadow = NSColor(name: nil) { appearance in
             NSColor.black.withAlphaComponent(
-                appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.20)
+                appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.16)
         }
     }
     /// Corner radii of highlights and containers. Glass surfaces and reply blocks keep their own.
