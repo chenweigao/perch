@@ -3,10 +3,11 @@ import SwiftUI
 
 /// The window's one translucent surface: system Liquid Glass over a non-opaque
 /// window, so the blurred desktop tints the frame, navigation and toolbar while
-/// the cards above stay opaque. At night the glass floats on `glassUnderlay`, a
-/// mostly opaque blue-graphite base that keeps its luminance in the canvas's
-/// family instead of the wallpaper's. Panels that float over content reuse it
-/// with their own radius. Reduce Transparency swaps the glass for the window color.
+/// the cards above stay opaque. The glass floats on `glassUnderlay`, whose
+/// strength is the reader's setting (white in light, blue-graphite in dark), so
+/// chrome luminance stays in the canvas's family instead of the wallpaper's.
+/// Panels that float over content reuse it with their own radius.
+/// Reduce Transparency swaps the glass for the window color.
 final class WorkbenchWindowBackdropView: NSView {
     /// `nil` follows the window's corner, so the glass rim meets the window edge.
     /// Floating panels set their concentric radius as the window corner changes.
@@ -78,6 +79,7 @@ final class WorkbenchWindowBackdropView: NSView {
 private struct WorkbenchBackdropGlass: View {
     let outline: WorkbenchBackdropOutline
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @AppStorage(WorkbenchGlassIntensity.defaultsKey) private var glassIntensity: WorkbenchGlassIntensity = .standard
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: outline.cornerRadius, style: .continuous)
@@ -85,11 +87,10 @@ private struct WorkbenchBackdropGlass: View {
             if reduceTransparency {
                 shape.fill(Color(nsColor: .windowBackgroundColor))
             } else {
-                // The night underlay sits beneath the glass, which blurs it into
-                // the desktop's contribution; in light it is clear and the glass
-                // keeps its pure desktop tint.
+                // The underlay sits beneath the glass, which blurs it into the
+                // desktop's contribution; its strength is the reader's setting.
                 ZStack {
-                    shape.fill(WorkbenchTheme.glassUnderlay)
+                    shape.fill(WorkbenchTheme.glassUnderlay(glassIntensity))
                     Color.clear.glassEffect(.regular, in: shape)
                 }
             }

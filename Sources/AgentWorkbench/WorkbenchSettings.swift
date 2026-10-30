@@ -13,6 +13,7 @@ struct WorkbenchSettings: View {
     @State private var permissionModes: [SessionKind: String] = [:]
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
+    @AppStorage(WorkbenchGlassIntensity.defaultsKey) private var glassIntensity: WorkbenchGlassIntensity = .standard
     @UILocalization private var L
     private let readingSize = ReadingBodySize.shared
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .codex, .claude]
@@ -133,6 +134,11 @@ struct WorkbenchSettings: View {
                     Text(appearance.title).tag(appearance)
                 }
             }
+            Picker("窗口玻璃", selection: $glassIntensity) {
+                ForEach(WorkbenchGlassIntensity.allCases) { intensity in
+                    Text(intensity.title).tag(intensity)
+                }
+            }
             Picker("正文字号", selection: Binding(get: { readingSize.value }, set: { readingSize.set($0) })) {
                 ForEach(ReadingBodySize.sizes, id: \.self) { size in
                     Text(verbatim: size == ReadingBodySize.standard ? L("\(Int(size)) pt（默认）") : "\(Int(size)) pt")
@@ -151,7 +157,7 @@ struct WorkbenchSettings: View {
                 Button("关闭活动叙事") { summarySettings.disable() }
             }
         } footer: {
-            Text("正文字号影响对话、思考与工具记录和输入框，也可用 ⌘= 放大、⌘− 缩小、⌘0 恢复默认。侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
+            Text("正文字号影响对话、思考与工具记录和输入框，也可用 ⌘= 放大、⌘− 缩小、⌘0 恢复默认。窗口玻璃调节侧边栏与工具栏透出的桌面色彩，日夜共用一档。侧边栏可拖动调整宽度，系统会记住位置。透明度与动态效果遵循 macOS 辅助功能设置。")
         }
     }
 

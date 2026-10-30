@@ -38,13 +38,16 @@ enum WorkbenchTheme {
     /// so the desktop tint still reads through it.
     static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),
                                                 dark: NSColor(white: 1, alpha: 0.11)))
-    /// The base beneath the window glass. Light glass keeps its pure desktop
-    /// tint (clear underlay). Dark glass floats over a mostly opaque blue-graphite
-    /// base, so navigation and the toolbar share the canvas's luminance instead of
-    /// glowing with the wallpaper; the remaining 15% keeps the glass alive.
-    static let glassUnderlay = Color(nsColor: nsColor(
-        light: NSColor(white: 1, alpha: 0.45),
-        dark: NSColor(srgbRed: 0.122, green: 0.133, blue: 0.161, alpha: 0.85)))
+    /// The base beneath the window glass, at the reader's chosen intensity
+    /// (Settings › 界面 › 窗口玻璃). Day and night share one setting: a white
+    /// underlay in light, the canvas's blue-graphite in dark. `standard` keeps
+    /// just over half the desktop's contribution; `clear` is closer to pure
+    /// desktop glass, `muted` almost matte.
+    static func glassUnderlay(_ intensity: WorkbenchGlassIntensity) -> Color {
+        Color(nsColor: nsColor(
+            light: NSColor(white: 1, alpha: intensity.lightAlpha),
+            dark: NSColor(srgbRed: 0.122, green: 0.133, blue: 0.161, alpha: intensity.darkAlpha)))
+    }
 
     /// Glyph color atop the accent-colored primary action circle; dark echoes the
     /// canvas hue so the circle reads as a single molded piece.
@@ -193,9 +196,46 @@ extension WorkbenchTheme {
     }
 }
 
+/// Window-glass strength from Settings › 界面 › 窗口玻璃. One setting tunes both
+/// appearances: the light underlay is white at the given alpha, the dark one the
+/// canvas's blue-graphite. Higher alpha means calmer, more matte chrome.
+enum WorkbenchGlassIntensity: String, CaseIterable, Identifiable {
+    case clear
+    case light
+    case standard
+    case muted
+
+    static let defaultsKey = "perch.glassIntensity"
+    var id: String { rawValue }
+
+    var lightAlpha: Double {
+        switch self {
+        case .clear: return 0
+        case .light: return 0.30
+        case .standard: return 0.45
+        case .muted: return 0.70
+        }
+    }
+    var darkAlpha: Double {
+        switch self {
+        case .clear: return 0.55
+        case .light: return 0.70
+        case .standard: return 0.85
+        case .muted: return 0.95
+        }
+    }
+    var title: LocalizedStringKey {
+        switch self {
+        case .clear: return "通透"
+        case .light: return "轻透"
+        case .standard: return "标准"
+        case .muted: return "克制"
+        }
+    }
+}
+
 /// Appearance override from settings; `system` leaves the scheme to macOS.
-enum AppAppearance: String, CaseIterable, Identifiable {
-    case system
+enum AppAppearance: String, CaseIterable, Identifiable {    case system
     case light
     case dark
 
