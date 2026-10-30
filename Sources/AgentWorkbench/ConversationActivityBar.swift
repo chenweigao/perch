@@ -166,9 +166,9 @@ struct ConversationActivityBar: View {
                      arrowEdge: .top) { details }
     }
 
-    /// Only real execution spins; every other state names itself with a symbol.
+    /// Only real execution hops the Perch sun; every other state names itself with a symbol.
     @ViewBuilder private var indicator: some View {
-        if activity.animates { ConversationBusyIndicator() }
+        if activity.animates { PerchBusyIndicator() }
         else {
             Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
                 .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
