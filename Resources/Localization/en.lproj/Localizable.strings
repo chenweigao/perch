@@ -1894,6 +1894,7 @@
 "工具活动" = "Tool activity";
 "已结束的调用 · %lld" = "Finished calls · %lld";
 "已结束的任务 · %lld" = "Finished tasks · %lld";
+"%lld 个运行中" = "%lld running";
 "已请求停止" = "Stop requested";
 "已锁定此任务" = "Locked to this task";
 "打开该任务的输入框，保留已有草稿" = "Open this task’s input, preserving its existing draft";

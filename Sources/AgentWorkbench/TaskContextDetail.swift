@@ -28,10 +28,11 @@ struct TaskContextDetailView: View {
                     Image(systemName: "chevron.left")
                     Text("后台任务与子 Agent").lineLimit(1)
                 }.contentShape(Rectangle())
-            }.buttonStyle(.borderless).foregroundStyle(WorkbenchTheme.quiet)
+            }.buttonStyle(TaskContextRowStyle()).foregroundStyle(WorkbenchTheme.quiet)
+                .fixedSize().padding(.leading, 12)
                 .help("返回任务列表").accessibilityLabel("返回任务列表")
                 .accessibilityIdentifier("task-context-back")
-                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 10)
+                .padding(.trailing, 16).padding(.top, 8).padding(.bottom, 8)
             if let task = listed ?? remembered {
                 content(task, current: listed != nil)
             } else if snapshot == nil {
@@ -64,10 +65,11 @@ struct TaskContextDetailView: View {
     // MARK: Summary
 
     private func summary(_ task: KimiTask, current: Bool, readsOutput: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let (title, endpoint) = TaskContextTitle.split(task.displayTitle)
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 TaskStatusSymbol(task: task)
-                Text(task.displayTitle)
+                Text(verbatim: title)
                     .font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                     .lineLimit(4).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,6 +79,11 @@ struct TaskContextDetailView: View {
                 if current, task.startedDate != nil {
                     Text(verbatim: " · ")
                     KimiTaskClock(task: task)
+                }
+                if let endpoint {
+                    Text(verbatim: " · ")
+                    Text(verbatim: endpoint).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
+                        .textSelection(.enabled)
                 }
             }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
                 .padding(.leading, 26)
@@ -249,10 +256,13 @@ struct TaskContextDetailView: View {
 /// The status mark of a task row and its detail page.
 struct TaskStatusSymbol: View {
     let task: KimiTask
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// A running task reads in the accent ink and breathes; finished ones stay quiet.
     var body: some View {
         Image(systemName: Self.name(of: task))
-            .foregroundStyle(task.isFailed ? Color.red : .secondary).frame(width: 16)
-            .accessibilityHidden(true)
+            .foregroundStyle(task.isFailed ? Color.red : task.isRunning ? WorkbenchTheme.accent : Color.secondary)
+            .symbolEffect(.pulse, options: .repeating, isActive: task.isRunning && !reduceMotion)
+            .frame(width: 16).accessibilityHidden(true)
     }
     static func name(of task: KimiTask) -> String {
         if task.isRunning { return "circle.dashed" }
