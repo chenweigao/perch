@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// Bounded native blocks for completed assistant messages: paragraphs, headings,
-/// code cards, rules, paragraph-only quotes and paragraph/list items. Tables,
+/// Bounded native blocks for assistant snapshots: paragraphs, headings, code cards,
+/// rules, paragraph-only quotes and paragraph/list items. Tables,
 /// attachments and nested content outside this set keep the SwiftUI renderer.
 enum NativeAssistantBlock: Equatable {
     case paragraphs(NSAttributedString)
@@ -26,7 +26,7 @@ enum NativeAssistantContent {
         let content: [NativeAssistantBlock]?
     }
 
-    /// Completed assistant text with plain structure. `allowsRichBlocks` exists for
+    /// Assistant text with bounded structure. `allowsRichBlocks` exists for
     /// acceptance A/B runs: off limits admission to paragraph groups.
     static func make(_ source: String, allowsRichBlocks: Bool = true) -> [NativeAssistantBlock]? {
         prepare(source, allowsRichBlocks: allowsRichBlocks).content
@@ -546,16 +546,29 @@ final class NativeAssistantStackView: NSView {
     }
     func update(_ blocks: [NativeAssistantBlock]) {
         guard blocks != self.blocks else { return }
+        let previous = self.blocks
         self.blocks = blocks
         var next: [NativeAssistantBlockView] = []
         for (index, block) in blocks.enumerated() {
             if index < blockViews.count, type(of: blockViews[index]) == makeViewType(for: block) {
-                blockViews[index].update(block)
+                if index >= previous.count || previous[index] != block {
+                    blockViews[index].update(block)
+                    #if TRANSCRIPT_CHECKS
+                    NavigationRenderMetrics.count("native_assistant_block_update")
+                    #endif
+                } else {
+                    #if TRANSCRIPT_CHECKS
+                    NavigationRenderMetrics.count("native_assistant_block_stable")
+                    #endif
+                }
                 next.append(blockViews[index])
             } else {
                 let view = makeView(for: block)
                 view.update(block)
                 next.append(view)
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.count("native_assistant_block_create")
+                #endif
             }
         }
         let kept = Set(next.map { ObjectIdentifier($0) })

@@ -39,7 +39,6 @@ struct ProtocolTests {
         try checkTaskContextFiles()
         checkTaskContextDetail()
         checkConversationTiming()
-        checkStreamReveal()
         try checkFrameHitchRecorder()
         checkAutoCompact()
         checkSafeLink()

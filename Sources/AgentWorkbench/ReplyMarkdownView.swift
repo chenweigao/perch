@@ -5,8 +5,8 @@ import WorkbenchCore
 
 /// The reading scale. Kimi, OMP, Qoder and the other native agents share it with
 /// their composers, and both renderers read every size, line height and gap from
-/// here — SwiftUI rows while a reply streams, native cached rows once it settles —
-/// so a settled row keeps the geometry of the row it replaces.
+/// here. Admitted Markdown stays in one native row while it streams and settles;
+/// unsupported shapes keep the SwiftUI renderer with the same geometry.
 ///
 /// Type sizes and vertical rhythm follow the reader's body size through
 /// `ReadingScale` (14 pt on a 22 pt line by default; H1 and H2 step up, the other
@@ -276,35 +276,12 @@ struct ReplyBlocks: View {
     let blocks: [ReplyBlock]
     var compact = false
     var coalescesParagraphs = ReplyParagraphLayout.enabled
-    @Environment(\.streamRevealCursor) private var revealCursor
     @Environment(\.documentReadingStyle) private var documentReadingStyle
     @Environment(\.documentFontScale) private var documentFontScale
     private struct Group: Identifiable, Equatable {
         let id: Int
         let block: ReplyBlock
         var following: [[ReplyInline]] = []
-        /// Length in the reveal cursor space: paragraph and heading groups count
-        /// their rendered UTF-16 text (with paragraph separators); code, lists,
-        /// quotes, tables and rules are wholesale checkpoints with zero length —
-        /// they appear once the cursor reaches them.
-        var renderedLength: Int {
-            switch block {
-            case .paragraph(let runs):
-                var total = runs.reduce(0) { $0 + $1.text.utf16.count }
-                for paragraph in following {
-                    total += 1 + paragraph.reduce(0) { $0 + $1.text.utf16.count }
-                }
-                return total + 1
-            case .heading(_, let runs):
-                return 1 + runs.reduce(0) { $0 + $1.text.utf16.count }
-            default:
-                return 0
-            }
-        }
-    }
-    private struct RevealedGroup: Equatable {
-        let group: Group
-        let truncateAt: Int?
     }
     // Bound streaming invalidation: only the final group of at most eight
     // paragraphs changes when the tail grows; completed groups remain equal.
@@ -321,30 +298,10 @@ struct ReplyBlocks: View {
         }
         return result
     }
-    /// Map the cursor onto groups: fully covered groups render whole, the
-    /// crossing paragraph/heading group renders a grapheme-safe prefix, groups
-    /// beyond the cursor stay hidden until it reaches them.
-    private func revealedGroups(upTo cursor: Int) -> [RevealedGroup] {
-        guard cursor != Int.max else { return groups.map { RevealedGroup(group: $0, truncateAt: nil) } }
-        var offset = 0
-        var result: [RevealedGroup] = []
-        for group in groups {
-            let length = group.renderedLength
-            if cursor >= offset + length {
-                result.append(RevealedGroup(group: group, truncateAt: nil))
-            } else if length > 0, cursor > offset {
-                result.append(RevealedGroup(group: group, truncateAt: cursor - offset))
-            }
-            offset += length
-        }
-        return result
-    }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(revealedGroups(upTo: revealCursor?.visible ?? Int.max), id: \.group.id) { revealed in
-                let group = revealed.group
-                GroupContent(group: group, compact: compact, coalescesParagraphs: coalescesParagraphs,
-                             truncateAt: revealed.truncateAt).equatable()
+            ForEach(groups) { group in
+                GroupContent(group: group, compact: compact, coalescesParagraphs: coalescesParagraphs).equatable()
                     .padding(.top, group.id == 0 ? 0 : spacing(before: group.block, after: blocks[group.id - 1]))
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -354,22 +311,17 @@ struct ReplyBlocks: View {
         let group: Group
         let compact: Bool
         let coalescesParagraphs: Bool
-        var truncateAt: Int? = nil
         static func == (lhs: Self, rhs: Self) -> Bool {
-            lhs.group == rhs.group && lhs.compact == rhs.compact && lhs.coalescesParagraphs == rhs.coalescesParagraphs && lhs.truncateAt == rhs.truncateAt
+            lhs.group == rhs.group && lhs.compact == rhs.compact && lhs.coalescesParagraphs == rhs.coalescesParagraphs
         }
         @ViewBuilder var body: some View {
             if case .paragraph(let runs) = group.block {
                 ReplyText(runs: runs, followingParagraphs: group.following,
                           paragraphSpacing: documentReadingStyle ? (compact ? 8 : 16) * DocumentTypography.unit :
                             (compact ? ReplyStyle.compactParagraphSpacing : ReplyStyle.paragraphSpacing),
-                          preservesSelectionOnAppend: coalescesParagraphs, truncateAt: truncateAt)
+                          preservesSelectionOnAppend: coalescesParagraphs)
             } else {
-                ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs,
-                                  truncateAt: truncateAt).equatable()
-                    // Lists/quotes/tables appear whole at their checkpoint.
-                    // Their nested blocks must not restart the outer cursor.
-                    .environment(\.streamRevealCursor, nil)
+                ReplyBlockContent(block: group.block, coalescesParagraphs: coalescesParagraphs).equatable()
             }
         }
     }
@@ -385,25 +337,21 @@ struct ReplyBlocks: View {
 
 }
 
-/// Completed Markdown blocks preserve their view tree while the tail streams.
 private struct ReplyBlockContent: View, Equatable {
     @Environment(\.documentReadingStyle) private var documentReadingStyle
     @Environment(\.documentFontScale) private var documentFontScale
     let block: ReplyBlock
     var coalescesParagraphs = ReplyParagraphLayout.enabled
-    /// UTF-16 cap in reveal cursor space; only headings consume it.
-    var truncateAt: Int? = nil
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.block == rhs.block && lhs.coalescesParagraphs == rhs.coalescesParagraphs && lhs.truncateAt == rhs.truncateAt
+        lhs.block == rhs.block && lhs.coalescesParagraphs == rhs.coalescesParagraphs
     }
     @ViewBuilder var body: some View {
         switch block {
-        case .paragraph(let runs): ReplyText(runs: runs, truncateAt: truncateAt)
+        case .paragraph(let runs): ReplyText(runs: runs)
         case .heading(let level, let runs):
             ReplyText(runs: runs, size: documentReadingStyle ? DocumentTypography.headingSize(level) : ReplyStyle.headingSize(level),
                       weight: documentReadingStyle ? .medium : .semibold,
-                      lineHeight: documentReadingStyle ? DocumentTypography.headingLineHeight(level) : ReplyStyle.headingLineHeight(level),
-                      truncateAt: truncateAt)
+                      lineHeight: documentReadingStyle ? DocumentTypography.headingLineHeight(level) : ReplyStyle.headingLineHeight(level))
         case .code(let language, let source):
             if MermaidSupport.isMermaid(language) {
                 ReplyMermaid(source: source)
@@ -464,8 +412,8 @@ private struct ReplyAlertBlock: View {
 
 /// One right-aligned marker column per list, at least 16 pt wide, shared by the
 /// SwiftUI and native renderers. Item text starts at the same x for "9." and
-/// "10.", and a settled native row keeps the geometry of the streamed SwiftUI
-/// row it replaces. Widths are measured with the marker's own label metrics.
+/// "10.", and switching between native admission and SwiftUI fallback keeps the
+/// same geometry. Widths are measured with the marker's own label metrics.
 @MainActor enum ReplyListMetrics {
     static let minimumMarkerWidth: CGFloat = ReplyStyle.ListLayout.minimumMarkerWidth
     private static let measuringField: NSTextField = {
@@ -595,20 +543,9 @@ extension EnvironmentValues {
     }
 }
 
-/// Live rows inject their reveal cursor; nil (and `Int.max`) render everything.
-private struct StreamRevealCursorKey: EnvironmentKey { static let defaultValue: RevealCursor? = nil }
-extension EnvironmentValues {
-    var streamRevealCursor: RevealCursor? {
-        get { self[StreamRevealCursorKey.self] }
-        set { self[StreamRevealCursorKey.self] = newValue }
-    }
-}
-
 /// Both native user rows and SwiftUI Markdown share exact text attributes.
 enum ReplyTextAttributes {
-    /// Attributed paragraph text is a pure function of runs and style. The live
-    /// row's crossing group rebuilds it every reveal frame, including the file
-    /// reference scan; memoize so a frame only slices the cached string.
+    /// Attributed paragraph text is a pure function of runs and style.
     /// Render-thread only.
     private struct ParagraphsKey: Hashable {
         let paragraphs: [[ReplyInline]]
@@ -768,8 +705,6 @@ private struct ReplyText: View {
     var followingParagraphs: [[ReplyInline]] = []
     var paragraphSpacing: CGFloat = ReplyStyle.paragraphSpacing
     var preservesSelectionOnAppend = false
-    /// Live reveal cap in UTF-16 units; nil renders the complete text.
-    var truncateAt: Int? = nil
     /// Quiet prose sets every run, headings and table cells included, at the quiet
     /// size and line height in secondary ink; weight still marks the hierarchy.
     private var resolvedSize: CGFloat { tone == .quiet ? ReplyStyle.quietSize : size }
@@ -778,11 +713,9 @@ private struct ReplyText: View {
     }
     private var ink: NSColor { tone == .quiet || documentMutedText ? ReplyStyle.quietInk : ReplyStyle.nativeInk }
     private var attributed: NSAttributedString {
-        let full = ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: resolvedSize, weight: weight,
-                                                  alignment: alignment, lineHeight: resolvedLineHeight,
-                                                  paragraphSpacing: paragraphSpacing, ink: ink)
-        guard let truncateAt, truncateAt < full.length else { return full }
-        return full.visiblePrefix(utf16Count: truncateAt)
+        ReplyTextAttributes.paragraphs([runs] + followingParagraphs, size: resolvedSize, weight: weight,
+                                       alignment: alignment, lineHeight: resolvedLineHeight,
+                                       paragraphSpacing: paragraphSpacing, ink: ink)
     }
     var body: some View {
         SelectableReplyText(attributed: attributed, preservesSelectionOnAppend: preservesSelectionOnAppend)
@@ -1155,21 +1088,39 @@ final class NativeUserMessageView: NSView {
     }
 }
 
+@MainActor @Observable
+private final class NativeAssistantActionsModel {
+    struct Configuration: Equatable {
+        var source: String?
+        var enabled = true
+        var context: ConversationActionContext?
+        var messageID: String?
+    }
+
+    var configuration = Configuration()
+
+    func update(source: String?, enabled: Bool = true,
+                context: ConversationActionContext? = nil, messageID: String? = nil) {
+        let next = Configuration(source: source, enabled: enabled, context: context, messageID: messageID)
+        if configuration != next { configuration = next }
+    }
+}
+
 private struct NativeAssistantActions: View {
-    var source: String?
-    var enabled = true
-    var context: ConversationActionContext?
-    var messageID: String?
+    let model: NativeAssistantActionsModel
     var body: some View {
+        let configuration = model.configuration
         HStack(spacing: 2) {
-            if let source { ReplyCopyButton(text: source).id(source).disabled(!enabled) }
-            if let context, let source {
+            if let source = configuration.source {
+                ReplyCopyButton(text: source).id(source).disabled(!configuration.enabled)
+            }
+            if let context = configuration.context, let source = configuration.source {
                 Button { context.post(.quote(source)) } label: {
                     Image(systemName: "quote.opening").font(.system(size: ReplyStyle.captionSize))
                         .frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
                     .accessibilityLabel("引用到输入框")
-                if let messageID, !messageID.isEmpty {
+                if let messageID = configuration.messageID, !messageID.isEmpty {
                     Button { context.post(.regenerate(before: messageID)) } label: {
                         Image(systemName: "arrow.clockwise").font(.system(size: ReplyStyle.captionSize))
                             .frame(width: 24, height: 24).contentShape(Rectangle())
@@ -1185,10 +1136,15 @@ final class NativeAssistantMessageView: NSView {
     private static var recycled: [NativeAssistantMessageView] = []
     private let links = SelectableReplyText.Coordinator()
     private let stack: NativeAssistantStackView
-    private let actions = NSHostingView(rootView: NativeAssistantActions())
+    private let actionModel: NativeAssistantActionsModel
+    private let actions: NSHostingView<NativeAssistantActions>
+    private var showsActions = true
     override var isFlipped: Bool { true }
 
     override init(frame frameRect: NSRect) {
+        let actionModel = NativeAssistantActionsModel()
+        self.actionModel = actionModel
+        actions = NSHostingView(rootView: NativeAssistantActions(model: actionModel))
         stack = NativeAssistantStackView(compact: false, links: links)
         super.init(frame: frameRect)
         actions.sizingOptions = []
@@ -1205,20 +1161,25 @@ final class NativeAssistantMessageView: NSView {
     }
     static func recycle(_ view: NativeAssistantMessageView) {
         view.removeFromSuperview()
-        view.actions.rootView = NativeAssistantActions()
+        view.actionModel.update(source: nil)
+        view.actions.isHidden = false
+        view.showsActions = true
         // Block containers are torn down; their text views return to the shared pool
         // cleared of content and selection, so recycled shells hold no conversation data.
         view.stack.teardown()
         if recycled.count < 16 { recycled.append(view) }
     }
     func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true,
-                actionContext: ConversationActionContext? = nil, messageID: String? = nil) {
+                actionContext: ConversationActionContext? = nil, messageID: String? = nil,
+                showsActions: Bool = true) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         stack.update(blocks)
-        let next = actions.rootView
-        if next.source != source || next.enabled != enabled || next.context != actionContext || next.messageID != messageID {
-            actions.rootView = NativeAssistantActions(source: source, enabled: enabled, context: actionContext, messageID: messageID)
-        }
+        self.showsActions = showsActions
+        actions.isHidden = !showsActions
+        let source = showsActions ? source : nil
+        let actionContext = showsActions ? actionContext : nil
+        let messageID = showsActions ? messageID : nil
+        actionModel.update(source: source, enabled: enabled, context: actionContext, messageID: messageID)
         // The hosting view hugs its buttons so hit targets never sit in padding.
         actionButtonCount = (source == nil ? 0 : 1) + (actionContext != nil && source != nil ? 1 : 0)
             + (actionContext != nil && messageID?.isEmpty == false ? 1 : 0)
@@ -1226,21 +1187,24 @@ final class NativeAssistantMessageView: NSView {
     private var actionButtonCount = 1
     private var actionsWidth: CGFloat { CGFloat(actionButtonCount) * 24 + CGFloat(max(0, actionButtonCount - 1)) * 2 }
     func measure(width: CGFloat) -> CGSize {
-        CGSize(width: width, height: stack.contentHeight(width: width) + ReplyStyle.entryPartSpacing + 24)
+        let actionsHeight = showsActions ? ReplyStyle.entryPartSpacing + 24 : 0
+        return CGSize(width: width, height: stack.contentHeight(width: width) + actionsHeight)
     }
     func place(width: CGFloat) {
         let content = stack.contentHeight(width: width)
         let stackFrame = CGRect(x: 0, y: 0, width: width, height: content)
         if stack.frame != stackFrame { stack.frame = stackFrame }
         stack.place(width: width)
-        let frame = CGRect(x: 0, y: content + ReplyStyle.entryPartSpacing, width: actionsWidth, height: 24)
+        let frame = showsActions
+            ? CGRect(x: 0, y: content + ReplyStyle.entryPartSpacing, width: actionsWidth, height: 24)
+            : .zero
         if actions.frame != frame { actions.frame = frame }
     }
     #if TRANSCRIPT_CHECKS
     static var poolState: [String: Any] {
         ["rows": recycled.count,
          "cleared": recycled.allSatisfy { view in
-             view.actions.rootView.source == nil && view.stack.blocks.isEmpty && view.stack.textViews().isEmpty
+             view.actionModel.configuration.source == nil && view.stack.blocks.isEmpty && view.stack.textViews().isEmpty
          }]
     }
     #endif
@@ -1343,8 +1307,8 @@ final class ReplyTextView: NSTextView {
         let appending = value.string.hasPrefix(storage.string)
         let retainedSelection = (preservingSelectionOnAppend || replacingAttributes) && appending ? selectedRange() : nil
         if appending && !replacingAttributes {
-            // Prefix growth (streaming, reveal frames): append only the delta so
-            // TextKit layout invalidates the tail, not the whole paragraph.
+            // Streaming prefix growth appends only the delta so TextKit layout
+            // invalidates the tail, not the whole paragraph.
             storage.append(value.attributedSubstring(from: NSRange(location: storage.length, length: value.length - storage.length)))
         } else {
             storage.setAttributedString(value)

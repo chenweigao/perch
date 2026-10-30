@@ -55,8 +55,8 @@ import WorkbenchCore
             try await checkWorkspaceUpgradeUI()
         case "interactions":
             try await checkDisclosureAndQuestionInteractions()
-        case "stream-reveal":
-            try await checkProductionStreamReveal()
+        case "streaming-rendering":
+            try await checkProductionStreamingRendering()
         case "git-write":
             try await checkGitWriteLifecycle()
         case "goal-header":
