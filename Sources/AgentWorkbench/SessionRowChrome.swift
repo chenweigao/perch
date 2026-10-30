@@ -50,8 +50,9 @@ struct SessionRowChrome<Indicator: View>: View {
         .help(Text(verbatim: tooltip))
     }
 
-    /// Titles own the space. Stable status width and intrinsic height keep a long
-    /// title readable on two lines; pin/archive remain in the row's context menu.
+    /// Titles own the space. The status column holds a stable 28 pt minimum and
+    /// grows for wider labels instead of truncating; pin/archive remain in the
+    /// row's context menu.
     private var conversationRow: some View {
         Button(action: onOpen) {
             HStack(alignment: .top, spacing: SidebarMetrics.labelSpacing) {
@@ -71,12 +72,14 @@ struct SessionRowChrome<Indicator: View>: View {
                         ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
                     } else if updatedAt > 0 {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
+                            // Two-digit labels ("25分") exceed the old 28 pt slot and
+                            // collapsed to an ellipsis; the slot widens instead.
                             Text(SessionTime.compactLabel(since: updatedAt, now: context.date, locale: locale) ?? "")
                                 .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
-                                .lineLimit(1)
+                                .lineLimit(1).fixedSize()
                         }
                     }
-                }.frame(width: 28, height: 18, alignment: .trailing).padding(.top, 1)
+                }.frame(minWidth: 28, minHeight: 18, maxHeight: 18, alignment: .trailing).padding(.top, 1)
             }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 8)
                 .frame(maxWidth: .infinity, minHeight: SidebarMetrics.sessionMinimumHeight, alignment: .leading)
                 .contentShape(Rectangle())
