@@ -1896,6 +1896,7 @@
 "文档与产物" = "Documents and outputs";
 "显示最近 20 次调用，完整记录请打开会话。" = "Showing the latest 20 calls. Open the conversation for the full history.";
 "本轮更新" = "Updated this turn";
+"%@（文件已不在会话主机上）" = "%@ (the file is no longer available on the session host)";
 "查看全部任务" = "Show all tasks";
 "查看全部文件" = "Show all files";
 "查看并处理" = "Review and respond";
