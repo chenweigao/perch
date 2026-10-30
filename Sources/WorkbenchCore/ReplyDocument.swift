@@ -64,7 +64,7 @@ public struct ReplyInline: Equatable, Hashable, Sendable {
 
 public enum ReplyDocument {
     public static func parse(_ source: String, documentLinks: Bool = false) -> [ReplyBlock] {
-        blocks(Document(parsing: source), documentLinks: documentLinks)
+        blocks(Document(parsing: ReplyMath.normalizeDelimiters(source)), documentLinks: documentLinks)
     }
 
     private static func blocks(_ parent: Markup, documentLinks: Bool) -> [ReplyBlock] {
