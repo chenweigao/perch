@@ -260,7 +260,7 @@ struct WorkbenchSidebar: View {
                     Text("置顶常用会话，随时继续")
                         .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, SidebarMetrics.rowInset)
-                        .frame(height: 26)
+                        .frame(height: SidebarMetrics.auxiliaryRowHeight)
                 }.buttonStyle(SidebarNavigationStyle()).accessibilityIdentifier("sidebar.pin.empty")
             case .projects:
                 HStack(spacing: 6) {
@@ -299,7 +299,7 @@ struct WorkbenchSidebar: View {
                     Text("显示全部 \(project.sessions.count) 个会话").font(.system(size: SidebarMetrics.detailSize))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, SidebarMetrics.childIndent + SidebarMetrics.titleOffset).frame(height: 26)
+                        .padding(.leading, SidebarMetrics.childIndent + SidebarMetrics.titleOffset).frame(height: SidebarMetrics.auxiliaryRowHeight)
                 }.buttonStyle(SidebarNavigationStyle())
             case .moreProjects:
                 moreButton("更多项目") { projectLimit += 8 }
@@ -338,7 +338,7 @@ struct WorkbenchSidebar: View {
                 .popover(isPresented: $showPinPicker, arrowEdge: .trailing) {
                     SidebarPinPicker(model: model).foregroundStyle(Color.primary)
                 }
-        }.padding(.trailing, 2).padding(.top, 6).padding(.bottom, SidebarMetrics.sectionBottomSpacing)
+        }.padding(.trailing, 2).padding(.top, SidebarMetrics.pinnedHeaderTopSpacing).padding(.bottom, SidebarMetrics.sectionBottomSpacing)
     }
 
     /// Secondary list actions sit under the row titles, quieter than rows.
@@ -346,7 +346,7 @@ struct WorkbenchSidebar: View {
         Button(action: action) {
             Text(title).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, SidebarMetrics.titleOffset).frame(height: 26)
+                .padding(.leading, SidebarMetrics.titleOffset).frame(height: SidebarMetrics.auxiliaryRowHeight)
         }.buttonStyle(SidebarNavigationStyle())
     }
 
@@ -575,7 +575,7 @@ private struct SessionSidebarRow: View {
     let onOpen: () -> Void
     private var subtitle: String? {
         if item.archived { return nil }
-        if !item.online { return L("离线 · 状态未同步") }
+        if !item.online { return compact ? nil : L("离线 · 状态未同步") }
         return item.section == .attention ? item.detail : nil
     }
     var body: some View {
@@ -587,6 +587,7 @@ private struct SessionSidebarRow: View {
                          directory: item.directory, detail: item.detail,
                          groups: groups, updatedAt: item.updatedAt, compact: compact,
                          running: item.online && !item.archived && item.section == .running,
+                         offline: compact && !item.online && !item.archived,
                          selected: selected,
                          starred: model.workspace.starred.contains(item.reference), archived: item.archived,
                          canOpen: item.online && !item.archived,

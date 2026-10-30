@@ -54,12 +54,21 @@ struct KimiActivityView: View {
                         else if !items.isEmpty { Text("思考与工具 · \(items.count) 次调用").fixedSize() }
                         else { Text("运行上下文").fixedSize() }
                         if !expanded {
-                            Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)
-                                .foregroundStyle(WorkbenchTheme.quiet)
+                            let targets = ToolPresentation.recentTargets(items)
+                            // Command names read as code; a sentence-like description stays prose.
+                            Text(targets).font(.system(size: ReplyStyle.captionSize,
+                                                       design: Self.readsAsCommands(targets) ? .monospaced : .default))
+                                .lineLimit(1).truncationMode(.middle).foregroundStyle(WorkbenchTheme.quiet)
                         }
                         Spacer(minLength: 0)
-                        let attention = items.filter { $0.staysVisible && $0.status != .running }.count
-                        if attention > 0 { Text("\(attention) 项需关注").foregroundStyle(.orange).fixedSize() }
+                        let attention = items.filter { $0.staysVisible && $0.status != .running }
+                        // One item is named so the collapsed row says what to look at.
+                        if attention.count == 1, let only = attention.first {
+                            Text("\(ToolPresentation.compactTarget(only)) 需关注").lineLimit(1).truncationMode(.middle)
+                                .foregroundStyle(.orange)
+                        } else if attention.count > 1 {
+                            Text("\(attention.count) 项需关注").foregroundStyle(.orange).fixedSize()
+                        }
                     }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
             if expanded, let narrative {
@@ -80,6 +89,16 @@ struct KimiActivityView: View {
                         .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
             }
+        }
+    }
+}
+
+extension KimiActivityView {
+    /// "git diff · sed": every part a short ASCII command, not a described step.
+    static func readsAsCommands(_ targets: String) -> Bool {
+        let parts = targets.components(separatedBy: " · ")
+        return !targets.isEmpty && parts.allSatisfy { part in
+            part.allSatisfy(\.isASCII) && part.split(separator: " ").count <= 2
         }
     }
 }
@@ -117,7 +136,9 @@ struct KimiToolCard: View {
         }
     }
     private func attention() -> Bool {
-        [.missingResult, .disconnected, .awaitingApproval].contains(tool.status) || !tool.hasCall
+        // A result without its call record is informational; it stays visible but not orange,
+        // like the task panel's tool list.
+        [.missingResult, .disconnected, .awaitingApproval].contains(tool.status)
     }
     private func resolvedExitReport() -> Int? {
         #if TRANSCRIPT_CHECKS
