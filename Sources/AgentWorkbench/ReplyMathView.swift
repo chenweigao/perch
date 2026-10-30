@@ -3,7 +3,7 @@ import SwiftUI
 import SwiftMath
 import WorkbenchCore
 
-/// Display math ($$…$$) typeset natively by SwiftMath — no web view, no KaTeX.
+/// Display math ($$…$$ / \[…\]) typeset natively by SwiftMath — no web view, no KaTeX.
 /// Each formula typesets once per (latex, size, mode), in light and dark ink, and
 /// is cached; the reveal cursor treats the block as an atomic checkpoint.
 struct ReplyMathBlock: View {
@@ -80,11 +80,24 @@ private enum ReplyMathImage {
                                 detail: (display ? "mode=display" : "mode=inline") + " bytes=\(latex.utf8.count)")
         }
         func typeset(_ ink: NSColor) -> NSImage? {
-            let math = MTMathImage(latex: latex, fontSize: size, textColor: ink,
+            let boxed = ReplyMath.boxedContent(latex)
+            let math = MTMathImage(latex: boxed ?? latex, fontSize: size, textColor: ink,
                                    labelMode: display ? .display : .text,
                                    textAlignment: .left)
             let (error, image) = math.asImage()
-            return error == nil ? image : nil
+            guard error == nil, let image else { return nil }
+            guard boxed != nil else { return image }
+            let inset: CGFloat = 4
+            let borderedSize = NSSize(width: image.size.width + 2 * inset,
+                                      height: image.size.height + 2 * inset)
+            return NSImage(size: borderedSize, flipped: false) { rect in
+                ink.setStroke()
+                let border = NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5))
+                border.lineWidth = 1
+                border.stroke()
+                image.draw(in: rect.insetBy(dx: inset, dy: inset))
+                return true
+            }
         }
         guard let light = typeset(.black), let dark = typeset(.white) else {
             failed.insert(latex)

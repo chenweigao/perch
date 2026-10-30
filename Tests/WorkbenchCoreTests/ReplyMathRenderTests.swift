@@ -1,5 +1,6 @@
 import AppKit
 import SwiftMath
+import WorkbenchCore
 
 /// Smoke check: the native typesetter really draws (the image is lazy, so draw
 /// into a bitmap and count painted pixels). Bad TeX must report an error.
@@ -18,6 +19,23 @@ func checkMathRendering() {
         }
     }
     precondition(painted > 20, "math image drew \(painted) pixels")
+    let reportedSources = [
+        #"\[\frac{12\times4\times P(S)}{S}\]"#,
+        #"\[\boxed{F(S)=11.6412088+F_{\rm attn}(S)+1.536\times10^{-6}S}\]"#,
+        #"\[P(S)=\begin{cases}S(S+1)/2, & S\le W\\W(W+1)/2+(S-W)W, & S>W\end{cases}\]"#,
+    ]
+    for source in reportedSources {
+        let blocks = ReplyDocument.parse(source)
+        guard blocks.count == 1, case .math(let latex) = blocks[0] else {
+            fatalError("expected backslash-delimited math, got \(blocks)")
+        }
+        let reportedMath = MTMathImage(latex: ReplyMath.boxedContent(latex) ?? latex,
+                                       fontSize: 16, textColor: .black,
+                                       labelMode: .display, textAlignment: .left)
+        let (reportedError, reportedImage) = reportedMath.asImage()
+        precondition(reportedError == nil && reportedImage != nil,
+                     "reported formula typeset failed: \(String(describing: reportedError))")
+    }
     let bad = MTMathImage(latex: #"\notarealcommand"#, fontSize: 14, textColor: .black,
                           labelMode: .text, textAlignment: .left)
     let (badError, _) = bad.asImage()
