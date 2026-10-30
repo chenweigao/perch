@@ -17,6 +17,7 @@ struct TaskContextDetailView: View {
     let back: () -> Void
     @State private var remembered: KimiTask?
     @State private var outputRefresh = 0
+    @State private var outputHeight: CGFloat = 0
 
     private var listed: KimiTask? { snapshot?.task(for: route) }
 
@@ -97,9 +98,10 @@ struct TaskContextDetailView: View {
             }
             if let command = task.command, !command.isEmpty {
                 HStack(alignment: .top, spacing: 4) {
-                    ScrollView([.horizontal, .vertical]) {
+                    // The command wraps: a long line cut at the lane's edge hides its tail.
+                    ScrollView(.vertical) {
                         Text(verbatim: command).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
-                            .textSelection(.enabled).fixedSize(horizontal: true, vertical: true)
+                            .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                     }.frame(maxHeight: 120)
                     ReplyCopyButton(text: command, label: "复制命令")
                 }.padding(.leading, 10).padding(.vertical, 6).padding(.trailing, 4)
@@ -209,7 +211,11 @@ struct TaskContextDetailView: View {
                     Text(value.text).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
                         .textSelection(.enabled).padding(10)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { outputHeight = $0 }
                 }
+                    // The box hugs short output and only scrolls once it outgrows the lane;
+                    // otherwise bottom anchoring strands a few lines under an empty box.
+                    .frame(maxHeight: outputHeight > 0 ? outputHeight : nil)
                     // A running process prints toward its latest line.
                     .defaultScrollAnchor(.bottom)
                     .background(WorkbenchTheme.Fill.surface,
