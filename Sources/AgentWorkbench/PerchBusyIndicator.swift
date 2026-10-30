@@ -110,7 +110,9 @@ private final class PerchBusyView: NSView {
     }
 
     private func resolvedInk() -> CGColor {
-        effectiveAppearance.performAsCurrentDrawingAppearance { NSColor.secondaryLabelColor.cgColor }
+        var ink = NSColor.secondaryLabelColor.cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance { ink = NSColor.secondaryLabelColor.cgColor }
+        return ink
     }
 
     /// Sunset disc baked from the brand gradient at the exact backing scale. Bitmap

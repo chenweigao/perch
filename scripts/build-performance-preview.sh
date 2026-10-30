@@ -33,7 +33,7 @@ app_files=(
     Sources/AgentWorkbench/ConversationScrollControls.swift
     Sources/AgentWorkbench/ReplyMarkdownView.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
-    Sources/AgentWorkbench/ConversationActivityBar.swift
+    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/PerchBusyIndicator.swift
     Sources/AgentWorkbench/WorkbenchGlass.swift
     Sources/AgentWorkbench/WorkspaceSplitView.swift
 )

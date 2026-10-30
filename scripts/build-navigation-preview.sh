@@ -21,7 +21,7 @@ app_files=(
     Sources/AgentWorkbench/ReplyAlertBlock.swift
     Sources/AgentWorkbench/NativeAssistantBlocks.swift
     Sources/AgentWorkbench/KimiAttachmentView.swift
-    Sources/AgentWorkbench/ConversationActivityBar.swift
+    Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/PerchBusyIndicator.swift
     Sources/AgentWorkbench/UILocalization.swift
     Sources/AgentWorkbench/WorkbenchGlass.swift
 
