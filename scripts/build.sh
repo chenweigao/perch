@@ -43,10 +43,21 @@ cp Resources/Info.plist "$app_dir/Contents/Info.plist"
 icon_build="$PWD/build/icon"
 rm -rf "$icon_build"
 mkdir -p "$icon_build"
-xcrun actool --compile "$icon_build" --platform macosx --minimum-deployment-target 26.0 \
-    --app-icon Perch --standalone-icon-behavior none \
-    --output-partial-info-plist "$icon_build/partial.plist" \
-    Resources/Brand/Perch.icon >/dev/null
+# actool's AssetCatalogAgent intermittently drops its connection on CI runners
+# (IBPlatformToolFailureException); the same tool and inputs succeed on retry.
+for attempt in 1 2 3; do
+    if xcrun actool --compile "$icon_build" --platform macosx --minimum-deployment-target 26.0 \
+        --app-icon Perch --standalone-icon-behavior none \
+        --output-partial-info-plist "$icon_build/partial.plist" \
+        Resources/Brand/Perch.icon >/dev/null; then
+        break
+    fi
+    if [ "$attempt" = 3 ]; then
+        echo "actool failed after 3 attempts" >&2
+        exit 1
+    fi
+    sleep 2
+done
 cp "$icon_build/Assets.car" "$app_dir/Contents/Resources/Assets.car"
 plutil -replace CFBundleIconName -string Perch "$app_dir/Contents/Info.plist"
 # The marketing version lives in Resources/Info.plist; the build identity is stamped
