@@ -67,7 +67,9 @@ git add "$plist"
 git commit -m "chore: 版本 $next"
 
 echo ""
-echo "即将发布 v$next（commit $(git rev-parse --short HEAD)）。发布会推送到 GitHub 并触发自动构建。"
+# Brace the version: macOS bash 3.2 otherwise reads the multibyte character
+# after $next as part of the variable name (next<bytes>: unbound variable).
+echo "即将发布 v${next}（commit $(git rev-parse --short HEAD)）。发布会推送到 GitHub 并触发自动构建。"
 if [ "$assume_yes" != 1 ]; then
     printf "继续？[y/N] "
     read -r answer
