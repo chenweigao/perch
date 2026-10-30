@@ -34,10 +34,12 @@ enum WorkbenchTheme {
     static let contentBackgroundNS = nsColor(
         light: (1, 1, 1), dark: (0.122, 0.133, 0.161))
     static let contentBackground = Color(nsColor: contentBackgroundNS)
-    /// Selected sidebar rows: a small light card on the window glass. Translucent,
-    /// so the desktop tint still reads through it.
-    static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),
-                                                dark: NSColor(white: 1, alpha: 0.11)))
+    /// Selected sidebar rows: a small light card on the window glass. Light is a
+    /// barely-blue gray rather than near-white, so the selection reads against
+    /// the pale glass instead of blending into it; dark keeps the white wash.
+    static let rowCard = Color(nsColor: nsColor(
+        light: NSColor(srgbRed: 0.925, green: 0.937, blue: 0.953, alpha: 0.95),
+        dark: NSColor(white: 1, alpha: 0.11)))
     /// The base beneath the window glass, at the reader's chosen intensity
     /// (Settings › 界面 › 窗口玻璃). Day and night share one setting: a white
     /// underlay in light, the canvas's blue-graphite in dark. `standard` keeps
@@ -169,7 +171,7 @@ extension WorkbenchTheme {
         /// only a soft contact shadow while hairlines mark the edges.
         static let panelShadow = NSColor(name: nil) { appearance in
             NSColor.black.withAlphaComponent(
-                appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.20)
+                appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.45 : 0.16)
         }
     }
     /// Corner radii of highlights and containers. Glass surfaces and reply blocks keep their own.

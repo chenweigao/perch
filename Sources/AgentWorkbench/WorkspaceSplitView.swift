@@ -663,7 +663,7 @@ private final class WorkbenchOuterShadowView: NSView {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             let elevation = NSShadow()
             elevation.shadowColor = WorkbenchTheme.Elevation.panelShadow
-            elevation.shadowBlurRadius = 18
+            elevation.shadowBlurRadius = 12
             elevation.shadowOffset = NSSize(width: 0, height: -5)
             shadow = elevation
         }
