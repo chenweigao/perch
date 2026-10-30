@@ -43,7 +43,7 @@ enum WorkbenchTheme {
     /// base, so navigation and the toolbar share the canvas's luminance instead of
     /// glowing with the wallpaper; the remaining 15% keeps the glass alive.
     static let glassUnderlay = Color(nsColor: nsColor(
-        light: NSColor.clear,
+        light: NSColor(white: 1, alpha: 0.45),
         dark: NSColor(srgbRed: 0.122, green: 0.133, blue: 0.161, alpha: 0.85)))
 
     /// Glyph color atop the accent-colored primary action circle; dark echoes the
