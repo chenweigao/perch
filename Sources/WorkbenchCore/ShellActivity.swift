@@ -11,9 +11,18 @@ struct ShellActivity {
         return tool.input?["command"].string ?? tool.input?["cmd"].string
     }
 
+    private static let leadingKeywords: Set<String> =
+        ["do", "then", "else", "elif", "if", "while", "until", "!", "{", "(", "time"]
+    private static let structuralKeywords: Set<String> =
+        ["for", "select", "case", "in", "done", "fi", "esac", "}", ")"]
+
     static func parse(_ command: String) -> Self? {
         for words in segments(command) {
             var words = words
+            // Compound-command syntax is not the operation: `do grep …` is grep, and
+            // the `for f in …` header, `done` and `fi` describe nothing by themselves.
+            while let first = words.first, Self.leadingKeywords.contains(first) { words.removeFirst() }
+            if let first = words.first, Self.structuralKeywords.contains(first) { continue }
             while let first = words.first, first.contains("="), !first.hasPrefix("-") { words.removeFirst() }
             while let first = words.first, ["env", "command", "exec"].contains(first) {
                 words.removeFirst()

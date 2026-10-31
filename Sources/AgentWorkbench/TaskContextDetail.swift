@@ -17,6 +17,7 @@ struct TaskContextDetailView: View {
     let back: () -> Void
     @State private var remembered: KimiTask?
     @State private var outputRefresh = 0
+    @State private var outputHeight: CGFloat = 0
 
     private var listed: KimiTask? { snapshot?.task(for: route) }
 
@@ -28,10 +29,11 @@ struct TaskContextDetailView: View {
                     Image(systemName: "chevron.left")
                     Text("后台任务与子 Agent").lineLimit(1)
                 }.contentShape(Rectangle())
-            }.buttonStyle(.borderless).foregroundStyle(WorkbenchTheme.quiet)
+            }.buttonStyle(TaskContextRowStyle()).foregroundStyle(WorkbenchTheme.quiet)
+                .fixedSize().padding(.leading, 12)
                 .help("返回任务列表").accessibilityLabel("返回任务列表")
                 .accessibilityIdentifier("task-context-back")
-                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 10)
+                .padding(.trailing, 16).padding(.top, 8).padding(.bottom, 8)
             if let task = listed ?? remembered {
                 content(task, current: listed != nil)
             } else if snapshot == nil {
@@ -64,10 +66,11 @@ struct TaskContextDetailView: View {
     // MARK: Summary
 
     private func summary(_ task: KimiTask, current: Bool, readsOutput: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let (title, endpoint) = TaskContextTitle.split(task.displayTitle)
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 TaskStatusSymbol(task: task)
-                Text(task.displayTitle)
+                Text(verbatim: title)
                     .font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                     .lineLimit(4).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,6 +80,11 @@ struct TaskContextDetailView: View {
                 if current, task.startedDate != nil {
                     Text(verbatim: " · ")
                     KimiTaskClock(task: task)
+                }
+                if let endpoint {
+                    Text(verbatim: " · ")
+                    Text(verbatim: endpoint).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
+                        .textSelection(.enabled)
                 }
             }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
                 .padding(.leading, 26)
@@ -90,9 +98,10 @@ struct TaskContextDetailView: View {
             }
             if let command = task.command, !command.isEmpty {
                 HStack(alignment: .top, spacing: 4) {
-                    ScrollView([.horizontal, .vertical]) {
+                    // The command wraps: a long line cut at the lane's edge hides its tail.
+                    ScrollView(.vertical) {
                         Text(verbatim: command).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
-                            .textSelection(.enabled).fixedSize(horizontal: true, vertical: true)
+                            .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                     }.frame(maxHeight: 120)
                     ReplyCopyButton(text: command, label: "复制命令")
                 }.padding(.leading, 10).padding(.vertical, 6).padding(.trailing, 4)
@@ -202,7 +211,11 @@ struct TaskContextDetailView: View {
                     Text(value.text).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
                         .textSelection(.enabled).padding(10)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { outputHeight = $0 }
                 }
+                    // The box hugs short output and only scrolls once it outgrows the lane;
+                    // otherwise bottom anchoring strands a few lines under an empty box.
+                    .frame(maxHeight: outputHeight > 0 ? outputHeight : nil)
                     // A running process prints toward its latest line.
                     .defaultScrollAnchor(.bottom)
                     .background(WorkbenchTheme.Fill.surface,
@@ -249,10 +262,13 @@ struct TaskContextDetailView: View {
 /// The status mark of a task row and its detail page.
 struct TaskStatusSymbol: View {
     let task: KimiTask
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// A running task reads in the accent ink and breathes; finished ones stay quiet.
     var body: some View {
         Image(systemName: Self.name(of: task))
-            .foregroundStyle(task.isFailed ? Color.red : .secondary).frame(width: 16)
-            .accessibilityHidden(true)
+            .foregroundStyle(task.isFailed ? Color.red : task.isRunning ? WorkbenchTheme.accent : Color.secondary)
+            .symbolEffect(.pulse, options: .repeating, isActive: task.isRunning && !reduceMotion)
+            .frame(width: 16).accessibilityHidden(true)
     }
     static func name(of task: KimiTask) -> String {
         if task.isRunning { return "circle.dashed" }

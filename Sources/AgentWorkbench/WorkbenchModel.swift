@@ -56,12 +56,15 @@ final class WorkbenchModel {
             if workspace.groups != oldValue.groups {
                 cachedGroupIndex = nil; cachedGroupShortcuts = nil
             }
-            if workspace.starred != oldValue.starred || workspace.sidebarProjectLocations != oldValue.sidebarProjectLocations { cachedSidebar = nil }
+            if workspace.starred != oldValue.starred || workspace.sidebarProjectLocations != oldValue.sidebarProjectLocations { cachedSidebar = [:] }
         }
     }
     @ObservationIgnored private var cachedGroupIndex: SessionGroupIndex?
     @ObservationIgnored private var cachedGroupShortcuts: (catalogRevision: Int, selectedID: UUID?, summaries: [TaskGroupSummary])?
-    @ObservationIgnored private var cachedSidebar: (catalogRevision: Int, repositoryRevision: Int, filter: SidebarRecentFilter, projection: SidebarProjection)?
+    /// One entry per filter: the list and the callers that ask for `.all` (revealing the
+    /// selection, the move-to-project menu) no longer evict each other on every pass.
+    @ObservationIgnored private var cachedSidebar: [SidebarRecentFilter: (catalogRevision: Int, repositoryRevision: Int, projection: SidebarProjection)] = [:]
+    @ObservationIgnored private var cachedRepositoryRequests: (catalogRevision: Int, hosts: [SSHHost], requests: [SidebarRepositoryRequest])?
     var workspaceError: String?
     private(set) var allSessions: [WorkspaceSession] {
         get { catalog.sessions }
@@ -441,7 +444,19 @@ final class WorkbenchModel {
         cachedGroupIndex = index
         return index
     }
+    /// The sidebar reads this on every pass to key its repository task. It scans the whole
+    /// catalog per machine, so it is recomputed only when the catalog or the machines change.
     var sidebarRepositoryRequests: [SidebarRepositoryRequest] {
+        let revision = catalog.revision
+        let hosts = connections.map(\.host)
+        if let cached = cachedRepositoryRequests, cached.catalogRevision == revision, cached.hosts == hosts {
+            return cached.requests
+        }
+        let requests = computeSidebarRepositoryRequests()
+        cachedRepositoryRequests = (revision, hosts, requests)
+        return requests
+    }
+    private func computeSidebarRepositoryRequests() -> [SidebarRepositoryRequest] {
         connections.compactMap { connection in
             let directories = Set(allSessions.filter {
                 !$0.archived && $0.reference.hostID == connection.id && ($0.online || connection.host.isLocal)
@@ -480,11 +495,11 @@ final class WorkbenchModel {
         let repositoryRevision = sidebarRepositories.revision
         let starred = workspace.starred
         let _ = workspace.sidebarProjectLocations
-        if let cachedSidebar, cachedSidebar.catalogRevision == revision,
-           cachedSidebar.repositoryRevision == repositoryRevision, cachedSidebar.filter == filter { return cachedSidebar.projection }
+        if let cached = cachedSidebar[filter], cached.catalogRevision == revision,
+           cached.repositoryRevision == repositoryRevision { return cached.projection }
         let locations = sidebarProjectLocations
         let projection = SidebarProjection(sessions: allSessions, starred: starred, filter: filter, projectLocations: locations)
-        cachedSidebar = (revision, repositoryRevision, filter, projection)
+        cachedSidebar[filter] = (revision, repositoryRevision, projection)
         return projection
     }
     func setScope(groupID: UUID?) {

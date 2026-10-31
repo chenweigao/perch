@@ -43,6 +43,10 @@ enum SidebarMetrics {
     static let sectionHeaderHeight: CGFloat = 24
     static let sectionTopSpacing: CGFloat = 12
     static let sectionBottomSpacing: CGFloat = 2
+    /// "显示全部", "更多会话" and the pin invitation: quieter than a session row.
+    static let auxiliaryRowHeight: CGFloat = 26
+    /// The first header sits closer to the navigation block than the later ones.
+    static let pinnedHeaderTopSpacing: CGFloat = 6
     static let sectionHeight: CGFloat = sectionTopSpacing + sectionHeaderHeight + sectionBottomSpacing
 
     /// Compact status badge past the agent mark's bottom-trailing corner: symbol

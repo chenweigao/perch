@@ -59,6 +59,8 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 VStack(alignment: .leading, spacing: 2) { rows }
                     .padding(.horizontal, 10).padding(.bottom, 10)
             }.scrollIndicators(.hidden)
+                // Rows fade out at the edges instead of being cut off mid-line.
+                .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
                 .onChange(of: scrollTargetID, initial: true) { _, target in
                     // Visible selections stay under the pointer. Offscreen selections
                     // (for example from search) move only enough to become visible.
@@ -131,8 +133,9 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                     .frame(width: SidebarMetrics.iconWidth)
                 Text(title).lineLimit(1); Spacer(minLength: 4)
                 if count > 0 {
+                    // Orange, like a task group's attention count: something waits on the reader.
                     Text("\(count)").font(.system(size: SidebarMetrics.detailSize, weight: .medium)).monospacedDigit()
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.orange)
                 }
                 if let shortcut { shortcutHint(shortcut) }
             }.font(.system(size: SidebarMetrics.navigationSize))
