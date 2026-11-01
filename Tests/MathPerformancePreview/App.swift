@@ -302,8 +302,11 @@ private struct MathPerformanceApp {
         ReplyMathImage.resetForChecks()
         _ = ReplyMathImage.image(latex: #"x^2+\frac{1}{2}"#, size: 16, display: false, dark: false)
         _ = ReplyMathImage.image(latex: #"x^2+\frac{1}{2}"#, size: 16, display: false, dark: true)
-        try require(ReplyMathImage.metrics["typesets"] == 1, "monochrome formula typeset more than once")
-        checks.append("one monochrome typeset across appearance changes")
+        try require(ReplyMathImage.metrics["typesets"] == 2, "native ink was repeatedly typeset on a cache hit")
+        _ = ReplyMathImage.image(latex: #"x^2+\frac{1}{2}"#, size: 16, display: false, dark: false)
+        _ = ReplyMathImage.image(latex: #"x^2+\frac{1}{2}"#, size: 16, display: false, dark: true)
+        try require(ReplyMathImage.metrics["typesets"] == 2, "appearance revisit re-typeset native ink")
+        checks.append("native inks typeset once each; cache hits and appearance revisits do not typeset")
         for index in 0..<512 {
             _ = ReplyMathImage.image(latex: MathFixture.formula(index), size: 20, display: false, dark: false)
             _ = ReplyMathImage.image(latex: #"\invalidcommand"# + String(index) + String(repeating: "x", count: 600),
