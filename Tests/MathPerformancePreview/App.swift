@@ -241,7 +241,6 @@ private struct MathPerformanceApp {
                     if boxed == nil {
                         let referencePixels = try paintedPixels(expected!, dark: dark)
                         let ratio = Double(painted) / Double(max(1, paintedCount(referencePixels)))
-                        try require(ratio > 0.8 && ratio < 1.2, "formula pixel coverage changed")
                         var difference = 0.0, weight = 0.0
                         for y in 0..<pixels.pixelsHigh {
                             for x in 0..<pixels.pixelsWide {
@@ -252,15 +251,19 @@ private struct MathPerformanceApp {
                             }
                         }
                         let deviation = difference / max(1, weight)
-                        if deviation >= 0.2 {
+                        if deviation >= 0.2 || ratio <= 0.8 || ratio >= 1.2 {
                             let folder = URL(fileURLWithPath: CommandLine.arguments[3]).deletingLastPathComponent()
                             try pixels.representation(using: .png, properties: [:])?.write(to: folder.appendingPathComponent("actual-glyphs.png"))
                             try referencePixels.representation(using: .png, properties: [:])?.write(to: folder.appendingPathComponent("reference-glyphs.png"))
                             let diagnostic: [String: Any] = ["latex": latex, "size": Double(size), "dark": dark,
-                                "alpha_deviation": deviation, "width_pixels": pixels.pixelsWide, "height_pixels": pixels.pixelsHigh]
+                                "coverage_ratio": ratio, "alpha_deviation": deviation,
+                                "logical_width": Double(image.size.width), "logical_height": Double(image.size.height),
+                                "width_pixels": pixels.pixelsWide, "height_pixels": pixels.pixelsHigh,
+                                "drawing": ReplyMathImage.drawingMetrics]
                             try JSONSerialization.data(withJSONObject: diagnostic, options: [.prettyPrinted])
                                 .write(to: folder.appendingPathComponent("glyph-difference.json"))
                         }
+                        try require(ratio > 0.8 && ratio < 1.2, "formula pixel coverage changed: \(ratio)")
                         try require(deviation < 0.2, "formula glyph pixels displaced: \(deviation), size=\(size), dark=\(dark)")
                     }
                     if !latex.contains("color") {

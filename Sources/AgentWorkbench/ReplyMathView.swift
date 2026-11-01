@@ -197,9 +197,23 @@ enum ReplyMathImage {
         return image
     }
 
+    #if MATH_PERFORMANCE_CHECKS
+    private static var lastDrawing: (rect: CGRect, transform: CGAffineTransform)?
+    static var drawingMetrics: [String: Double] {
+        guard let drawing = lastDrawing else { return [:] }
+        return ["rect_width": Double(drawing.rect.width), "rect_height": Double(drawing.rect.height),
+                "rect_x": Double(drawing.rect.minX), "rect_y": Double(drawing.rect.minY),
+                "transform_a": Double(drawing.transform.a), "transform_d": Double(drawing.transform.d),
+                "transform_tx": Double(drawing.transform.tx), "transform_ty": Double(drawing.transform.ty)]
+    }
+    #endif
+
     private static func maskedImage(_ mask: CGImage, size: NSSize, ink: NSColor) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            #if MATH_PERFORMANCE_CHECKS
+            lastDrawing = (rect, context.ctm)
+            #endif
             context.saveGState()
             defer { context.restoreGState() }
             context.clip(to: rect)
