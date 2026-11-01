@@ -19,6 +19,19 @@ private func milliseconds(_ operation: () throws -> Void) rethrows -> Double {
     return (CACurrentMediaTime() - start) * 1_000
 }
 
+private func processCPUMilliseconds() -> Double {
+    var usage = rusage()
+    precondition(getrusage(RUSAGE_SELF, &usage) == 0, "CPU usage measurement failed")
+    return Double(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1_000
+        + Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1_000
+}
+
+private func measured(_ operation: () throws -> Void) rethrows -> (wall: Double, cpu: Double) {
+    let cpu = processCPUMilliseconds()
+    let wall = try milliseconds(operation)
+    return (wall, processCPUMilliseconds() - cpu)
+}
+
 private func distribution(_ samples: [Double]) -> [String: Double] {
     let sorted = samples.sorted()
     guard !sorted.isEmpty else { return [:] }
@@ -188,18 +201,23 @@ private struct MathPerformanceApp {
         let formulas = (0..<count).map(MathFixture.formula)
         let before = residentBytes()
         var cold: [Double] = [], draws: [Double] = [], warm: [Double] = []
+        var coldCPU: [Double] = [], drawCPU: [Double] = []
         for formula in formulas {
             try autoreleasepool {
                 var image: NSImage?
-                cold.append(milliseconds {
+                let coldSample = measured {
                     let attributed = ReplyMathAttachment.string(latex: formula, size: 16)
                     image = (attributed.attribute(.attachment, at: 0, effectiveRange: nil) as? NSTextAttachment)?.image
-                })
+                }
+                cold.append(coldSample.wall)
+                coldCPU.append(coldSample.cpu)
                 try require(image != nil, "formula fell back to source")
-                draws.append(try milliseconds {
+                let drawSample = try measured {
                     _ = try paintedPixels(image!, dark: false)
                     _ = try paintedPixels(image!, dark: true)
-                })
+                }
+                draws.append(drawSample.wall)
+                drawCPU.append(drawSample.cpu)
             }
         }
         let after = residentBytes()
@@ -208,6 +226,7 @@ private struct MathPerformanceApp {
         }
         var result: [String: Any] = ["formula_count": count, "cold_attachment": distribution(cold),
                                    "first_light_dark_draw": distribution(draws), "warm_attachment": distribution(warm),
+                                   "cold_cpu": distribution(coldCPU), "draw_cpu": distribution(drawCPU),
                                    "rss_before_bytes": before, "rss_after_bytes": after]
         #if MATH_PERFORMANCE_CHECKS
         result["cache"] = ReplyMathImage.metrics
@@ -353,6 +372,7 @@ private struct MathPerformanceApp {
         let source = MathFixture.reply(count)
         try require(mathSources(ReplyDocument.parse(source)).count == count + 7, "window fixture lost formulas")
         let before = residentBytes()
+        let cpuStart = processCPUMilliseconds()
         let start = CACurrentMediaTime()
         let window = NSWindow(contentRect: CGRect(x: 60, y: 60, width: 800, height: 720),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -374,28 +394,32 @@ private struct MathPerformanceApp {
         window.displayIfNeeded()
         CATransaction.flush()
         let firstDisplay = (CACurrentMediaTime() - start) * 1_000
+        let firstCPU = processCPUMilliseconds() - cpuStart
         try require(host.frame.height > 720, "math document did not produce scrollable content")
-        var samples: [Double] = [], gaps: [Double] = []
+        var samples: [Double] = [], cpuSamples: [Double] = [], gaps: [Double] = []
         var previous = CACurrentMediaTime()
         for step in 0..<80 {
             try await Task.sleep(for: .milliseconds(16))
             let now = CACurrentMediaTime()
             gaps.append((now - previous) * 1_000)
             let fraction = step < 40 ? Double(step) / 39 : Double(79 - step) / 39
-            samples.append(milliseconds {
+            let sample = measured {
                 let y = max(0, host.frame.height - scroll.contentView.bounds.height) * fraction
                 scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
                 scroll.reflectScrolledClipView(scroll.contentView)
                 host.layoutSubtreeIfNeeded()
                 window.displayIfNeeded()
                 CATransaction.flush()
-            })
+            }
+            samples.append(sample.wall)
+            cpuSamples.append(sample.cpu)
             previous = now
         }
         let after = residentBytes()
         window.close()
         var result: [String: Any] = ["display_formula_count": count, "inline_formula_count": 7,
-                "initial_layout_display_ms": firstDisplay, "scroll_work": distribution(samples),
+                "initial_layout_display_ms": firstDisplay, "initial_layout_cpu_ms": firstCPU,
+                "scroll_work": distribution(samples), "scroll_cpu": distribution(cpuSamples),
                 "scheduled_tick_gap": distribution(gaps), "document_height_points": host.frame.height,
                 "rss_before_bytes": before, "rss_after_bytes": after]
         #if MATH_PERFORMANCE_CHECKS
