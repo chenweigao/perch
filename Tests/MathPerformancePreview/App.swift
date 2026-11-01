@@ -221,7 +221,7 @@ private struct MathPerformanceApp {
         #if MATH_PERFORMANCE_CHECKS
         ReplyMathImage.resetForChecks()
         for latex in [#"x^2+\frac{1}{2}"#, #"\frac{a_i}{b_i}"#, #"\boxed{\frac{x}{y}}"#,
-                      #"\color{FF0000}{x}+y"#] {
+                      #"\color{#FF0000}{x}+y"#] {
             for size in [CGFloat(14), CGFloat(18)] {
                 for dark in [false, true] {
                     guard let image = ReplyMathImage.image(latex: latex, size: size, display: false, dark: dark) else {
@@ -255,15 +255,22 @@ private struct MathPerformanceApp {
                         try require(correctInk > 10, "formula appearance ink is wrong")
                     }
                     if latex.contains("color") {
-                        var red = 0
-                        for y in 0..<pixels.pixelsHigh {
-                            for x in 0..<pixels.pixelsWide {
-                                if let color = pixels.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB),
-                                   color.alphaComponent > 0.1, color.redComponent > color.greenComponent + 0.2,
-                                   color.redComponent > color.blueComponent + 0.2 { red += 1 }
+                        func redPixels(_ bitmap: NSBitmapImageRep) -> Int {
+                            var red = 0
+                            for y in 0..<bitmap.pixelsHigh {
+                                for x in 0..<bitmap.pixelsWide {
+                                    if let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB),
+                                       color.alphaComponent > 0.1, color.redComponent > color.greenComponent + 0.2,
+                                       color.redComponent > color.blueComponent + 0.2 { red += 1 }
+                                }
                             }
+                            return red
                         }
-                        try require(red > 10, "explicit TeX color lost")
+                        let expectedRed = redPixels(try paintedPixels(expected!, dark: dark))
+                        try require(expectedRed > 10, "invalid color fixture")
+                        let red = redPixels(pixels)
+                        let ratio = Double(red) / Double(expectedRed)
+                        try require(red > 10 && ratio > 0.8 && ratio < 1.2, "explicit TeX color lost")
                     }
                 }
             }
