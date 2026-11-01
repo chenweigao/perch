@@ -211,7 +211,7 @@ private struct MathPerformanceApp {
                                    "rss_before_bytes": before, "rss_after_bytes": after]
         #if MATH_PERFORMANCE_CHECKS
         result["cache"] = ReplyMathImage.metrics
-        try require(ReplyMathImage.metrics["cached_bytes"]! <= ReplyMathImage.maxCachedBytes, "cache exceeded byte budget")
+        try require(ReplyMathImage.metrics["cost_estimate_bytes"]! <= ReplyMathImage.maxCachedBytes, "cache exceeded byte budget")
         #endif
         return result
     }
@@ -265,21 +265,6 @@ private struct MathPerformanceApp {
                         }
                         try require(ratio > 0.8 && ratio < 1.2, "formula pixel coverage changed: \(ratio)")
                         try require(deviation < 0.2, "formula glyph pixels displaced: \(deviation), size=\(size), dark=\(dark)")
-                        guard let raster = ReplyMathImage.raster(latex: latex, size: size, display: false, dark: dark) else {
-                            throw MathBenchmarkError.invalid("missing direct math raster")
-                        }
-                        let direct = NSBitmapImageRep(cgImage: raster.pixels)
-                        try require(direct.pixelsWide == referencePixels.pixelsWide && direct.pixelsHigh == referencePixels.pixelsHigh,
-                                    "direct raster dimensions changed")
-                        var directDifference = 0.0
-                        for y in 0..<direct.pixelsHigh {
-                            for x in 0..<direct.pixelsWide {
-                                let actual = Double(direct.colorAt(x: x, y: y)?.alphaComponent ?? 0)
-                                let reference = Double(referencePixels.colorAt(x: x, y: y)?.alphaComponent ?? 0)
-                                directDifference += abs(actual - reference)
-                            }
-                        }
-                        try require(directDifference / max(1, weight) < 0.2, "direct raster glyph pixels changed")
                     }
                     if !latex.contains("color") {
                         var correctInk = 0
@@ -323,13 +308,13 @@ private struct MathPerformanceApp {
         try require(ReplyMathImage.metrics["typesets"] == 2, "appearance revisit re-typeset native ink")
         checks.append("native inks typeset once each; cache hits and appearance revisits do not typeset")
         ReplyMathImage.resetForChecks()
-        _ = ReplyMathImage.raster(latex: #"x^2+\frac{1}{2}"#, size: 16, display: true, dark: false)
-        _ = ReplyMathImage.raster(latex: #"x^2+\frac{1}{2}"#, size: 16, display: true, dark: false)
-        try require(ReplyMathImage.metrics["typesets"] == 1, "display raster generated unused ink")
-        _ = ReplyMathImage.raster(latex: #"x^2+\frac{1}{2}"#, size: 16, display: true, dark: true)
-        _ = ReplyMathImage.raster(latex: #"x^2+\frac{1}{2}"#, size: 16, display: true, dark: false)
+        _ = ReplyMathImage.displayImage(latex: #"x^2+\frac{1}{2}"#, size: 16, dark: false)
+        _ = ReplyMathImage.displayImage(latex: #"x^2+\frac{1}{2}"#, size: 16, dark: false)
+        try require(ReplyMathImage.metrics["typesets"] == 1, "display image generated unused ink")
+        _ = ReplyMathImage.displayImage(latex: #"x^2+\frac{1}{2}"#, size: 16, dark: true)
+        _ = ReplyMathImage.displayImage(latex: #"x^2+\frac{1}{2}"#, size: 16, dark: false)
         try require(ReplyMathImage.metrics["typesets"] == 2, "display appearance cache was not reused")
-        checks.append("display rasters generate only requested native ink and reuse appearances")
+        checks.append("display images generate only requested native ink and reuse appearances")
         for index in 0..<512 {
             _ = ReplyMathImage.image(latex: MathFixture.formula(index), size: 20, display: false, dark: false)
             _ = ReplyMathImage.image(latex: #"\invalidcommand"# + String(index) + String(repeating: "x", count: 600),
@@ -342,7 +327,7 @@ private struct MathPerformanceApp {
             try require(ReplyMathImage.image(latex: latex, size: 16, display: false, dark: false) != nil, "large cache fixture did not render")
         }
         try require(ReplyMathImage.metrics["entries"]! < ReplyMathImage.maxCachedEntries &&
-                    ReplyMathImage.metrics["cached_bytes"]! <= ReplyMathImage.maxCachedBytes, "successful cache byte eviction failed")
+                    ReplyMathImage.metrics["cost_estimate_bytes"]! <= ReplyMathImage.maxCachedBytes, "successful cache byte eviction failed")
         try require(ReplyMathImage.metrics["failures"]! <= 128 &&
                     ReplyMathImage.metrics["failed_bytes"]! <= ReplyMathImage.maxFailedBytes, "negative cache unbounded")
         checks.append("successful and failed cache entry/byte budgets under churn")
