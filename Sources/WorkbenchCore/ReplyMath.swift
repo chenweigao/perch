@@ -57,7 +57,7 @@ public enum ReplyMath {
     /// Resolve boundaries in bounded passes, including unmatched streaming input.
     /// The original source remains unchanged outside paired math delimiters.
     static func normalizeDelimiters(_ source: String) -> String {
-        guard source.contains(#"\("#) || source.contains(#"\["#) else { return source }
+        guard source.utf8.contains(92), source.contains(#"\("#) || source.contains(#"\["#) else { return source }
         let bytes = Array(source.utf8)
         let boundaries = Boundaries(bytes)
         var result: [UInt8] = []

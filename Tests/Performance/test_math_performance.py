@@ -38,6 +38,7 @@ def fixtures():
                 "initial_layout_display_ms": 10 * factor,
                 "scroll_work": {"p95_ms": factor},
                 "scheduled_tick_gap": {"p95_ms": 16 + factor},
+                "rss_before_bytes": 1_000_000, "rss_after_bytes": 1_000_000 + int(1_000_000 * factor),
             }} for _ in range(3)]
     return runs
 
@@ -128,6 +129,20 @@ class MathPerformanceTests(unittest.TestCase):
         for record in runs["candidate"]["typeset-128"]:
             record["measurements"]["cold_attachment"]["total_ms"] = 500
         with self.assertRaisesRegex(ValueError, "regression exceeds"):
+            MODULE.compare(runs)
+
+    def test_window_memory_regression_fails(self):
+        runs = fixtures()
+        for record in runs["candidate"]["window-128"]:
+            record["measurements"]["rss_after_bytes"] = 3_000_000
+        with self.assertRaisesRegex(ValueError, "Window retained memory regressed"):
+            MODULE.compare(runs)
+
+    def test_window_initial_layout_regression_fails(self):
+        runs = fixtures()
+        for record in runs["candidate"]["window-30"]:
+            record["measurements"]["initial_layout_display_ms"] = 30
+        with self.assertRaisesRegex(ValueError, "Window initial layout regressed"):
             MODULE.compare(runs)
 
     def test_nonfinite_samples_fail(self):

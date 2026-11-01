@@ -242,6 +242,16 @@ private struct MathPerformanceApp {
                         let referencePixels = try paintedPixels(expected!, dark: dark)
                         let ratio = Double(painted) / Double(max(1, paintedCount(referencePixels)))
                         try require(ratio > 0.8 && ratio < 1.2, "formula pixel coverage changed")
+                        var difference = 0.0, weight = 0.0
+                        for y in 0..<pixels.pixelsHigh {
+                            for x in 0..<pixels.pixelsWide {
+                                let actual = Double(pixels.colorAt(x: x, y: y)?.alphaComponent ?? 0)
+                                let reference = Double(referencePixels.colorAt(x: x, y: y)?.alphaComponent ?? 0)
+                                difference += abs(actual - reference)
+                                weight += reference
+                            }
+                        }
+                        try require(difference / max(1, weight) < 0.2, "formula glyph pixels displaced")
                     }
                     if !latex.contains("color") {
                         var correctInk = 0

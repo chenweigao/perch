@@ -4,7 +4,7 @@ import SwiftMath
 import WorkbenchCore
 
 /// Display math ($$…$$ / \[…\]) typeset natively by SwiftMath — no web view, no KaTeX.
-/// Single-color formulas share one typeset layout and cached light/dark pixels;
+/// Single-color formulas share one typeset layout and a cached coverage mask;
 /// the reveal cursor treats the block as an atomic checkpoint.
 struct ReplyMathBlock: View {
     let latex: String
@@ -100,22 +100,28 @@ enum ReplyMathImage {
                                  height: source.size.height + 2 * inset)
         guard let lightRaster = rasterize(source, size: logicalSize, inset: inset, ink: .black) else { return nil }
         let colored = content.contains(#"\color"#) || content.contains(#"\textcolor"#)
-        let darkRaster: (image: CGImage, cost: Int)?
+        let light: NSImage
+        let dark: NSImage
+        let pixelCost: Int
         if colored {
-            darkRaster = typeset(.white).flatMap { rasterize($0, size: logicalSize, inset: inset, ink: .white) }
+            guard let darkSource = typeset(.white),
+                  let darkRaster = rasterize(darkSource, size: logicalSize, inset: inset, ink: .white) else { return nil }
+            light = NSImage(cgImage: lightRaster.image, size: logicalSize)
+            dark = NSImage(cgImage: darkRaster.image, size: logicalSize)
+            pixelCost = lightRaster.cost + darkRaster.cost
         } else {
-            darkRaster = whiteRaster(lightRaster.image)
+            guard let mask = alphaMask(lightRaster.image) else { return nil }
+            light = maskedImage(mask.image, size: logicalSize, ink: .black)
+            dark = maskedImage(mask.image, size: logicalSize, ink: .white)
+            pixelCost = mask.cost
         }
-        guard let darkRaster else { return nil }
-        let light = NSImage(cgImage: lightRaster.image, size: logicalSize)
-        let dark = NSImage(cgImage: darkRaster.image, size: logicalSize)
         let adaptive = NSImage(size: logicalSize, flipped: false) { rect in
             let isDark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             (isDark ? dark : light).draw(in: rect)
             return true
         }
-        let entry = Entry(light: light, dark: dark, adaptive: adaptive,
-                          cost: lightRaster.cost + darkRaster.cost + sourceBytes)
+        adaptive.cacheMode = .never
+        let entry = Entry(light: light, dark: dark, adaptive: adaptive, cost: pixelCost + sourceBytes)
         if entry.cost <= maxCachedBytes {
             while !order.isEmpty, order.count >= 128 || cachedBytes + entry.cost > maxCachedBytes {
                 if let removed = cache.removeValue(forKey: order.removeFirst()) { cachedBytes -= removed.cost }
@@ -155,21 +161,35 @@ enum ReplyMathImage {
         return (pixels, context.bytesPerRow * context.height)
     }
 
-    private static func whiteRaster(_ image: CGImage) -> (image: CGImage, cost: Int)? {
-        guard let context = bitmapContext(width: image.width, height: image.height),
-              let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
-        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    private static func alphaMask(_ image: CGImage) -> (image: CGImage, cost: Int)? {
+        guard image.bitsPerPixel == 32, image.alphaInfo == .premultipliedLast,
+              let data = image.dataProvider?.data, let pixels = CFDataGetBytePtr(data),
+              CFDataGetLength(data) >= image.bytesPerRow * image.height else { return nil }
+        var alpha = [UInt8](repeating: 0, count: image.width * image.height)
         for row in 0..<image.height {
             for column in 0..<image.width {
-                let offset = row * context.bytesPerRow + column * 4
-                let alpha = data[offset + 3]
-                data[offset] = alpha
-                data[offset + 1] = alpha
-                data[offset + 2] = alpha
+                alpha[row * image.width + column] = 255 - pixels[row * image.bytesPerRow + column * 4 + 3]
             }
         }
-        guard let pixels = context.makeImage() else { return nil }
-        return (pixels, context.bytesPerRow * context.height)
+        guard let provider = CGDataProvider(data: Data(alpha) as CFData),
+              let mask = CGImage(maskWidth: image.width, height: image.height, bitsPerComponent: 8,
+                                 bitsPerPixel: 8, bytesPerRow: image.width, provider: provider,
+                                 decode: nil, shouldInterpolate: true) else { return nil }
+        return (mask, alpha.count)
+    }
+
+    private static func maskedImage(_ mask: CGImage, size: NSSize, ink: NSColor) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.saveGState()
+            defer { context.restoreGState() }
+            context.clip(to: rect, mask: mask)
+            context.setFillColor(ink.cgColor)
+            context.fill(rect)
+            return true
+        }
+        image.cacheMode = .never
+        return image
     }
 
     private static func rememberFailure(_ latex: String) {

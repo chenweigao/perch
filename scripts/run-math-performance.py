@@ -76,6 +76,15 @@ def compare(runs):
         for label in ["scroll_work", "scheduled_tick_gap"]:
             comparisons[key][label] = {"baseline_p95_ms": median([record["measurements"][label]["p95_ms"] for record in a]),
                                        "candidate_p95_ms": median([record["measurements"][label]["p95_ms"] for record in b])}
+        old = median([record["measurements"]["rss_after_bytes"] - record["measurements"]["rss_before_bytes"] for record in a])
+        new = median([record["measurements"]["rss_after_bytes"] - record["measurements"]["rss_before_bytes"] for record in b])
+        comparisons[key]["rss_growth_bytes"] = {"baseline": old, "candidate": new}
+        if old > 0 and new > old * 1.15:
+            raise ValueError("Window retained memory regressed at " + str(count))
+        first = comparisons[key]["initial_layout_display_ms"]
+        if first["baseline"] > 0 and first["candidate"] > first["baseline"] * 1.25:
+            raise ValueError("Window initial layout regressed at " + str(count))
+    checks.append("bounded mounted-window memory and initial layout regression")
     return {"checks": checks, "comparison": comparisons,
             "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"}
 
