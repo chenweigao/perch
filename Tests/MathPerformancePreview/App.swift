@@ -309,8 +309,14 @@ private struct MathPerformanceApp {
             _ = ReplyMathImage.image(latex: #"\invalidcommand"# + String(index) + String(repeating: "x", count: 600),
                                      size: 16, display: false, dark: false)
         }
-        try require(ReplyMathImage.metrics["entries"]! <= 128 &&
-                    ReplyMathImage.metrics["cached_bytes"]! <= ReplyMathImage.maxCachedBytes, "successful cache unbounded")
+        for index in 0..<8 {
+            let row = (0..<36).map { #"\frac{x}{y}+"# + String(($0 + index) % 11) }.joined(separator: " & ")
+            let body = (0..<16).map { _ in row }.joined(separator: #"\\"#)
+            let latex = #"\begin{matrix}"# + body + #"\end{matrix}"#
+            try require(ReplyMathImage.image(latex: latex, size: 16, display: false, dark: false) != nil, "large cache fixture did not render")
+        }
+        try require(ReplyMathImage.metrics["entries"]! < 128 &&
+                    ReplyMathImage.metrics["cached_bytes"]! <= ReplyMathImage.maxCachedBytes, "successful cache byte eviction failed")
         try require(ReplyMathImage.metrics["failures"]! <= 128 &&
                     ReplyMathImage.metrics["failed_bytes"]! <= ReplyMathImage.maxFailedBytes, "negative cache unbounded")
         checks.append("successful and failed cache entry/byte budgets under churn")

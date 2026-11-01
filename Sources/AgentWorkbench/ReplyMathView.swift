@@ -4,7 +4,7 @@ import SwiftMath
 import WorkbenchCore
 
 /// Display math ($$…$$ / \[…\]) typeset natively by SwiftMath — no web view, no KaTeX.
-/// Single-color formulas share one typeset layout and a cached coverage mask;
+/// Formulas share one typeset layout with appearance-specific cached coverage;
 /// the reveal cursor treats the block as an atomic checkpoint.
 struct ReplyMathBlock: View {
     let latex: String
@@ -82,38 +82,53 @@ enum ReplyMathImage {
         }
         let boxed = ReplyMath.boxedContent(latex)
         let content = boxed ?? latex
-        func typeset(_ ink: NSColor) -> NSImage? {
-            #if MATH_PERFORMANCE_CHECKS
-            typesets += 1
-            #endif
-            let math = MTMathImage(latex: content, fontSize: size, textColor: ink,
-                                   labelMode: display ? .display : .text, textAlignment: .left)
-            let (error, image) = math.asImage()
-            return error == nil ? image : nil
-        }
-        guard let source = typeset(.black) else {
+        let label = MTMathUILabel(frame: .zero)
+        label.displayErrorInline = false
+        label.fontSize = size
+        label.labelMode = display ? .display : .text
+        label.textAlignment = .left
+        label.latex = content
+        guard label.error == nil, label.mathList != nil else {
             rememberFailure(latex)
             return nil
         }
+        #if MATH_PERFORMANCE_CHECKS
+        typesets += 1
+        #endif
+        label.layout()
+        guard let line = label.displayList else { return nil }
+        let mathSize = NSSize(width: line.width, height: line.ascent + line.descent)
+        guard mathSize.width.isFinite, mathSize.height.isFinite,
+              mathSize.width >= 0, mathSize.height >= 0 else { return nil }
+        let source = NSImage(size: mathSize, flipped: false) { _ in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.saveGState()
+            defer { context.restoreGState() }
+            // Translate the zero-height label's centered layout into the measured image.
+            context.translateBy(x: 0, y: mathSize.height / 2)
+            line.draw(context)
+            return true
+        }
+        source.cacheMode = .never
         let inset: CGFloat = boxed == nil ? 0 : 4
-        let logicalSize = NSSize(width: source.size.width + 2 * inset,
-                                 height: source.size.height + 2 * inset)
+        let logicalSize = NSSize(width: mathSize.width + 2 * inset, height: mathSize.height + 2 * inset)
+        label.textColor = .black
         guard let lightRaster = rasterize(source, size: logicalSize, inset: inset, ink: .black) else { return nil }
+        label.textColor = .white
+        guard let darkRaster = rasterize(source, size: logicalSize, inset: inset, ink: .white) else { return nil }
         let colored = content.contains(#"\color"#) || content.contains(#"\textcolor"#)
         let light: NSImage
         let dark: NSImage
         let pixelCost: Int
         if colored {
-            guard let darkSource = typeset(.white),
-                  let darkRaster = rasterize(darkSource, size: logicalSize, inset: inset, ink: .white) else { return nil }
             light = pixelImage(lightRaster.image, size: logicalSize)
             dark = pixelImage(darkRaster.image, size: logicalSize)
             pixelCost = lightRaster.cost + darkRaster.cost
         } else {
-            guard let mask = alphaMask(lightRaster.image) else { return nil }
-            light = maskedImage(mask.image, size: logicalSize, ink: .black)
-            dark = maskedImage(mask.image, size: logicalSize, ink: .white)
-            pixelCost = mask.cost
+            guard let lightMask = alphaMask(lightRaster.image), let darkMask = alphaMask(darkRaster.image) else { return nil }
+            light = maskedImage(lightMask.image, size: logicalSize, ink: .black)
+            dark = maskedImage(darkMask.image, size: logicalSize, ink: .white)
+            pixelCost = lightMask.cost + darkMask.cost
         }
         let adaptive = NSImage(size: logicalSize, flipped: false) { rect in
             let isDark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
