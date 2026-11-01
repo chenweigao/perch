@@ -22,16 +22,20 @@ from pathlib import Path
 import subprocess
 import sys
 snapshot, app, variant, revision = sys.argv[1:]
+resolved = json.loads(subprocess.check_output(['git', 'show', revision + ':Package.resolved'], text=True))
+pins = {pin['identity']: pin for pin in resolved['pins']}
+selected = [pins[name] for name in ['swift-markdown', 'swift-cmark', 'swiftmath']]
+dependencies = ',\n    '.join('.package(url: ' + json.dumps(pin['location']) + ', exact: ' + json.dumps(pin['state']['version']) + ')' for pin in selected)
 package = '''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "MathPerformance", platforms: [.macOS("26.0")], dependencies: [
-    .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.8.0"),
-    .package(url: "https://github.com/mgriebling/SwiftMath.git", exact: "1.7.3")
+    ''' + dependencies + '''
 ], targets: [.target(name: "WorkbenchCore", dependencies: [.product(name: "Markdown", package: "swift-markdown")])], swiftLanguageModes: [.v5])
 '''
 (Path(snapshot) / 'Package.swift').write_text(package)
 metadata = {'variant': variant, 'revision': subprocess.check_output(['git', 'rev-parse', revision], text=True).strip(),
             'fixture': 'synthetic; no sessions or network',
+            'dependencies': {pin['identity']: pin['state'] for pin in selected},
             'suffix_search': 'private static func closingDelimiter' in (Path(snapshot) / 'Sources/WorkbenchCore/ReplyMath.swift').read_text(),
             'toolchain': subprocess.check_output(['swift', '--version'], text=True).strip()}
 (Path(app) / 'Contents/Resources/build.json').write_text(json.dumps(metadata, indent=2) + '\n')
@@ -49,8 +53,8 @@ for path in sorted(Path(sys.argv[1]).rglob('*.o')):
 PY
 )
 done
-flags=()
-if [ "$variant" = candidate ]; then flags+=(-D MATH_PERFORMANCE_CHECKS); fi
+flags=(-D MATH_PERFORMANCE_BASELINE)
+if [ "$variant" = candidate ]; then flags=(-D MATH_PERFORMANCE_CHECKS); fi
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library \
     "${flags[@]}" -I "$bin_dir/Modules" \
     -I "$snapshot/.build/checkouts/swift-markdown/Sources/CAtomic/include" \
