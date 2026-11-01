@@ -315,6 +315,17 @@ private struct MathPerformanceApp {
         _ = ReplyMathImage.displayImage(latex: #"x^2+\frac{1}{2}"#, size: 16, dark: false)
         try require(ReplyMathImage.metrics["typesets"] == 2, "display appearance cache was not reused")
         checks.append("display images generate only requested native ink and reuse appearances")
+        ReplyMathImage.resetForChecks()
+        for index in 0..<128 {
+            _ = ReplyMathImage.image(latex: MathFixture.formula(index), size: 16, display: false, dark: false)
+        }
+        let beforeRevisit = ReplyMathImage.metrics["typesets"]!
+        for index in 0..<128 {
+            _ = ReplyMathImage.image(latex: MathFixture.formula(index), size: 16, display: false, dark: false)
+        }
+        try require(ReplyMathImage.metrics["typesets"] == beforeRevisit && ReplyMathImage.metrics["inline_entries"] == 128,
+                    "original 128-formula inline working set was evicted")
+        checks.append("128-formula inline working set is reused without typesetting")
         for index in 0..<512 {
             _ = ReplyMathImage.image(latex: MathFixture.formula(index), size: 20, display: false, dark: false)
             _ = ReplyMathImage.image(latex: #"\invalidcommand"# + String(index) + String(repeating: "x", count: 600),
@@ -327,7 +338,8 @@ private struct MathPerformanceApp {
             try require(ReplyMathImage.image(latex: latex, size: 16, display: false, dark: false) != nil, "large cache fixture did not render")
         }
         try require(ReplyMathImage.metrics["entries"]! < ReplyMathImage.maxCachedEntries &&
-                    ReplyMathImage.metrics["cost_estimate_bytes"]! <= ReplyMathImage.maxCachedBytes, "successful cache byte eviction failed")
+                    ReplyMathImage.metrics["inline_entries"]! <= ReplyMathImage.maxInlineEntries &&
+                    ReplyMathImage.metrics["cost_estimate_bytes"]! <= ReplyMathImage.maxCachedBytes, "successful cache admission eviction failed")
         try require(ReplyMathImage.metrics["failures"]! <= 128 &&
                     ReplyMathImage.metrics["failed_bytes"]! <= ReplyMathImage.maxFailedBytes, "negative cache unbounded")
         checks.append("successful and failed cache entry/byte budgets under churn")

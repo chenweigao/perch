@@ -55,10 +55,12 @@ enum ReplyMathImage {
         let costEstimate: Int
     }
     static let maxCachedEntries = 256
-    static let maxCachedBytes = 16 * 1024 * 1024
+    static let maxInlineEntries = 128
+    static let maxCachedBytes = 24 * 1024 * 1024
     static let maxFailedBytes = 64 * 1024
     private static var cache: [Key: Entry] = [:]
     private static var order: [Key] = []
+    private static var inlineEntries = 0
     private static var cachedCostEstimate = 0
     private static var failed: Set<String> = []
     private static var failedOrder: [String] = []
@@ -144,14 +146,26 @@ enum ReplyMathImage {
         // Admission estimates source and 2x raster capacity, not display-list memory or process RSS.
         let entry = Entry(light: light, dark: dark, adaptive: adaptive, costEstimate: estimate)
         if estimate <= maxCachedBytes {
+            if appearance == nil {
+                while inlineEntries >= maxInlineEntries,
+                      let index = order.firstIndex(where: { $0.appearance == nil }) { removeEntry(at: index) }
+            }
             while !order.isEmpty, order.count >= maxCachedEntries || cachedCostEstimate + estimate > maxCachedBytes {
-                if let removed = cache.removeValue(forKey: order.removeFirst()) { cachedCostEstimate -= removed.costEstimate }
+                removeEntry(at: 0)
             }
             cache[key] = entry
             order.append(key)
+            if appearance == nil { inlineEntries += 1 }
             cachedCostEstimate += estimate
         }
         return entry
+    }
+
+    private static func removeEntry(at index: Int) {
+        let key = order.remove(at: index)
+        guard let removed = cache.removeValue(forKey: key) else { return }
+        if key.appearance == nil { inlineEntries -= 1 }
+        cachedCostEstimate -= removed.costEstimate
     }
 
     #if MATH_PERFORMANCE_CHECKS
@@ -177,12 +191,13 @@ enum ReplyMathImage {
     private static var hits = 0
     static var metrics: [String: Int] {
         ["typesets": typesets, "requests": requests, "cache_hits": hits,
-         "cost_estimate_bytes": cachedCostEstimate, "entries": cache.count,
+         "cost_estimate_bytes": cachedCostEstimate, "entries": cache.count, "inline_entries": inlineEntries,
          "failed_bytes": failedBytes, "failures": failed.count]
     }
     static func resetForChecks() {
         cache.removeAll()
         order.removeAll()
+        inlineEntries = 0
         cachedCostEstimate = 0
         failed.removeAll()
         failedOrder.removeAll()
