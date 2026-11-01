@@ -12,11 +12,14 @@ struct ReplyMathBlock: View {
     var body: some View {
         // Display math is set at the body size, as in typeset text, in the row's
         // color scheme rather than the app's appearance.
-        if let image = ReplyMathImage.image(latex: latex, size: ReplyStyle.bodySize, display: true,
-                                            dark: colorScheme == .dark) {
-            Image(nsImage: image)
+        if let raster = ReplyMathImage.raster(latex: latex, size: ReplyStyle.bodySize, display: true,
+                                              dark: colorScheme == .dark) {
+            Image(decorative: raster.pixels, scale: 2, orientation: .up)
+                .frame(width: raster.size.width, height: raster.size.height, alignment: .bottomLeading)
+                .clipped()
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 6)
+                .accessibilityLabel(latex)
         } else {
             // Unparseable TeX shows its source, never a blank hole.
             SelectableReplyText(latex, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular))
@@ -45,13 +48,18 @@ enum ReplyMathImage {
         let latex: String
         let size: CGFloat
         let display: Bool
+        let appearance: Bool?
     }
     private struct Entry {
         let light: NSImage
         let dark: NSImage
         let adaptive: NSImage
+        let lightPixels: CGImage
+        let darkPixels: CGImage
+        let size: NSSize
         let cost: Int
     }
+    static let maxCachedEntries = 256
     static let maxCachedBytes = 16 * 1024 * 1024
     static let maxFailedBytes = 64 * 1024
     private static var cache: [Key: Entry] = [:]
@@ -69,9 +77,21 @@ enum ReplyMathImage {
         entry(latex: latex, size: size, display: display).map { dark ? $0.dark : $0.light }
     }
 
-    private static func entry(latex: String, size: CGFloat, display: Bool) -> Entry? {
-        let key = Key(latex: latex, size: size, display: display)
-        if let hit = cache[key] { return hit }
+    static func raster(latex: String, size: CGFloat, display: Bool, dark: Bool) -> (pixels: CGImage, size: NSSize)? {
+        entry(latex: latex, size: size, display: display, appearance: dark).map { (dark ? $0.darkPixels : $0.lightPixels, $0.size) }
+    }
+
+    private static func entry(latex: String, size: CGFloat, display: Bool, appearance: Bool? = nil) -> Entry? {
+        #if MATH_PERFORMANCE_CHECKS
+        requests += 1
+        #endif
+        let key = Key(latex: latex, size: size, display: display, appearance: appearance)
+        if let hit = cache[key] {
+            #if MATH_PERFORMANCE_CHECKS
+            hits += 1
+            #endif
+            return hit
+        }
         if failed.contains(latex) { return nil }
         let sourceBytes = latex.utf8.count
         guard sourceBytes <= 100_000, size.isFinite, size > 0 else { return nil }
@@ -91,38 +111,43 @@ enum ReplyMathImage {
             let (error, image) = math.asImage()
             return error == nil ? image : nil
         }
-        guard let lightSource = typeset(.black), let darkSource = typeset(.white) else {
-            rememberFailure(latex)
-            return nil
-        }
+        let inks: [NSColor] = appearance.map { [$0 ? .white : .black] } ?? [.black, .white]
         let inset: CGFloat = boxed == nil ? 0 : 4
-        let logicalSize = NSSize(width: lightSource.size.width + 2 * inset,
-                                 height: lightSource.size.height + 2 * inset)
-        guard let lightRaster = rasterize(lightSource, size: logicalSize, inset: inset, ink: .black),
-              let darkRaster = rasterize(darkSource, size: logicalSize, inset: inset, ink: .white) else { return nil }
         let colored = content.contains(#"\color"#) || content.contains(#"\textcolor"#)
-        let light: NSImage
-        let dark: NSImage
-        let pixelCost: Int
-        if colored {
-            light = pixelImage(lightRaster.image, size: logicalSize)
-            dark = pixelImage(darkRaster.image, size: logicalSize)
-            pixelCost = lightRaster.cost + darkRaster.cost
-        } else {
-            guard let lightMask = alphaMask(lightRaster.image), let darkMask = alphaMask(darkRaster.image) else { return nil }
-            light = maskedImage(lightMask.image, size: logicalSize, ink: .black)
-            dark = maskedImage(darkMask.image, size: logicalSize, ink: .white)
-            pixelCost = lightMask.cost + darkMask.cost
+        var logicalSize = NSSize.zero
+        var rasters: [(image: CGImage, cost: Int)] = []
+        for ink in inks {
+            guard let source = typeset(ink) else {
+                rememberFailure(latex)
+                return nil
+            }
+            if rasters.isEmpty {
+                logicalSize = NSSize(width: source.size.width + 2 * inset, height: source.size.height + 2 * inset)
+            }
+            guard let bitmap = rasterize(source, size: logicalSize, inset: inset, ink: ink) else { return nil }
+            if colored {
+                rasters.append(bitmap)
+            } else {
+                guard let compact = grayAlpha(bitmap.image) else { return nil }
+                rasters.append(compact)
+            }
         }
+        guard let first = rasters.first, let last = rasters.last else { return nil }
+        let lightPixels = first.image
+        let darkPixels = last.image
+        let pixelCost = rasters.reduce(0) { $0 + $1.cost }
+        let light = pixelImage(lightPixels, size: logicalSize)
+        let dark = pixelImage(darkPixels, size: logicalSize)
         let adaptive = NSImage(size: logicalSize, flipped: false) { rect in
             let isDark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             (isDark ? dark : light).draw(in: rect)
             return true
         }
         adaptive.cacheMode = .never
-        let entry = Entry(light: light, dark: dark, adaptive: adaptive, cost: pixelCost + sourceBytes)
+        let entry = Entry(light: light, dark: dark, adaptive: adaptive, lightPixels: lightPixels,
+                          darkPixels: darkPixels, size: logicalSize, cost: pixelCost + sourceBytes)
         if entry.cost <= maxCachedBytes {
-            while !order.isEmpty, order.count >= 128 || cachedBytes + entry.cost > maxCachedBytes {
+            while !order.isEmpty, order.count >= maxCachedEntries || cachedBytes + entry.cost > maxCachedBytes {
                 if let removed = cache.removeValue(forKey: order.removeFirst()) { cachedBytes -= removed.cost }
             }
             cache[key] = entry
@@ -160,21 +185,27 @@ enum ReplyMathImage {
         return (pixels, context.bytesPerRow * context.height)
     }
 
-    private static func alphaMask(_ image: CGImage) -> (image: CGImage, cost: Int)? {
+    private static func grayAlpha(_ image: CGImage) -> (image: CGImage, cost: Int)? {
         guard image.bitsPerPixel == 32, image.alphaInfo == .premultipliedLast,
               let data = image.dataProvider?.data, let pixels = CFDataGetBytePtr(data),
               CFDataGetLength(data) >= image.bytesPerRow * image.height else { return nil }
-        var alpha = [UInt8](repeating: 0, count: image.width * image.height)
+        var gray = [UInt8](repeating: 0, count: image.width * image.height * 2)
         for row in 0..<image.height {
             for column in 0..<image.width {
-                alpha[row * image.width + column] = 255 - pixels[row * image.bytesPerRow + column * 4 + 3]
+                let input = row * image.bytesPerRow + column * 4
+                let output = (row * image.width + column) * 2
+                gray[output] = pixels[input]
+                gray[output + 1] = pixels[input + 3]
             }
         }
-        guard let provider = CGDataProvider(data: Data(alpha) as CFData),
-              let mask = CGImage(maskWidth: image.width, height: image.height, bitsPerComponent: 8,
-                                 bitsPerPixel: 8, bytesPerRow: image.width, provider: provider,
-                                 decode: nil, shouldInterpolate: true) else { return nil }
-        return (mask, alpha.count)
+        guard let provider = CGDataProvider(data: Data(gray) as CFData),
+              let compact = CGImage(width: image.width, height: image.height, bitsPerComponent: 8,
+                                    bitsPerPixel: 16, bytesPerRow: image.width * 2,
+                                    space: CGColorSpaceCreateDeviceGray(),
+                                    bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                                    provider: provider, decode: nil, shouldInterpolate: true,
+                                    intent: .defaultIntent) else { return nil }
+        return (compact, gray.count)
     }
 
     private static func pixelRect(_ rect: CGRect, image: CGImage, size: NSSize) -> CGRect {
@@ -186,6 +217,9 @@ enum ReplyMathImage {
     private static func pixelImage(_ pixels: CGImage, size: NSSize) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            #if MATH_PERFORMANCE_CHECKS
+            lastDrawing = (rect, context.ctm)
+            #endif
             context.saveGState()
             defer { context.restoreGState() }
             context.clip(to: rect)
@@ -207,24 +241,6 @@ enum ReplyMathImage {
     }
     #endif
 
-    private static func maskedImage(_ mask: CGImage, size: NSSize, ink: NSColor) -> NSImage {
-        let image = NSImage(size: size, flipped: false) { rect in
-            guard let context = NSGraphicsContext.current?.cgContext else { return false }
-            #if MATH_PERFORMANCE_CHECKS
-            lastDrawing = (rect, context.ctm)
-            #endif
-            context.saveGState()
-            defer { context.restoreGState() }
-            context.clip(to: rect)
-            context.clip(to: pixelRect(rect, image: mask, size: size), mask: mask)
-            context.setFillColor(ink.cgColor)
-            context.fill(rect)
-            return true
-        }
-        image.cacheMode = .never
-        return image
-    }
-
     private static func rememberFailure(_ latex: String) {
         let cost = latex.utf8.count
         guard cost <= maxFailedBytes else { return }
@@ -240,8 +256,11 @@ enum ReplyMathImage {
 
     #if MATH_PERFORMANCE_CHECKS
     private static var typesets = 0
+    private static var requests = 0
+    private static var hits = 0
     static var metrics: [String: Int] {
-        ["typesets": typesets, "cached_bytes": cachedBytes, "entries": cache.count,
+        ["typesets": typesets, "requests": requests, "cache_hits": hits,
+         "cached_bytes": cachedBytes, "entries": cache.count,
          "failed_bytes": failedBytes, "failures": failed.count]
     }
     static func resetForChecks() {
@@ -252,6 +271,9 @@ enum ReplyMathImage {
         failedOrder.removeAll()
         failedBytes = 0
         typesets = 0
+        requests = 0
+        hits = 0
+        lastDrawing = nil
     }
     #endif
 }
