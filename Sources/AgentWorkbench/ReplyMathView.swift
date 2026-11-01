@@ -106,8 +106,8 @@ enum ReplyMathImage {
         if colored {
             guard let darkSource = typeset(.white),
                   let darkRaster = rasterize(darkSource, size: logicalSize, inset: inset, ink: .white) else { return nil }
-            light = NSImage(cgImage: lightRaster.image, size: logicalSize)
-            dark = NSImage(cgImage: darkRaster.image, size: logicalSize)
+            light = pixelImage(lightRaster.image, size: logicalSize)
+            dark = pixelImage(darkRaster.image, size: logicalSize)
             pixelCost = lightRaster.cost + darkRaster.cost
         } else {
             guard let mask = alphaMask(lightRaster.image) else { return nil }
@@ -178,12 +178,32 @@ enum ReplyMathImage {
         return (mask, alpha.count)
     }
 
+    private static func pixelRect(_ rect: CGRect, image: CGImage, size: NSSize) -> CGRect {
+        CGRect(origin: rect.origin,
+               size: CGSize(width: rect.width * CGFloat(image.width) / (size.width * 2),
+                            height: rect.height * CGFloat(image.height) / (size.height * 2)))
+    }
+
+    private static func pixelImage(_ pixels: CGImage, size: NSSize) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.saveGState()
+            defer { context.restoreGState() }
+            context.clip(to: rect)
+            context.draw(pixels, in: pixelRect(rect, image: pixels, size: size))
+            return true
+        }
+        image.cacheMode = .never
+        return image
+    }
+
     private static func maskedImage(_ mask: CGImage, size: NSSize, ink: NSColor) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
             context.saveGState()
             defer { context.restoreGState() }
-            context.clip(to: rect, mask: mask)
+            context.clip(to: rect)
+            context.clip(to: pixelRect(rect, image: mask, size: size), mask: mask)
             context.setFillColor(ink.cgColor)
             context.fill(rect)
             return true
