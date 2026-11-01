@@ -25,6 +25,7 @@ def macos_commands(group, out):
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),
+            ("math-performance", ["bash", "scripts/check-math-performance.sh", str(out / "math-performance")], 600),
         ]
     if group in ("all", "host"):
         commands += [
