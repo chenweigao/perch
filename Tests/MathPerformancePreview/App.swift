@@ -310,7 +310,7 @@ private struct MathPerformanceApp {
         window.contentView = scroll
         window.orderFront(nil)
         host.layoutSubtreeIfNeeded()
-        host.frame.size.height = max(1, controller.sizeThatFits(in: CGSize(width: 748, height: .greatestFiniteMagnitude)).height)
+        host.frame.size.height = max(1, controller.sizeThatFits(in: CGSize(width: 748, height: CGFloat.greatestFiniteMagnitude)).height)
         host.layoutSubtreeIfNeeded()
         window.displayIfNeeded()
         CATransaction.flush()
