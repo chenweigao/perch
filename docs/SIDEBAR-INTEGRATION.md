@@ -7,7 +7,8 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
 
 - Host the sidebar independently above the full conversation canvas: native
   floating glass, persisted visibility, and a draggable 220–480 pt width.
-- Fixed top: Perch, new session (⌘N), task search (⌘K), workbench, attention inbox.
+- Fixed top: Perch, new session (⌘N), task search (⌘K), workbench, attention inbox,
+  all sessions. Shortcuts appear in tooltips, not as row text.
 - The sidebar sits below the unified toolbar with 12-point left, top, and bottom
   margins. Wide layouts reserve content space beside it; narrow layouts let it
   overlay the safe-area-constrained conversation instead of shrinking the canvas.
@@ -16,8 +17,9 @@ This integration brings Goal A (`352b66c`), Goal B correctness fixes
   removed or restored through Customize Toolbar; the layout is saved. New task
   stays in the menu (⌘N) and is an optional toolbar item. Back/forward follow
   session history, disable at its boundaries, and retain ⌘[ / ⌘] shortcuts.
-- Scrollable middle: pins, task groups, up to 20 recent sessions, all sessions.
-- Fixed bottom: archive, environment popover, native Settings entry (⌘,).
+- Scrollable middle: pins, task groups, projects or recent sessions.
+- Fixed bottom: add machine (first run only) and the settings popover with
+  environments, archive and the native Settings entry (⌘,). No rule above it.
 - Workbench/group/archive selection changes the main page, not the sidebar's
   daily session scope. Recent filters (all/running) affect recents only. There is no
   local filter while local execution is not wired, because no session would match it.

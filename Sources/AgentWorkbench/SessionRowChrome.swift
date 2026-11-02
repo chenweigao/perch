@@ -17,8 +17,12 @@ struct SessionRowChrome<Indicator: View>: View {
     var updatedAt: Double = 0
     var compact = false
     var running = false
-    /// The session cannot be reached. Compact rows say so with a badge, not a status line,
-    /// so the row keeps its height when a machine drops off.
+    /// Unread results set the title a weight heavier, as in Mail; the agent mark's dot
+    /// alone is easy to miss.
+    var unread = false
+    /// The session cannot be reached. Compact rows say so with a quiet trailing symbol
+    /// on a dimmed row, not a status line, so the row keeps its height when a machine
+    /// drops off. Orange stays reserved for sessions that need the reader.
     var offline = false
     let selected: Bool
     let canOpen: Bool
@@ -52,7 +56,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 indicator.frame(width: SidebarMetrics.iconWidth, height: 18).padding(.top, 1)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: .regular))
+                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
                         .lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if let subtitle {
@@ -65,16 +69,16 @@ struct SessionRowChrome<Indicator: View>: View {
                         ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
                     } else if offline {
                         Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
-                            .foregroundStyle(Color.orange).help("离线 · 状态未同步")
+                            .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
                             .accessibilityHidden(true)
                     } else if updatedAt > 0 {
-                        // Two-digit labels ("25分") exceed the old 28 pt slot and
-                        // collapsed to an ellipsis; the slot widens instead.
+                        // Labels such as "14:32" or "2:32 PM" exceed a 28 pt slot;
+                        // the slot widens instead of collapsing to an ellipsis.
                         SessionTimeText(updatedAt: updatedAt)
                     }
                 }.frame(minWidth: 28, minHeight: 18, maxHeight: 18, alignment: .trailing).padding(.top, 1)
-            }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 8)
-                .frame(maxWidth: .infinity, minHeight: SidebarMetrics.sessionMinimumHeight, alignment: .leading)
+            }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, SidebarMetrics.sessionVerticalPadding)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(!canOpen)
             .accessibilityLabel(title)
@@ -90,7 +94,8 @@ struct SessionRowChrome<Indicator: View>: View {
                 HStack(alignment: .top, spacing: SidebarMetrics.labelSpacing) {
                     indicator.frame(width: SidebarMetrics.iconWidth, height: 16).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(title).font(.system(size: SidebarMetrics.titleSize)).lineLimit(1).truncationMode(.tail)
+                        Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
+                            .lineLimit(1).truncationMode(.tail)
                         #if PERCH_ACCEPTANCE
                         if NativeAcceptanceProbe.shared.persistentSubtitle {
                             Text(subtitle ?? "").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).lineLimit(1)

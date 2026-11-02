@@ -105,11 +105,20 @@ private func checkSidebarProjects() {
     let duplicate = SidebarProjection(sessions: [first, first], starred: [])
     precondition(duplicate.projects.first?.sessions.count == 1)
     precondition(SidebarProjectLocation(hostID: local, directory: "/work/name ", hostName: "Local").directory == "/work/name ")
+    // 2033-05-18 03:33 UTC, a Wednesday.
     let now = Date(timeIntervalSince1970: 2_000_000_000), zh = Locale(identifier: "zh-Hans")
-    precondition(SessionTime.compactLabel(since: 0, now: now, locale: zh) == nil)
-    precondition(SessionTime.compactLabel(since: now.timeIntervalSince1970 + 60, now: now, locale: zh) == "刚刚")
-    precondition(SessionTime.compactLabel(since: now.timeIntervalSince1970 - 720, now: now, locale: zh) == "12分")
-    precondition(SessionTime.compactLabel(since: now.timeIntervalSince1970 - 7200, now: now, locale: zh) == "2时")
-    precondition(SessionTime.compactLabel(since: 1, now: now, locale: zh)!.count == 5)
+    let utc = TimeZone(identifier: "UTC")!, t = now.timeIntervalSince1970
+    func compact(_ since: Double, _ locale: Locale = zh) -> String? {
+        SessionTime.compactLabel(since: since, now: now, locale: locale, timeZone: utc)
+    }
+    precondition(compact(0) == nil)
+    precondition(compact(t + 60) == "03:33")
+    precondition(compact(t - 7200) == "01:33")
+    precondition(compact(t - 4 * 3600) == "昨天")
+    precondition(compact(t - 3 * 86400) == "周日")
+    precondition(compact(t - 7 * 86400) == "5/11")
+    precondition(compact(1) == "1970/1")
+    precondition(compact(t - 3 * 86400, Locale(identifier: "en")) == "Sun")
+    precondition(compact(t - 7 * 86400, Locale(identifier: "en_GB")) == "11/05")
     print("PASS: full project catalog, host/path identity, stable headers, pins, manual membership, persistence and project search")
 }
