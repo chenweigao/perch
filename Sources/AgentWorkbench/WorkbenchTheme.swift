@@ -136,12 +136,7 @@ extension WorkbenchTheme {
     /// Sheets and dialogs share one outer padding.
     enum Dialog { static let padding: CGFloat = 24 }
 
-    /// The one brand hue (Resources/Brand): the sun of the Perch mark on the app icon
-    /// and the home mark. Running feedback never uses it; warm color in the status
-    /// bar means attention. The branch renders in `ink` so the mark adapts.
-    enum Brand {
-        static let sun = NSColor(srgbRed: 1.0, green: 0.478, blue: 0.349, alpha: 1)   // #FF7A59
-    }
+
 }
 
 extension WorkbenchTheme {

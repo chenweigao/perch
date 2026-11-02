@@ -2,12 +2,9 @@ import AppKit
 import QuartzCore
 import SwiftUI
 
-/// The Perch mark as two lines on the 24-unit glyph grid (y down), the grid the
-/// agent marks use: a sun ring floating one gap above a branch, left of centre.
-/// The gap matters at 16pt; touching strokes merge into an Ω. One source for
-/// the status bar, the list rows' running sun and the home mark (`PerchMark`).
-/// The app icon keeps the composition on its 1024 canvas at icon weight
-/// (`scripts/generate-brand.swift`).
+/// Execution-feedback geometry on the 24-unit glyph grid (y down): a sun ring
+/// floating over a branch. Used by phase motions and list rows. The brand bird
+/// lives in `PerchBirdGeometry` and does not change these execution cues.
 enum PerchLineMark {
     static let lineWidth: CGFloat = 1.75
     static let branchFrom = CGPoint(x: 3.5, y: 19.25)
@@ -58,21 +55,6 @@ enum PerchLineMark {
     /// 16pt slot so the mark carries the weight of the 14pt title beside it
     /// (×1.28 over the 24 box; the line draws at ~1.5pt).
     static let slotBounds = contentBounds.insetBy(dx: 0, dy: -(contentBounds.width - contentBounds.height) / 2)
-
-    /// The resting mark in grid units: the branch in one color, the sun in another.
-    static func draw(in cg: CGContext, branch: CGColor, sun: CGColor) {
-        cg.saveGState()
-        cg.setLineWidth(lineWidth)
-        cg.setLineCap(.round)
-        cg.setStrokeColor(branch)
-        cg.move(to: branchFrom)
-        cg.addLine(to: branchTo)
-        cg.strokePath()
-        cg.setStrokeColor(sun)
-        cg.strokeEllipse(in: CGRect(x: sunCenter.x - sunRadius, y: sunCenter.y - sunRadius,
-                                    width: 2 * sunRadius, height: 2 * sunRadius))
-        cg.restoreGState()
-    }
 
     /// Where the sun ring's path starts, in degrees. The chase is drawn as
     /// strokeStart/strokeEnd over a layer turning once per revolution; starting

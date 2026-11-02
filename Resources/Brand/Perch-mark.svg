@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
-  <line x1="282" y1="700" x2="742" y2="700" stroke-width="64" stroke-linecap="round" stroke="#292D37"/>
-  <circle cx="440" cy="470" r="140" fill="none" stroke-width="64" stroke="#292D37"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100" role="img" aria-label="Perch">
+  <g fill="none" stroke="#252B36" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M66 36C62 27 56 24 47 24C35 24 27 33 27 44C27 56 35 64 47 64C58 64 65 57 67 49L75 44L67 40C67 38 66.5 37 66 36Z" stroke-width="5.4"/>
+  <path d="M23 79H77M47 64V79" stroke-width="5.4"/>
+  <path d="M37 43C39 52 47 54 54 46" stroke-width="5.2"/>
+</g>
 </svg>
