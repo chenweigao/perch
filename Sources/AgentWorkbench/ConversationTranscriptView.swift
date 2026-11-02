@@ -59,6 +59,49 @@ private struct CompactionSummaryRow: View {
     }
 }
 
+/// A scheduled wake-up is harness machinery that still anchors its turn: one
+/// quiet marker line carrying the task summary, with the raw envelope folded
+/// behind it. Full-width like the compaction divider, never a prompt bubble.
+private struct CronFireRow: View {
+    let envelope: CronFireEnvelope
+    let raw: String
+    @RememberedExpansion("cron-fire") private var expanded
+    private var summary: String {
+        envelope.prompt.split(separator: "\n").first.map(String.init) ?? ""
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { expanded.toggle() } label: {
+                HStack(spacing: 10) {
+                    divider
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 10, weight: .medium))
+                        Text("定时任务触发").font(.system(size: ReplyStyle.captionSize)).fixedSize()
+                        if !summary.isEmpty {
+                            Text("· \(summary)").font(.system(size: ReplyStyle.captionSize))
+                                .lineLimit(1).truncationMode(.tail)
+                        }
+                        Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 9, weight: .medium))
+                    }.foregroundStyle(.secondary)
+                    divider
+                }.contentShape(Rectangle())
+            }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                .accessibilityLabel("定时任务触发")
+                .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
+            if expanded {
+                Text(raw).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                    .foregroundStyle(.secondary).textSelection(.enabled)
+                    .padding(.horizontal, ReplyStyle.Process.nestedIndent)
+            }
+        }
+    }
+    private var divider: some View {
+        Color.primary.opacity(0.12).frame(height: 1)
+    }
+}
+
 struct LongUserPrompt<Content: View>: View {
     @ViewBuilder let content: Content
     @RememberedExpansion("user-prompt") private var expanded
@@ -109,7 +152,9 @@ struct KimiMessageView: View {
         CompactionSummaryRow(text: text)
     }
     var body: some View {
-        if isUserMessage {
+        if let envelope = message.cronFire {
+            CronFireRow(envelope: envelope, raw: message.content.first?.text ?? "")
+        } else if isUserMessage {
             UserMessageLayout {
                 LongUserPrompt {
                     content.environment(\.replyLineHeight, UserMessageStyle.lineHeight)
@@ -1668,7 +1713,7 @@ private final class ConversationEntryController: NSViewController {
         #endif
         guard appearance.layoutDirection == .leftToRight, content.activityNarrative == nil,
               content.entry.presentation == .message, content.entry.messages.count == 1,
-              let message = content.entry.messages.first, message.isUserPrompt,
+              let message = content.entry.messages.first, message.isUserPrompt, message.cronFire == nil,
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
         let source = part.text ?? ""
