@@ -698,7 +698,8 @@ private final class ConversationDocumentView: NSView {
         if highlight, let view = controllers[target]?.view {
             let marker = CALayer()
             marker.frame = view.bounds.insetBy(dx: 1, dy: 1)
-            marker.cornerRadius = 12
+            marker.cornerRadius = WorkbenchTheme.Radius.card
+            marker.cornerCurve = .continuous
             marker.borderWidth = 1
             view.effectiveAppearance.performAsCurrentDrawingAppearance {
                 marker.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor

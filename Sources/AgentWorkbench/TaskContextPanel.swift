@@ -450,7 +450,7 @@ private struct TaskContextIconStyle: ButtonStyle {
                 .background(configuration.isPressed ? WorkbenchTheme.Fill.pressed
                             : selected ? WorkbenchTheme.Fill.selected
                             : hovered ? WorkbenchTheme.Fill.hover : Color.clear,
-                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip + 3))
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
                 .contentShape(Rectangle()).onHover { hovered = $0 }
         }
     }

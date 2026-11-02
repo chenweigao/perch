@@ -215,7 +215,7 @@ struct NewTaskView: View {
                             NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
                         }
                     }
-                    .workbenchControlSurface().disabled(creating)
+                    .workbenchComposerSurface().disabled(creating)
                 contextBar
                 if let directoryWarning {
                     Label(directoryWarning, systemImage: "exclamationmark.triangle")

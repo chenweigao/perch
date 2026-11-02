@@ -27,7 +27,7 @@ struct SubagentTranscriptList: View {
             if role == "user" {
                 Text(text).font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.secondary).textSelection(.enabled)
                     .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
             } else {
                 KimiMarkdown(text: text).environment(\.isConversationBodyText, true)
             }

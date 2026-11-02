@@ -395,7 +395,7 @@ private struct ConversationBookmarksMenu: View {
                 Image(systemName: "bookmark.fill").font(.system(size: 12))
                     .frame(width: 30, height: 30)
                     .workbenchFloatingSurface()
-                    .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(WorkbenchTheme.Stroke.hairline))
+                    .overlay(Capsule().strokeBorder(WorkbenchTheme.Stroke.hairline))
                     .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
             }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .help("已收藏的轮次").accessibilityLabel("已收藏的轮次")
