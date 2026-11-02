@@ -120,6 +120,16 @@
 "创建中…" = "Creating…";
 "创建终端" = "Create Terminal";
 
+/* Command line island */
+"命令行" = "Command Line";
+"关闭命令行" = "Close Command Line";
+"在当前会话目录重开" = "Reopen in Current Session's Directory";
+"结束这里的 Shell，在当前会话的目录重新打开" = "End this shell and reopen it in the current session's directory";
+"命令行已结束；可重新打开一个。" = "The command line has exited; you can open a fresh one.";
+"重新打开" = "Reopen";
+"连接「%@」后可在其目录中使用命令行。" = "Connect to %@ to use a command line in its directory.";
+"该会话所属机器不可用。" = "This session's machine is unavailable.";
+
 /* Local agent setup sheet */
 "本机 Agent" = "Local Agent";
 "本机执行环境与远程 SSH 主机分开：本机工具在你选择的 Mac 目录执行，不通过 ssh localhost。" = "The local environment is separate from remote SSH machines: local tools run in a Mac directory you choose, not through ssh localhost.";

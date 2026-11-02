@@ -19,4 +19,16 @@ public enum SSHCommand {
                  "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2",
                  "-S", controlPath, host.destination, remote].map(quote)).joined(separator: " ")
     }
+
+    /// A throwaway login shell on the host, multiplexed over the same control
+    /// connection as attach. Unlike a Herdr pane nothing persists: the shell
+    /// ends when the surface closes. An empty directory lands on the login
+    /// directory; "~/..." expands on the remote side.
+    public static func shell(host: SSHHost, directory: String, controlPath: String) -> String {
+        let destination = directory.hasPrefix("~/") ? "\"$HOME\"/" + quote(String(directory.dropFirst(2))) : quote(directory)
+        let remote = directory.isEmpty ? "exec ${SHELL:-/bin/sh} -l" : "cd \(destination) && exec ${SHELL:-/bin/sh} -l"
+        return (["/usr/bin/ssh", "-tt", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+                 "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2",
+                 "-S", controlPath, host.destination, remote].map(quote)).joined(separator: " ")
+    }
 }

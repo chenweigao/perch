@@ -92,6 +92,7 @@ struct ProtocolTests {
         try await checks.testShellQuotingPreservesHostileTextLiterally()
         checks.testRejectsSSHOptionInjection()
         try await checks.testAttachUsesRemoteBinaryAndDoesNotTakeOverAnotherClient()
+        try await checks.testShellCommandIsMultiplexedLoginShellInDirectory()
         try await checks.testLiveSnapshotWhenExplicitlyRequested()
         print("PASS: protocol decoding, error propagation, shell argument isolation, SSH destination validation, attach contract")
     }
@@ -201,6 +202,34 @@ struct ProtocolTests {
         expectTrue(args.contains("StrictHostKeyChecking=yes"))
         expectFalse(command.contains("--takeover"))
         expectEqual(args.last, "exec '/home/user/with space/herdr' terminal attach 'term_1'")
+    }
+
+    func testShellCommandIsMultiplexedLoginShellInDirectory() async throws {
+        let command = SSHCommand.shell(host: SSHHost(name: "Dev", destination: "dev-env"),
+            directory: "/home/user/with space/it's", controlPath: "/tmp/awb-control")
+        let parsed = try await ProcessRunner.run("/bin/sh", ["-c", "set -- \(command); printf '%s\\0' \"$@\""])
+        let args = String(decoding: parsed, as: UTF8.self).split(separator: "\0").map(String.init)
+        expectEqual(args.first, "/usr/bin/ssh")
+        expectTrue(args.contains("-tt"))
+        expectTrue(args.contains("StrictHostKeyChecking=yes"))
+        expectEqual(args.firstIndex(of: "-S").map { args[args.index(after: $0)] }, Optional("/tmp/awb-control"))
+        expectTrue(args.contains("dev-env"))
+        // The remote shell must receive the directory as one quoted word and expand $SHELL itself.
+        expectEqual(args.last, "cd '/home/user/with space/it'\"'\"'s' && exec ${SHELL:-/bin/sh} -l")
+        let remote = try await ProcessRunner.run("/bin/sh", ["-c", "cd \(SSHCommand.quote("/tmp")) && printf ok"])
+        expectEqual(String(decoding: remote, as: UTF8.self), "ok")
+
+        // "~/..." stays expandable on the remote side; empty means the login directory.
+        let homeCommand = SSHCommand.shell(host: SSHHost(name: "Dev", destination: "dev-env"),
+            directory: "~/code/project", controlPath: "/tmp/awb-control")
+        let homeArgs = String(decoding: try await ProcessRunner.run("/bin/sh", ["-c", "set -- \(homeCommand); printf '%s\\0' \"$@\""]), as: UTF8.self)
+            .split(separator: "\0").map(String.init)
+        expectEqual(homeArgs.last, "cd \"$HOME\"/'code/project' && exec ${SHELL:-/bin/sh} -l")
+        let bareCommand = SSHCommand.shell(host: SSHHost(name: "Dev", destination: "dev-env"),
+            directory: "", controlPath: "/tmp/awb-control")
+        let bareArgs = String(decoding: try await ProcessRunner.run("/bin/sh", ["-c", "set -- \(bareCommand); printf '%s\\0' \"$@\""]), as: UTF8.self)
+            .split(separator: "\0").map(String.init)
+        expectEqual(bareArgs.last, "exec ${SHELL:-/bin/sh} -l")
     }
 
     func testLiveSnapshotWhenExplicitlyRequested() async throws {

@@ -12,6 +12,7 @@ final class WorkbenchModel {
     let catalog = SessionCatalogState()
     let sidebarRepositories = SidebarRepositoryState()
     let conversationPresentations = ConversationPresentationCache()
+    let commandLineIsland = CommandLineIslandState()
     var kimi: KimiConnection
     var native: NativeAgentConnection
     @ObservationIgnored private var kimiEnvironments: [UUID: KimiConnection] = [:]
@@ -427,6 +428,30 @@ final class WorkbenchModel {
     var previewTerminalID: String? { tabs.previewID }
     var selectedConnection: HostConnection? { connections.first { $0.id == selectedHostID } }
     var selectedTerminal: AttachedTerminal? { terminals.first { $0.id == selectedTerminalID } }
+    /// The quick shell follows the selected session's host and directory. The
+    /// dashboard and the new-task draft have no resolvable target.
+    var commandLineTarget: CommandLineIslandState.Target? {
+        guard !showDashboard, !draftingNewTask, let item = selectedItem,
+              connections.contains(where: { $0.id == item.reference.hostID }) else { return nil }
+        return CommandLineIslandState.Target(hostID: item.reference.hostID, hostName: item.hostName,
+                                             directory: item.directory)
+    }
+    func toggleCommandLineIsland() {
+        guard let target = commandLineTarget,
+              let connection = connections.first(where: { $0.id == target.hostID })
+        else { commandLineIsland.hide(); return }
+        commandLineIsland.toggle(target: target, connection: connection)
+    }
+    func retargetCommandLineIsland() {
+        guard let target = commandLineTarget,
+              let connection = connections.first(where: { $0.id == target.hostID }) else { return }
+        commandLineIsland.retarget(target: target, connection: connection)
+    }
+    func restartCommandLineIsland() {
+        guard let target = commandLineIsland.target,
+              let connection = connections.first(where: { $0.id == target.hostID }) else { return }
+        commandLineIsland.restart(connection: connection)
+    }
     var selectedGroup: WorkItemGroup? { workspace.groups.first { $0.id == selectedGroupID } }
     /// The scope resolved against what still exists. A group that was removed or a
     /// machine that was disconnected leaves nothing to narrow by and nothing to show,
