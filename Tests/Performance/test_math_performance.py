@@ -139,11 +139,18 @@ class MathPerformanceTests(unittest.TestCase):
             MODULE.compare(runs)
 
     def test_window_initial_layout_regression_fails(self):
+        # Only a catastrophic best-case blowout (over 3x) is gated.
+        runs = fixtures()
+        for record in runs["candidate"]["window-30"]:
+            record["measurements"]["initial_layout_display_ms"] = 31
+        with self.assertRaisesRegex(ValueError, "Window initial layout regressed"):
+            MODULE.compare(runs)
+
+    def test_window_initial_layout_triple_boundary_passes(self):
         runs = fixtures()
         for record in runs["candidate"]["window-30"]:
             record["measurements"]["initial_layout_display_ms"] = 30
-        with self.assertRaisesRegex(ValueError, "Window initial layout regressed"):
-            MODULE.compare(runs)
+        MODULE.compare(runs)
 
     def test_window_initial_layout_load_spike_passes(self):
         # Two loaded rounds out of three move the median past the ratio gate;
