@@ -33,6 +33,12 @@ to light.
   or `codex/<task>`) and make all commits there. This directory only tracks
   `main` and reviews others' work. Do not modify unrelated work.
 - Build with scripts/build.sh; run swift run WorkbenchChecks for protocol and command contracts.
+- The macOS functional `core` group includes synthetic math A/B measurements.
+  `scripts/check-math-performance.sh <output>` uses the PR base (or `HEAD^` locally);
+  set `WORKBENCH_MATH_BASELINE_REF` for another fixed baseline. Keep real sessions
+  out of CI fixtures and distinguish window scheduling from measured FPS.
+  Native math cache admission estimates source and 2x raster capacity; it is not
+  an exact display-list allocation or process RSS limit.
 
 - New or migrated UI features follow `docs/architecture/state-and-effects.md`:
   Observation state owners, explicit dependencies, and `.task(id:)` for page-bound

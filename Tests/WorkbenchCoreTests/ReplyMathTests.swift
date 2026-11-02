@@ -103,5 +103,19 @@ func checkReplyMath() {
         expectEqual(tildeCode, #"\(y\)"#)
         expectEqual(latex, "z")
     }
-    print("PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation")
+    do {
+        let source = #"中文🙂 \(\frac{a_i}{b_i}\) 与 `\(代码\)` 以及 \(z^2\)。"#
+        guard case .paragraph(let runs) = ReplyDocument.parse(source).first else { fatalError("expected Unicode math") }
+        expectEqual(runs.compactMap(\.math), [#"\frac{a_i}{b_i}"#, "z^2"])
+        precondition(runs.contains { $0.code && $0.text == #"\(代码\)"# })
+        expectEqual(ReplyMath.boxedContent(#"\boxed{\frac{x}{y}}"#), #"\frac{x}{y}"#)
+        precondition(ReplyMath.boxedContent(#"\boxed{x}+y"#) == nil)
+    }
+    for count in [32, 128, 512, 2048] {
+        let source = String(repeating: #"未闭合 \(x "#, count: count)
+        guard case .paragraph(let runs) = ReplyDocument.parse(source).first else { fatalError("expected incomplete math text") }
+        precondition(runs.allSatisfy { $0.math == nil })
+        expectEqual(runs.map(\.text).joined(), String(repeating: "未闭合 (x ", count: count).trimmingCharacters(in: .whitespaces))
+    }
+    print("PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries")
 }

@@ -5,31 +5,71 @@ import Foundation
 /// a wholesale checkpoint, never a per-character reveal.
 public enum ReplyMath {
     private struct Fence {
-        let character: Character
+        let character: UInt8
         let length: Int
     }
 
     private struct FenceMarker {
-        let character: Character
+        let character: UInt8
         let length: Int
         let closesFence: Bool
     }
 
-    /// Normalize backslash delimiters before swift-markdown can consume their
-    /// backslashes. Code spans and fenced blocks retain their original source.
+    private struct Boundaries {
+        var math: [Int: Range<Int>] = [:]
+        var code: [Int: Int] = [:]
+
+        init(_ bytes: [UInt8]) {
+            var markers: [(start: Int, slash: Int, character: UInt8)] = []
+            var ticks: [Range<Int>] = []
+            var index = 0
+            while index < bytes.count {
+                let character = bytes[index]
+                if character == 92 || character == 96 {
+                    let start = index
+                    repeat { index += 1 } while index < bytes.count && bytes[index] == character
+                    if character == 96 {
+                        ticks.append(start..<index)
+                    } else if (index - start) % 2 == 1, index < bytes.count,
+                              [40, 41, 91, 93].contains(bytes[index]) {
+                        markers.append((start, index - 1, bytes[index]))
+                    }
+                } else {
+                    index += 1
+                }
+            }
+            var closers: [UInt8: Range<Int>] = [:]
+            for marker in markers.reversed() {
+                if marker.character == 41 || marker.character == 93 {
+                    closers[marker.character] = marker.slash..<(marker.slash + 2)
+                } else if let close = closers[marker.character == 40 ? 41 : 93] {
+                    math[marker.start] = close
+                }
+            }
+            var nextTick: [Int: Int] = [:]
+            for tick in ticks.reversed() {
+                if let end = nextTick[tick.count] { code[tick.lowerBound] = end }
+                nextTick[tick.count] = tick.upperBound
+            }
+        }
+    }
+
+    /// Resolve boundaries in bounded passes, including unmatched streaming input.
+    /// The original source remains unchanged outside paired math delimiters.
     static func normalizeDelimiters(_ source: String) -> String {
-        guard source.contains("\\") else { return source }
-        var result = ""
-        result.reserveCapacity(source.count)
-        var index = source.startIndex
+        guard source.utf8.contains(92), source.contains(#"\("#) || source.contains(#"\["#) else { return source }
+        let bytes = Array(source.utf8)
+        let boundaries = Boundaries(bytes)
+        var result: [UInt8] = []
+        var copyFrom = 0
+        var index = 0
         var atLineStart = true
         var fence: Fence?
 
-        while index < source.endIndex {
+        while index < bytes.count {
             if atLineStart {
-                let marker = fenceMarker(in: source, at: index)
+                let marker = fenceMarker(in: bytes, at: index)
                 if fence != nil || marker != nil {
-                    let lineEnd = source[index...].firstIndex(of: "\n").map { source.index(after: $0) } ?? source.endIndex
                     if let active = fence {
                         if let marker, marker.character == active.character,
                            marker.length >= active.length, marker.closesFence {
@@ -38,139 +78,77 @@ public enum ReplyMath {
                     } else if let marker {
                         fence = Fence(character: marker.character, length: marker.length)
                     }
-                    result.append(contentsOf: source[index..<lineEnd])
-                    index = lineEnd
+                    while index < bytes.count, bytes[index] != 10 { index += 1 }
+                    if index < bytes.count { index += 1 }
                     continue
                 }
             }
-
-            if source[index] == "\n" {
-                result.append("\n")
-                index = source.index(after: index)
+            if bytes[index] == 10 {
+                index += 1
                 atLineStart = true
                 continue
             }
-
-            if source[index] == "`", !isEscaped(source, at: index) {
-                let runEnd = backtickRunEnd(source, at: index)
-                let length = source.distance(from: index, to: runEnd)
-                if let spanEnd = codeSpanEnd(source, from: runEnd, delimiterLength: length) {
-                    result.append(contentsOf: source[index..<spanEnd])
-                    index = spanEnd
+            if bytes[index] == 96, !isEscaped(bytes, at: index) {
+                if let end = boundaries.code[index] {
+                    index = end
                 } else {
-                    result.append(contentsOf: source[index..<runEnd])
-                    index = runEnd
+                    repeat { index += 1 } while index < bytes.count && bytes[index] == 96
                 }
                 atLineStart = false
                 continue
             }
-
-            if source[index] == "\\" {
-                let runEnd = backslashRunEnd(source, at: index)
-                let count = source.distance(from: index, to: runEnd)
-                if count % 2 == 1, runEnd < source.endIndex,
-                   source[runEnd] == "(" || source[runEnd] == "[",
-                   let close = closingDelimiter(source, from: source.index(after: runEnd),
-                                                character: source[runEnd] == "(" ? ")" : "]") {
-                    let contentStart = source.index(after: runEnd)
-                    let content = source[contentStart..<close.lowerBound]
+            if bytes[index] == 92 {
+                let start = index
+                repeat { index += 1 } while index < bytes.count && bytes[index] == 92
+                if (index - start) % 2 == 1, let close = boundaries.math[start] {
+                    let content = String(decoding: bytes[(index + 1)..<close.lowerBound], as: UTF8.self)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     if !content.isEmpty {
-                        let openingSlash = source.index(before: runEnd)
-                        result.append(contentsOf: source[index..<openingSlash])
-                        let delimiter = source[runEnd] == "[" ? "$$" : "$"
-                        result.append(delimiter)
-                        result.append(content.replacingOccurrences(of: "\\", with: "\\\\"))
-                        result.append(delimiter)
+                        if result.isEmpty { result.reserveCapacity(bytes.count) }
+                        result.append(contentsOf: bytes[copyFrom..<(index - 1)])
+                        let display = bytes[index] == 91
+                        result.append(36)
+                        if display { result.append(36) }
+                        for byte in content.utf8 {
+                            result.append(byte)
+                            if byte == 92 { result.append(byte) }
+                        }
+                        result.append(36)
+                        if display { result.append(36) }
                         index = close.upperBound
-                        atLineStart = false
-                        continue
+                        copyFrom = index
                     }
                 }
-                result.append(contentsOf: source[index..<runEnd])
-                index = runEnd
                 atLineStart = false
                 continue
             }
-
-            result.append(source[index])
-            index = source.index(after: index)
+            index += 1
             atLineStart = false
         }
-        return result
+        guard copyFrom > 0 else { return source }
+        result.append(contentsOf: bytes[copyFrom...])
+        return String(decoding: result, as: UTF8.self)
     }
 
-    private static func closingDelimiter(_ source: String, from start: String.Index,
-                                         character: Character) -> Range<String.Index>? {
+    private static func isEscaped(_ bytes: [UInt8], at index: Int) -> Bool {
+        var start = index
+        while start > 0, bytes[start - 1] == 92 { start -= 1 }
+        return (index - start) % 2 == 1
+    }
+
+    private static func fenceMarker(in bytes: [UInt8], at start: Int) -> FenceMarker? {
         var index = start
-        while index < source.endIndex, let slash = source[index...].firstIndex(of: "\\") {
-            let runEnd = backslashRunEnd(source, at: slash)
-            let count = source.distance(from: slash, to: runEnd)
-            if count % 2 == 1, runEnd < source.endIndex, source[runEnd] == character {
-                return source.index(before: runEnd)..<source.index(after: runEnd)
-            }
-            index = runEnd
-        }
-        return nil
-    }
-
-    private static func codeSpanEnd(_ source: String, from start: String.Index,
-                                    delimiterLength: Int) -> String.Index? {
-        var index = start
-        while index < source.endIndex, let tick = source[index...].firstIndex(of: "`") {
-            let runEnd = backtickRunEnd(source, at: tick)
-            if source.distance(from: tick, to: runEnd) == delimiterLength { return runEnd }
-            index = runEnd
-        }
-        return nil
-    }
-
-    private static func backtickRunEnd(_ source: String, at start: String.Index) -> String.Index {
-        var index = start
-        while index < source.endIndex, source[index] == "`" { index = source.index(after: index) }
-        return index
-    }
-
-    private static func backslashRunEnd(_ source: String, at start: String.Index) -> String.Index {
-        var index = start
-        while index < source.endIndex, source[index] == "\\" { index = source.index(after: index) }
-        return index
-    }
-
-    private static func isEscaped(_ source: String, at index: String.Index) -> Bool {
-        var cursor = index
-        var count = 0
-        while cursor > source.startIndex {
-            let previous = source.index(before: cursor)
-            guard source[previous] == "\\" else { break }
-            count += 1
-            cursor = previous
-        }
-        return count % 2 == 1
-    }
-
-    private static func fenceMarker(in source: String, at start: String.Index) -> FenceMarker? {
-        var index = start
-        var spaces = 0
-        while index < source.endIndex, source[index] == " ", spaces < 4 {
-            spaces += 1
-            index = source.index(after: index)
-        }
-        guard spaces <= 3, index < source.endIndex,
-              source[index] == "`" || source[index] == "~" else { return nil }
-        let character = source[index]
+        while index < bytes.count, bytes[index] == 32, index - start < 4 { index += 1 }
+        guard index - start <= 3, index < bytes.count,
+              bytes[index] == 96 || bytes[index] == 126 else { return nil }
+        let character = bytes[index]
         var runEnd = index
-        while runEnd < source.endIndex, source[runEnd] == character {
-            runEnd = source.index(after: runEnd)
-        }
-        let length = source.distance(from: index, to: runEnd)
-        guard length >= 3 else { return nil }
+        while runEnd < bytes.count, bytes[runEnd] == character { runEnd += 1 }
+        guard runEnd - index >= 3 else { return nil }
         var trailing = runEnd
-        while trailing < source.endIndex, source[trailing] == " " || source[trailing] == "\t" {
-            trailing = source.index(after: trailing)
-        }
-        let closesFence = trailing == source.endIndex || source[trailing] == "\n"
-        return FenceMarker(character: character, length: length, closesFence: closesFence)
+        while trailing < bytes.count, bytes[trailing] == 32 || bytes[trailing] == 9 { trailing += 1 }
+        return FenceMarker(character: character, length: runEnd - index,
+                           closesFence: trailing == bytes.count || bytes[trailing] == 10)
     }
 
     /// Extract an outer `\boxed{...}` so the native renderer can draw the border

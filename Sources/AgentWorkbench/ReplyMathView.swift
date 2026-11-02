@@ -4,19 +4,20 @@ import SwiftMath
 import WorkbenchCore
 
 /// Display math ($$…$$ / \[…\]) typeset natively by SwiftMath — no web view, no KaTeX.
-/// Each formula typesets once per (latex, size, mode), in light and dark ink, and
-/// is cached; the reveal cursor treats the block as an atomic checkpoint.
+/// Native images remain lazy and appearance-specific to preserve glyph pixels;
+/// the reveal cursor treats the block as an atomic checkpoint.
 struct ReplyMathBlock: View {
     let latex: String
     @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         // Display math is set at the body size, as in typeset text, in the row's
         // color scheme rather than the app's appearance.
-        if let image = ReplyMathImage.image(latex: latex, size: ReplyStyle.bodySize, display: true,
-                                            dark: colorScheme == .dark) {
+        if let image = ReplyMathImage.displayImage(latex: latex, size: ReplyStyle.bodySize,
+                                                   dark: colorScheme == .dark) {
             Image(nsImage: image)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 6)
+                .accessibilityLabel(latex)
         } else {
             // Unparseable TeX shows its source, never a blank hole.
             SelectableReplyText(latex, font: .monospacedSystemFont(ofSize: ReplyStyle.codeSize, weight: .regular))
@@ -40,78 +41,170 @@ enum ReplyMathAttachment {
     }
 }
 
-/// Both inks typeset the same glyphs, so the light and dark renderings share one
-/// size: native and SwiftUI rows measure the same formula in either appearance.
-private enum ReplyMathImage {
+enum ReplyMathImage {
     private struct Key: Hashable {
         let latex: String
         let size: CGFloat
         let display: Bool
+        let appearance: Bool?
     }
     private struct Entry {
         let light: NSImage
         let dark: NSImage
-        /// Draws `light` or `dark` for the appearance it is drawn in.
         let adaptive: NSImage
+        let costEstimate: Int
     }
+    static let maxCachedEntries = 256
+    static let maxInlineEntries = 128
+    static let maxCachedBytes = 24 * 1024 * 1024
+    static let maxFailedBytes = 64 * 1024
     private static var cache: [Key: Entry] = [:]
     private static var order: [Key] = []
+    private static var inlineEntries = 0
+    private static var cachedCostEstimate = 0
     private static var failed: Set<String> = []
+    private static var failedOrder: [String] = []
+    private static var failedBytes = 0
 
-    /// For text attachments. TextKit draws an attachment in its text view's
-    /// appearance, so inline math follows the row's appearance rather than the
-    /// app's, and a cached attributed string stays right after either changes.
     static func image(latex: String, size: CGFloat, display: Bool) -> NSImage? {
         entry(latex: latex, size: size, display: display)?.adaptive
     }
 
-    /// One appearance's rendering, for SwiftUI views that know their color scheme.
     static func image(latex: String, size: CGFloat, display: Bool, dark: Bool) -> NSImage? {
         entry(latex: latex, size: size, display: display).map { dark ? $0.dark : $0.light }
     }
 
-    private static func entry(latex: String, size: CGFloat, display: Bool) -> Entry? {
-        let key = Key(latex: latex, size: size, display: display)
-        if let hit = cache[key] { return hit }
-        if failed.contains(latex) { return nil }
-        let typesetProbe = PerfDiagnostics.begin()
-        defer {
-            PerfDiagnostics.end("math_typeset", typesetProbe,
-                                detail: (display ? "mode=display" : "mode=inline") + " bytes=\(latex.utf8.count)")
+    static func displayImage(latex: String, size: CGFloat, dark: Bool) -> NSImage? {
+        entry(latex: latex, size: size, display: true, appearance: dark).map { dark ? $0.dark : $0.light }
+    }
+
+    private static func entry(latex: String, size: CGFloat, display: Bool, appearance: Bool? = nil) -> Entry? {
+        #if MATH_PERFORMANCE_CHECKS
+        requests += 1
+        #endif
+        let key = Key(latex: latex, size: size, display: display, appearance: appearance)
+        if let hit = cache[key] {
+            #if MATH_PERFORMANCE_CHECKS
+            hits += 1
+            #endif
+            return hit
         }
-        func typeset(_ ink: NSColor) -> NSImage? {
-            let boxed = ReplyMath.boxedContent(latex)
-            let math = MTMathImage(latex: boxed ?? latex, fontSize: size, textColor: ink,
-                                   labelMode: display ? .display : .text,
-                                   textAlignment: .left)
-            let (error, image) = math.asImage()
-            guard error == nil, let image else { return nil }
-            guard boxed != nil else { return image }
-            let inset: CGFloat = 4
-            let borderedSize = NSSize(width: image.size.width + 2 * inset,
-                                      height: image.size.height + 2 * inset)
-            return NSImage(size: borderedSize, flipped: false) { rect in
-                ink.setStroke()
-                let border = NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5))
-                border.lineWidth = 1
-                border.stroke()
-                image.draw(in: rect.insetBy(dx: inset, dy: inset))
-                return true
+        if failed.contains(latex) { return nil }
+        let sourceBytes = latex.utf8.count
+        guard sourceBytes <= 100_000, size.isFinite, size > 0 else { return nil }
+        let probe = PerfDiagnostics.begin()
+        defer {
+            PerfDiagnostics.end("math_typeset", probe,
+                                detail: (display ? "mode=display" : "mode=inline") + " bytes=\(sourceBytes)")
+        }
+        let boxed = ReplyMath.boxedContent(latex)
+        let content = boxed ?? latex
+        let inks: [NSColor] = appearance.map { [$0 ? .white : .black] } ?? [.black, .white]
+        var images: [NSImage] = []
+        var estimate = sourceBytes
+        for ink in inks {
+            #if MATH_PERFORMANCE_CHECKS
+            typesets += 1
+            #endif
+            let math = MTMathImage(latex: content, fontSize: size, textColor: ink,
+                                   labelMode: display ? .display : .text, textAlignment: .left)
+            let (error, source) = math.asImage()
+            guard error == nil, let source else {
+                rememberFailure(latex)
+                return nil
+            }
+            let image: NSImage
+            if boxed != nil {
+                let inset: CGFloat = 4
+                let imageSize = NSSize(width: source.size.width + 2 * inset, height: source.size.height + 2 * inset)
+                image = NSImage(size: imageSize, flipped: false) { rect in
+                    ink.setStroke()
+                    let border = NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5))
+                    border.lineWidth = 1
+                    border.stroke()
+                    source.draw(in: rect.insetBy(dx: inset, dy: inset))
+                    return true
+                }
+            } else {
+                image = source
+            }
+            images.append(image)
+            let width = ceil(image.size.width * 2), height = ceil(image.size.height * 2)
+            if width.isFinite, height.isFinite, width >= 0, height >= 0,
+               width <= 8_192, height <= 8_192, width * height <= 4_000_000 {
+                estimate += Int(width * height) * 4
+            } else {
+                estimate = maxCachedBytes + 1
             }
         }
-        guard let light = typeset(.black), let dark = typeset(.white) else {
-            failed.insert(latex)
-            return nil
-        }
+        guard let light = images.first, let dark = images.last else { return nil }
         let adaptive = NSImage(size: light.size, flipped: false) { rect in
             let isDark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             (isDark ? dark : light).draw(in: rect)
             return true
         }
-        if order.count >= 128 { cache.removeValue(forKey: order.removeFirst()) }
-        let entry = Entry(light: light, dark: dark, adaptive: adaptive)
-        cache[key] = entry
-        order.append(key)
+        // Admission estimates source and 2x raster capacity, not display-list memory or process RSS.
+        let entry = Entry(light: light, dark: dark, adaptive: adaptive, costEstimate: estimate)
+        if estimate <= maxCachedBytes {
+            if appearance == nil {
+                while inlineEntries >= maxInlineEntries,
+                      let index = order.firstIndex(where: { $0.appearance == nil }) { removeEntry(at: index) }
+            }
+            while !order.isEmpty, order.count >= maxCachedEntries || cachedCostEstimate + estimate > maxCachedBytes {
+                removeEntry(at: 0)
+            }
+            cache[key] = entry
+            order.append(key)
+            if appearance == nil { inlineEntries += 1 }
+            cachedCostEstimate += estimate
+        }
         return entry
     }
+
+    private static func removeEntry(at index: Int) {
+        let key = order.remove(at: index)
+        guard let removed = cache.removeValue(forKey: key) else { return }
+        if key.appearance == nil { inlineEntries -= 1 }
+        cachedCostEstimate -= removed.costEstimate
+    }
+
+    #if MATH_PERFORMANCE_CHECKS
+    static var drawingMetrics: [String: Double] { [:] }
+    #endif
+
+    private static func rememberFailure(_ latex: String) {
+        let cost = latex.utf8.count
+        guard cost <= maxFailedBytes else { return }
+        while !failedOrder.isEmpty, failedOrder.count >= 128 || failedBytes + cost > maxFailedBytes {
+            let removed = failedOrder.removeFirst()
+            failed.remove(removed)
+            failedBytes -= removed.utf8.count
+        }
+        failed.insert(latex)
+        failedOrder.append(latex)
+        failedBytes += cost
+    }
+
+    #if MATH_PERFORMANCE_CHECKS
+    private static var typesets = 0
+    private static var requests = 0
+    private static var hits = 0
+    static var metrics: [String: Int] {
+        ["typesets": typesets, "requests": requests, "cache_hits": hits,
+         "cost_estimate_bytes": cachedCostEstimate, "entries": cache.count, "inline_entries": inlineEntries,
+         "failed_bytes": failedBytes, "failures": failed.count]
+    }
+    static func resetForChecks() {
+        cache.removeAll()
+        order.removeAll()
+        inlineEntries = 0
+        cachedCostEstimate = 0
+        failed.removeAll()
+        failedOrder.removeAll()
+        failedBytes = 0
+        typesets = 0
+        requests = 0
+        hits = 0
+    }
+    #endif
 }
